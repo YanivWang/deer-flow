@@ -138,6 +138,10 @@ That prompt is intended for coding agents. It tells the agent to clone the repo 
 
    > **Advanced / manual configuration**: If you prefer to edit `config.yaml` directly, run `make config` instead to copy the full template. See `config.example.yaml` for the complete reference including CLI-backed providers (Codex CLI, Claude Code OAuth), OpenRouter, Responses API, subagent runtime caps such as `subagents.max_total_per_run`, and more.
 
+   Optional per-model pricing must use one currency across all priced models.
+   DeerFlow disables Console cost estimates when currencies are mixed rather
+   than presenting an invalid aggregate.
+
    <details>
    <summary>Manual model configuration examples</summary>
 
@@ -1125,6 +1129,13 @@ DeerFlow has key high-privilege capabilities including **system command executio
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, workflow, and guidelines.
+
+Backend `make test` is offline by default and excludes live external-API
+coverage. Maintainers can explicitly run the real `DeerFlowClient` integration
+suite with `cd backend && make test-live` after providing a valid root
+`config.yaml` and API credentials; this may incur API costs and create local
+sandboxes, artifacts, or files. Direct pytest runs additionally require
+`DEER_FLOW_RUN_LIVE_TESTS=1`.
 
 Regression coverage includes Docker sandbox mode detection and provisioner kubeconfig-path handling tests in `backend/tests/`.
 Backend blocking-IO diagnostics are available from the repository root with

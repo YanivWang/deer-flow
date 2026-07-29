@@ -86,6 +86,7 @@ When making code changes, you MUST update the relevant documentation:
 ```bash
 make check      # Check system requirements
 make install    # Install all dependencies (frontend + backend)
+make detect-thread-boundaries  # Inventory backend executor/thread/event-loop boundaries
 make dev        # Start all services (Gateway + Frontend + Nginx), with config.yaml preflight
 make start      # Start production services locally
 make stop       # Stop all services
@@ -96,12 +97,45 @@ make stop       # Stop all services
 make install            # Install backend dependencies
 make dev                # Run Gateway API with reload (port 8001)
 make gateway            # Run Gateway API only (port 8001)
-make test               # Run all backend tests
+make test               # Run offline backend tests (excludes live external-API tests)
+make test-live          # Explicitly run live DeerFlowClient tests with real APIs
 make test-blocking-io   # Run strict Blockbuster runtime gate on tests/blocking_io/
 make lint               # Lint with ruff
 make format             # Format code with ruff
 make migrate-rev MSG="..."  # Autogenerate a new alembic revision (see Schema Migrations section)
 ```
+
+The root `detect-thread-boundaries` target statically inventories execution
+boundaries under `backend/app/` and `backend/packages/harness/deerflow/`. It
+prints a concise count by execution domain and writes the complete, versioned
+JSON payload to `.deer-flow/thread-boundary-inventory.json`. Every finding has
+a stable `boundary_kind`: `asyncio_default_executor`, `dedicated_executor`,
+`anyio_worker_thread`, `direct_event_loop_blocking`, `separate_event_loop`, or
+`unresolved_dynamic_boundary`.
+
+The AST inventory covers `asyncio.to_thread`, default and explicit
+`run_in_executor` submissions, imported aliases, simple same-module helper
+wrappers (after pre-registering dedicated executor targets), `set_default_executor`,
+`ThreadPoolExecutor` construction/submission,
+additional event loops, synchronous LangChain tools, and direct
+`BaseChatModel` fallback inheritance. It remains read-only and does not alter
+executor routing or sizing.
+
+To supplement the static scan with configured runtime types, run:
+
+```bash
+python scripts/detect_thread_boundaries.py \
+  --runtime-config config.yaml \
+  --json-output .deer-flow/thread-boundary-inventory.json
+```
+
+Runtime inspection imports configured tool objects and model classes so it can
+record concrete tool names/types/modules, sync functions, async coroutines,
+and `_agenerate`/`_astream` ownership. It does not invoke tools, instantiate
+models, or call external services; import failures remain in the JSON as
+`unresolved_dynamic_boundary` records. The detector implementation and focused
+coverage live in `tests/support/detectors/thread_boundaries.py` and
+`tests/test_detect_thread_boundaries.py`.
 
 The `detect-blocking-io` target parses `app/`, `packages/harness/deerflow/`,
 and `scripts/` with AST. By default it reports only blocking IO candidates that
@@ -451,7 +485,7 @@ Localhost persistence deliberately reads the direct request `Host` and ignores `
 |--------|-----------|
 | **Models** (`/api/models`) | `GET /` - list models; `GET /{name}` - model details |
 | **Features** (`/api/features`) | `GET /` - report config-gated feature availability (`agents_api.enabled`, `browser_control.enabled`) for frontend UI gating |
-| **Console** (`/api/console`) | Read-only cross-thread observability for the current user (the data layer for an operations dashboard or external monitoring): `GET /stats` - headline counters (runs/threads/agents/tokens/cost); `GET /runs` - paginated run history joined with thread titles (per-run cost); `GET /usage` - zero-filled daily token series + per-model breakdown with spend. Queries `runs`/`threads_meta` directly as a reporting layer (no new `RunStore` methods); requires a SQL database backend — returns 503 on `database.backend: memory`. Real-cost estimation reads optional `models[*].pricing` (`currency`, `input_per_million`, `output_per_million`, `input_cache_hit_per_million`; `ModelConfig` is `extra="allow"`, so no schema change) and prices each run from its `token_usage_by_model` input/output split. Pricing is **cache-aware**: `RunJournal` accumulates prompt-cache hits from `usage_metadata.input_token_details.cache_read` into a sparse `cache_read_tokens` bucket key (also threaded through `SubagentTokenCollector` → `record_external_llm_usage_records`), and cache-hit input tokens are billed at `input_cache_hit_per_million` (omitted → billed at the miss price, a conservative upper bound). Legacy rows fall back to run-level totals at `model_name`; unpriced models yield `cost: null` and cost fields are null when no pricing is configured |
+| **Console** (`/api/console`) | Read-only cross-thread observability for the current user (the data layer for an operations dashboard or external monitoring): `GET /stats` - headline counters (runs/threads/agents/tokens/cost); `GET /runs` - paginated run history joined with thread titles (per-run cost); `GET /usage` - zero-filled daily token series + per-model breakdown with spend. Queries `runs`/`threads_meta` directly as a reporting layer (no new `RunStore` methods); requires a SQL database backend — returns 503 on `database.backend: memory`. Real-cost estimation reads optional `models[*].pricing` (`currency`, `input_per_million`, `output_per_million`, `input_cache_hit_per_million`; `ModelConfig` is `extra="allow"`, so no schema change) and prices each run from its `token_usage_by_model` input/output split. Pricing is **cache-aware**: `RunJournal` accumulates prompt-cache hits from `usage_metadata.input_token_details.cache_read` into a sparse `cache_read_tokens` bucket key (also threaded through `SubagentTokenCollector` → `record_external_llm_usage_records`), and cache-hit input tokens are billed at `input_cache_hit_per_million` (omitted → billed at the miss price, a conservative upper bound). All priced models must use one currency; mixed currencies disable cost reporting and leave cost/currency fields null instead of producing invalid aggregates. Legacy rows fall back to run-level totals at `model_name`; unpriced models yield `cost: null` and cost fields are null when no pricing is configured |
 | **MCP** (`/api/mcp`) | `GET /config` - get config; `PUT /config` - update config (saves to extensions_config.json) |
 | **Skills** (`/api/skills`) | `GET /` - list skills; `GET /{name}` - details; `PUT /{name}` - update enabled; `POST /install` - install from .skill archive (accepts standard optional frontmatter like `version`, `author`, `compatibility`); `POST /reload` - admin-only process-local prompt-cache invalidation after trusted external filesystem changes |
 | **Integrations** (`/api/integrations`) | `GET /lark/status` - inspect managed Lark/Feishu CLI integration state, including `sandbox_runtime_mode` / `sandbox_runtime_ready` (whether `lark-cli` will actually be present in the sandbox at chat time); `POST /lark/install` - admin-only install of the official `lark-*` managed skill pack; `POST /lark/config/start` and `/lark/config/complete` - internal first-time Lark connection setup; `POST /lark/auth/start` and `/lark/auth/complete` - browser device-flow user authorization without terminal access, with optional `domains` / exact `scope` for incremental permission grants |
@@ -1219,7 +1253,13 @@ Gateway API endpoints and `DeerFlowClient` methods can modify MCP servers and sk
 
 **Key difference from Gateway**: Upload accepts local `Path` objects instead of HTTP `UploadFile`, rejects directory paths before copying, and reuses a single worker when document conversion must run inside an active event loop. Artifact returns `(bytes, mime_type)` instead of HTTP Response. The new Gateway-only thread cleanup route deletes `.deer-flow/threads/{thread_id}` after LangGraph thread deletion; there is no matching `DeerFlowClient` method yet. `update_mcp_config()` and `update_skill()` automatically invalidate the cached agent.
 
-**Tests**: `tests/test_client.py` (77 unit tests including `TestGatewayConformance`), `tests/test_client_live.py` (live integration tests, requires config.yaml)
+**Tests**: `tests/test_client.py` (offline unit tests including
+`TestGatewayConformance`), `tests/test_client_live.py` (live integration tests,
+requires a root `config.yaml`, valid API credentials, and explicit opt-in via
+`make test-live` or `DEER_FLOW_RUN_LIVE_TESTS=1`). The live suite calls real
+external APIs and may incur API costs or create local sandboxes, artifacts, and
+files. It is marked `live`, excluded from `make test`, and skipped in default
+CI.
 
 **Gateway Conformance Tests** (`TestGatewayConformance`): Validate that every dict-returning client method conforms to the corresponding Gateway Pydantic response model. Each test parses the client output through the Gateway model — if Gateway adds a required field that the client doesn't provide, Pydantic raises `ValidationError` and CI catches the drift. Covers: `ModelsListResponse`, `ModelResponse`, `SkillsListResponse`, `SkillResponse`, `SkillInstallResponse`, `McpConfigResponse`, `UploadResponse`, `MemoryConfigResponse`, `MemoryStatusResponse`.
 
@@ -1230,18 +1270,26 @@ Gateway API endpoints and `DeerFlowClient` methods can modify MCP servers and sk
 **Every new feature or bug fix MUST be accompanied by unit tests. No exceptions.**
 
 - Write tests in `backend/tests/` following the existing naming convention `test_<feature>.py`
-- Run the full suite before and after your change: `make test`
+- Run the full offline suite before and after your change: `make test`
 - Tests must pass before a feature is considered complete
 - For lightweight config/utility modules, prefer pure unit tests with no external dependencies
 - If a module causes circular import issues in tests, add a `sys.modules` mock in `tests/conftest.py` (see existing example for `deerflow.subagents.executor`)
 
 ```bash
-# Run all tests
+# Run all offline tests
 make test
+
+# Explicit live integration tests (requires config.yaml and credentials;
+# calls real APIs and may create local side effects)
+make test-live
 
 # Run a specific test file
 PYTHONPATH=. uv run pytest tests/test_<feature>.py -v
 ```
+
+Direct pytest collection or execution of `tests/test_client_live.py` remains
+skipped unless `DEER_FLOW_RUN_LIVE_TESTS=1` is set. Do not add that opt-in to
+default CI workflows.
 
 ### Running the Full Application
 
