@@ -41,6 +41,9 @@ ordered `append_artifact_chunk` calls, then `finalize_artifact_write`.
 Present or report the artifact only after finalization succeeds. This keeps
 each model-emitted tool payload small and avoids mid-stream chunk-gap
 timeouts on oversized single-shot writes.
+For HTML artifacts, create or download every local image, stylesheet, script,
+font, and CSS `url(...)` resource before finalization, or use externally
+reachable URLs.
 (See issue #3189.)
 </file_editing_workflow>
 

@@ -1,4 +1,5 @@
 import asyncio
+import errno
 import hashlib
 import json
 import logging
@@ -8,7 +9,9 @@ import re
 import shlex
 from collections.abc import Callable
 from functools import lru_cache
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import unquote
 
 from langchain.tools import tool
 
@@ -73,6 +76,26 @@ _WRITE_FILE_MAX_BYTES_ENV = "DEERFLOW_WRITE_FILE_MAX_BYTES"
 _ARTIFACT_CHUNK_CONTENT_MAX_BYTES = 10 * 1024
 _ARTIFACT_CHUNK_MAX_BYTES_ENV = "DEERFLOW_ARTIFACT_CHUNK_MAX_BYTES"
 _HTML_FILE_EXTENSIONS = (".html", ".htm")
+_HTML_RESOURCE_SRC_TAGS = {
+    "audio",
+    "embed",
+    "iframe",
+    "img",
+    "input",
+    "script",
+    "source",
+    "track",
+    "video",
+}
+_HTML_RESOURCE_LINK_RELS = {
+    "apple-touch-icon",
+    "icon",
+    "manifest",
+    "modulepreload",
+    "preload",
+    "stylesheet",
+}
+_CSS_URL_PATTERN = re.compile(r"""url\(\s*(['"]?)(.*?)\1\s*\)""", re.IGNORECASE)
 _LOCAL_BASH_CWD_COMMANDS = {"cd", "pushd"}
 _LOCAL_BASH_COMMAND_WRAPPERS = {"command", "builtin"}
 _LOCAL_BASH_COMMAND_PREFIX_KEYWORDS = {"!", "{", "case", "do", "elif", "else", "for", "if", "select", "then", "time", "until", "while"}
@@ -2297,6 +2320,13 @@ def _find_html_integrity_error(path: str, content: str) -> str | None:
     return None
 
 
+def _is_complete_html_document(path: str, content: str) -> bool:
+    if not _is_html_file_path(path):
+        return False
+    lowered = content.lower()
+    return "</body" in lowered or "</html" in lowered
+
+
 def _find_html_finalization_error(path: str, content: str) -> str | None:
     """Return an error when a finalized HTML artifact is not a complete page."""
     if not _is_html_file_path(path):
@@ -2337,6 +2367,195 @@ def _find_html_finalization_error(path: str, content: str) -> str | None:
             return "HTML finalization failed: <head> must close before <body>."
 
     return None
+
+
+class _HtmlResourceReferenceParser(HTMLParser):
+    """Collect local-resource-bearing references from HTML.
+
+    This intentionally ignores normal ``<a href>`` links: navigation targets can
+    be legitimate external/report links and are not required for the current page
+    to render. We only validate references that browsers fetch to render the
+    page itself.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.references: list[str] = []
+        self._style_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag = tag.lower()
+        attr_map = {name.lower(): value for name, value in attrs if value is not None}
+
+        if tag == "style":
+            self._style_depth += 1
+
+        style = attr_map.get("style")
+        if style:
+            self.references.extend(_extract_css_url_references(style))
+
+        src = attr_map.get("src")
+        if src and tag in _HTML_RESOURCE_SRC_TAGS:
+            self.references.append(src)
+
+        poster = attr_map.get("poster")
+        if poster and tag == "video":
+            self.references.append(poster)
+
+        srcset = attr_map.get("srcset")
+        if srcset and tag in {"img", "source"}:
+            self.references.extend(_extract_srcset_references(srcset))
+
+        href = attr_map.get("href")
+        if href and tag == "link":
+            rels = {rel.lower() for rel in (attr_map.get("rel") or "").split()}
+            if rels & _HTML_RESOURCE_LINK_RELS:
+                self.references.append(href)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag.lower() == "style" and self._style_depth > 0:
+            self._style_depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        if self._style_depth > 0:
+            self.references.extend(_extract_css_url_references(data))
+
+
+def _extract_css_url_references(css: str) -> list[str]:
+    return [match.group(2).strip() for match in _CSS_URL_PATTERN.finditer(css)]
+
+
+def _extract_srcset_references(srcset: str) -> list[str]:
+    references: list[str] = []
+    index = 0
+    length = len(srcset)
+    while index < length:
+        while index < length and (srcset[index].isspace() or srcset[index] == ","):
+            index += 1
+        start = index
+        while index < length:
+            if srcset[index].isspace():
+                break
+            if srcset[index] == "," and not srcset[start:index].lower().startswith("data:"):
+                break
+            index += 1
+        if index > start:
+            references.append(srcset[start:index])
+        while index < length and srcset[index] != ",":
+            index += 1
+    return references
+
+
+def _extract_html_resource_references(content: str) -> list[str]:
+    parser = _HtmlResourceReferenceParser()
+    parser.feed(content)
+    parser.close()
+    return parser.references
+
+
+def _is_external_or_inline_resource_reference(reference: str) -> bool:
+    value = reference.strip()
+    if not value or value.startswith("#") or value.startswith("//"):
+        return True
+    scheme_match = re.match(r"^([a-z][a-z0-9+.-]*):", value, flags=re.IGNORECASE)
+    if scheme_match is None:
+        return False
+    return scheme_match.group(1).lower() in {
+        "blob",
+        "cid",
+        "data",
+        "http",
+        "https",
+        "javascript",
+        "mailto",
+        "tel",
+    }
+
+
+def _strip_resource_reference_suffix(reference: str) -> str:
+    return reference.split("#", 1)[0].split("?", 1)[0].strip()
+
+
+def _format_resource_reference_errors(label: str, entries: list[str], *, limit: int = 5) -> str:
+    visible = entries[:limit]
+    suffix = f"; and {len(entries) - limit} more" if len(entries) > limit else ""
+    return f"{label}: {', '.join(visible)}{suffix}."
+
+
+def _resolve_html_local_resource_path(document_path: str, reference: str) -> tuple[str | None, str | None]:
+    if _is_external_or_inline_resource_reference(reference):
+        return None, None
+
+    resource_path = _strip_resource_reference_suffix(reference)
+    if not resource_path:
+        return None, None
+    resource_path = unquote(resource_path)
+
+    if resource_path.startswith("/"):
+        if resource_path == VIRTUAL_PATH_PREFIX or resource_path.startswith(f"{VIRTUAL_PATH_PREFIX}/"):
+            return posixpath.normpath(resource_path), None
+        return None, f"{reference} (root-relative paths are not served from artifact previews; use a relative file path, /mnt/user-data/... path, or external URL)"
+
+    normalized_document_path = posixpath.normpath(document_path.replace("\\", "/"))
+    document_dir = posixpath.dirname(normalized_document_path)
+    target_path = posixpath.normpath(posixpath.join(document_dir, resource_path))
+    if normalized_document_path == VIRTUAL_PATH_PREFIX or normalized_document_path.startswith(f"{VIRTUAL_PATH_PREFIX}/"):
+        if target_path != VIRTUAL_PATH_PREFIX and not target_path.startswith(f"{VIRTUAL_PATH_PREFIX}/"):
+            return None, f"{reference} (relative path escapes {VIRTUAL_PATH_PREFIX})"
+    return target_path, None
+
+
+def _html_resource_exists(sandbox: Sandbox, path: str) -> bool:
+    normalized = path.replace("\\", "/")
+    if normalized != VIRTUAL_PATH_PREFIX and not normalized.startswith(f"{VIRTUAL_PATH_PREFIX}/"):
+        # Sandbox.download_file is guaranteed for thread user-data artifacts.
+        # Custom mounts may be writable/readable through sandbox-specific path
+        # mapping but not downloadable through the artifact API. Do not turn
+        # that capability boundary into a false "missing resource" failure.
+        return True
+    try:
+        sandbox.download_file(path)
+        return True
+    except OSError as exc:
+        return getattr(exc, "errno", None) == errno.EFBIG
+    except Exception:
+        return False
+
+
+def _find_html_resource_reference_error(sandbox: Sandbox, document_path: str, content: str) -> str | None:
+    if not _is_html_file_path(document_path):
+        return None
+
+    unsupported: list[str] = []
+    missing: list[str] = []
+    checked_paths: set[str] = set()
+
+    for reference in _extract_html_resource_references(content):
+        target_path, error = _resolve_html_local_resource_path(document_path, reference)
+        if error is not None:
+            unsupported.append(error)
+            continue
+        if target_path is None or target_path in checked_paths:
+            continue
+        checked_paths.add(target_path)
+        if not _html_resource_exists(sandbox, target_path):
+            missing.append(f"{reference} -> {target_path}")
+
+    if unsupported:
+        return _format_resource_reference_errors("HTML contains unsupported local resource reference(s)", unsupported)
+    if missing:
+        return _format_resource_reference_errors("HTML references missing local resource file(s)", missing) + " Create these files before saving the HTML artifact, or replace them with externally reachable URLs."
+    return None
+
+
+def _find_html_ready_to_write_error(sandbox: Sandbox, document_path: str, content: str) -> str | None:
+    """Validate a complete HTML payload before any write path saves it."""
+    html_error = _find_html_integrity_error(document_path, content)
+    if html_error is not None:
+        return html_error
+    if not _is_complete_html_document(document_path, content):
+        return None
+    return _find_html_resource_reference_error(sandbox, document_path, content)
 
 
 def _prepare_writable_sandbox_path(runtime: Runtime | None, path: str) -> tuple[Sandbox, str, str]:
@@ -2483,9 +2702,9 @@ def write_file_tool(
                     html_content_for_check = sandbox.read_file(path) + content
                 except Exception:
                     html_content_for_check = content
-            html_error = _find_html_integrity_error(path, html_content_for_check)
+            html_error = _find_html_ready_to_write_error(sandbox, requested_path, html_content_for_check)
             if html_error is not None:
-                return f"Error: {html_error} Rewrite the HTML from the beginning or append the missing earlier chunk before presenting the artifact."
+                return f"Error: {html_error} Rewrite the HTML from the beginning, append the missing earlier chunk, create missing local resources, or use externally reachable resource URLs before presenting the artifact."
             sandbox.write_file(path, content, append)
         return "OK"
     except SandboxError as e:
@@ -2711,6 +2930,9 @@ def finalize_artifact_write_tool(
             html_error = _find_html_finalization_error(path, content)
             if html_error is not None:
                 return f"Error: {html_error} The final target file was not written."
+            resource_error = _find_html_resource_reference_error(sandbox, requested_path, content)
+            if resource_error is not None:
+                return f"Error: {resource_error} The final target file was not written."
             sandbox.write_file(path, content)
             meta["finalized"] = True
             meta["final_bytes"] = len(content.encode("utf-8"))
@@ -2788,9 +3010,9 @@ def str_replace_tool(
                 content = content.replace(old_str, new_str)
             else:
                 content = content.replace(old_str, new_str, 1)
-            html_error = _find_html_integrity_error(path, content)
+            html_error = _find_html_ready_to_write_error(sandbox, requested_path, content)
             if html_error is not None:
-                return f"Error: {html_error} Rewrite the HTML from the beginning or append the missing earlier chunk before presenting the artifact."
+                return f"Error: {html_error} Rewrite the HTML from the beginning, create missing local resources, or use externally reachable resource URLs before presenting the artifact."
             sandbox.write_file(path, content)
         return "OK"
     except SandboxError as e:

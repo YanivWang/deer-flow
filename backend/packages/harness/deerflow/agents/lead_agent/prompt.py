@@ -715,7 +715,10 @@ combined with a FastAPI gateway for REST API access [citation:FastAPI](https://f
   then `finalize_artifact_write`. Present the artifact only after finalize
   returns OK. For HTML artifacts, finalize requires a complete
   `<html>...<body>...</body></html>` structure, with paired `<head>`,
-  `<style>`, and `<script>` tags whenever those regions are used.
+  `<style>`, and `<script>` tags whenever those regions are used. Any local
+  HTML resources referenced by `src`, `srcset`, stylesheet/icon `href`, or
+  CSS `url(...)` must already exist beside the artifact (or be externally
+  reachable URLs) before finalization.
   (See issue #3189.)
 - Clarity: Be direct and helpful, avoid unnecessary meta-commentary
 - Including Images and Mermaid: Images and Mermaid diagrams are welcomed in Markdown.

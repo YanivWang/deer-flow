@@ -31,11 +31,13 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CodeEditor } from "@/components/workspace/code-editor";
 import { useArtifactContent } from "@/core/artifacts/hooks";
 import {
-  appendHtmlPreviewBaseHref,
   appendHtmlPreviewScrollRestoration,
+  collectHtmlPreviewResourceUrls,
   createHtmlPreviewScrollKey,
   getArtifactViewState,
   HTML_PREVIEW_SCROLL_MESSAGE_SOURCE,
+  resolveHtmlPreviewResourceReference,
+  rewriteHtmlPreviewResourceUrls,
 } from "@/core/artifacts/preview";
 import { urlOfArtifact } from "@/core/artifacts/utils";
 import { useAuth } from "@/core/auth/AuthProvider";
@@ -563,18 +565,77 @@ export function ArtifactFilePreview({
       return;
     }
 
-    const previewContent = appendHtmlPreviewScrollRestoration(
-      appendHtmlPreviewBaseHref(content ?? "", url),
-      scrollKey,
-    );
-    const blob = new Blob([previewContent], {
-      type: "text/html;charset=utf-8",
-    });
-    const objectUrl = URL.createObjectURL(blob);
-    setHtmlPreviewUrl(objectUrl);
+    const abortController = new AbortController();
+    const createdObjectUrls: string[] = [];
+    let isCancelled = false;
+
+    const buildPreview = async () => {
+      const sourceContent = content ?? "";
+      const resourceUrlMap = new Map<string, string>();
+      const resourceUrls = [
+        ...new Set(
+          collectHtmlPreviewResourceUrls(sourceContent)
+            .map((resourceUrl) =>
+              resolveHtmlPreviewResourceReference(resourceUrl, url),
+            )
+            .filter(shouldInlineHtmlPreviewResource),
+        ),
+      ];
+
+      await Promise.all(
+        resourceUrls.map(async (resourceUrl) => {
+          try {
+            const response = await fetch(resourceUrl, {
+              signal: abortController.signal,
+            });
+            if (!response.ok) {
+              return;
+            }
+            resourceUrlMap.set(
+              resourceUrl,
+              await blobToDataUrl(await response.blob()),
+            );
+          } catch (error) {
+            if (!abortController.signal.aborted) {
+              console.warn("Failed to inline HTML preview resource", error);
+            }
+          }
+        }),
+      );
+
+      if (isCancelled) {
+        createdObjectUrls.forEach((objectUrl) => {
+          URL.revokeObjectURL(objectUrl);
+        });
+        return;
+      }
+
+      const previewContent = appendHtmlPreviewScrollRestoration(
+        rewriteHtmlPreviewResourceUrls(
+          sourceContent,
+          url,
+          undefined,
+          resourceUrlMap,
+        ),
+        scrollKey,
+      );
+      const objectUrl = URL.createObjectURL(
+        new Blob([previewContent], {
+          type: "text/html;charset=utf-8",
+        }),
+      );
+      createdObjectUrls.push(objectUrl);
+      setHtmlPreviewUrl(objectUrl);
+    };
+
+    void buildPreview();
 
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      isCancelled = true;
+      abortController.abort();
+      createdObjectUrls.forEach((objectUrl) => {
+        URL.revokeObjectURL(objectUrl);
+      });
     };
   }, [content, language, scrollKey, url]);
 
@@ -635,6 +696,38 @@ function scrollCoordinate(value: unknown) {
   return typeof value === "number" && Number.isFinite(value)
     ? value
     : undefined;
+}
+
+function shouldInlineHtmlPreviewResource(resourceUrl: string) {
+  try {
+    const parsed = new URL(resourceUrl, globalThis.location?.href);
+    if (parsed.origin !== globalThis.location?.origin) {
+      return false;
+    }
+    return (
+      /^\/api\/threads\/[^/]+\/artifacts\//.test(parsed.pathname) ||
+      /^\/mock\/api\/threads\/[^/]+\/artifacts\//.test(parsed.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Failed to read HTML preview resource."));
+    };
+    reader.onerror = () => {
+      reject(reader.error ?? new Error("Failed to read HTML preview resource."));
+    };
+    reader.readAsDataURL(blob);
+  });
 }
 
 function useThrottledValue(

@@ -1,12 +1,14 @@
 import { expect, test } from "@rstest/core";
 
 import {
-  appendHtmlPreviewBaseHref,
   appendHtmlPreviewScrollRestoration,
   buildWriteFileDraftContent,
+  collectHtmlPreviewResourceUrls,
   createHtmlPreviewScrollKey,
   getArtifactViewState,
   hasMalformedCompletedHtmlDocument,
+  resolveHtmlPreviewResourceReference,
+  rewriteHtmlPreviewResourceUrls,
 } from "@/core/artifacts/preview";
 
 const ARTIFACT_PATH = "/artifact-fixtures/report.html";
@@ -301,24 +303,109 @@ test("preserves existing head elements when injecting scroll restoration", () =>
   const html =
     '<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="script-src \'none\'"></head><body><main>content</main></body></html>';
   const result = appendHtmlPreviewScrollRestoration(
-    appendHtmlPreviewBaseHref(
-      html,
-      "/demo/threads/thread-1/user-data/outputs/report.html?download=true",
-      "http://localhost/workspace/chats/thread-1",
-    ),
+    html,
     ARTIFACT_PATH,
   );
 
-  expect(result).toContain(
-    '<base href="http://localhost/demo/threads/thread-1/user-data/outputs/">',
-  );
+  expect(result).toContain('<meta http-equiv="Content-Security-Policy"');
   expect(
     result.indexOf("data-deerflow-artifact-scroll-restoration"),
-  ).toBeLessThan(
-    result.indexOf(
-      '<base href="http://localhost/demo/threads/thread-1/user-data/outputs/">',
-    ),
+  ).toBeLessThan(result.indexOf('<meta http-equiv="Content-Security-Policy"'));
+});
+
+test("rewrites relative HTML preview resources to artifact URLs", () => {
+  const html =
+    '<!doctype html><html><head><title>Preview</title><link rel="stylesheet" href="style.css"><style>.hero{background:url(texture.png)}</style></head><body><a href="page.html">link</a><img src="beautiful-woman.jpg" srcset="small.jpg 1x, large.jpg 2x"><video poster="/mnt/user-data/outputs/poster.jpg"></video><div style="background:url(card.png)"></div></body></html>';
+  const result = rewriteHtmlPreviewResourceUrls(
+    html,
+    "/api/threads/thread-1/artifacts/mnt/user-data/outputs/index.html",
+    "http://localhost/workspace/chats/thread-1",
   );
+
+  expect(result).toContain(
+    'src="http://localhost/api/threads/thread-1/artifacts/mnt/user-data/outputs/beautiful-woman.jpg"',
+  );
+  expect(result).toContain(
+    'srcset="http://localhost/api/threads/thread-1/artifacts/mnt/user-data/outputs/small.jpg 1x, http://localhost/api/threads/thread-1/artifacts/mnt/user-data/outputs/large.jpg 2x"',
+  );
+  expect(result).toContain(
+    'href="http://localhost/api/threads/thread-1/artifacts/mnt/user-data/outputs/style.css"',
+  );
+  expect(result).toContain(
+    'poster="http://localhost/api/threads/thread-1/artifacts/mnt/user-data/outputs/poster.jpg"',
+  );
+  expect(result).toContain(
+    "background:url(http://localhost/api/threads/thread-1/artifacts/mnt/user-data/outputs/texture.png)",
+  );
+  expect(result).toContain(
+    'style="background:url(http://localhost/api/threads/thread-1/artifacts/mnt/user-data/outputs/card.png)"',
+  );
+  expect(result).toContain('<a href="page.html">link</a>');
+});
+
+test("can map resolved HTML preview resources to embedded URLs", () => {
+  const html =
+    '<html><body><img src="portrait.jpg"><div style="background:url(card.png)"></div></body></html>';
+  const resourceUrlMap = new Map([
+    [
+      "http://localhost/api/threads/thread-1/artifacts/mnt/user-data/outputs/portrait.jpg",
+      "data:image/jpeg;base64,image-data",
+    ],
+    [
+      "http://localhost/api/threads/thread-1/artifacts/mnt/user-data/outputs/card.png",
+      "data:image/png;base64,card-data",
+    ],
+  ]);
+
+  expect(
+    rewriteHtmlPreviewResourceUrls(
+      html,
+      "/api/threads/thread-1/artifacts/mnt/user-data/outputs/index.html",
+      "http://localhost/workspace/chats/thread-1",
+      resourceUrlMap,
+    ),
+  ).toContain('src="data:image/jpeg;base64,image-data"');
+  expect(
+    rewriteHtmlPreviewResourceUrls(
+      html,
+      "/api/threads/thread-1/artifacts/mnt/user-data/outputs/index.html",
+      "http://localhost/workspace/chats/thread-1",
+      resourceUrlMap,
+    ),
+  ).toContain("background:url(data:image/png;base64,card-data)");
+});
+
+test("collects HTML preview resource references before rewriting", () => {
+  expect(
+    collectHtmlPreviewResourceUrls(
+      '<html><head><link rel="stylesheet" href="style.css"><style>.hero{background:url(texture.png)}</style></head><body><a href="page.html">link</a><img src="portrait.jpg" srcset="small.jpg 1x, large.jpg 2x"></body></html>',
+    ),
+  ).toEqual(["texture.png", "style.css", "portrait.jpg", "small.jpg", "large.jpg"]);
+});
+
+test("resolves HTML preview resource references against the artifact file", () => {
+  expect(
+    resolveHtmlPreviewResourceReference(
+      "portrait.jpg",
+      "/api/threads/thread-1/artifacts/mnt/user-data/outputs/index.html",
+      "http://localhost/workspace/chats/thread-1",
+    ),
+  ).toBe(
+    "http://localhost/api/threads/thread-1/artifacts/mnt/user-data/outputs/portrait.jpg",
+  );
+});
+
+test("leaves external and inline HTML preview resources alone", () => {
+  const html =
+    '<html><body><img src="https://example.com/a.jpg"><img src="data:image/png;base64,aaa"><source srcset="data:image/png;base64,aaa 1x"><div style="background:url(blob:http://localhost/x)"></div></body></html>';
+
+  expect(
+    rewriteHtmlPreviewResourceUrls(
+      html,
+      "/api/threads/thread-1/artifacts/mnt/user-data/outputs/index.html",
+      "http://localhost/workspace/chats/thread-1",
+    ),
+  ).toBe(html);
 });
 
 test("does not duplicate HTML scroll restoration script", () => {

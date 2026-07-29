@@ -32,6 +32,11 @@ class _InMemorySandbox:
             raise FileNotFoundError(path)
         return self.files[path]
 
+    def download_file(self, path: str) -> bytes:
+        if path not in self.files:
+            raise FileNotFoundError(path)
+        return self.files[path].encode("utf-8")
+
     def write_file(self, path: str, content: str, append: bool = False) -> None:
         if append:
             self.files[path] = self.files.get(path, "") + content
@@ -79,6 +84,35 @@ def _call_write_file(
         )
 
 
+def _call_write_file_with_sandbox(
+    sandbox: _InMemorySandbox,
+    *,
+    content: str,
+    append: bool = False,
+    path: str = "/mnt/user-data/outputs/index.html",
+) -> str:
+    fn = getattr(write_file_tool, "func", write_file_tool)
+    runtime = MagicMock()
+
+    with (
+        patch.object(tools_module, "ensure_sandbox_initialized") as mock_ensure,
+        patch.object(tools_module, "ensure_thread_directories_exist"),
+        patch.object(tools_module, "is_local_sandbox", return_value=False),
+        patch.object(tools_module, "get_file_operation_lock") as mock_lock,
+    ):
+        mock_ensure.return_value = sandbox
+        mock_lock.return_value.__enter__ = MagicMock(return_value=None)
+        mock_lock.return_value.__exit__ = MagicMock(return_value=False)
+
+        return fn(
+            runtime=runtime,
+            description="test write",
+            path=path,
+            content=content,
+            append=append,
+        )
+
+
 def _call_str_replace(
     *,
     existing_content: str,
@@ -98,6 +132,35 @@ def _call_str_replace(
         sandbox = MagicMock()
         sandbox.read_file = MagicMock(return_value=existing_content)
         sandbox.write_file = MagicMock()
+        mock_ensure.return_value = sandbox
+        mock_lock.return_value.__enter__ = MagicMock(return_value=None)
+        mock_lock.return_value.__exit__ = MagicMock(return_value=False)
+
+        return fn(
+            runtime=runtime,
+            description="test replace",
+            path=path,
+            old_str=old_str,
+            new_str=new_str,
+        )
+
+
+def _call_str_replace_with_sandbox(
+    sandbox: _InMemorySandbox,
+    *,
+    old_str: str,
+    new_str: str,
+    path: str = "/mnt/user-data/outputs/index.html",
+) -> str:
+    fn = getattr(str_replace_tool, "func", str_replace_tool)
+    runtime = MagicMock()
+
+    with (
+        patch.object(tools_module, "ensure_sandbox_initialized") as mock_ensure,
+        patch.object(tools_module, "ensure_thread_directories_exist"),
+        patch.object(tools_module, "is_local_sandbox", return_value=False),
+        patch.object(tools_module, "get_file_operation_lock") as mock_lock,
+    ):
         mock_ensure.return_value = sandbox
         mock_lock.return_value.__enter__ = MagicMock(return_value=None)
         mock_lock.return_value.__exit__ = MagicMock(return_value=False)
@@ -240,6 +303,49 @@ def test_str_replace_rejects_truncated_completed_html():
     assert result.startswith("Error: HTML appears truncated")
 
 
+def test_write_file_rejects_complete_html_with_missing_relative_image():
+    sandbox = _InMemorySandbox()
+    path = "/mnt/user-data/outputs/index.html"
+    html = '<!doctype html><html><body><img src="portrait.jpg" alt="Portrait"></body></html>'
+
+    result = _call_write_file_with_sandbox(sandbox, content=html, path=path)
+
+    assert result.startswith("Error: HTML references missing local resource file")
+    assert "portrait.jpg -> /mnt/user-data/outputs/portrait.jpg" in result
+    assert path not in sandbox.files
+
+
+def test_write_file_allows_complete_html_when_relative_image_exists():
+    sandbox = _InMemorySandbox()
+    path = "/mnt/user-data/outputs/index.html"
+    sandbox.files["/mnt/user-data/outputs/portrait.jpg"] = "fake image bytes"
+    html = '<!doctype html><html><body><img src="portrait.jpg" alt="Portrait"></body></html>'
+
+    result = _call_write_file_with_sandbox(sandbox, content=html, path=path)
+
+    assert result == "OK"
+    assert sandbox.files[path] == html
+
+
+def test_str_replace_rejects_complete_html_with_missing_relative_image():
+    sandbox = _InMemorySandbox()
+    path = "/mnt/user-data/outputs/index.html"
+    original = "<!doctype html><html><body><h1>Draft</h1></body></html>"
+    replacement = '<!doctype html><html><body><img src="portrait.jpg" alt="Portrait"></body></html>'
+    sandbox.files[path] = original
+
+    result = _call_str_replace_with_sandbox(
+        sandbox,
+        old_str=original,
+        new_str=replacement,
+        path=path,
+    )
+
+    assert result.startswith("Error: HTML references missing local resource file")
+    assert "portrait.jpg -> /mnt/user-data/outputs/portrait.jpg" in result
+    assert sandbox.files[path] == original
+
+
 def test_env_override_malformed_falls_back_to_default(monkeypatch: pytest.MonkeyPatch):
     """A typo in the env var (e.g. 'lots') must not crash the tool — fall
     back silently to the safe 80 KB default. Crashing on every write because
@@ -267,6 +373,115 @@ def test_artifact_protocol_finalizes_complete_html():
 
     assert result.startswith("OK: finalized artifact")
     assert sandbox.files[path] == first + second
+
+
+def test_artifact_protocol_rejects_html_with_missing_relative_image():
+    sandbox = _InMemorySandbox()
+    path = "/mnt/user-data/outputs/index.html"
+    html = '<!doctype html><html><body><img src="hero-portrait.jpg" alt="Hero"></body></html>'
+
+    assert _call_artifact_tool(begin_artifact_write_tool, sandbox, path=path, total_chunks=1).startswith("OK")
+    assert _call_artifact_tool(append_artifact_chunk_tool, sandbox, path=path, chunk_index=0, content=html).startswith("OK")
+    result = _call_artifact_tool(finalize_artifact_write_tool, sandbox, path=path, expected_chunks=1)
+
+    assert result.startswith("Error: HTML references missing local resource file")
+    assert "hero-portrait.jpg -> /mnt/user-data/outputs/hero-portrait.jpg" in result
+    assert "final target file was not written" in result
+    assert path not in sandbox.files
+
+
+def test_artifact_protocol_allows_html_when_relative_image_exists():
+    sandbox = _InMemorySandbox()
+    path = "/mnt/user-data/outputs/index.html"
+    sandbox.files["/mnt/user-data/outputs/hero-portrait.jpg"] = "fake image bytes"
+    html = '<!doctype html><html><body><img src="hero-portrait.jpg" alt="Hero"></body></html>'
+
+    assert _call_artifact_tool(begin_artifact_write_tool, sandbox, path=path, total_chunks=1).startswith("OK")
+    assert _call_artifact_tool(append_artifact_chunk_tool, sandbox, path=path, chunk_index=0, content=html).startswith("OK")
+    result = _call_artifact_tool(finalize_artifact_write_tool, sandbox, path=path, expected_chunks=1)
+
+    assert result.startswith("OK: finalized artifact")
+    assert sandbox.files[path] == html
+
+
+def test_artifact_protocol_validates_srcset_and_css_url_resources():
+    sandbox = _InMemorySandbox()
+    path = "/mnt/user-data/outputs/index.html"
+    html = """<!doctype html><html><head><style>
+.hero{background-image:url("./hero-bg.png")}
+</style></head><body>
+<picture><source srcset="hero-small.jpg 1x, hero-large.jpg 2x"><img src="hero-small.jpg" alt="Hero"></picture>
+</body></html>"""
+
+    for resource_path in (
+        "/mnt/user-data/outputs/hero-bg.png",
+        "/mnt/user-data/outputs/hero-small.jpg",
+        "/mnt/user-data/outputs/hero-large.jpg",
+    ):
+        sandbox.files[resource_path] = "fake"
+
+    assert _call_artifact_tool(begin_artifact_write_tool, sandbox, path=path, total_chunks=1).startswith("OK")
+    assert _call_artifact_tool(append_artifact_chunk_tool, sandbox, path=path, chunk_index=0, content=html).startswith("OK")
+    result = _call_artifact_tool(finalize_artifact_write_tool, sandbox, path=path, expected_chunks=1)
+
+    assert result.startswith("OK: finalized artifact")
+
+
+def test_artifact_protocol_allows_external_and_inline_html_resources():
+    sandbox = _InMemorySandbox()
+    path = "/mnt/user-data/outputs/index.html"
+    html = """<!doctype html><html><head>
+<link rel="stylesheet" href="https://cdn.example.com/site.css">
+</head><body>
+<img src="data:image/svg+xml,%3Csvg%3E%3C/svg%3E" alt="Inline">
+<img src="//cdn.example.com/hero.jpg" alt="CDN">
+</body></html>"""
+
+    assert _call_artifact_tool(begin_artifact_write_tool, sandbox, path=path, total_chunks=1).startswith("OK")
+    assert _call_artifact_tool(append_artifact_chunk_tool, sandbox, path=path, chunk_index=0, content=html).startswith("OK")
+    result = _call_artifact_tool(finalize_artifact_write_tool, sandbox, path=path, expected_chunks=1)
+
+    assert result.startswith("OK: finalized artifact")
+
+
+def test_artifact_protocol_allows_data_url_srcset_resources():
+    sandbox = _InMemorySandbox()
+    path = "/mnt/user-data/outputs/index.html"
+    html = """<!doctype html><html><body>
+<img srcset="data:image/svg+xml,%3Csvg%3E%3C/svg%3E 1x, https://cdn.example.com/hero.png 2x" alt="Inline">
+</body></html>"""
+
+    assert _call_artifact_tool(begin_artifact_write_tool, sandbox, path=path, total_chunks=1).startswith("OK")
+    assert _call_artifact_tool(append_artifact_chunk_tool, sandbox, path=path, chunk_index=0, content=html).startswith("OK")
+    result = _call_artifact_tool(finalize_artifact_write_tool, sandbox, path=path, expected_chunks=1)
+
+    assert result.startswith("OK: finalized artifact")
+
+
+def test_artifact_protocol_does_not_false_fail_custom_mount_relative_resources():
+    sandbox = _InMemorySandbox()
+    path = "/mnt/custom/index.html"
+    html = '<!doctype html><html><body><img src="portrait.jpg" alt="Portrait"></body></html>'
+
+    assert _call_artifact_tool(begin_artifact_write_tool, sandbox, path=path, total_chunks=1).startswith("OK")
+    assert _call_artifact_tool(append_artifact_chunk_tool, sandbox, path=path, chunk_index=0, content=html).startswith("OK")
+    result = _call_artifact_tool(finalize_artifact_write_tool, sandbox, path=path, expected_chunks=1)
+
+    assert result.startswith("OK: finalized artifact")
+
+
+def test_artifact_protocol_rejects_root_relative_html_resource():
+    sandbox = _InMemorySandbox()
+    path = "/mnt/user-data/outputs/index.html"
+    html = '<!doctype html><html><body><img src="/assets/hero.jpg" alt="Hero"></body></html>'
+
+    assert _call_artifact_tool(begin_artifact_write_tool, sandbox, path=path, total_chunks=1).startswith("OK")
+    assert _call_artifact_tool(append_artifact_chunk_tool, sandbox, path=path, chunk_index=0, content=html).startswith("OK")
+    result = _call_artifact_tool(finalize_artifact_write_tool, sandbox, path=path, expected_chunks=1)
+
+    assert result.startswith("Error: HTML contains unsupported local resource reference")
+    assert "root-relative paths are not served from artifact previews" in result
+    assert path not in sandbox.files
 
 
 def test_artifact_protocol_rejects_out_of_order_chunk():
