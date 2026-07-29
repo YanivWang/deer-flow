@@ -143,8 +143,7 @@ const extensionMap: Record<string, string> = {
   v: "v",
 };
 
-const browserPreviewExtensions = new Set([
-  "pdf",
+const imagePreviewExtensions = new Set([
   "apng",
   "avif",
   "bmp",
@@ -154,17 +153,22 @@ const browserPreviewExtensions = new Set([
   "jpeg",
   "png",
   "webp",
+]);
+
+const audioPreviewExtensions = new Set([
   "mp3",
   "wav",
   "ogg",
   "aac",
   "m4a",
   "flac",
-  "mp4",
-  "mov",
-  "m4v",
-  "webm",
 ]);
+
+const videoPreviewExtensions = new Set(["mp4", "mov", "m4v", "webm"]);
+
+const iframePreviewExtensions = new Set(["pdf"]);
+
+export type BrowserPreviewKind = "image" | "audio" | "video" | "iframe";
 
 export function getFileName(filepath: string) {
   return filepath.split("/").pop()!;
@@ -194,7 +198,26 @@ export function checkCodeFile(
 }
 
 export function canBrowserPreviewFile(filepath: string) {
-  return browserPreviewExtensions.has(getFileExtension(filepath));
+  return getBrowserPreviewKind(filepath) !== null;
+}
+
+export function getBrowserPreviewKind(
+  filepath: string,
+): BrowserPreviewKind | null {
+  const extension = getFileExtension(filepath);
+  if (imagePreviewExtensions.has(extension)) {
+    return "image";
+  }
+  if (audioPreviewExtensions.has(extension)) {
+    return "audio";
+  }
+  if (videoPreviewExtensions.has(extension)) {
+    return "video";
+  }
+  if (iframePreviewExtensions.has(extension)) {
+    return "iframe";
+  }
+  return null;
 }
 
 export function getFileExtensionDisplayName(filepath: string) {

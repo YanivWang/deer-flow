@@ -49,8 +49,8 @@ import {
   toStreamdownComponents,
 } from "@/core/streamdown/components";
 import {
-  canBrowserPreviewFile,
   checkCodeFile,
+  getBrowserPreviewKind,
   getFileExtensionDisplayName,
   getFileIcon,
   getFileName,
@@ -130,12 +130,15 @@ export function ArtifactFileDetail({
   const isSkillFile = useMemo(() => {
     return filepath.endsWith(".skill");
   }, [filepath]);
+  const browserPreviewKind = useMemo(() => {
+    return getBrowserPreviewKind(filepath);
+  }, [filepath]);
   const { isCodeFile, language } = useMemo(() => {
     if (isWriteFile) {
       const codeResult = checkCodeFile(filepath);
       // Non-code browser-previewable files (PDF, images, audio, video)
-      // should render in the sandboxed iframe, not the code editor.
-      if (!codeResult.isCodeFile && canBrowserPreviewFile(filepath)) {
+      // should render through their browser preview path, not the code editor.
+      if (!codeResult.isCodeFile && browserPreviewKind !== null) {
         return codeResult;
       }
       let language = codeResult.language;
@@ -147,10 +150,10 @@ export function ArtifactFileDetail({
       return { isCodeFile: true, language: "markdown" };
     }
     return checkCodeFile(filepath);
-  }, [filepath, isWriteFile, isSkillFile]);
+  }, [filepath, isWriteFile, isSkillFile, browserPreviewKind]);
   const canPreviewInBrowser = useMemo(() => {
-    return canBrowserPreviewFile(filepath);
-  }, [filepath]);
+    return browserPreviewKind !== null;
+  }, [browserPreviewKind]);
   const isSupportPreview = useMemo(() => {
     return language === "html" || language === "markdown";
   }, [language]);
@@ -366,11 +369,12 @@ export function ArtifactFileDetail({
             readonly
           />
         )}
-        {!isCodeFile && canPreviewInBrowser && (
-          <iframe
-            className="size-full"
-            sandbox=""
-            src={urlOfArtifact({ filepath, threadId, isMock })}
+        {!isCodeFile && canPreviewInBrowser && browserPreviewKind && (
+          <ArtifactBrowserPreview
+            filepath={filepath}
+            kind={browserPreviewKind}
+            threadId={threadId}
+            isMock={isMock}
           />
         )}
         {!isCodeFile && !canPreviewInBrowser && (
@@ -383,6 +387,61 @@ export function ArtifactFileDetail({
       </ArtifactContent>
     </Artifact>
   );
+}
+
+function ArtifactBrowserPreview({
+  filepath,
+  kind,
+  threadId,
+  isMock,
+}: {
+  filepath: string;
+  kind: NonNullable<ReturnType<typeof getBrowserPreviewKind>>;
+  threadId: string;
+  isMock?: boolean;
+}) {
+  const src = urlOfArtifact({ filepath, threadId, isMock });
+
+  if (kind === "image") {
+    return (
+      <div className="bg-background flex size-full items-center justify-center">
+        <img
+          alt={getFileName(filepath)}
+          className="max-h-full max-w-full object-contain"
+          src={src}
+        />
+      </div>
+    );
+  }
+
+  if (kind === "audio") {
+    return (
+      <div className="bg-background flex size-full items-center justify-center p-6">
+        <audio
+          aria-label={getFileName(filepath)}
+          className="w-full max-w-xl"
+          controls
+          preload="metadata"
+          src={src}
+        />
+      </div>
+    );
+  }
+
+  if (kind === "video") {
+    return (
+      <video
+        aria-label={getFileName(filepath)}
+        className="size-full bg-black object-contain"
+        controls
+        playsInline
+        preload="metadata"
+        src={src}
+      />
+    );
+  }
+
+  return <iframe className="size-full" sandbox="" src={src} />;
 }
 
 function ArtifactDownloadFallback({
