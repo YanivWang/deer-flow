@@ -256,9 +256,9 @@ honor environment proxy settings.
 
 Backend processes automatically pick up `config.yaml` changes on the next config access, so model metadata updates do not require a manual restart during development.
 The checkpoint storage settings `database.checkpoint_channel_mode` and
-`database.checkpoint_delta_snapshot_frequency` are exceptions: both are frozen
-when the process first builds an agent (including through `DeerFlowClient`) and
-require a process restart to change safely.
+`database.checkpoint_delta.snapshot_frequency` (default `10`) are exceptions:
+both are frozen when the process first builds an agent (including through
+`DeerFlowClient`) and require a process restart to change safely.
 
 > [!TIP]
 > On Linux, if Docker-based commands fail with `permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock`, add your user to the `docker` group and re-login before retrying. See [CONTRIBUTING.md](CONTRIBUTING.md#linux-docker-daemon-permission-denied) for the full fix.
@@ -306,6 +306,8 @@ On Windows, run the local development flow from Git Bash. Native `cmd.exe` and P
    make check  # Verifies Node.js 22+, pnpm, uv, nginx
    ```
 
+   The local `make check`, `make install`, `make dev`, and `make start` entry points use a direct `pnpm`/`pnpm.cmd` executable when available and otherwise fall back to `corepack pnpm`. Corepack runs from `frontend/`, so it honors the `packageManager` version pinned in `frontend/package.json`; enabling a global pnpm shim is not required.
+
 2. **Install dependencies**:
    ```bash
    make install  # Install backend + frontend dependencies + pre-commit hooks
@@ -346,6 +348,17 @@ DeerFlow runs the agent runtime inside the Gateway API. Development mode enables
 | **Restart** | `./scripts/serve.sh --restart [flags]` | `./scripts/docker.sh restart` | — |
 
 Gateway owns `/api/langgraph/*` and translates those public LangGraph-compatible paths to its native `/api/*` routers behind nginx.
+
+For workflows that invoke `backend/langgraph.json` through LangGraph Studio or
+a direct LangGraph Server, DeerFlow consumes the authenticated identity
+published by that runtime and uses it for custom-agent configuration/SOUL, user
+skills and skill policy, uploads, thread data, and memory reads/writes. This
+keeps authenticated runs out of the shared `default` filesystem bucket, and the
+server-owned identity takes precedence over ordinary client-supplied `user_id`
+values. External identities such as email addresses are mapped to stable,
+collision-resistant directory-safe user IDs before accessing DeerFlow storage.
+The default DeerFlow service topology remains the Gateway-embedded runtime
+described above.
 
 Gateway runs automatically enforce native delivery for artifacts created or modified under `/mnt/user-data/outputs`: `present_files` must present at least one output produced by the current run, and the terminal `run.delivery` receipt must be durably recorded. Runs that do not produce output artifacts keep ordinary conversational behavior.
 
@@ -694,7 +707,7 @@ A skill directory is a package boundary: once DeerFlow finds its `SKILL.md`, nes
 
 Users can explicitly activate an enabled skill for a single turn by starting the request with `/skill-name`, for example `/data-analysis analyze uploads/foo.csv`. DeerFlow loads that skill's `SKILL.md` as hidden current-turn context while leaving the base prompt limited to skill metadata. Slash activation respects disabled skills, custom-agent skill whitelists, and existing channel commands such as `/new` and `/help`.
 
-An enabled skill's `allowed-tools` policy applies only after that skill is explicitly slash-activated or captured in the thread's active skill context after a `read_file` load. Merely enabling, advertising, or listing a skill in a custom agent's `skills` allowlist does not reduce the lead agent's normal toolset. During a slash-activated run, that explicit skill's policy is authoritative: reading another `SKILL.md` may provide instructions but cannot widen the slash skill's tools. Without slash activation, policies from skills actually loaded into active context retain their union semantics. Once active, the policy filters both model-visible tool schemas and tool execution. Framework discovery tools (`tool_search` and `describe_skill`) remain available so an allowed deferred tool or installed skill can still be discovered, but discovery and promotion never grant permission to execute a business tool omitted from `allowed-tools`. `task` is not framework-exempt; a restrictive skill must list it explicitly to delegate to a subagent. Per-step policy decisions are internal runtime context and are removed from observable or persisted context copies. Registry failures and an active set with no remaining valid skill fail closed to framework-safe tools; individual stale paths are ignored only when another valid active skill remains. This is best-effort behavioral scoping, not a hard security boundary: loading skill instructions through another tool is not captured, and active-skill entries can be evicted from bounded context.
+An enabled skill's `allowed-tools` policy applies only after that skill is explicitly slash-activated or captured in the agent's active skill context after a `read_file` load. Merely enabling, advertising, or listing a skill in a custom agent or subagent `skills` allowlist does not reduce that agent's normal toolset; subagents use the same progressive discovery and activation policy as the lead agent. During a slash-activated run, that explicit skill's policy is authoritative: reading another `SKILL.md` may provide instructions but cannot widen the slash skill's tools. Without slash activation, policies from skills actually loaded into active context retain their union semantics. Once active, the policy filters both model-visible tool schemas and tool execution. Framework discovery tools (`tool_search` and `describe_skill`) remain available so an allowed deferred tool or installed skill can still be discovered, but discovery and promotion never grant permission to execute a business tool omitted from `allowed-tools`. `task` is not framework-exempt; a restrictive skill must list it explicitly to delegate to a subagent. Per-step policy decisions are internal runtime context and are removed from observable or persisted context copies. Registry failures and an active set with no remaining valid skill fail closed to framework-safe tools; individual stale paths are ignored only when another valid active skill remains. This is best-effort behavioral scoping, not a hard security boundary: loading skill instructions through another tool is not captured, and active-skill entries can be evicted from bounded context.
 
 When you install `.skill` archives through the Gateway, DeerFlow accepts standard optional frontmatter metadata such as `version`, `author`, and `compatibility` instead of rejecting otherwise valid external skills.
 
@@ -911,6 +924,14 @@ After each run, DeerFlow records a workspace change summary for the run-owned `w
 
 With `AioSandboxProvider`, shell execution runs inside isolated containers. With `LocalSandboxProvider`, file tools still map to per-thread directories on the host, but host `bash` is disabled by default because it is not a secure isolation boundary. Re-enable host bash only for fully trusted local workflows. Host bash commands have a wall-clock timeout, and long-lived processes should be started in the background with output redirected to a workspace log.
 
+`AioSandboxProvider` normally detects thread-data mounts from its backend: local
+containers use the mounted gateway directories, while remote/provisioner
+sandboxes receive uploaded files through explicit synchronization. Deployments
+where both sides are guaranteed to share the same thread user-data directories
+can set `sandbox.thread_data_mounts: true` to skip that per-upload sandbox
+acquire and sync. Leave the field unset for automatic detection; setting it
+incorrectly can make uploaded files unavailable inside the sandbox.
+
 This is the difference between a chatbot with tool access and an agent with an actual execution environment.
 
 ```
@@ -949,11 +970,30 @@ Then uncomment the `group: browser` tool entries in `config.yaml` (`browser_navi
 
 Most agents forget everything the moment a conversation ends. DeerFlow remembers.
 
+DeerFlow also includes an optional `openviking` memory backend. It connects to
+an independent OpenViking server over HTTP, submits completed turns through
+OpenViking Sessions, and recalls remote memories for prompt injection while
+leaving DeerMem as the default. The initial integration supports
+`memory.mode: middleware`. Bounded submitted-message watermarks cover long and
+compacted histories and prevent a failed Session commit from duplicating
+already accepted messages on retry; the shared HTTP client also has explicit
+connection limits and jittered retries. See
+[OpenViking memory backend](docs/OPENVIKING.md) for configuration and Docker
+startup.
+
 Across sessions, DeerFlow builds a persistent memory of your profile, preferences, and accumulated knowledge. The more you use it, the better it knows you — your writing style, your technical stack, your recurring workflows. Memory is stored locally and stays under your control.
+
+DeerMem remains the default local backend. An opt-in `mem0` backend is also
+available for the hosted mem0 Platform API or API-compatible self-hosted
+servers. Its token-bearing `base_url` must use HTTPS by default; plaintext HTTP
+requires an explicit local-development opt-in. See the
+[mem0 backend guide](backend/packages/harness/deerflow/agents/memory/backends/mem0/README.md).
 
 Memory updates now skip duplicate fact entries at apply time, so repeated preferences and context do not accumulate endlessly across sessions.
 
 File-backed memory now separates global user context from agent facts. Each user has one `memory.json` containing only the project-independent `user` and `history` summaries; every fact is a canonical Markdown file below `agents/{agent_name}/facts/`. Existing lead-agent middleware, API, Settings, import/export, and embedded-client calls that omit `agent_name` resolve inside DeerMem to the reserved `__default__` bucket. That bucket is outside the valid custom-agent name grammar, so a real custom agent named `lead-agent` has a separate fact repository and deleting a custom agent cannot delete a memory-only directory without `config.yaml`. Public agent identifiers are case-insensitive and canonicalized to lowercase. Runtime/API readers still receive a compatibility `facts` array for the selected/default agent, so the frontend does not read agent facts from `memory.json`; structured Markdown `source` metadata is projected to the historical string field at the MemoryManager boundary. An unscoped Clear All first migrates facts from unread legacy per-agent JSON without adopting its soon-to-be-cleared summaries, then removes shared summaries and facts from every agent bucket while preserving agent configuration files, so a later read cannot resurrect skipped legacy facts; an explicitly agent-scoped clear removes only that agent's facts. On first normal read, old facts embedded in the user JSON are migrated automatically to `__default__`; facts written to the earlier implicit `lead-agent` bucket are also moved when that directory is not a real custom agent. Migration and normal writes notify the configured retrieval adapter only after durable storage locks are released. DeerMem uses a scope-aware SQLite FTS5/BM25 adapter by default, stores only rebuildable derived index data under `.retrieval/`, and rebuilds it in the background during Gateway startup or lazily on the first scoped search. A corrupt derived index is recreated automatically. Set `memory.backend_config.retrieval_adapter` to an empty string to disable it and use the local substring fallback. Chinese tokenization is optional; install the backend `memory-zh` extra (`uv sync --extra memory-zh`) for jieba-assisted sub-phrase search. Journaled writes, a shared user lock, and optimistic user-memory revisions prevent silent lost updates.
+
+Memory injection follows the configured operation mode. In `middleware` mode, DeerMem injects the user-global summaries and the selected agent's facts. In `tool` mode, the automatic `<memory>` block contains only the global `user` and `history` summaries; agent facts are retrieved explicitly through `memory_search`, avoiding duplicate automatic and tool-returned fact context. Setting `memory.injection_enabled: false` still disables the entire block in either mode.
 
 Single-fact repository operations are genuinely incremental: an upsert/delete reads, journals, writes, and re-indexes only the addressed fact files, and returns an explicit incomplete delta rather than a cache-dependent fake full document. Summary change sets merge the supplied `user`/`history` child keys over the persisted sections so a partial update cannot erase omitted siblings; full imports normalize both sections to the complete compatibility schema before applying replacement values. Manager/API compatibility methods materialize a fresh full document only when their public response contract requires one. Fact-level point operations use separate expected user-memory and fact revisions and may explicitly rebase when every addressed fact precondition still holds. Snapshot-derived operations such as scoped clear, capped create, consolidation, and trimming never replay stale delete/trim sets: a manifest conflict reloads the complete document and recomputes the operation, with a bounded retry. Fact paths use the first two hexadecimal characters of `SHA-256(fact_id)` so generated `fact_*` IDs distribute across shards. The cache token combines the shared JSON's nanosecond mtime, size, and persisted revision; this prevents coarse-mtime same-size writes from returning stale data without scanning fact files. Direct out-of-band Markdown edits require an explicit reload. Storage-specific conflicts and corruption are translated at the MemoryManager boundary; the Gateway returns conflict as HTTP 409 and a stable, non-sensitive corruption error as HTTP 500. Full-document `save()` remains a compatibility API and computes a diff before writing; malformed or missing `facts` can no longer silently erase an agent's Markdown files. Legacy migration preserves non-empty `user`/`history` before deleting an agent `memory.json`; conflicting summaries keep the legacy file and fail loudly instead of choosing a winner.
 
