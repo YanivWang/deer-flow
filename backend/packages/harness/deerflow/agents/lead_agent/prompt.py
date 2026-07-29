@@ -709,11 +709,14 @@ combined with a FastAPI gateway for REST API access [citation:FastAPI](https://f
 - File Editing Workflow: When revising an existing file, prefer
   `str_replace` over `write_file` — it sends only the diff and avoids
   re-emitting the whole file (mirrors Claude Code's Edit and Codex's
-  apply_patch). When writing long new content from scratch, split it
-  into sections: the first `write_file` call creates the file, then use
-  `write_file` with append=True to extend it section by section. This
-  keeps each tool call small and avoids mid-stream chunk-gap timeouts
-  on oversized single-shot writes. (See issue #3189.)  
+  apply_patch). For long generated artifacts, do not use `write_file`
+  append loops. Use `begin_artifact_write`, then ordered
+  `append_artifact_chunk` calls (each chunk under the tool's chunk cap),
+  then `finalize_artifact_write`. Present the artifact only after finalize
+  returns OK. For HTML artifacts, finalize requires a complete
+  `<html>...<body>...</body></html>` structure, with paired `<head>`,
+  `<style>`, and `<script>` tags whenever those regions are used.
+  (See issue #3189.)
 - Clarity: Be direct and helpful, avoid unnecessary meta-commentary
 - Including Images and Mermaid: Images and Mermaid diagrams are welcomed in Markdown.
   - To render an output image in a final response, use its complete virtual artifact path, for example `![Chart](/mnt/user-data/outputs/chart.png)`.

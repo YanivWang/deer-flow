@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -60,15 +61,18 @@ _DEFAULT_GREP_MAX_RESULTS = 100
 _MAX_GREP_MAX_RESULTS = 500
 _DEFAULT_WRITE_FILE_ERROR_MAX_CHARS = 2000
 
-# Maximum bytes accepted in a single non-append write_file call (issue #3189).
-# Oversized single-shot writes correlate with LLM streaming chunk-gap timeouts
-# because the tool-call JSON payload (which the model must emit as one
-# continuous stream) grows past the safe window. 80 KB ≈ 20K tokens, a
-# comfortable headroom under the factory-default 240s stream_chunk_timeout.
+# Maximum bytes accepted in a single write_file call (issue #3189).
+# Oversized writes correlate with LLM streaming chunk-gap timeouts because the
+# tool-call JSON payload (which the model must emit as one continuous stream)
+# grows past the safe window. 80 KB ≈ 20K tokens, a comfortable headroom under
+# the factory-default 240s stream_chunk_timeout.
 # Deployments can override via env var DEERFLOW_WRITE_FILE_MAX_BYTES; set to
 # 0 (or negative) to disable the guard entirely.
 _WRITE_FILE_CONTENT_MAX_BYTES = 80 * 1024
 _WRITE_FILE_MAX_BYTES_ENV = "DEERFLOW_WRITE_FILE_MAX_BYTES"
+_ARTIFACT_CHUNK_CONTENT_MAX_BYTES = 10 * 1024
+_ARTIFACT_CHUNK_MAX_BYTES_ENV = "DEERFLOW_ARTIFACT_CHUNK_MAX_BYTES"
+_HTML_FILE_EXTENSIONS = (".html", ".htm")
 _LOCAL_BASH_CWD_COMMANDS = {"cd", "pushd"}
 _LOCAL_BASH_COMMAND_WRAPPERS = {"command", "builtin"}
 _LOCAL_BASH_COMMAND_PREFIX_KEYWORDS = {"!", "{", "case", "do", "elif", "else", "for", "if", "select", "then", "time", "until", "while"}
@@ -2201,7 +2205,7 @@ read_file_tool.coroutine = _read_file_tool_async
 
 
 def _effective_write_file_max_bytes() -> int:
-    """Return the active size cap for non-append write_file calls.
+    """Return the active size cap for write_file calls.
 
     Reads ``DEERFLOW_WRITE_FILE_MAX_BYTES`` at call time (not import time)
     so tests and runtime tweaks take effect without restart. Falls back to
@@ -2217,6 +2221,193 @@ def _effective_write_file_max_bytes() -> int:
         return _WRITE_FILE_CONTENT_MAX_BYTES
 
 
+def _effective_artifact_chunk_max_bytes() -> int:
+    """Return the active size cap for each artifact chunk."""
+    raw = os.environ.get(_ARTIFACT_CHUNK_MAX_BYTES_ENV)
+    if raw is None:
+        return _ARTIFACT_CHUNK_CONTENT_MAX_BYTES
+    try:
+        return int(raw)
+    except ValueError:
+        return _ARTIFACT_CHUNK_CONTENT_MAX_BYTES
+
+
+def _content_sha256(content: str) -> str:
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def _is_html_file_path(path: str) -> bool:
+    return Path(path).suffix.lower() in _HTML_FILE_EXTENSIONS
+
+
+def _html_tag_count(content: str, tag: str, *, closing: bool = False) -> int:
+    slash = r"/\s*" if closing else ""
+    return len(re.findall(rf"<\s*{slash}{tag}\b[^>]*>", content, flags=re.IGNORECASE))
+
+
+def _find_html_integrity_error(path: str, content: str) -> str | None:
+    """Return an actionable error for HTML that is clearly a broken full page.
+
+    Chunked writes are allowed to contain an incomplete prefix. Once a payload
+    contains document-closing markers such as ``</body>``/``</html>`` (or closes
+    ``head``/``style``/``script``), it is no longer just a prefix; at that point
+    missing counterparts are strong evidence of a truncated tool-call payload.
+    """
+    if not _is_html_file_path(path):
+        return None
+
+    lowered = content.lower()
+    complete_document = "</body" in lowered or "</html" in lowered
+    closes_structural_region = any(f"</{tag}" in lowered for tag in ("head", "style", "script"))
+    if not complete_document and not closes_structural_region:
+        return None
+
+    for tag in ("style", "script"):
+        opens = _html_tag_count(content, tag)
+        closes = _html_tag_count(content, tag, closing=True)
+        if opens != closes:
+            return f"HTML appears truncated: found {opens} <{tag}> tag(s) but {closes} </{tag}> tag(s)."
+
+    if "</head" in lowered and _html_tag_count(content, "head") == 0:
+        return "HTML appears truncated: found </head> without a matching <head>."
+
+    if complete_document:
+        required_tags = ("html", "body")
+        for tag in required_tags:
+            if _html_tag_count(content, tag) == 0:
+                return f"HTML appears truncated: missing <{tag}> before the document closes."
+            if _html_tag_count(content, tag, closing=True) == 0:
+                return f"HTML appears truncated: missing </{tag}> before the document closes."
+
+        positions = {
+            "html_open": lowered.find("<html"),
+            "head_open": lowered.find("<head"),
+            "head_close": lowered.find("</head"),
+            "body_open": lowered.find("<body"),
+            "body_close": lowered.find("</body"),
+            "html_close": lowered.find("</html"),
+        }
+        if positions["head_open"] >= 0 or positions["head_close"] >= 0:
+            ordered = positions["html_open"] <= positions["head_open"] <= positions["head_close"] <= positions["body_open"] <= positions["body_close"] <= positions["html_close"]
+        else:
+            ordered = positions["html_open"] <= positions["body_open"] <= positions["body_close"] <= positions["html_close"]
+        if not ordered:
+            return "HTML appears truncated: <html>, <head>, and <body> tags are out of document order."
+
+    return None
+
+
+def _find_html_finalization_error(path: str, content: str) -> str | None:
+    """Return an error when a finalized HTML artifact is not a complete page."""
+    if not _is_html_file_path(path):
+        return None
+
+    integrity_error = _find_html_integrity_error(path, content)
+    if integrity_error is not None:
+        return integrity_error
+
+    lowered = content.lower()
+    for tag in ("html", "body"):
+        if _html_tag_count(content, tag) != 1:
+            return f"HTML finalization failed: expected exactly one <{tag}> tag."
+        if _html_tag_count(content, tag, closing=True) != 1:
+            return f"HTML finalization failed: expected exactly one </{tag}> tag."
+
+    if lowered.find("<html") > lowered.find("<body"):
+        return "HTML finalization failed: <html> must appear before <body>."
+    if lowered.find("<body") > lowered.find("</body"):
+        return "HTML finalization failed: <body> must appear before </body>."
+    if lowered.find("</body") > lowered.find("</html"):
+        return "HTML finalization failed: </body> must appear before </html>."
+
+    for tag in ("head", "style", "script"):
+        if _html_tag_count(content, tag) != _html_tag_count(content, tag, closing=True):
+            return f"HTML finalization failed: <{tag}> and </{tag}> tags are not paired."
+
+    if _html_tag_count(content, "head") > 1 or _html_tag_count(content, "head", closing=True) > 1:
+        return "HTML finalization failed: expected at most one <head>...</head> region."
+
+    head_open = lowered.find("<head")
+    head_close = lowered.find("</head")
+    body_open = lowered.find("<body")
+    if head_open >= 0:
+        if head_close < head_open:
+            return "HTML finalization failed: </head> appears before <head>."
+        if head_close > body_open:
+            return "HTML finalization failed: <head> must close before <body>."
+
+    return None
+
+
+def _prepare_writable_sandbox_path(runtime: Runtime | None, path: str) -> tuple[Sandbox, str, str]:
+    """Initialize sandbox and resolve a writable path when local mode requires it."""
+    requested_path = path
+    sandbox = ensure_sandbox_initialized(runtime)
+    ensure_thread_directories_exist(runtime)
+    if is_local_sandbox(runtime):
+        thread_data = get_thread_data(runtime)
+        validate_local_tool_path(path, thread_data)
+        if not _is_custom_mount_path(path):
+            path = _resolve_and_validate_user_data_path(path, thread_data)
+        # Custom mount paths are resolved by LocalSandbox._resolve_path()
+    return sandbox, requested_path, path
+
+
+def _artifact_staging_paths(path: str) -> tuple[str, str]:
+    directory, basename = posixpath.split(path.replace("\\", "/"))
+    if not basename:
+        basename = "artifact"
+    prefix = f".{basename}.deerflow"
+    if directory:
+        return posixpath.join(directory, f"{prefix}.part"), posixpath.join(directory, f"{prefix}.meta.json")
+    return f"{prefix}.part", f"{prefix}.meta.json"
+
+
+def _new_artifact_meta(
+    *,
+    requested_path: str,
+    resolved_path: str,
+    total_chunks: int | None,
+    final_sha256: str | None,
+) -> dict[str, object]:
+    return {
+        "path": requested_path,
+        "resolved_path": resolved_path,
+        "next_chunk_index": 0,
+        "total_chunks": total_chunks,
+        "final_sha256": final_sha256,
+    }
+
+
+def _read_artifact_meta(sandbox: Sandbox, meta_path: str, path: str) -> dict[str, object] | str:
+    try:
+        raw = sandbox.read_file(meta_path)
+    except Exception:
+        return f"Error: No active artifact write session for {path}. Call begin_artifact_write first."
+    try:
+        meta = json.loads(raw)
+    except json.JSONDecodeError:
+        return f"Error: Artifact write metadata is corrupt for {path}. Restart with begin_artifact_write."
+    if not isinstance(meta, dict):
+        return f"Error: Artifact write metadata is corrupt for {path}. Restart with begin_artifact_write."
+    if meta.get("resolved_path") != path:
+        return f"Error: Artifact write metadata path mismatch for {path}. Restart with begin_artifact_write."
+    next_chunk_index = meta.get("next_chunk_index")
+    if not isinstance(next_chunk_index, int) or next_chunk_index < 0:
+        return f"Error: Artifact write metadata has an invalid next_chunk_index for {path}. Restart with begin_artifact_write."
+    total_chunks = meta.get("total_chunks")
+    if total_chunks is not None and (not isinstance(total_chunks, int) or total_chunks < 0):
+        return f"Error: Artifact write metadata has an invalid total_chunks value for {path}. Restart with begin_artifact_write."
+    final_sha256 = meta.get("final_sha256")
+    if final_sha256 is not None and not isinstance(final_sha256, str):
+        return f"Error: Artifact write metadata has an invalid final_sha256 value for {path}. Restart with begin_artifact_write."
+    return meta
+
+
+def _write_artifact_meta(sandbox: Sandbox, meta_path: str, meta: dict[str, object]) -> None:
+    sandbox.write_file(meta_path, json.dumps(meta, ensure_ascii=False, sort_keys=True))
+
+
 @tool("write_file", parse_docstring=True)
 def write_file_tool(
     runtime: Runtime,
@@ -2225,7 +2416,7 @@ def write_file_tool(
     content: str,
     append: bool = False,
 ) -> str:
-    """Write text content to a file. By default this overwrites the target file; set append=True to add content to the end without replacing existing content.
+    """Write small text content to a file. By default this overwrites the target file; set append=True to add a small suffix to the end without replacing existing content.
 
     READ-BEFORE-WRITE (issue #3857): if the target file already exists (including
     append=True), you must have read its CURRENT version with read_file first.
@@ -2234,10 +2425,12 @@ def write_file_tool(
     that fail this check are rejected with an error.
 
     SIZE POLICY (issue #3189):
-    A single non-append write_file call must not exceed 80 KB of UTF-8 content.
-    Oversized single-shot writes correlate with LLM streaming chunk-gap
+    A single write_file call must not exceed 80 KB of UTF-8 content.
+    Oversized writes correlate with LLM streaming chunk-gap
     timeouts because the tool-call JSON payload — which the model must emit as
-    one continuous stream — grows past the safe window. For larger documents,
+    one continuous stream — grows past the safe window. For long generated artifacts,
+    use begin_artifact_write -> append_artifact_chunk -> finalize_artifact_write.
+    For ordinary file edits,
     use ONE of these strategies (write_file rejects oversized payloads with an
     actionable error):
 
@@ -2245,10 +2438,18 @@ def write_file_tool(
          use `str_replace` to surgically update sections. This is the same
          pattern Claude Code's Write+Edit and OpenAI Codex's apply_patch use,
          and keeps each tool call's payload small.
-      2. APPEND-IN-CHUNKS (for new long-form content): split the document into
-         sections, each well under 80 KB. First call uses append=False to
-         create the file; subsequent calls use append=True. The 80 KB cap does
-         NOT apply to append=True calls.
+      2. SMALL APPEND ONLY: append=True is for short end-of-file edits after
+         reading the current file. Do not use write_file append=True as the
+         long-artifact generation protocol.
+
+    HTML INTEGRITY:
+    For .html/.htm files, write_file rejects payloads that already contain
+    document-closing markers (for example </body> or </html>) but are missing
+    the corresponding opening/closing structure. This prevents truncated
+    tool-call payloads from being saved as successful complete web pages. When
+    writing a generated HTML artifact, use the artifact write protocol so
+    finalize_artifact_write can validate the complete staged document before
+    the final target file is created.
 
     Operators can override the cap via env var `DEERFLOW_WRITE_FILE_MAX_BYTES`
     (0 disables the guard entirely). Raising it risks streaming timeouts.
@@ -2259,30 +2460,32 @@ def write_file_tool(
         content: The content to write to the file. ALWAYS PROVIDE THIS PARAMETER THIRD.
         append: Whether to append content to the end of the file instead of overwriting it. Defaults to False.
     """
-    if not append:
-        max_bytes = _effective_write_file_max_bytes()
-        if max_bytes > 0:
-            content_bytes = len(content.encode("utf-8"))
-            if content_bytes > max_bytes:
-                return (
-                    f"Error: write_file content ({content_bytes} bytes) exceeds the "
-                    f"{max_bytes}-byte single-call limit. Split the content into smaller "
-                    "pieces: either (a) write the first section now, then use `str_replace` "
-                    "for further edits, or (b) call write_file again with append=True "
-                    "carrying the next section. See SIZE POLICY in the tool docstring "
-                    "or issue #3189 for the rationale."
-                )
+    max_bytes = _effective_write_file_max_bytes()
+    if max_bytes > 0:
+        content_bytes = len(content.encode("utf-8"))
+        if content_bytes > max_bytes:
+            return (
+                f"Error: write_file content ({content_bytes} bytes) exceeds the "
+                f"{max_bytes}-byte single-call limit. Split the content into smaller "
+                "pieces. For long generated artifacts, use begin_artifact_write, "
+                "append_artifact_chunk, and finalize_artifact_write. For revisions "
+                "to an existing file, use str_replace after reading the current file. "
+                "See SIZE POLICY in the tool docstring or issue #3189 for the rationale."
+            )
+
     try:
         requested_path = path
-        sandbox = ensure_sandbox_initialized(runtime)
-        ensure_thread_directories_exist(runtime)
-        if is_local_sandbox(runtime):
-            thread_data = get_thread_data(runtime)
-            validate_local_tool_path(path, thread_data)
-            if not _is_custom_mount_path(path):
-                path = _resolve_and_validate_user_data_path(path, thread_data)
-            # Custom mount paths are resolved by LocalSandbox._resolve_path()
+        sandbox, requested_path, path = _prepare_writable_sandbox_path(runtime, path)
         with get_file_operation_lock(sandbox, path):
+            html_content_for_check = content
+            if append and _is_html_file_path(path):
+                try:
+                    html_content_for_check = sandbox.read_file(path) + content
+                except Exception:
+                    html_content_for_check = content
+            html_error = _find_html_integrity_error(path, html_content_for_check)
+            if html_error is not None:
+                return f"Error: {html_error} Rewrite the HTML from the beginning or append the missing earlier chunk before presenting the artifact."
             sandbox.write_file(path, content, append)
         return "OK"
     except SandboxError as e:
@@ -2314,6 +2517,231 @@ async def _write_file_tool_async(
 
 
 write_file_tool.coroutine = _write_file_tool_async
+
+
+@tool("begin_artifact_write", parse_docstring=True)
+def begin_artifact_write_tool(
+    runtime: Runtime,
+    description: str,
+    path: str,
+    total_chunks: int | None = None,
+    final_sha256: str | None = None,
+) -> str:
+    """Start a staged artifact write for a generated deliverable.
+
+    Use this for long generated artifacts such as HTML pages, reports, dashboards,
+    generated source files, or other deliverables that may require multiple chunks.
+    The final target file is not overwritten here. Chunks are collected in a hidden
+    staging file and become visible at the requested path only after
+    finalize_artifact_write validates the complete staged content.
+
+    Args:
+        description: Explain why you are creating this artifact in short words. ALWAYS PROVIDE THIS PARAMETER FIRST.
+        path: The **absolute** final artifact path to create. ALWAYS PROVIDE THIS PARAMETER SECOND.
+        total_chunks: Optional number of chunks you expect to append before finalization.
+        final_sha256: Optional SHA-256 hex digest of the final UTF-8 content.
+    """
+    if total_chunks is not None and total_chunks < 0:
+        return "Error: total_chunks must be zero or greater."
+
+    try:
+        sandbox, requested_path, path = _prepare_writable_sandbox_path(runtime, path)
+        part_path, meta_path = _artifact_staging_paths(path)
+        with get_file_operation_lock(sandbox, path):
+            sandbox.write_file(part_path, "")
+            _write_artifact_meta(
+                sandbox,
+                meta_path,
+                _new_artifact_meta(
+                    requested_path=requested_path,
+                    resolved_path=path,
+                    total_chunks=total_chunks,
+                    final_sha256=final_sha256,
+                ),
+            )
+        chunk_hint = f" Append exactly {total_chunks} chunk(s)." if total_chunks is not None else ""
+        return f"OK: artifact staging initialized for {requested_path}.{chunk_hint} Next chunk_index is 0."
+    except SandboxError as e:
+        return _format_write_file_error(path, e, runtime)
+    except PermissionError:
+        return f"Error: Permission denied writing artifact: {path}"
+    except IsADirectoryError:
+        return f"Error: Artifact path is a directory, not a file: {path}"
+    except OSError as e:
+        return _format_write_file_error(path, e, runtime)
+    except Exception as e:
+        return f"Error: Unexpected error starting artifact write: {_sanitize_error(e, runtime)}"
+
+
+async def _begin_artifact_write_tool_async(
+    runtime: Runtime,
+    description: str,
+    path: str,
+    total_chunks: int | None = None,
+    final_sha256: str | None = None,
+) -> str:
+    return await _run_sync_tool_after_async_sandbox_init(begin_artifact_write_tool.func, runtime, description, path, total_chunks, final_sha256)
+
+
+begin_artifact_write_tool.coroutine = _begin_artifact_write_tool_async
+
+
+@tool("append_artifact_chunk", parse_docstring=True)
+def append_artifact_chunk_tool(
+    runtime: Runtime,
+    description: str,
+    path: str,
+    chunk_index: int,
+    content: str,
+    chunk_sha256: str | None = None,
+) -> str:
+    """Append one ordered, small chunk to an active staged artifact write.
+
+    Each chunk is capped at 10 KB by default to keep the model's tool-call JSON
+    comfortably below streaming chunk-gap timeout thresholds. Chunks must be
+    appended in exact 0-based order; out-of-order appends are rejected.
+
+    Args:
+        description: Explain what this chunk contains in short words. ALWAYS PROVIDE THIS PARAMETER FIRST.
+        path: The **absolute** final artifact path from begin_artifact_write. ALWAYS PROVIDE THIS PARAMETER SECOND.
+        chunk_index: The expected 0-based chunk index returned by the previous call.
+        content: The chunk content to append.
+        chunk_sha256: Optional SHA-256 hex digest of this chunk's UTF-8 content.
+    """
+    if chunk_index < 0:
+        return "Error: chunk_index must be zero or greater."
+
+    max_bytes = _effective_artifact_chunk_max_bytes()
+    content_bytes = len(content.encode("utf-8"))
+    if max_bytes > 0 and content_bytes > max_bytes:
+        return f"Error: artifact chunk ({content_bytes} bytes) exceeds the {max_bytes}-byte single-chunk limit. Split this artifact into smaller chunks."
+
+    if chunk_sha256 is not None and chunk_sha256 != _content_sha256(content):
+        return "Error: artifact chunk SHA-256 mismatch. Re-send this chunk exactly."
+
+    try:
+        sandbox, requested_path, path = _prepare_writable_sandbox_path(runtime, path)
+        part_path, meta_path = _artifact_staging_paths(path)
+        with get_file_operation_lock(sandbox, path):
+            meta_or_error = _read_artifact_meta(sandbox, meta_path, path)
+            if isinstance(meta_or_error, str):
+                return meta_or_error
+            meta = meta_or_error
+            if meta.get("finalized") is True:
+                return f"Error: Artifact write session for {requested_path} is already finalized. Start a new session with begin_artifact_write."
+            next_chunk_index = meta["next_chunk_index"]
+            if chunk_index != next_chunk_index:
+                return f"Error: Expected chunk_index {next_chunk_index} for {requested_path}, got {chunk_index}. Re-send chunks in order."
+            total_chunks = meta.get("total_chunks")
+            if isinstance(total_chunks, int) and chunk_index >= total_chunks:
+                return f"Error: Received chunk_index {chunk_index}, but total_chunks is {total_chunks} for {requested_path}."
+            sandbox.write_file(part_path, content, append=True)
+            meta["next_chunk_index"] = chunk_index + 1
+            meta["bytes_written"] = int(meta.get("bytes_written", 0) or 0) + content_bytes
+            _write_artifact_meta(sandbox, meta_path, meta)
+        return f"OK: appended chunk {chunk_index} for {requested_path} ({content_bytes} bytes). Next chunk_index is {chunk_index + 1}."
+    except SandboxError as e:
+        return _format_write_file_error(path, e, runtime)
+    except PermissionError:
+        return f"Error: Permission denied writing artifact chunk: {path}"
+    except IsADirectoryError:
+        return f"Error: Artifact path is a directory, not a file: {path}"
+    except OSError as e:
+        return _format_write_file_error(path, e, runtime)
+    except Exception as e:
+        return f"Error: Unexpected error appending artifact chunk: {_sanitize_error(e, runtime)}"
+
+
+async def _append_artifact_chunk_tool_async(
+    runtime: Runtime,
+    description: str,
+    path: str,
+    chunk_index: int,
+    content: str,
+    chunk_sha256: str | None = None,
+) -> str:
+    return await _run_sync_tool_after_async_sandbox_init(append_artifact_chunk_tool.func, runtime, description, path, chunk_index, content, chunk_sha256)
+
+
+append_artifact_chunk_tool.coroutine = _append_artifact_chunk_tool_async
+
+
+@tool("finalize_artifact_write", parse_docstring=True)
+def finalize_artifact_write_tool(
+    runtime: Runtime,
+    description: str,
+    path: str,
+    expected_chunks: int | None = None,
+    final_sha256: str | None = None,
+) -> str:
+    """Validate a staged artifact and write the final target file.
+
+    This is the only successful completion point for long generated artifacts.
+    For HTML files, finalization requires a complete document structure before
+    the target path is written.
+
+    Args:
+        description: Explain why this artifact is ready in short words. ALWAYS PROVIDE THIS PARAMETER FIRST.
+        path: The **absolute** final artifact path from begin_artifact_write. ALWAYS PROVIDE THIS PARAMETER SECOND.
+        expected_chunks: Optional exact number of chunks that must have been appended.
+        final_sha256: Optional SHA-256 hex digest of the final UTF-8 content.
+    """
+    if expected_chunks is not None and expected_chunks < 0:
+        return "Error: expected_chunks must be zero or greater."
+
+    try:
+        sandbox, requested_path, path = _prepare_writable_sandbox_path(runtime, path)
+        part_path, meta_path = _artifact_staging_paths(path)
+        with get_file_operation_lock(sandbox, path):
+            meta_or_error = _read_artifact_meta(sandbox, meta_path, path)
+            if isinstance(meta_or_error, str):
+                return meta_or_error
+            meta = meta_or_error
+            chunk_count = meta["next_chunk_index"]
+            total_chunks = meta.get("total_chunks")
+            if expected_chunks is not None and chunk_count != expected_chunks:
+                return f"Error: Expected {expected_chunks} artifact chunk(s) for {requested_path}, but received {chunk_count}."
+            if isinstance(total_chunks, int) and chunk_count != total_chunks:
+                return f"Error: Artifact {requested_path} expected {total_chunks} chunk(s), but received {chunk_count}."
+            content = sandbox.read_file(part_path)
+            digest = _content_sha256(content)
+            expected_digest = final_sha256 if final_sha256 is not None else meta.get("final_sha256")
+            if isinstance(expected_digest, str) and expected_digest and digest != expected_digest:
+                return "Error: artifact final SHA-256 mismatch. Re-read the staged tail or restart the artifact write."
+            html_error = _find_html_finalization_error(path, content)
+            if html_error is not None:
+                return f"Error: {html_error} The final target file was not written."
+            sandbox.write_file(path, content)
+            meta["finalized"] = True
+            meta["final_bytes"] = len(content.encode("utf-8"))
+            meta["computed_sha256"] = digest
+            _write_artifact_meta(sandbox, meta_path, meta)
+        return f"OK: finalized artifact {requested_path} ({len(content.encode('utf-8'))} bytes, {chunk_count} chunk(s), sha256={digest})."
+    except SandboxError as e:
+        return _format_write_file_error(path, e, runtime)
+    except FileNotFoundError:
+        return f"Error: No staged artifact content found for {path}. Call begin_artifact_write first."
+    except PermissionError:
+        return f"Error: Permission denied finalizing artifact: {path}"
+    except IsADirectoryError:
+        return f"Error: Artifact path is a directory, not a file: {path}"
+    except OSError as e:
+        return _format_write_file_error(path, e, runtime)
+    except Exception as e:
+        return f"Error: Unexpected error finalizing artifact write: {_sanitize_error(e, runtime)}"
+
+
+async def _finalize_artifact_write_tool_async(
+    runtime: Runtime,
+    description: str,
+    path: str,
+    expected_chunks: int | None = None,
+    final_sha256: str | None = None,
+) -> str:
+    return await _run_sync_tool_after_async_sandbox_init(finalize_artifact_write_tool.func, runtime, description, path, expected_chunks, final_sha256)
+
+
+finalize_artifact_write_tool.coroutine = _finalize_artifact_write_tool_async
 
 
 @tool("str_replace", parse_docstring=True)
@@ -2360,6 +2788,9 @@ def str_replace_tool(
                 content = content.replace(old_str, new_str)
             else:
                 content = content.replace(old_str, new_str, 1)
+            html_error = _find_html_integrity_error(path, content)
+            if html_error is not None:
+                return f"Error: {html_error} Rewrite the HTML from the beginning or append the missing earlier chunk before presenting the artifact."
             sandbox.write_file(path, content)
         return "OK"
     except SandboxError as e:

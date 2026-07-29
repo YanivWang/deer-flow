@@ -168,11 +168,6 @@ export function ArtifactFileDetail({
     }
     return findToolCallResult(toolCallId, thread.messages);
   })();
-  const artifactViewState = getArtifactViewState({
-    filepath: filepathFromProps,
-    isSupportPreview,
-    toolResult,
-  });
   const { content, url } = useArtifactContent({
     threadId,
     filepath: filepathFromProps,
@@ -186,6 +181,12 @@ export function ArtifactFileDetail({
     isWritingFile ? WRITE_FILE_PREVIEW_REFRESH_INTERVAL_MS : 0,
     filepathFromProps,
   );
+  const artifactViewState = getArtifactViewState({
+    filepath: filepathFromProps,
+    isSupportPreview,
+    toolResult,
+    content: visibleContent,
+  });
 
   const [viewMode, setViewMode] = useState<"code" | "preview">(
     artifactViewState.initialViewMode,

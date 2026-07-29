@@ -366,6 +366,8 @@ described above.
 
 Gateway runs automatically enforce native delivery for artifacts created or modified under `/mnt/user-data/outputs`: `present_files` must present at least one output produced by the current run, and the terminal `run.delivery` receipt must be durably recorded. Runs that do not produce output artifacts keep ordinary conversational behavior.
 
+File artifacts are also guarded at write time. `write_file` remains for small files and ordinary edits, while long generated deliverables should use the staged artifact protocol: `begin_artifact_write` creates hidden staging files, ordered `append_artifact_chunk` calls add small chunks, and `finalize_artifact_write` validates the staged content before writing the final target file. Completed `.html`/`.htm` artifacts are rejected at finalize time unless their document tags form a complete page, so truncated pages do not present as valid output.
+
 DeerFlow's built-in custom events are available through both LangGraph streaming interfaces: native clients can continue subscribing to `stream_mode="custom"`, while callback-based integrations can consume the same payloads as `on_custom_event` records from `astream_events(version="v2")`. The callback event name matches the payload's `type` field.
 
 #### Docker Production Deployment

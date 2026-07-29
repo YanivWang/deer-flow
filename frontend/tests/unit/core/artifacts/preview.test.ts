@@ -6,6 +6,7 @@ import {
   buildWriteFileDraftContent,
   createHtmlPreviewScrollKey,
   getArtifactViewState,
+  hasMalformedCompletedHtmlDocument,
 } from "@/core/artifacts/preview";
 
 const ARTIFACT_PATH = "/artifact-fixtures/report.html";
@@ -47,6 +48,44 @@ test("keeps failed write artifacts in code view", () => {
     canPreview: false,
     initialViewMode: "code",
   });
+});
+
+test("keeps malformed completed HTML write artifacts in code view", () => {
+  expect(
+    getArtifactViewState({
+      filepath: `write-file:${ARTIFACT_PATH}?message_id=ai-1&tool_call_id=call-1`,
+      isSupportPreview: true,
+      toolResult: "OK",
+      content:
+        "/* TIMELINE */\n.timeline{color:red}</style></head><body><h1>Broken</h1></body></html>",
+    }),
+  ).toEqual({
+    canPreview: false,
+    initialViewMode: "code",
+  });
+});
+
+test("detects malformed completed HTML but allows incomplete prefix chunks", () => {
+  expect(
+    hasMalformedCompletedHtmlDocument(
+      "/* TIMELINE */\n.timeline{color:red}</style></head><body><h1>Broken</h1></body></html>",
+    ),
+  ).toBe(true);
+  expect(
+    hasMalformedCompletedHtmlDocument(
+      "<!doctype html><html><head><style>.hero{color:red}",
+    ),
+  ).toBe(false);
+  expect(
+    hasMalformedCompletedHtmlDocument(
+      "<!doctype html><html><head><style>.hero{color:red}</style></head><body><h1>OK</h1></body></html>",
+    ),
+  ).toBe(false);
+  expect(
+    hasMalformedCompletedHtmlDocument(
+      "<!doctype html><html><body><h1>OK</h1></body></html>",
+    ),
+  ).toBe(false);
 });
 
 test("keeps completed artifacts on their existing preview defaults", () => {

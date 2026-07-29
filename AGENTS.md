@@ -139,3 +139,8 @@ These apply repo-wide; module guides own the module-specific detail.
   frontend tests live in `frontend/tests/`.
 - **Format before pushing** — run `make format` (backend) / `pnpm check` (frontend). Backend
   CI enforces `ruff format --check`, so formatting must be clean before a push.
+- **Python editor analysis** — root-level `pyrightconfig.json` points pyright/basedpyright
+  at `backend/.venv` and the harness source path so opening the monorepo root in VS Code
+  resolves `deerflow.*`, backend dependencies, and pytest imports consistently. It keeps
+  type checking off by default because backend CI currently relies on ruff and pytest rather
+  than pyright/basedpyright as a strict type gate.

@@ -1,0 +1,24 @@
+{
+  "include": [
+    "backend/app",
+    "backend/packages/harness/deerflow",
+    "backend/tests"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/.venv",
+    "frontend",
+    "node_modules"
+  ],
+  "extraPaths": [
+    "backend",
+    "backend/packages/harness"
+  ],
+  "pythonVersion": "3.12",
+  "venvPath": "backend",
+  "venv": ".venv",
+  "typeCheckingMode": "off",
+  "reportMissingImports": "error"
+}

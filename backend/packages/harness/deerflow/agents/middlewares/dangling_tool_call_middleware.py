@@ -244,19 +244,19 @@ class DanglingToolCallMiddleware(AgentMiddleware[AgentState]):
             name = tool_call.get("name")
             error = tool_call.get("error")
             error_text = error[:_MAX_RECOVERY_ERROR_DETAIL_LEN] if isinstance(error, str) and error else ""
-            # Workaround for issue #2894: malformed write_file calls can carry huge Markdown
+            # Workaround for issue #2894: malformed file-writing calls can carry huge Markdown
             # payloads in invalid tool-call args. Keep recovery guidance actionable without
             # echoing large or malformed content back to the model.
-            if name == "write_file":
+            if name in {"write_file", "append_artifact_chunk"}:
                 details = f" Parser error: {error_text}" if error_text else ""
                 return (
-                    "[write_file failed before execution: the tool-call arguments were not valid JSON, "
+                    f"[{name} failed before execution: the tool-call arguments were not valid JSON, "
                     "so no file was written. This often happens when the model tries to write a very "
-                    "large Markdown file in a single tool call, especially when `content` contains "
+                    "large file chunk in a single tool call, especially when `content` contains "
                     "unescaped quotes, inline JSON, backslashes, or code fences. Do not retry the same "
-                    "large `write_file` payload for this artifact; provide the report/content directly "
-                    "as normal assistant text in your next response. If a file write is still needed "
-                    f"later, split the file into smaller sections instead of one large payload.{details}]"
+                    "large payload for this artifact. If a file write is still needed, start or restart "
+                    "with begin_artifact_write, send smaller ordered append_artifact_chunk calls, then "
+                    f"finish with finalize_artifact_write.{details}]"
                 )
             if error_text:
                 return f"[Tool call could not be executed because its arguments were invalid: {error_text}]"

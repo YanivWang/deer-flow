@@ -567,9 +567,8 @@ def test_warm_enabled_skills_cache_logs_on_timeout(monkeypatch, caplog):
 def test_system_prompt_template_contains_file_editing_workflow_rule():
     """The File Editing Workflow rule must remain in the system prompt
     template so the planner picks the right tool (str_replace for edits,
-    write_file + append=True for long new content) and avoids mid-stream
-    chunk-gap timeouts on oversized single-shot writes. See issue #3189
-    / PR #3195.
+    staged artifact writes for long new content) and avoids mid-stream chunk-gap
+    timeouts on oversized single-shot writes. See issue #3189 / PR #3195.
 
     We deliberately do NOT assert on any specific byte / word threshold
     here — that would re-introduce the docstring-lock-in pattern the
@@ -582,7 +581,9 @@ def test_system_prompt_template_contains_file_editing_workflow_rule():
     # Behavioural anchors — if either of these disappears, the model will
     # silently regress to single-shot write_file calls for long content.
     assert "str_replace" in template
-    assert "append=True" in template
+    assert "begin_artifact_write" in template
+    assert "append_artifact_chunk" in template
+    assert "finalize_artifact_write" in template
 
 
 def test_system_prompt_template_requires_virtual_paths_for_output_images():

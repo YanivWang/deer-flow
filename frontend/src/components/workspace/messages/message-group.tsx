@@ -486,6 +486,12 @@ function shouldInlineThinkingToken({
   return formatDebugToken(debugStep, t);
 }
 
+function isSuccessfulToolResult(
+  result?: string | Record<string, unknown>,
+): boolean {
+  return typeof result === "string" && result.trimStart().startsWith("OK");
+}
+
 function DebugStepLabel({
   label,
   token,
@@ -577,6 +583,19 @@ function ToolCall({
     typeof args.path === "string"
       ? args.path
       : undefined;
+  const artifactWritePath =
+    (name === "begin_artifact_write" ||
+      name === "append_artifact_chunk" ||
+      name === "finalize_artifact_write") &&
+    typeof args.path === "string"
+      ? args.path
+      : undefined;
+  const finalizedArtifactPath =
+    name === "finalize_artifact_write" &&
+    typeof args.path === "string" &&
+    isSuccessfulToolResult(result)
+      ? args.path
+      : undefined;
   const writeFileArtifactUrl = writeFilePath
     ? buildWriteFileArtifactURL({
         filepath: writeFilePath,
@@ -584,14 +603,13 @@ function ToolCall({
         toolCallId: id,
       })
     : null;
+  const fileArtifactUrl = finalizedArtifactPath ?? writeFileArtifactUrl;
   const autoOpenArtifactUrl =
-    isLoading &&
     isLast &&
     autoOpen &&
     autoSelect &&
-    writeFileArtifactUrl &&
-    !result
-      ? writeFileArtifactUrl
+    ((isLoading && writeFileArtifactUrl && !result) || finalizedArtifactPath)
+      ? (finalizedArtifactPath ?? writeFileArtifactUrl)
       : null;
 
   useEffect(() => {
@@ -795,7 +813,13 @@ function ToolCall({
         )}
       </ChainOfThoughtStep>
     );
-  } else if (name === "write_file" || name === "str_replace") {
+  } else if (
+    name === "write_file" ||
+    name === "str_replace" ||
+    name === "begin_artifact_write" ||
+    name === "append_artifact_chunk" ||
+    name === "finalize_artifact_write"
+  ) {
     let description: string | undefined = (args as { description: string })
       ?.description;
     if (!description) {
@@ -805,20 +829,20 @@ function ToolCall({
     return (
       <ChainOfThoughtStep
         key={id}
-        className={writeFileArtifactUrl ? "cursor-pointer" : undefined}
+        className={fileArtifactUrl ? "cursor-pointer" : undefined}
         label={resolveLabel(description)}
         icon={NotebookPenIcon}
         onClick={() => {
-          if (!writeFileArtifactUrl) {
+          if (!fileArtifactUrl) {
             return;
           }
-          select(writeFileArtifactUrl);
+          select(fileArtifactUrl);
           setOpen(true);
         }}
       >
-        {writeFilePath && (
+        {(writeFilePath ?? artifactWritePath) && (
           <ChainOfThoughtSearchResult className="cursor-pointer">
-            {writeFilePath}
+            {writeFilePath ?? artifactWritePath}
           </ChainOfThoughtSearchResult>
         )}
       </ChainOfThoughtStep>

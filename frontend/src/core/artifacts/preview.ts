@@ -27,6 +27,71 @@ function hasFailedWriteResult(toolResult: string | undefined) {
   );
 }
 
+function htmlTagCount(content: string, tag: string, closing = false) {
+  const slash = closing ? String.raw`/\s*` : "";
+  return Array.from(
+    content.matchAll(new RegExp(String.raw`<\s*${slash}${tag}\b[^>]*>`, "gi")),
+  ).length;
+}
+
+export function hasMalformedCompletedHtmlDocument(content: string) {
+  const lowered = content.toLowerCase();
+  const completeDocument =
+    lowered.includes("</body") || lowered.includes("</html");
+  const closesStructuralRegion = ["head", "style", "script"].some((tag) =>
+    lowered.includes(`</${tag}`),
+  );
+  if (!completeDocument && !closesStructuralRegion) {
+    return false;
+  }
+
+  for (const tag of ["style", "script"]) {
+    if (htmlTagCount(content, tag) !== htmlTagCount(content, tag, true)) {
+      return true;
+    }
+  }
+
+  if (lowered.includes("</head") && htmlTagCount(content, "head") === 0) {
+    return true;
+  }
+
+  if (!completeDocument) {
+    return false;
+  }
+
+  for (const tag of ["html", "body"]) {
+    if (
+      htmlTagCount(content, tag) === 0 ||
+      htmlTagCount(content, tag, true) === 0
+    ) {
+      return true;
+    }
+  }
+
+  const positions = {
+    htmlOpen: lowered.indexOf("<html"),
+    headOpen: lowered.indexOf("<head"),
+    headClose: lowered.indexOf("</head"),
+    bodyOpen: lowered.indexOf("<body"),
+    bodyClose: lowered.indexOf("</body"),
+    htmlClose: lowered.indexOf("</html"),
+  };
+  if (positions.headOpen >= 0 || positions.headClose >= 0) {
+    return !(
+      positions.htmlOpen <= positions.headOpen &&
+      positions.headOpen <= positions.headClose &&
+      positions.headClose <= positions.bodyOpen &&
+      positions.bodyOpen <= positions.bodyClose &&
+      positions.bodyClose <= positions.htmlClose
+    );
+  }
+  return !(
+    positions.htmlOpen <= positions.bodyOpen &&
+    positions.bodyOpen <= positions.bodyClose &&
+    positions.bodyClose <= positions.htmlClose
+  );
+}
+
 function getTextContent(content: unknown) {
   if (typeof content === "string") {
     return content.trim();
@@ -147,17 +212,27 @@ export function getArtifactViewState({
   filepath,
   isSupportPreview,
   toolResult,
+  content,
 }: {
   filepath: string;
   isSupportPreview: boolean;
   toolResult?: string;
+  content?: string;
 }): {
   canPreview: boolean;
   initialViewMode: ArtifactViewMode;
 } {
   const isWriteArtifact = isWriteFileArtifact(filepath);
+  const isMalformedHtmlWriteArtifact =
+    isWriteArtifact &&
+    filepath.toLowerCase().startsWith("write-file:") &&
+    filepath.toLowerCase().includes(".htm") &&
+    typeof content === "string" &&
+    hasMalformedCompletedHtmlDocument(content);
   const canPreview =
-    isSupportPreview && (!isWriteArtifact || !hasFailedWriteResult(toolResult));
+    isSupportPreview &&
+    !isMalformedHtmlWriteArtifact &&
+    (!isWriteArtifact || !hasFailedWriteResult(toolResult));
   return {
     canPreview,
     initialViewMode: canPreview ? "preview" : "code",

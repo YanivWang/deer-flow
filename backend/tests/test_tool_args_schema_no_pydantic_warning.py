@@ -20,7 +20,10 @@ from langchain.tools import ToolRuntime
 from langchain_core.utils.function_calling import convert_to_openai_tool
 
 from deerflow.sandbox.tools import (
+    append_artifact_chunk_tool,
     bash_tool,
+    begin_artifact_write_tool,
+    finalize_artifact_write_tool,
     glob_tool,
     grep_tool,
     ls_tool,
@@ -57,6 +60,9 @@ _TOOL_CASES = [
     (read_file_tool, {"description": "read", "path": "/tmp/x"}),
     (write_file_tool, {"description": "write", "path": "/tmp/x", "content": "hi"}),
     (str_replace_tool, {"description": "replace", "path": "/tmp/x", "old_str": "a", "new_str": "b"}),
+    (begin_artifact_write_tool, {"description": "begin", "path": "/tmp/x"}),
+    (append_artifact_chunk_tool, {"description": "chunk", "path": "/tmp/x", "chunk_index": 0, "content": "hi"}),
+    (finalize_artifact_write_tool, {"description": "finalize", "path": "/tmp/x"}),
     (list_uploaded_files, {"include_outline": False, "max_results": 20}),
     (present_file_tool, {"filepaths": ["/tmp/x"], "tool_call_id": "call-1"}),
     (view_image_tool, {"image_path": "/tmp/img.png", "tool_call_id": "call-1"}),

@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 READ_MARK_KEY = "deerflow_read_mark"
 
 _READ_TOOLS = frozenset({"read_file"})
-_GATED_WRITE_TOOLS = frozenset({"write_file", "str_replace"})
+_GATED_WRITE_TOOLS = frozenset({"write_file", "str_replace", "finalize_artifact_write"})
 
 # AIO/E2B-style sandboxes convert read failures (including missing files)
 # into "Error: ..." strings instead of raising. Content with this prefix is
@@ -191,7 +191,7 @@ class ReadBeforeWriteMiddleware(AgentMiddleware):
         try:
             current = self._content_reader(request.runtime, path)
         except FileNotFoundError:
-            # write_file creates the file; str_replace surfaces its own error.
+            # write_file/finalize_artifact_write create the file; str_replace surfaces its own error.
             return None
         except Exception:
             logger.warning("read-before-write gate could not inspect %r; allowing the write (fail-open)", path, exc_info=True)
