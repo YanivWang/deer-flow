@@ -1,6 +1,13 @@
 import { FilesIcon, XIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { type PanelSize, usePanelRef } from "react-resizable-panels";
 
 import { ConversationEmptyState } from "@/components/ai-elements/conversation";
@@ -44,6 +51,8 @@ const ChatBox: React.FC<{
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const threadIdRef = useRef(threadId);
+  const chatRegionRef = useRef<HTMLDivElement | null>(null);
+  const rightPanelContainerRef = useRef<HTMLElement | null>(null);
 
   const {
     artifacts,
@@ -123,6 +132,9 @@ const ChatBox: React.FC<{
   const rightPanelOpen = activeRightPanel !== null;
   const [renderedRightPanel, setRenderedRightPanel] =
     useState<RightPanelKind | null>(activeRightPanel);
+  const [rightPanelHiddenFromA11y, setRightPanelHiddenFromA11y] = useState(
+    () => !rightPanelOpen,
+  );
 
   const resizableIdBase = useMemo(() => {
     return pathname.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
@@ -227,6 +239,27 @@ const ChatBox: React.FC<{
       window.clearTimeout(timeout);
     };
   }, [activeRightPanel]);
+
+  useLayoutEffect(() => {
+    if (rightPanelOpen) {
+      setRightPanelHiddenFromA11y(false);
+      return;
+    }
+
+    const activeElement = document.activeElement;
+    const rightPanelContainer = rightPanelContainerRef.current;
+    if (
+      activeElement instanceof HTMLElement &&
+      rightPanelContainer?.contains(activeElement)
+    ) {
+      chatRegionRef.current?.focus({ preventScroll: true });
+      if (document.activeElement === activeElement) {
+        activeElement.blur();
+      }
+    }
+
+    setRightPanelHiddenFromA11y(true);
+  }, [rightPanelOpen]);
 
   useEffect(() => {
     if (sidecarOpen && artifactsOpen) {
@@ -351,12 +384,12 @@ const ChatBox: React.FC<{
       id={`${resizableIdBase}-group`}
       orientation="horizontal"
       className={cn(
-        "[container-type:inline-size] size-full min-h-0",
+        "@container size-full min-h-0",
         // The sized flex item is the library's own `[data-panel]` element, not
         // the child `className` lands on, so the open/close transition has to be
         // addressed from here.
         animatingRightPanel &&
-          "[&>[data-panel]]:transition-[flex-grow] [&>[data-panel]]:duration-[280ms] [&>[data-panel]]:ease-out motion-reduce:[&>[data-panel]]:transition-none",
+          "*:data-panel:transition-[flex-grow] *:data-panel:duration-280 *:data-panel:ease-out motion-reduce:*:data-panel:transition-none",
       )}
     >
       <ResizablePanel
@@ -364,7 +397,12 @@ const ChatBox: React.FC<{
         minSize="30%"
         className="relative min-h-0 min-w-0"
       >
-        <div className="relative size-full min-h-0 min-w-0" id="chat">
+        <div
+          ref={chatRegionRef}
+          className="relative size-full min-h-0 min-w-0"
+          id="chat"
+          tabIndex={-1}
+        >
           {children}
         </div>
       </ResizablePanel>
@@ -388,9 +426,10 @@ const ChatBox: React.FC<{
         className="min-h-0 min-w-0"
       >
         <aside
-          aria-hidden={!rightPanelOpen}
+          ref={rightPanelContainerRef}
+          aria-hidden={rightPanelHiddenFromA11y}
           className={cn(
-            "size-full min-h-0 min-w-0 overflow-hidden transition-opacity duration-[280ms] ease-out motion-reduce:transition-none",
+            "size-full min-h-0 min-w-0 overflow-hidden transition-opacity duration-280 ease-out motion-reduce:transition-none",
             rightPanelOpen ? "opacity-100" : "pointer-events-none opacity-0",
           )}
           id="artifacts"

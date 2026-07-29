@@ -7,10 +7,10 @@ import { MarkdownContent } from "@/components/workspace/messages/markdown-conten
 function renderMarkdown(
   content: string,
   isLoading: boolean,
-  components?: Parameters<typeof MarkdownContent>[0]["components"],
+  options: Partial<Parameters<typeof MarkdownContent>[0]> = {},
 ) {
   return renderToStaticMarkup(
-    createElement(MarkdownContent, { content, isLoading, components }),
+    createElement(MarkdownContent, { content, isLoading, ...options }),
   );
 }
 
@@ -58,10 +58,12 @@ describe("MarkdownContent streaming code blocks", () => {
       "[Docs](https://example.com)\n\n![Chart](chart.png)",
       true,
       {
-        a: ({ children, href }) =>
-          createElement("a", { "data-custom-link": true, href }, children),
-        img: (props: ImgHTMLAttributes<HTMLImageElement>) =>
-          createElement("img", { ...props, "data-custom-image": true }),
+        components: {
+          a: ({ children, href }) =>
+            createElement("a", { "data-custom-link": true, href }, children),
+          img: (props: ImgHTMLAttributes<HTMLImageElement>) =>
+            createElement("img", { ...props, "data-custom-image": true }),
+        },
       },
     );
 
@@ -74,8 +76,10 @@ describe("MarkdownContent streaming code blocks", () => {
       ["```html", "<main />", "```"].join("\n"),
       true,
       {
-        code: ({ children }) =>
-          createElement("code", { "data-custom-code": true }, children),
+        components: {
+          code: ({ children }) =>
+            createElement("code", { "data-custom-code": true }, children),
+        },
       },
     );
 
@@ -106,6 +110,28 @@ describe("MarkdownContent streaming animation", () => {
     const html = renderMarkdown("Hello completed world", false);
 
     expect(html).not.toContain("data-sd-animate");
+  });
+});
+
+describe("MarkdownContent images", () => {
+  it("resolves relative message images against thread artifacts", () => {
+    const html = renderMarkdown(
+      "![二次元美女](anime-beauty.jpg)",
+      false,
+      {
+        threadId: "thread-1",
+        artifactPaths: [],
+      },
+    );
+
+    expect(html).toContain(
+      'href="/api/threads/thread-1/artifacts/mnt/user-data/outputs/anime-beauty.jpg"',
+    );
+    expect(html).toContain(
+      'src="/api/threads/thread-1/artifacts/mnt/user-data/outputs/anime-beauty.jpg"',
+    );
+    expect(html).toContain('alt="二次元美女"');
+    expect(html).not.toContain("node=");
   });
 });
 

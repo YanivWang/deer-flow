@@ -274,11 +274,13 @@ export function MessageListItem({
 function MessageImage({
   src,
   alt,
+  node: _node,
   threadId,
   artifactPaths,
   maxWidth = "90%",
   ...props
 }: React.ImgHTMLAttributes<HTMLImageElement> & {
+  node?: unknown;
   threadId: string;
   artifactPaths: readonly string[];
   maxWidth?: string;
@@ -305,7 +307,9 @@ function MessageImage({
     );
   }
 
-  const url = resolveMessageImageURL(src, threadId, artifactPaths);
+  const url = resolveMessageImageURL(src, threadId, artifactPaths, {
+    fallbackToOutputs: true,
+  });
 
   return (
     <a href={url} target="_blank" rel="noopener noreferrer">
@@ -332,7 +336,7 @@ function HumanMessageText({ content }: { content: string }) {
   const reference = useMemo(() => parseSlashSkillReference(content), [content]);
 
   if (!reference) {
-    return <div className="break-words whitespace-pre-wrap">{content}</div>;
+    return <div className="wrap-break-word whitespace-pre-wrap">{content}</div>;
   }
 
   return <HumanSlashSkillText content={content} />;
@@ -343,14 +347,14 @@ function HumanSlashSkillText({ content }: { content: string }) {
   const slashSkill = resolveSlashSkillDisplay(content, skills);
 
   if (!slashSkill) {
-    return <div className="break-words whitespace-pre-wrap">{content}</div>;
+    return <div className="wrap-break-word whitespace-pre-wrap">{content}</div>;
   }
 
   return (
     <div className="flex max-w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
       <SlashSkillChip name={slashSkill.name} />
       {slashSkill.remainingText && (
-        <span className="min-w-0 flex-1 break-words whitespace-pre-wrap">
+        <span className="min-w-0 flex-1 wrap-break-word whitespace-pre-wrap">
           {slashSkill.remainingText}
         </span>
       )}

@@ -3,6 +3,8 @@
 import {
   createContext,
   type ComponentProps,
+  type CSSProperties,
+  type ImgHTMLAttributes,
   isValidElement,
   type ReactNode,
   useContext,
@@ -14,6 +16,7 @@ import {
 } from "react";
 
 import { type ClipboardSafeStreamdownProps } from "@/components/ai-elements/streamdown";
+import { resolveMessageImageURL } from "@/core/artifacts/utils";
 import {
   preprocessStreamdownMarkdown,
   rehypeStreamingListItems,
@@ -36,11 +39,20 @@ export type MarkdownContentProps = {
   className?: string;
   remarkPlugins?: ClipboardSafeStreamdownProps["remarkPlugins"];
   components?: StreamdownComponentOverrides;
+  threadId?: string;
+  artifactPaths?: readonly string[];
 };
 
 type StreamingCodeProps = ComponentProps<"code"> & {
   node?: unknown;
   children?: ReactNode;
+};
+
+type MarkdownImageProps = ImgHTMLAttributes<HTMLImageElement> & {
+  node?: unknown;
+  threadId?: string;
+  artifactPaths?: readonly string[];
+  maxWidth?: string;
 };
 
 const SMOOTH_REVEAL_MIN_DELTA = 80;
@@ -219,6 +231,52 @@ function StreamingCode({
   );
 }
 
+function MarkdownImage({
+  src,
+  alt,
+  className,
+  style,
+  node: _node,
+  threadId,
+  artifactPaths = [],
+  maxWidth = "90%",
+  ...props
+}: MarkdownImageProps) {
+  if (!src) {
+    return null;
+  }
+
+  const imgClassName = cn("overflow-hidden rounded-lg", className);
+  const imgStyle: CSSProperties = { maxWidth, ...style };
+  const resolvedSrc =
+    threadId && typeof src === "string"
+      ? resolveMessageImageURL(src, threadId, artifactPaths, {
+          fallbackToOutputs: true,
+        })
+      : src;
+  const image = (
+    <img
+      {...props}
+      className={imgClassName}
+      style={imgStyle}
+      src={resolvedSrc}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+    />
+  );
+
+  if (typeof resolvedSrc !== "string") {
+    return image;
+  }
+
+  return (
+    <a href={resolvedSrc} target="_blank" rel="noopener noreferrer">
+      {image}
+    </a>
+  );
+}
+
 /** Renders markdown content. */
 export function MarkdownContent({
   content,
@@ -227,6 +285,8 @@ export function MarkdownContent({
   className,
   remarkPlugins = streamdownPluginsWithoutRawHtml.remarkPlugins,
   components: componentsFromProps,
+  threadId,
+  artifactPaths,
 }: MarkdownContentProps) {
   const deferredContent = useDeferredValue(content);
   const targetContent = isLoading ? deferredContent : content;
@@ -251,7 +311,14 @@ export function MarkdownContent({
   }, [isStreamingRender, rehypePlugins]);
   const components = useMemo(() => {
     const baseComponents = {
-      a: createMarkdownLinkComponent(),
+      a: createMarkdownLinkComponent(threadId),
+      img: (props: ImgHTMLAttributes<HTMLImageElement>) => (
+        <MarkdownImage
+          {...props}
+          threadId={threadId}
+          artifactPaths={artifactPaths}
+        />
+      ),
       ...componentsFromProps,
     };
     if (!isStreamingRender) {
@@ -262,7 +329,7 @@ export function MarkdownContent({
       code: componentsFromProps?.code ?? StreamingCode,
       pre: componentsFromProps?.pre ?? StreamingPre,
     };
-  }, [componentsFromProps, isStreamingRender]);
+  }, [artifactPaths, componentsFromProps, isStreamingRender, threadId]);
 
   if (!displayContent) return null;
 

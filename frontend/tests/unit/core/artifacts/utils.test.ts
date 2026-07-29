@@ -224,6 +224,40 @@ describe("artifact URL helpers", () => {
     ).toBe("https://example.com/image.png");
   });
 
+  test("can fallback relative message images to the outputs directory", async () => {
+    const { resolveMessageImageURL } = await loadFreshArtifactUtils();
+
+    expect(
+      resolveMessageImageURL("anime-beauty.jpg", "thread-1", [], {
+        fallbackToOutputs: true,
+      }),
+    ).toBe(
+      "/api/threads/thread-1/artifacts/mnt/user-data/outputs/anime-beauty.jpg",
+    );
+    expect(
+      resolveMessageImageURL(
+        "./charts/anime-beauty.jpg#preview",
+        "thread-1",
+        [],
+        {
+          fallbackToOutputs: true,
+        },
+      ),
+    ).toBe(
+      "/api/threads/thread-1/artifacts/mnt/user-data/outputs/charts/anime-beauty.jpg#preview",
+    );
+    expect(
+      resolveMessageImageURL("../anime-beauty.jpg", "thread-1", [], {
+        fallbackToOutputs: true,
+      }),
+    ).toBe("../anime-beauty.jpg");
+    expect(
+      resolveMessageImageURL("https://example.com/image.png", "thread-1", [], {
+        fallbackToOutputs: true,
+      }),
+    ).toBe("https://example.com/image.png");
+  });
+
   test("builds encoded write-file URLs without undefined query parameters", async () => {
     const { buildWriteFileArtifactURL } = await loadFreshArtifactUtils();
     const filepath = "/mnt/user-data/outputs/a b#c?%20.md";

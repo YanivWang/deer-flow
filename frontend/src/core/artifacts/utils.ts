@@ -51,6 +51,25 @@ function decodeRelativeArtifactPath(filepath: string) {
   return filepath.split("/").map(decodePathSegment).join("/");
 }
 
+function normalizeMessageImagePath(src: string) {
+  const { path: relativePath, suffix } = splitPathSuffix(src);
+  const normalizedPath = relativePath.replace(/^(?:\.\/)+/, "");
+  if (
+    !normalizedPath ||
+    normalizedPath.startsWith("/") ||
+    /^[a-z][a-z\d+.-]*:/i.test(normalizedPath) ||
+    normalizedPath.startsWith("//") ||
+    normalizedPath.split("/").includes("..")
+  ) {
+    return null;
+  }
+  return {
+    normalizedPath,
+    decodedNormalizedPath: decodeRelativeArtifactPath(normalizedPath),
+    suffix,
+  };
+}
+
 export function urlOfArtifact({
   filepath,
   threadId,
@@ -95,32 +114,32 @@ export function resolveMessageImageURL(
   src: string,
   threadId: string,
   artifactPaths: readonly string[],
+  options: { fallbackToOutputs?: boolean } = {},
 ) {
   if (src.startsWith("/mnt/")) {
     return resolveMarkdownArtifactURL(src, threadId);
   }
 
-  const { path: relativePath, suffix } = splitPathSuffix(src);
-  const normalizedPath = relativePath.replace(/^(?:\.\/)+/, "");
-  const decodedNormalizedPath = decodeRelativeArtifactPath(normalizedPath);
-  if (
-    !normalizedPath ||
-    normalizedPath.startsWith("/") ||
-    /^[a-z][a-z\d+.-]*:/i.test(normalizedPath) ||
-    normalizedPath.startsWith("//") ||
-    normalizedPath.split("/").includes("..")
-  ) {
+  const imagePath = normalizeMessageImagePath(src);
+  if (imagePath === null) {
     return src;
   }
 
   const matches = artifactPaths.filter((path) =>
-    path.endsWith(`/${decodedNormalizedPath}`),
+    path.endsWith(`/${imagePath.decodedNormalizedPath}`),
   );
-  if (matches.length !== 1) {
+  if (matches.length === 1) {
+    return `${resolveArtifactURL(matches[0]!, threadId)}${imagePath.suffix}`;
+  }
+
+  if (!options.fallbackToOutputs) {
     return src;
   }
 
-  return `${resolveArtifactURL(matches[0]!, threadId)}${suffix}`;
+  return `${resolveArtifactURL(
+    `/mnt/user-data/outputs/${imagePath.decodedNormalizedPath}`,
+    threadId,
+  )}${imagePath.suffix}`;
 }
 
 function staticDemoArtifactURL({

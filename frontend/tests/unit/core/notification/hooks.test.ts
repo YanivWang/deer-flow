@@ -77,6 +77,7 @@ async function loadNotificationHook({
 }
 
 afterEach(() => {
+  rs.restoreAllMocks();
   rs.doUnmock("react");
   rs.doUnmock("@/core/settings");
   rs.unstubAllGlobals();
@@ -119,5 +120,23 @@ describe("useNotification", () => {
     expect(notifications.map((notification) => notification.title)).toEqual([
       "Finished elsewhere",
     ]);
+  });
+
+  test("silently skips notifications before browser permission is granted", async () => {
+    const warnSpy = rs
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
+    const { notifications, useNotification } = await loadNotificationHook({
+      browserPermission: "default",
+      hookPermission: "default",
+    });
+    const { showNotification } = useNotification();
+
+    showNotification("Finished");
+
+    expect(notifications).toHaveLength(0);
+    expect(warnSpy).not.toHaveBeenCalledWith(
+      "Notification permission not granted",
+    );
   });
 });
