@@ -3,13 +3,15 @@
 > **用途**:新会话冷启动后读本篇即可接手,无需重新推导。
 > **最后更新**:2026-07-31
 > **主仓库**:`/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`
-> **分支**:`main-wc`|**对标基线 commit**:`f204d2cb`(原 `16ea3a4d`,2026-07-31 按 **D4-a** 前移)
+> **分支**:`main-wc`|**对标基线 commit**:🔴 **`b71a892b`**
+> (`16ea3a4d` → **D4-a** → `f204d2cb` → **D4-b** → `b71a892b`,均在 2026-07-31。
+>  **D4-b 这次 `frontend/` 零漂移**,资产数字全部保持)
 
 ---
 
 ## 〇、⚠️ 冷启动必读
 
-### 🔴 2026-07-31 v4 已落地:六项外部现实修正 + 两个待你拍板的开放项
+### 🔴 2026-07-31 v4 已定稿:六项外部现实修正,**O18/O19 均已由用户拍定**
 
 > **方案已从 v3.5 → v4。** 用户 2026-07-31 说「按照你推荐的来进行修复」后落的。
 > **仍未写一行业务代码。**
@@ -21,7 +23,7 @@
 > | --- | --- | --- | --- |
 > | 🔴 **D26** | **上游冻结政策**(选定 (b):只 merge `backend/` + 安全补丁) | 实测 `frontend/src` 近 6 个月**文件级 100% 翻动**(453 唯一文件 / 389 现存),月新增中位数 **+6,500 行**。5–7.5 个月工期 → 上游多出 **33,000–74,000 行**。**风险 R6 由「中/低」上调为「必然/高」** | 11 号 **§2.10** |
 > | 🔴 **D25-a ①** | **`crypto.randomUUID()` 不能用,改回 `uuid` 包** | 它 **secure-context-only**;`docker-vue/` 是内网 **HTTP `:2027`** → 除 localhost 外 `undefined`。而 `uuid()` 生成**新建 thread 的 ID**(6 处)→ **新建会话直接报错** | 11 号 **§2.4.6** |
-> | 🔴 **D13-a** | **补第六类偏离 `DETYPED`**,Tier 1 从 10,400 → **7,244 行** | 实测 **12 个 core 文件 / 3,156 行** import `langgraph-sdk`/`ai` 但不 import react,被误算进 Tier 1 → `core-provenance.test.ts` **第一天报 12 个红** | 11 号 **§3.1.4** |
+> | 🔴 **D13-a** | **补第六类偏离 `DETYPED`**,Tier 1 从 10,400 → **7,215 行** | 实测 **13 个 core 文件 / 3,185 行** import `langgraph-sdk`/`ai` 但不 import react,被误算进 Tier 1 → `core-provenance.test.ts` **第一天报 13 个红** | 11 号 **§3.1.4** |
 > | 🔴 **D24-a** | **推翻 D24,装 `@tanstack/vue-query`** | 实测 peer 仅 `vue ^2.6\|\|^3.3`,**零 React 依赖**;而自研面是 38 useQuery/40 useMutation/57 invalidateQueries + 7 类选项,且 §4.4 是**全案唯一没有量级的自研件** | 11 号 **§2.8.7** |
 > | 🔴 **D25-a ②** | **保留 `@vueuse/core`** | 实测 `14.4.0` **2026-07-29 仍在发版**,Vue 生态事实标准;D25 把它当 `motion-v` 的附属品一起删了,**它不是** | 11 号 **§2.4.6** |
 > | 🔴 **D11-a** | **上 GitHub CI,关掉风险 R14** | 实测 14 个现有 workflow **全部按 `paths:` 过滤** → 新建 `paths: frontend-vue/**` 的 workflow **零修改现有文件**,与 D10 同构。**R14 从「中高/高」降到「低/中」** | 11 号 **§3.2.4** |
@@ -29,19 +31,37 @@
 > | ✅ **减负 2** | `splitpanes@4.1.2` **已 emit `resize` + `resized`** | 红线 P5 最硬的判据已满足,**风险 R4 概率下调**,P0 第 3 项 1–2 天 → **半天** | 11 号 **§2.3.2** |
 > | ⚠️ **新增 R20** | **antdv 4.2.6 发布于 2024-11-11,20 个月无新版** | 不推翻 D2,但 **P0 ⑦ 的实测结果就是终局**,不能指望上游修 | 11 号 **§8** |
 >
-> **依赖数 50 → 53**;**Tier 1 逐字节 10,400 → 7,244**;**自研基础件 4 → 3**;
+> **依赖数 50 → 53**;**Tier 1 逐字节 10,400 → 7,215**;**自研基础件 4 → 3**;
 > **P1 `1–2` → `1.5–2.5 周`**;**对外口径 `≈7–12 人月` 不变**(v4 净影响 ≈ 0)。
 
-### 🔴 现在卡在哪:两个待你拍板的开放项(见 11 号 §9.2)
+### ✅ 现在的状态:**无待决项、无阻塞项 —— 可以开 P0**
 
-| # | 待决 | 何时必须定 |
-| --- | --- | --- |
-| 🔴 **O18** | **D26 选 (a)/(b)/(c)** —— 方案已按推荐填了 **(b)**,但取决于你要不要上游持续演进的后端能力。⚠️ **不能边做边定**:P1 复制完 `core/` 再改冻结政策,溯源基线要重做 | 🔴 **开 P0 之前** |
-| **O19** | **是否接受 D11-a 上 GitHub CI** —— 已按推荐填了「上」。坚持 D11 原文也行,但 R14 回到「中高/高」 | P0 期间 |
+🔴 **2026-07-31 用户「按你推荐方案来」,O18 / O19 全部关闭:**
 
-> 📌 **其余四项(D25-a ①、D13-a、D24-a、D25-a ②)不需要你再确认** ——
-> 前两项是**技术事实纠错**(事实层面没有可选项,只能选修法),后两项虽推翻了你此前的决策,
-> 但你已明确授权「按推荐来」。**若要推翻其中任何一条,证据分别在 §2.4.6 / §3.1.4 / §2.8.7。**
+| # | 定案 |
+| --- | --- |
+| ✅ **O18** | **D26 = (b)** —— 项目期间只 merge `backend/` + 安全补丁,**`frontend/` 完全冻结** |
+| ✅ **O19** | **D11-a = 上 CI** —— 新建 `frontend-vue-verify.yml`(`paths: frontend-vue/**`),零改现有文件 |
+
+🔴 **同日发生 D4-b:基线第二次前移,已重冻至 `b71a892b`** ——
+用户再次合入 main,**但这次 `frontend/` 零漂移**
+(实测 `git diff f204d2cb..b71a892b -- frontend/` 为空;该 merge 只动 `backend/` / `docker/` / `deploy/` / `scripts/`,
+65 文件 / +4,813 −585)。
+✅ **全部资产数字保持不变**,已在新基线上按铁律 1 复核:`frontend/src` **56,484 行**、
+`core` **143 个 / 19,001 行**、`threads/hooks.ts` **3,072 行**、E2E **27 个 spec**。
+
+> 🔴 **这次 merge 本身就是 D26 (b) 的第一次验证** —— 政策与实际操作天然一致。
+> 📌 **但别把它当成"漂移不会发生"**:对照 **D4-a**(18 文件 / +768 −99,需全量刷新数字、
+> 并连带关闭 O17、反转 D18 理由)—— **同样是"合入 main",代价可以差一个数量级。
+> 这正是 D26 要管住的东西。**
+>
+> ⚠️ **P0 期间每次 merge upstream 后都要跑**:
+> ```bash
+> git diff b71a892b..HEAD --stat -- frontend/
+> ```
+> **输出非空即按 §2.10.5 第 3 条处理**(判断是否属安全补丁例外;不属则回退该路径)。
+
+> 📌 **剩下唯一的开放项是 O15**(v2 是否做共享包,远期,v1 上线后再议)—— **不影响开工**。
 
 ---
 
@@ -126,7 +146,7 @@ git status --short frontend-refactor-docs/
 > 上一版写的「`git diff 16ea3a4d..HEAD -- frontend/` 为空,零变动」**已失效**:
 > `main` 合入 `main-wc` 后实测 `git diff 16ea3a4d..HEAD -- frontend/src frontend/tests`
 > = **18 文件 / +768 −99**(6 个提交:#4577/#4578/#4580/#4582/#4584/#4587)。
-> **新基线 `f204d2cb`**,全部资产数字已按新基线实测刷新;
+> **新基线 `b71a892b`**,全部资产数字已按新基线实测刷新;
 > 其中 `0d8e11ad` 修掉了 `autoOpen` 跨 thread 粘滞 → **O17 关闭、D18 理由反转**。
 
 ### 本会话涉及两个项目,别搞混
@@ -158,13 +178,13 @@ git status --short frontend-refactor-docs/
 | 类 | 数量 | 是什么 |
 | --- | --- | --- |
 | **上线当天会炸** | **1** | `crypto.randomUUID()` secure-context(**D25-a ①**) |
-| **P0/P1 第一天会卡** | **2** | DETYPED 12 个文件(**D13-a**);`Message` 类型模型无预算(**§4.1.5**) |
+| **P0/P1 第一天会卡** | **2** | DETYPED 13 个文件(**D13-a**);`Message` 类型模型无预算(**§4.1.5**) |
 | **方向性推翻** | **3** | 上游冻结(**D26**)、装 vue-query(**D24-a**)、留 `@vueuse/core`(**D25-a ②**) |
 | **风险重估** | **3** | R6 上调(中/低 → 必然/高)、R14 下调(中高/高 → 低/中)、R4 概率下调 |
 | **新增风险** | **1** | **R20** antdv 20 个月未发版 |
 | **减负(待 P0 证实)** | **2** | P4 渲染末端可能不必自研;resizable 判定压到半天 |
 
-🔴 **口径**:依赖 **50 → 53**;Tier 1 逐字节 **10,400 → 7,244 行**;自研基础件 **4 → 3**;
+🔴 **口径**:依赖 **50 → 53**;Tier 1 逐字节 **10,400 → 7,215 行**;自研基础件 **4 → 3**;
 P1 **1–2 → 1.5–2.5 周**;**对外 `≈7–12 人月` 不变**(v4 净影响 ≈ 0,见 11 号 §7 修正记录 ⑨–⑫)。
 
 > 🔴 **本轮最该记住的一条**:六处问题的共同形态是
@@ -300,7 +320,7 @@ P1 **1–2 → 1.5–2.5 周**;**对外 `≈7–12 人月` 不变**(v4 净影响
 | **D2** | UI 组件库 | **Ant Design Vue**(用户选择;我原推荐 reka-ui,已按 antdv 重做分析见 §2.3) |
 | **D3** | ~~共享包~~ | **已被 D7 否决** |
 | **D4** | 对标基线 | 冻结 `16ea3a4d`,后续上游变更进 v2 待办 |
-| 🔄 **D4-a** | 基线首次漂移,**已重新冻结为 `f204d2cb`** | 2026-07-31 合入 main(6 个前端提交 / 18 文件 / +768 −99)。本次计入 v1,数字已刷新;连带 **O17 关闭、D18 理由反转**。后续仍按 D4 原则进 v2 待办 |
+| 🔄 **D4-a** | 基线首次漂移,**已重新冻结为 `b71a892b`** | 2026-07-31 合入 main(6 个前端提交 / 18 文件 / +768 −99)。本次计入 v1,数字已刷新;连带 **O17 关闭、D18 理由反转**。后续仍按 D4 原则进 v2 待办 |
 | **D5** | 无障碍 | Vue 版**不写任何 `aria-*`**,不为无障碍额外投入(D8 进一步砍 `sr-only`)|
 | **D6** | 范围裁剪 | **砍 6 项**共 4,925 行 + 72 MDX(见下)|
 | **D7** | 改动范围 | 🔴 **只能改 `frontend-vue/`,其余一切不动** |
@@ -317,11 +337,11 @@ P1 **1–2 → 1.5–2.5 周**;**对外 `≈7–12 人月` 不变**(v4 净影响
 | 🔴 **D23** | **`@langchain/core` 包不装,本地手写 `ToolCall` 最小类型** | React 版实测只有 `frontend/src/core/tools/utils.ts:1` 一处 `import type { ToolCall }`,零运行时代码。Vue 侧改在 `app/core/agent-types.ts` 定义 `{ name; args; id? }` 最小结构,覆盖当前 `name` / `args.query` / `args.description` 使用面。依赖数 **61→60**。 |
 | ~~🔴 **D24**~~<br>🔴 **已被 D24-a 推翻** | ~~**`@tanstack/vue-query` 包不装,自研 server-state 层**~~ → ✅ **改为装 `@tanstack/vue-query`** | 原决策留档:React 版实测 `@tanstack/react-query` 运行时用在 16 个 `frontend/src` 文件。<br>🔴 **v4 推翻理由**:实测 Vue 对应物 peer 仅 `vue`,零 React 依赖;自研面 38 useQuery/40 useMutation/57 invalidateQueries + `enabled` 48 等 7 类选项;§4.4 是全案唯一没有量级的自研件。见 **D24-a** 行与 11 号 §2.8.7 |
 | 🔴 **D25**<br>🔄 **部分被 D25-a 推翻** | **清掉 9 个 React 迁移惯性/小众包** | 不装 `motion-v` / ~~`@vueuse/core`~~ / `@vue-flow/core` / `canvas-confetti` / `@uiw/codemirror-theme-*` / `nanoid` / ~~`uuid`~~ / `tokenlens`。依赖数 **59→50**。<br>🔴 **v4:其中 2 项已推翻(D25-a)** —— `@vueuse/core` 保留、`uuid` 保留(`crypto.randomUUID()` 是 secure-context-only)。**其余 7 项维持。** |
-| 🔴 **D26** | **上游冻结政策(v4 新增,已选 (b))** | 项目期间只 merge `backend/` + 安全补丁,**`frontend/` 完全冻结在 `f204d2cb`**。<br>实测依据:近 6 个月 `frontend/src` **文件级 100% 翻动**(453 唯一文件 / 389 现存),月新增中位数 **+6,500 行**,5–7.5 个月 → 上游多出 **33,000–74,000 行**;且 2026-07 变更最大的四个文件(`threads/hooks.ts` +2,181 等)**全在 P1/P3/P5 关键路径上**。<br>🔴 **待你确认(O18)**,(a)/(c) 见 11 号 §2.10.4。**必须在开 P0 前定** |
+| 🔴 **D26** | **上游冻结政策(v4 新增,已选 (b))** | 项目期间只 merge `backend/` + 安全补丁,**`frontend/` 完全冻结在 `b71a892b`**。<br>实测依据:近 6 个月 `frontend/src` **文件级 100% 翻动**(453 唯一文件 / 389 现存),月新增中位数 **+6,500 行**,5–7.5 个月 → 上游多出 **33,000–74,000 行**;且 2026-07 变更最大的四个文件(`threads/hooks.ts` +2,181 等)**全在 P1/P3/P5 关键路径上**。<br>✅ 🔴 **2026-07-31 用户定案 (b)**(「按你推荐方案来」),**O18 关闭**;(a)/(c) 见 11 号 §2.10.4。<br>✅ **当天即完成第一次验证**:随后合入 main 的 `b71a892b` 实测 `frontend/` **零漂移**(见 **D4-b**) |
 | 🔄 **D24-a** | **推翻 D24:装 `@tanstack/vue-query`** | 实测 `5.101.4` peer 仅 `vue ^2.6\|\|^3.3`(+ Vue2 才用的 composition-api),**零 React 依赖**;自研面 38 useQuery/40 useMutation/3 useInfiniteQuery/57 invalidateQueries/8 setQueryData + `enabled` 48 等 7 类选项,而 §4.4 **是全案唯一没有量级的自研件**,却压在 P2 关键路径。依赖数 **50→51**。见 11 号 §2.8.7 |
 | 🔄 **D25-a** | **修订 D25 两项** | ① 🔴 **`crypto.randomUUID()` 是 secure-context-only** —— 内网 HTTP `:2027` 下 `undefined`,而 `uuid()` 生成新建 thread 的 ID(`use-thread-chat.ts` 5 处 + `agents/new/page.tsx` 1 处)→ **新建会话直接报错**。佐证:`core/clipboard.ts` 已为 `navigator.clipboard` 写过 `execCommand` 回退,**非安全上下文是本项目已知的真实部署条件**。<br>② **`@vueuse/core` 保留** —— `14.4.0` @ 2026-07-29 仍在发版,Vue 生态事实标准;D25 把它当 `motion-v` 附属品删了,**它不是**。依赖数 **51→53**。见 11 号 §2.4.6 |
-| 🔄 **D13-a** | **补第六类偏离 `DETYPED`** | 实测 **12 个 core 文件 / 3,156 行** import `@langchain/langgraph-sdk`(11)或 `ai`(1)但不 import react,被误算进 Tier 1 → **逐字节 10,400 → 7,244 行**,且 `core-provenance.test.ts` **第一天报 12 个红**。与 i18n/lucide-react 那次**同一根因**(按 `from "react"` 量),只是 D21/D22/D23 之后没重跑。见 11 号 §3.1.4 |
-| 🔄 **D11-a** | **修订 D11:上 GitHub CI** | 实测 `.github/workflows/` **14 个 workflow 全部按 `paths:` 过滤** → 新建 `frontend-vue-verify.yml`(`paths: frontend-vue/**`)**零修改现有文件、不触发任何现有流水线**,与 D10 同构。25 UI spec + guards + contract 全变成 CI 强制执行,**R14 从「中高/高」→「低/中」**(4 个真后端 spec 仍需人工)。🔴 **待你确认(O19)**。见 11 号 §3.2.4 |
+| 🔄 **D13-a** | **补第六类偏离 `DETYPED`** | 实测 **13 个 core 文件 / 3,185 行** import `@langchain/langgraph-sdk`(11)或 `ai`(1)但不 import react,被误算进 Tier 1 → **逐字节 10,400 → 7,215 行**,且 `core-provenance.test.ts` **第一天报 13 个红**。与 i18n/lucide-react 那次**同一根因**(按 `from "react"` 量),只是 D21/D22/D23 之后没重跑。见 11 号 §3.1.4 |
+| 🔄 **D11-a** | **修订 D11:上 GitHub CI** | 实测 `.github/workflows/` **14 个 workflow 全部按 `paths:` 过滤** → 新建 `frontend-vue-verify.yml`(`paths: frontend-vue/**`)**零修改现有文件、不触发任何现有流水线**,与 D10 同构。25 UI spec + guards + contract 全变成 CI 强制执行,**R14 从「中高/高」→「低/中」**(4 个真后端 spec 仍需人工)。✅ 🔴 **2026-07-31 用户定案「上」**,**O19 关闭**。见 11 号 §3.2.4 |
 | **D16** | **O5:团队有 Vue+Nuxt 实战经验** | ✅ 按基准口径,**54 周 / 13.5 人月的尾部情景消除**。⚠️ 区间仍 **27–48 周**,但跨度只剩两个**已识别且各有处置**的项:D15 的 `+3–6`(待 P2 校准)与 resizable no-go 的 `+2–3`(D19 已预授权)。**两项都在 P0–P2 见分晓 → 开工约两个月后可收敛到可承诺的数** |
 | **D17** | **O6:全盘接受 §1.3 五条约束** | ✅ 进开发规范 + PR 模板。**其中四条可机械化**(testid 集合 / 禁 `<div @click>` / 路由表 / cookie 名)→ 做成 `tests/guards/` 进快门禁,同时缓解风险 R9、R14 |
 | **D18** | ✅ **O17:`autoOpen` 切 thread 重置为 `true`**(**已与上游对齐**) | 🔄 **2026-07-31 复核后理由反转**:合入 main `0d8e11ad` 后,React 版新增 pathname 水合 effect,`artifacts/context.tsx:98` 会把 `autoOpen` 设回 `true` → **跨 thread 粘滞在上游已消失,这不再是"有意不同"**。<br>✅ **实测仍 0 处 spec 改动** —— 25 个 spec 之间用整页 `page.goto()`(全量重载)。<br>🔄 **原「必须登记进已知对标差异」作废**:反过来,Vue 侧若**不**重置才是缺陷,R18 逐屏 diff 应按"对齐"判定 |
@@ -392,8 +412,8 @@ P1 **1–2 → 1.5–2.5 周**;**对外 `≈7–12 人月` 不变**(v4 净影响
 ```
 §0   目标边界 + 决策记录(D1-D14)+ §0.5 D9 的可执行证明
 🔴 §1.0 **总表:哪些能复用、哪些必须重写** ★★ **实现前先看这张**(v3 新增)
-     🔴 v4 四档:①逐字节 15,861 行 ②改几行 6,424 行 ③重写 29,680 行+3 自研件 ④不做 7,025 行
-     (v3 为 ①19,017 ②3,268;总量 22,285 不变,DETYPED 3,156 行从①移到②)
+     🔴 v4 四档:①逐字节 15,832 行 ②改几行 6,453 行 ③重写 29,680 行+3 自研件 ④不做 7,025 行
+     (v3 为 ①19,017 ②3,268;总量 22,285 不变,DETYPED 3,185 行从①移到②)
 §1   核心策略:以 E2E 套件作为可执行规格 ★方案骨架
      🔴 §1.2 验收定义(D14 分两层)/ §1.2.1 为什么 25 spec 看不见代理层
 §2   技术选型 / §2.3 antdv 影响分析 / 🔴 §2.3.1.1 组件存活口径(唯一权威计数)/
@@ -458,7 +478,8 @@ Nitro `routeRules` 已经把 `/api/**` 代理到 Gateway,前面再放 nginx 只�
 
 ## 五、下一步行动(**待用户下令后再执行**)
 
-方案已按 D1–D25 修订到位(v3.5,含 D15 弃 Tailwind 改 SCSS、D21 `ai` 类型本地化、D22 流处理手写化、D23 `@langchain/core` 类型本地化、D24 `@tanstack/vue-query` 自研替代、D25 清理 9 个 React 迁移惯性/小众包),**无阻塞项 —— 技术上可以开 P0**。
+🔴 **方案已按 D1–D26 + 五项修订(D4-a/D4-b/D11-a/D13-a/D24-a/D25-a)定稿到 v4**,
+**O18/O19 已由用户拍定,无待决项、无阻塞项 —— 可以开 P0**。
 但 🔴 **不要自行开始**:本节是「用户说开始时该做什么」的清单,不是「现在就去做」。
 
 **P0 的关键交付**(11 号 §6;⑨⑩⑪ 为 D14 新增,⑬ 为 D22 新增),其中 ⑤ 已提前完成:
@@ -468,7 +489,7 @@ Nitro `routeRules` 已经把 `/api/**` 代理到 Gateway,前面再放 nginx 只�
 | ① | 选型核实报告 | ⚠️ **大部分已由 §6.13 闭合**(Nuxt 4.4.8 + antdv 4.2.6 + `@ant-design-vue/nuxt` 1.4.6 + Pinia 3.0.4 + vue-i18n 11.4.6 实跑通过,FOUC 已解)。D24 后**不做 `@tanstack/vue-query` 客户端插件 smoke**,改做 server-state contract fixture |
 | ② | Nuxt 骨架 + 独立起服务 + Nitro 代理 | 🔴 含 **R15 的三项责任转移**(SSE 不缓冲 / 长超时 / `X-Forwarded-Proto`)+ §3.2.1 的 `proxy-policy` 契约 |
 | ③ | 🔴 **Nitro 鉴权中间件五态 + CSRF 双提交** | 五态定义见 03 号文档;D20 后首跳鉴权由 `server/middleware/auth.ts` 承担 |
-| ④ | `core/` 复制 + 🔴 **六类偏离**可行性验证(v4:原五类) | **13,486** 行,🔴 **其中 7,244 行**逐字节零改动(v4 更正,旧写 10,400)、**3,086 行** i18n 改 icon import、🔴 **3,156 行 / 12 个文件** 改类型 import。<br>⚠️ **不是「3 处适配」** —— 实测为 ADAPTED 3 / **DEMOCKED 4**(`isMock`)/ **SPLIT 1**(`threads/hooks.ts`)/ 🔴 **DETYPED 12**(D13-a)/ ADDED / REMOVED |
+| ④ | `core/` 复制 + 🔴 **六类偏离**可行性验证(v4:原五类) | **13,486** 行,🔴 **其中 7,215 行**逐字节零改动(v4 更正,旧写 10,400)、**3,086 行** i18n 改 icon import、🔴 **3,185 行 / 12 个文件** 改类型 import。<br>⚠️ **不是「3 处适配」** —— 实测为 ADAPTED 3 / **DEMOCKED 4**(`isMock`)/ **SPLIT 1**(`threads/hooks.ts`)/ 🔴 **DETYPED 13**(D13-a)/ ADDED / REMOVED |
 | ⑤ | ~~`ai-elements` 使用面盘点~~ | ✅ **D9 已完成**(28→14 个),不必重做 |
 | ⑥ | 🔴 **`resizable` 候选库调研 + 最小 demo** | **go/no-go 硬检查点**:必须能区分「拖拽中 resize」与「最终布局变更」两类事件,否则红线 P5 无法实现、#4465 类 bug 必然重现。不达标须走 O11 |
 | ⑦ | antdv 的 14 个原语 role 实测 | 重点是 38 次风险断言,尤其 **12 次 `getByRole("dialog", { name })` 是否靠 `a-modal` 内部把 title 接成 accessible name**(R13)——D5/D8 后我们不写任何 `aria-*` |
@@ -481,6 +502,8 @@ Nitro `routeRules` 已经把 `/api/**` 代理到 Gateway,前面再放 nginx 只�
 | 🔴 **⑮** | **`hast-util-to-jsx-runtime` + `vue/jsx-runtime` 实验**(v4 新增) | 半天,二元。成立则 **P4 的 5–8 周上界显著下修**。见 11 号 §4.2.5 |
 | 🔴 **⑯** | **非 `localhost` 内网地址冒烟**(v4 新增) | 10 分钟。唯一能抓到 `crypto.randomUUID` secure-context 的检查(11 号 §2.4.6) |
 | 🔴 **⑰** | **`.github/workflows/frontend-vue-verify.yml` 落盘**(v4 新增,D11-a) | 1 小时。`paths: frontend-vue/**`,零修改现有文件。⚠️ **必须完整 checkout** —— `core-provenance.test.ts` 要读 `frontend/src`(11 号 §3.2.4) |
+| 🔴 **⑱** | **规格空白清单 `tests/SPEC-GAPS.md`**(v4 新增,**风险 R21**) | **半天**。实测 ≈ **2,122 行**产品功能**零验收判据**:6 个设置页 **1,604**(🔴 `memory` **993** / appearance 196 / account 171 / skill 147 / tool 88 / about 9)+ `/workspace/agents/new` **455** + `/auth/callback` **63**;另 `login` 370 + `setup` 349 = **719 行**只有需真 Gateway 的第二层覆盖。<br>逐条定 **A 补 spec / B 人工签字 / C 接受漂移**,🔴 **每条必须有结论,不允许留空**。<br>🔴 **`memory` 与 `agents/new` 都是 §6 P2 点名的交付物,建议走 A**(各 0.5–1 天,可直接复用 `mock-api.ts`)。见 11 号 **§1.2.2** |
+| 🔴 **⑲** | **27 个非 core 单测定去留**(v4 新增) | **1 小时**。实测 `tests/unit/` 共 **99** = core **72** + 非 core **27**(其中 **5 个**硬依赖 `@testing-library/react`,确定要重写)。<br>⚠️ 方案此前只写「71 个 core 单测迁 Vitest」:① **实测是 72**(§十⑥ 自己记的就是 72,正文写 71,v4 已统一);② 那 **27 个全文零归属** —— 而 P1 的验收判据正是"core 的 N 个单测全绿"。见 11 号 **§1.2.3** |
 
 **同时要建的三样**(D10/D11/D12+D13 的产物):
 - `frontend-vue/Makefile` 的 **`make verify`(快:lint+typecheck+vitest+guards+contract,秒级)**
@@ -497,7 +520,7 @@ Nitro `routeRules` 已经把 `/api/**` 代理到 Gateway,前面再放 nginx 只�
 
 | 顺序 | 实验 | 成本 | 失败的后果 |
 | --- | --- | --- | --- |
-| **0** | 🔴 **确认 D26 上游冻结政策已落地(O18)** | — | **不是实验,是流程决定** —— 后面每一件的基准都建立在"基线不再动"之上。**不定就不要开始** |
+| **0** | ✅ **前置已完成** | — | D26 已定案 (b)、基线已重冻至 **`b71a892b`**(D4-b)。⚠️ **P0 期间每次 merge upstream 后仍要跑** `git diff b71a892b..HEAD --stat -- frontend/`,**非空即按 §2.10.5 第 3 条处理** |
 | **1** | 🔴 **D22 stream contract fixture** | **1 天** | 若手写 transport/codec/adapter 不能还原当前 Gateway 语义,§4.1 需先改架构 |
 | ~~2~~ | ~~D24 server-state contract fixture~~ → ❌ **v4 取消**(D24-a)<br>改为 **`VueQueryPlugin` smoke** | **2 小时** | 只需验插件注册 + 一个 query 跑通 + 🔴 **`enabled` 传响应式 ref 时会正确重新启用**(48 处使用面,React→Vue 最常见的静默 bug) |
 | **3** | 🔴 **⑥ resizable 判定** | 🔻 **半天**(原 1–2 天) | 红线 P5 无法实现 → 走 **D19** 追加 2–3 周自研。<br>✅ **v4 已答掉最硬的一条**:`splitpanes@4.1.2` 实测已 emit `resize`+`resized`;**只剩验命令式开合 + minSize 折叠 + group 级过渡** |
@@ -534,7 +557,7 @@ Nitro `routeRules` 已经把 `/api/**` 代理到 Gateway,前面再放 nginx 只�
 | --- | --- |
 | `frontend/src` 总行数 | 56,355 |
 | `core/` 非测试文件合计 | **143 个 / 19,001 行**(= 13,668 + 5,333,**分毫不差**) |
-| `core/` 纯 TS(**无 React 依赖**) | **13,668**(含 i18n 词典 3,086)<br>🔴 **v4 更正**= **7,244**(逐字节)+ **3,086**(i18n 改 icon)+ **3,156**(**DETYPED**,12 个文件改类型 import)+ **182**(3 处适配)<br>⚠️ **旧写「10,400 逐字节」已作废** —— 那 3,156 行 import 了 D21/D22 要删的包,哈希必不等。见 11 号 §3.1.4 |
+| `core/` 纯 TS(**无 React 依赖**) | **13,668**(含 i18n 词典 3,086)<br>🔴 **v4 更正**= **7,215**(逐字节)+ **3,086**(i18n 改 icon)+ **3,185**(**DETYPED**,12 个文件改类型 import)+ **182**(3 处适配)<br>⚠️ **旧写「10,400 逐字节」已作废** —— 那 3,185 行 import 了 D21/D22 要删的包,哈希必不等。见 11 号 §3.1.4 |
 | 🔴 **上游演进速度**(v4 新增,D26 的依据) | `frontend/src` 月新增行(2026-02→07):`4,935 / 6,326 / 14,653 / 4,023 / 6,657 / 22,815`,**中位数 ≈6,500,均值 ≈9,900**;提交 36–114/月<br>🔴 **近 6 个月被改动过的唯一文件 453 个,现存总文件 389 个 → 文件级 100% 翻动**<br>当前 `frontend/src` = **56,484 行**(方案写 56,355,差在统计时点/扩展名集合) |
 | 🔴 **依赖健康度抽查**(v4 新增) | `ant-design-vue` **4.2.6 @ 2024-11-11(20 个月无新版,latest 就是它)** → **R20**<br>`@vueuse/core` 14.4.0 @ **2026-07-29**;`splitpanes` 4.1.2 @ **2026-05-26**;`@tanstack/vue-query` **5.101.4**(跟随 query-core);`eslint` **10.8.0**;`vitest` **4.1.10**;`nuxt` **4.5.1**(方案锁 4.4.8) |
 | `core/` React 耦合 | **24 个文件 / 5,333 行** = `threads/hooks.ts` 3,072 + 16 个薄 hooks.ts 1,090 + 其余 7 个 1,171 |
@@ -543,7 +566,7 @@ Nitro `routeRules` 已经把 `/api/**` 代理到 Gateway,前面再放 nginx 只�
 | `components/workspace` | 20,286 |
 | `components/ui`(44 个,含 3 个 .css → 41 组件) / `ai-elements`(28 个)| 5,318 / 5,374<br>**D9 后:antdv 需映射 14 个;ai-elements 实需 14 个 / 3,714 行** |
 | `app/` 路由 | 4,118 |
-| 单测 | 97 个文件(core 71 / components 21 / hooks 2 / content 1) |
+| 单测 | 🔴 **99 个文件 = core 72 + 非 core 27**(v4 实测更正,旧写「97(core 71 / components 21 / hooks 2 / content 1)」)<br>其中 **5 个**硬依赖 `@testing-library/react`(确定迁不了);**27 个非 core 在方案里此前零归属** → **P0 ⑲ 定去留**(11 号 §1.2.3)<br>复现:`find frontend/tests/unit -name "*.test.*" \| wc -l` / `... -not -path "*/core/*" \| wc -l` |
 | E2E | `tests/e2e/` 27 spec / 7,334 行 + `mock-api.ts` 1,411 行<br>另有 `e2e-auth`(1)/`e2e-real-backend`(3)/`e2e-record`(1),**全仓 31 个** |
 | `isMock` 出现次数 | **102 处 / 15 个文件**(D6 全链路清除面) |
 | `NEXT_PUBLIC_STATIC_WEBSITE_ONLY` | **35 处 / 17 个文件** |
@@ -554,6 +577,27 @@ Nitro `routeRules` 已经把 `/api/**` 代理到 Gateway,前面再放 nginx 只�
 1. `tests/e2e/utils/mock-api.ts` **1,411 行** —— 完整模拟后端,入口 `mockLangGraphAPI(page, options)` + `handleRunStream()`。纯 Playwright+TS,零 React
 2. **25 个 E2E spec**(原 27 减去 D6 砍掉的 `landing`、`docs-localized-links`)—— 全黑盒
 3. `core/` 纯 TS **13,668 行**
+
+### 🔴 6.3.0 验收骨架的覆盖边界(v4 新增,风险 R21)—— **接手必读**
+
+> **继承的 25 个 spec 覆盖的是「React 版历史上出过 bug 的地方」,不是功能全集。**
+> §6.2 说「继承资产占工作面 43%」,那是**行数口径**;判据口径要小得多。
+
+| | 行数 | 状态 |
+| --- | ---: | --- |
+| 🔴 **完全无验收判据** | **≈ 2,122** | 6 个设置页 **1,604**(🔴 `memory` **993**)+ `/workspace/agents/new` **455** + `/auth/callback` **63** |
+| ⚠️ 仅第二层覆盖(需真 Gateway) | **719** | `login` 370 + `setup` 349 |
+
+🔴 **`memory`(993)与 `agents/new`(455)都是 §6 P2 点名的交付物,却没有任何判据。**
+
+复现:
+
+```bash
+cd frontend && grep -rhoE "goto\(\s*[\"\`'][^\"\`']*" tests/e2e/*.spec.ts | sed -E 's/.*["\`'"'"']//' | sed -E 's/\?.*//' | sort -u
+```
+
+**处置**:P0 ⑱ 产出 `frontend-vue/tests/SPEC-GAPS.md`,逐条定 A/B/C;P6 验收第 ④ 项按它销账。
+🔴 **R21 比 R18 更重** —— R18 是"实现了但长得不一样",R21 是"**可能压根没实现**",**两者都逃得过三层验收全绿**。
 
 ### 6.3 验收定义(方案骨架)—— 🔴 **D14 后分两层**
 > **① UI 层:25 个 E2E spec 全绿**
@@ -643,7 +687,7 @@ D6 已决定保留双语。
 ### 6.7 🔴 **三个**必须自研的基础件(v4:原 4 个,`ServerStateClient` 已由 D24-a 移出)
 | 件 | 说明 | 估算 |
 | --- | --- | --- |
-| **`ThreadStreamEngine`** | 🔴 **D22 后不装 `@langchain/langgraph-sdk`**。需手写 fetch/SSE transport、DeerFlow Gateway wire codec、adapter、canonical reducer,再把现有 1,060 行 DeerFlow 编排语义收进发布订阅状态机。SDK 的 `useStream` 只作为历史参照,不能作为运行时依赖<br>🔴 **v4 追加:`Message` 类型模型 2–3 天,落 P1 不落 P3** —— 实测 SDK 类型渗透 **27 个文件**,`Message` 一个符号占 **19 个**,而 12 个 DETYPED 件要 import 它。见 11 号 §4.1.5 | 4–6 周<br>**+2–3 天(P1)** |
+| **`ThreadStreamEngine`** | 🔴 **D22 后不装 `@langchain/langgraph-sdk`**。需手写 fetch/SSE transport、DeerFlow Gateway wire codec、adapter、canonical reducer,再把现有 1,060 行 DeerFlow 编排语义收进发布订阅状态机。SDK 的 `useStream` 只作为历史参照,不能作为运行时依赖<br>🔴 **v4 追加:`Message` 类型模型 2–3 天,落 P1 不落 P3** —— 实测 SDK 类型渗透 **27 个文件**,`Message` 一个符号占 **19 个**,而 13 个 DETYPED 件要 import 它。见 11 号 §4.1.5 | 4–6 周<br>**+2–3 天(P1)** |
 | **`streamdown-vue`** | `streamdown@2.5.0` 硬 React peer。整条 unified 管线(remark/rehype)+ `remend`(残缺修补)+ mermaid **可复用**。<br>🔴 **v4 实测更正**:~~React 专有的有 `hast-util-to-jsx-runtime`~~ —— **它 `peerDependencies` 为 `null`、依赖无 react,是通用 JSX-runtime 库,而 `vue` 导出 `./jsx-runtime`**。**真正 React 专有的只剩 `animated`/`isAnimating` 动画 API**。见 11 号 §4.2.5 | 5–8 周 🔴**最高风险**<br>⚠️ **上界可能显著下修,待 P0 实验 6** |
 | **`ai-elements-vue`** | 28 个组件 5,374 行 → **D9 后实需 14 个 / 3,714 行**。✅ 对 Radix 真实依赖为 0 | 含 P5 |
 | ~~**`ServerStateClient`**~~ | ❌ **v4 移出 —— D24-a 改装 `@tanstack/vue-query`,不自研**。<br>实测其 peer 仅 `vue ^2.6\|\|^3.3`,零 React 依赖;而 §4.4 是全案唯一没有量级的自研件,却压在 P2 关键路径。见 11 号 §2.8.7 | — |
@@ -696,7 +740,7 @@ D6 已决定保留双语。
 `threads/hooks.ts` 拆出的 12 个 hook 758 行【P2 约 400 / P3·P5 约 358】。
 🔴 **最后这 758 行在方案 v1 里没有任何阶段认领**,v2 已补。
 
-**必做**:`frontend-vue/app/core/PROVENANCE.md` 记录来源 commit(`f204d2cb`,D4-a 新基线)+
+**必做**:`frontend-vue/app/core/PROVENANCE.md` 记录来源 commit(`b71a892b`,D4-a 新基线)+
 **五类偏离逐条登记** —— 且由 `core-provenance.test.ts` 的**完备性检查**强制
 (登记缺失即报红,豁免清单不能悄悄膨胀)。
 
