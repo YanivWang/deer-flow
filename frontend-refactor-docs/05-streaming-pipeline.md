@@ -2,7 +2,7 @@
 
 > 这是全系统最复杂的部分。`core/threads/hooks.ts`（3,072 行）+
 > `core/messages/utils.ts`（861 行）+ `message-list.tsx`（1,423 行）+
-> `message-group.tsx`（1,022 行）合计约 6,400 行都服务于这一条链路。
+> `message-group.tsx`（1,058 行）合计约 6,400 行都服务于这一条链路。
 > **动这里之前请完整读本篇。**
 
 ## 5.1 分层
@@ -209,7 +209,7 @@ type MessageGroup =
 隐藏的控制消息名：`summary`、`loop_warning`、`todo_reminder`、
 `todo_completion_reminder`（`HIDDEN_CONTROL_MESSAGE_NAMES`）。
 
-### 三条分组不变量（易被"优化"破坏）
+### 四条分组不变量（易被"优化"破坏）
 
 1. **带 `tool_calls` 的 AI 消息也可能有用户可见文本**。这类 turn 归入
    `assistant:processing`，`message-group.tsx` 必须把可见文本渲染成一个处理步骤，
@@ -219,6 +219,19 @@ type MessageGroup =
    过早判定为终态 assistant 气泡会让文本跳进步骤面板。
 3. **同理适用于已有 tool call 之后**：流式期间，位于当前最后一个 tool-call 步骤
    之后的纯内容 AI 消息保持可见，因为它自己也可能在 turn 结束前再长出一个 tool call。
+4. 🔴 **reasoning 必须排在答案文本之上，且两个渲染组件都要满足**（上游 #4576，
+   2026-07-31 随 D4-a 基线并入）。**同一条消息在生命周期内由两个不同组件渲染**：
+   流式期间是 `MessageGroup`，turn 落定后是 `MessageListItem`。后者把已定型气泡的
+   `<Reasoning>` 披露渲染在正文之上，因此 `MessageGroup` 也必须把尾部 reasoning 披露
+   放在其后的助手文本之上，且 `convertToSteps` 要先产出某条消息的 reasoning step
+   再产出它的 content step —— **否则 turn 落定的瞬间，两者会上下互换**。
+   ⚠️ 例外：在该 reasoning **之前**发出的助手文本保持原位，只有"由这段 reasoning 产出的答案"下移。
+
+> 🔴 **对 Vue 重写的意义（第 4 条）**：这是一条**跨组件**不变量，不是单个组件内部的排序问题。
+> 迁移时若把 `MessageGroup` 与 `MessageListItem` 拆给不同人／不同阶段做，
+> 单看任一侧都是"对的"，只有把流式与落定态连起来看才会暴露。
+> 建议在 Vue 侧补一条等价 E2E —— React 版已有 `tests/e2e/streaming-reasoning-order.spec.ts`
+> （180 行 / 2 用例，覆盖"流式中"与"已落定"两态），**它已计入 D6 保留的 25 个 spec**。
 
 ### `MessageGroup` 的查表优化
 `MessageGroup` 在把消息转成 steps **之前**，对每个 processing 组**只建一次**

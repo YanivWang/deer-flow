@@ -11,7 +11,7 @@
 | **LangGraph `useStream`** | 当前 run 的活动流状态（messages / values / isLoading / error） | SDK hook，包在 `useThreadStream` 内 | 单个 thread 的流生命周期 |
 | **React Context** | UI 局部共享状态（artifacts / sidecar / subtasks / browser-view / i18n / auth / theme / sidebar / prompt-input） | 各自 `createContext` | 组件树 |
 | **localStorage** | 用户偏好（模型、通知、token 用量展示、每 thread 模型覆盖） | [core/settings/store.ts](../frontend/src/core/settings/store.ts) + `local.ts` | 跨会话持久 |
-| **sessionStorage** | 标签页级临时状态（composer 草稿、SDK reconnect 记账） | [core/threads/composer-draft.ts](../frontend/src/core/threads/composer-draft.ts)、`lg:stream:{threadId}` | 标签页 |
+| **sessionStorage** | 标签页级临时状态（composer 草稿、SDK reconnect 记账、**产物面板状态**） | [core/threads/composer-draft.ts](../frontend/src/core/threads/composer-draft.ts)、`lg:stream:{threadId}`、`deerflow:artifacts:v1:{pathname}` | 标签页 |
 
 另有 **cookie**：`locale`（i18n）、`sidebar_state`（侧栏展开）、
 `access_token`（HttpOnly，Gateway 所有）、`csrf_token`（可读，Gateway 所有）。
@@ -67,7 +67,7 @@ Query key 采用数组前缀分域，主要几组：
 | `I18nContext` | [core/i18n/context.tsx](../frontend/src/core/i18n/context.tsx) | core | 只存 `locale` + setter，写 cookie |
 | `AuthProvider` | [core/auth/AuthProvider.tsx](../frontend/src/core/auth/AuthProvider.tsx) | core | `useAuth()` / `useRequireAuth()` |
 | `SubtasksProvider` | [core/tasks/context.tsx](../frontend/src/core/tasks/context.tsx) | core | 子任务字典 + `tasksRef` 镜像 |
-| `ArtifactsProvider` | `components/workspace/artifacts/context.tsx` | components | 产物列表、选中项、面板开合 |
+| `ArtifactsProvider` | `components/workspace/artifacts/context.tsx` | components | 产物列表、选中项、面板开合。🔴 **按 pathname 水合并持久化到 sessionStorage**（见下） |
 | `SidecarProvider` | `components/workspace/sidecar/context.tsx` | components | 副驾会话、引用/引文 |
 | `BrowserViewProvider` | `components/workspace/browser-view/context.tsx` | components | 远程浏览器面板 |
 | `ThreadContext` | `components/workspace/messages/context.ts` | components | 把 `{ thread, isMock }` 下发给消息子树 |
@@ -163,3 +163,24 @@ fire-and-forget cancel 完成，早于后端把标题 finalize 落库——只�
   降级成可编辑的斜杠文本。
 - 草稿只在通过 in-flight guard 后、经 `SendMessageOptions.onSent` 回调清除。
 - **不持久化**：附件、sidecar 引用、语音状态、polish 撤销状态。
+
+## 4.10 产物面板的存储契约（2026-07-31 随 D4-a 基线并入，上游 #4580 / #4584）
+
+[components/workspace/artifacts/context.tsx](../frontend/src/components/workspace/artifacts/context.tsx)：
+
+- **`ThreadState.artifacts` 始终是产物列表的权威来源**；sessionStorage 里的那份
+  只是**刷新引导缓存**（refresh bootstrap cache），不是第二数据源。
+- key 为 `deerflow:artifacts:v1:{encodeURIComponent(pathname)}`。
+  ⚠️ **按 pathname 而非 threadId 分区** —— 聊天路由是 `/workspace/chats/[thread_id]`，
+  两者在聊天页等价；换成不含 thread id 的路由就不再等价。
+- 持久化字段仅 `{ artifacts, selectedArtifact, open }`；读取时逐字段做类型校验，
+  任一不合法即整体丢弃（`readPersistedState` 返回 `null`）。
+- 🔴 **pathname 水合 effect 同时承担 thread 切换重置**：重设
+  `artifacts` / `selectedArtifact` / `open` / `autoOpen`（→ `true`）/ `autoSelect`。
+  这是 §3.3.1 里 O17（`autoOpen` 跨 thread 粘滞）被上游关闭的原因。
+- 🔴 **初始空流值不得覆盖已恢复的状态**：[chat-box.tsx:88](../frontend/src/components/workspace/chats/chat-box.tsx)
+  用 `if (threadArtifacts && threadArtifacts.length > 0)` 守卫，
+  历史加载完成前的空数组不会写回 provider。**去掉这个守卫会导致刷新后面板闪空。**
+- 正式产物内容在 **run 结束时刷新一次**（[core/artifacts/hooks.ts:44](../frontend/src/core/artifacts/hooks.ts)
+  的 `wasLoading && !thread.isLoading` 边沿触发）；`write-file:` 临时预览不走这条，
+  始终由消息驱动（`loadArtifactContentFromToolCall`）。

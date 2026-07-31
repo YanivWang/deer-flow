@@ -74,7 +74,7 @@
 
 | 模块 | 文件 | 职责 |
 | --- | --- | --- |
-| `auth/` | `server.ts`（SSR 五态判定）`AuthProvider.tsx` `types.ts`（`userSchema`/`buildLoginUrl`/`assertNever`）`gateway-config.ts` `proxy-policy.ts` `remember-login.ts` `setup.ts` `constants.ts` `static-user.ts` `auth-disabled-user.ts` | 鉴权全链路 |
+| `auth/` | `server.ts`（SSR 五态判定）`AuthProvider.tsx` `types.ts`（`userSchema`/`buildLoginUrl`/`assertNever`）`gateway-config.ts` `proxy-policy.ts` `remember-login.ts` `setup.ts` `constants.ts` `static-user.ts` `auth-disabled-user.ts` 🔴 `next-path.ts`（登录后跳转目标校验，上游 #4587） | 鉴权全链路 |
 | `i18n/` | `context.tsx` `hooks.ts` `server.ts` `locale.ts` `cookies.ts` `translations.ts` + `locales/{en-US,zh-CN,types,index}.ts` | 双语（en-US / zh-CN） |
 
 ### i18n 的结构与代价

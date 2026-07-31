@@ -48,14 +48,14 @@ workspace/
 | --- | --- |
 | `input-box.tsx` | **2,859** |
 | `messages/message-list.tsx` | 1,423 |
-| `messages/message-group.tsx` | 1,022 |
+| `messages/message-group.tsx` | 1,058 |
 | `settings/memory-settings-page.tsx` | 993 |
 | `sidecar/sidecar-panel.tsx` | 975 |
 | `settings/integrations-settings-page.tsx` | 884 |
 | `artifacts/artifact-file-detail.tsx` | 802 |
 | `messages/message-list-item.tsx` | 758 |
 | `messages/human-input-card.tsx` | 588 |
-| `chats/chat-box.tsx` | 467 |
+| `chats/chat-box.tsx` | 468 |
 | `browser-view/browser-view-panel.tsx` | 462 |
 
 ## 8.3 右侧面板布局（重构高危区）

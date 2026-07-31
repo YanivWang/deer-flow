@@ -112,6 +112,14 @@ app/layout.tsx                          [Server]
 前端只允许通过 [core/auth/remember-login.ts](../frontend/src/core/auth/remember-login.ts)
 持久化**邮箱地址**。密码和 token 绝不能进前端存储。
 
+🔴 **登录后跳转必须过白名单校验**（上游 #4587，2026-07-31 随 D4-a 并入）：
+`/login` 与 `/auth/callback` 的 `next` 参数一律经 [core/auth/next-path.ts](../frontend/src/core/auth/next-path.ts) 归一化，
+`validateAuthNextPath()` 四条拒绝规则：不以 `/` 开头、以 `//` 开头（协议相对 URL）、
+含 `\`、含 `:`。最后一条同时挡掉绝对 URL 与 `javascript:` 伪协议，
+**代价是含冒号的合法站内路径也会被拒**，回落到 `DEFAULT_AUTH_NEXT_PATH = "/workspace"`。
+Vue 侧迁移时这条不能省 —— 它是 open-redirect 防护，不是 UI 细节；
+且该文件是纯 TS、无 React 依赖，属 **Tier 1 逐字节复制**。
+
 ## 3.5 聊天页的 thread id 生命周期
 
 这是一个容易踩坑的机制，由 [use-thread-chat.ts](../frontend/src/components/workspace/chats/use-thread-chat.ts) 管理：

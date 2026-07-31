@@ -121,6 +121,7 @@ Base：`getBackendBaseURL()`，默认空串（同源相对路径）。全部经
 | GET | `/api/models` | 可用模型 + `tokenUsageEnabled` |
 | GET | `/api/skills`、POST `/api/skills/install`、PUT `/api/skills/{name}` | 技能列表 / 安装 / 启停 |
 | GET/PUT | `/api/mcp/config` | MCP server 配置与启停 |
+| PATCH | `/api/mcp/config` | 🔴 **单个 server 的定向启停**（上游 #4577，2026-07-31 并入）。设置页的 MCP 开关必须走这条，**不能整份 PUT 回写** —— 否则同一份配置里其他非法/不完整的 peer server 条目会被一并校验而连带失败。前端契约：mutation 期间禁用开关，成功 refetch 完成前不解禁；失败时用后端返回的 `detail` 弹 toast；仅在成功后失效 `["mcpConfig"]` |
 | GET | `/api/agents`、`/api/agents/{name}`、`/api/agents/check?name=…` | 自定义 agent CRUD 与查重 |
 | GET | `/api/suggestions/config` | 建议配置 |
 | POST | `/api/input-polish` | 提交前草稿润色 |

@@ -12,7 +12,7 @@ churn 取最近 400 次提交中触及 `frontend/src` 的文件计数。
 | `core/threads/hooks.ts` | **3,072** | 68 | 🔴 **第一优先级**。全站唯一的超大逻辑文件，改动最频繁 |
 | `components/workspace/input-box.tsx` | **2,859** | 48 | 🔴 单一组件承载 composer 全部职责 |
 | `components/workspace/messages/message-list.tsx` | 1,423 | 43 | 🟠 消息渲染 + 多种卡片状态判定 |
-| `components/workspace/messages/message-group.tsx` | 1,022 | 26 | 🟠 |
+| `components/workspace/messages/message-group.tsx` | 1,058 | 26 | 🟠 |
 | `components/workspace/messages/message-list-item.tsx` | 758 | 45 | 🟠 churn 高于体量预期 |
 | `app/workspace/chats/[thread_id]/page.tsx` | 453 | 52 | 🔴 churn 极高，且与 agent 页成对修改 |
 | `app/workspace/agents/[agent_name]/chats/[thread_id]/page.tsx` | 426 | 28 | 🔴 与上一行重复 |

@@ -268,6 +268,17 @@ _EXEMPT_BLOCK_TAGS = {
     # Documentation artifact: appears only in this middleware's own explanatory
     # comment describing the tag pattern, not emitted into any prompt.
     "tag",
+    # HTML document structure, not framework authority context. These reach the
+    # harness from two places, neither of which grants trusted context:
+    # ``sandbox/tools.py`` validates the structure of *user-generated* HTML
+    # artifacts before ``finalize_artifact_write`` writes the target file, and
+    # ``agents/lead_agent/prompt.py`` describes that required shape to the model.
+    # Blocking them would be actively harmful rather than merely redundant:
+    # writing HTML artifacts is a supported product capability, so a document
+    # body arriving as legitimate user input would be mangled by the rewrite.
+    "html",
+    "head",
+    "body",
 }
 
 
