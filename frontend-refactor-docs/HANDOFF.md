@@ -842,14 +842,38 @@ E2E 123 全绿证明运行时行为未变 → **行为差异为 0,不是"影响�
 
 **可直接抄 4 项**:antdv SSR 接线、主题桥接链(构建期从单一 JSON 生成 CSS 变量 + antdv token)、
 antdv locale 联动 vue-i18n、routeRules 从单一 config 派生。
-**借鉴但要裁剪 4 项**:`docs-sync` 的 claims 机制(用于 C 类 29 条红线)、架构守护型测试
-(用于 §1.3 五条约束 → **缓解 R14**)、`i18n-manager.mjs`、`quality` 脚本顺序(→ `make verify` 模板)。
+**借鉴但要裁剪 8 项**:`docs-sync` 的 claims 机制(用于 C 类 29 条红线)、架构守护型测试
+(用于 §1.3 五条约束 → **缓解 R14**)、`i18n-manager.mjs`、`quality` 脚本顺序(→ `make verify` 模板)、
+公开页面的 `default` layout、SEO 资源与 Public API adapter、SWR + webhook revalidate、
+`app/features/<domain>` 作为**对标完成后新增领域**的垂直切片约定。
 
-🔴 **明确不要抄**:`app/features/` 分层(**与 §3.2「子目录镜像 React 版」冲突**)、
-CSP 配置(它有未解冲突)、`.env.*` 白名单提交(反面教材)、`app/lib/http`。
+🔴 **明确不要原样抄**:把现有 workspace 整体改成 `app/features/`(会破坏 §3.2 子目录镜像)、
+CSP 配置(它有未解冲突)、`.env.*` 白名单提交(反面教材)、`app/lib/http`、普通可读 token Cookie、
+浏览器直连后端作为 DeerFlow 的生产 API 边界。认证、CSRF、SSE 和后端代理必须遵守 DeerFlow 的
+`proxy-policy` / Nitro 契约。
 
-🚫 **完全没覆盖**:服务端状态层的 DeerFlow 使用面(⚠️ **v4:D24-a 后不再是自研件**,但参照工程不用 TanStack,仍无参照)、`resizable`(R4)、
-流式/SSE(`ThreadStreamEngine`、`streamdown-vue`)、E2E。
+**新增领域的最终形态**:旧 workspace 继续镜像 React;新建 `billing`、`pricing`、`news` 等领域
+可采用 `app/features/<domain>` + 薄页面 + `core/<domain>`/API adapter。两种结构渐进共存,不为统一目录而做迁移性重构。
+
+🚫 **`nuxt-modern-starter` 完全没覆盖**:服务端状态层的 DeerFlow 使用面(⚠️ **v4:D24-a 后不再是自研件**,
+但参照工程不用 TanStack,仍无参照)、`resizable`(R4)、DeerFlow Gateway 流式/SSE(`ThreadStreamEngine`、
+`streamdown-vue`)、E2E。
+
+### 6.14 可参照 SSE 实现:`gamma-project/features`(2026-07-31 深读)
+
+参照来源:`/Users/wangcheng/Documents/workSpace/frontEnd/pixelBloomSpace/oversea/gamma-project`。
+
+**✅ 借鉴**:通用 SSE buffer/parser 与业务 transport 分层、业务 adapter、纯 reducer action、
+流所有权/abort、watchdog 纯函数、实时与历史回放 parity 测试、UI 层 `requestAnimationFrame` 批量更新。
+详细取舍已写入 11 号 **§4.1.0**。
+
+**🔴 不复制**:它的 `\\n\\n` 简化 parser、`segment_continue/last_message_index` 协议、
+`localStorage` token、模块级重连变量和“没有通用 event 去重”的最终状态。DeerFlow 必须遵守
+Gateway 的 `id` / heartbeat / `Last-Event-ID` / `Content-Location` / `gap` / `end` / 409 契约。
+
+**最终结构**:`fetch-sse → wire codec → Gateway adapter → canonical event → pure reducer →
+ThreadStreamEngine → Vue composable → Pinia/UI`。Gamma 只提供分层参考,不改变 D22 的手写流处理方案,
+也不减少 P0 的 stream contract、Nitro proxy 和生命周期测试。
 
 🔴 **最有价值的一项(2026-07-31 深读后新增)**:它的 `revalidate-nitro-contract.test.ts`
 演示了**「从被拷贝方源码提取算法/常量执行比对」**的契约测试模式 ——

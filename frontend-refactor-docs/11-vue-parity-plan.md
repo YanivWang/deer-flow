@@ -1316,20 +1316,71 @@ const listFiles = (root, exts) => { /* 递归 readdirSync */ }
 2. **缺前置条件时用 `ctx.skip()`,不要用 `return`** ——
    `return` 是**静默 pass**,会伪装成「测过了」;`ctx.skip()` 才是真跳过。
 
-#### 2.7.3 ❌ 明确不要抄
+#### 2.7.3 ⚠️ 不要整体照搬,按阶段借鉴
 
 | 项 | 原因 |
 | --- | --- |
-| **`app/features/` 分层** | 🔴 **与 §3.2 冲突**。该工程是 6 个 feature / 3,425 行;deer-flow 的 `components/workspace` 是 **20,286 行**,且 §3.2 明确要求**子目录镜像 React 版**以便对标时双向查找。按 feature 重划会直接破坏这条 |
+| **把现有 workspace 整体改成 `app/features/`** | 🔴 **与 §3.2 冲突**。该工程是 6 个 feature / 3,425 行;deer-flow 的 `components/workspace` 是 **20,286 行**,且 §3.2 明确要求**子目录镜像 React 版**以便对标时双向查找。对标阶段按 feature 重划会直接破坏双向查找；但这不禁止 v1 之后为**新增领域**采用 feature 垂直切片，见下方「渐进式扩展规则」 |
 | **CSP 配置** | 它那份有**未解冲突**:`script-src 'unsafe-inline'` 去不掉 —— nonce 必须每响应唯一,与它的 prerender/SWR 缓存策略根本不兼容。deer-flow 是内网工具,入口在 Nginx(:2026)或 `docker-vue`(:2027),CSP 该放哪层是另一个问题 |
 | **`.env.*` 白名单提交** | 明确的反面教材:`.gitignore` 用 `!.env.prod` 强制提交生产 env 文件。deer-flow 用 `.env.example` |
-| **`app/lib/http`** | deer-flow 有自己的 `core/api/`(从 React 版复制,含 CSRF 双通道、401 处理、SSE gap 恢复 5 次预算),复杂度高一个量级 |
+| **`app/lib/http` 原样复制** | deer-flow 有自己的 `core/api/`(从 React 版复制,含 CSRF 双通道、401 处理、SSE gap 恢复 5 次预算),复杂度高一个量级；只借鉴其 Public/Auth/Product client 的分层思想 |
+
+#### 2.7.3a 🔵 渐进式扩展规则(新增业务适用)
+
+参照工程的 `app/features/<domain>` 不用于重划现有 workspace,但适合作为 DeerFlow **对标完成后的新增业务目录约定**。两套形态允许并存,不得为了形式统一而回迁旧代码:
+
+```text
+现有对标区(保持 React 镜像)       新增领域(垂直切片)
+app/components/workspace/          app/features/billing/
+app/core/threads/                  app/features/pricing/
+app/composables/                   app/features/news/
+                                   ├── components/
+                                   ├── api.ts / types.ts
+                                   ├── composables/ / stores/
+                                   └── index.ts(唯一公共导出面)
+```
+
+新增业务的页面只负责路由、layout、SEO 和 feature 组合;服务端状态进入 `@tanstack/vue-query`,客户端工作流状态才进入 Pinia。Feature 之间不得深引内部文件,跨领域共享 API/类型放在 `core/<domain>` 或已有共享 adapter 中。
+
+新增页面必须先声明以下元数据,再决定实现:
+
+| 元数据 | 可选值 | 约束 |
+| --- | --- | --- |
+| 区域 | 营销 / 认证 / 产品 / 编辑器 | 决定 layout、鉴权和依赖边界 |
+| 渲染 | prerender / SSR / SWR / CSR | 只在 `config/routes.ts` 登记,不在页面散落 |
+| 数据 | 静态 / Public API / Auth API / Product API | 公开 SSR 数据不得携带用户凭据 |
+| SEO | index / noindex、canonical、hreflang | 公开页面必须接入统一 SEO 工具 |
+| 缓存 | 无缓存 / SWR TTL / 按需失效 | 价格等商业数据最终以服务端校验为准 |
+
+#### 2.7.3b 🔴 安全与部署边界:只借鉴分层,不复制认证实现
+
+参照工程把 API 直连后端、在普通可读 Cookie 中保存 token 并由浏览器转成 Bearer,适合作为轻量 starter 的实现,不作为 DeerFlow 的生产边界。DeerFlow 继续采用 Nitro 代理契约:
+
+```text
+浏览器 ── HttpOnly session/cookie + CSRF ──▶ Nitro
+Nitro  ── 代理、鉴权、CSRF、SSE 不缓冲、超时 ──▶ Gateway
+```
+
+Public client 的「主动剥离 authorization/cookie」可以借鉴;但 `frontend-vue` 的敏感 token 不得依赖可被页面 JavaScript 读取的 Cookie。公开营销数据可通过 Public API 在 SSR/prerender/SWR 中读取,产品区实时流和用户数据必须沿 DeerFlow 的 Gateway 契约处理。
+
+#### 2.7.3c 🔵 可借鉴的公开站点基础设施
+
+后续新增落地页、价格页、关于页、新闻页时,可借鉴参照工程的以下职责分布:
+
+- `config/routes.ts`: 路由区域、渲染规则、公开路径单一来源;
+- `server/routes/`: `sitemap.xml`、`robots.txt` 等 SEO 资源;
+- `server/middleware/`: 首跳鉴权与 canonical 重定向;
+- `server/api/`: 受保护的 revalidate/BFF 入口;
+- `server/utils/`: SEO、缓存失效和请求边界工具;
+- `app/api/public.ts`: 公开内容 adapter,不携带用户凭据。
+
+SWR 仅用于新闻、帮助文档、营销内容等公开数据;不得用于聊天流、thread 状态或工作台实时数据。参照工程通过 webhook 触发缓存失效的模式可以复用,但不得依赖 Nitro 私有 cache key 算法而不配升级回归测试;多实例限流必须放到共享网关或 Redis 等外部设施。
 
 #### 2.7.4 🚫 它完全没覆盖的(deer-flow 最难的部分)
 
 | deer-flow 的难点 | 参照工程 |
 | --- | --- |
-| 自研 server-state 层(D24,§4.4 的 key 约定 / 失效策略) | ⚠️ **只有方向参照** —— 它不用 TanStack Query,但它的 api 函数复杂度远低于 DeerFlow;不能照抄 `app/lib/http` |
+| 服务端状态(D24,§4.4 的 key 约定 / 失效策略) | ⚠️ **只有分层方向参照** —— 参照工程不用 TanStack Query,DeerFlow 按 D24-a 使用 `@tanstack/vue-query`;不能照抄 `app/lib/http` |
 | **`resizable`**(风险 R4 的 go/no-go,承载 **08 号** §8.3 五条布局红线 + issue #4465) | ❌ **零参照** |
 | `ThreadStreamEngine`(§4.1,4–6 周) | ❌ 无任何流式 / SSE |
 | `streamdown-vue`(§4.2,5–8 周,全案最高风险) | ❌ 无 |
@@ -3029,6 +3080,75 @@ jobs:
 > 当前后端仍不改,但 LangGraph-compatible 只作为 **DeerFlow Gateway adapter** 的输入协议;
 > 前端内部不得泄漏 LangGraph SDK 的 run/thread/stream 抽象。未来后端若不用 LangChain/LangGraph,
 > 只需新增 adapter 或保持 canonical event 契约,UI/store 不大改。
+
+#### 4.1.0 🔵 Gamma-project 参照评估:借鉴分层,不复制协议
+
+**参照来源**:`/Users/wangcheng/Documents/workSpace/frontEnd/pixelBloomSpace/oversea/gamma-project`
+的 `features/agentCore/stream/`、`features/deepResearch/api/core/sse/`、`reducers/`、`store/`
+与 `tests/sse-transport.test.ts`、`tests/reducer-merge.test.ts`、`tests/parity.test.ts`。
+
+这套实现中值得借鉴的不是具体事件名,而是职责分层:
+
+```text
+Gamma 通用 SSE buffer/parser
+        ↓
+Deep Research transport(连接、分片续拉、网络重试)
+        ↓
+业务 SSE adapter(JSON.parse、业务类型)
+        ↓
+纯 reducer(事件 → action)
+        ↓
+Pinia store(游标、abort、重连、消息合并)
+        ↓
+view-model / renderer
+```
+
+**✅ DeerFlow 采用的部分**:
+
+1. `agentCore/stream` 的职责思想:buffer 只切 frame,parser 只产出 `{ event, data }`,不在底层解析业务 JSON。
+2. transport 与业务 adapter 分层:连接失败、abort、协议错误不在业务 reducer 中处理。
+3. reducer 使用纯函数和明确 action(`ignore` / `merge` / `error`),不直接改 Pinia。
+4. 流所有权和生命周期检查:切 thread、stop、重连后,旧 reader 即使晚到事件也不能写入当前状态。
+5. `requestAnimationFrame` 批量更新的性能思路,但只放在 Vue 适配层;引擎内部继续使用 `coalesce.ts` 的框架无关合并语义。
+6. 实时流与历史回放的 parity 测试:同一组 canonical 事件分别走实时和回放路径,最终 view-model 必须一致。
+7. watchdog 的纯函数规则:「后端等待用户输入」与「真实断流」必须分开,组件不直接控制重连。
+
+**🔴 DeerFlow 不复制的部分**:
+
+| Gamma 实现 | DeerFlow 处理 |
+| --- | --- |
+| `sse-buffer.ts` 只按 `\\n\\n` 切分 | 仅借鉴思路;必须覆盖 `CRLF`、多行 `data:`、注释/heartbeat、EOF 残帧与 frame 边界测试 |
+| `parse-sse-event.ts` 不解析 `id:`、heartbeat,且只支持简化字段 | DeerFlow parser 必须保留 `id`,识别 `: heartbeat`,并把 heartbeat 排除在业务 reducer 之外 |
+| `segment_continue` + `last_message_index` | 不复制;DeerFlow 使用 Gateway 的 `Last-Event-ID`、`Content-Location`、`gap` 和 durable state reload |
+| `localStorage` 读取 token | 不复制;认证由 Nitro proxy / HttpOnly session / CSRF 契约负责,transport 不读存储 |
+| 模块级 `reconnectTimer` / `reconnectPromise` | 不复制;`ThreadStreamEngine` 每个实例自有生命周期,必须有 `dispose()` 和单一流所有权 |
+| reducer 明确声明“没有通用 event 去重” | 不接受为最终方案;DeerFlow 至少按 event id/cursor 做重复保护,并覆盖 gap 恢复后的重放行为 |
+
+**DeerFlow 最终采用的链路**:
+
+```text
+fetch-sse(字节/文本流)
+  → sse-buffer + parse-sse-event(通用 SSE frame)
+  → deerflow-wire(codec: id / event / data / heartbeat / end / gap / 409)
+  → deerflow-gateway(adapter: Gateway event → CanonicalStreamEvent)
+  → reducer(CanonicalStreamEvent → snapshot patches)
+  → ThreadStreamEngine(游标、所有权、abort、gap recovery、coalesce)
+  → Vue composable(响应式快照与 RAF 批量通知)
+  → Pinia / workspace UI
+```
+
+Gamma 的 `message_chunk`、`segment_continue`、`stream_completed`、Deep Research agent 名称
+都属于它自己的业务协议,不能进入 DeerFlow 的 canonical 层。DeerFlow canonical 层只允许本方案
+§4.1.2 定义的自有事件,组件和 Pinia 不得判断 Gateway 原始 `event` 名。
+
+**必须新增或保留的测试形态**:
+
+- `sse-transport`: CRLF、heartbeat、多行 data、`id`、`end`、EOF、abort;
+- `gateway-codec`: `Content-Location`、`metadata/messages/values/custom`、`gap`、409 分支;
+- `engine-lifecycle`: dispose、切 thread 后旧流事件丢弃、stop/drain、单流所有权;
+- `replay-parity`: 实时事件与 durable reload/tail resume 的 canonical snapshot 一致;
+- `coalesce`: 连续 chunk 不饿死 UI,且不产生每 chunk 一次的响应式通知;
+- `nitro-proxy`: 首帧按到达时间断言,验证 SSE 没有被代理缓冲。
 
 ```
 frontend-vue/app/core/api/stream/     ← 🔴 ADDED:React 侧无此目录(实测已确认)
