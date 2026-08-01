@@ -1,0 +1,12 @@
+{
+  "light": {
+    "colorPrimary": "#1677ff",
+    "colorBgBase": "#ffffff",
+    "colorTextBase": "#111827"
+  },
+  "dark": {
+    "colorPrimary": "#5b8cff",
+    "colorBgBase": "#0f172a",
+    "colorTextBase": "#f8fafc"
+  }
+}

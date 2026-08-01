@@ -1,0 +1,22 @@
+name: deer-flow-vue
+
+services:
+  frontend-vue:
+    build:
+      context: ../
+      dockerfile: frontend-vue/Dockerfile
+    container_name: deer-flow-frontend-vue
+    ports:
+      - "${VUE_PORT:-2027}:3000"
+    environment:
+      - NUXT_GATEWAY_URL=${VUE_GATEWAY_URL:-http://gateway:8001}
+      - NITRO_HOST=0.0.0.0
+      - NITRO_PORT=3000
+    networks:
+      - deer-flow
+    restart: unless-stopped
+
+networks:
+  deer-flow:
+    external: true
+    name: ${DEER_FLOW_NETWORK:-deer-flow_deer-flow}

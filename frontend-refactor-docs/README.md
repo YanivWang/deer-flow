@@ -4,8 +4,9 @@
 `2026-07-30` 时点的 `main-wc` 分支源码（前端 `package.json` version `2.1.0`），
 而非设计愿望或未来规划。
 
-> 🔖 **新会话接手请先读 [HANDOFF.md](HANDOFF.md)** —— 含 25 项定稿决策（D1–D25）、
-> 当前进度与全部实测数据，读完即可继续任务。
+> 🔖 **新会话接手请先读 [12-vue-execution-workflow.md](12-vue-execution-workflow.md)**
+> 与 [HANDOFF.md](HANDOFF.md) ——
+> 前者是当前执行工作流,后者只保留最新滚动检查点。旧的连续轮次 prompt / 执行流水账已从交接文档移除;需要历史细节时查 git 历史。
 >
 > 📌 **当前为方案 v4**（2026-07-31）：
 > v2 完成「彻底修复」，修掉 10 处问题（2 处会导致落地卡住 → D13/D14；6 处记账不一致；2 处执行形态）；
@@ -30,13 +31,13 @@
 > 🔴 **对外口径 `≈7–12 人月` 不变**（v4 净影响 ≈ 0）；依赖 **50 → 53**；自研基础件 **4 → 3**。
 > ✅ **O18 / O19 已于 2026-07-31 由用户拍定**（D26 = (b)、D11-a = 上 CI）。
 > 🔴 **同日 D4-b：基线重冻至 `b71a892b`，`frontend/` 零漂移，全部数字保持。**
-> 详见 HANDOFF §〇 与 11 号 §2.10 / §2.4.6 / §3.1.4 / §2.8.7 / §3.2.4 / §4.2.5。
+> 详见 11 号 §2.10 / §2.4.6 / §3.1.4 / §2.8.7 / §3.2.4 / §4.2.5。
 
 ## 阅读顺序
 
 | 文档 | 内容 | 适用场景 |
 | --- | --- | --- |
-| [HANDOFF.md](HANDOFF.md) | **交接文档**：决策记录、进度、阻塞项、实测数据速查 | 冷启动接手时第一篇 |
+| [HANDOFF.md](HANDOFF.md) | **短交接检查点**：最新状态、验证时间、风险/边界、下一步 1-3 项和下一窗口可复制 prompt;不再保存历史轮次流水账 | 冷启动接手时读最新状态 |
 | [01-system-overview.md](01-system-overview.md) | 服务拓扑、请求路径、四种运行模式 | 先读这篇，理解前端在整个系统中的位置 |
 | [02-frontend-layers.md](02-frontend-layers.md) | `src/` 分层、目录职责、依赖方向 | 判断新代码该放哪一层 |
 | [03-routing-and-pages.md](03-routing-and-pages.md) | App Router 路由表、布局链、Provider 树、Server/Client 边界 | 改路由、加页面、调 Provider |
@@ -47,23 +48,25 @@
 | [08-components-and-ui.md](08-components-and-ui.md) | 组件分层、生成目录、右侧面板布局所有权 | 改 UI、加面板 |
 | [09-tooling-and-quality.md](09-tooling-and-quality.md) | 构建、测试双环境、Lint、环境变量 | 提交前的质量门禁 |
 | [10-refactor-hotspots.md](10-refactor-hotspots.md) | 重构热点、必须保留的不变量、风险清单 | 制定重构计划时的输入 |
-| [11-vue-parity-plan.md](11-vue-parity-plan.md) | **Vue/Nuxt 前端对标建设方案（草案 v4，待评审）** | 技术栈迁移决策与执行计划 |
+| [11-vue-parity-plan.md](11-vue-parity-plan.md) | **Vue/Nuxt 前端对标建设方案 v4**：历史决策、迁移边界、风险和 parity 基线 | 需要追溯技术决策或对标范围时阅读 |
+| [12-vue-execution-workflow.md](12-vue-execution-workflow.md) | **当前执行工作流**：Domain Completion Sprint、一个域一次收口、live signoff 独立车道、分层验证、压缩 HANDOFF | 后续实现与新窗口接手时必须遵守 |
 
 ## 当前进展
 
 | | |
 | --- | --- |
-| 阶段 | 架构提取已完成；Vue 化方案 **草案 v4** 待用户评审。**尚未写代码** |
+| 阶段 | Vue/Nuxt 新树已进入实现推进;当前不再按旧连续轮次或单纵切停顿推进,改按 [12-vue-execution-workflow.md](12-vue-execution-workflow.md) 的 Domain Completion Sprint 执行 |
 | 已定稿决策 | **D1–D26 + 五项修订**（D4-a / D11-a / D13-a / D24-a / D25-a）<br>原 **D1–D25**（🔴 **Nuxt+按路由分级渲染（产品区全 CSR）** / Ant Design Vue / 自包含复制 / 冻结基线 `16ea3a4d` / 不写 aria / 砍 6 项 / 只改 `frontend-vue/` / 砍 sr-only / 砍 2,100 行零引用代码 / 可新建目录 / 不做 GitHub CI / 测试可只读 frontend / 溯源两层校验+拆分规格 / 验收拆两层 / 弃 Tailwind 改 SCSS / **团队有 Nuxt 经验** / **接受五条约束** / **autoOpen 切换即重置** / **预授权 resizable 自研** / 🔴 **产品区全 CSR** / 🔴 **`ai` 类型本地化** / 🔴 **流处理手写化,不装 LangGraph SDK** / 🔴 **`@langchain/core` 类型本地化** / 🔴 **`@tanstack/vue-query` 自研替代** / 🔴 **清掉 9 个 React 迁移惯性/小众包**）→ [详见 §0.4](11-vue-parity-plan.md)<br>⚠️ D1–D12、D15–D25 由用户拍板；**D13/D14 是授权后按最佳实践所定，可推翻** |
 | 待决项 | ✅ **仅剩 O15**（v2 是否做共享包，远期，v1 上线后再议）。<br>🔴 **v4 的 O18 / O19 已于 2026-07-31 由用户拍定**：**O18 → D26 = (b)**（只 merge `backend/` + 安全补丁，`frontend/` 冻结）、**O19 → D11-a = 上 CI**。<br>O5/O6/O11/O17 已定案为 D16–D19；O2 已转为**结论**（**P5 视觉签字前不得退役 `frontend/`**）|
-| 阻塞项 | ✅ **无 —— 可以开 P0**。<br>v4 唯一的阻塞项 O18（D26 上游冻结政策）已由用户定案 (b)；🔴 **同日 D4-b 基线重冻至 `b71a892b`，实测 `frontend/` 零漂移，全部资产数字保持不变**。<br>⚠️ **P0 期间每次 merge upstream 后仍需跑** `git diff b71a892b..HEAD --stat -- frontend/`，非空即按 [§2.10.5](11-vue-parity-plan.md) 处理。<br>~~O14~~ 已由 D10 + D11-a（上 CI）关闭 |
+| 当前阻塞 | 方案层无阻塞;实现层的 live auth、live scheduler、real SSE replay、live IM channels、Docker live runtime 仍需真实 Gateway/账号/scheduler/IM provider/Docker 环境签字,见 [HANDOFF.md](HANDOFF.md) 与 `frontend-vue/tests/SPEC-GAPS.md` |
 | 目标量级 | 重写 ≈ 29,680 行（D9 后）；工期 🔴 **≈ 7–12 人月（3 人约 5–7.5 个月）** —— **v3 已含 D15 的 +3–6 周，旧口径 6–10 已作废**。别报到周，见 [§7.1](11-vue-parity-plan.md) |
 | ⚠️ 口径警告 | 上面的 `7–12 人月` **含一笔未实测的样式估算**（D15 的 `+3–6 周`，`⚠️待P2校准`）——它决定了上界的 12.5%。**对外沟通时必须说明这一点**；P2 做完前 3 个页面后按 [§7 表下说明](11-vue-parity-plan.md) 用实测速率回推并同步三处 |
 | 复用 vs 重写 | 🔴 **总表在 [§1.0](11-vue-parity-plan.md)，实现前先看这张**（此前散在 6 个章节）。四档：①逐字节复制 🔴 **15,832 行**（v4 修正，旧值 19,017）②改几行即可 🔴 **6,453 行**（v4：+3,185 的 DETYPED）③必须重写 **≈29,680 行 + 3 个自研基础件 + 4 个缺口件 + 37 个耦合包的替代** ④直接不做 **7,025 行 + 72 MDX**<br>**继承总量 22,285 与占比 42.9% 不变**，变的是①②之间的划分（[§3.1.4](11-vue-parity-plan.md)） |
-| 实现确定度 | ✅ 目录结构（[§3.2](11-vue-parity-plan.md)，354 行完整树）/ 架构设计（§4 🔴 **3 个**自研基础件 + §3.3.1 store 作用域）/ **技术栈与 `package.json`（[§2.8](11-vue-parity-plan.md)，🔴 **53 个依赖**）** 均已落地<br>🔴 **v4 依赖变更**：D21–D25 删到 50 后，**D24-a 加回 `@tanstack/vue-query`、D25-a 加回 `@vueuse/core` + `uuid`** → **53**。⚠️ **v4 是第一次「加包」**，P0 落盘时那次 `--strict-peer-dependencies` 实跑**不再是留证，而是必须项**<br>⚠️ **新增 R20**：`ant-design-vue` 4.2.6 **发布于 2024-11-11，20 个月无新版** → **P0 ⑦ 的实测结果就是终局**，不能指望上游修 |
+| 实现状态 | `frontend-vue/` 与 `docker-vue/` 新树已落地并处于 staged 状态;后续按 Domain Completion Sprint 选择一个页面域/产品域一次性收口。方案 v4 的结构决策、目录树和依赖口径仍作为基线,但不再把 P0 早期实验清单当作下一步执行入口 |
 | 样式方案 | 🔴 **SCSS**（D15，不用 Tailwind）。SFC `<style lang="scss" scoped>` + `theme-palette.json` 派生三路（SCSS 变量 / CSS 自定义属性 / antdv token）。**115 个 CSS 变量必须保留**——暗色切换是运行时的，见 [§2.3.3](11-vue-parity-plan.md) |
-| 验收定义 | 🔴 **分两层（D14）**：① UI 层 25 个 E2E spec 全绿 ② 代理层 `proxy-policy` 6 条断言 + 4 个真后端 spec 全绿。<br>**只签①等于 Nitro 代理层零验证** —— 25 spec 走 `page.route()`，从未执行过代理 |<br>🔴 **v4 追加（R21）**：验收骨架有一处固有边界 —— 继承的 25 个 spec 覆盖的是「React 版踩过的坑」，**不是功能全集**。实测 ≈ **2,122 行**产品功能**零判据**（6 个设置页 1,604 含 `memory` 993 + `agents/new` 455 + `auth/callback` 63），而 `memory` 与 `agents/new` **都是 P2 点名交付物**。→ **P0 ⑱ 产出 `tests/SPEC-GAPS.md` 逐条定 A 补 spec / B 人工签字 / C 接受漂移**，[§1.2.2](11-vue-parity-plan.md)
-| 建议起手 | ✅ **D26 已定案、基线已重冻（D4-b）**，直接做六个「便宜、二元、失败即改架构」的实验，最后才搭骨架**（共约 3.5–4.5 天）：<br>① D22 stream fixture（1 天）② ~~D24 server-state fixture~~ → **`VueQueryPlugin` smoke（2 小时，含 `enabled` 响应式验证）** ③ resizable 判定（🔻 **半天**，splitpanes 已答掉最硬一条）④ **SSE 能否不缓冲穿过 Nitro**（1 小时）⑤ Nitro 鉴权中间件 PoC（半天）⑥ 🔴 **`hast-util-to-jsx-runtime` + `vue/jsx-runtime`（半天，成立则 P4 最贵一段显著下修）**<br>🔴 **另加 10 分钟冒烟：用非 `localhost` 的内网地址打开一次** —— 唯一能抓到 `crypto.randomUUID` secure-context 的检查。见 HANDOFF §五 |<br>🔴 **另加两项 P0 交付（v4/R21）**：⑱ `tests/SPEC-GAPS.md` 规格空白清单（半天）、⑲ 27 个非 core 单测定去留（1 小时）
+| 验收定义 | 🔴 **分两层（D14）**：① UI 层 25 个 E2E spec 全绿 ② 代理层 `proxy-policy` 6 条断言 + 4 个真后端 spec 全绿。<br>**只签①等于 Nitro 代理层零验证** —— 25 spec 走 `page.route()`，从未执行过代理。<br>🔴 **v4 追加（R21）**：验收骨架有一处固有边界 —— 继承的 25 个 spec 覆盖的是「React 版踩过的坑」，**不是功能全集**。实测 ≈ **2,122 行**产品功能**零判据**（6 个设置页 1,604 含 `memory` 993 + `agents/new` 455 + `auth/callback` 63），而 `memory` 与 `agents/new` **都是 P2 点名交付物**。→ **P0 ⑱ 产出 `tests/SPEC-GAPS.md` 逐条定 A 补 spec / B 人工签字 / C 接受漂移**，[§1.2.2](11-vue-parity-plan.md) |
+| 执行工作流 | 默认走 **Domain Completion Sprint**:一次只选择一个页面域/产品域,在该域内把当前源码和环境能 source-backed 实现的完整功能连续做完,不再每个小纵切后停顿。当前阶段先不跑 E2E;M1/M2/M3/M4/M5 这类 live signoff 独立成环境车道,只有 Gateway/账号/scheduler/Docker/IM provider 条件具备且用户明确要求时才进入主线。开发中只跑局部 unit/contract/guard/typecheck,域收口后集中门禁;遇到 protected path、shared stream/auth/proxy/core contract、跨域修复或验证失败需要改共享层时,立即停止继续叠功能。 |
+| 下一步入口 | 不再执行旧 P0 起手实验清单。默认从 [12-vue-execution-workflow.md](12-vue-execution-workflow.md) 选择一个域收口;推荐 Settings 域收口、Message + Artifact 域收口或 Scheduled Tasks 域收口。每个域改完验证后,先汇报本域实际修改文件和建议暂存命令,只在用户明确授权后精确暂存 |
 
 ## 一句话架构
 
