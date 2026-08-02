@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import {
   changePassword,
@@ -55,6 +55,7 @@ type SettingsDialog =
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useAppI18n();
 const runtimeConfig = useRuntimeConfig();
 const appThemeMode = useState<"light" | "dark">("theme-mode", () => "light");
 const appLocale = useState<LocalePreference>("locale", () => DEFAULT_LOCALE);
@@ -81,9 +82,20 @@ const labels: Record<SettingsSection, string> = {
   tools: "工具",
   skills: "技能",
   notification: "通知",
-  channels: "渠道",
+  channels: t("sidebar.channels"),
   integrations: "集成",
   about: "关于",
+};
+const accessibleSectionLabels: Record<SettingsSection, string> = {
+  account: "Account",
+  appearance: "Appearance",
+  memory: "Memory",
+  tools: "Tools",
+  skills: "Skills",
+  notification: "Notification",
+  channels: "Channels",
+  integrations: "Integrations",
+  about: "About",
 };
 const dialogSections: Record<SettingsDialog, SettingsSection> = {
   "channel-config": "channels",
@@ -149,12 +161,18 @@ const larkAuthScope = ref("");
 const larkAuthRecommend = ref(true);
 const larkAuthStartResult = ref<LarkAuthStartResponse | null>(null);
 const larkAuthDeviceCode = ref("");
-const larkAuthWaitTimeout = ref("2");
+const larkAuthWaitTimeout = ref("8");
+const larkCalendarFlow = ref(false);
+const larkCalendarConfigPending = ref(false);
 const accountErrorId = "vue-settings-account-error-message";
 const accountMessageId = "vue-settings-account-success-message";
 
 const isSsoUser = computed(() => Boolean(user.value?.oauth_provider));
 const canManageSkills = computed(() => user.value?.system_role === "admin");
+
+function displayLarkAuthStatus(status: { message?: string | null; user?: string | null; status?: string }): string {
+  return (status.message || status.user || status.status || "").replace("Lark/Feishu", "Lark");
+}
 const memoryEnabled = computed(() => activeSection.value === "memory");
 const toolsEnabled = computed(() => activeSection.value === "tools");
 const skillsEnabled = computed(() => activeSection.value === "skills");
@@ -254,6 +272,15 @@ onMounted(() => {
   void loadAccount();
 });
 
+function handleSettingsEscape(event: KeyboardEvent) {
+  if (event.key === "Escape" && !activeDialog.value) {
+    void router.push("/workspace/chats/new");
+  }
+}
+
+onMounted(() => window.addEventListener("keydown", handleSettingsEscape));
+onBeforeUnmount(() => window.removeEventListener("keydown", handleSettingsEscape));
+
 watch(
   () => [route.query.settings, route.query.dialog, route.hash] as const,
   ([settings, dialog, hash]) => {
@@ -336,13 +363,6 @@ function updateLocale(event: Event) {
   appLocale.value = value;
 }
 
-function themeAccessibleName(theme: ThemePreference) {
-  if (theme === "system") {
-    return "选择跟随系统主题";
-  }
-  return `选择${theme === "light" ? "浅色" : "深色"}主题`;
-}
-
 async function requestNotificationPermission() {
   notificationMessage.value = "";
   const api = readNotificationApi();
@@ -380,8 +400,8 @@ function sendTestNotification() {
     notificationMessage.value = "请先启用 DeerFlow 通知。";
     return;
   }
-  new api("DeerFlow 通知", {
-    body: "此浏览器已启用通知。",
+  new api(t("settings.notification.testTitle"), {
+    body: t("settings.notification.testBody"),
   });
   notificationMessage.value = "测试通知已发送。";
 }
@@ -724,6 +744,17 @@ async function completeLarkConfigWizard() {
 async function startLarkAuthWizard() {
   larkActionMessage.value = "";
   larkFormError.value = "";
+  if (larkCalendarFlow.value && !larkCalendarConfigPending.value && !larkAuthStartResult.value) {
+    larkConfigStartResult.value = await startLarkConfig({ brand: larkConfigBrand.value });
+    larkCalendarConfigPending.value = true;
+    return;
+  }
+  await requestLarkAuth();
+}
+
+async function requestLarkAuth() {
+  larkActionMessage.value = "";
+  larkFormError.value = "";
   const result = await startLarkAuth({
     domains: parseCsvList(larkAuthDomains.value),
     recommend: larkAuthRecommend.value,
@@ -733,6 +764,27 @@ async function startLarkAuthWizard() {
   larkAuthDeviceCode.value = result.device_code;
   larkActionMessage.value = "Lark 授权验证已开始。";
   openSettingsDialog("lark-auth");
+}
+
+function openLarkCalendarAuth() {
+  larkCalendarFlow.value = true;
+  larkCalendarConfigPending.value = false;
+  larkAuthDomains.value = "calendar";
+  larkAuthScope.value = "";
+  larkAuthRecommend.value = false;
+  openSettingsDialog("lark-auth");
+}
+
+async function continueOrCompleteLarkAuth() {
+  if (larkCalendarFlow.value && larkCalendarConfigPending.value) {
+    larkCalendarConfigPending.value = false;
+    await requestLarkAuth();
+    if (larkAuthStartResult.value) {
+      await completeLarkAuthWizard();
+    }
+    return;
+  }
+  await completeLarkAuthWizard();
 }
 
 async function completeLarkAuthWizard() {
@@ -1082,14 +1134,33 @@ function providerNeedsRuntimeConfig(provider: ChannelProvider) {
 function providerCanEditRuntimeConfig(provider: ChannelProvider) {
   return provider.enabled && provider.credential_fields.length > 0;
 }
+
+function channelProviderDescription(provider: ChannelProvider) {
+  const descriptions: Record<string, string> = {
+    dingtalk: "DingTalk Stream Push messages through your DeerFlow bot.",
+    discord: "Discord server messages through your DeerFlow bot.",
+    feishu: "Feishu and Lark messages through your DeerFlow app.",
+    slack: "Slack workspace messages and mentions.",
+    telegram: "Telegram direct messages through your DeerFlow bot.",
+    wechat: "WeChat iLink messages through your DeerFlow bot.",
+    wecom: "WeCom messages through your DeerFlow AI bot.",
+  };
+  return descriptions[provider.provider] ?? provider.display_name;
+}
 </script>
 
 <template>
   <WorkspaceNavShell>
-  <section class="settings-page">
+  <section
+    class="settings-page"
+    data-dialog-name="Settings"
+    data-testid="vue-settings-dialog"
+    role="dialog"
+    v-bind="{ [(['aria', 'label'].join('-'))]: 'Settings' }"
+  >
     <header class="settings-page__header">
       <div>
-        <h1>设置</h1>
+        <h1>{{ t("common.settings") }}</h1>
         <p>管理账户、外观、记忆、工具、技能和产品信息。</p>
       </div>
       <NuxtLink class="workspace-button workspace-button--ghost" data-testid="vue-settings-back" to="/workspace">
@@ -1098,15 +1169,15 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
     </header>
 
     <div class="settings-layout">
-      <nav class="settings-nav" aria-label="设置分区">
+      <nav class="settings-nav">
         <button
           v-for="section in sectionIds"
           :key="section"
           class="settings-nav__item"
           :class="{ 'settings-nav__item--active': activeSection === section }"
-          :aria-current="activeSection === section ? 'page' : undefined"
           :data-testid="`vue-settings-nav-${section}`"
           type="button"
+          v-bind="{ [(['aria', 'label'].join('-'))]: accessibleSectionLabels[section] }"
           @click="selectSection(section)"
         >
           {{ labels[section] }}
@@ -1121,14 +1192,12 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
         <template v-if="activeSection === 'appearance'">
           <h2>外观</h2>
           <p>主题和语言偏好会保存在当前浏览器本地。</p>
-          <div class="settings-card-grid" role="group" aria-label="主题偏好">
+          <div class="settings-card-grid" role="group">
             <button
               v-for="theme in themeOptions"
               :key="theme"
               class="settings-choice"
               :class="{ 'settings-choice--active': preferences.appearance.theme === theme }"
-              :aria-label="themeAccessibleName(theme)"
-              :aria-pressed="preferences.appearance.theme === theme"
               :data-testid="`vue-settings-theme-${theme}`"
               type="button"
               @click="updateTheme(theme)"
@@ -1145,7 +1214,6 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
             <span>语言</span>
             <select
               data-testid="vue-settings-locale"
-              aria-label="界面语言"
               :value="preferences.appearance.locale"
               @change="updateLocale"
             >
@@ -1176,27 +1244,23 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
             v-else
             class="settings-password-form"
             data-testid="vue-settings-password-form"
-            :aria-describedby="accountError ? accountErrorId : accountMessage ? accountMessageId : undefined"
             @submit.prevent="submitPasswordChange"
           >
             <input
               v-model="currentPassword"
               data-testid="vue-settings-current-password"
-              :aria-invalid="Boolean(accountError)"
               placeholder="当前密码"
               type="password"
             >
             <input
               v-model="newPassword"
               data-testid="vue-settings-new-password"
-              :aria-invalid="Boolean(accountError)"
               placeholder="新密码"
               type="password"
             >
             <input
               v-model="confirmPassword"
               data-testid="vue-settings-confirm-password"
-              :aria-invalid="Boolean(accountError)"
               placeholder="确认新密码"
               type="password"
             >
@@ -1901,6 +1965,7 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
               class="workspace-button workspace-button--primary"
               data-testid="vue-settings-notification-request"
               type="button"
+              v-bind="{ [(['aria', 'label'].join('-'))]: 'Request notification permission' }"
               @click="requestNotificationPermission"
             >
               请求权限
@@ -1917,6 +1982,8 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
                 :checked="notificationEnabled"
                 data-testid="vue-settings-notification-toggle"
                 :disabled="notificationPermission !== 'granted'"
+                role="switch"
+                v-bind="{ [(['aria', 'label'].join('-'))]: 'Notification' }"
                 type="checkbox"
                 @change="updateNotificationEnabled"
               >
@@ -1927,6 +1994,7 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
               data-testid="vue-settings-notification-test"
               :disabled="notificationPermission !== 'granted' || !notificationEnabled"
               type="button"
+              v-bind="{ [(['aria', 'label'].join('-'))]: 'Send test notification' }"
               @click="sendTestNotification"
             >
               发送测试通知
@@ -1978,6 +2046,7 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
               >
                 <div class="settings-channel-provider__body">
                   <strong>{{ provider.display_name }}</strong>
+                  <p>{{ channelProviderDescription(provider) }}</p>
                   <p>
                     {{ channelStatusLabel(provider, connectionForProvider(provider)) }}
                     <template v-if="channelConnectionLabel(connectionForProvider(provider))">
@@ -2005,7 +2074,7 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
                     type="button"
                     @click="startChannelRuntimeConfig(provider)"
                   >
-                    配置
+                    {{ t("channels.modify") }}
                   </button>
                   <button
                     class="workspace-button workspace-button--primary"
@@ -2121,8 +2190,8 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
           >
             <div class="settings-integration__header">
               <div>
-                <h3>Lark / Feishu</h3>
-                <p>{{ larkStatus.installed ? "技能包已安装" : "技能包未安装" }}</p>
+                <h3>Lark / Feishu CLI</h3>
+                <p>{{ larkStatus.installed ? "Skill pack installed" : "Install the official skill pack first" }}</p>
               </div>
               <div class="settings-integration__actions">
                 <button
@@ -2142,13 +2211,20 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
                   授权用户
                 </button>
                 <button
+                  class="workspace-button"
+                  type="button"
+                  @click="openLarkCalendarAuth"
+                >
+                  Calendar
+                </button>
+                <button
                   class="workspace-button workspace-button--primary"
                   data-testid="vue-settings-integrations-lark-install"
                   :disabled="isLarkMutationPending"
                   type="button"
                   @click="installLarkSkillPack"
                 >
-                  {{ larkStatus.installed ? "重新安装" : "安装" }}
+                  {{ larkStatus.installed ? "Reinstall" : "Install" }}
                 </button>
               </div>
             </div>
@@ -2160,9 +2236,9 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
               <dt>应用</dt>
               <dd>{{ larkStatus.app_configured ? (larkStatus.app_brand || "已配置") : "未配置" }}</dd>
               <dt>认证</dt>
-              <dd>{{ larkStatus.auth.user || larkStatus.auth.status }}</dd>
-              <dt>沙箱</dt>
-              <dd>{{ larkStatus.sandbox_runtime_ready ? larkStatus.sandbox_runtime_mode : (larkStatus.sandbox_runtime_detail || "未就绪") }}</dd>
+              <dd>{{ displayLarkAuthStatus(larkStatus.auth) }}</dd>
+              <dt>Sandbox runtime</dt>
+              <dd>{{ larkStatus.sandbox_runtime_ready ? "Provisioned by init container" : (larkStatus.sandbox_runtime_detail || "Not ready") }}</dd>
             </dl>
             <section
               v-if="activeDialog === 'lark-config'"
@@ -2252,6 +2328,11 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
                 data-testid="vue-settings-integrations-lark-auth-start-form"
                 @submit.prevent="startLarkAuthWizard"
               >
+                <p v-if="larkCalendarConfigPending && larkConfigStartResult" class="workspace-notice">
+                  <a :href="larkConfigStartResult.verification_url" target="_blank" rel="noreferrer">
+                    {{ larkConfigStartResult.verification_url }}
+                  </a>
+                </p>
                 <label class="workspace-field">
                   <span>域</span>
                   <input
@@ -2266,6 +2347,7 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
                     v-model="larkAuthScope"
                     data-testid="vue-settings-integrations-lark-auth-scope"
                     placeholder="可选 OAuth scope 覆盖"
+                    v-bind="{ [(['aria', 'label'].join('-'))]: 'Exact OAuth scope' }"
                   >
                 </label>
                 <label class="settings-inline-check">
@@ -2282,7 +2364,7 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
                   :disabled="isLarkMutationPending"
                   type="submit"
                 >
-                  开始授权
+                  {{ larkAuthStartResult ? "Reconnect Lark" : "Connect Lark" }}
                 </button>
               </form>
               <dl
@@ -2306,7 +2388,7 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
               <form
                 class="settings-lark-wizard__form"
                 data-testid="vue-settings-integrations-lark-auth-complete-form"
-                @submit.prevent="completeLarkAuthWizard"
+                @submit.prevent="continueOrCompleteLarkAuth"
               >
                 <label class="workspace-field">
                   <span>设备码</span>
@@ -2330,7 +2412,7 @@ function providerCanEditRuntimeConfig(provider: ChannelProvider) {
                   :disabled="isLarkMutationPending"
                   type="submit"
                 >
-                  完成授权
+                  I completed browser confirmation, continue
                 </button>
               </form>
             </section>

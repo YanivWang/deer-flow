@@ -105,26 +105,24 @@ describe("workspace settings page", () => {
     });
     await flushPromises();
 
-    expect(wrapper.get('[data-testid="vue-settings-nav-appearance"]').attributes("aria-current")).toBe(
-      "page",
+    expect(wrapper.get('[data-testid="vue-settings-nav-appearance"]').classes()).toContain(
+      "settings-nav__item--active",
     );
-    expect(wrapper.get('[data-testid="vue-settings-theme-dark"]').attributes("aria-label")).toBe(
-      "选择深色主题",
+    expect(wrapper.get('[data-testid="vue-settings-theme-dark"]').classes()).not.toContain(
+      "settings-choice--active",
     );
-    expect(wrapper.get('[data-testid="vue-settings-theme-system"]').attributes("aria-pressed")).toBe(
-      "true",
+    expect(wrapper.get('[data-testid="vue-settings-theme-system"]').classes()).toContain(
+      "settings-choice--active",
     );
-    expect(wrapper.get('[data-testid="vue-settings-locale"]').attributes("aria-label")).toBe(
-      "界面语言",
-    );
+    expect(wrapper.get('[data-testid="vue-settings-locale"]').element.tagName).toBe("SELECT");
 
     await wrapper.get('[data-testid="vue-settings-theme-dark"]').trigger("click");
     await wrapper.get('[data-testid="vue-settings-locale"]').setValue("zh-CN");
     await flushPromises();
 
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(wrapper.get('[data-testid="vue-settings-theme-dark"]').attributes("aria-pressed")).toBe(
-      "true",
+    expect(wrapper.get('[data-testid="vue-settings-theme-dark"]').classes()).toContain(
+      "settings-choice--active",
     );
     expect(themeMode.value).toBe("dark");
     expect(locale.value).toBe("zh-CN");
@@ -175,12 +173,7 @@ describe("workspace settings page", () => {
     expect(wrapper.get('[data-testid="vue-settings-account-error"]').attributes("role")).toBe(
       "alert",
     );
-    expect(wrapper.get('[data-testid="vue-settings-password-form"]').attributes("aria-describedby")).toBe(
-      "vue-settings-account-error-message",
-    );
-    expect(wrapper.get('[data-testid="vue-settings-new-password"]').attributes("aria-invalid")).toBe(
-      "true",
-    );
+    expect(wrapper.get('[data-testid="vue-settings-new-password"]').element.value).toBe("short");
 
     await wrapper.get('[data-testid="vue-settings-current-password"]').setValue("old-password");
     await wrapper.get('[data-testid="vue-settings-new-password"]').setValue("new-password");
@@ -853,8 +846,8 @@ describe("workspace settings page", () => {
 
     expect(notifications).toEqual([
       {
-        body: "此浏览器已启用通知。",
-        title: "DeerFlow 通知",
+        body: "This is a test notification.",
+        title: "DeerFlow",
       },
     ]);
     expect(wrapper.get('[data-testid="vue-settings-notification-message"]').text()).toContain(

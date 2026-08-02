@@ -59,6 +59,19 @@ describe("useThreadGoal", () => {
     expect(wrapper.vm.threadGoal.goalErrorMessage.value).toContain("目标太长");
   });
 
+  it("can save against a created thread before the route ref updates", async () => {
+    const fetchMock = vi.fn(async () => Response.json({ goal: goal("Created thread goal") }));
+    vi.stubGlobal("fetch", fetchMock);
+    const wrapper = mountGoalHarness(ref("new"), ref<GoalState | null | undefined>(undefined));
+
+    await wrapper.vm.threadGoal.saveGoal("Created thread goal", "thread-created");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/threads/thread-created/goal",
+      expect.objectContaining({ method: "PUT" }),
+    );
+  });
+
   it("reads continuation display only after hidden continuation starts", () => {
     expect(getGoalContinuationDisplay(goal("Fresh"))).toBeNull();
     expect(

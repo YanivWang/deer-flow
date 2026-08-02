@@ -22,6 +22,12 @@ export function adaptDeerFlowGatewayEvent(event: DeerFlowWireEvent): CanonicalSt
       typeof event.data === "object" && event.data !== null
         ? Reflect.get(event.data, "type")
         : undefined;
+    if (customType === "artifact_delta") {
+      return { type: "artifact_delta", payload: event.data, cursor };
+    }
+    if (customType === "human_input_required") {
+      return { type: "human_input_required", payload: event.data, cursor };
+    }
     if (typeof customType === "string" && customType.startsWith("task_")) {
       return { type: "subtask_delta", payload: event.data, cursor };
     }

@@ -36,7 +36,7 @@ describe("thread API client", () => {
     const threads = await searchThreads({ limit: 10, offset: 5 });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/threads/search",
+      "/api/langgraph/threads/search",
       expect.objectContaining({
         body: JSON.stringify({ metadata: {}, limit: 10, offset: 5 }),
         credentials: "include",
@@ -56,7 +56,7 @@ describe("thread API client", () => {
     const [, init] = fetchMock.mock.calls[0] ?? [];
     const headers = new Headers(init?.headers);
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/threads/thread-1/state",
+      "/api/langgraph/threads/thread-1/state",
       expect.objectContaining({ method: "POST" }),
     );
     expect(headers.get("X-CSRF-Token")).toBe("token-1");
@@ -82,7 +82,7 @@ describe("thread API client", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/threads",
+      "/api/langgraph/threads",
       expect.objectContaining({
         body: JSON.stringify({
           thread_id: "thread-1",

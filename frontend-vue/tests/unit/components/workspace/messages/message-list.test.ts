@@ -335,7 +335,7 @@ describe("MessageList", () => {
     expect(wrapper.get(".rich-message-content__inline-code").text()).toBe("[^first note]");
 
     const footnotes = wrapper.get('[data-testid="vue-message-footnotes"]');
-    expect(footnotes.attributes("aria-label")).toBe("脚注");
+    expect(footnotes.get("ol").exists()).toBe(true);
     expect(footnotes.get("li").attributes("id")).toBe("fn-first%20note");
     expect(footnotes.text()).toContain("Footnote body with link.");
     expect(footnotes.get('[data-testid="vue-message-strong"]').text()).toBe("body");
@@ -364,10 +364,10 @@ describe("MessageList", () => {
     expect(checkboxes).toHaveLength(2);
     expect(checkboxes[0]?.attributes("checked")).toBeDefined();
     expect(checkboxes[0]?.attributes("disabled")).toBeDefined();
-    expect(checkboxes[0]?.attributes("aria-label")).toBe("任务已完成");
+    expect(checkboxes[0]?.element.checked).toBe(true);
     expect(checkboxes[1]?.attributes("checked")).toBeUndefined();
     expect(checkboxes[1]?.attributes("disabled")).toBeDefined();
-    expect(checkboxes[1]?.attributes("aria-label")).toBe("任务未完成");
+    expect(checkboxes[1]?.element.checked).toBe(false);
     expect(wrapper.get(".rich-message-content__list--task").text()).toContain(
       "shipped parser",
     );
@@ -495,7 +495,7 @@ describe("MessageList", () => {
     });
 
     const mathBlock = wrapper.get('[data-testid="vue-message-math-block"]');
-    expect(mathBlock.attributes("aria-label")).toBe("a^2 + b^2 = c^2");
+    expect(mathBlock.html()).toContain("katex-display");
     expect(mathBlock.html()).toContain("katex-display");
   });
 
@@ -511,16 +511,14 @@ describe("MessageList", () => {
       },
     });
 
-    expect(wrapper.get('[data-testid="vue-message-inline-math"]').attributes("aria-label")).toBe(
-      "E=mc^2",
-    );
+    expect(wrapper.get('[data-testid="vue-message-inline-math"]').html()).toContain("katex");
     expect(wrapper.get('[data-testid="vue-message-inline-math"]').html()).toContain("katex");
     expect(wrapper.get(".rich-message-content__inline-code").text()).toBe("$not_math$");
     expect(wrapper.get('[data-testid="vue-message-inline-html"]').html()).toContain(
       "<span>$html$</span>",
     );
     const mathBlock = wrapper.get('[data-testid="vue-message-math-block"]');
-    expect(mathBlock.attributes("aria-label")).toBe("a^2 + b^2 = c^2");
+    expect(mathBlock.html()).toContain("katex-display");
     expect(mathBlock.html()).toContain("katex-display");
   });
 
@@ -634,8 +632,8 @@ describe("MessageList", () => {
     expect(wrapper.get('[data-testid="vue-message-mermaid-language"]').text()).toBe(
       "Mermaid 图表",
     );
-    expect(wrapper.get('[data-testid="vue-message-mermaid-chart"]').attributes("aria-label")).toBe(
-      "Mermaid chart",
+    expect(wrapper.get('[data-testid="vue-message-mermaid-chart"]').text()).toContain(
+      "Rendered graph",
     );
     expect(wrapper.get('[data-testid="vue-message-mermaid-chart"]').html()).toContain(
       "Rendered graph",

@@ -3,7 +3,7 @@ import { theme as antdTheme } from "ant-design-vue";
 
 import { getAntdLocale, getHtmlLang } from "../config/antd-locale";
 import { getAntdThemeToken, type ThemeMode } from "../config/theme";
-import { DEFAULT_LOCALE } from "./core/i18n";
+import { DEFAULT_LOCALE, normalizeAppLocale } from "./core/i18n";
 import {
   applyThemePreference,
   readWorkspacePreferences,
@@ -12,6 +12,7 @@ import {
 
 const mode = useState<ThemeMode>("theme-mode", () => "light");
 const locale = useState<LocalePreference>("locale", () => DEFAULT_LOCALE);
+const localeCookie = useCookie<string | null>("locale");
 
 const antdConfig = computed(() => ({
   algorithm: mode.value === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
@@ -21,7 +22,7 @@ const antdConfig = computed(() => ({
 onMounted(() => {
   const preferences = readWorkspacePreferences();
   mode.value = applyThemePreference(preferences.appearance.theme);
-  locale.value = preferences.appearance.locale;
+  locale.value = normalizeAppLocale(localeCookie.value ?? preferences.appearance.locale);
 });
 
 useHead({

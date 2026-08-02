@@ -37,9 +37,6 @@ const SAFE_SVG_TAGS = new Set([
 ]);
 const SAFE_SVG_ATTRIBUTES = new Set([
   "alignment-baseline",
-  "aria-hidden",
-  "aria-label",
-  "aria-labelledby",
   "class",
   "clip-path",
   "cx",
@@ -178,7 +175,6 @@ export default defineComponent({
             ? h(
                 "div",
                 {
-                  "aria-label": "Mermaid chart",
                   class: "rich-message-content__mermaid-chart",
                   "data-testid": "vue-message-mermaid-chart",
                 },
@@ -187,7 +183,6 @@ export default defineComponent({
             : h(
                 "div",
                 {
-                  "aria-busy": status.value === "loading" ? "true" : undefined,
                   class: "rich-message-content__mermaid-fallback",
                   "data-testid": "vue-message-mermaid-fallback",
                 },

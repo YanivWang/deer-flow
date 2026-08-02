@@ -24,6 +24,8 @@ export type StartDeerFlowThreadStreamOptions = {
   engine: ThreadStreamEngine;
   assistantId?: string;
   context?: Record<string, unknown>;
+  checkpoint?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   endpointBase?: string;
   signal?: AbortSignal;
   headers?: HeadersInit;
@@ -66,6 +68,8 @@ export async function startDeerFlowThreadStream({
   engine,
   assistantId = "lead_agent",
   context,
+  checkpoint,
+  metadata,
   endpointBase = "",
   signal,
   headers,
@@ -82,6 +86,8 @@ export async function startDeerFlowThreadStream({
           assistant_id: assistantId,
           input,
           context,
+          ...(checkpoint ? { checkpoint } : {}),
+          ...(metadata ? { metadata } : {}),
           stream_mode: DEFAULT_STREAM_MODE,
           on_disconnect: "cancel",
           multitask_strategy: "reject",
@@ -365,12 +371,12 @@ async function fetchThreadStateValues({
 
 function buildThreadStreamUrl(endpointBase: string, threadId: string): string {
   const prefix = endpointBase.replace(/\/$/, "");
-  return `${prefix}/api/threads/${encodeURIComponent(threadId)}/runs/stream`;
+  return `${prefix}/api/langgraph/threads/${encodeURIComponent(threadId)}/runs/stream`;
 }
 
 function buildJoinStreamUrl(endpointBase: string, threadId: string, runId: string): string {
   const prefix = endpointBase.replace(/\/$/, "");
-  return `${prefix}/api/threads/${encodeURIComponent(threadId)}/runs/${encodeURIComponent(runId)}/join`;
+  return `${prefix}/api/langgraph/threads/${encodeURIComponent(threadId)}/runs/${encodeURIComponent(runId)}/join`;
 }
 
 function buildCancelAndDrainUrl(
@@ -380,12 +386,12 @@ function buildCancelAndDrainUrl(
   action: "interrupt" | "rollback",
 ): string {
   const prefix = endpointBase.replace(/\/$/, "");
-  return `${prefix}/api/threads/${encodeURIComponent(threadId)}/runs/${encodeURIComponent(runId)}/stream?action=${action}`;
+  return `${prefix}/api/langgraph/threads/${encodeURIComponent(threadId)}/runs/${encodeURIComponent(runId)}/stream?action=${action}`;
 }
 
 function buildThreadStateUrl(endpointBase: string, threadId: string): string {
   const prefix = endpointBase.replace(/\/$/, "");
-  return `${prefix}/api/threads/${encodeURIComponent(threadId)}/state`;
+  return `${prefix}/api/langgraph/threads/${encodeURIComponent(threadId)}/state`;
 }
 
 function buildStreamHeaders(headers: HeadersInit | undefined, method: string): Headers {

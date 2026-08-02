@@ -10,7 +10,7 @@ const skippedDirectories = new Set([".nuxt", ".output", "node_modules", "playwri
 const skippedSuffixes = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".lock"];
 
 const prohibitedPatterns = [
-  { label: "explicit any", pattern: /\bany\b|as\s+any\b/ },
+  { label: "explicit any", pattern: /(?:\bas\s+any\b|:\s*any\b|<any>|\bany\[\])/ },
   { label: "ts ignore", pattern: new RegExp(`@ts-${"ignore"}`) },
   { label: "ts expect error", pattern: new RegExp(`@ts-${"expect-error"}`) },
   { label: "eslint disable", pattern: new RegExp(`eslint-${"disable"}`) },

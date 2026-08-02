@@ -4,6 +4,10 @@ import type { ToolRichCard } from "../../../core/messages/tool-cards";
 defineProps<{
   card: ToolRichCard;
 }>();
+
+const emit = defineEmits<{
+  selectArtifact: [path: string];
+}>();
 </script>
 
 <template>
@@ -20,12 +24,22 @@ defineProps<{
       <strong data-testid="vue-tool-rich-card-title">{{ card.title }}</strong>
     </header>
     <p
-      v-if="card.description"
+      v-if="card.description && card.artifactPaths.length === 0"
       class="tool-rich-card__description"
       data-testid="vue-tool-rich-card-description"
     >
       {{ card.description }}
     </p>
+    <div v-if="card.artifactPaths.length > 0" class="tool-rich-card__artifacts">
+      <button
+        v-for="path in card.artifactPaths"
+        :key="path"
+        type="button"
+        @click="emit('selectArtifact', path)"
+      >
+        {{ path }}
+      </button>
+    </div>
     <ul v-if="card.details.length > 0" class="tool-rich-card__details">
       <li v-for="detail in card.details" :key="detail">{{ detail }}</li>
     </ul>

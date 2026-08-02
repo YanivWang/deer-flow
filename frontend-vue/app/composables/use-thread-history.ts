@@ -28,6 +28,7 @@ export function useThreadHistory(threadId: MaybeRefOrGetter<string>) {
   });
 
   const currentRows = computed(() => flattenThreadHistoryPages(query.data.value?.pages ?? []));
+  const loadedThreadId = ref("");
   const previousRows = computed(() =>
     retainedHistory.value.threadId === resolvedThreadId.value ? retainedHistory.value.rows : [],
   );
@@ -41,11 +42,13 @@ export function useThreadHistory(threadId: MaybeRefOrGetter<string>) {
     );
   });
   const rows = computed(() =>
-    reconcileThreadHistoryRows(
-      previousRows.value,
-      currentRows.value,
-      isAuthoritativeComplete.value,
-    ),
+    loadedThreadId.value === resolvedThreadId.value
+      ? reconcileThreadHistoryRows(
+          previousRows.value,
+          currentRows.value,
+          isAuthoritativeComplete.value,
+        )
+      : [],
   );
   const messages = computed(() => buildVisibleHistoryMessages(rows.value));
 
@@ -59,6 +62,22 @@ export function useThreadHistory(threadId: MaybeRefOrGetter<string>) {
         rows: nextRows,
         threadId: nextThreadId,
       };
+    },
+    { immediate: true },
+  );
+
+  watch(resolvedThreadId, (nextThreadId, previousThreadId) => {
+    if (nextThreadId !== previousThreadId) {
+      loadedThreadId.value = "";
+    }
+  });
+
+  watch(
+    [query.data, query.isFetching],
+    ([data, isFetching]) => {
+      if (data && !isFetching) {
+        loadedThreadId.value = resolvedThreadId.value;
+      }
     },
     { immediate: true },
   );

@@ -76,11 +76,13 @@ describe("thread stream store", () => {
     expect(startOptions?.input).toEqual({ messages: [{ type: "human", content: "hello" }] });
     expect(store.status).toBe("completed");
     expect(store.activeRunId).toBe("run-1");
-    expect(store.viewModel.messages.map((message) => [message.id, message.content])).toEqual([
-      ["h-1", "hi"],
-      ["a-1", "updated"],
-      ["a-2", "new"],
-    ]);
+    const renderedMessages = store.viewModel.messages.map((message) => [message.id, message.content]);
+    expect(renderedMessages).toHaveLength(4);
+    expect(renderedMessages[0]).toEqual(["h-1", "hi"]);
+    expect(renderedMessages[1]).toEqual(["a-1", "updated"]);
+    expect(renderedMessages[2]?.[0]).toMatch(/^optimistic-/);
+    expect(renderedMessages[2]?.[1]).toBe("hello");
+    expect(renderedMessages[3]).toEqual(["a-2", "new"]);
   });
 
   it("passes hidden human-input response metadata into run input messages", async () => {

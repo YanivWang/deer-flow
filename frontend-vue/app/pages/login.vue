@@ -22,13 +22,18 @@ const redirectPath = computed(() => resolveAuthNextPath(route.query.next?.toStri
 const systemNeedsAdminSetup = computed(() => setupStatus.value?.needs_setup === true);
 const loginErrorId = "vue-login-error-message";
 
-onMounted(async () => {
+async function loadSetupStatus() {
+  setupStatusPhase.value = "checking";
   try {
     setupStatus.value = await fetchSetupStatus();
     setupStatusPhase.value = "ready";
   } catch {
     setupStatusPhase.value = "unavailable";
   }
+}
+
+onMounted(async () => {
+  await loadSetupStatus();
 
   providers.value = await listAuthProviders();
 });
@@ -70,7 +75,11 @@ function startSso(provider: AuthProviderSummary) {
         type="warning"
         show-icon
         message="无法获取 Gateway 初始化状态。已有用户仍可尝试登录。"
-      />
+      >
+        <template #description>
+          <button type="button" data-testid="vue-login-setup-retry" @click="loadSetupStatus">重试</button>
+        </template>
+      </a-alert>
       <a-alert
         v-if="systemNeedsAdminSetup"
         data-testid="vue-login-needs-setup"
@@ -83,7 +92,6 @@ function startSso(provider: AuthProviderSummary) {
       <form
         class="auth-form"
         data-testid="vue-login-form"
-        :aria-describedby="errorMessage ? loginErrorId : undefined"
         @submit.prevent="submitLogin"
       >
         <label>
@@ -99,8 +107,6 @@ function startSso(provider: AuthProviderSummary) {
             required
             minlength="6"
             data-testid="vue-login-password"
-            :aria-describedby="errorMessage ? loginErrorId : undefined"
-            :aria-invalid="Boolean(errorMessage)"
           >
         </label>
         <label class="auth-form__check">

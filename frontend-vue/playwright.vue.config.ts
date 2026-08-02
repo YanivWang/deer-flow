@@ -5,6 +5,7 @@ const webServerPort = process.env.PLAYWRIGHT_WEB_SERVER_PORT ?? "3001";
 const webServerUrl = `http://${webServerHost}:${webServerPort}`;
 
 export default defineConfig({
+  globalSetup: "./tests/e2e/global-setup.ts",
   testDir: "./tests/e2e",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? webServerUrl,
@@ -18,5 +19,8 @@ export default defineConfig({
           url: webServerUrl,
           reuseExistingServer: true,
           timeout: 120_000,
+          env: {
+            DEER_FLOW_AUTH_DISABLED: "1",
+          },
         },
 });

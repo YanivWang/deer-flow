@@ -4,6 +4,85 @@
 > 本文件只保留 `frontend-vue/` 后续工作的滚动检查点。
 > 旧的连续轮次 prompt / 执行流水账已从本文移除;需要历史细节时查 git 历史。
 
+## 0.1 用户追加的强制验收口径
+
+- 本轮不接受把当前 Vue 站点描述为“基本 parity”或“功能锚定即完成”。最终交付必须严格按 `11-vue-parity-plan.md` 逐项闭环。
+- 功能与交互必须相对冻结基线 `b71a892b` 1:1，包括事件顺序、状态机、输入、路由、缓存、错误、取消、恢复、面板和请求先后顺序；UI 还原度必须达到 98% 以上，并有逐路由、逐状态、逐断点的 React/Vue 对比证据。
+- 页面、composable/store、`app/core`、组件和 SCSS 必须保持企业级职责边界；跨层依赖、硬编码主题值、重复样式和超职责页面不得以测试通过替代整改。
+- 在上述门槛、D14 三层验收和人工视觉签字全部完成前，`SPEC-GAPS.md` 中不得把相关项改为 Closed。
+
+## 0.2 2026-08-02 Vue parity 交互续作检查点（本节优先于旧历史）
+
+本窗口继续执行的是 **`frontend` React 冻结基线的 1:1 交互 parity**，不是普通功能补齐。以下事实以当前 checkout 为准；本节未明确写“通过”的内容，不得在新窗口中推断为已完成。
+
+### 已落地并有当前证据的交互修复
+
+- 新线程创建、路由替换、历史缓存清理、删除后重定向、侧边栏导航、草稿/sessionStorage、附件上传与失败恢复链已补齐；聊天关键域 E2E 已多次验证通过。
+- `/goal` 命令已修正为等待新线程路由响应式切换后再保存目标，避免把目标写入旧的 `new` 线程；`useThreadGoal` 也改为按 server goal key 变化做 reconciliation，不再因普通线程查询刷新清空本地刚保存的目标。
+- 移动端 workspace 网格已使用 `minmax(0, 1fr)`，Artifact 布局已加入移动端宽度约束、正常流触发器、抽屉内部 `border-box` 和 Header action 的窄屏收缩规则；真实点击链已从“被主内容遮挡”推进到“点击成功、面板打开”，最后剩余的是打开后的 `scrollWidth` 门禁待重跑确认。
+- `global-setup.ts` 已加入 Playwright Nuxt 冷启动预热；这是测试环境稳定性处理，不是降低断言或延长产品行为超时。
+
+### 当前验证证据
+
+- `cd frontend-vue && corepack pnpm typecheck`：通过。
+- `cd frontend-vue && corepack pnpm lint`：通过。
+- `cd frontend-vue && corepack pnpm stylelint`：通过。
+- `cd frontend-vue && corepack pnpm exec vitest run tests/unit/composables/use-thread-goal.test.ts`：5 tests passed。
+- `/goal finish all tests` 专项 E2E：1 passed；另一个“welcome header 不被 goal 覆盖”的目标专项此前也已通过。
+- 附件限制、Lark 集成状态、通知标题、流式 reasoning、pin、artifact filename 去重等上一轮专项失败已修复并通过对应重跑。
+- 移动端三项测试在中断前的最后稳定证据不是全绿：sidebar overflow 曾通过；Artifact 触发器真实点击曾通过，但打开后仍观察到 `document.documentElement.scrollWidth = 412`（目标应 `<= 375`）。随后已修复超出元素定位到的 Header action（`Scheduled tasks`、compact button span），但本次命令在最终重跑期间被用户中断，必须重新验证。
+- 全量 mock UI E2E 早期基线为 `116 tests: 104 passed, 12 failed`；经过本窗口连续修复后不得直接沿用该旧数字作为最终结论，必须重新跑全量并记录最新总数、失败用例和失败原因。
+
+### 仍未完成的硬门槛
+
+- 尚未获得“全量 React UI E2E 116/116（或当前实际总数）通过”的新证据。
+- 尚未完成逐路由、逐状态、逐断点 React/Vue screenshot diff、差异 mask、阈值报告和可复跑 visual gate；因此绝不能声称 UI 98% 达标。
+- 尚未完成对 `11-vue-parity-plan.md` D14/P6 的最终闭环审计；`SPEC-GAPS.md` 中相关项保持 Open/Partial，不能改 Closed。
+- 仍需检查移动端 Artifact 打开后的横向溢出修复没有破坏桌面 Artifact resize、preview、code view、markdown view 和 panel close 交互。
+
+### 下一窗口的严格执行顺序
+
+1. 先 `git status --short`，确认没有临时 debug 文件，尤其检查 `frontend-vue/tests/e2e/ui-polish-mobile.spec.ts` 与 `frontend-vue/app/assets/styles/main.scss`；不要自动暂存或重置既有 staged 状态。
+2. 先重跑移动端专项：
+
+   ```bash
+   cd frontend-vue
+   corepack pnpm exec playwright test -c playwright.vue.config.ts tests/e2e/ui-polish-mobile.spec.ts --workers=1
+   ```
+
+   若 Artifact 仍 `scrollWidth > 375`，用 DOM `getBoundingClientRect()` 找出超出节点并修复 CSS；禁止改成 `click({ force: true })`、删除 overflow 断言或降低门槛。
+3. 重跑目标/关键交互专项，再跑完整 mock UI：
+
+   ```bash
+   corepack pnpm exec playwright test -c playwright.vue.config.ts tests/e2e/chat.spec.ts tests/e2e/integrations.spec.ts tests/e2e/settings-notification.spec.ts tests/e2e/streaming-reasoning-order.spec.ts tests/e2e/thread-list-pin.spec.ts tests/e2e/artifact-preview.spec.ts tests/e2e/artifact-panel-resize.spec.ts --workers=1
+   corepack pnpm exec playwright test -c playwright.vue.config.ts --workers=1
+   ```
+
+4. 通过后重跑 `corepack pnpm verify`、适用的 real-backend lane、`git diff --check`，然后才更新本文件和 `SPEC-GAPS.md` 的证据；失败时先修根因，不要把失败改写成环境边界。
+5. 继续实现并验证可复跑的视觉门禁：React/Vue 同 viewport、同 route、同 state、同数据 fixture 的截图、diff、动态区 mask、阈值报告和人工抽样；没有报告就不允许写“98%+”。
+
+### 新窗口可直接复制的短 prompt
+
+```text
+继续 DeerFlow `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow` 的 Vue parity 任务。先读 AGENTS.md、frontend/AGENTS.md、backend/AGENTS.md、frontend-refactor-docs/11-vue-parity-plan.md、frontend-refactor-docs/12-vue-execution-workflow.md、frontend-refactor-docs/HANDOFF.md、frontend-vue/tests/SPEC-GAPS.md，并先运行 git status --short；保留既有 staged/unstaged，不自动 git add/reset。只改 frontend-vue、docker-vue 和明确授权的 frontend-refactor-docs，React frontend 是冻结基线。
+
+本窗口已修复 `/goal` 新线程路由保存时序和 useThreadGoal reconciliation；typecheck/lint/stylelint 通过，goal 专项通过。移动端 workspace overflow 第一层已通过，Artifact 触发器真实点击已通过，但打开 Artifact 后最后观测到 scrollWidth=412（目标 <=375）；之后已修复 Header action 宽度，但最终重跑被中断，先重跑 `cd frontend-vue && corepack pnpm exec playwright test -c playwright.vue.config.ts tests/e2e/ui-polish-mobile.spec.ts --workers=1`。禁止 force click、删断言或降低门槛。若通过，再重跑关键专项和全量 mock UI E2E，记录真实总数；再跑 `pnpm verify`、real-backend 适用门禁、git diff --check。
+
+任务尚未完成：没有全量 E2E 最新全绿证据，没有 React/Vue 可复跑 screenshot diff/mask/threshold 报告，因此不能声称功能 1:1 或 UI 98%+。继续严格对标 11 号计划 D14/P6、企业级组件/CSS 边界和交互细节；不要修改 React baseline，不要用 mock/source-contract 证据冒充 live/visual signoff。
+```
+
+## 0.3 用户确认的后续执行策略
+
+用户已确认：**后续优先完成全部功能，最后统一进行完整测试与验收**。
+
+具体执行口径如下：
+
+- 主线优先级是继续完成 `11-vue-parity-plan.md` 中尚未落地的功能、页面、交互状态和架构细节，不因局部测试暂时失败而提前宣称完成。
+- 开发期间仍保留必要的最小验证：涉及 shared stream、auth/proxy、thread state、Artifact、路由或数据契约的改动，至少运行对应 unit/contract/smoke，防止问题堆积到最后无法定位。
+- 全部功能实现后冻结代码，再统一执行完整门禁：全量 mock UI E2E、D14 代理层契约与 real-backend、完整 `pnpm verify`、`git diff --check`、React/Vue 视觉截图 Diff、动态区域 mask、98% 阈值报告和 P6 人工签字。
+- “最后统一测试”不等于删除开发期验证、使用 `force click`、降低断言、跳过失败用例或把 mock/source-backed 证据冒充真实/视觉验收。
+- 在最终全量测试和视觉证据全部完成前，`SPEC-GAPS.md` 不得把未闭环项目改为 Closed，也不得把项目描述为已完成。
+
 ## 1. 冷启动必读
 
 新窗口按以下顺序读取:

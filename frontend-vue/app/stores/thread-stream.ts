@@ -21,6 +21,9 @@ export type StartThreadMessageOptions = {
   text: string;
   additionalKwargs?: Record<string, unknown>;
   context?: Record<string, unknown>;
+  checkpoint?: Record<string, unknown>;
+  input?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   endpointBase?: string;
 };
 
@@ -41,6 +44,7 @@ export const useThreadStreamStore = defineStore("thread-stream", () => {
   const activeThreadId = ref<string | null>(null);
   const activeRunId = ref<string | null>(null);
   const historyMessages = ref<DeerFlowMessage[]>([]);
+  const optimisticMessages = ref<DeerFlowMessage[]>([]);
   const status = ref<ThreadStreamStatus>("idle");
   const errorMessage = ref<string | null>(null);
   let controller: AbortController | undefined;
@@ -52,7 +56,7 @@ export const useThreadStreamStore = defineStore("thread-stream", () => {
   const viewModel = computed(() =>
     deriveThreadStreamViewModel(snapshot.value, {
       errorMessage: errorMessage.value,
-      historyMessages: historyMessages.value,
+      historyMessages: [...historyMessages.value, ...optimisticMessages.value],
       runId: activeRunId.value,
       status: status.value,
       threadId: activeThreadId.value,
@@ -65,8 +69,11 @@ export const useThreadStreamStore = defineStore("thread-stream", () => {
     threadId,
     text,
     additionalKwargs,
+    checkpoint,
     context,
     endpointBase,
+    input: preparedInput,
+    metadata,
   }: StartThreadMessageOptions): Promise<void> {
     await stop({ drain: false });
     const trimmed = text.trim();
@@ -80,8 +87,14 @@ export const useThreadStreamStore = defineStore("thread-stream", () => {
     activeRunId.value = null;
     errorMessage.value = null;
     status.value = "streaming";
+    optimisticMessages.value = [{
+      type: "human",
+      id: `optimistic-${Date.now()}`,
+      content: trimmed,
+      ...(additionalKwargs ? { additional_kwargs: additionalKwargs } : {}),
+    }];
 
-    const input: DeerFlowRunInput = {
+    const input: DeerFlowRunInput = preparedInput ?? {
       messages: [
         {
           type: "human",
@@ -94,9 +107,11 @@ export const useThreadStreamStore = defineStore("thread-stream", () => {
     try {
       const result = await startDeerFlowThreadStream({
         context,
+        checkpoint,
         endpointBase,
         engine,
         input,
+        metadata,
         onEvent: handleStreamEvent,
         signal: runController.signal,
         threadId,
@@ -190,6 +205,7 @@ export const useThreadStreamStore = defineStore("thread-stream", () => {
     activeThreadId.value = null;
     activeRunId.value = null;
     historyMessages.value = [];
+    optimisticMessages.value = [];
     errorMessage.value = null;
     status.value = "idle";
     engine.reset();
@@ -198,6 +214,26 @@ export const useThreadStreamStore = defineStore("thread-stream", () => {
 
   function setHistoryMessages(messages: DeerFlowMessage[]): void {
     historyMessages.value = messages;
+    const historyText = new Set(messages.map(messageContentText));
+    optimisticMessages.value = optimisticMessages.value.filter((message) => {
+      const text = messageContentText(message);
+      return !historyText.has(text);
+    });
+  }
+
+  function messageContentText(message: DeerFlowMessage): string {
+    if (typeof message.content === "string") return message.content;
+    if (!Array.isArray(message.content)) return "";
+    return message.content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part === "object") {
+          const text = Reflect.get(part, "text") ?? Reflect.get(part, "content");
+          return typeof text === "string" ? text : "";
+        }
+        return "";
+      })
+      .join("");
   }
 
   function isRunningStatus(value: ThreadStreamStatus): boolean {

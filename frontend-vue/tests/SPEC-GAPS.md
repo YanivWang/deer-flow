@@ -4,6 +4,23 @@ This file tracks Vue/Nuxt parity gaps after the 2026-07-31 implementation run.
 It is intentionally scoped to `frontend-vue/` tests and does not claim full
 product parity until a real-backend/manual pass signs off the remaining areas.
 
+## Mandatory final gates
+
+The current user acceptance overlay requires all of the following before this
+ledger can be declared complete:
+
+- Function and interaction behavior is 1:1 with the frozen React baseline
+  `b71a892b`, including event order, state machines, input behavior, routing,
+  cache invalidation, error/cancel/recovery behavior, panel transitions, and
+  request ordering, within the explicit D5/D6/D8/D20/D21-D25 decisions.
+- UI restoration is at least 98% for every in-scope route, required state, and
+  desktop/mobile viewport, measured by reproducible React/Vue visual diff with
+  an explicit dynamic-region mask list.
+- Component, store/composable, `app/core`, dependency-direction, and SCSS
+  token/mixin boundaries meet the enterprise architecture gate.
+- D14 UI/proxy/real-Gateway layers and the P6 manual visual signoff are all
+  complete; mock/source-backed evidence alone cannot close these gates.
+
 ## Closed Or Anchored
 
 | Area | Current Vue Coverage | Status |
@@ -11,7 +28,7 @@ product parity until a real-backend/manual pass signs off the remaining areas.
 | Nuxt P0 harness | `tests/p0/*`, `tests/guards/no-vue-in-stream-core.test.ts`, `tests/guards/no-disabled-checks.test.ts` | Closed for P0 harness, no-Vue-in-stream-core guard, and no-disabled-checks guard |
 | Nitro proxy / SSE / CSRF | `tests/contract/docker-vue-parity.test.ts`, `tests/unit/core/api/csrf.test.ts`, stream client/transport tests | Anchored; real gateway smoke still belongs to deployment validation |
 | Playwright/Nuxt webServer | `scripts/e2e-nuxt-dev-server.mjs`, `playwright.vue.config.ts`, `tests/e2e/*` | Closed for local fixed-port E2E harness |
-| Minimal chat E2E | `tests/e2e/chat-flow.spec.ts`, `tests/e2e/utils/mock-api.ts` | Anchored with mocked backend chat flow |
+| Full parity UI E2E | `tests/e2e/chat.spec.ts`, `tests/e2e/utils/mock-api.ts` | Anchored with the copied React parity suite and shared mock contract |
 | Chat vertical smoke | `tests/unit/pages/workspace-chat.nuxt.test.ts`, `tests/unit/core/api/thread/client.test.ts`, `tests/unit/composables/use-thread-list.test.ts`, `tests/unit/stores/thread-stream.test.ts`, `tests/unit/core/api/stream/client.test.ts`, `tests/contract/gateway-sse-resume.test.ts` | Anchored for Gateway-backed new-thread creation and cache/nav update, send draft/error behavior, stop refresh behavior, Gateway-shaped SSE message/run/cursor/gap/error state, stream status live region, active sidebar `aria-current`, skip-to-chat-content anchor, artifact panel route isolation, and settings/agent context handoff to runs |
 | Workspace chat routes/list | `tests/unit/pages/workspace-chat.nuxt.test.ts`, thread list/history composable tests | Closed for active route, new chat, load older, pin/rename/delete basics |
 | Thread API error envelopes | `tests/unit/core/api/thread/client.test.ts` | Closed for non-JSON, empty, array, and object detail fallback |
@@ -30,7 +47,7 @@ product parity until a real-backend/manual pass signs off the remaining areas.
 | Goal command/status | `tests/unit/composables/use-thread-goal.test.ts`, `tests/unit/core/api/thread/client.test.ts`, page tests | Anchored for GET/PUT/DELETE `/goal` and optimistic display |
 | Compact command guard | `tests/unit/composables/use-thread-compaction.test.ts`, API client tests, page tests | Anchored for empty-thread skip, busy disable, success refetch, and error display |
 | Local thread settings | `tests/unit/core/settings/local.test.ts`, `tests/unit/composables/use-local-thread-settings.test.ts`, page tests | Anchored for persisted allowed context fields and send context |
-| Auth/setup/callback/session | `tests/unit/core/auth/client.test.ts`, `tests/unit/pages/auth-pages.nuxt.test.ts`, `tests/unit/pages/settings.nuxt.test.ts`, `tests/contract/auth-state.test.ts`, `tests/e2e/smoke.spec.ts`, `tests/e2e/auth-flow.spec.ts` | Anchored for key UI, safe `next`, login redirect construction, login/setup request shape, login/setup validation error associations, callback status/error live-region semantics, account password/logout shape, failed-logout hard redirect, Nitro route protection, browser local-login form submission, Gateway error display, password-change CSRF, rotated CSRF reuse on logout, and protected redirect after cookie clearing |
+| Auth/setup/callback/session | `tests/unit/core/auth/client.test.ts`, `tests/unit/pages/auth-pages.nuxt.test.ts`, `tests/unit/pages/settings.nuxt.test.ts`, `tests/contract/auth-state.test.ts`, `tests/e2e-real-backend/auth-setup-recovery.spec.ts` | Anchored for key UI, safe `next`, login redirect construction, login/setup request shape, login/setup validation error associations, callback status/error semantics, account password/logout shape, failed-logout hard redirect, Nitro route protection, browser local-login form submission, Gateway error display, password-change CSRF, rotated CSRF reuse on logout, and protected redirect after cookie clearing |
 | Scheduled tasks MVP | `tests/unit/core/api/scheduled-tasks/client.test.ts`, `tests/unit/composables/use-scheduled-tasks.test.ts`, `tests/unit/pages/scheduled-tasks.nuxt.test.ts` | Anchored for list, thread scoped create, runs, pause/resume/trigger/delete |
 | Scheduled tasks once create | `tests/unit/core/api/scheduled-tasks/client.test.ts`, `tests/unit/pages/scheduled-tasks.nuxt.test.ts` | Anchored for cron/once create toggle, timezone wall-clock `datetime-local` to backend `schedule_spec.run_at`, and backend one-time create payload |
 | Scheduled tasks edit/filter UX | `tests/unit/core/api/scheduled-tasks/client.test.ts`, `tests/unit/composables/use-scheduled-tasks.test.ts`, `tests/unit/pages/scheduled-tasks.nuxt.test.ts` | Anchored for `PATCH /scheduled-tasks/{task_id}`, edit form for locked schedule type including timezone wall-clock once edits, status/type filters, selected-task reselection, recipes, cron presets, timezone catalog, parsed cron/create preview, backend lease/overlap/run-count/last-run fields in the detail model, manual-trigger run-history refresh, active-run conflict display, and skipped terminal run detail |

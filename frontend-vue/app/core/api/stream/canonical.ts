@@ -18,6 +18,8 @@ export type CanonicalStreamEvent =
   | { type: "message_delta"; payload: unknown; cursor?: StreamCursor }
   | { type: "message_snapshot"; values: unknown; cursor?: StreamCursor }
   | { type: "subtask_delta"; payload: unknown; cursor?: StreamCursor }
+  | { type: "artifact_delta"; payload: unknown; cursor?: StreamCursor }
+  | { type: "human_input_required"; payload: unknown; cursor?: StreamCursor }
   | { type: "notice"; payload: unknown; cursor?: StreamCursor }
   | { type: "stream_gap"; gap: StreamReplayGapData }
   | { type: "error"; error: StreamEngineError; cursor?: StreamCursor }

@@ -5,6 +5,7 @@ import {
 } from "../artifacts/utils";
 
 export type ToolRichCard = {
+  artifactPaths: string[];
   description: string | null;
   details: string[];
   draftPreview: WriteFileDraftPreview | null;
@@ -40,13 +41,14 @@ export function extractToolRichCards(message: unknown): ToolRichCard[] {
 function describeAssistantToolCall(toolCall: ToolCallRecord): ToolRichCard {
   const draftPreview = describeWriteFileDraftPreview(toolCall.args);
   return {
+    artifactPaths: artifactPathsForArgs(toolCall.args, draftPreview),
     description: describeToolDescription(toolCall, draftPreview),
     details: buildToolDetails(toolCall),
     draftPreview,
     id: toolCall.id,
     kind: "assistant-call",
     name: toolCall.name,
-    title: titleForToolCall(toolCall, draftPreview),
+    title: toolCall.name === "task" ? "Subtask failed" : titleForToolCall(toolCall, draftPreview),
   };
 }
 
@@ -60,6 +62,7 @@ function describeToolResult(record: Record<string, unknown>): ToolRichCard | nul
   const name = readNonEmptyString(record.name) ?? "tool_result";
   const content = readTextContent(record.content);
   return {
+    artifactPaths: artifactPathsForArgs(record.artifact, null),
     description: content ? truncate(content, 220) : null,
     details: [
       ...(toolCallId ? [`调用：${toolCallId}`] : []),
@@ -71,6 +74,20 @@ function describeToolResult(record: Record<string, unknown>): ToolRichCard | nul
     name,
     title: `${humanizeToolName(name)} 结果`,
   };
+}
+
+function artifactPathsForArgs(value: unknown, draftPreview: WriteFileDraftPreview | null): string[] {
+  const record = asRecord(value) ?? {};
+  const paths = [
+    draftPreview?.targetPath,
+    readNonEmptyString(record.path),
+    readNonEmptyString(record.file_path),
+    readNonEmptyString(record.filepath),
+    readNonEmptyString(record.target_path),
+    readNonEmptyString(record.targetPath),
+    ...readStringArray(record.filepaths),
+  ];
+  return Array.from(new Set(paths.filter((path): path is string => Boolean(path))));
 }
 
 function titleForToolCall(
@@ -175,8 +192,8 @@ function buildToolDetails(toolCall: ToolCallRecord): string[] {
     ...(toolCall.id ? [`调用：${toolCall.id}`] : []),
     ...detailFromValue("查询", args.query),
     ...detailFromValue("URL", args.url),
-    ...detailFromValue("路径", args.path ?? args.file_path ?? args.filepath),
-    ...detailFromValue("目标", args.target_path ?? args.targetPath),
+    ...detailFromArtifactValue("路径", args.path ?? args.file_path ?? args.filepath),
+    ...detailFromArtifactValue("目标", args.target_path ?? args.targetPath),
     ...detailFromValue("选择器", args.selector),
     ...detailFromValue("文本", args.text),
     ...detailFromValue("片段", args.chunk),
@@ -216,6 +233,11 @@ function normalizeToolCall(value: unknown): ToolCallRecord | null {
 function detailFromValue(label: string, value: unknown): string[] {
   const text = readNonEmptyString(value);
   return text ? [`${label}：${truncate(text, 120)}`] : [];
+}
+
+function detailFromArtifactValue(label: string, value: unknown): string[] {
+  const path = readNonEmptyString(value);
+  return path ? [`${label}：${artifactFilename(path)}`] : [];
 }
 
 function readRole(record: Record<string, unknown>): string | null {

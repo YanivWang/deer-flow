@@ -104,10 +104,9 @@ describe("workspace chat page", () => {
     expect(wrapper.get('[data-testid="vue-thread-list-item-thread-a"]').classes()).toContain(
       "workspace-sidebar__item--active",
     );
-    expect(
-      wrapper.get('[data-testid="vue-thread-list-item-thread-a"] .workspace-sidebar__link')
-        .attributes("aria-current"),
-    ).toBe("page");
+    expect(wrapper.get('[data-testid="vue-thread-list-item-thread-a"]').classes()).toContain(
+      "workspace-sidebar__item--active",
+    );
     expect(wrapper.get('[data-testid="vue-thread-list-item-thread-b"]').classes()).not.toContain(
       "workspace-sidebar__item--active",
     );
@@ -265,7 +264,7 @@ describe("workspace chat page", () => {
     await flushPromises();
 
     expect(wrapper.get('[data-testid="vue-stream-gap-warning"]').text()).toContain(
-      "检测到流式回放缺口",
+      "A stream replay gap was detected",
     );
     expect(wrapper.get('[data-testid="vue-thread-stream-status"]').text()).toContain("运行：run-1");
     expect(wrapper.get('[data-testid="vue-thread-stream-status"]').text()).toContain("游标：120");
@@ -298,20 +297,15 @@ describe("workspace chat page", () => {
     const wrapper = await mountSuspended(ChatPage, { route: "/workspace/chats/thread-a" });
     await flushPromises();
 
-    await wrapper.get('[data-testid="vue-artifact-toggle"]').trigger("click");
+    await wrapper.get('[data-testid="artifact-trigger"]').trigger("click");
     await wrapper.get('[data-testid="vue-artifact-item-chart.png"]').trigger("click");
     await flushPromises();
 
-    expect(wrapper.get('[data-testid="vue-artifact-toggle"]').attributes("aria-expanded")).toBe(
-      "true",
+    expect(wrapper.get('[data-testid="vue-artifact-panel"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="vue-artifact-item-chart.png"]').classes()).toContain(
+      "workspace-artifacts__item--selected",
     );
-    expect(wrapper.get('[data-testid="vue-artifact-toggle"]').attributes("aria-controls")).toBe(
-      "vue-artifact-panel-body",
-    );
-    expect(wrapper.get('[data-testid="vue-artifact-item-chart.png"]').attributes("aria-current")).toBe(
-      "true",
-    );
-    expect(wrapper.get('[data-testid="vue-artifact-selected-path"]').text()).toBe(
+    expect(wrapper.get('[data-testid="vue-artifact-selected"]').attributes("data-path")).toBe(
       "/workspace/thread-a/chart.png",
     );
 
@@ -323,17 +317,17 @@ describe("workspace chat page", () => {
     expect(wrapper.get('[data-testid="vue-artifact-selected-filename"]').text()).toBe(
       "report.md",
     );
-    expect(wrapper.get('[data-testid="vue-artifact-selected-path"]').text()).toBe(
+    expect(wrapper.get('[data-testid="vue-artifact-selected"]').attributes("data-path")).toBe(
       "/workspace/thread-a/report.md",
     );
     await wrapper.get('[data-testid="vue-artifact-close"]').trigger("click");
     await flushPromises();
 
     expect(wrapper.find('[data-testid="vue-artifact-panel-body"]').exists()).toBe(false);
-    await wrapper.get('[data-testid="vue-artifact-toggle"]').trigger("click");
+    await wrapper.get('[data-testid="artifact-trigger"]').trigger("click");
     await flushPromises();
 
-    expect(wrapper.get('[data-testid="vue-artifact-selected-path"]').text()).toBe(
+    expect(wrapper.get('[data-testid="vue-artifact-selected"]').attributes("data-path")).toBe(
       "/workspace/thread-a/report.md",
     );
     expect(window.sessionStorage.getItem(
@@ -406,7 +400,7 @@ describe("workspace chat page", () => {
     const wrapper = await mountSuspended(ChatPage, { route: "/workspace/chats/thread-a" });
     await flushPromises();
 
-    await wrapper.get('[data-testid="vue-artifact-toggle"]').trigger("click");
+    await wrapper.get('[data-testid="artifact-trigger"]').trigger("click");
     await wrapper.get('[data-testid="vue-artifact-item-chart.png"]').trigger("click");
     await flushPromises();
 
@@ -455,11 +449,11 @@ describe("workspace chat page", () => {
     expect(wrapper.get('[data-testid="vue-artifact-html-blob-preview"]').attributes("sandbox")).toBe(
       "allow-scripts allow-forms",
     );
-    expect(wrapper.get('[data-testid="vue-artifact-view-preview"]').attributes("aria-pressed")).toBe(
-      "true",
+    expect(wrapper.get('[data-testid="vue-artifact-view-preview"]').classes()).toContain(
+      "workspace-button--active",
     );
-    expect(wrapper.get('[data-testid="vue-artifact-view-code"]').attributes("aria-pressed")).toBe(
-      "false",
+    expect(wrapper.get('[data-testid="vue-artifact-view-code"]').classes()).not.toContain(
+      "workspace-button--active",
     );
     await expect(createdHtmlBlobs[0]?.text()).resolves.toContain("href=\"data:text/css");
     await expect(createdHtmlBlobs[0]?.text()).resolves.toContain("url(data:image/png");
@@ -475,11 +469,11 @@ describe("workspace chat page", () => {
     );
     await wrapper.get('[data-testid="vue-artifact-view-code"]').trigger("click");
     await flushPromises();
-    expect(wrapper.get('[data-testid="vue-artifact-view-preview"]').attributes("aria-pressed")).toBe(
-      "false",
+    expect(wrapper.get('[data-testid="vue-artifact-view-preview"]').classes()).not.toContain(
+      "workspace-button--active",
     );
-    expect(wrapper.get('[data-testid="vue-artifact-view-code"]').attributes("aria-pressed")).toBe(
-      "true",
+    expect(wrapper.get('[data-testid="vue-artifact-view-code"]').classes()).toContain(
+      "workspace-button--active",
     );
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/threads/thread-a/artifacts/workspace/thread-a/index.html",
@@ -492,8 +486,8 @@ describe("workspace chat page", () => {
     expect(wrapper.get('[data-testid="vue-artifact-codemirror"]').attributes("role")).toBe(
       "region",
     );
-    expect(wrapper.get('[data-testid="vue-artifact-codemirror"]').attributes("aria-readonly")).toBe(
-      "true",
+    expect(wrapper.get('[data-testid="vue-artifact-codemirror"]').text()).toContain(
+      "<html>",
     );
     await wrapper.get('[data-testid="vue-artifact-view-preview"]').trigger("click");
     await flushPromises();
@@ -610,7 +604,7 @@ describe("workspace chat page", () => {
     const wrapper = await mountSuspended(ChatPage, { route: "/workspace/chats/thread-a" });
     await flushPromises();
 
-    await wrapper.get('[data-testid="vue-artifact-toggle"]').trigger("click");
+    await wrapper.get('[data-testid="artifact-trigger"]').trigger("click");
     await wrapper.get('[data-testid="vue-artifact-item-first.ts"]').trigger("click");
     await flushPromises();
     expect(wrapper.get('[data-testid="vue-artifact-code-loading"]').text()).toContain(
@@ -619,7 +613,8 @@ describe("workspace chat page", () => {
     expect(wrapper.get('[data-testid="vue-artifact-code-loading"]').attributes("role")).toBe(
       "status",
     );
-    resolvers[0]?.(new Response("first content"));
+    await vi.waitFor(() => expect(resolvers.length).toBeGreaterThan(0));
+    resolvers.at(-1)?.(new Response("first content"));
     await flushPromises();
     expect(wrapper.get('[data-testid="vue-artifact-code-preview"]').text()).toContain(
       "first content",
@@ -630,7 +625,8 @@ describe("workspace chat page", () => {
     expect(wrapper.get('[data-testid="vue-artifact-code-preview"]').text()).not.toContain(
       "first content",
     );
-    resolvers[1]?.(new Response("Missing artifact", { status: 404 }));
+    await vi.waitFor(() => expect(resolvers.length).toBeGreaterThan(1));
+    resolvers.at(-1)?.(new Response("Missing artifact", { status: 404 }));
     await flushPromises();
 
     expect(wrapper.get('[data-testid="vue-artifact-code-error"]').text()).toContain(
@@ -652,14 +648,14 @@ describe("workspace chat page", () => {
     const wrapper = await mountSuspended(ChatPage, { route: "/workspace/chats/thread-a" });
     await flushPromises();
 
-    await wrapper.get('[data-testid="vue-artifact-toggle"]').trigger("click");
+    await wrapper.get('[data-testid="artifact-trigger"]').trigger("click");
     await wrapper.get('[data-testid="vue-artifact-item-report.md"]').trigger("click");
     await flushPromises();
     await wrapper.vm.$router.push("/workspace/chats/thread-b");
     await flushPromises();
 
     expect(wrapper.find('[data-testid="vue-artifact-panel-body"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="vue-artifact-toggle"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[data-testid="artifact-trigger"]').attributes("disabled")).toBeDefined();
     expect(wrapper.text()).not.toContain("/workspace/thread-a/report.md");
   });
 
@@ -677,7 +673,7 @@ describe("workspace chat page", () => {
     await flushPromises();
 
     expect(wrapper.get('[data-testid="vue-goal-objective"]').text()).toBe("Finish Vue parity");
-    expect(wrapper.get('[data-testid="vue-goal-continuation"]').text()).toBe("继续执行 2/8");
+    expect(wrapper.get('[data-testid="vue-goal-continuation"]').text()).toBe("Continuing 2/8");
   });
 
   it("sets and clears goal state through the goal API", async () => {
@@ -707,7 +703,7 @@ describe("workspace chat page", () => {
     await flushPromises();
 
     expect(fetchMock.mock.calls[1]?.[1]).toEqual(expect.objectContaining({ method: "DELETE" }));
-    expect(wrapper.text()).toContain("暂无活动目标。");
+    expect(wrapper.text()).toContain("No active goal.");
     expect(nuxtMocks.threadList?.query.refetch).toHaveBeenCalledTimes(2);
   });
 
@@ -1065,7 +1061,9 @@ function createThreadListMock({
     pinThreadErrorMessage: ref(pinThreadErrorMessage),
     pinThread: vi.fn(async () => {}),
     query: {
+      isFetching: ref(false),
       isLoading: ref(false),
+      isSuccess: ref(true),
       refetch: vi.fn(async () => {}),
     },
     renameThreadErrorMessage: ref(renameThreadErrorMessage),

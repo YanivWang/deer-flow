@@ -19,7 +19,7 @@ function streamResponse(body: string): Response {
     }),
     {
       headers: {
-        "Content-Location": "/api/threads/thread-1/runs/run-1",
+        "Content-Location": "/api/langgraph/threads/thread-1/runs/run-1",
         "Content-Type": "text/event-stream",
       },
       status: 200,
@@ -65,7 +65,7 @@ describe("DeerFlow thread stream client", () => {
     const [, init] = fetchMock.mock.calls[0] ?? [];
     const headers = new Headers(init?.headers);
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/threads/thread-1/runs/stream",
+      "/api/langgraph/threads/thread-1/runs/stream",
       expect.objectContaining({ method: "POST" }),
     );
     expect(headers.get("X-CSRF-Token")).toBe("stream-token");
@@ -95,7 +95,7 @@ describe("DeerFlow thread stream client", () => {
     const [, init] = fetchMock.mock.calls[0] ?? [];
     const headers = new Headers(init?.headers);
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/threads/thread-1/runs/run-1/join",
+      "/api/langgraph/threads/thread-1/runs/run-1/join",
       expect.objectContaining({ method: "GET" }),
     );
     expect(headers.get("Last-Event-ID")).toBe("7");
@@ -178,7 +178,7 @@ describe("DeerFlow thread stream client", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/threads/thread-1/runs/run-1/stream?action=interrupt",
+      "/api/langgraph/threads/thread-1/runs/run-1/stream?action=interrupt",
       expect.objectContaining({ method: "POST" }),
     );
     expect(engine.getSnapshot().done).toBe(true);

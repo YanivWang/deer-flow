@@ -813,6 +813,9 @@ function readMathToken(text: string, index: number): InlineToken | null {
   if (text[index] !== "$") {
     return null;
   }
+  if (/\d/.test(text[index + 1] ?? "")) {
+    return null;
+  }
   const end = text.indexOf("$", index + 1);
   if (end === -1) {
     return null;

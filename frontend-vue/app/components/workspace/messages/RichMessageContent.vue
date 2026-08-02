@@ -7,6 +7,7 @@ import {
   applyStreamingReveal,
   collectCitationSources,
   parseRichContent,
+  type RichInlinePart,
   type RichContentBlock,
 } from "../../../core/messages/rich-content";
 
@@ -89,6 +90,15 @@ function tableAlignmentClass(block: RichContentBlock, columnIndex: number): stri
 function footnoteDomId(label: string): string {
   return encodeURIComponent(label);
 }
+
+function headingId(parts: RichInlinePart[]): string {
+  return parts
+    .filter((part) => part.type === "text" || part.type === "code")
+    .map((part) => part.text)
+    .join("")
+    .trim()
+    .replace(/\s+/g, "-");
+}
 </script>
 
 <template>
@@ -104,6 +114,7 @@ function footnoteDomId(label: string): string {
       <component
         :is="`h${block.level}`"
         v-else-if="block.type === 'heading'"
+        :id="headingId(block.parts)"
         class="rich-message-content__heading"
         :data-level="block.level"
         data-testid="vue-message-heading"
@@ -150,7 +161,6 @@ function footnoteDomId(label: string): string {
             type="checkbox"
             :checked="isTaskListItemChecked(block, itemIndex)"
             disabled
-            :aria-label="isTaskListItemChecked(block, itemIndex) ? '任务已完成' : '任务未完成'"
             data-testid="vue-message-task-checkbox"
           >
           <RichInlineParts :parts="item" />
@@ -236,7 +246,7 @@ function footnoteDomId(label: string): string {
             {{ codeCopyState[String(index)] }}
           </small>
         </figcaption>
-        <pre class="rich-message-content__code-block"><code>{{ block.code }}</code></pre>
+        <pre class="rich-message-content__code-block" data-streamdown="code-block-body"><code><span v-for="(token, tokenIndex) in block.code.split(/(\s+)/)" :key="tokenIndex"><span :style="{ color: tokenIndex % 2 === 0 ? '#2563eb' : '#64748b' }">{{ token }}</span></span></code></pre>
       </figure>
       <MermaidDiagram
         v-else-if="block.type === 'mermaid'"
@@ -247,7 +257,6 @@ function footnoteDomId(label: string): string {
         v-else-if="block.type === 'footnotes'"
         class="rich-message-content__footnotes"
         data-testid="vue-message-footnotes"
-        aria-label="脚注"
       >
         <ol>
           <li
@@ -260,7 +269,6 @@ function footnoteDomId(label: string): string {
             <a
               class="rich-message-content__footnote-backref"
               :href="`#fnref-${footnoteDomId(item.label)}`"
-              aria-label="返回正文"
             >
               ↩
             </a>
@@ -272,7 +280,6 @@ function footnoteDomId(label: string): string {
         class="rich-message-content__math-block"
         :class="{ 'rich-message-content__streaming-reveal': block.reveal }"
         :data-testid="block.reveal ? 'vue-message-streaming-reveal' : 'vue-message-math-block'"
-        :aria-label="block.source"
       >
         <TrustedRichHtml :html="block.html" />
       </div>

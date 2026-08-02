@@ -1,0 +1,49 @@
+name: frontend-vue verify
+
+on:
+  push:
+    paths:
+      - "frontend-vue/**"
+      - ".github/workflows/frontend-vue-verify.yml"
+  pull_request:
+    paths:
+      - "frontend-vue/**"
+      - ".github/workflows/frontend-vue-verify.yml"
+
+concurrency:
+  group: fe-vue-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: frontend-vue
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.22.3"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install pinned pnpm dependencies
+        run: corepack pnpm install --frozen-lockfile --strict-peer-dependencies
+
+      - name: Run fast verification
+        run: make verify
+
+      - name: Install Playwright Chromium
+        run: corepack pnpm exec playwright install --with-deps chromium
+
+      - name: Run Vue UI E2E suite
+        run: corepack pnpm exec playwright test -c playwright.vue.config.ts

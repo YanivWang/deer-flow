@@ -14,6 +14,7 @@ export type StreamViewMessage = {
   id?: string;
   role: string;
   content: string;
+  reasoning?: string;
   raw: unknown;
 };
 
@@ -25,6 +26,8 @@ export type ThreadStreamViewModel = {
   messageCount: number;
   messages: StreamViewMessage[];
   subtasks: unknown[];
+  artifacts: unknown[];
+  humanInputRequests: unknown[];
   notices: unknown[];
   gapCount: number;
   done: boolean;
@@ -53,6 +56,8 @@ export function deriveThreadStreamViewModel(
     messageCount: messages.length,
     messages,
     subtasks: snapshot.subtasks,
+    artifacts: snapshot.artifacts,
+    humanInputRequests: snapshot.humanInputRequests,
     notices: snapshot.notices,
     gapCount: snapshot.gapCount,
     done: snapshot.done,
@@ -62,7 +67,80 @@ export function deriveThreadStreamViewModel(
 
 function extractSnapshotMessages(snapshot: StreamSnapshot): unknown[] {
   const valuesMessages = readMessagesArray(snapshot.values);
-  return valuesMessages.length > 0 ? valuesMessages : snapshot.messageDeltas;
+  // LangGraph's `values` frames can arrive before the final tool-call chunks.
+  // Keep both sources and let the identity merge below replace partial rows
+  // with the assembled delta instead of dropping the streamed tool call.
+  const deltas = assembleMessageDeltas(snapshot.messageDeltas);
+  const valueIds = new Set(valuesMessages.flatMap((message) => {
+    if (!isRecord(message) || typeof message.id !== "string") return [];
+    return [message.id];
+  }));
+  return [...valuesMessages, ...deltas.filter((message) => {
+    if (!isRecord(message) || typeof message.id !== "string") return true;
+    if (!valueIds.has(message.id)) return true;
+    return Array.isArray(message.tool_calls) && message.tool_calls.length > 0;
+  })];
+}
+
+function assembleMessageDeltas(deltas: unknown[]): unknown[] {
+  const messages = new Map<string, {
+    type: "ai";
+    id: string;
+    content: string;
+    reasoning_content: string;
+    tool_calls: Array<{ id: string; name: string; args: Record<string, unknown> }>;
+    chunks: Map<number, { id: string; name: string; args: string }>;
+  }>();
+
+  for (const delta of deltas) {
+    const chunk = Array.isArray(delta) ? delta[0] : delta;
+    if (!isRecord(chunk)) continue;
+    const id = typeof chunk.id === "string" && chunk.id ? chunk.id : `delta-${messages.size}`;
+    const current = messages.get(id) ?? {
+      type: "ai" as const,
+      id,
+      content: "",
+      reasoning_content: "",
+      tool_calls: [],
+      chunks: new Map(),
+    };
+    if (typeof chunk.content === "string") current.content += chunk.content;
+    const reasoning = isRecord(chunk.additional_kwargs)
+      ? chunk.additional_kwargs.reasoning_content
+      : chunk.reasoning_content;
+    if (typeof reasoning === "string") current.reasoning_content += reasoning;
+    const toolChunks = Array.isArray(chunk.tool_call_chunks) ? chunk.tool_call_chunks : [];
+    for (const rawChunk of toolChunks) {
+      if (!isRecord(rawChunk)) continue;
+      const index = typeof rawChunk.index === "number" ? rawChunk.index : 0;
+      const previous = current.chunks.get(index) ?? {
+        id: typeof rawChunk.id === "string" ? rawChunk.id : `tool-${index}`,
+        name: typeof rawChunk.name === "string" ? rawChunk.name : "tool",
+        args: "",
+      };
+      if (typeof rawChunk.name === "string" && rawChunk.name) previous.name = rawChunk.name;
+      if (typeof rawChunk.id === "string" && rawChunk.id) previous.id = rawChunk.id;
+      if (typeof rawChunk.args === "string") previous.args += rawChunk.args;
+      current.chunks.set(index, previous);
+    }
+    messages.set(id, current);
+  }
+
+  return [...messages.values()].map(({ chunks, ...message }) => ({
+    ...message,
+    ...(chunks.size > 0
+      ? {
+          tool_calls: [...chunks.values()].flatMap((chunk) => {
+            try {
+              const args = JSON.parse(chunk.args) as unknown;
+              return isRecord(args) ? [{ id: chunk.id, name: chunk.name, args }] : [];
+            } catch {
+              return [];
+            }
+          }),
+        }
+      : {}),
+  }));
 }
 
 function readMessagesArray(values: unknown): unknown[] {
@@ -81,15 +159,34 @@ function normalizeMessageForView(raw: unknown): StreamViewMessage {
   const id = typeof raw.id === "string" ? raw.id : undefined;
   const role = readRole(raw);
   const content = readMessageContent(raw.content);
-  return { ...(id ? { id } : {}), role, content, raw };
+  const reasoning = readReasoningContent(raw);
+  return { ...(id ? { id } : {}), role, content, ...(reasoning ? { reasoning } : {}), raw };
+}
+
+function readReasoningContent(message: Record<string, unknown>): string {
+  const direct = message.reasoning_content;
+  const additional = isRecord(message.additional_kwargs)
+    ? message.additional_kwargs.reasoning_content
+    : undefined;
+  return typeof direct === "string" ? direct : typeof additional === "string" ? additional : "";
 }
 
 function mergeMessagesForView(historyMessages: unknown[], liveMessages: unknown[]): StreamViewMessage[] {
   const merged: StreamViewMessage[] = [];
   const indexByIdentity = new Map<string, number>();
+  const optimisticHumanIndexByContent = new Map<string, number>();
 
   for (const raw of [...historyMessages, ...liveMessages]) {
     const message = normalizeMessageForView(raw);
+    const rawId = isRecord(raw) && typeof raw.id === "string" ? raw.id : "";
+    if (message.role === "human" && rawId.startsWith("optimistic-") && message.content) {
+      optimisticHumanIndexByContent.set(message.content, merged.length);
+    } else if (message.role === "human" && !rawId && message.content) {
+      const optimisticIndex = optimisticHumanIndexByContent.get(message.content);
+      if (optimisticIndex !== undefined) {
+        continue;
+      }
+    }
     const identity = messageIdentity(raw, message);
     if (!identity) {
       merged.push(message);

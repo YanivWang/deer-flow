@@ -11,7 +11,8 @@ const errorMessage = ref("");
 const isSubmitting = ref(false);
 const setupErrorId = "vue-setup-error-message";
 
-onMounted(async () => {
+async function loadSetupStatus() {
+  mode.value = "loading";
   try {
     const status = await fetchSetupStatus();
     if (status.needs_setup) {
@@ -22,6 +23,10 @@ onMounted(async () => {
   } catch {
     mode.value = "unavailable";
   }
+}
+
+onMounted(async () => {
+  await loadSetupStatus();
 });
 
 async function submitSetup() {
@@ -57,9 +62,10 @@ async function submitSetup() {
       <template v-else-if="mode === 'unavailable'">
         <h1>初始化不可用</h1>
         <p role="alert">无法获取 Gateway 初始化状态。</p>
-        <a-button data-testid="vue-setup-login-link" @click="router.replace('/login')">
-          登录
-        </a-button>
+        <div>
+          <a-button data-testid="vue-setup-retry" @click="loadSetupStatus">重试</a-button>
+          <a-button data-testid="vue-setup-login-link" @click="router.replace('/login')">登录</a-button>
+        </div>
       </template>
 
       <template v-else>
@@ -68,7 +74,6 @@ async function submitSetup() {
         <form
           class="auth-form"
           data-testid="vue-setup-form"
-          :aria-describedby="errorMessage ? setupErrorId : undefined"
           @submit.prevent="submitSetup"
         >
           <label>
@@ -83,8 +88,6 @@ async function submitSetup() {
               required
               minlength="8"
               data-testid="vue-setup-password"
-              :aria-describedby="errorMessage ? setupErrorId : undefined"
-              :aria-invalid="Boolean(errorMessage)"
             >
           </label>
           <label>
@@ -95,8 +98,6 @@ async function submitSetup() {
               required
               minlength="8"
               data-testid="vue-setup-confirm-password"
-              :aria-describedby="errorMessage ? setupErrorId : undefined"
-              :aria-invalid="Boolean(errorMessage)"
             >
           </label>
           <label class="auth-form__check">

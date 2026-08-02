@@ -22,6 +22,7 @@ export function useThreadGoal(
   const isGoalPending = ref(false);
   const goalErrorMessage = ref<string | null>(null);
   const previousThreadId = ref<string | null>(null);
+  const previousServerGoalKey = ref<string | null>(null);
 
   watch(
     () => ({
@@ -29,10 +30,13 @@ export function useThreadGoal(
       serverGoalProvided: toValue(serverGoal) !== undefined,
       threadId: toValue(threadId),
     }),
-    ({ serverGoalProvided, threadId }, previous) => {
+    ({ serverGoalKey, threadId }, previous) => {
       const threadChanged = previousThreadId.value !== null && previousThreadId.value !== threadId;
+      const serverGoalChanged =
+        previousServerGoalKey.value !== null && previousServerGoalKey.value !== serverGoalKey;
       previousThreadId.value = threadId;
-      if (threadChanged || serverGoalProvided || previous?.threadId !== threadId) {
+      previousServerGoalKey.value = serverGoalKey;
+      if (threadChanged || serverGoalChanged || previous?.threadId !== threadId) {
         localGoal.value = undefined;
       }
       if (threadChanged) {
@@ -53,7 +57,7 @@ export function useThreadGoal(
     });
   }
 
-  async function saveGoal(objective: string) {
+  async function saveGoal(objective: string, targetThreadId = toValue(threadId)) {
     const normalizedObjective = objective.trim();
     if (!normalizedObjective) {
       return null;
@@ -64,7 +68,7 @@ export function useThreadGoal(
     }
 
     return runGoalRequest(async () => {
-      const goal = await setThreadGoal(toValue(threadId), { objective: normalizedObjective });
+      const goal = await setThreadGoal(targetThreadId, { objective: normalizedObjective });
       localGoal.value = goal;
       return goal;
     });

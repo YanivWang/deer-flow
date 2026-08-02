@@ -15,10 +15,11 @@
     "stylelint": "stylelint \"**/*.{scss,vue}\"",
     "p0:lan-secure-context": "node scripts/p0-lan-secure-context.mjs",
     "p0:nitro-proxy-sse": "node scripts/p0-nitro-proxy-sse.mjs",
-    "test": "vitest run tests/unit tests/p0 tests/contract tests/guards",
+    "test": "vitest run tests/unit tests/guards tests/contract",
+    "test:p0": "vitest run tests/p0",
     "test:e2e": "playwright test -c playwright.vue.config.ts",
     "verify": "pnpm lint && pnpm stylelint && pnpm typecheck && pnpm test",
-    "verify-full": "pnpm verify && pnpm test:e2e"
+    "verify-full": "pnpm verify && pnpm exec playwright test -c playwright.vue.config.ts && pnpm exec playwright test -c playwright.real-backend.config.ts"
   },
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",

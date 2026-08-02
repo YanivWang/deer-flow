@@ -48,7 +48,7 @@ describe("Gateway SSE resume contract", () => {
     const observedEvents: CanonicalStreamEvent[] = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url === "/api/threads/thread-1/runs/stream") {
+      if (url === "/api/langgraph/threads/thread-1/runs/stream") {
         expect(init?.method).toBe("POST");
         expect(JSON.parse(String(init?.body))).toMatchObject({
           assistant_id: "lead_agent",
@@ -69,10 +69,10 @@ describe("Gateway SSE resume contract", () => {
               event: "gap",
             },
           ]),
-          contentLocation: "/api/threads/thread-1/runs/run-1",
+          contentLocation: "/api/langgraph/threads/thread-1/runs/run-1",
         });
       }
-      if (url === "/api/threads/thread-1/state") {
+      if (url === "/api/langgraph/threads/thread-1/state") {
         expect(init?.method).toBe("GET");
         return Response.json({
           values: {
@@ -80,7 +80,7 @@ describe("Gateway SSE resume contract", () => {
           },
         });
       }
-      if (url === "/api/threads/thread-1/runs/run-1/join") {
+      if (url === "/api/langgraph/threads/thread-1/runs/run-1/join") {
         const headers = new Headers(init?.headers);
         expect(init?.method).toBe("GET");
         expect(headers.get("Last-Event-ID")).toBe("120");
@@ -136,7 +136,7 @@ describe("Gateway SSE resume contract", () => {
     const observedEvents: CanonicalStreamEvent[] = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url === "/api/threads/thread-1/runs/run-1/join") {
+      if (url === "/api/langgraph/threads/thread-1/runs/run-1/join") {
         const headers = new Headers(init?.headers);
         expect(init?.method).toBe("GET");
         if (headers.get("Last-Event-ID") === "90") {
@@ -168,7 +168,7 @@ describe("Gateway SSE resume contract", () => {
           ]),
         });
       }
-      if (url === "/api/threads/thread-1/state") {
+      if (url === "/api/langgraph/threads/thread-1/state") {
         expect(init?.method).toBe("GET");
         return Response.json({
           values: {

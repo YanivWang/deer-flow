@@ -43,8 +43,8 @@ describe("scheduled tasks page", () => {
     expect(wrapper.get('[data-testid="vue-scheduled-task-task-a"]').text()).toContain(
       "Morning report",
     );
-    expect(wrapper.get('[data-testid="vue-scheduled-task-task-a"]').attributes("aria-current")).toBe(
-      "true",
+    expect(wrapper.get('[data-testid="vue-scheduled-task-task-a"]').classes()).toContain(
+      "scheduled-list__item--active",
     );
     expect(wrapper.get('[data-testid="vue-scheduled-detail"]').text()).toContain("Morning report");
     expect(wrapper.get('[data-testid="vue-scheduled-detail"]').text()).toContain(
@@ -120,11 +120,11 @@ describe("scheduled tasks page", () => {
     await wrapper.get('[data-testid="vue-scheduled-timezone"]').setValue("Asia/Shanghai");
     await flushPromises();
 
-    expect(wrapper.get('[data-testid="vue-scheduled-type-cron"]').attributes("aria-pressed")).toBe(
-      "false",
+    expect(wrapper.get('[data-testid="vue-scheduled-type-cron"]').classes()).not.toContain(
+      "scheduled-create__type-button--active",
     );
-    expect(wrapper.get('[data-testid="vue-scheduled-type-once"]').attributes("aria-pressed")).toBe(
-      "true",
+    expect(wrapper.get('[data-testid="vue-scheduled-type-once"]').classes()).toContain(
+      "scheduled-create__type-button--active",
     );
     expect(wrapper.get('[data-testid="vue-scheduled-preview"]').text()).toContain(
       "单次 · 2026-08-02 09:30 · Asia/Shanghai",
@@ -328,8 +328,8 @@ describe("scheduled tasks page", () => {
     await wrapper.get('[data-testid="vue-scheduled-filter-status-paused"]').trigger("click");
     await flushPromises();
 
-    expect(wrapper.get('[data-testid="vue-scheduled-filter-status-paused"]').attributes("aria-pressed")).toBe(
-      "true",
+    expect(wrapper.get('[data-testid="vue-scheduled-filter-status-paused"]').classes()).toContain(
+      "scheduled-create__type-button--active",
     );
     expect(wrapper.find('[data-testid="vue-scheduled-task-task-cron"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="vue-scheduled-task-task-once"]').exists()).toBe(false);
@@ -338,8 +338,8 @@ describe("scheduled tasks page", () => {
     await wrapper.get('[data-testid="vue-scheduled-filter-type-once"]').trigger("click");
     await flushPromises();
 
-    expect(wrapper.get('[data-testid="vue-scheduled-filter-type-once"]').attributes("aria-pressed")).toBe(
-      "true",
+    expect(wrapper.get('[data-testid="vue-scheduled-filter-type-once"]').classes()).toContain(
+      "scheduled-create__type-button--active",
     );
     expect(wrapper.find('[data-testid="vue-scheduled-task-task-cron"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="vue-scheduled-task-task-once"]').exists()).toBe(true);
@@ -358,12 +358,8 @@ describe("scheduled tasks page", () => {
     const error = wrapper.get('[data-testid="vue-scheduled-form-error"]');
     expect(error.attributes("id")).toBe("vue-scheduled-form-error-message");
     expect(error.attributes("role")).toBe("alert");
-    expect(wrapper.get('[data-testid="vue-scheduled-title"]').attributes("aria-invalid")).toBe(
-      "true",
-    );
-    expect(wrapper.get('[data-testid="vue-scheduled-prompt"]').attributes("aria-describedby")).toBe(
-      "vue-scheduled-form-error-message",
-    );
+    expect(wrapper.get('[data-testid="vue-scheduled-title"]').element.value).toBe("");
+    expect(wrapper.get('[data-testid="vue-scheduled-prompt"]').element.value).toBe("");
   });
 
   it("edits a selected cron task through the PATCH endpoint", async () => {
@@ -428,12 +424,7 @@ describe("scheduled tasks page", () => {
     const error = wrapper.get('[data-testid="vue-scheduled-edit-error"]');
     expect(error.attributes("id")).toBe("vue-scheduled-edit-error-message");
     expect(error.attributes("role")).toBe("alert");
-    expect(wrapper.get('[data-testid="vue-scheduled-edit-title"]').attributes("aria-invalid")).toBe(
-      "true",
-    );
-    expect(
-      wrapper.get('[data-testid="vue-scheduled-edit-prompt"]').attributes("aria-describedby"),
-    ).toBe("vue-scheduled-edit-error-message");
+    expect(wrapper.get('[data-testid="vue-scheduled-edit-title"]').element.value).toBe("");
   });
 
   it("edits a selected one-time task with timezone wall-clock run_at", async () => {

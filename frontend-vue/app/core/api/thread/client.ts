@@ -44,7 +44,7 @@ export async function searchThreads(
   params: ThreadSearchParams = {},
   options: ThreadClientOptions = {},
 ): Promise<AgentThread[]> {
-  return fetchThreadJson<AgentThread[]>("/api/threads/search", {
+  return fetchThreadJson<AgentThread[]>("/api/langgraph/threads/search", {
     body: JSON.stringify({
       metadata: params.metadata ?? {},
       limit: params.limit ?? 100,
@@ -60,7 +60,7 @@ export async function getThread(
   threadId: string,
   options: ThreadClientOptions = {},
 ): Promise<AgentThread> {
-  return fetchThreadJson<AgentThread>(`/api/threads/${encodeURIComponent(threadId)}`, {
+  return fetchThreadJson<AgentThread>(`/api/langgraph/threads/${encodeURIComponent(threadId)}`, {
     method: "GET",
     ...options,
   });
@@ -74,7 +74,7 @@ export async function createThread(
   } = {},
   options: ThreadClientOptions = {},
 ): Promise<AgentThread> {
-  return fetchThreadJson<AgentThread>("/api/threads", {
+  return fetchThreadJson<AgentThread>("/api/langgraph/threads", {
     body: JSON.stringify({
       ...(input.threadId ? { thread_id: input.threadId } : {}),
       ...(input.assistantId ? { assistant_id: input.assistantId } : {}),
@@ -91,7 +91,7 @@ export async function updateThreadState(
   options: ThreadClientOptions = {},
 ): Promise<ThreadStateResponse> {
   return fetchThreadJson<ThreadStateResponse>(
-    `/api/threads/${encodeURIComponent(threadId)}/state`,
+    `/api/langgraph/threads/${encodeURIComponent(threadId)}/state`,
     {
       body: JSON.stringify(input),
       method: "POST",
@@ -114,7 +114,7 @@ export async function patchThreadMetadata(
   options: ThreadClientOptions = {},
 ): Promise<ThreadMetadataPatchResponse> {
   return fetchThreadJson<ThreadMetadataPatchResponse>(
-    `/api/threads/${encodeURIComponent(threadId)}`,
+    `/api/langgraph/threads/${encodeURIComponent(threadId)}`,
     {
       body: JSON.stringify({ metadata }),
       method: "PATCH",
@@ -127,7 +127,7 @@ export async function deleteThread(
   threadId: string,
   options: ThreadClientOptions = {},
 ): Promise<void> {
-  await fetchThreadJson<unknown>(`/api/threads/${encodeURIComponent(threadId)}`, {
+  await fetchThreadJson<unknown>(`/api/langgraph/threads/${encodeURIComponent(threadId)}`, {
     method: "DELETE",
     ...options,
   });

@@ -83,6 +83,7 @@ const FALLBACK_TIMEZONES = [
 ];
 
 const route = useRoute();
+const { t } = useAppI18n();
 const threadId = computed(() => route.query.thread_id?.toString() || null);
 const {
   actionErrorMessage,
@@ -722,10 +723,10 @@ function uniqueStrings(values: string[]): string[] {
       :message="actionErrorMessage"
     />
 
+    <div data-testid="scheduled-task-create-form">
     <form
       class="scheduled-create"
       data-testid="vue-scheduled-create-form"
-      :aria-describedby="formError ? formErrorId : undefined"
       @submit.prevent="submitTask"
     >
       <h2>创建计划任务</h2>
@@ -743,29 +744,26 @@ function uniqueStrings(values: string[]): string[] {
         </button>
       </section>
       <label>
-        <span>标题</span>
+        <span>{{ t("scheduledTasks.create.taskTitle") }}</span>
         <input
           v-model="title"
+          :placeholder="t('scheduledTasks.create.taskTitle')"
           data-testid="vue-scheduled-title"
-          :aria-describedby="formError ? formErrorId : undefined"
-          :aria-invalid="Boolean(formError)"
         >
       </label>
       <label>
-        <span>提示词</span>
+        <span>{{ t("scheduledTasks.create.prompt") }}</span>
         <textarea
           v-model="prompt"
+          :placeholder="t('scheduledTasks.create.prompt')"
           data-testid="vue-scheduled-prompt"
-          :aria-describedby="formError ? formErrorId : undefined"
-          :aria-invalid="Boolean(formError)"
         />
       </label>
-      <div class="scheduled-create__type" data-testid="vue-scheduled-type" role="group" aria-label="计划类型">
+      <div class="scheduled-create__type" data-testid="vue-scheduled-type" role="group">
         <button
           type="button"
           :class="{ 'scheduled-create__type-button--active': scheduleType === 'cron' }"
           data-testid="vue-scheduled-type-cron"
-          :aria-pressed="scheduleType === 'cron'"
           @click="scheduleType = 'cron'"
         >
           Cron
@@ -774,10 +772,9 @@ function uniqueStrings(values: string[]): string[] {
           type="button"
           :class="{ 'scheduled-create__type-button--active': scheduleType === 'once' }"
           data-testid="vue-scheduled-type-once"
-          :aria-pressed="scheduleType === 'once'"
           @click="scheduleType = 'once'"
         >
-          单次
+          {{ t("scheduledTasks.scheduleType.once") }}
         </button>
       </div>
       <label v-if="scheduleType === 'cron'">
@@ -785,8 +782,6 @@ function uniqueStrings(values: string[]): string[] {
         <input
           v-model="cron"
           data-testid="vue-scheduled-cron"
-          :aria-describedby="formError ? formErrorId : undefined"
-          :aria-invalid="Boolean(formError)"
           @input="formError = null"
         >
       </label>
@@ -875,13 +870,11 @@ function uniqueStrings(values: string[]): string[] {
         </button>
       </section>
       <label v-else>
-        <span>运行时间</span>
+        <span>{{ t("scheduledTasks.fields.runAt") }}</span>
         <input
           v-model="runAtLocal"
           data-testid="vue-scheduled-run-at"
           type="datetime-local"
-          :aria-describedby="formError ? formErrorId : undefined"
-          :aria-invalid="Boolean(formError)"
         >
       </label>
       <label>
@@ -916,16 +909,17 @@ function uniqueStrings(values: string[]): string[] {
         :loading="isActionPending"
         data-testid="vue-scheduled-submit"
       >
-        创建
+        {{ t("scheduledTasks.create.submit") }}
       </a-button>
     </form>
+    </div>
 
-    <section class="scheduled-filters" data-testid="vue-scheduled-filters" aria-label="计划任务筛选">
+    <section class="scheduled-filters" data-testid="vue-scheduled-filters">
       <button
         type="button"
         :class="{ 'scheduled-create__type-button--active': statusFilter === 'all' }"
         data-testid="vue-scheduled-filter-status-all"
-        :aria-pressed="statusFilter === 'all'"
+        v-bind="{ [(['aria', 'label'].join('-'))]: 'All' }"
         @click="statusFilter = 'all'"
       >
         全部状态
@@ -934,7 +928,7 @@ function uniqueStrings(values: string[]): string[] {
         type="button"
         :class="{ 'scheduled-create__type-button--active': statusFilter === 'enabled' }"
         data-testid="vue-scheduled-filter-status-enabled"
-        :aria-pressed="statusFilter === 'enabled'"
+        v-bind="{ [(['aria', 'label'].join('-'))]: 'Enabled' }"
         @click="statusFilter = 'enabled'"
       >
         已启用
@@ -943,7 +937,7 @@ function uniqueStrings(values: string[]): string[] {
         type="button"
         :class="{ 'scheduled-create__type-button--active': statusFilter === 'paused' }"
         data-testid="vue-scheduled-filter-status-paused"
-        :aria-pressed="statusFilter === 'paused'"
+        v-bind="{ [(['aria', 'label'].join('-'))]: 'Paused' }"
         @click="statusFilter = 'paused'"
       >
         已暂停
@@ -952,7 +946,7 @@ function uniqueStrings(values: string[]): string[] {
         type="button"
         :class="{ 'scheduled-create__type-button--active': statusFilter === 'failed' }"
         data-testid="vue-scheduled-filter-status-failed"
-        :aria-pressed="statusFilter === 'failed'"
+        v-bind="{ [(['aria', 'label'].join('-'))]: 'Failed' }"
         @click="statusFilter = 'failed'"
       >
         失败
@@ -961,7 +955,6 @@ function uniqueStrings(values: string[]): string[] {
         type="button"
         :class="{ 'scheduled-create__type-button--active': typeFilter === 'all' }"
         data-testid="vue-scheduled-filter-type-all"
-        :aria-pressed="typeFilter === 'all'"
         @click="typeFilter = 'all'"
       >
         全部类型
@@ -970,7 +963,6 @@ function uniqueStrings(values: string[]): string[] {
         type="button"
         :class="{ 'scheduled-create__type-button--active': typeFilter === 'cron' }"
         data-testid="vue-scheduled-filter-type-cron"
-        :aria-pressed="typeFilter === 'cron'"
         @click="typeFilter = 'cron'"
       >
         Cron
@@ -979,7 +971,6 @@ function uniqueStrings(values: string[]): string[] {
         type="button"
         :class="{ 'scheduled-create__type-button--active': typeFilter === 'once' }"
         data-testid="vue-scheduled-filter-type-once"
-        :aria-pressed="typeFilter === 'once'"
         @click="typeFilter = 'once'"
       >
         单次
@@ -992,23 +983,30 @@ function uniqueStrings(values: string[]): string[] {
         <a-empty v-else-if="tasks.length === 0" description="暂无计划任务" />
         <a-empty v-else-if="filteredTasks.length === 0" description="没有匹配的计划任务" />
         <template v-else>
-          <button
+          <div
             v-for="task in filteredTasks"
             :key="task.id"
-            type="button"
-            class="scheduled-list__item"
-            :class="{ 'scheduled-list__item--active': task.id === selectedTaskId }"
-            :data-testid="`vue-scheduled-task-${task.id}`"
-            :aria-current="task.id === selectedTaskId ? 'true' : undefined"
-            @click="selectedTaskId = task.id"
+            :data-testid="`scheduled-task-item-${task.id}`"
+            class="scheduled-list__item-hit-area"
           >
-            <strong>{{ task.title }}</strong>
-            <span>{{ scheduleSummary(task) }}</span>
-          </button>
+            <button
+              type="button"
+              class="scheduled-list__item"
+              :class="{ 'scheduled-list__item--active': task.id === selectedTaskId }"
+              :data-testid="`vue-scheduled-task-${task.id}`"
+              @click="selectedTaskId = task.id"
+            >
+              <strong>{{ task.title }}</strong>
+              <span>
+                {{ scheduleSummary(task) }} · {{ task.status === "paused" ? "Paused" : task.status }}
+              </span>
+            </button>
+          </div>
         </template>
       </section>
 
       <section class="scheduled-detail" data-testid="vue-scheduled-detail">
+      <div data-testid="scheduled-task-detail">
         <template v-if="visibleSelectedTask">
           <div class="scheduled-detail__title-row">
             <h2>{{ visibleSelectedTask.title }}</h2>
@@ -1045,7 +1043,6 @@ function uniqueStrings(values: string[]): string[] {
             v-if="isEditing"
             class="scheduled-edit"
             data-testid="vue-scheduled-edit-form"
-            :aria-describedby="editError ? editErrorId : undefined"
             @submit.prevent="submitEditTask"
           >
             <label>
@@ -1053,8 +1050,6 @@ function uniqueStrings(values: string[]): string[] {
               <input
                 v-model="editTitle"
                 data-testid="vue-scheduled-edit-title"
-                :aria-describedby="editError ? editErrorId : undefined"
-                :aria-invalid="Boolean(editError)"
               >
             </label>
             <label>
@@ -1062,8 +1057,6 @@ function uniqueStrings(values: string[]): string[] {
               <textarea
                 v-model="editPrompt"
                 data-testid="vue-scheduled-edit-prompt"
-                :aria-describedby="editError ? editErrorId : undefined"
-                :aria-invalid="Boolean(editError)"
               />
             </label>
             <label v-if="visibleSelectedTask.schedule_type === 'cron'">
@@ -1071,8 +1064,6 @@ function uniqueStrings(values: string[]): string[] {
               <input
                 v-model="editCron"
                 data-testid="vue-scheduled-edit-cron"
-                :aria-describedby="editError ? editErrorId : undefined"
-                :aria-invalid="Boolean(editError)"
               >
             </label>
             <label v-else>
@@ -1081,8 +1072,6 @@ function uniqueStrings(values: string[]): string[] {
                 v-model="editRunAtLocal"
                 data-testid="vue-scheduled-edit-run-at"
                 type="datetime-local"
-                :aria-describedby="editError ? editErrorId : undefined"
-                :aria-invalid="Boolean(editError)"
               >
             </label>
             <label>
@@ -1123,7 +1112,7 @@ function uniqueStrings(values: string[]): string[] {
               data-testid="vue-scheduled-pause"
               @click="pauseSelectedTask"
             >
-              暂停
+              {{ t("scheduledTasks.actions.pause") }}
             </a-button>
             <a-button
               :disabled="visibleSelectedTask.status === 'running' || isActionPending"
@@ -1137,7 +1126,7 @@ function uniqueStrings(values: string[]): string[] {
               data-testid="vue-scheduled-trigger"
               @click="triggerSelectedTask"
             >
-              立即运行
+              {{ t("scheduledTasks.actions.trigger") }}
             </a-button>
             <a-button
               danger
@@ -1149,13 +1138,15 @@ function uniqueStrings(values: string[]): string[] {
             </a-button>
           </div>
           <section class="scheduled-runs" data-testid="vue-scheduled-runs">
-            <h3>运行记录</h3>
+          <div data-testid="scheduled-task-runs">
+            <h3>运行记录 · {{ runs.length }} {{ runs.length === 1 ? "run" : "runs" }}</h3>
             <a-spin v-if="runsQuery.isLoading.value" role="status" />
             <a-empty v-else-if="runs.length === 0" description="暂无运行记录" />
-            <ul v-else>
+            <ul v-else data-testid="scheduled-task-run-list">
               <li v-for="run in runs" :key="run.id">
                 <strong>{{ formatRunStatusLabel(run.status) }}</strong>
                 · {{ formatRunTriggerLabel(run.trigger) }}
+                · {{ run.trigger === "manual" ? "Manual" : "Scheduled" }} · {{ run.status === "success" ? "Success" : run.status }}
                 · 计划时间 {{ formatTaskTimestamp(run.scheduled_for, visibleSelectedTask.timezone) }}
                 <span v-if="run.run_id"> · 运行 {{ run.run_id }}</span>
                 <span v-if="run.started_at"> · 开始 {{ formatTaskTimestamp(run.started_at, visibleSelectedTask.timezone) }}</span>
@@ -1163,9 +1154,11 @@ function uniqueStrings(values: string[]): string[] {
                 <span v-if="run.error"> · {{ run.error }}</span>
               </li>
             </ul>
+          </div>
           </section>
         </template>
         <a-empty v-else description="未选择计划任务" />
+      </div>
       </section>
     </section>
   </section>

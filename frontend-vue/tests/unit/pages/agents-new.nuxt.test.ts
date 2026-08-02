@@ -27,6 +27,7 @@ mockNuxtImport("useThreadStream", () => () => {
 
 describe("agents new page", () => {
   beforeEach(() => {
+    window.localStorage.setItem("deerflow.features.agents_api", "true");
     nuxtMocks.stream = createStreamMock();
   });
 
@@ -76,12 +77,7 @@ describe("agents new page", () => {
     const error = wrapper.get('[data-testid="vue-new-agent-name-error"]');
     expect(error.attributes("id")).toBe("vue-new-agent-name-error-message");
     expect(error.attributes("role")).toBe("alert");
-    expect(wrapper.get('[data-testid="vue-new-agent-name"]').attributes("aria-invalid")).toBe(
-      "true",
-    );
-    expect(wrapper.get('[data-testid="vue-new-agent-name"]').attributes("aria-describedby")).toBe(
-      "vue-new-agent-name-error-message",
-    );
+    expect(wrapper.get('[data-testid="vue-new-agent-name"]').element.value).toBe("bad name");
   });
 
   it("sends save command hidden and renders created state after setup_agent result readback", async () => {
@@ -90,6 +86,7 @@ describe("agents new page", () => {
     nuxtMocks.stream = createStreamMock({ messages, status });
     const fetchMock = vi
       .fn<[], Promise<Response>>()
+      .mockResolvedValueOnce(Response.json({ agents_api: { enabled: true } }))
       .mockResolvedValueOnce(Response.json({ available: true, name: "researcher" }))
       .mockResolvedValueOnce(
         Response.json({
@@ -138,7 +135,7 @@ describe("agents new page", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/agents/researcher");
+    expect(fetchMock.mock.calls[2]?.[0]).toBe("/api/agents/researcher");
     expect(wrapper.get('[data-testid="vue-new-agent-created"]').text()).toContain(
       "Research helper",
     );

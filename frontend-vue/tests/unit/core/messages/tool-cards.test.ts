@@ -25,6 +25,7 @@ describe("tool rich cards", () => {
       }),
     ).toEqual([
       {
+        artifactPaths: [],
         description: null,
         details: ["调用：call-browser", "URL：https://example.com"],
         draftPreview: null,
@@ -34,8 +35,9 @@ describe("tool rich cards", () => {
         title: "在浏览器中打开 https://example.com",
       },
       {
+        artifactPaths: ["/mnt/user-data/outputs/app.ts"],
         description: "/mnt/user-data/outputs/app.ts 的草稿预览",
-        details: ["调用：call-write", "路径：/mnt/user-data/outputs/app.ts"],
+        details: ["调用：call-write", "路径：app.ts"],
         draftPreview: {
           content: "console.log('hi')",
           filename: "app.ts",
@@ -60,6 +62,7 @@ describe("tool rich cards", () => {
       }),
     ).toEqual([
       {
+        artifactPaths: [],
         description: "Page title: DeerFlow",
         details: ["调用：call-browser", "结果：Page title: DeerFlow"],
         draftPreview: null,
@@ -98,8 +101,9 @@ describe("tool rich cards", () => {
       }),
     ).toEqual([
       {
+        artifactPaths: ["/mnt/user-data/outputs/weather-skill.zip"],
         description: "从 /mnt/user-data/outputs/weather-skill.zip 安装技能包",
-        details: ["调用：call-skill", "路径：/mnt/user-data/outputs/weather-skill.zip"],
+        details: ["调用：call-skill", "路径：weather-skill.zip"],
         draftPreview: null,
         id: "call-skill",
         kind: "assistant-call",
@@ -107,10 +111,11 @@ describe("tool rich cards", () => {
         title: "安装技能 weather-skill.zip",
       },
       {
+        artifactPaths: ["/mnt/user-data/outputs/report.html"],
         description: "/mnt/user-data/outputs/report.html 的草稿预览",
         details: [
           "调用：call-append",
-          "目标：/mnt/user-data/outputs/report.html",
+          "目标：report.html",
           "片段：<main>ready</main>",
         ],
         draftPreview: {
@@ -125,8 +130,9 @@ describe("tool rich cards", () => {
         title: "追加分段产物内容 report.html",
       },
       {
+        artifactPaths: ["/mnt/user-data/outputs/report.html"],
         description: "后端验证后正在完成分段产物。",
-        details: ["调用：call-finalize", "目标：/mnt/user-data/outputs/report.html"],
+        details: ["调用：call-finalize", "目标：report.html"],
         draftPreview: null,
         id: "call-finalize",
         kind: "assistant-call",

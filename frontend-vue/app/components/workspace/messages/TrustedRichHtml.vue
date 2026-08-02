@@ -89,7 +89,7 @@ function readSafeAttributes(element: Element, tagName: string): Record<string, s
       continue;
     }
     if (
-      name === "aria-hidden" ||
+      name.startsWith("aria-") ||
       name === "class" ||
       name === "encoding" ||
       name === "rel" ||

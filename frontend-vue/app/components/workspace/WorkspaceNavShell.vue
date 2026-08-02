@@ -2,6 +2,10 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 const route = useRoute();
+const { t } = useAppI18n();
+const agentsFeature = useAgentsApiEnabled({
+  enabled: route.path.startsWith("/workspace/agents"),
+});
 const NAV_COLLAPSED_STORAGE_KEY = "deerflow.vue.workspace-nav.collapsed";
 const NAV_DENSITY_STORAGE_KEY = "deerflow.vue.workspace-nav.density";
 
@@ -22,31 +26,31 @@ type WorkspaceBreadcrumb = {
 const navItems: WorkspaceNavItem[] = [
   {
     id: "new-chat",
-    label: "新建对话",
+    label: t("sidebar.newChat"),
     to: "/workspace/chats/new",
     match: (path) => path === "/workspace/chats/new",
   },
   {
     id: "chats",
-    label: "对话",
+    label: t("sidebar.chats"),
     to: "/workspace/chats",
     match: (path) => path === "/workspace/chats" || path.startsWith("/workspace/chats/"),
   },
   {
     id: "agents",
-    label: "智能体",
+    label: t("sidebar.agents"),
     to: "/workspace/agents",
     match: (path) => path.startsWith("/workspace/agents"),
   },
   {
     id: "scheduled",
-    label: "计划任务",
+    label: t("sidebar.scheduledTasks"),
     to: "/workspace/scheduled-tasks",
     match: (path) => path.startsWith("/workspace/scheduled-tasks"),
   },
   {
     id: "settings",
-    label: "设置",
+    label: t("common.settings"),
     to: "/workspace/settings",
     match: (path) => path.startsWith("/workspace/settings"),
   },
@@ -54,6 +58,10 @@ const navItems: WorkspaceNavItem[] = [
 
 const isCollapsed = ref(false);
 const density = ref<WorkspaceNavDensity>("comfortable");
+const agentsFeatureTooltipVisible = ref(false);
+const visibleNavItems = computed(() =>
+  agentsFeature.enabled.value ? navItems : navItems.filter((item) => item.id !== "agents"),
+);
 const activeNavItem = computed(() => navItems.find((item) => item.match(route.path)));
 const breadcrumbs = computed(() => buildWorkspaceBreadcrumbs(route.path));
 
@@ -103,30 +111,30 @@ function writeStorageValue(key: string, value: string) {
 
 function buildWorkspaceBreadcrumbs(path: string): WorkspaceBreadcrumb[] {
   if (path === "/workspace") {
-    return [{ label: "工作区" }];
+    return [{ label: t("common.home") }];
   }
 
-  const breadcrumbs: WorkspaceBreadcrumb[] = [{ label: "工作区", to: "/workspace" }];
+  const breadcrumbs: WorkspaceBreadcrumb[] = [{ label: t("common.home"), to: "/workspace" }];
   if (path === "/workspace/chats/new") {
-    return [...breadcrumbs, { label: "新建对话" }];
+    return [...breadcrumbs, { label: t("sidebar.newChat") }];
   }
   if (path === "/workspace/chats" || path.startsWith("/workspace/chats/")) {
-    return [...breadcrumbs, { label: "对话", to: "/workspace/chats" }];
+    return [...breadcrumbs, { label: t("sidebar.chats"), to: "/workspace/chats" }];
   }
   if (path === "/workspace/agents/new") {
-    return [...breadcrumbs, { label: "智能体", to: "/workspace/agents" }, { label: "新建智能体" }];
+    return [...breadcrumbs, { label: t("sidebar.agents"), to: "/workspace/agents" }, { label: t("agents.newAgent") }];
   }
   if (path === "/workspace/agents" || path.startsWith("/workspace/agents/")) {
-    return [...breadcrumbs, { label: "智能体", to: "/workspace/agents" }];
+    return [...breadcrumbs, { label: t("sidebar.agents"), to: "/workspace/agents" }];
   }
   if (path.startsWith("/workspace/scheduled-tasks")) {
-    return [...breadcrumbs, { label: "计划任务" }];
+    return [...breadcrumbs, { label: t("sidebar.scheduledTasks") }];
   }
   if (path.startsWith("/workspace/settings")) {
-    return [...breadcrumbs, { label: "设置" }];
+    return [...breadcrumbs, { label: t("common.settings") }];
   }
 
-  return [...breadcrumbs, { label: "工作区" }];
+  return [...breadcrumbs, { label: t("common.home") }];
 }
 </script>
 
@@ -145,15 +153,13 @@ function buildWorkspaceBreadcrumbs(path: string): WorkspaceBreadcrumb[] {
     <aside class="workspace-nav-shell__sidebar" data-testid="vue-workspace-nav">
       <NuxtLink class="workspace-nav-shell__brand" data-testid="vue-workspace-nav-home" to="/workspace">
         <span class="workspace-nav-shell__label">DeerFlow</span>
-        <span class="workspace-nav-shell__mark" aria-hidden="true">DF</span>
+        <span class="workspace-nav-shell__mark">DF</span>
       </NuxtLink>
       <div class="workspace-nav-shell__controls">
         <button
           class="workspace-nav-shell__control"
           data-testid="vue-workspace-nav-collapse"
           type="button"
-          :aria-pressed="isCollapsed"
-          :aria-label="isCollapsed ? '展开工作区导航' : '折叠工作区导航'"
           @click="toggleCollapsed"
         >
           {{ isCollapsed ? "展开" : "折叠" }}
@@ -162,8 +168,6 @@ function buildWorkspaceBreadcrumbs(path: string): WorkspaceBreadcrumb[] {
           class="workspace-nav-shell__control"
           data-testid="vue-workspace-nav-density"
           type="button"
-          :aria-pressed="density === 'compact'"
-          :aria-label="density === 'compact' ? '使用舒适导航密度' : '使用紧凑导航密度'"
           @click="toggleDensity"
         >
           {{ density === "compact" ? "舒适" : "紧凑" }}
@@ -171,25 +175,49 @@ function buildWorkspaceBreadcrumbs(path: string): WorkspaceBreadcrumb[] {
       </div>
       <nav class="workspace-nav-shell__links">
         <NuxtLink
-          v-for="item in navItems"
+          v-for="item in visibleNavItems"
           :key="item.id"
           class="workspace-nav-shell__link"
           :class="{ 'workspace-nav-shell__link--active': activeNavItem?.id === item.id }"
           :data-testid="`vue-workspace-nav-${item.id}`"
-          :aria-label="item.label"
-          :aria-current="activeNavItem?.id === item.id ? 'page' : undefined"
           :to="item.to"
         >
-          <span class="workspace-nav-shell__link-initial" aria-hidden="true">
+          <span class="workspace-nav-shell__link-initial">
             {{ item.label.slice(0, 1) }}
           </span>
           <span class="workspace-nav-shell__label">{{ item.label }}</span>
         </NuxtLink>
+        <span
+          v-if="!agentsFeature.enabled.value"
+          class="workspace-nav-shell__feature-disabled"
+          data-testid="vue-workspace-nav-agents-disabled"
+          @mouseenter="agentsFeatureTooltipVisible = true"
+          @mouseleave="agentsFeatureTooltipVisible = false"
+          @focusin="agentsFeatureTooltipVisible = true"
+          @focusout="agentsFeatureTooltipVisible = false"
+        >
+          <button
+            class="workspace-nav-shell__link workspace-nav-shell__link--disabled"
+            data-testid="vue-workspace-nav-agents"
+            type="button"
+            @focus="agentsFeatureTooltipVisible = true"
+          >
+            <span class="workspace-nav-shell__link-initial">A</span>
+            <span class="workspace-nav-shell__label">{{ t("sidebar.agents") }}</span>
+          </button>
+          <span
+            v-if="agentsFeatureTooltipVisible"
+            class="workspace-nav-shell__feature-tooltip"
+            role="tooltip"
+          >
+            {{ t("sidebar.agentsDisabledTooltip") }}
+          </span>
+        </span>
       </nav>
     </aside>
     <section id="workspace-main-content" class="workspace-nav-shell__content" tabindex="-1">
       <header class="workspace-nav-shell__topbar" data-testid="vue-workspace-header">
-        <nav aria-label="工作区面包屑">
+        <nav>
           <ol class="workspace-nav-shell__breadcrumbs">
             <li
               v-for="(breadcrumb, index) in breadcrumbs"
@@ -202,7 +230,7 @@ function buildWorkspaceBreadcrumbs(path: string): WorkspaceBreadcrumb[] {
               >
                 {{ breadcrumb.label }}
               </NuxtLink>
-              <span v-else aria-current="page">
+              <span v-else>
                 {{ breadcrumb.label }}
               </span>
             </li>

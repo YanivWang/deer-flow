@@ -6,6 +6,8 @@ export type StreamSnapshot = {
   messageDeltas: unknown[];
   notices: unknown[];
   subtasks: unknown[];
+  artifacts: unknown[];
+  humanInputRequests: unknown[];
   done: boolean;
   gapCount: number;
   seenEventIds: string[];
@@ -15,6 +17,8 @@ export const initialStreamSnapshot = (): StreamSnapshot => ({
   messageDeltas: [],
   notices: [],
   subtasks: [],
+  artifacts: [],
+  humanInputRequests: [],
   done: false,
   gapCount: 0,
   seenEventIds: [],
@@ -45,6 +49,17 @@ export function reduceStreamSnapshot(
   }
   if (event.type === "subtask_delta") {
     return { ...snapshot, cursor, seenEventIds, subtasks: [...snapshot.subtasks, event.payload] };
+  }
+  if (event.type === "artifact_delta") {
+    return { ...snapshot, cursor, seenEventIds, artifacts: [...snapshot.artifacts, event.payload] };
+  }
+  if (event.type === "human_input_required") {
+    return {
+      ...snapshot,
+      cursor,
+      seenEventIds,
+      humanInputRequests: [...snapshot.humanInputRequests, event.payload],
+    };
   }
   if (event.type === "notice") {
     return { ...snapshot, cursor, seenEventIds, notices: [...snapshot.notices, event.payload] };

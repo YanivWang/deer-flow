@@ -68,7 +68,6 @@ function footnoteDomId(label: string): string {
       class="rich-message-content__inline-math"
       :class="{ 'rich-message-content__streaming-reveal': part.reveal }"
       data-testid="vue-message-inline-math"
-      :aria-label="part.source"
     >
       <TrustedRichHtml :html="part.html" />
     </span>
@@ -89,7 +88,6 @@ function footnoteDomId(label: string): string {
       <a
         :id="`fnref-${footnoteDomId(part.label)}`"
         :href="`#fn-${footnoteDomId(part.label)}`"
-        :aria-label="`脚注 ${part.index}`"
       >
         {{ part.index }}
       </a>
@@ -114,7 +112,6 @@ function footnoteDomId(label: string): string {
       :class="{ 'rich-message-content__streaming-reveal': part.reveal }"
       :data-testid="part.reveal ? 'vue-message-streaming-reveal' : 'vue-message-unsafe-link'"
       :title="`已忽略不安全链接协议：${part.href}`"
-      aria-label="已忽略不安全链接"
     >
       {{ part.label }}
     </span>

@@ -55,6 +55,16 @@
 | 后端 | **不动**。Gateway 契约、SSE 协议、鉴权模型全部保持 |
 | 交付对象 | 公司内部使用 |
 
+### 0.1.1 用户追加的最终验收硬门槛
+
+本节是对本方案的强制补充，优先级高于“可运行”“source-backed anchor”或“功能近似”等阶段性表述：
+
+1. **功能与交互 1:1**：以冻结基线 `b71a892b` 的 React 行为为唯一参照，在本方案 D5/D6/D8/D20/D21–D25 已明确裁剪或替换的范围内，URL/query、cookie、`data-testid`、可见文案、请求体、错误态、加载态、交互状态、事件顺序、状态机、键盘/鼠标行为、路由切换、draft/sessionStorage、缓存失效、面板开合、取消/恢复和 API/SSE 语义必须逐项等价。功能锚点、静态 mock 或“看起来能用”不构成完成证据。
+2. **UI 还原度 ≥98%**：对每个纳入范围的路由、关键交互状态和移动/桌面断点，分别采集 React 基线与 Vue 实现截图，使用可复现的像素/结构差异工具计算结果；动态区域必须建立显式 mask 清单，不能通过扩大 mask 或人工主观判断提高分数。任一必验页面低于 98% 即不得关闭该页面或宣称 P6 完成。
+3. **企业级架构**：页面只负责组合与路由上下文；业务状态进入 Pinia/composable；Gateway、SSE、类型和纯函数进入 `app/core`；展示组件不得反向依赖页面或 transport；跨层依赖必须由 guard 检查；禁止继续堆叠超职责的大页面。
+4. **企业级 CSS**：样式必须通过 SCSS 分层、token、mixin 和组件作用域组织；主题值来自单一 token 源并同时生成运行时 CSS variables 与 Ant Design Vue tokens；禁止跨页面复制硬编码颜色/间距、禁止以 Tailwind 工具类或样式偶然结构作为行为选择器。
+5. **完成定义**：上述四项必须与 D14 的 UI、代理、真实 Gateway 三层验收以及 P6 的人工视觉核对同时通过；任何未完成项必须保持 Open Gap，不得改写成 Anchored/Closed。
+
 ### 0.2 明确的非目标
 - 不重新设计交互与信息架构(对标优先,优化留到 v2)
 - 不改后端任何接口(哪怕现有接口有瑕疵,如 §10.5 提到的 409 字符串匹配)
@@ -3921,6 +3931,7 @@ Vue 侧不会自动获得 —— 但 **D12 的 `core-provenance.test.ts`(§3.1.2
 | --- | --- |
 | 范围 | i18n 双语完整性核对、移动端适配、暗色主题与 antdv token 桥接收尾<br>~~无障碍~~ → 按 **D5 + D8** 彻底不投入(`aria-*` 136 处、`sr-only` 24 处均不写)<br>~~landing 特效件~~、~~文档站 + 72 MDX~~ → 按 **D6** 已砍 |
 | 验收 spec | 🔴 **按 D14 分层,每层都必须绿**:<br>**① UI 层** —— `ui-polish-mobile` + **`tests/e2e/` 25 个 spec 全绿**(含 D5/D8/D15 的 **7** 处 testid 改动)<br>**② 代理层** —— `tests/contract/proxy-policy.test.ts` 6 条断言全绿 + **真后端 4 个 spec**(`e2e-real-backend` 3 + `e2e-auth` 1,实测)<br>**③ 补位 spec** —— `thread-switch.spec.ts`(跨 thread 状态隔离,R3 / §3.3.1)⚠️ **不在 24 个里,别漏跑**<br>🔴 **④ v4 新增 · 规格空白区签字**(R21 / §1.2.2)—— 按 P0 ⑱ 产出的 `SPEC-GAPS.md` 逐条销账:<br>&nbsp;&nbsp;&nbsp;&nbsp;· 走 **A** 的(建议 `memory` / `agents/new`)→ 新 spec 全绿;<br>&nbsp;&nbsp;&nbsp;&nbsp;· 走 **B** 的 → **第二人逐屏对照 React 版并签字**(与 R18 的视觉 diff 合并做);<br>&nbsp;&nbsp;&nbsp;&nbsp;· 走 **C** 的 → 已登记进「已知对标差异」。<br>&nbsp;&nbsp;&nbsp;&nbsp;⚠️ **`SPEC-GAPS.md` 里每一条都必须有结论,不允许留空**<br>⚠️ **只签①不签②等于代理层零验证** —— 25 spec 走 `page.route()` 在浏览器层就被拦截,**从未执行过 Nitro 代理**(§1.2.1)<br>🔴 **D11 无 CI** → 全绿必须由**第二个人在自己机器上独立跑 `make verify-full` 并签字**(§3.2.3 / 风险 R14)|
+| **追加硬门槛** | **功能 1:1、UI 还原度 ≥98%、企业级组件/依赖架构、企业级 SCSS/token/mixin 架构**必须逐项有自动化或人工证据；任一页面、状态或断点低于 98%，P6 不得关闭。 |
 | 说明 | D6 使本阶段显著瘦身:原本最不确定的两项(landing 的 GSAP/WebGL 特效、Nextra → Vue 文档站方案)都已移出范围,工期从 3–4 周降到 **2–3 周** |
 
 ---

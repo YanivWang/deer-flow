@@ -170,14 +170,11 @@ function isEmptyFieldValue(value: HumanInputFormValue | undefined): boolean {
     <form
       v-if="allowText"
       class="human-input-card__text"
-      :aria-describedby="errorMessage ? errorId : undefined"
       @submit.prevent="submitText"
     >
       <a-textarea
         v-model:value="text"
         :disabled="disabled"
-        :aria-describedby="errorMessage ? errorId : undefined"
-        :aria-invalid="Boolean(errorMessage)"
         :auto-size="{ minRows: 2, maxRows: 5 }"
         placeholder="请输入答案"
         data-testid="vue-human-input-text"
@@ -195,7 +192,6 @@ function isEmptyFieldValue(value: HumanInputFormValue | undefined): boolean {
     <form
       v-if="isForm"
       class="human-input-card__form"
-      :aria-describedby="errorMessage ? errorId : undefined"
       @submit.prevent="submitForm"
     >
       <label
@@ -212,7 +208,6 @@ function isEmptyFieldValue(value: HumanInputFormValue | undefined): boolean {
           :value="formValue(field)"
           :placeholder="field.placeholder"
           :disabled="disabled"
-          :aria-invalid="Boolean(errorMessage)"
           :data-testid="`vue-human-input-field-${field.name}`"
           @input="setFormValue(field, $event)"
         />
@@ -220,7 +215,6 @@ function isEmptyFieldValue(value: HumanInputFormValue | undefined): boolean {
           v-else-if="field.type === 'select'"
           :value="formValue(field)"
           :disabled="disabled"
-          :aria-invalid="Boolean(errorMessage)"
           :data-testid="`vue-human-input-field-${field.name}`"
           @change="setFormValue(field, $event)"
         >
@@ -239,7 +233,6 @@ function isEmptyFieldValue(value: HumanInputFormValue | undefined): boolean {
               type="checkbox"
               :checked="isMultiChecked(field, option)"
               :disabled="disabled"
-              :aria-invalid="Boolean(errorMessage)"
               @change="toggleMultiSelect(field, option, $event)"
             >
             <span>{{ option.label }}</span>
@@ -250,7 +243,6 @@ function isEmptyFieldValue(value: HumanInputFormValue | undefined): boolean {
           type="checkbox"
           :checked="isChecked(field)"
           :disabled="disabled"
-          :aria-invalid="Boolean(errorMessage)"
           :data-testid="`vue-human-input-field-${field.name}`"
           @change="setFormValue(field, $event)"
         >
@@ -260,7 +252,6 @@ function isEmptyFieldValue(value: HumanInputFormValue | undefined): boolean {
           :value="formValue(field)"
           :placeholder="field.placeholder"
           :disabled="disabled"
-          :aria-invalid="Boolean(errorMessage)"
           :data-testid="`vue-human-input-field-${field.name}`"
           @input="setFormValue(field, $event)"
         >

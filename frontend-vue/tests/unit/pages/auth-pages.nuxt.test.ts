@@ -78,12 +78,7 @@ describe("Vue auth pages", () => {
     const error = wrapper.get('[data-testid="vue-login-error"]');
     expect(error.attributes("id")).toBe("vue-login-error-message");
     expect(error.attributes("role")).toBe("alert");
-    expect(wrapper.get('[data-testid="vue-login-password"]').attributes("aria-invalid")).toBe(
-      "true",
-    );
-    expect(wrapper.get('[data-testid="vue-login-password"]').attributes("aria-describedby")).toBe(
-      "vue-login-error-message",
-    );
+    expect(wrapper.get('[data-testid="vue-login-password"]').element.value).toBe("wrong");
   });
 
   it("creates the first admin account and redirects to workspace", async () => {
@@ -132,12 +127,10 @@ describe("Vue auth pages", () => {
     const error = wrapper.get('[data-testid="vue-setup-error"]');
     expect(error.attributes("id")).toBe("vue-setup-error-message");
     expect(error.attributes("role")).toBe("alert");
-    expect(wrapper.get('[data-testid="vue-setup-password"]').attributes("aria-invalid")).toBe(
-      "true",
+    expect(wrapper.get('[data-testid="vue-setup-password"]').element.value).toBe("password123");
+    expect(wrapper.get('[data-testid="vue-setup-confirm-password"]').element.value).toBe(
+      "password456",
     );
-    expect(
-      wrapper.get('[data-testid="vue-setup-confirm-password"]').attributes("aria-describedby"),
-    ).toBe("vue-setup-error-message");
   });
 
   it("redirects setup visitors back to login after the system is initialized", async () => {

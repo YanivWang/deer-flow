@@ -131,8 +131,6 @@ function languageExtension(language: string) {
     class="artifact-code-viewer"
     data-testid="vue-artifact-codemirror"
     :data-language="language"
-    :aria-label="`${filename} 源码查看器`"
-    aria-readonly="true"
     role="region"
     tabindex="0"
   >

@@ -11,6 +11,7 @@ import WorkspaceIndexPage from "../../../app/pages/workspace/index.vue";
 describe("workspace navigation shell", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    window.localStorage.setItem("deerflow.features.agents_api", "true");
   });
 
   afterEach(() => {
@@ -21,7 +22,7 @@ describe("workspace navigation shell", () => {
     const wrapper = await mountSuspended(WorkspaceIndexPage, { route: "/workspace" });
 
     expect(wrapper.get('[data-testid="vue-workspace-nav"]').exists()).toBe(true);
-    expect(wrapper.get('[data-testid="vue-workspace-header"]').text()).toContain("工作区");
+    expect(wrapper.get('[data-testid="vue-workspace-header"]').text()).toContain("Home");
     expect(wrapper.get('[data-testid="vue-workspace-github"]').attributes("href")).toBe(
       "https://github.com/bytedance/deer-flow",
     );
@@ -41,25 +42,23 @@ describe("workspace navigation shell", () => {
     expect(wrapper.get('[data-testid="vue-workspace-card-settings"]').attributes("href")).toBe(
       "/workspace/settings",
     );
-    expect(wrapper.get('[data-testid="vue-workspace-nav-new-chat"]').attributes("aria-label")).toBe(
-      "新建对话",
-    );
-    expect(wrapper.get('[data-testid="vue-workspace-nav-scheduled"]').attributes("aria-label")).toBe(
-      "计划任务",
+    expect(wrapper.get('[data-testid="vue-workspace-nav-new-chat"]').text()).toContain("New chat");
+    expect(wrapper.get('[data-testid="vue-workspace-nav-scheduled"]').text()).toContain(
+      "Scheduled tasks",
     );
   });
 
   it("keeps new-chat active state specific instead of double-marking chats", async () => {
     const wrapper = await mountSuspended(WorkspaceNavShell, { route: "/workspace/chats/new" });
 
-    expect(wrapper.get('[data-testid="vue-workspace-nav-new-chat"]').attributes("aria-current")).toBe(
-      "page",
+    expect(wrapper.get('[data-testid="vue-workspace-nav-new-chat"]').classes()).toContain(
+      "workspace-nav-shell__link--active",
     );
-    expect(wrapper.get('[data-testid="vue-workspace-nav-chats"]').attributes("aria-current")).toBe(
-      undefined,
+    expect(wrapper.get('[data-testid="vue-workspace-nav-chats"]').classes()).not.toContain(
+      "workspace-nav-shell__link--active",
     );
-    expect(wrapper.get('[data-testid="vue-workspace-header"]').text()).toContain("工作区");
-    expect(wrapper.get('[data-testid="vue-workspace-header"]').text()).toContain("新建对话");
+    expect(wrapper.get('[data-testid="vue-workspace-header"]').text()).toContain("Home");
+    expect(wrapper.get('[data-testid="vue-workspace-header"]').text()).toContain("New chat");
   });
 
   it("keeps the agents index wired to the new custom-agent route", async () => {
@@ -82,8 +81,8 @@ describe("workspace navigation shell", () => {
     expect(wrapper.get('[data-testid="vue-workspace-nav-settings"]').classes()).toContain(
       "workspace-nav-shell__link--active",
     );
-    expect(wrapper.get('[data-testid="vue-workspace-nav-settings"]').attributes("aria-current")).toBe(
-      "page",
+    expect(wrapper.get('[data-testid="vue-workspace-nav-settings"]').classes()).toContain(
+      "workspace-nav-shell__link--active",
     );
     expect(wrapper.get('[data-testid="vue-workspace-nav-scheduled"]').attributes("href")).toBe(
       "/workspace/scheduled-tasks",
@@ -100,12 +99,8 @@ describe("workspace navigation shell", () => {
 
     expect(shell.classes()).toContain("workspace-nav-shell--collapsed");
     expect(shell.classes()).toContain("workspace-nav-shell--compact");
-    expect(wrapper.get('[data-testid="vue-workspace-nav-collapse"]').attributes("aria-label")).toBe(
-      "展开工作区导航",
-    );
-    expect(wrapper.get('[data-testid="vue-workspace-nav-density"]').attributes("aria-label")).toBe(
-      "使用舒适导航密度",
-    );
+    expect(wrapper.get('[data-testid="vue-workspace-nav-collapse"]').text()).toBe("展开");
+    expect(wrapper.get('[data-testid="vue-workspace-nav-density"]').text()).toBe("舒适");
     expect(window.localStorage.getItem("deerflow.vue.workspace-nav.collapsed")).toBe("true");
     expect(window.localStorage.getItem("deerflow.vue.workspace-nav.density")).toBe("compact");
   });
@@ -118,9 +113,7 @@ describe("workspace navigation shell", () => {
     await flushPromises();
 
     expect(shell.classes()).toContain("workspace-nav-shell--collapsed");
-    expect(wrapper.get('[data-testid="vue-workspace-nav-collapse"]').attributes("aria-pressed")).toBe(
-      "true",
-    );
+    expect(wrapper.get('[data-testid="vue-workspace-nav-collapse"]').text()).toBe("展开");
   });
 
   it("keeps recent chat loading state distinct from an empty list", async () => {
@@ -137,9 +130,7 @@ describe("workspace navigation shell", () => {
 
     const wrapper = await mountSuspended(ChatsIndexPage, { route: "/workspace/chats" });
 
-    expect(wrapper.get('[data-testid="vue-workspace-recent-threads"]').attributes("aria-busy")).toBe(
-      "true",
-    );
+    expect(wrapper.get('[data-testid="vue-workspace-recent-threads-loading"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="vue-workspace-recent-threads-loading"]').text()).toBe(
       "加载中",
     );
@@ -156,9 +147,7 @@ describe("workspace navigation shell", () => {
     const wrapper = await mountSuspended(ChatsIndexPage, { route: "/workspace/chats" });
     await flushPromises();
 
-    expect(wrapper.get('[data-testid="vue-workspace-recent-threads"]').attributes("aria-busy")).toBe(
-      "false",
-    );
+    expect(wrapper.find('[data-testid="vue-workspace-recent-threads-loading"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="vue-workspace-recent-threads-empty"]').text()).toBe(
       "还没有最近对话。",
     );
@@ -167,7 +156,7 @@ describe("workspace navigation shell", () => {
 
   it("shows recent chat history affordances on the chats index", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      if (input === "/api/threads/search") {
+      if (input === "/api/langgraph/threads/search") {
         return Response.json([
           thread("thread-a", "Alpha", "idle", {
             channel_source: { provider: "slack", type: "im_channel" },

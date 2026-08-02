@@ -16,6 +16,16 @@ describe("stream reducer", () => {
         payload: { type: "task_running", task_id: "search" },
         cursor: { eventId: "2" },
       },
+      {
+        type: "artifact_delta" as const,
+        payload: { path: "outputs/result.md" },
+        cursor: { eventId: "2a" },
+      },
+      {
+        type: "human_input_required" as const,
+        payload: { request_id: "request-1" },
+        cursor: { eventId: "2b" },
+      },
       { type: "notice" as const, payload: { type: "stream_replay_gap" }, cursor: { eventId: "3" } },
       { type: "done" as const, cursor: { eventId: "4" } },
     ];
@@ -28,6 +38,8 @@ describe("stream reducer", () => {
     }
 
     expect(live.getSnapshot()).toEqual(replay.getSnapshot());
+    expect(live.getSnapshot().artifacts).toEqual([{ path: "outputs/result.md" }]);
+    expect(live.getSnapshot().humanInputRequests).toEqual([{ request_id: "request-1" }]);
   });
 
   it("keeps live delta and replay values view-models equivalent", () => {

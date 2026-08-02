@@ -5,6 +5,8 @@ import MessageList from "../../../components/workspace/messages/MessageList.vue"
 import { useNewAgent } from "../../../composables/use-new-agent";
 
 const router = useRouter();
+const { t } = useAppI18n();
+const agentsFeature = useAgentsApiEnabled();
 const stream = useThreadStream();
 const chatDraft = ref("");
 
@@ -46,7 +48,15 @@ async function submitChatDraft() {
 
 <template>
   <WorkspaceNavShell>
-  <section class="new-agent-page">
+  <section v-if="agentsFeature.isLoading.value" class="workspace-simple-page" data-testid="vue-workspace-agents-loading">
+    <p>{{ t("common.loading") }}</p>
+  </section>
+  <section v-else-if="!agentsFeature.enabled.value" class="workspace-feature-disabled" data-testid="vue-agents-feature-disabled">
+    <div class="workspace-feature-disabled__icon">A</div>
+    <h1>{{ t("agents.featureDisabledTitle") }}</h1>
+    <p>{{ t("agents.featureDisabledDescription") }}</p>
+  </section>
+  <section v-else class="new-agent-page">
     <header class="new-agent-header">
       <button
         class="workspace-button workspace-button--ghost"
@@ -83,8 +93,6 @@ async function submitChatDraft() {
             autocomplete="off"
             data-testid="vue-new-agent-name"
             placeholder="code-reviewer"
-            :aria-describedby="newAgent.nameError.value ? nameErrorId : undefined"
-            :aria-invalid="Boolean(newAgent.nameError.value)"
             @input="newAgent.clearNameError"
             @keydown.enter.prevent="newAgent.confirmName"
           >
@@ -157,7 +165,6 @@ async function submitChatDraft() {
           v-model="chatDraft"
           data-testid="vue-new-agent-chat-input"
           :disabled="isBusy"
-          :aria-describedby="newAgent.statusMessage.value ? statusMessageId : undefined"
           placeholder="告诉 DeerFlow 这个智能体应该做什么。"
         />
         <button

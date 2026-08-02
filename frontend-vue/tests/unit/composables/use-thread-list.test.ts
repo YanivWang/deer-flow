@@ -57,20 +57,20 @@ describe("useThreadList", () => {
     let pinned = false;
     let deleted = false;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url === "/api/threads/search") {
+      if (url === "/api/langgraph/threads/search") {
         return Response.json([
           thread("a", "Alpha"),
           ...(deleted ? [] : [thread("b", "Beta", pinned)]),
         ]);
       }
-      if (url === "/api/threads/b" && init?.method === "PATCH") {
+      if (url === "/api/langgraph/threads/b" && init?.method === "PATCH") {
         pinned = true;
         return Response.json({
           ...thread("b", "Beta", true),
           metadata: { [THREAD_PINNED_METADATA_KEY]: true },
         });
       }
-      if (url === "/api/threads/b" && init?.method === "DELETE") {
+      if (url === "/api/langgraph/threads/b" && init?.method === "DELETE") {
         deleted = true;
         return new Response(null, { status: 204 });
       }
@@ -131,13 +131,13 @@ describe("useThreadList", () => {
   it("creates a Gateway thread and prepends it into the sidebar cache", async () => {
     let created = false;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url === "/api/threads/search") {
+      if (url === "/api/langgraph/threads/search") {
         return Response.json([
           ...(created ? [{ ...thread("fresh", "Untitled"), metadata: { agent_name: "researcher" } }] : []),
           thread("a", "Alpha"),
         ]);
       }
-      if (url === "/api/threads" && init?.method === "POST") {
+      if (url === "/api/langgraph/threads" && init?.method === "POST") {
         created = true;
         return Response.json({
           ...thread("fresh", "Untitled"),
@@ -184,7 +184,7 @@ describe("useThreadList", () => {
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/threads",
+      "/api/langgraph/threads",
       expect.objectContaining({
         body: JSON.stringify({
           thread_id: "fresh",
@@ -247,7 +247,7 @@ describe("useThreadList", () => {
     expect(wrapper.get('[data-testid="count"]').text()).toBe("51");
     expect(wrapper.get('[data-testid="threads"]').text()).toContain("thread-50");
     expect(fetchMock).toHaveBeenLastCalledWith(
-      "/api/threads/search",
+      "/api/langgraph/threads/search",
       expect.objectContaining({
         body: JSON.stringify({ metadata: {}, limit: 50, offset: 50 }),
       }),
@@ -256,10 +256,10 @@ describe("useThreadList", () => {
 
   it("keeps thread caches unchanged when rename fails with a backend detail", async () => {
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url === "/api/threads/search") {
+      if (url === "/api/langgraph/threads/search") {
         return Response.json([thread("a", "Alpha")]);
       }
-      if (url === "/api/threads/a/state" && init?.method === "POST") {
+      if (url === "/api/langgraph/threads/a/state" && init?.method === "POST") {
         return Response.json({ detail: "Thread has an active run." }, { status: 409 });
       }
       return new Response("not found", { status: 404 });
@@ -315,13 +315,13 @@ describe("useThreadList", () => {
 
   it("exposes mutation error messages for failed pin and delete actions", async () => {
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url === "/api/threads/search") {
+      if (url === "/api/langgraph/threads/search") {
         return Response.json([thread("a", "Alpha")]);
       }
-      if (url === "/api/threads/a" && init?.method === "PATCH") {
+      if (url === "/api/langgraph/threads/a" && init?.method === "PATCH") {
         return Response.json({ detail: "Pin failed." }, { status: 409 });
       }
-      if (url === "/api/threads/a" && init?.method === "DELETE") {
+      if (url === "/api/langgraph/threads/a" && init?.method === "DELETE") {
         return Response.json({ detail: "Delete failed." }, { status: 409 });
       }
       return new Response("not found", { status: 404 });
