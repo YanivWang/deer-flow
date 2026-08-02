@@ -38,8 +38,10 @@ continues to validate the built Nitro output used for Docker runtime signoff.
 - `/api/langgraph/**` is rewritten by Nuxt route rules to `${NUXT_GATEWAY_URL}/api/**`, matching the existing nginx rewrite from `/api/langgraph/*` to Gateway `/api/*`.
 - `/api/**` is proxied to `${NUXT_GATEWAY_URL}/api/**` so auth, memory, MCP, skills, agents, scheduled tasks, uploads, artifacts, and Gateway custom routes stay same-origin from the browser.
 - Browser auth POSTs from `localhost:2027` or `localhost:2028` are split-origin
-  from the main `localhost:2026` stack. Set `GATEWAY_CORS_ORIGINS` on Gateway to
-  include the Vue origin when doing live browser login against the standalone Vue
-  port.
+  from the main `localhost:2026` stack. For live browser login against the
+  standalone Vue ports, set `GATEWAY_CORS_ORIGINS` in the root `.env` to the
+  exact Vue origins. The main Gateway compose files load `../.env`, and Gateway
+  uses the same allowlist for CORS responses and auth CSRF origin checks, so do
+  not work around this by stripping `Origin` or loosening proxy headers.
 
 The contract is covered by `frontend-vue/tests/contract/docker-vue-parity.test.ts`.

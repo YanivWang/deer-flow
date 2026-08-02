@@ -74,6 +74,12 @@ services:
       # The same value must be set on the gateway side via config.yaml sandbox.provisioner_api_key.
       - PROVISIONER_API_KEY=${PROVISIONER_API_KEY:-}
     env_file:
+      # Loads local operator configuration into Gateway. In particular,
+      # GATEWAY_CORS_ORIGINS belongs in ../.env for split-origin browser
+      # clients such as standalone Vue Docker runtimes on 2027/2028. Gateway's
+      # CORS middleware and auth CSRF origin check read the same variable, so
+      # keeping it here avoids proxy/header workarounds while preserving the
+      # unified nginx same-origin default on localhost:2026.
       - ../.env
     extra_hosts:
       - "host.docker.internal:host-gateway"

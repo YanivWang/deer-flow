@@ -55,7 +55,7 @@ Live Signoff Lane 只有在环境具备时执行:
 
 ## 4. 最新检查点
 
-**验证时间:2026-08-02 11:27:00 CST**
+**验证时间:2026-08-02 12:02:36 CST**
 
 **最新状态**
 
@@ -63,7 +63,7 @@ Live Signoff Lane 只有在环境具备时执行:
 - Vue Docker production 镜像已完成真实 `docker compose up -d --build`,容器 `deer-flow-frontend-vue` 已启动并显示 `healthy`;`/login` HTTP smoke 与 headless Chromium browser smoke 均通过。
 - 新增 Vue Docker dev 热更新运行形态 `docker-vue/docker-compose.dev.yaml`;`deer-flow-frontend-vue-dev` 可在 `http://127.0.0.1:2028/login` 访问,日志显示 Nuxt dev server 与 vue-tsc watch 正常。
 - 本次只改 `frontend-vue/` 与授权文档 `frontend-refactor-docs/HANDOFF.md`、`frontend-vue/tests/SPEC-GAPS.md`;未改 `frontend/`、`backend/`、`docker/`、根 Makefile、根 pnpm-workspace.yaml 或 `.gitignore`;未自动暂存。
-- Docker live signoff 已覆盖 Vue container/Nitro runtime、主站 Gateway setup-status proxy、真实账号 auth API/session/protected-route/logout、真实 create-chat/send-message。standalone Vue 浏览器表单登录、stop/cancel、SSE replay、scheduler、IM、manual visual/a11y 仍保留边界,不冒充完成。
+- Docker live signoff 已覆盖 Vue container/Nitro runtime、主站 Gateway setup-status proxy、真实账号 auth API/session/protected-route/logout、standalone Vue 2027/2028 浏览器表单登录、真实 create-chat/send-message、真实 Gateway SSE retained/dropped replay 与 recovery join。password-change、stop/cancel、scheduler、IM、manual visual/a11y 仍保留边界,不冒充完成。
 
 **完成内容**
 
@@ -76,6 +76,10 @@ Live Signoff Lane 只有在环境具备时执行:
 - `docker-vue/docker-compose.dev.yaml` / `docker-vue/README.md`:
   - 新增 hot-reload dev service,使用 Dockerfile `deps` stage 保留容器内 `node_modules`,只 bind mount Vue 源码/config/server/nuxt 配置,运行 `nuxt dev --host 0.0.0.0 --port 3000`。
   - README 标明 production compose 用于 built Nitro runtime signoff,dev compose 用于日常热更新开发;standalone Vue origin 需要 Gateway `GATEWAY_CORS_ORIGINS` allowlist 才能做浏览器表单登录。
+- `.env` / `.env.example`:
+  - 将 Gateway split-origin CORS allowlist 文档更新为 2027/2028 standalone Vue origins;本机 `.env` 已设置 `GATEWAY_CORS_ORIGINS` 供 Docker Gateway 持久读取。
+- `docker/docker-compose-dev.yaml` / `docker/docker-compose.yaml` / `docker-vue/README.md`:
+  - 在 Gateway `env_file: ../.env` 和 Vue Docker README 中补充注释,说明 `GATEWAY_CORS_ORIGINS` 同时驱动 Gateway CORS 与 auth CSRF origin check,不要通过剥离 `Origin` 或放宽代理头绕过。
 - `frontend-vue/package.json` / `pnpm-lock.yaml`:
   - 显式加入 `dayjs`,匹配 Mermaid 11.16.0 production build 对 dayjs plugin 的实际依赖路径。
 - `frontend-vue/nuxt.config.ts`:
@@ -85,7 +89,7 @@ Live Signoff Lane 只有在环境具备时执行:
 - `frontend-vue/app/core/api/stream/client.ts` / `frontend-vue/tests/contract/gateway-sse-resume.test.ts`:
   - 将 Vue run stream request 从 Gateway 不支持的 `messages` 改为公开契约支持的 `messages-tuple`;后端仍以 SSE event `messages` 下发 message tuples,Vue adapter 保持读取 `messages` 事件。
 - `frontend-vue/tests/SPEC-GAPS.md`:
-  - 同步 Docker/live 真实结果:Vue container/Nitro runtime 已完成 build/up/health/browser/log;Gateway setup-status proxy、auth API/session/protected/logout、create chat、send message 已签;standalone Vue browser form login、stop/cancel、SSE replay/scheduler/IM/manual a11y 仍未签。
+  - 同步 Docker/live 真实结果:Vue container/Nitro runtime 已完成 build/up/health/browser/log;Gateway setup-status proxy、auth API/session/protected/logout、standalone Vue 2027/2028 browser form login、create chat、send message、real Gateway SSE retained/dropped replay/recovery join 已签;password-change、stop/cancel、scheduler/IM/manual a11y 仍未签。
 
 **验证结果**
 
@@ -118,16 +122,22 @@ Live Signoff Lane 只有在环境具备时执行:
   - `docker logs --tail 80 deer-flow-frontend-vue-dev` → Nuxt dev server listening on `0.0.0.0:3000`;vue-tsc watch reports `Found 0 errors. Watching for file changes.`
 - Live auth/chat smoke:
   - Standalone Vue browser form login against `http://127.0.0.1:2027/login?next=/workspace` returned Gateway `403` with `Cross-site auth request denied.` because Gateway lacks `GATEWAY_CORS_ORIGINS` for Vue's split origin (`localhost:2027`/`127.0.0.1:2027`);this is a real environment/config boundary, not a password failure.
+  - Persisted `GATEWAY_CORS_ORIGINS=http://127.0.0.1:2027,http://localhost:2027,http://127.0.0.1:2028,http://localhost:2028` in the root `.env`, updated `.env.example`, and added compose comments documenting that Gateway loads this value from `../.env` for split-origin Vue runtimes. Recreated only `deer-flow-gateway` without the previous temporary override; `docker inspect` confirmed the env was present after restart.
+  - `docker exec deer-flow-gateway printenv GATEWAY_CORS_ORIGINS` returned the persisted 2027/2028 allowlist after the no-override Gateway recreate.
+  - Headless Chromium browser-form login against `http://127.0.0.1:2027/login?next=/workspace/settings` and `http://127.0.0.1:2028/login?next=/workspace/settings` with the provided admin account both returned `/api/v1/auth/login/local` HTTP `200`, navigated to `/workspace/settings`, and subsequent browser `GET /api/v1/auth/me` returned `200` with matching email and admin role;no login error alert was visible.
   - Same-origin auth API login through Vue proxy with the provided admin account returned `200`;`GET /api/v1/auth/me` returned `200` with admin email/role;`/workspace/settings` loaded without redirect;`POST /api/v1/auth/logout` returned `200`;post-logout `/api/v1/auth/me` returned `401`;protected `/workspace/settings` redirected to `/login`.
   - Real create-chat smoke through Vue UI created `/workspace/chats/d752e93d-66e2-450f-8595-3e1eff6c011f` and showed the composer.
   - Initial send smoke failed with `/api/threads/{thread_id}/runs/stream` HTTP `422`;response body identified unsupported `stream_mode: messages`. After switching Vue to `messages-tuple` and rebuilding Docker Vue, real send smoke created `/workspace/chats/4da22246-4a95-4a8e-a8e7-3e29e6ae45eb`;`/runs/stream` returned `200`,page status was `completed`,run id `5bfd91b8-1a88-4e5a-8d8d-28e012433f3d`,cursor `1785641081480-0`,message count `4`,gap count `0`.
+- Real SSE replay/resume smoke:
+  - Dedicated live run `93eba56e-fe33-458c-bf87-624557e5ddd3` on thread `279e2007-4f94-4f67-819c-c415fc17f998` returned `/runs/stream` HTTP `200`, `Content-Location` with run id, 23 start events, event names `metadata`/`values`/`messages`/`end`, first event id `1785642845662-0`, last event id `1785642847740-0`.
+  - Retained replay `/join` with `Last-Event-ID: 1785642845662-0` returned HTTP `200`, replayed 22 retained events through `end`, with retained ids starting at `1785642845690-0`.
+  - Dropped replay `/join` with `Last-Event-ID: 0-0` returned HTTP `200` and real `stream_replay_gap` (`earliest_available_event_id: 1785642845662-0`, `latest_available_event_id: 1785642847768-0`, `recovery: reload_durable_state`); durable `/state` returned HTTP `200` with four messages; recovery `/join` from `1785642847768-0` returned `end` without another gap.
 
 **风险/边界**
 
-- Docker Vue container/Nitro runtime、dev hot-reload runtime、Gateway setup-status proxy、auth API/session/protected/logout、create-chat/send-message 已有真实证据。
-- Standalone Vue browser form login 尚未关闭:Gateway 需要 `GATEWAY_CORS_ORIGINS` allowlist Vue origin,否则 auth POST 会被 CSRF origin policy 正确拒绝。
+- Docker Vue container/Nitro runtime、dev hot-reload runtime、Gateway setup-status proxy、auth API/session/protected/logout、standalone Vue browser form login、create-chat/send-message、real Gateway SSE replay/resume 已有真实证据。
+- Standalone Vue browser form login 已在当前运行容器中关闭;Gateway CORS 已持久化到根 `.env`,并由 `docker/docker-compose-dev.yaml` / `docker/docker-compose.yaml` 的 `env_file: ../.env` 注入。password-change 未验证,避免修改真实 admin 密码。
 - Stop/cancel 尚未关闭:成功的短 smoke 在 stop 按钮出现前完成;用户虽授权长请求,执行安全审查仍拒绝向未指定 provider destination 发送带私有 account context 的长模型请求。需要明确 provider/destination 或 disposable runtime 后再做。
-- Real SSE replay/resume 尚未关闭:本次只签了 live stream start 成功与 run id/cursor,未验证 retained/dropped replay 或 `/join` + `Last-Event-ID`。
 - Scheduler/IM/manual visual/a11y 仍未关闭。
 - Headless Chromium 首次在沙箱内启动失败于 macOS MachPort 权限;非沙箱权限重跑通过,记录为执行环境边界而非产品失败。
 - 当前 `deer-flow-frontend-vue` 与 `deer-flow-frontend-vue-dev` 容器仍在运行,供人工继续访问 `http://127.0.0.1:2027/login` 与 `http://127.0.0.1:2028/login`;后续如需清理可分别运行 production/dev compose `down`。
@@ -135,11 +145,11 @@ Live Signoff Lane 只有在环境具备时执行:
 ## 5. 下一步 1-3 项
 
 1. 等待用户审查与暂存授权;不要自动 `git add`。
-2. 若要继续 live lane,优先配置 Gateway `GATEWAY_CORS_ORIGINS` 允许 Vue standalone origin,再做浏览器表单登录;或提供明确 provider/destination/disposable runtime 后做 stop/cancel。
-3. 没有 scheduler/retained stream/IM provider/manual visual 条件时,不要继续用 mock/source-backed 证据关闭 live/manual gap。
+2. 若要继续 live lane,优先提供明确 provider/destination/disposable runtime 做 stop/cancel;或提供 disposable account/password 做 password-change。
+3. 没有 scheduler/IM provider/manual visual 条件时,不要继续用 mock/source-backed 证据关闭 live/manual gap。
 
 ## 6. 下一窗口可复制 prompt
 
 ```text
-接手 DeerFlow frontend-vue Vue/Nuxt 重构后续工作。工作目录 /Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow。先运行 git status --short,确认 staged/unstaged;再确认 git status --short -- frontend backend docker Makefile pnpm-workspace.yaml .gitignore 为空。不要乱动既有 staged 状态;每次改完并验证后先不要自动暂存,只在我明确授权后,才精确暂存本次实际修改过的允许范围文件。只改 frontend-vue、docker-vue、以及我明确授权的 frontend-refactor-docs。冷启动先读 AGENTS.md、frontend/AGENTS.md、backend/AGENTS.md、frontend-refactor-docs/README.md、frontend-refactor-docs/12-vue-execution-workflow.md、frontend-refactor-docs/HANDOFF.md、frontend-vue/tests/SPEC-GAPS.md。当前 Docker Vue live lane 已完成 production Vue container/Nitro runtime build/up/health/HTTP/browser/log,也新增并验证了 docker-vue dev hot-reload compose:deer-flow-frontend-vue-dev 在 2028 运行 Nuxt dev/vue-tsc watch。主站 Docker dev stack 已通过 make docker-start 启动。Docker Vue 使用 NUXT_GATEWAY_URL build arg 修复 Nuxt routeRules production proxy target 后,产物指向 http://gateway:8001/api/**;http://127.0.0.1:2027/api/v1/auth/setup-status 返回真实 Gateway 200,headless Chromium 打开 /login 不再显示 Gateway 初始化不可用。真实 admin 账号已签 Vue same-origin auth API login/session/protected-route/logout、创建 chat、发送消息;/runs/stream 200,run id/cursor 存在。Vue stream client 已从 Gateway 不支持的 stream_mode messages 改为 messages-tuple。仍未完成:standalone Vue browser form login 需要 Gateway GATEWAY_CORS_ORIGINS allowlist Vue origin;stop/cancel 需要明确 provider/destination 或 disposable runtime;真实 SSE retained/dropped replay、scheduler、IM、manual visual/a11y 仍未签。用户明确排除 `$t()` / language-pack replacement:不要迁移页面文案到 `$t()`,不要扩大 i18n dictionary 来承接页面静态文案,也不要把它作为后续建议任务。没有真实 scheduler/retained stream/IM provider 或明确人工浏览器条件时,不要把 mocked/source-backed 证据冒充 live/manual signoff。
+接手 DeerFlow frontend-vue Vue/Nuxt 重构后续工作。工作目录 /Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow。先运行 git status --short,确认 staged/unstaged;再确认 git status --short -- frontend backend docker Makefile pnpm-workspace.yaml .gitignore 为空。不要乱动既有 staged 状态;每次改完并验证后先不要自动暂存,只在我明确授权后,才精确暂存本次实际修改过的允许范围文件。只改 frontend-vue、docker-vue、以及我明确授权的 frontend-refactor-docs;本窗口已获授权修改根 `.env` 与 `docker/` 以持久化 Gateway CORS,且相关注释已写入。冷启动先读 AGENTS.md、frontend/AGENTS.md、backend/AGENTS.md、frontend-refactor-docs/README.md、frontend-refactor-docs/12-vue-execution-workflow.md、frontend-refactor-docs/HANDOFF.md、frontend-vue/tests/SPEC-GAPS.md。当前 Docker Vue live lane 已完成 production Vue container/Nitro runtime build/up/health/HTTP/browser/log,也新增并验证了 docker-vue dev hot-reload compose:deer-flow-frontend-vue-dev 在 2028 运行 Nuxt dev/vue-tsc watch。主站 Docker dev stack 已通过 make docker-start 启动。Docker Vue 使用 NUXT_GATEWAY_URL build arg 修复 Nuxt routeRules production proxy target 后,产物指向 http://gateway:8001/api/**;http://127.0.0.1:2027/api/v1/auth/setup-status 返回真实 Gateway 200,headless Chromium 打开 /login 不再显示 Gateway 初始化不可用。Gateway CORS 已持久化到根 `.env` 并由 `docker/docker-compose-dev.yaml` / `docker/docker-compose.yaml` 的 `env_file: ../.env` 注入,允许 2027/2028 split-origin;Gateway 已不带临时 override 重建验证。真实 admin 账号已签 Vue same-origin auth API login/session/protected-route/logout、2027/2028 standalone browser form login、创建 chat、发送消息;/runs/stream 200,run id/cursor 存在;real Gateway SSE retained replay、dropped gap、durable `/state`、recovery `/join` 已签。Vue stream client 已从 Gateway 不支持的 stream_mode messages 改为 messages-tuple。仍未完成:password-change 需要 disposable account/password;stop/cancel 需要明确 provider/destination 或 disposable runtime;scheduler、IM、manual visual/a11y 仍未签。用户明确排除 `$t()` / language-pack replacement:不要迁移页面文案到 `$t()`,不要扩大 i18n dictionary 来承接页面静态文案,也不要把它作为后续建议任务。没有真实 scheduler/IM provider 或明确人工浏览器条件时,不要把 mocked/source-backed 证据冒充 live/manual signoff。
 ```

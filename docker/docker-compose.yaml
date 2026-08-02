@@ -133,6 +133,11 @@ services:
       - NO_PROXY=${NO_PROXY:-}${NO_PROXY:+,}localhost,127.0.0.1,::1,gateway,frontend,nginx,provisioner,openviking,host.docker.internal
       - no_proxy=${no_proxy:-}${no_proxy:+,}localhost,127.0.0.1,::1,gateway,frontend,nginx,provisioner,openviking,host.docker.internal
     env_file:
+      # Loads deployment/operator configuration into Gateway. Set
+      # GATEWAY_CORS_ORIGINS in ../.env only for split-origin browser clients
+      # such as a separately hosted Vue runtime. Gateway uses this variable for
+      # both CORSMiddleware and auth CSRF origin checks; the unified nginx entry
+      # on localhost:2026 remains same-origin and does not require it.
       - ../.env
     extra_hosts:
       - "host.docker.internal:host-gateway"
