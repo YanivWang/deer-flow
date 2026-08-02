@@ -64,12 +64,20 @@ describe("docker-vue deployment parity", () => {
     expect(nginxConfig).toContain("set $gateway_upstream gateway:8001;");
   });
 
-  it("keeps Mermaid dayjs plugin aliases resolvable for production builds", () => {
+  it("keeps Mermaid dayjs plugin aliases resolvable for production and dev optimizeDeps", () => {
     const nuxtConfig = readWorkspaceFile("frontend-vue/nuxt.config.ts");
 
     expect(nuxtConfig).toContain('import { dirname, resolve } from "node:path";');
     expect(nuxtConfig).toContain('import { fileURLToPath } from "node:url";');
     expect(nuxtConfig).toContain("const dayjsPluginPath = (plugin: string) =>");
+    expect(nuxtConfig).toContain('"dayjs/plugin/advancedFormat.js"');
+    expect(nuxtConfig).toContain('"dayjs/plugin/customParseFormat.js"');
+    expect(nuxtConfig).toContain('"dayjs/plugin/duration.js"');
+    expect(nuxtConfig).toContain('"dayjs/plugin/isoWeek.js"');
+    expect(nuxtConfig).toContain("optimizeDeps");
+    expect(nuxtConfig).toContain('"@ant-design/icons-vue"');
+    expect(nuxtConfig).toContain('"@tanstack/vue-query"');
+    expect(nuxtConfig).toContain('"vue-i18n"');
     expect(nuxtConfig).toContain('"dayjs/esm/plugin/advancedFormat.js"');
     expect(nuxtConfig).toContain('"dayjs/esm/plugin/customParseFormat.js"');
     expect(nuxtConfig).toContain('"dayjs/esm/plugin/duration.js"');

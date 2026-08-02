@@ -34,8 +34,29 @@ export default defineNuxtConfig({
     typeCheck: true,
   },
   vite: {
+    optimizeDeps: {
+      include: [
+        "@ant-design/icons-vue",
+        "@tanstack/vue-query",
+        "dayjs",
+        "dayjs/plugin/advancedFormat.js",
+        "dayjs/plugin/customParseFormat.js",
+        "dayjs/plugin/duration.js",
+        "dayjs/plugin/isoWeek.js",
+        "dayjs/plugin/localeData",
+        "dayjs/plugin/quarterOfYear",
+        "dayjs/plugin/weekOfYear",
+        "dayjs/plugin/weekYear",
+        "dayjs/plugin/weekday",
+        "vue-i18n",
+      ],
+    },
     resolve: {
       alias: {
+        "dayjs/plugin/advancedFormat.js": dayjsPluginPath("advancedFormat"),
+        "dayjs/plugin/customParseFormat.js": dayjsPluginPath("customParseFormat"),
+        "dayjs/plugin/duration.js": dayjsPluginPath("duration"),
+        "dayjs/plugin/isoWeek.js": dayjsPluginPath("isoWeek"),
         "dayjs/esm/plugin/advancedFormat.js": dayjsPluginPath("advancedFormat"),
         "dayjs/esm/plugin/customParseFormat.js": dayjsPluginPath("customParseFormat"),
         "dayjs/esm/plugin/duration.js": dayjsPluginPath("duration"),

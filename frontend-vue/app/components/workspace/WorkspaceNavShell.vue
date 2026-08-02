@@ -176,6 +176,7 @@ function buildWorkspaceBreadcrumbs(path: string): WorkspaceBreadcrumb[] {
           class="workspace-nav-shell__link"
           :class="{ 'workspace-nav-shell__link--active': activeNavItem?.id === item.id }"
           :data-testid="`vue-workspace-nav-${item.id}`"
+          :aria-label="item.label"
           :aria-current="activeNavItem?.id === item.id ? 'page' : undefined"
           :to="item.to"
         >

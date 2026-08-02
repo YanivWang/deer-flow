@@ -48,14 +48,14 @@ Live Signoff Lane 只有在环境具备时执行:
 | 里程碑 | 需要条件 | 不具备时 |
 | --- | --- | --- |
 | M1 Live Gateway auth | Gateway、Vue runtime、真实账号或允许创建临时账号 | 记录阻塞,不使用 mock 关闭 |
-| M2 Live scheduler | `scheduler.enabled:true`、Gateway、可等待 poller | 记录阻塞,不使用静态契约冒充 live |
+| M2 Live scheduler | 已签 poller timing / completion / overlap;用户明确不做 expired-lease crash/reclaim drill | 不作为剩余 live signoff |
 | M3 Real Gateway SSE replay | 可创建真实 thread/run,可触发 retained/dropped replay | 记录阻塞,保留 gap |
-| M4 Live IM channels | Gateway、真实 provider/bot account、可收发消息 | 记录阻塞,保留 gap |
+| M4 Live IM channels | 用户已明确不做 | 不作为剩余 live signoff |
 | M5 Docker runtime | Docker daemon、网络、可 build/up | 记录环境边界 |
 
 ## 4. 最新检查点
 
-**验证时间:2026-08-02 12:02:36 CST**
+**验证时间:2026-08-02 12:26:03 CST**
 
 **最新状态**
 
@@ -63,7 +63,7 @@ Live Signoff Lane 只有在环境具备时执行:
 - Vue Docker production 镜像已完成真实 `docker compose up -d --build`,容器 `deer-flow-frontend-vue` 已启动并显示 `healthy`;`/login` HTTP smoke 与 headless Chromium browser smoke 均通过。
 - 新增 Vue Docker dev 热更新运行形态 `docker-vue/docker-compose.dev.yaml`;`deer-flow-frontend-vue-dev` 可在 `http://127.0.0.1:2028/login` 访问,日志显示 Nuxt dev server 与 vue-tsc watch 正常。
 - 本次只改 `frontend-vue/` 与授权文档 `frontend-refactor-docs/HANDOFF.md`、`frontend-vue/tests/SPEC-GAPS.md`;未改 `frontend/`、`backend/`、`docker/`、根 Makefile、根 pnpm-workspace.yaml 或 `.gitignore`;未自动暂存。
-- Docker live signoff 已覆盖 Vue container/Nitro runtime、主站 Gateway setup-status proxy、真实账号 auth API/session/protected-route/logout、standalone Vue 2027/2028 浏览器表单登录、真实 create-chat/send-message、真实 Gateway SSE retained/dropped replay 与 recovery join。password-change、stop/cancel、scheduler、IM、manual visual/a11y 仍保留边界,不冒充完成。
+- Docker live signoff 已覆盖 Vue container/Nitro runtime、主站 Gateway setup-status proxy、真实账号 auth API/session/protected-route/logout、standalone Vue 2027/2028 浏览器表单登录、真实 create-chat/send-message、真实 Gateway SSE retained/dropped replay 与 recovery join、真实 stop/cancel interrupt。Scheduler live 已覆盖真实 poller timing、scheduled run completion、manual overlap active-run conflict 与测试任务清理;用户明确不做 password-change live、IM provider live 和 scheduler expired-lease crash/reclaim drill。manual visual/a11y 仍保留边界,不冒充完成。
 
 **完成内容**
 
@@ -89,7 +89,7 @@ Live Signoff Lane 只有在环境具备时执行:
 - `frontend-vue/app/core/api/stream/client.ts` / `frontend-vue/tests/contract/gateway-sse-resume.test.ts`:
   - 将 Vue run stream request 从 Gateway 不支持的 `messages` 改为公开契约支持的 `messages-tuple`;后端仍以 SSE event `messages` 下发 message tuples,Vue adapter 保持读取 `messages` 事件。
 - `frontend-vue/tests/SPEC-GAPS.md`:
-  - 同步 Docker/live 真实结果:Vue container/Nitro runtime 已完成 build/up/health/browser/log;Gateway setup-status proxy、auth API/session/protected/logout、standalone Vue 2027/2028 browser form login、create chat、send message、real Gateway SSE retained/dropped replay/recovery join 已签;password-change、stop/cancel、scheduler/IM/manual a11y 仍未签。
+  - 同步 Docker/live 真实结果:Vue container/Nitro runtime 已完成 build/up/health/browser/log;Gateway setup-status proxy、auth API/session/protected/logout、standalone Vue 2027/2028 browser form login、create chat、send message、real Gateway SSE retained/dropped replay/recovery join、stop/cancel interrupt、scheduler poller/completion/overlap 已签;password-change live、IM provider live 与 scheduler expired-lease crash/reclaim drill 已由用户明确排除;manual a11y 仍未签。
 
 **验证结果**
 
@@ -132,24 +132,33 @@ Live Signoff Lane 只有在环境具备时执行:
   - Dedicated live run `93eba56e-fe33-458c-bf87-624557e5ddd3` on thread `279e2007-4f94-4f67-819c-c415fc17f998` returned `/runs/stream` HTTP `200`, `Content-Location` with run id, 23 start events, event names `metadata`/`values`/`messages`/`end`, first event id `1785642845662-0`, last event id `1785642847740-0`.
   - Retained replay `/join` with `Last-Event-ID: 1785642845662-0` returned HTTP `200`, replayed 22 retained events through `end`, with retained ids starting at `1785642845690-0`.
   - Dropped replay `/join` with `Last-Event-ID: 0-0` returned HTTP `200` and real `stream_replay_gap` (`earliest_available_event_id: 1785642845662-0`, `latest_available_event_id: 1785642847768-0`, `recovery: reload_durable_state`); durable `/state` returned HTTP `200` with four messages; recovery `/join` from `1785642847768-0` returned `end` without another gap.
+- Stop/cancel live smoke:
+  - Headless Chromium submitted a no-sensitive-content long-output prompt on `http://127.0.0.1:2027/workspace/chats/ba22ae94-d61e-4d12-874a-438a8d5305e4`;start stream returned `/runs/stream` HTTP `200` with run id `116a2ff9-bb85-49e3-80c9-b796b0a74d4b`.
+  - The Vue stop button became visible, clicking it called `/api/threads/ba22ae94-d61e-4d12-874a-438a8d5305e4/runs/116a2ff9-bb85-49e3-80c9-b796b0a74d4b/stream?action=interrupt` and returned HTTP `200`;the stop button disappeared after click.
+  - Follow-up `GET /api/threads/ba22ae94-d61e-4d12-874a-438a8d5305e4/runs/116a2ff9-bb85-49e3-80c9-b796b0a74d4b` returned status `"interrupted"`, `message_count: 0`, and token counts all `0`, confirming the run was interrupted before any model output was committed.
+- Scheduler live smoke:
+  - 安全预检:在启动 poller 前,通过 Vue browser login 读取 `/api/scheduled-tasks` 得到当前 admin 账号任务数 `0`;随后直接查询 SQLite `scheduled_tasks` 聚合得到全局 `total=0`,避免启动 poller 时误触发旧任务。
+  - 临时将本机 gitignored `config.yaml` 的 scheduler 改为 `enabled:true`, `poll_interval_seconds:2`, `min_once_delay_seconds:5`;重启 `deer-flow-gateway` 后容器内 `/app/project/config.yaml` 显示临时配置生效。验证结束后已恢复为 `enabled:false`, `poll_interval_seconds:5`, `min_once_delay_seconds:60`,并再次重启 Gateway。
+  - Once poller/timing/completion:通过 Vue same-origin API 创建无敏感 prompt 的 once 任务 `task-59c7240dcb4a405b98ebae70a8d4ac24`,任务 title `scheduler-live-once-2026-08-02T04:20:32.731Z`;poller 自动触发 run history `task-run-534af5786c824ae6b1bc9dc1559066d9`, `trigger:"scheduled"`, `status:"success"`, run id `661cb93c-2445-4bef-86c1-7af084162d81`, thread id `b68c996c-7838-4fe3-b58e-01cbcabb98c0`, `scheduled_for:"2026-08-02T04:20:45.165902+00:00"`;父任务最终 `status:"completed"`, `run_count:1`, `next_run_at:null`。
+  - Overlap active-run conflict:创建远未来 once 任务 `task-3fad739b084b47799fb3ba15fa05ee52`;第一次 `/api/scheduled-tasks/{id}/trigger` 返回 `200` 并产生 running run `73cb32b6-3544-4e87-a4b4-4811ed0461e5` / task run `task-run-f0a8b2e00c55470e95b96a50105e6b1c`;第二次立即 trigger 返回 `409` 和 `detail:"task already has an active run"`。随后调用 `/api/threads/226296ab-f8d0-4d12-8728-b32c933bc6f0/runs/73cb32b6-3544-4e87-a4b4-4811ed0461e5/stream?action=interrupt` 返回 `200`,run history 变为 `status:"interrupted"`。
+  - 清理:API delete 对 completed/active-history 测试任务返回 `500`,因此改用 SQLite 只删除 `title like 'scheduler-live-%'` 的测试 rows 及其 run rows;最终收尾查询 `scheduled_tasks where title like 'scheduler-live-%'` 为 `0`,active `scheduled_task_runs` 为 `0`,`scheduled_tasks` total 为 `0`。人工 expired-lease reclaim 模拟没有产生 run,不计入 live signoff。
 
 **风险/边界**
 
-- Docker Vue container/Nitro runtime、dev hot-reload runtime、Gateway setup-status proxy、auth API/session/protected/logout、standalone Vue browser form login、create-chat/send-message、real Gateway SSE replay/resume 已有真实证据。
-- Standalone Vue browser form login 已在当前运行容器中关闭;Gateway CORS 已持久化到根 `.env`,并由 `docker/docker-compose-dev.yaml` / `docker/docker-compose.yaml` 的 `env_file: ../.env` 注入。password-change 未验证,避免修改真实 admin 密码。
-- Stop/cancel 尚未关闭:成功的短 smoke 在 stop 按钮出现前完成;用户虽授权长请求,执行安全审查仍拒绝向未指定 provider destination 发送带私有 account context 的长模型请求。需要明确 provider/destination 或 disposable runtime 后再做。
-- Scheduler/IM/manual visual/a11y 仍未关闭。
+- Docker Vue container/Nitro runtime、dev hot-reload runtime、Gateway setup-status proxy、auth API/session/protected/logout、standalone Vue browser form login、create-chat/send-message、real Gateway SSE replay/resume、stop/cancel interrupt、scheduler poller/timing/completion 与 overlap active-run conflict 已有真实证据。
+- Standalone Vue browser form login 已在当前运行容器中关闭;Gateway CORS 已持久化到根 `.env`,并由 `docker/docker-compose-dev.yaml` / `docker/docker-compose.yaml` 的 `env_file: ../.env` 注入。password-change live 用户明确不做,不要后续窗口再要求 disposable account/password 来签这一项。
+- Scheduler expired-lease crash/reclaim drill 用户明确不做;本次人工模拟没有产生 run,已清理,不要后续窗口再要求专门故障演练来签这一项。IM provider live 用户明确不做,不要后续窗口再要求真实 provider/bot 来签这一项。manual visual/a11y 仍未关闭。
 - Headless Chromium 首次在沙箱内启动失败于 macOS MachPort 权限;非沙箱权限重跑通过,记录为执行环境边界而非产品失败。
 - 当前 `deer-flow-frontend-vue` 与 `deer-flow-frontend-vue-dev` 容器仍在运行,供人工继续访问 `http://127.0.0.1:2027/login` 与 `http://127.0.0.1:2028/login`;后续如需清理可分别运行 production/dev compose `down`。
 
 ## 5. 下一步 1-3 项
 
 1. 等待用户审查与暂存授权;不要自动 `git add`。
-2. 若要继续 live lane,优先提供明确 provider/destination/disposable runtime 做 stop/cancel;或提供 disposable account/password 做 password-change。
-3. 没有 scheduler/IM provider/manual visual 条件时,不要继续用 mock/source-backed 证据关闭 live/manual gap。
+2. 若要继续,只剩 manual visual/a11y 手工签收。
+3. 没有 manual visual/a11y 条件时,不要继续用 mock/source-backed 证据关闭 manual gap。
 
 ## 6. 下一窗口可复制 prompt
 
 ```text
-接手 DeerFlow frontend-vue Vue/Nuxt 重构后续工作。工作目录 /Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow。先运行 git status --short,确认 staged/unstaged;再确认 git status --short -- frontend backend docker Makefile pnpm-workspace.yaml .gitignore 为空。不要乱动既有 staged 状态;每次改完并验证后先不要自动暂存,只在我明确授权后,才精确暂存本次实际修改过的允许范围文件。只改 frontend-vue、docker-vue、以及我明确授权的 frontend-refactor-docs;本窗口已获授权修改根 `.env` 与 `docker/` 以持久化 Gateway CORS,且相关注释已写入。冷启动先读 AGENTS.md、frontend/AGENTS.md、backend/AGENTS.md、frontend-refactor-docs/README.md、frontend-refactor-docs/12-vue-execution-workflow.md、frontend-refactor-docs/HANDOFF.md、frontend-vue/tests/SPEC-GAPS.md。当前 Docker Vue live lane 已完成 production Vue container/Nitro runtime build/up/health/HTTP/browser/log,也新增并验证了 docker-vue dev hot-reload compose:deer-flow-frontend-vue-dev 在 2028 运行 Nuxt dev/vue-tsc watch。主站 Docker dev stack 已通过 make docker-start 启动。Docker Vue 使用 NUXT_GATEWAY_URL build arg 修复 Nuxt routeRules production proxy target 后,产物指向 http://gateway:8001/api/**;http://127.0.0.1:2027/api/v1/auth/setup-status 返回真实 Gateway 200,headless Chromium 打开 /login 不再显示 Gateway 初始化不可用。Gateway CORS 已持久化到根 `.env` 并由 `docker/docker-compose-dev.yaml` / `docker/docker-compose.yaml` 的 `env_file: ../.env` 注入,允许 2027/2028 split-origin;Gateway 已不带临时 override 重建验证。真实 admin 账号已签 Vue same-origin auth API login/session/protected-route/logout、2027/2028 standalone browser form login、创建 chat、发送消息;/runs/stream 200,run id/cursor 存在;real Gateway SSE retained replay、dropped gap、durable `/state`、recovery `/join` 已签。Vue stream client 已从 Gateway 不支持的 stream_mode messages 改为 messages-tuple。仍未完成:password-change 需要 disposable account/password;stop/cancel 需要明确 provider/destination 或 disposable runtime;scheduler、IM、manual visual/a11y 仍未签。用户明确排除 `$t()` / language-pack replacement:不要迁移页面文案到 `$t()`,不要扩大 i18n dictionary 来承接页面静态文案,也不要把它作为后续建议任务。没有真实 scheduler/IM provider 或明确人工浏览器条件时,不要把 mocked/source-backed 证据冒充 live/manual signoff。
+接手 DeerFlow frontend-vue Vue/Nuxt 重构后续工作。工作目录 /Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow。先运行 git status --short,确认 staged/unstaged;再确认 git status --short -- frontend backend docker Makefile pnpm-workspace.yaml .gitignore 为空。不要乱动既有 staged 状态;每次改完并验证后先不要自动暂存,只在我明确授权后,才精确暂存本次实际修改过的允许范围文件。只改 frontend-vue、docker-vue、以及我明确授权的 frontend-refactor-docs;本窗口已获授权修改根 `.env` 与 `docker/` 以持久化 Gateway CORS,且相关注释已写入。冷启动先读 AGENTS.md、frontend/AGENTS.md、backend/AGENTS.md、frontend-refactor-docs/README.md、frontend-refactor-docs/12-vue-execution-workflow.md、frontend-refactor-docs/HANDOFF.md、frontend-vue/tests/SPEC-GAPS.md。当前 Docker Vue live lane 已完成 production Vue container/Nitro runtime build/up/health/HTTP/browser/log,也新增并验证了 docker-vue dev hot-reload compose:deer-flow-frontend-vue-dev 在 2028 运行 Nuxt dev/vue-tsc watch。主站 Docker dev stack 已通过 make docker-start 启动。Docker Vue 使用 NUXT_GATEWAY_URL build arg 修复 Nuxt routeRules production proxy target 后,产物指向 http://gateway:8001/api/**;http://127.0.0.1:2027/api/v1/auth/setup-status 返回真实 Gateway 200,headless Chromium 打开 /login 不再显示 Gateway 初始化不可用。Gateway CORS 已持久化到根 `.env` 并由 `docker/docker-compose-dev.yaml` / `docker/docker-compose.yaml` 的 `env_file: ../.env` 注入,允许 2027/2028 split-origin;Gateway 已不带临时 override 重建验证。真实 admin 账号已签 Vue same-origin auth API login/session/protected-route/logout、2027/2028 standalone browser form login、创建 chat、发送消息;/runs/stream 200,run id/cursor 存在;real Gateway SSE retained replay、dropped gap、durable `/state`、recovery `/join` 已签;stop/cancel interrupt 已签,run `116a2ff9-bb85-49e3-80c9-b796b0a74d4b` 后端状态为 `interrupted`。Scheduler live 已签 poller timing/once completion 与 manual overlap active-run conflict:scheduled run `661cb93c-2445-4bef-86c1-7af084162d81` 成功,overlap 第二次 trigger 返回 409;测试任务已清理,Gateway scheduler 配置已恢复为 disabled。人工 expired-lease reclaim 模拟没有产生 run,且用户明确不做 scheduler expired-lease crash/reclaim drill,不要计入剩余 signoff。Vue stream client 已从 Gateway 不支持的 stream_mode messages 改为 messages-tuple。用户明确不做 password-change live 和 IM provider live。仍未完成:manual visual/a11y。用户明确排除 `$t()` / language-pack replacement:不要迁移页面文案到 `$t()`,不要扩大 i18n dictionary 来承接页面静态文案,也不要把它作为后续建议任务。没有明确人工浏览器条件时,不要把 mocked/source-backed 证据冒充 manual signoff。
 ```

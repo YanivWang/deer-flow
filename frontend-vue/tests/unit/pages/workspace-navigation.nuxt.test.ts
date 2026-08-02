@@ -41,6 +41,12 @@ describe("workspace navigation shell", () => {
     expect(wrapper.get('[data-testid="vue-workspace-card-settings"]').attributes("href")).toBe(
       "/workspace/settings",
     );
+    expect(wrapper.get('[data-testid="vue-workspace-nav-new-chat"]').attributes("aria-label")).toBe(
+      "新建对话",
+    );
+    expect(wrapper.get('[data-testid="vue-workspace-nav-scheduled"]').attributes("aria-label")).toBe(
+      "计划任务",
+    );
   });
 
   it("keeps new-chat active state specific instead of double-marking chats", async () => {
