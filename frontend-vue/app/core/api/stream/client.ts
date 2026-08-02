@@ -58,7 +58,7 @@ export type CancelDeerFlowThreadStreamOptions = {
   onEvent?: (event: CanonicalStreamEvent) => void;
 };
 
-const DEFAULT_STREAM_MODE = ["values", "messages", "custom"] as const;
+const DEFAULT_STREAM_MODE = ["values", "messages-tuple", "custom"] as const;
 
 export async function startDeerFlowThreadStream({
   threadId,

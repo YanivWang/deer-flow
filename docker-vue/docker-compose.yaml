@@ -5,6 +5,8 @@ services:
     build:
       context: ../
       dockerfile: frontend-vue/Dockerfile
+      args:
+        NUXT_GATEWAY_URL: ${VUE_GATEWAY_URL:-http://gateway:8001}
     container_name: deer-flow-frontend-vue
     ports:
       - "${VUE_PORT:-2027}:3000"

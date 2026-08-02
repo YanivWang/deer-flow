@@ -11,10 +11,23 @@ describe("docker-vue deployment parity", () => {
 
     expect(compose).toContain("name: deer-flow-vue");
     expect(compose).toContain("${VUE_PORT:-2027}:3000");
+    expect(compose).toContain("NUXT_GATEWAY_URL: ${VUE_GATEWAY_URL:-http://gateway:8001}");
     expect(compose).toContain("NUXT_GATEWAY_URL=${VUE_GATEWAY_URL:-http://gateway:8001}");
     expect(compose).toContain("NITRO_HOST=0.0.0.0");
     expect(compose).toContain("NITRO_PORT=3000");
     expect(compose).toContain("external: true");
+    expect(compose).toContain("name: ${DEER_FLOW_NETWORK:-deer-flow_deer-flow}");
+  });
+
+  it("provides a hot-reload Docker dev service without shadowing node_modules", () => {
+    const compose = readWorkspaceFile("docker-vue/docker-compose.dev.yaml");
+
+    expect(compose).toContain("name: deer-flow-vue-dev");
+    expect(compose).toContain("target: deps");
+    expect(compose).toContain('"nuxt", "dev"');
+    expect(compose).toContain("${VUE_DEV_PORT:-2028}:3000");
+    expect(compose).toContain("../frontend-vue/app:/app/app");
+    expect(compose).not.toContain("../frontend-vue:/app");
     expect(compose).toContain("name: ${DEER_FLOW_NETWORK:-deer-flow_deer-flow}");
   });
 
@@ -26,6 +39,8 @@ describe("docker-vue deployment parity", () => {
 
     expect(dockerfile).toContain("EXPOSE 3000");
     expect(dockerfile).toContain("ENV NODE_ENV=production");
+    expect(dockerfile).toContain("ARG NUXT_GATEWAY_URL=http://gateway:8001");
+    expect(dockerfile).toContain("ENV NUXT_GATEWAY_URL=${NUXT_GATEWAY_URL}");
     expect(dockerfile).toContain("ENV NITRO_HOST=0.0.0.0");
     expect(dockerfile).toContain("ENV NITRO_PORT=3000");
     expect(dockerfile).toContain("RUN corepack enable && corepack pnpm install --frozen-lockfile");
@@ -47,6 +62,19 @@ describe("docker-vue deployment parity", () => {
 
     expect(nginxConfig).toContain("rewrite ^/api/langgraph/(.*) /api/$1 break;");
     expect(nginxConfig).toContain("set $gateway_upstream gateway:8001;");
+  });
+
+  it("keeps Mermaid dayjs plugin aliases resolvable for production builds", () => {
+    const nuxtConfig = readWorkspaceFile("frontend-vue/nuxt.config.ts");
+
+    expect(nuxtConfig).toContain('import { dirname, resolve } from "node:path";');
+    expect(nuxtConfig).toContain('import { fileURLToPath } from "node:url";');
+    expect(nuxtConfig).toContain("const dayjsPluginPath = (plugin: string) =>");
+    expect(nuxtConfig).toContain('"dayjs/esm/plugin/advancedFormat.js"');
+    expect(nuxtConfig).toContain('"dayjs/esm/plugin/customParseFormat.js"');
+    expect(nuxtConfig).toContain('"dayjs/esm/plugin/duration.js"');
+    expect(nuxtConfig).toContain('"dayjs/esm/plugin/isoWeek.js"');
+    expect(nuxtConfig).toContain('resolve(projectRoot, "node_modules/dayjs/plugin", `${plugin}.js`)');
   });
 
   it("documents the Vue runtime healthcheck as a local Nitro smoke", () => {

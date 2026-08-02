@@ -53,7 +53,7 @@ describe("Gateway SSE resume contract", () => {
         expect(JSON.parse(String(init?.body))).toMatchObject({
           assistant_id: "lead_agent",
           on_disconnect: "cancel",
-          stream_mode: ["values", "messages", "custom"],
+          stream_mode: ["values", "messages-tuple", "custom"],
         });
         return sseResponse({
           body: sse([
