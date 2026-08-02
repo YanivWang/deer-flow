@@ -1,4 +1,9 @@
-.PHONY: install lint stylelint typecheck test test-e2e verify verify-full
+VUE_DOCKER_NETWORK ?= deer-flow-dev_deer-flow-dev
+VUE_DOCKER_COMPOSE = DEER_FLOW_NETWORK=$(VUE_DOCKER_NETWORK) docker compose -f ../docker-vue/docker-compose.yaml
+VUE_DOCKER_DEV_COMPOSE = DEER_FLOW_NETWORK=$(VUE_DOCKER_NETWORK) docker compose -f ../docker-vue/docker-compose.dev.yaml
+
+.PHONY: install lint stylelint typecheck test test-e2e verify verify-full \
+	docker-up docker-down docker-dev-up docker-dev-down
 
 install:
 	pnpm install --strict-peer-dependencies
@@ -26,3 +31,15 @@ verify:
 
 verify-full: verify
 	pnpm test:e2e
+
+docker-up:
+	$(VUE_DOCKER_COMPOSE) up -d --build
+
+docker-down:
+	$(VUE_DOCKER_COMPOSE) down
+
+docker-dev-up:
+	$(VUE_DOCKER_DEV_COMPOSE) up -d --build
+
+docker-dev-down:
+	$(VUE_DOCKER_DEV_COMPOSE) down

@@ -8,16 +8,29 @@ same-origin API calls to the existing Gateway.
 Start the existing DeerFlow stack first, then run:
 
 ```bash
-docker compose -f docker-vue/docker-compose.yaml up -d --build
+make -C frontend-vue docker-up
 ```
 
 Use `DEER_FLOW_NETWORK=deer-flow-dev_deer-flow-dev` when attaching to the dev Docker stack.
 The Vue frontend is exposed on `http://localhost:2027` by default and proxies API requests to the existing Gateway.
 
+The default network can be overridden when needed:
+
+```bash
+make -C frontend-vue docker-up VUE_DOCKER_NETWORK=deer-flow_deer-flow
+make -C frontend-vue docker-down
+```
+
 For Vue development with hot reload, use the dev compose file instead:
 
 ```bash
-DEER_FLOW_NETWORK=deer-flow-dev_deer-flow-dev docker compose -f docker-vue/docker-compose.dev.yaml up -d --build
+make -C frontend-vue docker-dev-up
+```
+
+Stop the dev container with:
+
+```bash
+make -C frontend-vue docker-dev-down
 ```
 
 The dev container is exposed on `http://localhost:${VUE_DEV_PORT:-2028}` and runs

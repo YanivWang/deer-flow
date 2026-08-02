@@ -558,10 +558,7 @@ function shouldInlineArtifactHtmlPreviewResource(resourceUrl: string): boolean {
     if (parsed.origin !== globalThis.location?.origin) {
       return false;
     }
-    return (
-      /^\/api\/threads\/[^/]+\/artifacts\//.test(parsed.pathname)
-      || /^\/mock\/api\/threads\/[^/]+\/artifacts\//.test(parsed.pathname)
-    );
+    return /^\/api\/threads\/[^/]+\/artifacts\//.test(parsed.pathname);
   } catch {
     return false;
   }

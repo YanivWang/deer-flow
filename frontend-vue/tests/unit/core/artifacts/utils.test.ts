@@ -29,9 +29,8 @@ describe("artifact utils", () => {
     expect(artifactApiUrl({
       download: true,
       filepath: "/mnt/user-data/outputs/report%201.md",
-      isMock: true,
       threadId: "thread-a",
-    })).toBe("/mock/api/threads/thread-a/artifacts/mnt/user-data/outputs/report%201.md?download=true");
+    })).toBe("/api/threads/thread-a/artifacts/mnt/user-data/outputs/report%201.md?download=true");
   });
 
   it("classifies browser-previewable files", () => {

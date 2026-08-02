@@ -145,16 +145,13 @@ export function artifactApiUrl({
   filepath,
   threadId,
   download = false,
-  isMock = false,
 }: {
   filepath: string;
   threadId: string;
   download?: boolean;
-  isMock?: boolean;
 }): string {
   const encodedThreadId = encodeURIComponent(threadId);
-  const prefix = isMock ? "/mock/api" : "/api";
-  return `${prefix}/threads/${encodedThreadId}/artifacts${encodeArtifactPath(filepath)}${
+  return `/api/threads/${encodedThreadId}/artifacts${encodeArtifactPath(filepath)}${
     download ? "?download=true" : ""
   }`;
 }
@@ -274,18 +271,16 @@ export function getBrowserPreviewKind(filepath: string): BrowserPreviewKind | nu
 export function describeArtifactViewer({
   filepath,
   threadId,
-  isMock = false,
 }: {
   filepath: string;
   threadId: string;
-  isMock?: boolean;
 }): ArtifactViewerState {
   const previewKind = getBrowserPreviewKind(filepath);
   return {
-    artifactUrl: artifactApiUrl({ filepath, isMock, threadId }),
+    artifactUrl: artifactApiUrl({ filepath, threadId }),
     canPreview: previewKind !== null,
     downloadFilename: artifactFilename(filepath),
-    downloadUrl: artifactApiUrl({ filepath, download: true, isMock, threadId }),
+    downloadUrl: artifactApiUrl({ filepath, download: true, threadId }),
     extensionLabel: artifactExtensionLabel(filepath),
     fallbackDescription: describeArtifactFallback(filepath, previewKind),
     filename: artifactFilename(filepath),

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,6 +13,28 @@ const gatewayUrl =
   "http://127.0.0.1:8001";
 const dayjsPluginPath = (plugin: string) =>
   resolve(projectRoot, "node_modules/dayjs/plugin", `${plugin}.js`);
+
+// @ant-design-vue/nuxt rewrites dayjs/plugin/* to dayjs/esm/plugin/*, but
+// dayjs publishes ESM plugins as plugin-name/index.js rather than plugin-name.js.
+// Resolve the rewritten specifier to the published CJS file before that alias runs.
+const dayjsPluginResolver = {
+  name: "deerflow-dayjs-plugin-resolver",
+  enforce: "pre" as const,
+  resolveId(source: string) {
+    const match = /^dayjs\/(?:esm\/)?plugin\/([^/]+?)(?:\.js)?$/.exec(source);
+    if (!match) {
+      return undefined;
+    }
+
+    const plugin = match[1];
+    if (!plugin) {
+      return undefined;
+    }
+
+    const pluginPath = dayjsPluginPath(plugin);
+    return existsSync(pluginPath) ? pluginPath : undefined;
+  },
+};
 
 export default defineNuxtConfig({
   compatibilityDate: "2026-07-31",
@@ -35,34 +58,12 @@ export default defineNuxtConfig({
   },
   vite: {
     optimizeDeps: {
-      include: [
-        "@ant-design/icons-vue",
-        "@tanstack/vue-query",
-        "dayjs",
-        "dayjs/plugin/advancedFormat.js",
-        "dayjs/plugin/customParseFormat.js",
-        "dayjs/plugin/duration.js",
-        "dayjs/plugin/isoWeek.js",
-        "dayjs/plugin/localeData",
-        "dayjs/plugin/quarterOfYear",
-        "dayjs/plugin/weekOfYear",
-        "dayjs/plugin/weekYear",
-        "dayjs/plugin/weekday",
-        "vue-i18n",
-      ],
+      // Mermaid's lazy Gantt chunk imports CJS dayjs plugins. The Ant Design
+      // Nuxt module rewrites those imports during esbuild pre-bundling to
+      // dayjs/esm/plugin/*.js, which is not a published dayjs file.
+      exclude: ["mermaid"],
     },
-    resolve: {
-      alias: {
-        "dayjs/plugin/advancedFormat.js": dayjsPluginPath("advancedFormat"),
-        "dayjs/plugin/customParseFormat.js": dayjsPluginPath("customParseFormat"),
-        "dayjs/plugin/duration.js": dayjsPluginPath("duration"),
-        "dayjs/plugin/isoWeek.js": dayjsPluginPath("isoWeek"),
-        "dayjs/esm/plugin/advancedFormat.js": dayjsPluginPath("advancedFormat"),
-        "dayjs/esm/plugin/customParseFormat.js": dayjsPluginPath("customParseFormat"),
-        "dayjs/esm/plugin/duration.js": dayjsPluginPath("duration"),
-        "dayjs/esm/plugin/isoWeek.js": dayjsPluginPath("isoWeek"),
-      },
-    },
+    plugins: [dayjsPluginResolver],
     css: {
       preprocessorOptions: {
         scss: {
