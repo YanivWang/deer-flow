@@ -4,14 +4,17 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { buildNewAgentRunContext } from "../../app/composables/use-new-agent";
+import { buildNewAgentRunContext } from "../../app/entities/agent/model";
 
 const gatewayServicesSource = readRepositoryFile("backend/app/gateway/services.py");
 const leadAgentSource = readRepositoryFile(
   "backend/packages/harness/deerflow/agents/lead_agent/agent.py",
 );
 const agentsRouterSource = readRepositoryFile("backend/app/gateway/routers/agents.py");
-const vueNewAgentSource = readRepositoryFile("frontend-vue/app/composables/use-new-agent.ts");
+const vueNewAgentSource = readRepositoryFile(
+  "frontend-vue/app/features/agents/new/use-new-agent.ts",
+);
+const vueAgentModelSource = readRepositoryFile("frontend-vue/app/entities/agent/model.ts");
 
 describe("Vue custom-agent builder matches the real backend bootstrap contract", () => {
   it("forwards bootstrap context keys that Gateway admits into runtime config", () => {
@@ -51,7 +54,7 @@ describe("Vue custom-agent builder matches the real backend bootstrap contract",
     expect(agentsRouterSource).toContain('AGENT_NAME_PATTERN = re.compile(r"^[A-Za-z0-9-]+$")');
     expect(agentsRouterSource).toContain("return name.lower()");
     expect(agentsRouterSource).toContain('return {"available": not exists, "name": normalized}');
-    expect(vueNewAgentSource).toContain("const NAME_RE = /^[A-Za-z0-9-]+$/");
+    expect(vueAgentModelSource).toContain("const AGENT_NAME_RE = /^[A-Za-z0-9-]+$/");
     expect(vueNewAgentSource).toContain("agentName.value = result.name || trimmed");
     expect(vueNewAgentSource).toContain("getAgentWithRetry(agentName.value");
   });

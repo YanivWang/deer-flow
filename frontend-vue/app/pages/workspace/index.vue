@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import WorkspaceNavShell from "../../widgets/workspace/navigation/WorkspaceNavShell.vue";
+</script>
+
 <template>
   <WorkspaceNavShell>
     <section class="workspace-home" data-testid="vue-workspace-home">

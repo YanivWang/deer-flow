@@ -250,7 +250,7 @@ describe("workspace chat page", () => {
     expect(nuxtMocks.threadList?.query.refetch).toHaveBeenCalledTimes(1);
   });
 
-  it("shows a stream replay gap warning while preserving run and cursor status", async () => {
+  it("shows a stream replay gap warning without rendering debug stream status chrome", async () => {
     nuxtMocks.stream = createStreamMock({
       viewModel: {
         cursor: "120",
@@ -266,12 +266,7 @@ describe("workspace chat page", () => {
     expect(wrapper.get('[data-testid="vue-stream-gap-warning"]').text()).toContain(
       "A stream replay gap was detected",
     );
-    expect(wrapper.get('[data-testid="vue-thread-stream-status"]').text()).toContain("运行：run-1");
-    expect(wrapper.get('[data-testid="vue-thread-stream-status"]').text()).toContain("游标：120");
-    expect(wrapper.get('[data-testid="vue-thread-stream-status"]').text()).toContain("缺口：1");
-    expect(wrapper.get('[data-testid="vue-thread-stream-status"]').attributes("role")).toBe(
-      "status",
-    );
+    expect(wrapper.find('[data-testid="vue-thread-stream-status"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="vue-stream-gap-warning"]').attributes("role")).toBe(
       "status",
     );
@@ -872,6 +867,7 @@ describe("workspace chat page", () => {
     const pushSpy = vi.spyOn(router, "push").mockResolvedValue();
     const wrapper = await mountSuspended(ChatPage, { route: "/workspace/chats/thread-a" });
 
+    await wrapper.get('[data-testid="vue-thread-more-thread-a"]').trigger("click");
     await wrapper.get('[data-testid="vue-thread-delete-thread-a"]').trigger("click");
     await flushPromises();
 
@@ -886,6 +882,7 @@ describe("workspace chat page", () => {
     const pushSpy = vi.spyOn(router, "push").mockResolvedValue();
     const wrapper = await mountSuspended(ChatPage, { route: "/workspace/chats/thread-a" });
 
+    await wrapper.get('[data-testid="vue-thread-more-thread-b"]').trigger("click");
     await wrapper.get('[data-testid="vue-thread-delete-thread-b"]').trigger("click");
     await flushPromises();
 
@@ -903,9 +900,11 @@ describe("workspace chat page", () => {
       threads: [thread("thread-a", "Alpha")],
     });
     const wrapper = await mountSuspended(ChatPage, { route: "/workspace/chats/thread-a" });
+    await wrapper.get('[data-testid="vue-thread-more-thread-a"]').trigger("click");
+    await wrapper.get('[data-testid="vue-thread-rename-thread-a"]').trigger("click");
     await wrapper.get('[data-testid="vue-thread-rename-input"]').setValue("Blocked title");
 
-    await wrapper.get("form.workspace-chat__rename").trigger("submit");
+    await wrapper.get("form.workspace-sidebar__rename-dialog").trigger("submit");
     await flushPromises();
 
     expect(renameThread).toHaveBeenCalledWith({ threadId: "thread-a", title: "Blocked title" });
@@ -931,19 +930,19 @@ describe("workspace chat page", () => {
       threads: [thread("thread-a", "Alpha")],
     });
     const wrapper = await mountSuspended(ChatPage, { route: "/workspace/chats/thread-a" });
+    await wrapper.get('[data-testid="vue-thread-more-thread-a"]').trigger("click");
+    await wrapper.get('[data-testid="vue-thread-rename-thread-a"]').trigger("click");
     await wrapper.get('[data-testid="vue-thread-rename-input"]').setValue("Recovered title");
-    await wrapper.get("form.workspace-chat__rename").trigger("submit");
+    await wrapper.get("form.workspace-sidebar__rename-dialog").trigger("submit");
     await flushPromises();
     expect(wrapper.find('[data-testid="vue-thread-rename-error"]').exists()).toBe(true);
 
-    await wrapper.get("form.workspace-chat__rename").trigger("submit");
+    await wrapper.get("form.workspace-sidebar__rename-dialog").trigger("submit");
     await flushPromises();
 
     expect(renameThread).toHaveBeenCalledTimes(2);
     expect(wrapper.find('[data-testid="vue-thread-rename-error"]').exists()).toBe(false);
-    expect(
-      (wrapper.get('[data-testid="vue-thread-rename-input"]').element as HTMLInputElement).value,
-    ).toBe("");
+    expect(wrapper.find('[data-testid="vue-thread-rename-input"]').exists()).toBe(false);
   });
 
   it("disables duplicate mutation actions and shows sidebar mutation errors", async () => {
@@ -957,7 +956,6 @@ describe("workspace chat page", () => {
       threads: [thread("thread-a", "Alpha")],
     });
     const wrapper = await mountSuspended(ChatPage, { route: "/workspace/chats/thread-a" });
-    await wrapper.get('[data-testid="vue-thread-rename-input"]').setValue("Rename while busy");
 
     expect(wrapper.get('[data-testid="vue-thread-action-error"]').text()).toContain(
       "Delete failed.",
@@ -966,10 +964,13 @@ describe("workspace chat page", () => {
       "alert",
     );
     expect(wrapper.get('[data-testid="vue-thread-create"]').attributes("disabled")).toBeDefined();
+    await wrapper.get('[data-testid="vue-thread-more-thread-a"]').trigger("click");
     expect(wrapper.get('[data-testid="vue-thread-pin-thread-a"]').attributes("disabled")).toBeDefined();
     expect(
       wrapper.get('[data-testid="vue-thread-delete-thread-a"]').attributes("disabled"),
     ).toBeDefined();
+    await wrapper.get('[data-testid="vue-thread-rename-thread-a"]').trigger("click");
+    await wrapper.get('[data-testid="vue-thread-rename-input"]').setValue("Rename while busy");
     expect(wrapper.get('[data-testid="vue-thread-rename-submit"]').attributes("disabled")).toBeDefined();
   });
 

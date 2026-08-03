@@ -7,9 +7,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   joinDeerFlowThreadStream,
   startDeerFlowThreadStream,
-} from "../../app/core/api/stream/client";
-import { ThreadStreamEngine } from "../../app/core/api/stream/engine";
-import type { CanonicalStreamEvent } from "../../app/core/api/stream/canonical";
+} from "../../app/core/stream/client";
+import { ThreadStreamEngine } from "../../app/core/stream/engine";
+import type { CanonicalStreamEvent } from "../../app/core/protocol/stream/canonical";
 
 const encoder = new TextEncoder();
 const gatewayServicesSource = readRepositoryFile("backend/app/gateway/services.py");
@@ -19,7 +19,7 @@ const memoryBridgeSource = readRepositoryFile(
 const redisBridgeSource = readRepositoryFile(
   "backend/packages/harness/deerflow/runtime/stream_bridge/redis.py",
 );
-const vueStreamClientSource = readRepositoryFile("frontend-vue/app/core/api/stream/client.ts");
+const vueStreamClientSource = readRepositoryFile("frontend-vue/app/core/stream/client.ts");
 
 describe("Gateway SSE resume contract", () => {
   afterEach(() => {

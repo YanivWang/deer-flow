@@ -14,7 +14,7 @@ import {
   buildForwardHeaders,
   isAllowedLangGraphPath,
   LANGGRAPH_COMPAT_POLICY,
-} from "../../../../app/core/auth/proxy-policy";
+} from "../../../../app/core/security/gateway-proxy-policy";
 
 export default defineEventHandler(async (event) => {
   const path = getRouterParam(event, "path") ?? "";

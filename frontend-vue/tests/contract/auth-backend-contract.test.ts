@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const backendAuthRouter = readRepositoryFile("backend/app/gateway/routers/auth.py");
 const vueAuthClient = readRepositoryFile("frontend-vue/app/core/auth/client.ts");
-const vueAuthSession = readRepositoryFile("frontend-vue/app/composables/use-auth-session.ts");
+const vueAuthSession = readRepositoryFile("frontend-vue/app/entities/auth/use-auth-session.ts");
 
 describe("Vue auth client matches the real Gateway auth contract", () => {
   it("keeps local login aligned with FastAPI form fields and remember-me semantics", () => {

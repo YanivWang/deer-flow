@@ -9,9 +9,14 @@ const vueLarkClientSource = readRepositoryFile(
   "frontend-vue/app/core/api/integrations/lark.ts",
 );
 const vueLarkComposableSource = readRepositoryFile(
-  "frontend-vue/app/composables/use-lark-integration.ts",
+  "frontend-vue/app/features/settings/integrations/use-lark-integration.ts",
 );
-const vueSettingsSource = readRepositoryFile("frontend-vue/app/pages/workspace/settings.vue");
+const vueSettingsFeatureSource = readRepositoryFile(
+  "frontend-vue/app/features/settings/integrations/use-settings-integrations.ts",
+);
+const vueSettingsWidgetSource = readRepositoryFile(
+  "frontend-vue/app/widgets/workspace/settings/SettingsIntegrationsPanel.vue",
+);
 
 describe("Vue Lark integration settings match the real Gateway integration contract", () => {
   it("keeps Vue client endpoints aligned with the Lark integration router", () => {
@@ -53,12 +58,14 @@ describe("Vue Lark integration settings match the real Gateway integration contr
   });
 
   it("exposes the integration as a scoped settings section instead of overloading MCP tools", () => {
-    expect(vueSettingsSource).toContain('"integrations"');
-    expect(vueSettingsSource).toContain("useLarkIntegration(integrationsEnabled)");
-    expect(vueSettingsSource).toContain("vue-settings-integrations-lark");
-    expect(vueSettingsSource).toContain("installLarkSkillPack");
-    expect(vueSettingsSource).toContain("startLarkConfigWizard");
-    expect(vueSettingsSource).toContain("completeLarkAuthWizard");
+    expect(vueSettingsFeatureSource).toContain("useLarkIntegration(enabled)");
+    expect(vueSettingsFeatureSource).toContain("installSkillPack");
+    expect(vueSettingsFeatureSource).toContain("startConfigWizard");
+    expect(vueSettingsFeatureSource).toContain("completeAuthWizard");
+    expect(vueSettingsWidgetSource).toContain("vue-settings-integrations-lark");
+    expect(vueSettingsWidgetSource).toContain("vue-settings-integrations-lark-install");
+    expect(vueSettingsWidgetSource).toContain("vue-settings-integrations-lark-config-dialog");
+    expect(vueSettingsWidgetSource).toContain("vue-settings-integrations-lark-auth-dialog");
   });
 });
 

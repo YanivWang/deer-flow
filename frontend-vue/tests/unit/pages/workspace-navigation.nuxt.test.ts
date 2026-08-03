@@ -2,7 +2,7 @@ import { mountSuspended } from "@nuxt/test-utils/runtime";
 import { flushPromises } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import WorkspaceNavShell from "../../../app/components/workspace/WorkspaceNavShell.vue";
+import WorkspaceNavShell from "../../../app/widgets/workspace/navigation/WorkspaceNavShell.vue";
 import AgentsIndexPage from "../../../app/pages/workspace/agents/index.vue";
 import ChatsIndexPage from "../../../app/pages/workspace/chats/index.vue";
 import SettingsPage from "../../../app/pages/workspace/settings.vue";
@@ -114,6 +114,36 @@ describe("workspace navigation shell", () => {
 
     expect(shell.classes()).toContain("workspace-nav-shell--collapsed");
     expect(wrapper.get('[data-testid="vue-workspace-nav-collapse"]').text()).toBe("展开");
+  });
+
+  it("opens and closes the mobile navigation without changing the current route", async () => {
+    const wrapper = await mountSuspended(WorkspaceIndexPage, { route: "/workspace" });
+
+    expect(wrapper.get('[data-testid="vue-workspace-nav"]').classes()).not.toContain(
+      "workspace-nav-shell__sidebar--mobile-open",
+    );
+
+    await wrapper.get('[data-testid="vue-workspace-nav-mobile-toggle"]').trigger("click");
+    expect(wrapper.get('[data-testid="vue-workspace-nav"]').classes()).toContain(
+      "workspace-nav-shell__sidebar--mobile-open",
+    );
+
+    await wrapper.get('[data-testid="vue-workspace-nav-mobile-close"]').trigger("click");
+    expect(wrapper.get('[data-testid="vue-workspace-nav"]').classes()).not.toContain(
+      "workspace-nav-shell__sidebar--mobile-open",
+    );
+  });
+
+  it("closes the mobile navigation after a route link is selected", async () => {
+    const wrapper = await mountSuspended(WorkspaceIndexPage, { route: "/workspace" });
+
+    await wrapper.get('[data-testid="vue-workspace-nav-mobile-toggle"]').trigger("click");
+    await wrapper.get('[data-testid="vue-workspace-nav-chats"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="vue-workspace-nav"]').classes()).not.toContain(
+      "workspace-nav-shell__sidebar--mobile-open",
+    );
   });
 
   it("keeps recent chat loading state distinct from an empty list", async () => {

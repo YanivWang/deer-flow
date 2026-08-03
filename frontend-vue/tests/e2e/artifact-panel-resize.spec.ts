@@ -178,10 +178,7 @@ test.describe("Artifacts panel resize", () => {
       .toBeGreaterThan(widthBefore + 100);
     const widthAfterDrag = await panelWidth(artifactsPanel);
 
-    await artifactsPanel
-      .getByRole("button", { name: /close/i })
-      .first()
-      .click();
+    await artifactsPanel.getByTestId("vue-artifact-close").click();
     await expect(artifactsPanel).toBeHidden();
 
     await openArtifact(page);
@@ -247,5 +244,42 @@ test.describe("Artifacts panel resize", () => {
     })();
 
     expect(transitionDuringDrag).not.toContain("flex-grow");
+  });
+
+  test("mobile artifact sheet stays inside the viewport and resizes by height", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/workspace/chats/${THREAD_ID}`);
+    await openArtifact(page);
+
+    const artifactsPanel = page.locator("#artifacts");
+    const group = page.locator('[data-slot="resizable-panel-group"]');
+    const handle = page.locator('[data-slot="resizable-handle"]');
+    await expect(artifactsPanel).toBeVisible();
+    await expect(handle).toHaveAttribute("data-axis", "vertical");
+
+    const width = await panelWidth(artifactsPanel);
+    const heightBefore = (await artifactsPanel.boundingBox())?.height ?? 0;
+    const handleBox = await handle.boundingBox();
+    expect(handleBox).not.toBeNull();
+    const mouse = page.mouse;
+    await mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
+    await mouse.down();
+    await mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y - 120, { steps: 10 });
+    await mouse.up();
+
+    await expect.poll(async () => (await artifactsPanel.boundingBox())?.height ?? 0).toBeGreaterThan(heightBefore + 60);
+    const metrics = await page.evaluate(() => ({
+      bodyScrollWidth: document.body.scrollWidth,
+      viewportWidth: window.innerWidth,
+    }));
+    expect(width).toBeLessThanOrEqual(390);
+    expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(metrics.viewportWidth);
+    await page.screenshot({ path: "test-results/artifact-panel-mobile.png" });
+
+    await artifactsPanel.getByTestId("vue-artifact-close").click();
+    await expect(artifactsPanel).toBeHidden();
+    await openArtifact(page);
+    await expect.poll(async () => (await artifactsPanel.boundingBox())?.height ?? 0).toBeGreaterThan(heightBefore + 60);
+    await expect(group).toBeVisible();
   });
 });

@@ -10,7 +10,7 @@ test.describe("Integrations settings", () => {
 
     await page.goto("/workspace/chats/new?settings=integrations");
 
-    const dialog = page.getByRole("dialog", { name: "Settings" });
+    const dialog = page.getByTestId("vue-settings-dialog");
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText("Lark / Feishu CLI")).toBeVisible();
   });
@@ -22,16 +22,16 @@ test.describe("Integrations settings", () => {
 
     // Deep link opens the shared dialog on Integrations.
     await page.goto("/workspace/chats/new?settings=integrations");
-    const dialog = page.getByRole("dialog", { name: "Settings" });
+    const dialog = page.getByTestId("vue-settings-dialog");
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText("Lark / Feishu CLI")).toBeVisible();
-    await expect(page.getByRole("dialog", { name: "Settings" })).toHaveCount(1);
+    await expect(page.getByTestId("vue-settings-dialog")).toHaveCount(1);
 
     // Close the modal before using the sidebar. While the modal is open, the
     // background is intentionally inert and Playwright should not be able to
     // click sidebar controls there.
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog", { name: "Settings" })).toHaveCount(0);
+    await expect(page.getByTestId("vue-settings-dialog")).toHaveCount(0);
 
     // Opening again from the nav menu must still use the same shared host, not
     // mount a second SettingsDialog instance.
@@ -40,7 +40,7 @@ test.describe("Integrations settings", () => {
     await page.getByRole("menuitem", { name: "Settings" }).click();
 
     // Exactly one Settings dialog is mounted/visible at any time.
-    await expect(page.getByRole("dialog", { name: "Settings" })).toHaveCount(1);
+    await expect(page.getByTestId("vue-settings-dialog")).toHaveCount(1);
   });
 
   test("can install the Lark integration skill pack from settings", async ({
@@ -101,9 +101,9 @@ test.describe("Integrations settings", () => {
     await sidebar.getByRole("button", { name: /Settings and more/ }).click();
     await page.getByRole("menuitem", { name: "Settings" }).click();
 
-    const dialog = page.getByRole("dialog", { name: "Settings" });
+    const dialog = page.getByTestId("vue-settings-dialog");
     await expect(dialog).toBeVisible();
-    await dialog.getByRole("button", { name: "Integrations" }).click();
+    await page.getByTestId("vue-settings-nav-integrations").click();
 
     await expect(dialog.getByText("Lark / Feishu CLI")).toBeVisible();
     await expect(
@@ -124,7 +124,7 @@ test.describe("Integrations settings", () => {
 
     await dialog.getByRole("button", { name: "Calendar" }).click();
     await dialog
-      .getByLabel("Exact OAuth scope")
+      .getByTestId("vue-settings-integrations-lark-auth-scope")
       .fill("calendar:calendar.event:read");
     await dialog.getByRole("button", { name: "Connect Lark" }).click();
     await expect(dialog.getByText("about:blank")).toBeVisible();
@@ -157,7 +157,7 @@ test.describe("Integrations settings", () => {
     ).toHaveCount(0);
 
     await dialog.getByRole("button", { name: "Calendar" }).click();
-    await dialog.getByLabel("Exact OAuth scope").fill("");
+    await dialog.getByTestId("vue-settings-integrations-lark-auth-scope").fill("");
     await dialog.getByRole("button", { name: "Reconnect Lark" }).click();
     await expect(
       dialog.getByText("https://open.feishu.cn/auth/mock-device"),

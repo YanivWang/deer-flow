@@ -36,6 +36,27 @@ export type CompactThreadContextInput = {
   modelName?: string | null;
 };
 
+export type ThreadRunPreparation = {
+  input: Record<string, unknown>;
+  checkpoint: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+};
+
+export type ThreadUploadLimits = {
+  max_files: number;
+  max_file_size: number;
+  max_total_size: number;
+};
+
+export type ThreadUploadResult = {
+  files?: Array<{
+    filename: string;
+    size: number;
+    path: string;
+    virtual_path?: string;
+  }>;
+};
+
 const JSON_HEADERS = {
   "Content-Type": "application/json",
 };
@@ -121,6 +142,61 @@ export async function patchThreadMetadata(
       ...options,
     },
   );
+}
+
+export async function prepareThreadRun(
+  threadId: string,
+  path: "/runs/regenerate/prepare" | "/runs/edit-regenerate/prepare",
+  body: Record<string, unknown>,
+  options: ThreadClientOptions = {},
+): Promise<ThreadRunPreparation> {
+  return fetchThreadJson<ThreadRunPreparation>(
+    `/api/threads/${encodeURIComponent(threadId)}${path}`,
+    { body: JSON.stringify(body), method: "POST", ...options },
+  );
+}
+
+export async function createThreadBranch(
+  threadId: string,
+  messageId: string,
+  options: ThreadClientOptions = {},
+): Promise<{ thread_id?: string }> {
+  return fetchThreadJson<{ thread_id?: string }>(
+    `/api/threads/${encodeURIComponent(threadId)}/branches`,
+    { body: JSON.stringify({ message_id: messageId }), method: "POST", ...options },
+  );
+}
+
+export async function getThreadUploadLimits(
+  threadId: string,
+  options: ThreadClientOptions = {},
+): Promise<ThreadUploadLimits> {
+  return fetchThreadJson<ThreadUploadLimits>(
+    `/api/threads/${encodeURIComponent(threadId)}/uploads/limits`,
+    { method: "GET", ...options },
+  );
+}
+
+export async function uploadThreadFiles(
+  threadId: string,
+  files: readonly File[],
+  options: ThreadClientOptions = {},
+): Promise<ThreadUploadResult> {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append("files", file);
+  }
+  const response = await fetch(`/api/threads/${encodeURIComponent(threadId)}/uploads`, {
+    credentials: "include",
+    headers: options.headers,
+    method: "POST",
+    signal: options.signal,
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error(await readResponseErrorMessage(response, "Upload failed"));
+  }
+  return await response.json() as ThreadUploadResult;
 }
 
 export async function deleteThread(

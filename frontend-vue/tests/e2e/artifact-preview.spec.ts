@@ -7,6 +7,8 @@ const MARKDOWN_ARTIFACT_PATH = "/artifact-fixtures/report.md";
 const JSON_ARTIFACT_PATH = "/artifact-fixtures/report.json";
 const PRESENTED_ARTIFACT_PATH = "/mnt/user-data/outputs/presented-report.md";
 const PDF_ARTIFACT_PATH = "/artifact-fixtures/report.pdf";
+const IMAGE_ARTIFACT_PATH = "/mnt/user-data/outputs/broken-image.png";
+const AUDIO_ARTIFACT_PATH = "/mnt/user-data/outputs/broken-audio.mp3";
 const VIDEO_ARTIFACT_PATH = "/mnt/user-data/outputs/dancer-video.mp4";
 const IN_PROGRESS_THREAD_ID = "00000000-0000-0000-0000-000000003119";
 const COMPLETE_THREAD_ID = "00000000-0000-0000-0000-000000003120";
@@ -16,6 +18,8 @@ const JSON_THREAD_ID = "00000000-0000-0000-0000-000000003122";
 const PRESENTED_THREAD_ID = "00000000-0000-0000-0000-000000003123";
 const PERSISTED_PANEL_THREAD_ID = "00000000-0000-0000-0000-000000003125";
 const PDF_THREAD_ID = "00000000-0000-0000-0000-000000003124";
+const IMAGE_THREAD_ID = "00000000-0000-0000-0000-000000003126";
+const AUDIO_THREAD_ID = "00000000-0000-0000-0000-000000003127";
 const VIDEO_THREAD_ID = "00000000-0000-0000-0000-000000003125";
 
 function writeFileMessages({
@@ -452,5 +456,45 @@ test.describe("Artifact preview stability", () => {
 
     const videoRequest = await videoRequestPromise;
     expect(videoRequest.headers().origin).not.toBe("null");
+  });
+
+  test("shows a visible error when an image artifact cannot be decoded", async ({ page }) => {
+    mockLangGraphAPI(page, {
+      threads: [
+        {
+          thread_id: IMAGE_THREAD_ID,
+          title: "Broken image artifact preview",
+          messages: writeFileMessages({ path: IMAGE_ARTIFACT_PATH, content: "not an image" }),
+        },
+      ],
+    });
+
+    await page.goto(`/workspace/chats/${IMAGE_THREAD_ID}`);
+    await expect(page.getByRole("button", { name: IMAGE_ARTIFACT_PATH })).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: IMAGE_ARTIFACT_PATH }).click();
+
+    const artifactsPanel = page.locator("#artifacts");
+    await expect(artifactsPanel.locator("img")).toBeVisible();
+    await expect(artifactsPanel.getByTestId("vue-artifact-media-error")).toBeVisible();
+  });
+
+  test("shows a visible error when an audio artifact cannot be decoded", async ({ page }) => {
+    mockLangGraphAPI(page, {
+      threads: [
+        {
+          thread_id: AUDIO_THREAD_ID,
+          title: "Broken audio artifact preview",
+          messages: writeFileMessages({ path: AUDIO_ARTIFACT_PATH, content: "not audio" }),
+        },
+      ],
+    });
+
+    await page.goto(`/workspace/chats/${AUDIO_THREAD_ID}`);
+    await expect(page.getByRole("button", { name: AUDIO_ARTIFACT_PATH })).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: AUDIO_ARTIFACT_PATH }).click();
+
+    const artifactsPanel = page.locator("#artifacts");
+    await expect(artifactsPanel.locator("audio")).toBeVisible();
+    await expect(artifactsPanel.getByTestId("vue-artifact-media-error")).toBeVisible();
   });
 });

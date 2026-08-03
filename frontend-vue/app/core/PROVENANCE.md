@@ -24,46 +24,65 @@ core file equivalent.
 | Vue core file | Classification | Current reason |
 | --- | --- | --- |
 | `about/content.ts` | REWRITTEN | Vue-owned About content and fallback handling |
-| `api/agents/client.ts` | REWRITTEN | Gateway client used by Vue composables |
+| `api/agents/client.ts` | REWRITTEN | Gateway client used by Vue features |
 | `api/agents/types.ts` | DETYPED | Local agent contract types |
+| `api/browser/client.ts` | ADDED | Gateway REST navigation and browser stream URL client |
 | `api/channels/client.ts` | REWRITTEN | Gateway channel client |
 | `api/csrf.ts` | ADAPTED | Nuxt/browser CSRF boundary |
+| `api/features/client.ts` | ADDED | Feature capability client |
+| `api/input-polish/client.ts` | ADDED | Composer input-polish client |
 | `api/integrations/lark.ts` | REWRITTEN | Gateway-shaped Lark integration client |
 | `api/mcp/client.ts` | REWRITTEN | Gateway MCP client |
 | `api/memory/client.ts` | REWRITTEN | Gateway memory client |
+| `api/models/client.ts` | ADDED | Gateway model capability client |
 | `api/scheduled-tasks/client.ts` | REWRITTEN | Gateway scheduler client |
+| `api/sidecar/client.ts` | ADDED | Sidecar thread and run client |
 | `api/skills/client.ts` | REWRITTEN | Gateway skills client |
-| `api/stream/adapters/deerflow-gateway.ts` | ADDED | Gateway event adapter |
-| `api/stream/canonical.ts` | ADDED | Vue stream canonical event model |
-| `api/stream/client.ts` | ADDED | Handwritten fetch/SSE client |
-| `api/stream/codec/deerflow-wire.ts` | ADDED | Gateway wire codec |
-| `api/stream/engine.ts` | ADDED | Framework-neutral ThreadStreamEngine |
-| `api/stream/gap-recovery.ts` | ADDED | Replay-gap recovery policy |
-| `api/stream/reducer.ts` | ADDED | Vue stream state reducer |
-| `api/stream/transport/fetch-sse.ts` | ADDED | Fetch-based SSE transport |
-| `api/stream/transport/parse-sse-event.ts` | ADDED | SSE event parser |
-| `api/stream/transport/sse-buffer.ts` | ADDED | Incremental SSE buffer |
-| `api/stream/transport/sse-event.ts` | ADDED | SSE event contract |
-| `api/stream/transport/stream-error.ts` | ADDED | Stream transport errors |
-| `api/stream/view-model.ts` | ADDED | Vue stream view-model projection |
 | `api/thread/client.ts` | REWRITTEN | Gateway thread client |
 | `api/thread/types.ts` | DETYPED | Local thread contract types |
 | `api/thread/utils.ts` | REWRITTEN | Vue thread utilities |
+| `api/workspace-changes/client.ts` | ADDED | Workspace change summary client |
 | `artifacts/loader.ts` | DEMOCKED | Real artifact loading and fallback behavior |
 | `artifacts/preview.ts` | REWRITTEN | Vue artifact preview paths |
 | `artifacts/utils.ts` | DEMOCKED | Real artifact path and resource handling |
+| `auth/auth-disabled-user.ts` | ADDED | Auth-disabled runtime user identity fallback |
 | `auth/client.ts` | ADAPTED | Browser auth/session boundary |
-| `auth/proxy-policy.ts` | ADDED | Explicit LangGraph proxy header/path/CSRF policy |
+| `security/gateway-proxy-policy.ts` | ADDED | Explicit LangGraph proxy header/path/CSRF policy |
 | `i18n/index.ts` | ADAPTED | Nuxt i18n plugin state boundary |
 | `i18n/locales/en-US.ts` | DETYPED | Full React locale data adapted to Vue icon components |
 | `i18n/locales/types.ts` | DETYPED | Locale contract adapted from Lucide React to Vue components |
 | `i18n/locales/zh-CN.ts` | DETYPED | Full React locale data adapted to Vue icon components |
 | `i18n/messages.ts` | REWRITTEN | Current Vue-owned message scaffold |
+| `i18n/use-app-i18n.ts` | ADDED | Vue composable for locale message access |
 | `messages/human-input.ts` | DETYPED | Local human-input contract |
-| `messages/rich-content.ts` | REWRITTEN | Vue rich-content renderer |
+| `messages/rich-content/index.ts` | REWRITTEN | Vue rich-content renderer entrypoint |
+| `messages/rich-content/block-parser.ts` | ADDED | Block-level markdown parser owner |
+| `messages/rich-content/citations.ts` | ADDED | Citation source projection owner |
+| `messages/rich-content/constants.ts` | ADDED | Rich-content parser constants and regular expressions |
+| `messages/rich-content/inline-parser.ts` | ADDED | Inline markdown token parser owner |
+| `messages/rich-content/markdown-safety.ts` | ADDED | Streaming and pathological-markdown safety owner |
+| `messages/rich-content/math.ts` | ADDED | KaTeX rendering and delimiter normalization owner |
+| `messages/rich-content/mermaid.ts` | ADDED | Mermaid source normalization owner |
+| `messages/rich-content/sanitizer.ts` | ADDED | Safe HTML, href, entity, and marker sanitization owner |
+| `messages/rich-content/streaming-reveal.ts` | ADDED | Incremental reveal projection owner |
+| `messages/rich-content/tables.ts` | ADDED | GFM table parsing and alignment owner |
+| `messages/rich-content/types.ts` | ADDED | Rich-content block and inline contracts |
 | `messages/tool-cards.ts` | REWRITTEN | Vue tool-card view model |
 | `settings/local.ts` | REWRITTEN | Browser-local settings state |
 | `settings/preferences.ts` | REWRITTEN | Vue preference persistence |
+| `protocol/stream/canonical.ts` | ADDED | Framework-neutral canonical stream event model |
+| `protocol/stream/codec/deerflow-wire.ts` | ADDED | Gateway wire codec |
+| `stream/adapters/deerflow-gateway.ts` | ADDED | Gateway event adapter |
+| `stream/client.ts` | ADDED | Handwritten fetch/SSE client |
+| `stream/engine.ts` | ADDED | Framework-neutral ThreadStreamEngine |
+| `stream/gap-recovery.ts` | ADDED | Replay-gap recovery policy |
+| `stream/reducer.ts` | ADDED | Vue stream state reducer |
+| `stream/transport/fetch-sse.ts` | ADDED | Fetch-based SSE transport |
+| `stream/transport/parse-sse-event.ts` | ADDED | SSE event parser |
+| `stream/transport/sse-buffer.ts` | ADDED | Incremental SSE buffer |
+| `stream/transport/sse-event.ts` | ADDED | SSE event contract |
+| `stream/transport/stream-error.ts` | ADDED | Stream transport errors |
+| `stream/view-model.ts` | ADDED | Vue stream view-model projection |
 | `threads/coalesce.ts` | ADDED | Framework-neutral render coalescing policy |
 | `threads/composer-draft.ts` | ADAPTED | Session-scoped composer draft contract |
 | `utils/id.ts` | DETYPED | Local UUID/secure-context fallback |

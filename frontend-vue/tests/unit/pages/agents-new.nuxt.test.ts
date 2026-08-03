@@ -5,7 +5,7 @@ import { computed, ref, type ComputedRef, type Ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import NewAgentPage from "../../../app/pages/workspace/agents/new.vue";
-import type { StreamViewMessage } from "../../../app/core/api/stream/view-model";
+import type { StreamViewMessage } from "../../../app/core/stream/view-model";
 
 type StreamMock = {
   isBusy: Ref<boolean>;
@@ -32,6 +32,7 @@ describe("agents new page", () => {
   });
 
   afterEach(() => {
+    window.localStorage.removeItem("deerflow.agent-create.save-hint-seen");
     vi.restoreAllMocks();
   });
 
@@ -105,6 +106,7 @@ describe("agents new page", () => {
     await flushPromises();
     nuxtMocks.stream?.sendMessage.mockClear();
 
+    await wrapper.get('[data-testid="vue-new-agent-more"]').trigger("click");
     await wrapper.get('[data-testid="vue-new-agent-save"]').trigger("click");
     await flushPromises();
 
@@ -151,6 +153,59 @@ describe("agents new page", () => {
 
     await wrapper.get('[data-testid="vue-new-agent-back"]').trigger("click");
 
+    expect(pushSpy).toHaveBeenCalledWith("/workspace/agents");
+  });
+
+  it("shows the one-time save hint and exposes the save action through the more menu", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(Response.json({ agents_api: { enabled: true } }))
+        .mockResolvedValueOnce(Response.json({ available: true, name: "researcher" })),
+    );
+    const wrapper = await mountSuspended(NewAgentPage, { route: "/workspace/agents/new" });
+
+    await wrapper.get('[data-testid="vue-new-agent-name"]').setValue("researcher");
+    await wrapper.get('[data-testid="vue-new-agent-continue"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="vue-new-agent-save-hint"]').attributes("role")).toBe("status");
+    expect(wrapper.get('[data-testid="vue-new-agent-more"]').text()).toBe("更多");
+    await wrapper.get('[data-testid="vue-new-agent-more"]').trigger("click");
+    expect(wrapper.get('[data-testid="vue-new-agent-save"]').attributes("role")).toBe("menuitem");
+    expect(window.localStorage.getItem("deerflow.agent-create.save-hint-seen")).toBe("1");
+  });
+
+  it("offers a gallery route after the agent is created", async () => {
+    const router = useRouter();
+    const pushSpy = vi.spyOn(router, "push").mockResolvedValue();
+    const messages = ref<StreamViewMessage[]>([]);
+    const status = ref("idle");
+    nuxtMocks.stream = createStreamMock({ messages, status });
+    const fetchMock = vi
+      .fn<[], Promise<Response>>()
+      .mockResolvedValueOnce(Response.json({ agents_api: { enabled: true } }))
+      .mockResolvedValueOnce(Response.json({ available: true, name: "researcher" }))
+      .mockResolvedValueOnce(Response.json({ name: "researcher", description: "Research helper" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const wrapper = await mountSuspended(NewAgentPage, { route: "/workspace/agents/new" });
+    await wrapper.get('[data-testid="vue-new-agent-name"]').setValue("researcher");
+    await wrapper.get('[data-testid="vue-new-agent-continue"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="vue-new-agent-more"]').trigger("click");
+    await wrapper.get('[data-testid="vue-new-agent-save"]').trigger("click");
+
+    messages.value = [
+      viewMessage({ id: "ai-1", type: "ai", tool_calls: [{ id: "call-1", name: "setup_agent" }] }),
+      viewMessage({ id: "tool-1", type: "tool", tool_call_id: "call-1", content: "OK" }),
+    ];
+    status.value = "completed";
+    await flushPromises();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="vue-new-agent-back-to-gallery"]').trigger("click");
     expect(pushSpy).toHaveBeenCalledWith("/workspace/agents");
   });
 });

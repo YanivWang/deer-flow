@@ -11,7 +11,10 @@ function filesUnder(directory: string): string[] {
 
 describe("stream core guard", () => {
   it("does not import Vue from the framework-neutral stream core", () => {
-    const files = filesUnder(join(process.cwd(), "app/core/api/stream"));
+    const files = [
+      ...filesUnder(join(process.cwd(), "app/core/stream")),
+      ...filesUnder(join(process.cwd(), "app/core/protocol/stream")),
+    ];
     const offenders = files.filter((file) => {
       const source = readFileSync(file, "utf8");
       return /from ["']vue["']|from ["']#imports["']|from ["']nuxt/.test(source);

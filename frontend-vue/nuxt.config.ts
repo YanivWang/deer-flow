@@ -41,7 +41,22 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ["@pinia/nuxt", "@ant-design-vue/nuxt", "@nuxt/eslint"],
   components: [{ path: "~/components", pathPrefix: false }],
-  css: ["~/assets/styles/main.scss"],
+  imports: {
+    dirs: [
+      "~/core/i18n/messages.ts",
+      "~/core/i18n/use-app-i18n.ts",
+      "~/entities/thread/use-local-thread-settings.ts",
+      "~/entities/thread/use-thread-compaction.ts",
+      "~/entities/thread/use-thread-goal.ts",
+      "~/entities/thread/use-thread-history.ts",
+      "~/entities/thread/use-thread-list.ts",
+      "~/entities/thread/use-thread-stream.ts",
+      "~/entities/artifact/use-artifact-panel.ts",
+      "~/entities/artifact/use-artifact-content.ts",
+      "~/features/chat/send-message/use-composer-draft.ts",
+    ],
+  },
+  css: ["~/shared/styles/main.scss"],
   runtimeConfig: {
     gatewayUrl,
     public: {
@@ -67,7 +82,7 @@ export default defineNuxtConfig({
     css: {
       preprocessorOptions: {
         scss: {
-          additionalData: '@use "~/assets/styles/tokens/variables" as *;',
+          additionalData: '@use "~/shared/styles/tokens/variables" as *;',
         },
       },
     },

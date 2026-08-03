@@ -24,3 +24,11 @@ export async function loadArtifactContent({
   }
   return { content, filepath, url };
 }
+
+export async function loadArtifactResourceBlob(url: string, signal?: AbortSignal): Promise<Blob> {
+  const response = await fetch(url, { credentials: "include", signal });
+  if (!response.ok) {
+    throw new Error(`加载产物资源失败（${response.status}）。`);
+  }
+  return await response.blob();
+}

@@ -51,9 +51,9 @@ async function openNotificationSettings(page: Page) {
   const sidebar = page.locator("[data-sidebar='sidebar']");
   await sidebar.getByRole("button", { name: /Settings and more/ }).click();
   await page.getByRole("menuitem", { name: "Settings" }).click();
-  const dialog = page.getByRole("dialog", { name: "Settings" });
+  const dialog = page.getByTestId("vue-settings-dialog");
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Notification" }).click();
+  await page.getByTestId("vue-settings-nav-notification").click();
   return dialog;
 }
 
@@ -66,15 +66,15 @@ test.describe("Notification settings", () => {
 
     const dialog = await openNotificationSettings(page);
     await dialog
-      .getByRole("button", { name: "Request notification permission" })
+      .getByTestId("vue-settings-notification-request")
       .click();
 
     await expect(
-      dialog.getByRole("switch", { name: "Notification" }),
+      dialog.getByTestId("vue-settings-notification-toggle"),
     ).toBeChecked();
 
     await dialog
-      .getByRole("button", { name: "Send test notification" })
+      .getByTestId("vue-settings-notification-test")
       .click();
 
     await expect

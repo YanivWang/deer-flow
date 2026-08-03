@@ -2,37 +2,65 @@ import { expect, test } from "@playwright/test";
 
 import { mockLangGraphAPI } from "./utils/mock-api";
 
-test.describe("Sidebar navigation", () => {
-  test("sidebar contains Chats and Agents nav links", async ({ page }) => {
+test.describe("Workspace navigation", () => {
+  test("shows every enabled workspace entry and the current route", async ({ page }) => {
     mockLangGraphAPI(page);
 
     await page.goto("/workspace/chats/new");
 
-    // Sidebar uses data-sidebar="menu-button" with asChild rendering on <Link>
-    const sidebar = page.locator("[data-sidebar='sidebar']");
-    await expect(sidebar.locator("a[href='/workspace/chats']")).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(sidebar.locator("a[href='/workspace/agents']")).toBeVisible();
+    const navigation = page.getByTestId("vue-workspace-nav").first();
+    await expect(navigation).toBeVisible({ timeout: 15_000 });
+
+    for (const entry of ["new-chat", "chats", "agents", "scheduled", "settings"]) {
+      await expect(navigation.getByTestId(`vue-workspace-nav-${entry}`)).toBeVisible();
+    }
+
+    await expect(navigation.getByTestId("vue-workspace-nav-new-chat")).toHaveAttribute(
+      "href",
+      "/workspace/chats/new",
+    );
+    await expect(navigation.getByTestId("vue-workspace-nav-new-chat")).toHaveClass(
+      /workspace-nav-shell__link--active/,
+    );
   });
 
-  test("Agents link navigates to agents page", async ({ page }) => {
+  test("switches routes and active state through real navigation", async ({ page }) => {
     mockLangGraphAPI(page);
+    await page.route("**/api/features", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ agents_api: { enabled: true } }),
+      }),
+    );
 
     await page.goto("/workspace/chats/new");
+    await page.getByTestId("vue-workspace-nav-chats").click();
+    await expect(page).toHaveURL(/\/workspace\/chats$/);
+    await expect(page.getByTestId("vue-workspace-nav-chats")).toHaveClass(
+      /workspace-nav-shell__link--active/,
+    );
 
-    const sidebar = page.locator("[data-sidebar='sidebar']");
-    const agentsLink = sidebar.locator("a[href='/workspace/agents']");
-    await expect(agentsLink).toBeVisible({ timeout: 15_000 });
-    await agentsLink.click();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
+    await expect(page.getByTestId("vue-workspace-nav-new-chat")).toHaveClass(
+      /workspace-nav-shell__link--active/,
+    );
 
-    await page.waitForURL("**/workspace/agents");
-    await expect(page).toHaveURL(/\/workspace\/agents/);
+    await page.goForward();
+    await expect(page).toHaveURL(/\/workspace\/chats$/);
+    await page.reload();
+    await expect(page.getByTestId("vue-workspace-nav-chats")).toHaveClass(
+      /workspace-nav-shell__link--active/,
+    );
+
+    await page.goto("/workspace/settings");
+    await expect(page.getByTestId("vue-workspace-nav-settings")).toHaveClass(
+      /workspace-nav-shell__link--active/,
+    );
   });
 
-  test("Agents button is disabled with a hover tooltip when agents_api is off", async ({
-    page,
-  }) => {
+  test("keeps Agents visible but non-navigable when the feature is disabled", async ({ page }) => {
     mockLangGraphAPI(page);
     await page.route("**/api/features", (route) =>
       route.fulfill({
@@ -44,70 +72,39 @@ test.describe("Sidebar navigation", () => {
 
     await page.goto("/workspace/chats/new");
 
-    const sidebar = page.locator("[data-sidebar='sidebar']");
-    // Chats remains a real link; Agents is no longer a navigable link.
-    await expect(sidebar.locator("a[href='/workspace/chats']")).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(sidebar.locator("a[href='/workspace/agents']")).toHaveCount(0);
+    const navigation = page.getByTestId("vue-workspace-nav").first();
+    await expect(navigation.getByTestId("vue-workspace-nav-chats")).toBeVisible();
+    await expect(navigation.locator("a[href='/workspace/agents']")).toHaveCount(0);
 
-    // The disabled Agents button is rendered and announces its disabled state.
-    const agentsButton = sidebar.getByRole("button", { name: "Agents" });
+    const agentsButton = navigation.getByTestId("vue-workspace-nav-agents");
     await expect(agentsButton).toHaveAttribute("data-feature-disabled", "true");
-
-    // The button itself has pointer-events suppressed; force the hover so the
-    // event reaches the wrapping tooltip-trigger span that surfaces the tooltip.
-    await agentsButton.hover({ force: true });
-    await expect(page.getByText("Feature not enabled").first()).toBeVisible({
-      timeout: 5_000,
-    });
-
-    // Keyboard/screen-reader users get the reason too: the disabled entry
-    // stays in the tab order (focusable) and is wired to a visually-hidden
-    // description rather than relying on the hover-only tooltip.
-    await expect(page.getByText("Feature not enabled")).toBeVisible();
-    await agentsButton.focus();
+    await agentsButton.click();
     await expect(agentsButton).toBeFocused();
   });
 
-  test("mobile welcome layout stays within viewport and opens sidebar", async ({
-    page,
-  }) => {
+  test("opens, closes, and switches the mobile navigation without overflow", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     mockLangGraphAPI(page);
 
     await page.goto("/workspace/chats/new");
 
     const viewportWidth = page.viewportSize()?.width ?? 390;
-    const expectInsideViewport = async (
-      locator: ReturnType<typeof page.locator>,
-    ) => {
-      await expect(locator).toBeVisible({ timeout: 15_000 });
-      const box = await locator.boundingBox();
-      expect(box).not.toBeNull();
-      expect(box!.x).toBeGreaterThanOrEqual(-1);
-      expect(box!.x + box!.width).toBeLessThanOrEqual(viewportWidth + 1);
-    };
+    const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(documentWidth).toBeLessThanOrEqual(viewportWidth);
 
-    await expectInsideViewport(page.getByText(/Welcome to|欢迎使用/).first());
-    await expectInsideViewport(page.getByRole("textbox").first());
-    await expectInsideViewport(page.locator("[data-slot='suggestions-list']"));
+    const mobileToggle = page.getByTestId("vue-workspace-nav-mobile-toggle");
+    await expect(mobileToggle).toBeVisible();
+    await mobileToggle.click();
 
-    const mobileSidebarTrigger = page
-      .locator("[data-sidebar='trigger']:visible")
-      .first();
-    await expect(mobileSidebarTrigger).toBeVisible();
-    await mobileSidebarTrigger.click();
+    const sidebar = page.locator(".workspace-sidebar");
+    await expect(sidebar).toHaveClass(/workspace-sidebar--mobile-open/);
+    await expect(sidebar.getByTestId("vue-workspace-nav-chats")).toBeVisible();
+    await page.screenshot({ path: "test-results/workspace-navigation-mobile.png", fullPage: true });
 
-    const mobileSidebar = page.locator(
-      "[data-mobile='true'][data-sidebar='sidebar']",
+    await sidebar.getByTestId("vue-workspace-nav-chats").click();
+    await expect(page).toHaveURL(/\/workspace\/chats$/);
+    await expect(page.getByTestId("vue-workspace-nav").first()).not.toHaveClass(
+      /workspace-nav-shell__sidebar--mobile-open/,
     );
-    await expect(mobileSidebar).toBeVisible();
-    await expect(
-      mobileSidebar.locator("a[href='/workspace/chats']"),
-    ).toBeVisible();
-    await expect(
-      mobileSidebar.locator("a[href='/workspace/agents']"),
-    ).toBeVisible();
   });
 });

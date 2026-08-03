@@ -12,7 +12,7 @@ import {
   parseRichContent,
   parseRichInline,
   stripLeakedSystemTags,
-} from "../../../../app/core/messages/rich-content";
+} from "../../../../app/core/messages/rich-content/index";
 
 describe("rich message content", () => {
   it("parses markdown paragraphs, lists, code fences, and inline code", () => {
@@ -73,6 +73,37 @@ describe("rich message content", () => {
         type: "image",
       },
     ]);
+  });
+
+  it("decodes the full HTML5 named-reference table through the parser dependency", () => {
+    expect(parseRichInline("Aacute: &Aacute;, contour: &CounterClockwiseContourIntegral;"))
+      .toEqual([
+        { text: "Aacute: Á, contour: ∳", type: "text" },
+      ]);
+  });
+
+  it("completes incomplete streaming markdown without exposing placeholder links", () => {
+    const blocks = parseRichContent(
+      "**partial\n\n[visible](https://example.com/incomplete",
+      {},
+      { streaming: true },
+    );
+
+    expect(blocks[0]).toMatchObject({
+      parts: [{ parts: [{ text: "partial", type: "text" }], type: "strong" }],
+      type: "paragraph",
+    });
+    expect(blocks[1]).toEqual({
+      parts: [{ text: "visible", type: "text" }],
+      type: "paragraph",
+    });
+  });
+
+  it("keeps escaped brackets literal while normalizing real display-math delimiters", () => {
+    const source = String.raw`Literal \\[not math\\] and \\[x^2\\]`;
+
+    expect(normalizeLatexMathDelimiters(source)).toBe(source);
+    expect(normalizeLatexMathDelimiters(String.raw`Real \[x^2\]`)).toBe("Real $$x^2$$");
   });
 
   it("parses React Streamdown remark-gfm-backed URL and email autolink literals", () => {
