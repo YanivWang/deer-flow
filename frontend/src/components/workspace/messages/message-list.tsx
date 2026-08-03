@@ -1152,6 +1152,8 @@ export function MessageList({
                       <MarkdownContent
                         content={extractContentFromMessage(message)}
                         isLoading={thread.isLoading}
+                        threadId={threadId}
+                        artifactPaths={artifactPaths}
                       />
                       {renderTokenUsage({
                         messages: group.messages,
@@ -1179,6 +1181,8 @@ export function MessageList({
                         content={extractContentFromMessage(group.messages[0])}
                         isLoading={thread.isLoading}
                         className="mb-4"
+                        threadId={threadId}
+                        artifactPaths={artifactPaths}
                       />
                     )}
                     <ArtifactFileList files={files} threadId={threadId} />

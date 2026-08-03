@@ -250,17 +250,16 @@ export function rewriteHtmlPreviewResourceUrls(
   }
 
   const baseHref = htmlBaseHref(url, currentHref);
-  const baseElement = `<base href="${escapeHtmlAttribute(baseHref)}">`;
-  // "(?:\s[^>]*)?" keeps the tag-name boundary so `<header>` (a common
-  // leading tag in agent-generated fragments) is not mistaken for `<head>`;
-  // mirrors appendHtmlPreviewScrollRestoration below.
-  if (/<head(?:\s[^>]*)?>/i.test(content)) {
-    return content.replace(
-      /<head(?:\s[^>]*)?>/i,
-      (headTag) => `${headTag}${baseElement}`,
-    );
-  }
-  return `${baseElement}${content}`;
+  const withStyleBlocks = content.replace(
+    /(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi,
+    (_, openTag: string, css: string, closeTag: string) =>
+      `${openTag}${rewriteCssResourceUrls(css, baseHref, resourceUrlMap)}${closeTag}`,
+  );
+
+  return withStyleBlocks.replace(
+    /<\s*[a-z][\w:-]*(?:\s+(?:[^>"']|"[^"]*"|'[^']*')*)?\s*\/?>/gi,
+    (tag) => rewriteHtmlResourceTag(tag, baseHref, resourceUrlMap),
+  );
 }
 
 function htmlBaseHref(url: string, currentHref: string) {

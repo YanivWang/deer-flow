@@ -302,10 +302,7 @@ test("injects scroll restoration at the start of the HTML head", () => {
 test("preserves existing head elements when injecting scroll restoration", () => {
   const html =
     '<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="script-src \'none\'"></head><body><main>content</main></body></html>';
-  const result = appendHtmlPreviewScrollRestoration(
-    html,
-    ARTIFACT_PATH,
-  );
+  const result = appendHtmlPreviewScrollRestoration(html, ARTIFACT_PATH);
 
   expect(result).toContain('<meta http-equiv="Content-Security-Policy"');
   expect(
@@ -380,7 +377,13 @@ test("collects HTML preview resource references before rewriting", () => {
     collectHtmlPreviewResourceUrls(
       '<html><head><link rel="stylesheet" href="style.css"><style>.hero{background:url(texture.png)}</style></head><body><a href="page.html">link</a><img src="portrait.jpg" srcset="small.jpg 1x, large.jpg 2x"></body></html>',
     ),
-  ).toEqual(["texture.png", "style.css", "portrait.jpg", "small.jpg", "large.jpg"]);
+  ).toEqual([
+    "texture.png",
+    "style.css",
+    "portrait.jpg",
+    "small.jpg",
+    "large.jpg",
+  ]);
 });
 
 test("resolves HTML preview resource references against the artifact file", () => {
@@ -406,39 +409,6 @@ test("leaves external and inline HTML preview resources alone", () => {
       "http://localhost/workspace/chats/thread-1",
     ),
   ).toBe(html);
-});
-
-test("does not mistake <header> for <head> when injecting the base href", () => {
-  // Agent-generated fragments often have no <head> but open with <header>;
-  // the base must then be prepended so assets before the tag resolve too.
-  const html =
-    '<img src="logo.png"><header class="top">Report</header><main>content</main>';
-
-  const result = appendHtmlPreviewBaseHref(
-    html,
-    "/demo/threads/thread-1/user-data/outputs/report.html",
-    "http://localhost/workspace/chats/thread-1",
-  );
-
-  expect(result).toBe(
-    '<base href="http://localhost/demo/threads/thread-1/user-data/outputs/">' +
-      html,
-  );
-});
-
-test("injects the base href inside an attributed <head> tag", () => {
-  const html =
-    '<!doctype html><html><head lang="en"><meta charset="utf-8"></head><body>x</body></html>';
-
-  const result = appendHtmlPreviewBaseHref(
-    html,
-    "/demo/threads/thread-1/user-data/outputs/report.html",
-    "http://localhost/workspace/chats/thread-1",
-  );
-
-  expect(result).toContain(
-    '<head lang="en"><base href="http://localhost/demo/threads/thread-1/user-data/outputs/">',
-  );
 });
 
 test("does not duplicate HTML scroll restoration script", () => {

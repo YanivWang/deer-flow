@@ -193,11 +193,6 @@ export function ArtifactFileDetail({
     }
     return findToolCallResult(toolCallId, thread.messages);
   })();
-  const artifactViewState = getArtifactViewState({
-    filepath: filepathFromProps,
-    isSupportPreview,
-    toolResult,
-  });
   const {
     content,
     url,
@@ -698,11 +693,12 @@ export function ArtifactFileDetail({
                 {visibleContent}
               </pre>
             )}
-          {!isCodeFile && canPreviewInBrowser && (
-            <iframe
-              className="size-full"
-              sandbox=""
-              src={urlOfArtifact({ filepath, threadId, isMock })}
+          {!isCodeFile && canPreviewInBrowser && browserPreviewKind && (
+            <ArtifactBrowserPreview
+              filepath={filepath}
+              kind={browserPreviewKind}
+              threadId={threadId}
+              isMock={isMock}
             />
           )}
           {!isCodeFile && !canPreviewInBrowser && (
@@ -760,6 +756,61 @@ function formatArtifactBytes(bytes: number | undefined) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+}
+
+function ArtifactBrowserPreview({
+  filepath,
+  kind,
+  threadId,
+  isMock,
+}: {
+  filepath: string;
+  kind: NonNullable<ReturnType<typeof getBrowserPreviewKind>>;
+  threadId: string;
+  isMock?: boolean;
+}) {
+  const src = urlOfArtifact({ filepath, threadId, isMock });
+
+  if (kind === "image") {
+    return (
+      <div className="bg-background flex size-full items-center justify-center">
+        <img
+          alt={getFileName(filepath)}
+          className="max-h-full max-w-full object-contain"
+          src={src}
+        />
+      </div>
+    );
+  }
+
+  if (kind === "audio") {
+    return (
+      <div className="bg-background flex size-full items-center justify-center p-6">
+        <audio
+          aria-label={getFileName(filepath)}
+          className="w-full max-w-xl"
+          controls
+          preload="metadata"
+          src={src}
+        />
+      </div>
+    );
+  }
+
+  if (kind === "video") {
+    return (
+      <video
+        aria-label={getFileName(filepath)}
+        className="size-full bg-black object-contain"
+        controls
+        playsInline
+        preload="metadata"
+        src={src}
+      />
+    );
+  }
+
+  return <iframe className="size-full" sandbox="" src={src} />;
 }
 
 function ArtifactDownloadFallback({
@@ -1039,7 +1090,9 @@ function blobToDataUrl(blob: Blob) {
       reject(new Error("Failed to read HTML preview resource."));
     };
     reader.onerror = () => {
-      reject(reader.error ?? new Error("Failed to read HTML preview resource."));
+      reject(
+        reader.error ?? new Error("Failed to read HTML preview resource."),
+      );
     };
     reader.readAsDataURL(blob);
   });
