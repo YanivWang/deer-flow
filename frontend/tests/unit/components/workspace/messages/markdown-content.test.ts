@@ -115,14 +115,10 @@ describe("MarkdownContent streaming animation", () => {
 
 describe("MarkdownContent images", () => {
   it("resolves relative message images against thread artifacts", () => {
-    const html = renderMarkdown(
-      "![二次元美女](anime-beauty.jpg)",
-      false,
-      {
-        threadId: "thread-1",
-        artifactPaths: [],
-      },
-    );
+    const html = renderMarkdown("![二次元美女](anime-beauty.jpg)", false, {
+      threadId: "thread-1",
+      artifactPaths: [],
+    });
 
     expect(html).toContain(
       'href="/api/threads/thread-1/artifacts/mnt/user-data/outputs/anime-beauty.jpg"',
