@@ -250,16 +250,17 @@ export function rewriteHtmlPreviewResourceUrls(
   }
 
   const baseHref = htmlBaseHref(url, currentHref);
-  const withStyleBlocks = content.replace(
-    /(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi,
-    (_, openTag: string, css: string, closeTag: string) =>
-      `${openTag}${rewriteCssResourceUrls(css, baseHref, resourceUrlMap)}${closeTag}`,
-  );
-
-  return withStyleBlocks.replace(
-    /<\s*[a-z][\w:-]*(?:\s+(?:[^>"']|"[^"]*"|'[^']*')*)?\s*\/?>/gi,
-    (tag) => rewriteHtmlResourceTag(tag, baseHref, resourceUrlMap),
-  );
+  const baseElement = `<base href="${escapeHtmlAttribute(baseHref)}">`;
+  // "(?:\s[^>]*)?" keeps the tag-name boundary so `<header>` (a common
+  // leading tag in agent-generated fragments) is not mistaken for `<head>`;
+  // mirrors appendHtmlPreviewScrollRestoration below.
+  if (/<head(?:\s[^>]*)?>/i.test(content)) {
+    return content.replace(
+      /<head(?:\s[^>]*)?>/i,
+      (headTag) => `${headTag}${baseElement}`,
+    );
+  }
+  return `${baseElement}${content}`;
 }
 
 function htmlBaseHref(url: string, currentHref: string) {
@@ -375,7 +376,13 @@ function collectHtmlResourceTagUrls(tag: string) {
   const urls: string[] = [];
   tag.replace(
     /(\s)(src|poster|srcset|href|style)(\s*=\s*)("[^"]*"|'[^']*'|[^\s"'=<>`]+)/gi,
-    (_match, _prefix: string, name: string, _separator: string, raw: string) => {
+    (
+      _match,
+      _prefix: string,
+      name: string,
+      _separator: string,
+      raw: string,
+    ) => {
       const lowerName = name.toLowerCase();
       if (lowerName === "href" && !rewritesHref) {
         return "";
@@ -397,7 +404,9 @@ function collectHtmlResourceTagUrls(tag: string) {
 
 function getHtmlAttribute(tag: string, name: string) {
   const match = new RegExp(
-    String.raw`\s${name}\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>` + "`" + String.raw`]+)`,
+    String.raw`\s${name}\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>` +
+      "`" +
+      String.raw`]+)`,
     "i",
   ).exec(tag);
   if (!match?.[1]) {
