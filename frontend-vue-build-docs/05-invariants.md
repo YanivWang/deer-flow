@@ -2,6 +2,8 @@
 
 **这是本方案里最重要的一份文档。**
 
+M-1 对这些不变式所依赖的 wire/status/auth 合同已经冻结在 [09-m1-contract-freeze.md](09-m1-contract-freeze.md)。
+
 `frontend/AGENTS.md` 记录的大量约束都是线上问题修复后沉淀下来的（#4465、#4555、#4576 等）。它们不会跟着组件自动迁移，是"看起来做完了但行为不对"的主要来源。
 
 移植每个模块前先读对应小节；实现完成后逐条对照。原始表述以 `frontend/AGENTS.md` 为准，本文是移植视角的提取。
@@ -214,7 +216,7 @@
 | **L13** | **abort 不等于 cancel** | 本地停止读取只能释放连接；用户点 stop 时必须显式调用 Gateway cancel/cancel-then-drain，并观察最终 session 状态 |
 | **L14** | **最终 checkpoint 不是流式 oracle** | 516 条消息只能验证最终 adapter/state；raw SSE trace 才验证 chunk、id、namespace、heartbeat、gap 与重连时序 |
 | **L15** | **完整 state 与消息同一次归约** | `values` 会带 messages、artifacts、todos、goal 等；不能只维护 message map，再让组件各自补业务状态 |
-| **L16** | **cancel 结果不能压成 `void`** | UI stop 先进入 `stopping`；200 SSE 要 drain 尾帧，202 accepted 要轮询 durable run，204/已确认终态才能显示 stopped。创建阶段无 handle 的断开是“不确定”，不是“已取消” |
+| **L16** | **cancel 结果不能压成 `void`** | UI stop 先进入 `stopping`；200 SSE 要 drain 尾帧，202 accepted 要轮询 durable run，204/已确认终态后再按 Gateway durable status 映射为 `cancelled`/`completed`/`failed`。创建阶段无 handle 的断开是“不确定”，不是“已取消” |
 
 同时，A 组（流式与重连）的全部约束仍然适用——自研 transport 不代表可以放弃那些语义，只是实现方从 SDK 变成了自己。
 

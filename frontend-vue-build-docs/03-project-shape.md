@@ -2,6 +2,8 @@
 
 项目位于仓库内的 `frontend-vue/`，与 `frontend/` 并存。并行运行与端口分配见 [07-parallel-run.md](07-parallel-run.md)。
 
+> M-1 已冻结：开发端口为 3100、E2E preview 为 3101；生产使用两个独立 hostname 的同源 ingress。完整合同见 [09](09-m1-contract-freeze.md)。
+
 ## 目录结构
 
 ```
@@ -15,6 +17,7 @@ frontend-vue/
 ├── components.json               # shadcn-vue CLI 配置
 ├── vitest.config.ts              # 双 project：node（纯 TS）+ nuxt（composable）
 ├── playwright.config.ts          # webServer 指向 nuxt preview :3101（独立端口）
+├── playwright.m0.config.ts       # M0 infra/proxy/auth/WS/OIDC/run-protocol 专用，不依赖业务页面
 ├── playwright.auth.config.ts     # 对应 frontend/ 的 auth 套件
 ├── playwright.real-backend.config.ts # 真实 Gateway：认证、续传、并发 run
 ├── playwright.visual.config.ts   # 6–10 个关键状态截图门禁
@@ -155,6 +158,13 @@ frontend-vue/
     ├── structural-diff.spec.ts   # ★ 自有 E2E：同一脚本对两个 baseURL 各跑一遍，
     │                             #   提取选择器契约做 diff → 产出报告。
     │                             #   ⚠️ 是诊断不是门禁，见 04 §7。不碰 frontend/
+    ├── m0/                       # ★ M0 独有的网络/运行合同，不复制 React 业务 spec
+    │   ├── proxy.spec.ts         # @proxy：preview routeRules、SSE、20 MiB 边界
+    │   ├── auth-disabled.spec.ts # @auth-disabled：空壳 workspace 的守卫决策
+    │   ├── visual-seed.spec.ts   # @visual-seed：Button/light/dark 基准
+    │   ├── ws.spec.ts            # @ws：真实 Origin+Cookie Upgrade
+    │   ├── oidc.spec.ts          # @oidc：双 callback、state 与 forwarded header
+    │   └── run-protocol.spec.ts  # @run-protocol：create/resume/cancel/gap/heartbeat
     ├── visual/                   # 关键状态截图：确定性 fixture + 受审 mask
     │   └── critical-states.spec.ts
     ├── fixtures/
@@ -169,7 +179,7 @@ frontend-vue/
         └── agent-deerflow/       # ← 适配层测试（内核自己的测试在 packages/agent-core/tests/）
 ```
 
-**E2E 不在 `frontend-vue/tests/` 下重建**（`structural-diff.spec.ts` 除外，它是自有的结构比对，不是合同 spec）。见下文 [E2E 一节](#e2e共用-frontendtestse2e不复制)。
+**React 业务合同 E2E 不在 `frontend-vue/tests/` 下重建**：继续共用 `frontend/tests/e2e/`。`structural-diff.spec.ts` 是诊断，`tests/m0/` 是 Vue/Nitro 独有的基础设施 gate，二者都不是共享业务 spec 的副本。见下文 [E2E 一节](#e2e共用-frontendtestse2e不复制)。
 
 ### `packages/agent-core/` 怎么被解析
 
@@ -406,8 +416,9 @@ Reka UI 与 Radix 的内部结构在个别组件上有出入，一定会有选�
 
 .PHONY: help install dev build preview start generate \
         lint lint-fix typecheck format format-write audit \
-        docker-build container-smoke \
+        docker-build container-smoke proxy-security \
         test test-watch e2e e2e-list e2e-auth e2e-real-backend e2e-visual e2e-preflight e2e-install \
+        proxy-smoke auth-disabled-smoke visual-baseline-smoke ws-smoke oidc-smoke run-protocol-smoke \
         i18n-check i18n-diff i18n-unused \
         verify gen-api-types gen-api-types-check
 
@@ -434,6 +445,10 @@ help:
 	@echo "  make e2e-auth       - Auth recovery contract"
 	@echo "  make e2e-real-backend - Replay Gateway integration contract"
 	@echo "  make e2e-visual     - Critical-state screenshot gate"
+	@echo "  make proxy-smoke    - M0 preview HTTP/SSE proxy contract"
+	@echo "  make ws-smoke       - M0 browser WebSocket contract"
+	@echo "  make oidc-smoke     - M0 dual-origin OIDC contract"
+	@echo "  make run-protocol-smoke - M0 create/resume/cancel/gap/heartbeat contract"
 	@echo "  make gen-api-types  - Regenerate REST types from openapi.snapshot.json"
 
 install:
@@ -480,6 +495,9 @@ docker-build:
 container-smoke: docker-build
 	./scripts/container-smoke.sh "$(IMAGE)"
 
+proxy-security:
+	$(EXEC) vitest run tests/unit/config/proxy-security.test.ts
+
 ## Tests
 test:
 	$(EXEC) vitest run
@@ -508,6 +526,25 @@ e2e-preflight:
 
 e2e-install:
 	$(EXEC) playwright install --with-deps chromium
+
+# M0 专用 config 的 testDir=tests/m0；每个文件带唯一 tag，命令与 gate 一一对应。
+proxy-smoke: e2e-preflight
+	$(EXEC) playwright test -c playwright.m0.config.ts --grep @proxy
+
+auth-disabled-smoke: e2e-preflight
+	$(EXEC) playwright test -c playwright.m0.config.ts --grep @auth-disabled
+
+visual-baseline-smoke: e2e-preflight
+	$(EXEC) playwright test -c playwright.m0.config.ts --grep @visual-seed
+
+ws-smoke: e2e-preflight
+	$(EXEC) playwright test -c playwright.m0.config.ts --grep @ws
+
+oidc-smoke: e2e-preflight
+	$(EXEC) playwright test -c playwright.m0.config.ts --grep @oidc
+
+run-protocol-smoke: e2e-preflight
+	$(EXEC) playwright test -c playwright.m0.config.ts --grep @run-protocol
 
 ## i18n 词典体检
 i18n-check:

@@ -1,5 +1,7 @@
 # 01 · 范围界定
 
+> M-1 已冻结。开发/生产拓扑、协议与根级集成的最终边界以 [09-m1-contract-freeze.md](09-m1-contract-freeze.md) 为准。
+
 ## 做什么
 
 只重写**应用本体**：
@@ -7,7 +9,7 @@
 - `/workspace/**` —— 聊天、自定义智能体、定时任务、artifacts、sidecar、browser view、设置
 - 认证流 —— `/login`、`/setup`、`/auth/callback`
 - 三个**营销占位页** —— `/`、`/pricing`、`/about`（当前为占位，未来替换为公司自定义内容）
-- 必需的仓库接入：pnpm runner、CI、根 README/AGENTS；若 M-1 选择 DeerFlow 生产双前端 profile，还包括 nginx/compose/health-check 和 OIDC 双回跳
+- 必需的仓库接入：M0 完成 pnpm runner、CI、根 Makefile/启动脚本、README/AGENTS；M7 完成已冻结的双 hostname nginx/compose/health-check 与 OIDC 双回跳
 
 ## 不做什么
 

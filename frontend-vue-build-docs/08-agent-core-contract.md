@@ -1,6 +1,6 @@
 # 08 · Agent 内核与 DeerFlow 协议契约
 
-> **状态：实施规格。** M0 先用真实 Gateway 探针确认响应头、续传与取消行为；探针结果若与本文不同，必须先修订本文和测试，再进入 M1。不能边写组件边猜协议。
+> **状态：M-1 已冻结。** 当前源码、测试和 Gateway replay 运行探针已经确认响应头、续传与终止行为；仍需经 Nuxt proxy 运行验证的 cancel/gap/heartbeat 边界列在 [09](09-m1-contract-freeze.md)。探针若与本文不同，必须先修订合同和测试，不能边写组件边猜协议。
 >
 > 本文是 `frontend-vue` 的 L1/L3 边界唯一来源。目录结构、里程碑、测试和运行文档不得另造一套接口。
 
@@ -192,7 +192,7 @@ export type RunSessionState<THandle> =
   | { status: "reconnecting"; handle: THandle; cursor?: string; attempt: number }
   | { status: "stopping"; handle: THandle; cursor?: string; mode: "draining" | "polling" }
   | { status: "completed"; handle: THandle }
-  | { status: "stopped"; handle?: THandle; reason?: string }
+  | { status: "cancelled"; handle?: THandle; reason?: string }
   | { status: "failed"; handle?: THandle; error: AgentStreamError }
   | { status: "gap"; handle: THandle; recovery: "reload_durable_state" };
 ```
@@ -206,11 +206,11 @@ export type RunSessionState<THandle> =
 5. heartbeat 刷新 watchdog；业务等待态可暂停 watchdog。
 6. `gap` 不从头重放，先 reload durable state，再由 L3 决定是否 join。
 7. cancel 与 stream abort 分开：abort 本地读取不等于服务端 run 已取消。
-8. UI stop 先进入 `stopping`。`cancel()` 返回 `drain` 时继续归约尾帧直到 `end/error`；返回 `accepted` 时用 `inspect()` 有界轮询 durable run；只有服务端终态才能进入 `stopped`。创建阶段尚无 handle 就断开属于不确定结果，不能伪装成已取消。
+8. UI stop 先进入 `stopping`。`cancel()` 返回 `drain` 时继续归约尾帧直到 `end/error`；返回 `accepted` 时用 `inspect()` 有界轮询 durable run；只有 durable `interrupted` 才进入 `cancelled`，`success` 进入 `completed`，`error/timeout` 进入 `failed`。创建阶段尚无 handle 就断开属于不确定结果，不能伪装成已取消。
 
 ## DeerFlow RunProtocol 的已知映射
 
-M0 必须用真实 Gateway 固化这张表：
+M-1 已由源码、测试和 replay Gateway 固化下表；M0 必须再验证 Nuxt preview 不改变这些行为：
 
 | 动作 | 方法与路径 | 关键响应/请求 |
 | --- | --- | --- |
@@ -220,11 +220,11 @@ M0 必须用真实 Gateway 固化这张表：
 | cancel | `POST /api/langgraph/threads/:threadId/runs/:runId/cancel` | 明确 `action`/`wait`；202 进入 durable status poll，204 才是已完成 |
 | cancel-then-drain | `POST /api/langgraph/threads/:threadId/runs/:runId/stream?action=interrupt` | 200 SSE 继续读尾帧；跨 worker 可能只回 202，不能假定总有 body |
 
-当前 Gateway 的 create 响应明确提供 `Content-Location`；当前 SDK 用它提取 run metadata，而重连 helper 查找 `Location`。这不是可忽略的命名差异。M0 的 raw-response 测试必须记录最终经过 Nuxt proxy 后的两个 header，并据此冻结 DeerFlow adapter，禁止凭 SDK 假设补齐。
+当前 Gateway 的 create 响应与本轮运行探针均明确提供 `Content-Location`，没有观察到 `Location`；当前 SDK 用前者提取 run metadata，而重连 helper 查找后者。这不是可忽略的命名差异。M0 的 raw-response 测试必须记录最终经过 Nuxt proxy 后的两个 header，禁止凭 SDK 假设补齐。
 
 ## 事件与完整状态归约
 
-L1 不只处理消息。它提供泛型状态容器；L3 决定 `values` 如何映射成完整 DeerFlow thread state。
+L1 不只处理消息。它提供泛型状态容器；L3 决定 `values` 如何映射成完整 DeerFlow thread state。`values` 是全量 snapshot，归一化后替换 durable state；`updates` 是 node/channel 增量写，必须调用通道 reducer，不能与 `values` 共用浅 merge。UI-only Pinia state 始终与 durable state 分离。
 
 ```ts
 export interface AgentSnapshot<TState> {
@@ -254,6 +254,8 @@ export type EventReducer<TState, TEvent> = (
 ```
 
 reducer 必须是纯函数。多 action 返回值允许一次 `values` 同时更新完整 state、消息顺序和 session 状态；不能把 artifact/todo/goal 更新散落到组件生命周期里。
+
+Gateway durable status 与 UI session 的冻结映射是：`pending → creating`、`running → streaming/reconnecting`、`success → completed`、`interrupted → cancelled`、`error|timeout → failed`。`stopping` 只是客户端瞬态，Gateway 没有 `completed/cancelled/failed/stopping` 这些枚举。
 
 ## 框架无关 external store
 
@@ -341,6 +343,8 @@ watchdog 的输入至少包含 `lastActivityAt`、session state、最后消息�
 | raw SSE golden traces | 分帧、事件顺序、chunk merge、heartbeat、gap、end/error | 真实代理和网络行为 |
 | fake upstream 集成测试 | LF/CRLF、跨 chunk、buffer、断流、POST→GET 方法切换 | Gateway 当前 header 约定 |
 | real Gateway smoke | Content-Location/Location、Last-Event-ID、cancel、代理、认证 | 全量 UI 回归 |
+
+当前 checkout 的最终 fixture 是 **13 个 `thread.json` / `values.messages` 合计 516 条**；读取顶层 `messages` 会错误得到 0。M-1 的去敏运行证据见 [evidence/m1-replay-gateway-probe.md](evidence/m1-replay-gateway-probe.md)。
 
 M2 的长期门禁必须同时包含前 3 类；第 4 类进入专门的 real-backend job。raw trace 至少覆盖富内容、reasoning、tool call 碎片、临时 id 重写、subagent namespace、`updates`/`custom`/`checkpoints`/`tasks`、heartbeat、gap、error/end、断线重连，并断言请求模式 `messages-tuple` 对应 wire event `messages`。
 

@@ -2,6 +2,8 @@
 
 七个决策，每个都直接影响目标能否达成。
 
+跨组件的 M-1 部署/协议/认证/测试结论已经冻结在 [09-m1-contract-freeze.md](09-m1-contract-freeze.md)；本文的库与 UI 决策不得改变那些合同。
+
 ---
 
 ## 1. Markdown 渲染：保留 unified 管线，渲染层用现成库而非自写

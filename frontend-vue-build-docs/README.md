@@ -8,7 +8,7 @@
 
 这两条不冲突，靠**顺序**解决：先做通用层（L1 → L2），再做 DeerFlow 专有层（L3），L2 边界逐模块抽取而不是最后再抽。分层定义见 [08-agent-core-contract.md](08-agent-core-contract.md)，里程碑见 [06-migration-plan.md](06-migration-plan.md)。
 
-> **实施状态：Conditional Go。** 可以开始 M-1/M0；M0 十道 gate 全绿后才能批准 M1，全量生产交付还必须通过 production readiness gate。本文不再把“方向可行”等同于“可以直接上线”。
+> **实施状态：M-1 已通过，允许开始 M0。** 合同冻结、证据边界和外部前提见 [09-m1-contract-freeze.md](09-m1-contract-freeze.md)。M0 十道 gate 全绿后才能批准 M1；双前端 production readiness 仍在 M7 验收，不能把“允许搭骨架”写成“可以直接上线”。
 
 > 本目录是实施规格，不是完成记录。第三方包存在性与 peer 关系按 2026-08-04 核实；行为敏感包使用现有 `frontend/pnpm-lock.yaml` 的 resolved version，不能把“当前 latest”当迁移目标。
 
@@ -43,7 +43,7 @@ LangChain 依赖在 M2 四类协议门禁通过后移除
 | 维度 | 结论 |
 | --- | --- |
 | 框架 | Nuxt 4（Vue 3.5 + Vite），端口 **3100** |
-| 运行方式 | `cd frontend-vue && make dev`；开发/preview 用 `routeRules`，DeerFlow 生产双前端推荐对称 nginx/ingress |
+| 运行方式 | 开发：Next `3000`、Vue `3100`、共享 Gateway `8001`；生产：两个独立 hostname 的对称 nginx/ingress，共享 Gateway |
 | L1 内核 | **`frontend-vue/packages/agent-core/`** —— 独立包，可整包搬走 |
 | 组件库 | **shadcn-vue + Reka UI + Tailwind 4** —— cva 样式串可逐字复制 |
 | 服务端状态 | `@tanstack/vue-query` |
@@ -57,7 +57,7 @@ LangChain 依赖在 M2 四类协议门禁通过后移除
 
 | 维度 | 要求 | 验收方式 | 是否门禁 |
 | --- | --- | --- | --- |
-| 功能 | **一致** | Playwright E2E，同一份 spec 跑两个 app（当前 25 spec / 120 test） | ✅ |
+| 功能 | **一致** | Playwright E2E；当前 mock 总基线 27 files / 130 tests，Vue 硬合同排除两个 React-only spec 后为 25 / 120 | ✅ |
 | 交互逻辑与体验 | **一致** | Playwright E2E + [05-invariants.md](05-invariants.md) 逐条勾选（A–N 共 14 组） | ✅ |
 | 页面结构（DOM） | 选择器契约一致 | E2E 选择器；`structural-diff` 只作**诊断报告** | ❌ 不做门禁 |
 | 关键视觉状态 | 基线阈值内一致 | 6–10 个确定性截图状态 | ✅ |
@@ -102,10 +102,11 @@ LangChain 依赖在 M2 四类协议门禁通过后移除
 | [06-migration-plan.md](06-migration-plan.md) | **M-1–M8 里程碑**、按通用度排的执行顺序、风险登记 |
 | [07-parallel-run.md](07-parallel-run.md) | 与 `frontend/` 并行运行、共用后端的接线方式（端口、代理、WebSocket） |
 | [08-agent-core-contract.md](08-agent-core-contract.md) | **★ 产品定义** —— L1/L2/L3 分层、接口契约、禁入清单、依赖方向。**其他项目复用时读这份** |
+| [09-m1-contract-freeze.md](09-m1-contract-freeze.md) | **★ M-1 冻结结论** —— 双前端部署、Gateway/SSE/WS、认证、测试、视觉与根级集成追踪矩阵 |
 
 ## 阅读顺序建议
 
-动手前至少读 [08](08-agent-core-contract.md)（产品定义）、[04](04-architecture-decisions.md) 和 [05](05-invariants.md)。
+动手前先读 [09](09-m1-contract-freeze.md)（冻结合同），再读 [08](08-agent-core-contract.md)（产品定义）、[04](04-architecture-decisions.md) 和 [05](05-invariants.md)。
 
 [05-invariants.md](05-invariants.md) 尤其重要：`frontend/AGENTS.md` 里记录的约束大多是线上问题修复后沉淀的（#4465、#4555、#4576 等），不会跟着组件自动迁移，是"看起来做完了但行为不对"的主要来源。其中 **A 组（流式与重连）与 L 组（自研 SSE 补强）** 在改用自研 SSE 后风险最高，必须有单测覆盖。
 
@@ -119,12 +120,12 @@ LangChain 依赖在 M2 四类协议门禁通过后移除
 | --- | --- | --- |
 | **G0-0 clean checkout CI** | M0 | 先安装 `frontend` 的共享 Playwright，再安装 Vue；目录未创建时 workflow 安全跳过；provenance 不依赖偶然存在的 git object |
 | **G0-1 `nuxt preview` 下代理生效 + SSE 不被缓冲** | M0 | E2E 的 webServer 跑的就是 preview。**`nitro.devProxy` 只管 dev**，用它会让 `e2e-auth` / `e2e-real-backend` 直接不可用 → 必须用 `routeRules`。同时要验 `sendStream` / `streamRequest` 两个 flag，见 [03](03-project-shape.md#️-为什么代理必须是-routerules-而不是-nitrodevproxy) |
-| **G0-2 共用 testDir 能收集到用例** | M0 | clean install 后列出当前 25 spec / 120 test；CI 打印实时 inventory |
+| **G0-2 共用 testDir 能收集到用例** | M0 | 先用当前可执行命令确认 React mock 总基线 27 files / 130 tests；Vue config 明确排除两个 React-only spec 后列出 25 / 120。收集成功不等于测试通过 |
 | **G0-3 鉴权可关** | M0 | Next 版靠 `DEER_FLOW_AUTH_DISABLED=1`，**25 个合同 spec 全依赖它**；Vue 版必须有等价开关 |
 | **G0-4 shadcn-vue 视觉基准** | M0 | Button 并排截图 + 暗色切换。样式基准没对齐就不该往下走 |
 | **G0-5 真实 Cookie/CSRF** | M0 | 经 preview 完成 register/login、写请求、refresh、logout |
-| **G0-6 WebSocket 最终路径** | M0 | 不是只测 routeRules；选定 Nuxt handler、显式 Origin allowlist 或 nginx，并让真实握手通过 |
-| **G0-7 OIDC 双回跳** | M0 | Vue 发起登录必须回 Vue；`frontend_base_url` 与 provider `redirect_uri` 同时留空，且同 hostname 两端口的 state-cookie 并发覆盖风险有明确处理 |
+| **G0-6 WebSocket 最终路径** | M0 | 开发冻结为直连 `ws://localhost:8001` + 精确 Origin allowlist；生产冻结为各 hostname 同源 nginx/ingress Upgrade。真实 Cookie+Origin 握手必须通过 |
+| **G0-7 OIDC 双回跳** | M0 | 生产使用独立 hostname；IdP 注册两个 callback，`frontend_base_url` 与 provider `redirect_uri` 同时留空；开发同 host 不同端口的 state-cookie 覆盖必须有负测 |
 | **G0-8 Run session 协议** | M0 | create POST 一次、捕获 run handle、resume GET + Last-Event-ID、cancel/gap/heartbeat 全部录成 trace |
 | **G0-9 依赖与代理安全** | M0 | 锁 Nuxt/Nitro/h3 resolved version，moderate+ audit、编码路径逃逸回归与生产 20 MiB body limit 全部通过 |
 | splitpanes spike | M0/M1 | 三面板编排是**唯一没有同构关系**的组件，却原本排在最后的 M7。先花一天验 H1/H2/H6 能否表达 |
@@ -135,6 +136,6 @@ LangChain 依赖在 M2 四类协议门禁通过后移除
 业务实现主要落在 `frontend-vue/`；仓库集成必须同步更新 source-of-truth。
 
 - `frontend/` 产品代码和共享 E2E spec 保持只读；一次性 React oracle 探针走 worktree
-- 根 `scripts/pnpm.py`、对应测试、workflow、README/AGENTS 属于必需集成；Vue 自身 Dockerfile/health 属于生产基础产物，dual profile 若启用，nginx/compose/health-check 同步进入范围
+- 根 `scripts/pnpm.py`、对应测试、workflow、README/AGENTS 属于 M0 必需集成；Vue 自身 Dockerfile/health 属于生产基础产物；冻结的 dual profile 要在 M7 同步完成 nginx/compose/health-check
 - `backend/` 默认不改；只有 OIDC 双 origin 无法通过相对回跳解决时，才以受签名 state + allowlist 的方式扩展，并补安全测试
 - **共用的 E2E spec 视为只读合同。** 选择器对不上时由 Vue 侧消化（复刻 `data-slot` 约定），不改 `frontend/tests/e2e/*.spec.ts`、也不给 React 组件加 `data-testid`；实在不行进[豁免登记表](03-project-shape.md#选择器失效时的口径spec-只读--豁免登记)。这条曾与 04 §7 的"两边同步改"冲突，已统一为本口径

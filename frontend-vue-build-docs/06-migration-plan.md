@@ -1,5 +1,7 @@
 # 06 · 执行计划
 
+> M-1 已完成并通过；冻结结果、运行探针和追踪矩阵见 [09-m1-contract-freeze.md](09-m1-contract-freeze.md)。本计划从 M0 起必须按该合同实施。
+
 ## 终态与顺序
 
 **终态：功能与交互合同一致；关键视觉状态受截图门禁保护。** 不承诺 React 与 Vue 的全页面逐像素相同，也不再用“视觉 1:1”与“允许少许差异”两套冲突口径。精确定义见 [04 §7](04-architecture-decisions.md#7-验收分层功能合同与关键视觉门禁)。
@@ -111,6 +113,8 @@ git tag frontend-vue-baseline-v2 27a425b0
 
 ## M-1 · 契约冻结（先改方案，再写应用）
 
+**状态：已通过（2026-08-04）。** 以下七项已在 [09](09-m1-contract-freeze.md) 逐项给出源码证据、测试/运行证据与后续 gate。
+
 这一阶段的产出全部是可执行清单，不写 Vue 业务组件：
 
 1. 从当前 Gateway 路由生成 run protocol matrix：create、resume、join、cancel、cancel-then-drain 的方法、路径、header、状态码。
@@ -121,7 +125,7 @@ git tag frontend-vue-baseline-v2 27a425b0
 6. 冻结 6–10 个关键视觉截图状态和阈值。
 7. 确认根级改动范围：pnpm runner、workflow、README/AGENTS；这些是正常集成，不再宣称“零仓库改动”。
 
-**Gate**：上述七项都有文档、负责人/决策和对应测试位置。任何一项仍写“以后再讨论”，不得进入 M0。
+**Gate 结果**：通过。上述七项都有明确决定与测试位置；允许进入 M0，但不代表任一 M0 命令已经通过。
 
 ---
 
@@ -142,7 +146,7 @@ git tag frontend-vue-baseline-v2 27a425b0
 - **文件头注释规约**（六段式 + 【对应 frontend/】栏）从第一个文件就开始写，见 [04 §6](04-architecture-decisions.md#配套文件头注释规约)。这条补不回来——等 126 个组件写完再回头加，等于重读一遍
 - **行为敏感依赖精确对齐 `frontend/pnpm-lock.yaml` resolved version**，不要只复制 caret 声明（见 [02-stack.md](02-stack.md#️-版本对齐约束)）
 
-**根级集成是交付的一部分**：workflow、`scripts/pnpm.py`、对应测试、根 README/AGENTS 必须同一变更集同步。根 Makefile/nginx/compose 是否修改由 M-1 的生产入口与 WS 决策决定；不能为了维持“零改动”口号牺牲可运行性。
+**根级集成是交付的一部分**：M0 同步 workflow、`scripts/pnpm.py`、对应测试、根 Makefile/serve 脚本、README/AGENTS；M7 同步双 hostname nginx/compose/health-check。现有 `make dev` 保持 React 默认，新增显式 `dev-vue`/`dev-dual`，不能为了维持“零改动”口号牺牲可运行性。
 
 **产出**：clean checkout 下 `make verify` 通过，`localhost:3100` 可访问，十道 gate 全绿。
 
@@ -154,12 +158,12 @@ git tag frontend-vue-baseline-v2 27a425b0
 | --- | --- | --- | --- |
 | **G0-0** | **clean checkout CI** | workflow 先用根 runner frozen-install `frontend/`，确认共享 Playwright 存在，再安装 `frontend-vue/`；设置完整基线历史或改用签入 hash manifest；跑 `verify`/E2E | 本机 node_modules 掩盖 dangling `link:`，或 provenance 在 shallow checkout 失败 |
 | **G0-1** | **`nuxt preview` 下代理生效 + SSE 不被缓冲** | `nuxt build && nuxt preview`，请求 `/api/features` 拿到 Gateway 真实响应；再发一个真实 run，确认 `/api/langgraph/**` 比 `/api/**` 优先命中、且 SSE token 逐条到达。**顺带验 `sendStream` / `streamRequest` 两个 flag 的有无差异**（见 [03](03-project-shape.md#️-为什么代理必须是-routerules-而不是-nitrodevproxy)）。**把前缀优先级断言沉进 `tests/unit/config/routes.test.ts`**，含两个 `NUXT_PUBLIC_*` 设/不设的 4 种组合 | E2E webServer 跑的就是 preview。这条不过，`e2e-auth` / `e2e-real-backend` 全不可用，合同 spec 的未 mock 请求会 404 |
-| **G0-2** | **共用 testDir 能收集到用例** | clean install 后 `make e2e-list` 列出当前基线的 **25 个 spec / 120 个 test**；CI 打印实时数量 | `@playwright/test` 双实例会让用例收集为 0 或直接报错 |
+| **G0-2** | **共用 testDir 能收集到用例** | 先运行 React collection 得到当前总基线 **27 files / 130 tests**；Vue config 排除两个 React-only spec 后，clean install 的 `make e2e-list` 得 **25 / 120**。collection 不是 pass，后续还须 `make e2e` | `@playwright/test` 双实例会让用例收集为 0 或直接报错 |
 | **G0-3** | **鉴权可关** | 带 `NUXT_PUBLIC_AUTH_DISABLED=1` 起 preview，直接访问 `/workspace` 不跳 `/login`。决策逻辑写成纯函数 + 单测（见 [M4a](#m4a--数据流)），别只靠这一次手工验 | 25 个合同 spec 全红，且失败信息指向"页面没渲染"而不是真实原因 |
 | **G0-4** | **shadcn-vue 视觉基准** | `Button` 与原版 React `Button` 并排截图 + 暗色切换 | 样式基准没对齐，后面 41 个组件的 cva 复制全部建在流沙上 |
 | **G0-5** | **真实 Cookie + CSRF** | 经 3101 preview 同源代理完成 setup/register/login、带 CSRF 的写请求、刷新 `/auth/me`、logout | 只测 auth-disabled 无法证明 Set-Cookie、credentials 和 CSRF 代理正确 |
-| **G0-6** | **WebSocket 最终路径** | 对已选方案完成浏览器真实 Origin + cookie 的 upgrade；若直连 8001，明确设置并测试 `GATEWAY_CORS_ORIGINS=http://localhost:3100` | 默认 Gateway 会拒绝 `localhost:3100 → localhost:8001` 的 Origin |
-| **G0-7** | **OIDC 回跳** | 两入口同源代理；`frontend_base_url` 与 provider `redirect_uri` 同时留空；IdP 注册两 callback；分别验证从 React/Vue 发起后回原入口，并验证同 hostname 不同端口的并发 state-cookie 覆盖风险 | 单值绝对 URL 会把 Vue 用户送回 React；同 hostname 两端口并发登录会覆盖 state cookie |
+| **G0-6** | **WebSocket 冻结路径** | 开发用 `ws://localhost:8001` + `GATEWAY_CORS_ORIGINS=http://localhost:3100,http://localhost:3101` 完成真实 Origin+Cookie upgrade；生产用每个 hostname 的同源 nginx/ingress Upgrade | 默认 Gateway 会拒绝 `localhost:3100 → localhost:8001` 的 Origin；Nitro routeRules 不能被假定支持 Upgrade |
+| **G0-7** | **OIDC 回跳** | 生产两个独立 hostname 各自同源代理；`frontend_base_url` 与 provider `redirect_uri` 同时留空；IdP 注册两 callback；分别验证从 React/Vue 发起后回原入口，并负测同 hostname 不同端口的并发 state-cookie 覆盖 | 单值绝对 URL 会把 Vue 用户送回 React；同 hostname 两端口并发登录会覆盖 state cookie |
 | **G0-8** | **Run session 协议** | 记录 create 响应头、run handle、resume GET + Last-Event-ID、cancel、heartbeat、gap；固化 raw trace | 自研 transport 可能重复 POST、漏续传或把 abort 当 cancel |
 | **G0-9** | **依赖、代理与镜像安全** | 锁定 Nuxt/Nitro/h3 resolved version；`make audit` 对 moderate+ 公告失败；编码 traversal 不能逃出 `/api/langgraph/**`；生产入口实测 20 MiB body limit；镜像以非 root 启动、只含 `.output`、`/health` 与 SIGTERM smoke 通过 | wildcard proxy 可能 scope bypass；独立 Nuxt 入口会丢 nginx body limit；开发镜像直接上线会带源码/权限/存活探针缺口 |
 
@@ -632,14 +636,14 @@ export default defineNuxtRouteMiddleware(async (to) => {
 | **孤儿 CI workflow** | 第一次 push 直接红，失败信息指不到真实原因 | [G0-0](#g0-0--ci-workflow-对齐)，M0 第一件事 |
 | **Markdown 层被低估 3–4 倍** | M3 从「小」变「中偏大」，排期失真 | 已重估为 ~900 行；代码块组件、`plugins.ts` 重写部分、`globals.css` 的 `@source` 陷阱都已列明（[M3](#m3--markdown-渲染层)） |
 | **`src/app/` 目标文件曾未进工作量表** | 19 个 / 3,215 行的 layout / page / providers 无人认领 | 已并入 [M4b](#m4b--通用-agent-uil2-第一批-模板价值兑现点) |
-| **WebSocket 过不了 routeRules 或直连被 Origin 拒绝** | browser-view 不可用 | M-1 先选最终路径；[G0-6](#m0-的十道-gate) 用真实浏览器 Origin/cookie 验证 |
+| **WebSocket 直连被 Origin 拒绝或生产 Upgrade 丢失** | browser-view 不可用 | M-1 已冻结开发直连+精确 allowlist、生产同源 ingress；[G0-6](#m0-的十道-gate) 用真实浏览器 Origin/cookie 验证 |
 | **结构 diff 门禁无界** | 与「视觉 98%」同一种失败形状：门禁工作量超过功能本身 | 已降为诊断报告、不做门禁、只覆盖固定少数容器（[04 §7](04-architecture-decisions.md#页面结构一致靠诊断报告不做门禁)） |
 | shadcn-vue 组件与 React 版有偏差 | 视觉不一致 | 逐个对照 cva 定义；M0 先做 Button 并排截图 gate |
 | E2E 选择器强依赖 React DOM | 验收合同失效 | shadcn-vue 复刻同样的 `data-slot` 约定；**spec 只读**，差异由 Vue 侧消化，实在不行进豁免登记表并复核该表长度 |
 | **代理只在 dev 生效** | auth/real-backend E2E 请求 404 | 用 `routeRules`，并由 [M0 G0-1](#m0-的十道-gate) 在 preview 实测 |
 | **鉴权关不掉或真实 Cookie/CSRF 失败** | mock E2E 全红或生产登录不可用 | [G0-3/G0-5](#m0-的十道-gate) 分别验证测试开关和真实认证 |
 | **`@playwright/test` 双实例或 link target 不存在** | 共用 testDir 无法收集 | clean CI 先安装 `frontend`，再安装 Vue；[G0-0/G0-2](#m0-的十道-gate) |
-| **OIDC 固定回 React 的绝对 URL** | Vue 发起 SSO 后落回错误前端，或同 hostname 并发 state 被覆盖 | M-1 决定入口策略，[G0-7](#m0-的十道-gate) 实测 `frontend_base_url`、provider `redirect_uri`、可信代理与 cookie 范围 |
+| **OIDC 固定回 React 的绝对 URL** | Vue 发起 SSO 后落回错误前端，或同 hostname 并发 state 被覆盖 | M-1 已冻结独立 hostname + 双 callback + 相对回跳；[G0-7](#m0-的十道-gate) 实测可信代理与 cookie 范围 |
 | **Nuxt wildcard proxy 或 body limit 未锁定** | 编码路径逃逸代理 scope，或绕过 20 MiB 上传限制 | [G0-9](#m0-的十道-gate) 锁 resolved dependency、audit、恶意路径回归与生产入口限制 |
 | **splitpanes 表达不了 H 组** | 最后一个里程碑才发现要换库或自写 | M0/M1 插入一天的 spike，只验 H1 / H2 / H6 |
 | **M2 探针变成兔子洞** | `useStream` 兼容层越写越大 | 探针只在 worktree、定 3 天；长期门禁是四类协议证据 |

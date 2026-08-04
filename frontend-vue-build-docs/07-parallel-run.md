@@ -2,6 +2,8 @@
 
 `frontend-vue/` 与现有 `frontend/` 在同一仓库内并存、同时运行、共用同一套 Gateway 接口。
 
+> M-1 已冻结最终接线：开发用 Next `3000`、Vue `3100`、Gateway `8001`；生产用两个独立 hostname 的对称同源 nginx/ingress，共享一个 Gateway。完整矩阵见 [09-m1-contract-freeze.md](09-m1-contract-freeze.md)。
+
 ## 原则：隔离业务代码，但完整接入仓库
 
 `frontend/` 的产品代码和共享 E2E spec 保持只读；`backend/` 只有在 OIDC 双入口确实需要扩展时才改。但 workflow、pnpm runner、README/AGENTS，以及生产 profile 需要的 nginx/compose 是正常集成范围。
@@ -12,7 +14,7 @@
 
 `.github/workflows/frontend-vue-verify.yml` 已按 [06 G0-0](06-migration-plan.md#g0-0--ci-workflow-对齐) 修成预备态：目录不存在时安全跳过；目录存在时从 clean checkout 安装两个前端并运行真实命令。M0 仍必须用首个 Vue skeleton 提交证明它真的工作，不能把“YAML 已写”当通过。
 
-本地开发默认仍可直接访问 3100；若交付“DeerFlow 生产双前端”，推荐增加对称 nginx/ingress 入口，因为它能复用已验证的 SSE、body limit、WS Upgrade 和同源认证。是否交付该 profile 在 M-1 冻结，不能写到最后再讨论。
+本地开发直接访问 3100。DeerFlow 双前端生产 profile 已冻结为对称 nginx/ingress：React 与 Vue 使用独立 hostname，但各自暴露相同的 `/api/**`、`/api/langgraph/**` 和 browser WS 路径，共用 Gateway。它复用已验证的 SSE、body limit、WS Upgrade 和同源认证；路径前缀和不同端口都不是生产默认。
 
 ## 端口分配
 
@@ -130,19 +132,15 @@ export default defineNuxtConfig({
 
 Nuxt 的 `runtimeConfig.public` 可以在运行时改变客户端使用的 base URL；但 `buildProxyRules()` 读取的 `process.env` 会编译进 Nitro route rules。**同一产物可以换客户端直连地址，不代表可以运行时重写已经构建的代理拓扑。** 生产默认仍要求同源反代，不能把 public base URL 当万能逃生口。
 
-## ⚠️ browser-view 的 WebSocket —— 提前到 M0 验
+## ⚠️ browser-view 的 WebSocket —— 路径已冻结，M0 验证
 
 [`frontend/src/components/workspace/browser-view/api.ts:44`](../frontend/src/components/workspace/browser-view/api.ts) 建的是 `ws://…/api/threads/{id}/browser/stream`。nginx 有[专门的 upgrade location](../docker/nginx/nginx.local.conf) 处理它（`location ~ ^/api/threads/[^/]+/browser/stream`，带 `proxy_set_header Upgrade` + 600s 超时）。
 
-**Nitro 这边大概率不行**：`routeRules` 的 `proxy` 底层是 h3 的 `proxyRequest`，纯 HTTP 转发，不处理 `Upgrade` 握手；Nitro 自身的 WebSocket 能力服务的是它自己的 handler，不是 proxy 规则。
+不能假定 Nitro `routeRules` 会处理 `Upgrade`。M-1 已把实现路径冻结为：
 
-**所以最终路径在 M-1 决策，并由 [M0 G0-6](06-migration-plan.md#m0-的十道-gate) 验证。** 先测 routeRules，但不能只得到“不通”结论而不落实替代方案。
-
-结论若是“不通”，三个选项：
-
-1. Nuxt server 实现并测试真正的 WS proxy handler；
-2. WS 直连 Gateway，同时把 Vue public origin 加入 `GATEWAY_CORS_ORIGINS`；
-3. 为 Vue 增加 nginx/ingress 同源入口，复用现有 Upgrade location（DeerFlow 生产 profile 推荐）。
+1. **开发**：browser WS 直连 `ws://localhost:8001`，Gateway 精确配置 `GATEWAY_CORS_ORIGINS=http://localhost:3100,http://localhost:3101`；HTTP/SSE 仍经 Nuxt 同源 routeRules。所有地址统一写 `localhost`，不混用 `127.0.0.1`，否则 host Cookie 不共享。
+2. **生产**：React/Vue 各自的 hostname 都由 nginx/ingress 同源处理 Upgrade，保留 `proxy_http_version 1.1`、`Upgrade`、`Connection` 和 600s timeout。
+3. 如果 M0 后续实现并安全验证了 Nuxt WS proxy handler，它可以替换“开发直连”，但不能改变生产同源 ingress 合同。
 
 > ⚠️ **不要把「跨源丢 cookie」直接套到 WebSocket 上。** 下一节讲的是 **fetch** 跨源：那是 CORS + `credentials` 的问题，需要 `Access-Control-Allow-Credentials` 与精确 origin 白名单。
 >
@@ -150,7 +148,7 @@ Nuxt 的 `runtimeConfig.public` 可以在运行时改变客户端使用的 base 
 >
 > Cookie 可能会带上，但当前 Gateway 的 `_ws_origin_allowed()` 还会比较 Origin 与 target host 或显式 CORS allowlist。默认 `localhost:3100 → localhost:8001` 会因端口不同被拒绝；直连方案必须显式配置 `GATEWAY_CORS_ORIGINS=http://localhost:3100` 并测试。
 
-**G0-6 的通过条件是选定方案已经工作，不是只记录 routeRules 不支持。**
+**G0-6 的通过条件是上述开发路径在真实浏览器 Origin+Cookie 下工作，不是只记录 routeRules 不支持。**
 
 ## ⚠️ 跨源会丢认证 cookie —— 不要轻易绕开同源代理
 
@@ -187,7 +185,7 @@ make dev
 cd frontend-vue && make dev
 ```
 
-M0 先支持模块内 `make dev`。根 `make dev-vue` 或全栈 `make dev` 是否纳入 Vue，由 M-1 的交付 profile 决定；一旦纳入，根 Makefile/README/AGENTS 同步更新。
+M0 先支持模块内 `make dev`，并在根级新增显式 `make dev-vue` / `make dev-dual` 生命周期；现有 `make dev` 继续作为 React 默认，避免无提示地改变已有开发入口。根 Makefile、`scripts/serve.sh`、README/AGENTS 同步更新。
 
 | 检查 | 期望 |
 | --- | --- |
@@ -196,7 +194,7 @@ M0 先支持模块内 `make dev`。根 `make dev-vue` 或全栈 `make dev` 是�
 | `localhost:3100` 上调用 `/api/features` | 返回 Gateway 的真实响应，不是 404/502 |
 | **`PORT=3101 nuxt preview` 下同样调用 `/api/features`** | **同上**——这一条是 `routeRules` 相对 `devProxy` 的全部意义所在，必须在 **preview** 上单独验 |
 | `localhost:3100` 上发起一个 run | `/api/langgraph/threads/…/runs/stream` 命中 Gateway，且 token **逐条到达**而不是攒到最后（代理未缓冲） |
-| browser-view WS | 选定的最终路径在真实 Origin/cookie 下完成握手（[G0-6](06-migration-plan.md#m0-的十道-gate)） |
+| browser-view WS | 开发直连 8001 + exact allowlist，在真实 Origin/cookie 下完成握手（[G0-6](06-migration-plan.md#m0-的十道-gate)） |
 | `make e2e-list` | clean install 后列出 **25 个 spec / 120 个 test**；实时数量由 CI 输出 |
 | 真实认证 smoke | 经 preview 完成 register/login、CSRF 写请求、refresh、logout |
 | run resume smoke | create POST 只发生一次，续传切 GET 并带 `Last-Event-ID` |
@@ -262,7 +260,7 @@ playwright-report/
 交付分为两个明确 profile：
 
 1. **Standalone template**：复用方提供同源 reverse proxy，满足下表要求；
-2. **DeerFlow dual-frontend production**：React 与 Vue 同时部署。推荐为 Vue 增加独立 public origin/nginx 或 ingress 入口，并复用同一组 API/SSE/WS location；同时完成 OIDC 双回跳。
+2. **DeerFlow dual-frontend production**：React 与 Vue 同时部署，分别使用独立 hostname；两个同源 nginx/ingress 入口复用同一组 API/SSE/WS location并指向共享 Gateway，同时完成 OIDC 双回跳。
 
 如果本期只完成开发 profile，发布说明必须标为“development preview”，不能称 production-ready。
 
@@ -289,27 +287,27 @@ playwright-report/
 
 ⚠️ 有一个坑值得预先记下来（`nuxt-modern-starter` 已经踩过并在注释里写明）：**预渲染 / SWR 缓存的 HTML 与 CSP `nonce` 天然冲突**——nonce 要求每个响应唯一，而缓存 HTML 是复用的。要么保留 `script-src 'unsafe-inline'`，要么单独实现构建期 hash 注入。本项目营销区正是 `prerender: true`，一旦要开 CSP 就会直接撞上这条。
 
-dual-frontend profile 若被 M-1 选中，nginx/compose/health-check 改动就在本次范围，不再推迟。
+dual-frontend profile 已由 M-1 选中；nginx/compose/health-check 在 M7 production readiness 完成，不得推迟到发布之后，也不在当前文档窗口提前修改业务运行代码。
 
 ---
 
 ## 附录：何时让两个前端都走 nginx
 
-对称部署（nginx 新增 2027 入口 → frontend-vue）在「frontend-vue 取代 `frontend/`」的前提下是更好的方案：两个前端拿到逐字相同的 `/api/*` 配置，SSE 调优、WebSocket、压缩全部复用，不会漂移。
+对称部署是冻结的生产方案：实际发布由外层 ingress 根据两个 hostname 路由；本地/compose 可以用第二个 loopback published port 验证入口。两个前端拿到逐字相同的 `/api/*` 配置，SSE 调优、WebSocket、压缩全部复用，不会漂移。
 
 它要求改至少以下仓库文件：
 
 | 文件 | 改动 |
 | --- | --- |
-| `docker/nginx/nginx.local.conf` + `nginx.conf` | 抽出 `api-locations.conf`，各加一个 `listen 2027` server 块 |
+| `docker/nginx/nginx.local.conf` + `nginx.conf` | 抽出共享 API location；为 Vue 增加按 hostname 的 server/入口，本地 profile 可用第二 loopback 端口验证 |
 | `scripts/serve.sh` | 五处端口接线 |
 | `docker/docker-compose*.yaml` | 加服务与第二个发布端口 |
 | `backend/tests/test_compose_default_bind_host.py` | `test_nginx_entry_defaults_to_loopback` 断言的是单元素列表，加端口后会红 |
 
-结论不再是“一律废弃”，而是按 profile：
+冻结结论按 profile：
 
 - standalone template：不修改 DeerFlow nginx，由复用方提供等价入口；
-- 本地开发：3100 routeRules 足够，WS 用 G0-6 选定方案；
-- DeerFlow 生产双前端：**推荐对称 nginx/ingress**。它以有限根级改动换回 SSE 调优、WS、认证和压缩的一致性，收益明确。
+- 本地开发：3100 routeRules 负责 HTTP/SSE，WS 直连 8001 + exact allowlist；
+- DeerFlow 生产双前端：**必须使用两个独立 hostname 的对称同源 nginx/ingress**。它以有限根级改动换回 SSE 调优、WS、认证和压缩的一致性。
 
-无论选择哪一档，都必须保住全部 API URL（含 `/api/langgraph` 前缀），并用同一套 real-backend contract 验证。
+每个 profile 都必须保住全部 API URL（含 `/api/langgraph` 前缀），并用同一套 real-backend contract 验证。
