@@ -41,7 +41,7 @@
 
 早期版本写的是「等 1:1 达成、E2E 全绿后再抽」。**这条已推翻。**
 
-理由是本文档自己给出的：全做完 133 个 DeerFlow 形状的组件再回头抽，「可移植」这个目标会在中间几个阶段里被磨掉。改为：
+理由是本文档自己给出的：全做完 126 个 DeerFlow 形状的组件再回头抽，「可移植」这个目标会在中间几个阶段里被磨掉。改为：
 
 | 时机 | 动作 |
 | --- | --- |
@@ -131,7 +131,7 @@ export interface AgentMessage {
 ### SSE 传输
 
 ```ts
-export interface SseFrame {
+export interface SseEvent {
   /** SSE `event:` 字段；省略时按规范默认为 "message" */
   event: string;
   /** SSE `data:` 字段，多行按 \n 拼接；只剥一个前导空格，不要 trim */
@@ -139,6 +139,17 @@ export interface SseFrame {
   /** SSE `id:` 字段——重放游标的载体，不要丢 */
   id?: string;
 }
+
+/**
+ * ⚠️ 分帧结果是一个联合类型，不是单一的事件对象。
+ * 以 `:` 开头的行是 SSE 注释，代理与后端普遍用它做 keep-alive（`: ping`）。
+ * 把它当成 data 为空的事件会污染归约；直接丢掉则会让看门狗把有心跳的连接
+ * 误判成静默并触发无谓重连（见 05 的 L9）。
+ * 正确处置：不进 reducer，但要重置看门狗计时。
+ */
+export type SseFrame =
+  | { kind: "event"; event: SseEvent }
+  | { kind: "heartbeat"; comment: string };
 
 export interface StreamReaderOptions<TEvent> {
   url: string | URL;
@@ -158,7 +169,9 @@ export function streamEvents<TEvent>(
 ): AsyncIterable<TEvent>;
 ```
 
-内核负责：分帧（含 **CRLF 归一化**）、`event`/`data`/`id` 三字段解析、重试与**指数退避**、重试总量上限、buffer 上限、abort 静默结束、**抛错而非静默 return**。
+内核负责：分帧（含 **CRLF 归一化**）、`event`/`data`/`id` 三字段解析、**心跳注释帧识别**、重试与**指数退避**、重试总量上限、buffer 上限、abort 静默结束、**抛错而非静默 return**。
+
+> transport 层不必从零写——git 历史里有一份已经满足 L1/L2/L3/L9 的实现可作起点，见 [05 的 L 组](05-invariants.md#️-不要从-gamma-那份开始写--git-历史里有更好的起点)。
 
 内核不负责：URL 构造、鉴权头、业务事件语义。
 

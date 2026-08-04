@@ -6,15 +6,16 @@
 
 ```
 frontend-vue/
+├── Makefile                      # ★ 唯一开发者入口（对齐 backend/Makefile 的做法）
 ├── nuxt.config.ts
-├── package.json                  # 完整内容见下方
+├── package.json                  # 只留 postinstall，不放开发者脚本；完整内容见下方
 ├── tsconfig.json                 # extends ./.nuxt/tsconfig.json
 ├── components.json               # shadcn-vue CLI 配置
 ├── vitest.config.ts              # 双 project：node（纯 TS）+ nuxt（composable）
-├── playwright.config.ts          # webServer 指向 nuxt preview :3100
+├── playwright.config.ts          # webServer 指向 nuxt preview :3101（独立端口）
 ├── playwright.auth.config.ts     # 对应 frontend/ 的 auth 套件
 ├── eslint.config.mjs
-├── openapi.snapshot.json         # Gateway /openapi.json 的签入快照 → gen:api-types
+├── openapi.snapshot.json         # Gateway /openapi.json 的签入快照 → make gen-api-types
 ├── pnpm-workspace.yaml           # ★ 嵌套 workspace，只含本目录 —— 见「agent-core 怎么被解析」
 ├── .prettierrc
 ├── .gitignore
@@ -52,6 +53,8 @@ frontend-vue/
 │   │       └── main.css          # ← 由 frontend/src/styles/ 直接搬（Tailwind 4 + CSS 变量主题）
 │   │
 │   ├── core/                     # ★ 由 frontend/src/core/ 原样搬，99 个零改动 + 24 个改 import
+│   │   ├── PROVENANCE.md         #   ★ 每个文件标 COPIED/RETYPED/ADAPTED/ADDED/DROPPED
+│   │   │                         #     COPIED 一档由 tests/core-provenance.test.ts 做 hash 守护
 │   │   │
 │   │   ├── agent-deerflow/       #   ★ L3 协议适配层 —— 随项目走，不可复用
 │   │   │   ├── endpoints.ts             # /threads/:id/runs/stream · join · cancel
@@ -67,7 +70,7 @@ frontend-vue/
 │   │   │   ├── blocks.ts                # marked 分块 + memo key
 │   │   │   ├── animate.ts               # 逐词淡入
 │   │   │   ├── preprocess.ts            # ← 原样搬（嵌套截断 / LaTeX 归一化 / 系统标签剥离）
-│   │   │   └── plugins.ts                # ← 原样搬（含 rehypeStreamingListItems）
+│   │   │   └── plugins.ts               # ← 重写；只有 rehypeStreamingListItems 能搬
 │   │   ├── api/                  #   ← 改写：不再依赖 LangChain SDK
 │   │   │   ├── client.ts                # 7 个 REST 方法 + CSRF 头 + 错误规范化（~180 行）
 │   │   │   └── types.gen.ts             # openapi-typescript 生成，勿手改
@@ -85,7 +88,7 @@ frontend-vue/
 │   │
 │   ├── components/
 │   │   ├── ui/                   # shadcn-vue CLI 生成（30 个）+ 手写（resizable + 4 特效）
-│   │   ├── elements/             # ← 原 ai-elements/，29 个手写
+│   │   ├── elements/             # ← 原 ai-elements/，22 个手写（7 个 xyflow canvas 件不迁）
 │   │   ├── workspace/            # 104 个 —— 工作量主体
 │   │   │   ├── messages/
 │   │   │   ├── artifacts/
@@ -134,8 +137,12 @@ frontend-vue/
 │
 └── tests/
     ├── architecture.test.ts      # ★ 依赖方向与内核禁入清单的自动守护（M0 就建）
+    ├── core-provenance.test.ts   # ★ app/core/PROVENANCE.md 台账守护；COPIED 一档
+    │                             #   对基线 27a425b0 做内容 hash 比对（见 06 M1 1e）
+    ├── global-setup.ts           # ★ Playwright 的 Nuxt 冷启动预热（不预热首个 spec 假红）
     ├── structural-diff.spec.ts   # ★ 自有 E2E：同一脚本对两个 baseURL 各跑一遍，
-    │                             #   dump 归一化 DOM 做 diff（见 04 §7）。不碰 frontend/
+    │                             #   提取选择器契约做 diff → 产出报告。
+    │                             #   ⚠️ 是诊断不是门禁，见 04 §7。不碰 frontend/
     ├── fixtures/
     │   └── threads/              # ← 由 frontend/public/demo/threads/ 拷入
     │                             #   13 个真实会话 / 516 条真实消息，M2 差分测试语料
@@ -185,15 +192,15 @@ frontend-vue 保留自研 i18n（[04 §5](04-architecture-decisions.md#5-i18n-�
 | `core/i18n/locales/zh-CN.ts` | 1,101 |
 | `core/i18n/locales/types.ts` | 914 |
 
-**两千多条文案、两份词典、零工具。** 重写 133 个组件期间最容易发生的就是漏 key、两份词典不同步、留下一堆再没人用的 key——而这三类问题**编译器都不会报**（`types.ts` 只约束结构，不约束"每个 key 都被用到"）。
+**两千多条文案、两份词典、零工具。** 重写 126 个组件期间最容易发生的就是漏 key、两份词典不同步、留下一堆再没人用的 key——而这三类问题**编译器都不会报**（`types.ts` 只约束结构，不约束"每个 key 都被用到"）。
 
 照 `nuxt-modern-starter` 的 `i18n-manager.mjs` 做一个，三个子命令：
 
 | 命令 | 作用 |
 | --- | --- |
-| `i18n:diff` | 列出 `en-US` 与 `zh-CN` 的 key 差集——**任一边缺 key 就该红** |
-| `i18n:unused` | 扫 `app/` 找出没有任何引用的 key。移植期间用来确认"这个 key 是不是跟着不迁的模块一起废了" |
-| `i18n:check` | 上面两项的 CI 形态，进 `pnpm quality` |
+| `make i18n-diff` | 列出 `en-US` 与 `zh-CN` 的 key 差集——**任一边缺 key 就该红** |
+| `make i18n-unused` | 扫 `app/` 找出没有任何引用的 key。移植期间用来确认"这个 key 是不是跟着不迁的模块一起废了" |
+| `make i18n-check` | 上面两项的 CI 形态，是 `make verify` 的前置目标之一 |
 
 差别：那个项目的词典是 JSON，这里是 TS 模块，扫描要走 AST（或直接 `import` 后遍历对象，反正是纯数据）。
 
@@ -211,16 +218,40 @@ E2E 是 1:1 的验收合同。**复制一份 spec 到 `frontend-vue/` 会漂移�
 
 ```ts
 // frontend-vue/playwright.config.ts
+import { defineConfig, devices } from "@playwright/test";
+
+// ⚠️ E2E 专用端口，不是 3100。见下方「为什么 E2E 不能用 3100」。
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3101";
+
 export default defineConfig({
   testDir: "../frontend/tests/e2e",
   // 两个明确豁免项（Vue 版故意不做的东西）——在本文件里排除，
   // 不去动 frontend/ 的任何文件。
   testIgnore: ["**/landing.spec.ts", "**/docs-localized-links.spec.ts"],
-  use: { baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3100" },
+
+  // Nuxt 首次 preview 编译很慢，不预热第一个 spec 会假红。
+  // 现成实现：git show 44309ae7:frontend-vue/tests/e2e/global-setup.ts
+  globalSetup: "./tests/global-setup.ts",
+
+  // ↓↓↓ 以下六项逐字镜像 frontend/playwright.config.ts —— 见下方说明 ↓↓↓
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: process.env.CI ? "github" : "html",
+  timeout: 30_000,
+  use: {
+    baseURL,
+    locale: "en-US",        // ★ 漏掉这条会大面积假红，见下
+    trace: "on-first-retry",
+  },
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // ↑↑↑ 到这里 ↑↑↑
+
   webServer: {
-    command: "./node_modules/.bin/nuxt build && ./node_modules/.bin/nuxt preview --port 3100",
-    url: "http://localhost:3100",
-    reuseExistingServer: !process.env.CI,
+    command: "./node_modules/.bin/nuxt build && PORT=3101 ./node_modules/.bin/nuxt preview",
+    url: baseURL,
+    reuseExistingServer: false,   // ★ 不是 !CI，见下
     timeout: 240_000,
     env: {
       // 对应 frontend/playwright.config.ts:38 的 DEER_FLOW_AUTH_DISABLED=1
@@ -230,7 +261,29 @@ export default defineConfig({
 });
 ```
 
-`page.route()` 在浏览器侧拦截，不经过 nginx，所以 E2E 直接打 :3100 即可——前提是应用发出的 URL 与 Next 版一致（见 [07-parallel-run.md](07-parallel-run.md)）。
+`page.route()` 在浏览器侧拦截，不经过 nginx，所以 E2E 直接打自己的端口即可——前提是应用发出的 URL 与 Next 版一致（见 [07-parallel-run.md](07-parallel-run.md)）。
+
+### ⚠️ spec 是合同，config 也是合同的一部分
+
+上面标注「逐字镜像」的六项不是抄写洁癖。**spec 只读、但 spec 的运行条件由 config 决定**，config 不同等于合同条件不同：
+
+| 字段 | 漏掉的后果 |
+| --- | --- |
+| **`use.locale: "en-US"`** | **最危险的一条。** 25 个 spec 里绝大多数断言英文文案（`getByRole("button", { name: "Regenerate" })`、`getByPlaceholder(/how can i assist you/i)`…），而 `chat.spec.ts` 有一个用例主动写 `document.cookie = "locale=zh-CN"` 再 reload。不锁 locale，Vue 版会跟随宿主机语言（本机是 zh-CN），**大面积假红且失败信息毫无指向性** |
+| `timeout: 30_000` | Next 版 30 s；Vue 版用 Playwright 默认 30 s 恰好相同，但显式写出来才不会在将来漂 |
+| `fullyParallel` / `workers` | 并发度不同会改变 spec 之间的竞态暴露程度，两边跑出不同结果时无法归因 |
+| `retries` | CI 上 Next 版重试 2 次。Vue 版不重试会显得更不稳，不是真实差异 |
+| `projects: [chromium]` | 不写会用默认 project，`devices["Desktop Chrome"]` 的 viewport / UA / deviceScaleFactor 都不一样——`ui-polish-mobile.spec.ts` 这类断言尺寸的 spec 直接失真 |
+
+### ⚠️ 为什么 E2E 不能用 3100，以及为什么 `reuseExistingServer: false`
+
+这两条是同一个问题的两面。
+
+[G0-1](06-migration-plan.md#m0-的六道-gate) 的全部论证是「`routeRules` 在 preview 下生效而 `devProxy` 不生效，所以必须验 preview」。但如果 E2E 用 3100 且 `reuseExistingServer: !CI`，那么**本地只要有一个 `make dev` 正跑在 3100，Playwright 就直接复用那个 dev server，preview 根本没被启动过**——G0-1 的论证被完整架空，而且没有任何报错。
+
+所以：**E2E 用独立端口 3101，且 `reuseExistingServer: false`。** 代价是每次 E2E 都要重新 build（`timeout` 已放到 240 s），换来的是「跑的确实是 preview 产物」这个前提成立。
+
+> Next 版用 3000 + `reuseExistingServer: !CI` 有同样的隐患，但它的 `rewrites()` 在 dev 与 start 下行为一致，所以复用 dev server 不影响结论。Vue 版没有这个豁免。
 
 ### ⚠️ M0 必须先验证 spec 能被收集到
 
@@ -241,10 +294,14 @@ export default defineConfig({
 M0 花几分钟先跑这一条：
 
 ```bash
-cd frontend-vue && pnpm exec playwright test --list
+cd frontend-vue && make e2e -- --list
 ```
 
-列不出 25 个用例就立刻处理。最省事的修法是让两边指向同一份物理安装：
+**期望是 25 个 spec 文件 / 约 120 个 `test()`。** 实测 `frontend/tests/e2e/` 有 **27 个 spec / 128 个 `test()`**，减去两个豁免 spec 后就是这个数。
+
+> ⚠️ 早期版本写的是「列不出 **25 个用例**」——`--list` 列的是 test case 不是 spec 文件，按 25 去比对会在第一次跑的时候直接把人带偏。
+
+列不出来就立刻处理。最省事的修法是让两边指向同一份物理安装：
 
 ```json
 "@playwright/test": "link:../frontend/node_modules/@playwright/test"
@@ -286,6 +343,124 @@ Reka UI 与 Radix 的内部结构在个别组件上有出入，一定会有选�
 
 其余 25 个是硬合同。按模块分批挂到 [M4b / M5 / M6](06-migration-plan.md#里程碑总览) 上，不要攒到 M7 一次性跑。
 
+## Makefile —— 唯一开发者入口
+
+**决策：所有开发者命令走 `make`，`package.json` 的 `scripts` 只留 `postinstall`。**
+
+理由有三条：
+
+1. **与 `backend/` 对齐。** `backend/Makefile` 已经是这个形态（`dev` / `test` / `lint` / `format` / `migrate-rev`），仓库里已有先例。`frontend/` 用 pnpm 脚本是 create-t3-app 模板带来的，不是这个仓库的偏好
+2. **CI 已经在调 `make verify`。** 仓库里那个 workflow 就是这么写的（见 [06 G0-0](06-migration-plan.md#g0-0--ci-workflow-对齐)），入口统一后不用两头改
+3. **一个入口，不用记两套名字。** 有 `make verify` 又有 `make verify` 是纯粹的认知负担
+
+```makefile
+# frontend-vue/Makefile
+#
+# 唯一开发者入口。package.json 的 scripts 只保留 postinstall。
+#
+# ⚠️ 这里直接调 corepack pnpm，不走仓库根的 scripts/pnpm.py ——
+#    那个 runner 硬编码了 cwd=frontend/，在本目录调用会静默跑到
+#    Next.js 项目里去。理由见 07-parallel-run.md。
+#    corepack 会按 package.json 的 packageManager 字段取到 pnpm@10.26.2。
+
+.PHONY: help install dev build preview start generate \
+        lint lint-fix typecheck format format-write \
+        test test-watch e2e e2e-install \
+        i18n-check i18n-diff i18n-unused \
+        verify gen-api-types
+
+PNPM ?= corepack pnpm
+EXEC  = $(PNPM) exec
+
+DEV_PORT     ?= 3100
+E2E_PORT     ?= 3101
+
+help:
+	@echo "frontend-vue commands:"
+	@echo "  make install        - Install dependencies"
+	@echo "  make dev            - Nuxt dev server (port $(DEV_PORT))"
+	@echo "  make build          - Production build (.output/)"
+	@echo "  make preview        - Preview the build (port $(DEV_PORT))"
+	@echo "  make verify         - Full gate: lint + format + types + i18n + build + unit tests"
+	@echo "  make test           - Unit tests (Vitest, both projects)"
+	@echo "  make e2e            - Contract E2E against ../frontend/tests/e2e"
+	@echo "  make gen-api-types  - Regenerate REST types from openapi.snapshot.json"
+
+install:
+	$(PNPM) install
+
+## Dev / build
+dev:
+	$(EXEC) nuxt dev --port $(DEV_PORT)
+
+build:
+	$(EXEC) nuxt build
+
+preview:
+	PORT=$(DEV_PORT) $(EXEC) nuxt preview
+
+start:
+	node .output/server/index.mjs
+
+generate:
+	$(EXEC) nuxt generate
+
+## Quality
+lint:
+	$(EXEC) eslint .
+
+lint-fix:
+	$(EXEC) eslint . --fix
+
+typecheck:
+	$(EXEC) vue-tsc --noEmit
+
+format:
+	$(EXEC) prettier --check .
+
+format-write:
+	$(EXEC) prettier --write .
+
+## Tests
+test:
+	$(EXEC) vitest run
+
+test-watch:
+	$(EXEC) vitest
+
+# testDir 指向 ../frontend/tests/e2e —— spec 是只读合同，见本文档 E2E 一节。
+e2e:
+	$(EXEC) playwright test
+
+e2e-install:
+	$(EXEC) playwright install --with-deps chromium
+
+## i18n 词典体检
+i18n-check:
+	node scripts/i18n-manager.mjs check
+
+i18n-diff:
+	node scripts/i18n-manager.mjs diff
+
+i18n-unused:
+	node scripts/i18n-manager.mjs unused
+
+## 门禁：CI 调的就是这个
+verify: lint format typecheck i18n-check build test
+
+## 由签入的 openapi.snapshot.json 生成 REST 类型（不依赖 Gateway 在线）
+gen-api-types:
+	$(EXEC) openapi-typescript ./openapi.snapshot.json -o ./app/core/api/types.gen.ts
+```
+
+> `verify` 用的是 make 的前置依赖（`verify: lint format typecheck ...`）而不是 `&&` 串联——任一目标失败即整体失败，且 `make -k` 可以一次跑完看全部问题。这比 `pnpm lint && pnpm format && ...` 好用。
+
+### ⚠️ 不要用 `scripts/pnpm.py`
+
+仓库根 `AGENTS.md` 要求 host 侧 pnpm 调用走 `scripts/pnpm.py`，但[那个 runner 硬编码了 `cwd=frontend/`](07-parallel-run.md#️-不要用-scriptspnpmpy-启动)——在 `frontend-vue/` 里调用它会**静默地跑到 Next.js 项目里去，且不报错**。
+
+那条约束的对象是仓库既有的构建流程；`frontend-vue` 不接入根 `make`，直接用 `corepack pnpm`。`frontend-vue/package.json` 同样 pin `packageManager: "pnpm@10.26.2"`，corepack 会在本目录取到正确版本。
+
 ## package.json
 
 > 版本状态核实于 2026-08-03/04。**共享包一律对齐 `frontend/` 的版本**，理由见 [02-stack.md](02-stack.md#️-版本对齐约束)——`core/` 是原样搬过来的，依赖行为必须一致。
@@ -297,26 +472,7 @@ Reka UI 与 Radix 的内部结构在个别组件上有出入，一定会有选�
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nuxt dev --port 3100",
-    "build": "nuxt build",
-    "preview": "nuxt preview --port 3100",
-    "start": "node .output/server/index.mjs",
-    "generate": "nuxt generate",
-    "postinstall": "nuxt prepare",
-    "check": "eslint . && vue-tsc --noEmit",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "typecheck": "vue-tsc --noEmit",
-    "format": "prettier --check .",
-    "format:write": "prettier --write .",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "i18n:check": "node scripts/i18n-manager.mjs check",
-    "i18n:diff": "node scripts/i18n-manager.mjs diff",
-    "i18n:unused": "node scripts/i18n-manager.mjs unused",
-    "quality": "pnpm lint && pnpm format && pnpm typecheck && pnpm i18n:check && pnpm build && pnpm test",
-    "gen:api-types": "openapi-typescript ./openapi.snapshot.json -o ./app/core/api/types.gen.ts"
+    "postinstall": "nuxt prepare"
   },
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",
@@ -461,7 +617,7 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
   vite: { plugins: [tailwindcss()] },
 
-  // 关闭业务组件自动导入：133 个嵌套组件的自动命名会失控
+  // 关闭业务组件自动导入：126 个嵌套组件的自动命名会失控
   // （WorkspaceMessagesMessageList…），显式 import 才能与 frontend/ 的结构
   // 一一对应，迁移期间保持可追溯。
   components: { dirs: [] },
@@ -498,7 +654,7 @@ export default defineNuxtConfig({
     },
   },
 
-  typescript: { typeCheck: false },   // 交给 pnpm check 里的 vue-tsc
+  typescript: { typeCheck: false },   // 交给 make typecheck 里的 vue-tsc
 });
 ```
 
@@ -526,16 +682,27 @@ const gateway =
 export const buildProxyRules = (env = process.env) => ({
   ...(env.NUXT_PUBLIC_LANGGRAPH_BASE_URL
     ? {}
-    : { "/api/langgraph/**": { proxy: `${gateway}/api/**` } }),
+    : { "/api/langgraph/**": { proxy: { to: `${gateway}/api/**`, ...streamOpts } } }),
   ...(env.NUXT_PUBLIC_BACKEND_BASE_URL
     ? {}
-    : { "/api/**": { proxy: `${gateway}/api/**` } }),
+    : { "/api/**": { proxy: { to: `${gateway}/api/**`, ...streamOpts } } }),
 });
+
+/**
+ * ⚠️ 这两个 flag 会被 Nitro 透传给 h3 的 proxyRequest，是 SSE 与大 body 的关键。
+ * 不带 streamRequest，h3 会先把整个请求体读进内存（readRawBody）——nginx 侧对
+ * /api/langgraph/ 配的是 client_max_body_size 20M + proxy_request_buffering off，
+ * 这里不对齐就是一个内存问题。
+ * G0-1 要带/不带各跑一遍确认差异。
+ */
+const streamOpts = { sendStream: true, streamRequest: true } as const;
 ```
+
+> `proxy` 既可以是字符串也可以是 `{ to, ... }` 对象；用对象形式才能把 `sendStream` / `streamRequest` 传下去。这两个字段是 M0 必须实测的东西之一，不要因为「字符串形式看起来更简洁」就退回去。
 
 **为什么值得多这一个文件**（做法参照内部项目 `nuxt-modern-starter` 的 `config/routes.ts`）：
 
-1. **[M0 G0-1](06-migration-plan.md#m0-的四道-gate) 那条断言有地方放了。** 「`/api/langgraph/**` 是否比 `/api/**` 优先命中」原本只能人工验一次；现在 `buildProxyRules` 接受注入的 `env`，是个纯函数，可以直接单测——G0-1 从一次性检查变成永久回归。
+1. **[M0 G0-1](06-migration-plan.md#m0-的六道-gate) 那条断言有地方放了。** 「`/api/langgraph/**` 是否比 `/api/**` 优先命中」原本只能人工验一次；现在 `buildProxyRules` 接受注入的 `env`，是个纯函数，可以直接单测——G0-1 从一次性检查变成永久回归。
 2. **两个 `NUXT_PUBLIC_*` 的条件分支能被穷举测。** 设 / 不设共 4 种组合，手工验容易漏。
 3. **渲染分区是一份可读的清单**，不用在 `nuxt.config.ts` 里翻。将来加 `/workspace/settings` 之类的新路由时，改一处。
 
@@ -556,10 +723,12 @@ export const buildProxyRules = (env = process.env) => ({
 
 `routeRules` 的 `proxy` 编译进 Nitro 产物，dev / preview / `node .output/server/index.mjs` 三种形态共用同一份规则，与 Next 的 `rewrites` 同构。
 
-**两个 M0 必须实测的点**（不要假设）：
+**四个 M0 必须实测的点**（不要假设）：
 
-1. **匹配优先级** —— Nitro 的 routeRules 走 radix 匹配，理论上 `/api/langgraph/**` 比 `/api/**` 更具体因而胜出。但这是本方案的命门（前缀语义反了会静默把 SSE 打到错误路径），M0 要用真实请求确认，而不是靠推断。
-2. **SSE 是否被缓冲** —— nginx 侧靠 `proxy_buffering off` 保证首字节即时到达。Nitro 的代理理论上是流式转发，M0 用一个真实 run 确认 token 是逐条到达而不是攒到最后。
+1. **匹配优先级** —— Nitro 的 routeRules 走 radix 匹配并用 `defu` 合并 `matchAll` 结果，理论上 `/api/langgraph/**` 比 `/api/**` 更具体因而胜出。但这是本方案的命门（前缀语义反了会静默把 SSE 打到错误路径），M0 要用真实请求确认，而不是靠推断。
+2. **SSE 是否被缓冲** —— nginx 侧靠 `proxy_buffering off` 保证首字节即时到达。M0 用一个真实 run 确认 token 是逐条到达而不是攒到最后。现成脚本：`git show 44309ae7:frontend-vue/scripts/p0-nitro-proxy-sse.mjs`（它自起假 SSE upstream + Nuxt 断言帧到达；**但它跑的是 `nuxt dev`，要改成 `build && preview`**，并补一段 `\r\n\r\n` 分隔的用例，顺手把 [L1](05-invariants.md#l-自研-sse-transport-的补强项) 一起验了）。
+3. **`sendStream` / `streamRequest` 的有无差异** —— 带与不带各跑一遍，确认 (a) SSE 逐帧到达 (b) 20 MB 上传不整个进内存。
+4. **WebSocket 能否 upgrade**（[G0-5](06-migration-plan.md#m0-的六道-gate)）—— routeRules 的 proxy 走 h3 `proxyRequest`，是纯 HTTP 转发，**大概率不处理 `Upgrade`**。browser-view 依赖它，结论要在 M0 拿到而不是 M6。
 
 ### ⚠️ E2E 必须能关掉鉴权
 

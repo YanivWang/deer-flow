@@ -74,6 +74,41 @@ Nextra 没有 Vue 移植，重建需要自写文档主题；当前不在范围�
 
 其中 `src/core/threads/hooks.ts` 里 `isMock` 出现 **23 次** —— 这正是最难移植的文件（`useStream` 所在）。少掉 mock 分支后 `getAPIClient()` 退化为无参单例，该 composable 会干净很多。
 
+### 4. xyflow canvas 组件（不迁）
+
+`ai-elements/` 里有 7 个组件只服务于 `@xyflow/react` 的画布：
+
+| 文件 | 行 |
+| --- | --- |
+| `canvas.tsx` `node.tsx` `edge.tsx` `connection.tsx` `controls.tsx` `panel.tsx` `toolbar.tsx` | 共 310 |
+
+实测这 7 个在 `frontend/src/` 内**零外部引用**——`@xyflow/react` 的全部引用点就是它们自己。删掉依赖，它们随之不用写。
+
+**`ai-elements/` 的手写量因此是 22 个 / 5,107 行，不是 29 个 / 5,417 行。**
+
+### 5. `src/app/` 的处置（早期版本漏了这一节）
+
+`frontend/src/app/` 实测 **39 个文件 / 4,143 行**，此前不在任何一张工作量表里。
+
+| 分类 | 数 | 处置 |
+| --- | --- | --- |
+| `mock/api/**` route handlers | 12 | 不迁（见上文 §3） |
+| `[lang]/docs/**`、`blog/**` | 5 | 不迁（见上文 §2） |
+| `api/memory/**` route handlers | 2 | 删除——浏览器经代理直连 `/api/memory` |
+| **`layout.tsx`（根 + `(auth)` + `workspace` + 各级嵌套）** | 6 | → `layouts/{default,auth,workspace}.vue` |
+| **`page.tsx` / `providers.tsx` / `workspace-content.tsx`** | 14 | → `pages/**`，见 [03 的路由映射](03-project-shape.md#路由映射) |
+
+**需要改写的是 20 个 layout/page + 2 个不迁 = 22 个进 [M4b](06-migration-plan.md#m4b--通用-agent-uil2-第一批--模板价值兑现点)。**
+
+其中两个值得单独留意：
+
+- `workspace/workspace-content.tsx` —— 服务端读 cookie，`ssr:false` 后改客户端（见 [03 的服务端边界变化](03-project-shape.md#服务端边界的变化)）
+- `workspace/chats/[thread_id]/providers.tsx` —— 7 个业务 Context 的挂载点之一，对应 [04 §3](04-architecture-decisions.md#3-状态管理pinia-管流式状态provideinject-管-ui-状态) 的 `provide`/`inject` 改写
+
+### 6. `@radix-ui/react-icons`（换掉，不是删掉）
+
+实测 2 个消费文件。它与 `@radix-ui/*` 那 16 个**行为原语**不是一回事——reka-ui 只接手原语，不提供图标。改用 `lucide-vue-next` 的等价图标，逐处替换。
+
 ## ⚠️ 一个不能跟着删的东西
 
 `frontend/tests/e2e/utils/mock-api.ts` **必须保留**。

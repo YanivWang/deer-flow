@@ -136,7 +136,15 @@ toJsxRuntime(tree, { Fragment, jsx, jsxs, elementAttributeNameCase: "html" });
 
 同时实测确认 `streamdown@2.5.0` 的 dependencies 确实包含 `hast-util-to-jsx-runtime`、`remend`、`rehype-harden`、`marked`、`rehype-raw`、`rehype-sanitize`、`unified` —— 本方案的依赖考古成立。
 
-**⚠️ `elementAttributeNameCase: 'html'` 的连带影响**：自定义组件覆盖拿到的 prop 是 **`class` 而不是 `className`**，components map 里每个覆盖都要按 `class` 写。另外 `stylePropertyNameCase` 默认 `'dom'`（驼峰），需显式决定用 `'css'` 还是保持默认。
+**⚠️ `elementAttributeNameCase: 'html'` 的连带影响**：自定义组件覆盖拿到的 prop 是 **`class` 而不是 `className`**，components map 里每个覆盖都要按 `class` 写。
+
+**`stylePropertyNameCase` 取 `'css'`**（默认是 `'dom'` 驼峰）。git 历史里有一份现成的 Vitest 探针用的就是这个值，可以直接取来当 M3 的起点：
+
+```bash
+git show 44309ae7:frontend-vue/tests/p0/jsx-runtime-hast.test.ts
+```
+
+它除了验可渲染性，还验了**流式追加兄弟节点时已有 DOM 不重新挂载**（`expect(wrapper.find("p").element).toBe(firstParagraph)`）——正是 [05 M4](05-invariants.md#m-vue-移植专有陷阱)「逐词动画 key 必须稳定」的底层前提。
 
 **⚠️ streamdown 同时用了 `rehype-harden` 和 `rehype-sanitize`**，本方案早期只列了前者。在 `rehype-raw` 开启的前提下漏掉 `rehype-sanitize` 是安全降级，两个都要带。
 
@@ -149,19 +157,52 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层(marked/re
 
 两者**不互相依赖，但复用同一个 `hast-util-to-jsx-runtime`**。而该库的官方描述是 "hast utility to transform to preact, react, solid, svelte, **vue**, etc"，Vue 也确实提供 `vue/jsx-runtime` 入口（`exports` 中含 `./jsx-runtime`，带 types/import/require）。
 
-| 层 | 处置 |
-| --- | --- |
-| unified 管线（remark/rehype 插件链） | **原样保留**，框架无关 |
-| `preprocess.ts`（12 KB 嵌套截断 / LaTeX 归一化 / 系统标签剥离） | **原样搬** |
-| `rehypeStreamingListItems` | **原样搬** |
-| hast → vnode | **`hast-util-to-jsx-runtime` + `vue/jsx-runtime`**（`elementAttributeNameCase: 'html'`），约 30 行胶水 |
-| 未完成 markdown 自愈 | **直接用 `remend`** 1.3.0（Streamdown 的 `parseIncompleteMarkdown` 的独立框架无关实现） |
-| URL 安全过滤 | **直接用 `rehype-harden`** 1.1.8 **+ `rehype-sanitize`** 6.0.0（streamdown 两个都用） |
-| 分块 + memo | 自写（用 `marked`，同 Streamdown 策略） |
-| 逐词动画 | 自写 |
-| 错误边界 | 自写（`onErrorCaptured`） |
+| 层 | 处置 | 新代码 |
+| --- | --- | --- |
+| unified 管线（remark/rehype 插件链） | **原样保留**，框架无关 | 0 |
+| `preprocess.ts`（12 KB 嵌套截断 / LaTeX 归一化 / 系统标签剥离） | **原样搬**（389 行） | 0 |
+| 未完成 markdown 自愈 | **直接用 `remend`** 1.3.0（Streamdown 的 `parseIncompleteMarkdown` 的独立框架无关实现） | 0 |
+| URL 安全过滤 | **直接用 `rehype-harden`** 1.1.8 **+ `rehype-sanitize`** 6.0.0（streamdown 两个都用） | 0 |
+| hast → vnode | **`hast-util-to-jsx-runtime` + `vue/jsx-runtime`** | ~30 |
+| `rehypeStreamingListItems` | 从 `plugins.ts` 里**摘出来**搬 | ~50 |
+| `plugins.ts` 其余部分 | **重写**（它 import 三个 React-only 包，见下） | ~50 |
+| `components.tsx` 组件覆盖 map | **重写**（90 行 React） | ~120 |
+| `mermaid.ts` + `safe-children.ts` | **重写**（132 行 React） | ~150 |
+| **代码块组件**（渲染 shiki tokens + 复制 + 语言标签 + 主题） | **重写**（见下，它在 streamdown 内部） | ~250 |
+| 分块 + memo | 自写（用 `marked`，同 Streamdown 策略） | ~100 |
+| 逐词动画 | 自写 | ~120 |
+| 错误边界 | 自写（`onErrorCaptured`） | ~30 |
+| | | **~900 行** |
 
-新代码约 **230 行**（原估 400 行）。最易出错的部分——属性名转换、key 生成、raw HTML、URL 安全——交给成熟库。
+最易出错的部分——属性名转换、key 生成、raw HTML、URL 安全——仍然交给成熟库。但**整层的量是 ~900 行，不是早期写的 230 行**，三个实测事实把它顶了上去：
+
+**① `core/streamdown/` 是 6 个文件 714 行，不是只有 `preprocess.ts`。**
+
+| 文件 | 行 | 早期说法 | 实际 |
+| --- | --- | --- | --- |
+| `preprocess.ts` | 389 | 原样搬 | ✅ |
+| `plugins.ts` | 98 | **「原样搬，0 行」** | ❌ 它 `import { code } from "@streamdown/code"`、`import { mermaid } from "@streamdown/mermaid"`、`import type { StreamdownProps } from "streamdown"`。**只有 `rehypeStreamingListItems` 可搬** |
+| `components.tsx` | 90 | 未提及 | 重写 |
+| `mermaid.ts` | 98 | 未提及 | 重写 |
+| `safe-children.ts` | 34 | 未提及 | 重写 |
+
+`plugins.ts` 还导出 `streamdownWordAnimation` / `streamdownSmoothStreamingAnimation`（`{ animation: "fadeIn", duration: 200, sep: "word", stagger: 0 }`）——那是 **Streamdown 自己的动画配置 API**。它们是「逐词动画要实现成什么样」的规格，不是可搬的代码。
+
+**② 代码块 UI 在 `streamdown` 包里，不在 `@streamdown/code` 里。**
+
+实测 `@streamdown/code` 的 dist 只有 **1,568 字节**——纯 **shiki tokenizer 插件**（语言别名归一化、highlighter 缓存、返回 tokens），零 DOM。真正的代码块渲染在 `streamdown` 的 `chunk-*.js`，**67,773 字节**。「保留 shiki」只解决高亮，组件本身要重写。
+
+**③ ⚠️ `globals.css` 直接搬会静默丢样式。**
+
+[`frontend/src/styles/globals.css:4-6`](../frontend/src/styles/globals.css)：
+
+```css
+@source "../../node_modules/streamdown/dist/index.js";
+@source "../../node_modules/@streamdown/code/dist/*.js";
+@source "../../node_modules/@streamdown/mermaid/dist/*.js";
+```
+
+Tailwind 4 靠这三行从 streamdown 的 dist 里扫 class。453 行主题搬到 `frontend-vue/` 后这些路径不存在，**只出现在 streamdown dist 里的 class 会被 purge**——表现是「样式莫名少一块」，不报错。搬的时候必须删掉这三行，并确认自写的代码块 / mermaid 组件把用到的 class 都写进自己的源码。
 
 ⚠️ **`hast-util-to-jsx-runtime` 最后发布 2025-03-05。** 它是 unified 生态的纯函数式工具库、无框架 peer、被 react-markdown 与 Streamdown 同时依赖，停在稳定态与"UI 库停更"性质不同，可接受。Vue 支持已按上文核实，[M3](06-migration-plan.md) 的 gate 只需 diff 输出。
 
@@ -183,6 +224,7 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层(marked/re
 | shadcn/ui | **shadcn-vue**（`shadcn-nuxt` 模块） |
 | `@radix-ui/*`（16 个） | **reka-ui** |
 | `@radix-ui/react-slot` | Reka UI `Primitive` + `as-child` |
+| **`@radix-ui/react-icons`**（2 个消费文件） | **换成 `lucide-vue-next` 的等价图标**。早期版本漏了这一行——它与 `@radix-ui/*` 行为原语不是一回事，reka-ui 不提供图标 |
 | `lucide-react` | `lucide-vue-next` 1.0.0 |
 | `sonner` | `vue-sonner` |
 | `next-themes` | `@nuxtjs/color-mode`（`classSuffix: ""`） |
@@ -218,11 +260,11 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层(marked/re
 | `@uiw/react-codemirror` | **直接封装 CodeMirror 6 `EditorView`**（约 60–80 行）—— ⚠️ 不要用 `vue-codemirror`，停更于 2022-08-27 |
 | `@codemirror/lang-*` / `@uiw/codemirror-theme-*` | 原样保留（CM6 扩展，框架无关） |
 | `nextra` / `nextra-theme-docs` | 删除 |
-| `@xyflow/react` | 删除（仅被 7 个 ai-elements canvas 文件引用，`src/` 内无外部使用） |
+| `@xyflow/react` | 删除。**连带 7 个 ai-elements canvas 组件一并不迁**（`canvas` `node` `edge` `connection` `controls` `panel` `toolbar`，共 310 行；实测它们在 `src/` 内零外部引用）→ ai-elements 手写量 29 → **22** |
 
 ### Next 专有 API → Vue 写法
 
-这张表是逐文件机械改写的主要成本来源，**用量为实测**（`frontend/src/` 内的文件数）。写法先定死，避免 133 个组件里出现三种不同的改法。
+这张表是逐文件机械改写的主要成本来源，**用量为实测**（`frontend/src/` 内的文件数）。写法先定死，避免 126 个组件里出现三种不同的改法。
 
 | Next | 用量 | Vue / Nuxt | 语义差异（会咬人的地方） |
 | --- | --- | --- | --- |
@@ -272,7 +314,11 @@ codemirror                @codemirror/language-data
 class-variance-authority  clsx                tailwind-merge    tw-animate-css
 ```
 
-`ai`（Vercel AI SDK）**仅用于 3 个类型**：`FileUIPart`、`ChatStatus`、`LanguageModelUsage`。保留为 type-only 依赖或内联定义。**AI Elements 是 React-only，29 个组件必须手写。**
+`ai`（Vercel AI SDK）**仅用于 3 个类型**：`FileUIPart`、`ChatStatus`、`LanguageModelUsage`。
+
+**决策：内联定义，不装这个包。** 早期版本写「保留为 type-only 依赖或内联定义」两可，导致 [03 的 `package.json`](03-project-shape.md#packagejson) 里既没有它、正文又说保留。为 3 个类型挂一个 SDK 不划算，且它会把 React 相关的传递依赖带进来——写进 `app/core/types/message.ts` 即可（那里本来就要手写 Message 类型）。
+
+**AI Elements 是 React-only，22 个组件必须手写**（不是 29，7 个 xyflow canvas 件不迁，见 [01](01-scope.md#4-xyflow-canvas-组件不迁)）。
 
 ### 新增
 

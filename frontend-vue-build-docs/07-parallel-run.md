@@ -2,11 +2,21 @@
 
 `frontend-vue/` 与现有 `frontend/` 在同一仓库内并存、同时运行、共用同一套 Gateway 接口。
 
-## 原则：零仓库改动
+## 原则：仓库改动只有一处
 
 `frontend/` 与 `backend/` 是 GitHub 上游在维护的项目，仓库根的配置文件（`Makefile`、`docker/nginx/`、`docker-compose`、`scripts/`）也不属于本次工作区。
 
 **因此接线方式必须做到零改动**——`frontend-vue` 自己解决代理，不碰 nginx、不碰 `serve.sh`、不碰 `scripts/pnpm.py`、不加 `make` 目标。
+
+### ⚠️ 但有一个已经存在的例外
+
+**`.github/workflows/frontend-vue-verify.yml` 已经在仓库里且已提交**，触发条件是 `paths: frontend-vue/**`，执行的是本方案不存在的 `make verify` 与 `playwright.vue.config.ts`。它是上一轮实现留下的——目录清掉了，workflow 没清。
+
+**不处理它，建完 `frontend-vue/` 的第一次 push 就会 CI 红**，且失败信息是 `make: command not found`，指不到真实原因。
+
+处理它要动 `.github/`，属于仓库根配置，**需要先征得同意**。三个选项与推荐做法见 [06 的 G0-0](06-migration-plan.md#g0-0--ci-workflow-对齐)——这是 M0 的第一件事。
+
+所以准确的表述是：**除这一个遗留文件外零仓库改动。**
 
 > 早期版本提议让两个前端对称地都走 nginx（新增 2027 入口、抽 `api-locations.conf`、改 `serve.sh` 与 compose）。那套方案的前提是「frontend-vue 将来取代 `frontend/`」。产品目标改为[通用模板](08-agent-core-contract.md)后前提不成立，且它要改 4 个仓库文件——**已废弃**，理由与取舍见[文末附录](#附录为什么不再让两个前端都走-nginx)。
 
@@ -17,7 +27,8 @@
 | Nginx | `2026` | 现有统一入口 → `frontend`(3000) + `gateway`(8001)，不动 |
 | Gateway API | `8001` | 共用 |
 | `frontend`（Next.js） | `3000` | 现状 |
-| **`frontend-vue`（Nuxt）** | **`3100`** | 新增 |
+| **`frontend-vue`（Nuxt）** | **`3100`** | 新增，`make dev` / `make preview` |
+| **`frontend-vue` E2E preview** | **`3101`** | ★ 独立端口。E2E 必须跑在自己的 preview 上，不能复用 3100 上的 dev server——理由见 [03](03-project-shape.md#️-为什么-e2e-不能用-3100以及为什么-reuseexistingserver-false) |
 | Provisioner | `8002` | 可选 |
 
 ### ⚠️ 本机其他项目也会抢端口
@@ -64,14 +75,27 @@ export default defineNuxtConfig({
   devServer: { port: 3100 },
 
   routeRules: {
+    // ⚠️ sendStream / streamRequest 会被 Nitro 透传给 h3 的 proxyRequest。
+    // 不带 streamRequest，h3 会先把整个请求体读进内存（readRawBody）——nginx 侧
+    // 对 /api/langgraph/ 配的是 client_max_body_size 20M + proxy_request_buffering off。
+    // G0-1 要带/不带各跑一遍确认差异。
+    //
     // 复刻 nginx: /api/langgraph/* → Gateway /api/*
     ...(process.env.NUXT_PUBLIC_LANGGRAPH_BASE_URL
       ? {}
-      : { "/api/langgraph/**": { proxy: `${gateway}/api/**` } }),
+      : {
+          "/api/langgraph/**": {
+            proxy: { to: `${gateway}/api/**`, sendStream: true, streamRequest: true },
+          },
+        }),
     // 其余 REST 路由 1:1 透传
     ...(process.env.NUXT_PUBLIC_BACKEND_BASE_URL
       ? {}
-      : { "/api/**": { proxy: `${gateway}/api/**` } }),
+      : {
+          "/api/**": {
+            proxy: { to: `${gateway}/api/**`, sendStream: true, streamRequest: true },
+          },
+        }),
   },
 
   runtimeConfig: {
@@ -112,16 +136,26 @@ export default defineNuxtConfig({
 
 Next 的 `NEXT_PUBLIC_*` 是**构建时内联**的，换后端地址必须重新构建。Nuxt 的 `runtimeConfig.public` 由 `NUXT_PUBLIC_*` **运行时注入**，同一个产物可以换环境。这是本次重写少数几个净收益之一。
 
-## ⚠️ 已知限制：browser-view 的 WebSocket
+## ⚠️ browser-view 的 WebSocket —— 提前到 M0 验
 
-[`frontend/src/components/workspace/browser-view/api.ts:44`](../frontend/src/components/workspace/browser-view/api.ts) 建的是 `ws://…/api/threads/{id}/browser/stream`。Nitro 的代理对 WebSocket upgrade 的支持需要实测，而 nginx 有专门的 upgrade location 处理它。
+[`frontend/src/components/workspace/browser-view/api.ts:44`](../frontend/src/components/workspace/browser-view/api.ts) 建的是 `ws://…/api/threads/{id}/browser/stream`。nginx 有[专门的 upgrade location](../docker/nginx/nginx.local.conf) 处理它（`location ~ ^/api/threads/[^/]+/browser/stream`，带 `proxy_set_header Upgrade` + 600s 超时）。
 
-影响范围：**只有 browser-view（[M6](06-migration-plan.md)，L3 DeerFlow 专有）**。到 M6 时若 Nitro 代理确实撑不住 WS，两个选项：
+**Nitro 这边大概率不行**：`routeRules` 的 `proxy` 底层是 h3 的 `proxyRequest`，纯 HTTP 转发，不处理 `Upgrade` 握手；Nitro 自身的 WebSocket 能力服务的是它自己的 handler，不是 proxy 规则。
 
-1. 用 `NUXT_PUBLIC_BACKEND_BASE_URL=http://127.0.0.1:8001` 让 WS 直连 Gateway。⚠️ **这条有隐藏代价，见下节「跨源会丢认证 cookie」**——不是配一下 `GATEWAY_CORS_ORIGINS` 就完事
-2. 届时再申请在 nginx 加一个入口
+**所以这条从 M6 提前到 [M0 的 G0-5](06-migration-plan.md#m0-的六道-gate)。** 理由不是它更重要，而是**它的两条出路里有一条需要征得同意**（改 nginx），而征得同意这件事越晚成本越高——M6 时再发现，等于在最后一个里程碑上卡一个需要跨团队决策的事。验它 10 分钟。
 
-**不要为了这一个 L3 功能提前改 nginx。**
+结论若是"不通"，两个选项：
+
+1. **让 WS 直连 Gateway**（`NUXT_PUBLIC_BACKEND_BASE_URL` 或单独给 WS 一个 base URL）
+2. 申请在 nginx 加一个入口
+
+> ⚠️ **不要把「跨源丢 cookie」直接套到 WebSocket 上。** 下一节讲的是 **fetch** 跨源：那是 CORS + `credentials` 的问题，需要 `Access-Control-Allow-Credentials` 与精确 origin 白名单。
+>
+> WebSocket 不走 CORS 那套。`localhost:3100` → `localhost:8001` 虽然是不同 **origin**，但**端口不属于 site**，两者是 **same-site**，所以 `SameSite=Lax` 的 `access_token` cookie 在 WS 握手时照样会被带上。
+>
+> 也就是说：**选项 1 对 WS 很可能是可行的，即使它对普通 REST 请求不可行。** 这两件事必须分开判断，混成一条会让人误以为唯一出路是改 nginx。真正要验的是握手能否完成、以及 Gateway 侧是否校验 `Origin`。
+
+**在 G0-5 拿到结论之前，不要为这一个 L3 功能改 nginx。**
 
 ## ⚠️ 跨源会丢认证 cookie —— 不要轻易绕开同源代理
 
@@ -145,7 +179,7 @@ make dev
 
 ```bash
 # 2. 另开终端起 Vue 版
-cd frontend-vue && pnpm dev
+cd frontend-vue && make dev
 ```
 
 不加 `make dev-vue` 目标——那要改根 `Makefile`。`scripts/pnpm.py` 同理不能用（它硬编码 `cwd=frontend/`，见下）。
@@ -155,9 +189,10 @@ cd frontend-vue && pnpm dev
 | `localhost:2026` | 现有 Next 前端正常，未受影响 |
 | `localhost:3100` | Nuxt 前端可访问 |
 | `localhost:3100` 上调用 `/api/features` | 返回 Gateway 的真实响应，不是 404/502 |
-| **`nuxt preview` 下同样调用 `/api/features`** | **同上**——这一条是 `routeRules` 相对 `devProxy` 的全部意义所在，必须单独验 |
+| **`PORT=3101 nuxt preview` 下同样调用 `/api/features`** | **同上**——这一条是 `routeRules` 相对 `devProxy` 的全部意义所在，必须在 **preview** 上单独验 |
 | `localhost:3100` 上发起一个 run | `/api/langgraph/threads/…/runs/stream` 命中 Gateway，且 token **逐条到达**而不是攒到最后（代理未缓冲） |
-| `pnpm exec playwright test --list` | 列出 25 个用例。列不出来说明撞上了 `@playwright/test` 双实例，见 [03](03-project-shape.md#️-m0-必须先验证-spec-能被收集到) |
+| `ws://localhost:3100/api/threads/x/browser/stream` | 握手能否完成（[G0-5](06-migration-plan.md#m0-的六道-gate)）。大概率不行，结论要在 M0 拿到 |
+| `make e2e -- --list` | 列出 **25 个 spec / 约 120 个用例**。列不出来说明撞上了 `@playwright/test` 双实例，见 [03](03-project-shape.md#️-m0-必须先验证-spec-能被收集到) |
 
 ### ⚠️ 不要用 `scripts/pnpm.py` 启动
 

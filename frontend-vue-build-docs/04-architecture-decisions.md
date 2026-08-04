@@ -32,15 +32,19 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层
 
 输出的 DOM 结构与 class 名与 React 版一致 → 现有 CSS 全部复用 → 样式天然对齐。换成 markdown-it 会产生不同的 AST 与 HTML 结构，样式与行为都要重调。
 
-消息正文是用户注视时间最长的区域，其 DOM 结构在硬性验收范围内（见 [§7](#7-验收全域-11结构与交互严格样式放宽)），这一层不能妥协。
+消息正文是用户注视时间最长的区域，其 DOM 结构在硬性验收范围内（见 [§7](#7-验收只有一条硬门禁)），这一层不能妥协。
 
 ### 仍需自写的部分
 
 - **分块 + memo**（用 `marked`，同 Streamdown 策略）
 - **逐词动画**——铁律：**不要用"给每个词套一个 rehype 插件"的方案**，增长中的块被重新解析会导致旧词重新挂载并重播动画
 - **错误边界**（Vue 用 `onErrorCaptured`）
+- **代码块组件**（渲染 shiki tokens、复制按钮、语言标签、明暗主题）
+- **`plugins.ts` / `components.tsx` / `mermaid.ts` / `safe-children.ts` 的 Vue 等价物**
 
-新代码约 230 行，放在 `app/core/markdown/`。
+⚠️ **新代码约 900 行，不是早期写的 230 行。** 低估来自三个实测事实——`core/streamdown/` 是 6 文件 714 行而非只有 `preprocess.ts`、`plugins.ts` 根本搬不了（它 import 三个 React-only 包）、代码块 UI 在 `streamdown` 的 68 KB chunk 里而不在 `@streamdown/code`（那只是个 1.5 KB 的 shiki tokenizer 插件）。明细与 `globals.css` 的 `@source` 陷阱见 [M3](06-migration-plan.md#️-早期的约-230-行是错的实测低估了-34-倍)。
+
+落点 `app/core/markdown/`。
 
 ### Vue 支持已核实
 
@@ -299,7 +303,7 @@ gamma 的 agent 层针对**它自己的后端协议**编写，与 DeerFlow Gatew
 
 **决策：`components: { dirs: [] }`，业务组件全部显式 import。**
 
-133 个业务组件分布在 `workspace/messages/`、`workspace/artifacts/`、`workspace/sidecar/` 等多层嵌套目录。Nuxt 的自动导入按路径拼名（`WorkspaceMessagesMessageList`），既难读又容易与 `ui/` 下同名组件碰撞。
+126 个业务组件分布在 `workspace/messages/`、`workspace/artifacts/`、`workspace/sidecar/` 等多层嵌套目录。Nuxt 的自动导入按路径拼名（`WorkspaceMessagesMessageList`），既难读又容易与 `ui/` 下同名组件碰撞。
 
 显式 import 保留与原项目一一对应的引用结构，让"这个组件对应原来哪个文件"始终可追溯——迁移期间这比少写几行 import 重要得多。
 
@@ -307,7 +311,7 @@ Composable 的自动导入（`app/composables/`）保留。
 
 ### 配套：文件头注释规约
 
-显式 import 只解决了"引用关系可追溯"，解决不了"这个文件为什么长这样"。133 个组件逐个重写，半年后没人记得某处古怪写法对应的是哪条不变式。
+显式 import 只解决了"引用关系可追溯"，解决不了"这个文件为什么长这样"。126 个组件逐个重写，半年后没人记得某处古怪写法对应的是哪条不变式。
 
 采用 `nuxt-modern-starter` 的六段式文件头（那个项目 130 个源文件全覆盖，并有脚本校验），**加一栏本项目专有的对应关系**：
 
@@ -326,45 +330,92 @@ Composable 的自动导入（`app/composables/`）保留。
 
 | 栏 | 解决什么 |
 | --- | --- |
-| **【对应 frontend/】** | 上游持续演进（近 3 个月 151 次提交），每个里程碑要 diff 一次增量。有这一栏才知道上游某个文件改了要跟到哪 |
+| **【对应 frontend/】** | 上游持续演进（近 3 个月 239 次提交）。基线冻结在 `27a425b0` 后不再逐里程碑 diff，但换基线时要知道上游某个文件改了该跟到哪 |
 | **【架构位置】L1/L2/L3** | [08](08-agent-core-contract.md) 要求 L2 边界在 M4b / M5 逐模块抽。没有标记就得靠回忆挑文件，而"L2 会被磨掉"正是 [06 风险登记](06-migration-plan.md#风险登记)里的一条 |
 | **【边界与注意】写不变式编号** | [05-invariants.md](05-invariants.md) 有 A–N 共 14 组。约束散在文档里、代码里没有痕迹，改动时不会有人回去查。写上 `B4`、`H6` 这类编号，改到该文件的人才看得见 |
 
 不需要像参照项目那样上一整套 `docs-sync` 校验（130 个文件的 manifest + claims 抽取 + 批次报告，对本项目太重）。**先靠 review 保证，等到 M8 收口时若发现漏得多，再补一个"检查每个文件是否有头注释"的最小脚本即可。**
 
+### ⚠️ 但 `app/core/` 那 99 个复制文件必须有机器守护
+
+文件头注释解决「这个文件为什么长这样」，解决不了「它还是不是上游那一份」。**这两件事不能都靠 review**：99 个零改动复制文件是整套 1:1 的护城河（[06 的两条底盘之一](06-migration-plan.md#两条底盘)），一旦有人「顺手改一行」，护城河属性就没了，而 review 看不出来。
+
+所以 `app/core/` 额外配一份 `PROVENANCE.md` 台账 + `tests/guards/core-provenance.test.ts`：每个文件标 `COPIED` / `RETYPED` / `ADAPTED` / `ADDED` / `DROPPED`，其中 **`COPIED` 那一档对冻结基线做内容 hash 比对**。详见 [M1 的 1e](06-migration-plan.md#1e-provenance-台账与-copied-hash-守护)。
+
+这两套机制分工明确：**文件头给人看（为什么），PROVENANCE 给 CI 看（是不是还一致）。**
+
 ---
 
-## 7. 验收：全域 1:1（结构与交互严格，样式放宽）
+## 7. 验收：只有一条硬门禁
 
-**决策：功能、交互逻辑、页面结构必须一致；视觉样式允许少许差异，不做像素级 diff。**
+**决策：Playwright E2E 是唯一硬门禁。DOM 结构比对降为诊断报告，视觉样式人工回归。**
 
 采用 shadcn-vue 后，之前因引入有主见组件库而拆分的"分区验收"口径整个撤销。
 
-| 维度 | 要求 | 验收方式 |
-| --- | --- | --- |
-| 功能 | **一致** | Playwright E2E，同一份 spec 跑两个 app |
-| 交互逻辑与体验 | **一致** | Playwright E2E + [05-invariants.md](05-invariants.md) 逐条勾选（A–N 共 14 组） |
-| 页面结构（DOM） | **一致** | E2E 选择器 + 逐页面 DOM 比对 |
-| 视觉样式 | 允许少许差异 | 关键页面人工回归，**不做像素级截图 diff** |
+| 维度 | 要求 | 验收方式 | 是否门禁 |
+| --- | --- | --- | --- |
+| 功能 | **一致** | Playwright E2E，同一份 spec 跑两个 app | ✅ **唯一硬门禁** |
+| 交互逻辑与体验 | **一致** | Playwright E2E + [05-invariants.md](05-invariants.md) 逐条勾选（A–N 共 14 组） | ✅ |
+| 页面结构（DOM） | 选择器契约一致 | E2E 选择器；`structural-diff` 只产出报告 | ❌ |
+| 视觉样式 | 允许少许差异 | 关键页面人工回归，**不做像素级截图 diff** | ❌ |
 
-### 为什么结构必须一致、样式可以放宽
+### ⚠️ 为什么「DOM 结构一致」不能当门禁
 
-**结构一致不是为了好看，是三件事的前提**：E2E 选择器能复用、`frontend/src/styles/globals.css` 那 453 行主题能直接搬、Markdown 输出的 CSS 能对上。所以它是硬要求。
+早期版本把「页面结构（DOM）一致」列为硬要求，做法是 `structural-diff.spec.ts` 逐节点比 `tagName` + 属性集合 + 文本 + 子节点顺序，差异进「允许的差异类型登记」。
 
-**样式的少许差异不影响任何一条**——Reka UI 与 Radix 的内部结构在个别组件上本来就有出入，为了消掉几像素的偏差去改 shadcn-vue 的实现，性价比很低，而且会让组件偏离 shadcn-vue 上游、后续升级困难。
+**这条要撤销，因为它无界。** Vue 与 React 的组件树在这些地方系统性地不同，且不是有限枚举：
 
-### E2E 是验收合同
+- Reka UI 的 `Primitive` / `as-child` 与 Radix 的 `Slot` 展开出的包裹层不同
+- `<Teleport>` 与 React portal 的挂载点、DOM 顺序不同
+- Vue 的 fragment 锚点注释（`<!--[-->` / `<!--]-->`）、`v-if` 留下的注释节点
+- `<Transition>` 在过渡期间的类名与额外节点
 
-这套 E2E 用 `page.route()` 拦截后端、断言真实 DOM 与文本，**与框架无关**。它是验证"1:1"的唯一客观手段——人肉比对 133 个组件不可能可靠。
+126 个组件会持续产生**新的差异类别**，那张登记表只会一直变长；而一张只增不减、又没有上限的登记表，等于没有门禁——最后一定是被人为放宽，或者反过来吃掉整个排期。
 
-实测规模：**32 个 spec 文件 + 4 个 playwright config**，其中 25 个是硬合同。完整清单与 2 个豁免项见 [03-project-shape.md](03-project-shape.md#e2e共用-frontendtestse2e不复制)。
+**这个形状是有先例的。** 上一轮实现（ant-design-vue 路线）的验收口径是「UI 还原 ≥98% + 逐路由逐状态 screenshot diff + 动态区 mask + 阈值报告」；结果是功能做到全量 E2E 104/116，而那套视觉门禁**从未建成**。失败模式不是功能不够，是**验收门禁的工作量超过了功能本身**。把「像素级」换成「DOM 级」并不改变这个形状。
+
+### 结构仍然重要，但由 E2E 选择器承担
+
+**结构一致不是为了好看，是三件事的前提**：E2E 选择器能复用、`globals.css` 那 453 行主题能直接搬、Markdown 输出的 CSS 能对上。
+
+但这三件事**都不需要全量 DOM 等价**，只需要：
+
+| 需要什么 | 由谁保证 |
+| --- | --- |
+| E2E 选择器能复用 | **25 个合同 spec 本身**——选择器对不上就是红的，客观、有界、失败信息精确 |
+| 主题能直接搬 | shadcn-vue 逐字复制 cva + 复刻 `data-slot` / `data-variant` 属性约定 |
+| Markdown CSS 能对上 | [M3 的归一化 DOM 等价 gate](06-migration-plan.md#m3--markdown-渲染层)——**范围限定在 Markdown 输出这一个子树**，那里确实是有界的（unified 管线两边共用，差异只可能来自渲染器） |
+
+换句话说：**Markdown 那棵子树做严格 DOM 等价（有界、且是同一条管线的输出），整页 DOM 不做。**
+
+### `structural-diff.spec.ts` 的定位与边界
+
+保留这个脚本，但明确三条：
+
+1. **它是诊断，不是门禁。** 报告有内容不阻塞里程碑通过
+2. **只覆盖固定的少数容器**（建议 ≤8 个：消息列表、消息组、composer、侧栏、artifacts 面板、settings 主区、thread 列表、workspace header），不是「逐页面」
+3. **只比 E2E 选择器真正依赖的属性子集**——`data-slot`、`data-variant`、`role`、`aria-*`、可见文本。不比 `tagName`、不比完整属性集合、不比子节点顺序
+
+这样它回答的是一个有用且有界的问题：「shadcn-vue 的 DOM 复刻假设还成立吗」。若报告里的**差异类别**开始增长（而不只是数量），说明那个假设有问题，值得回头看——这是[中止判定](06-migration-plan.md#相对工作量与中止判定)里的一条观察项，不是失败条件。
+
+### 样式为什么可以放宽
+
+Reka UI 与 Radix 的内部结构在个别组件上本来就有出入，为了消掉几像素的偏差去改 shadcn-vue 的实现，性价比很低，而且会让组件偏离 shadcn-vue 上游、后续升级困难。
+
+### E2E 是唯一的验收合同
+
+这套 E2E 用 `page.route()` 拦截后端、断言真实 DOM 与文本，**与框架无关**。它是验证 1:1 的唯一客观手段——人肉比对 126 个组件不可能可靠。
+
+实测规模：**32 个 spec 文件 + 4 个 playwright config**，其中 **25 个 spec / 约 120 个 `test()`** 是硬合同（`frontend/tests/e2e/` 实测 27 spec / **128 个 `test()`**，减去 2 个豁免 spec）。完整清单与豁免项见 [03-project-shape.md](03-project-shape.md#e2e共用-frontendtestse2e不复制)。
+
+⚠️ **spec 是合同，config 也是合同的一部分。** Vue 侧的 `playwright.config.ts` 必须逐字镜像 `frontend/playwright.config.ts` 的 `use` 段（尤其 `locale: "en-US"`）——config 不同等于合同条件不同，见 [03](03-project-shape.md#e2e共用-frontendtestse2e不复制)。
 
 具体做法：
 
 1. **不复制 spec**——`frontend-vue/playwright.config.ts` 的 `testDir` 直接指向 `../frontend/tests/e2e`。复制会漂移，漂移后合同失效。⚠️ M0 先跑 `playwright test --list` 验证用例能被收集到，见 [03](03-project-shape.md#️-m0-必须先验证-spec-能被收集到)
 2. 保留 `frontend/tests/e2e/utils/mock-api.ts`（与被删除的产品内 static demo 模式无关，见 [01-scope.md](01-scope.md)）
 3. **应用发出的 API URL 必须逐字一致**——`mock-api.ts` 实测有 **39 个 route pattern**，7 个在 `/api/langgraph/*`，32 个在裸 `/api/*`。不是保住一个前缀就够，见 [07](07-parallel-run.md#为什么必须保住这些-url)
-4. `webServer` 改为 `nuxt build && nuxt preview --port 3100`，并传 `NUXT_PUBLIC_AUTH_DISABLED=1`（对应 Next 版的 `DEER_FLOW_AUTH_DISABLED`，**25 个 spec 全部依赖它**）
+4. `webServer` 改为 `nuxt build && PORT=3101 nuxt preview`（独立端口 + `reuseExistingServer: false`），并传 `NUXT_PUBLIC_AUTH_DISABLED=1`（对应 Next 版的 `DEER_FLOW_AUTH_DISABLED`，**25 个 spec 全部依赖它**）
 5. **spec 视为只读合同。** 选择器基本可保持原样——shadcn-vue 复刻同样的 DOM 结构与 `data-slot` 属性约定。差异由 **Vue 侧消化**，不改 `frontend/`；实在对不上的进豁免登记表。口径与登记表见 [03](03-project-shape.md#选择器失效时的口径spec-只读--豁免登记)
 
 > ⚠️ 第 5 条早期写的是「两边同步改，保持一份 spec」。**这条与 [06](06-migration-plan.md) 的「不提交对 `frontend/` 的任何修改」直接冲突**——改 spec 或给 React 组件加 `data-testid` 都落在 `frontend/` 里。已改为「spec 只读 + 豁免登记」，冲突消除。
@@ -373,15 +424,17 @@ Composable 的自动导入（`app/composables/`）保留。
 - `tests/e2e/chat.spec.ts` —— 固定了"斜杠只在输入起始位置打开技能列表"
 - `tests/e2e/sidecar-chat.spec.ts` —— 固定了"面板动画期间不得触发消息列表滚动"
 
-### 页面结构一致必须可执行，不能靠人肉
+### 页面结构一致靠诊断报告，不做门禁
 
-133 个组件人工比对不可能可靠，所以 DOM 一致性要有自己的检查手段——但它**不能靠改共用的 spec 实现**（那是只读合同）。
+126 个组件人工比对不可能可靠，所以还是要有机器手段——但它**不能靠改共用的 spec 实现**（那是只读合同），也**不该当门禁**（上一节的理由）。
 
 做法：在 `frontend-vue/tests/structural-diff.spec.ts` 写一个**自有的** Playwright spec，同一份脚本对两个 `baseURL` 各跑一遍：
 
 1. 复用 `mock-api.ts` 喂同一份确定性数据（只读引用，不修改）
-2. 在若干稳定检查点 dump 目标容器的 `outerHTML`
-3. 归一化：剥掉随机 id、`data-*` 里的 uuid、时间戳、Vue/React 各自的框架注释
-4. 两份 baseline 做 diff，差异进与 M3 同一套「允许的差异类型」登记
+2. 在若干稳定检查点，对**上一节列出的那 ≤8 个容器**提取选择器契约（`data-slot` / `data-variant` / `role` / `aria-*` / 可见文本），**不是 `outerHTML`**
+3. 归一化：剥掉随机 id、`data-*` 里的 uuid、时间戳
+4. 两份提取结果做 diff，**输出一份报告并归档**
 
-这样 `frontend/` 一个字都不用改，而"结构一致"从口号变成了会红的检查。
+**报告有内容不让构建失败。** 它的用途是让人看见「shadcn-vue 的 DOM 复刻假设在哪些组件上不成立」，而不是把每一处不成立都变成必须消灭的待办。
+
+这样 `frontend/` 一个字都不用改，「结构」有了可观测的抓手，而排期不会被一张无限增长的登记表吃掉。

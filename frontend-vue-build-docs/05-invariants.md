@@ -6,7 +6,7 @@
 
 移植每个模块前先读对应小节；实现完成后逐条对照。原始表述以 `frontend/AGENTS.md` 为准，本文是移植视角的提取。
 
-A–L 共 12 组来自 `frontend/AGENTS.md` 与 `gamma-project` 的实现差距；**M 组是 React → Vue 的语义差异**，与业务无关但同样会造成"看起来搬对了、行为不对"。
+全表 **A–N 共 14 组**。A–K 来自 `frontend/AGENTS.md`；**L 组**是参照 `gamma-project` 实现自研 SSE 时必须补齐的规范差距；**M 组**是 React → Vue 的语义差异，与业务无关但同样会造成"看起来搬对了、行为不对"；**N 组**是已知的覆盖空白，需要在动到对应模块前先读源码补上。
 
 ---
 
@@ -203,10 +203,34 @@ A–L 共 12 组来自 `frontend/AGENTS.md` 与 `gamma-project` 的实现差距�
 | L6 | **buffer 需要上限保护** | 后端一直不发分隔空行时 buffer 会无限增长。长报告场景值得加保护 |
 | L7 | **看门狗阈值重定** | gamma 是固定 15 秒。DeerFlow 的 agent 会跑很长的工具调用（sandbox 执行、浏览器操作、子 agent），15 秒静默完全正常。需重定阈值或改成按事件类型动态判断 |
 | L8 | **不要模块级可变状态** | gamma 的 `merge-message.ts` 用了模块级 `imageBuffer` / `imageBufferMessageId`。DeerFlow 有 sidecar 子会话与多 thread 并存，必须改为放进 message 自身或 per-stream context |
+| **L9** | **心跳注释帧要识别、且不能当事件** | SSE 规范里以 `:` 开头的行是注释，常被代理与后端用作 keep-alive（`: ping`）。gamma 的解析器没处理这一类，会把它当成一个 `data` 为空的事件或直接丢掉。**两个后果**：一是可能产生空事件污染归约；二是**看门狗（L7）会把有心跳的连接误判成静默**。正确做法是解析成独立的 `heartbeat` 帧——不进 reducer，但**要重置看门狗计时** |
 
 同时，A 组（流式与重连）的全部约束仍然适用——自研 transport 不代表可以放弃那些语义，只是实现方从 SDK 变成了自己。
 
-> gamma 的 `tests/sse-transport.test.ts` 覆盖了 SSE 解析、buffer 分帧、游标续拉、以及"无游标失败时报 `segment_exhausted`"四个用例。移植时把这四个用例一起搬过来，再补 L1–L8 对应的测试。
+> gamma 的 `tests/sse-transport.test.ts` 覆盖了 SSE 解析、buffer 分帧、游标续拉、以及"无游标失败时报 `segment_exhausted`"四个用例。移植时把这四个用例一起搬过来，再补 L1–L9 对应的测试。
+
+### ⚠️ 不要从 gamma 那份开始写 —— git 历史里有更好的起点
+
+上一轮实现的 SSE transport **已经满足 L1 / L2 / L3 / L9**，比 gamma 那份更接近规范：
+
+```bash
+git show 44309ae7:frontend-vue/app/core/api/stream/transport/sse-buffer.ts
+git show 44309ae7:frontend-vue/app/core/api/stream/transport/parse-sse-event.ts
+```
+
+| 条目 | gamma | 上一轮实现 |
+| --- | --- | --- |
+| L1 CRLF 归一化 | ❌ 只找 `\n\n` | ✅ `/\r?\n\r?\n/` 分帧、`/\r?\n/` 拆行 |
+| L2 保留 `id:` | ❌ | ✅ |
+| L3 只剥一个前导空格 | ❌ 用了 `.trim()` | ✅ `startsWith(" ") ? slice(1) : raw` |
+| L9 心跳注释帧 | ❌ | ✅ 归为 `{ kind: "heartbeat" }` |
+| 无冒号的字段行 | ❌ | ✅ 按规范当空值字段 |
+| 流末残留数据 | ❌ | ✅ `flushSseRemainder` |
+| **L4 / L5 / L6**（退避、重试上限、buffer 上限） | ❌ | ❌ **仍要自己补** |
+
+**把这两个文件当 `packages/agent-core/transport/` 的第一版**，再补 L4–L6，比照抄 gamma 的 272 行然后逐条修 8 处规范差距划算。
+
+⚠️ 它的 `stream-error.ts` 不要照搬——错误分类里有 `gap`，那是 DeerFlow 概念，进内核就破坏协议无关性（属 L3 适配层），且缺 `cursor_exhausted`。以 [08 的错误分类契约](08-agent-core-contract.md#错误分类)为准。
 
 ---
 

@@ -8,7 +8,19 @@
 
 这两条不冲突，靠**顺序**解决：先做通用层（L1 → L2），再做 DeerFlow 专有层（L3），L2 边界逐模块抽取而不是最后再抽。分层定义见 [08-agent-core-contract.md](08-agent-core-contract.md)，里程碑见 [06-migration-plan.md](06-migration-plan.md)。
 
-> 本目录是方案文档，不是实施记录。所有统计数字均来自对 `frontend/` 现有代码的实测（统计时间：2026-08-03，分支 `main-wc`）。第三方包的维护状态同期通过 `npm view` 核实。
+> 本目录是方案文档，不是实施记录。第三方包的维护状态通过 `npm view` 核实——[03](03-project-shape.md#packagejson) 那份 `package.json` 里的 28 个新增包已逐个确认存在且为当时 latest。
+
+## ★ 冻结基线
+
+**对标对象是 `27a425b0f1078baf8b2a361103a2b136ee342ab5`，已冻结。**
+
+```
+27a425b0  2026-08-04 13:50:46 +0800  Merge branch 'main' into main-wc
+```
+
+`frontend/` 近 3 个月 **239 次提交**（约 2.6 次/天）。追 moving `main` 做不到——对标是逐文件的，而 M0–M7 期间上游会再累积数百次提交。
+
+**冻结的直接收益：本目录所有规模数字都是常量，不是估计。** 在 `27a425b0` 处实测的 `core` 149 / `ui` 44 / `ai-elements` 29 / `workspace` 104 / `app` 39 与各文档记录值完全一致，可以直接当口径用。同步策略（只在里程碑之间批量 rebase，里程碑内部完全不看上游）见 [06](06-migration-plan.md#冻结基线与上游同步策略)。
 
 ## 一页纸结论
 
@@ -29,7 +41,7 @@ LangChain 依赖全部移除：自写 REST client + openapi-typescript 生成类
 | 维度 | 结论 |
 | --- | --- |
 | 框架 | Nuxt 4（Vue 3.5 + Vite），端口 **3100** |
-| 运行方式 | `cd frontend-vue && pnpm dev`，`routeRules` 代理直连 Gateway（**不是 `devProxy`**，它只管 dev）。**零仓库改动** |
+| 运行方式 | `cd frontend-vue && make dev`，`routeRules` 代理直连 Gateway（**不是 `devProxy`**，它只管 dev）。仓库改动仅 1 处：[G0-0 的 CI workflow 对齐](#前置-gate) |
 | L1 内核 | **`frontend-vue/packages/agent-core/`** —— 独立包，可整包搬走 |
 | 组件库 | **shadcn-vue + Reka UI + Tailwind 4** —— cva 样式串可逐字复制 |
 | 服务端状态 | `@tanstack/vue-query` |
@@ -37,16 +49,18 @@ LangChain 依赖全部移除：自写 REST client + openapi-typescript 生成类
 | 状态管理 | Pinia（流式）+ provide/inject（thread 作用域 UI） |
 | Markdown | unified 管线保留，渲染层用 `hast-util-to-jsx-runtime` + `remend` |
 | 测试 | Vitest 双 project（`node` 纯 TS + `nuxt` composable）；Playwright E2E **共用 `frontend/tests/e2e/`，不复制** |
-| 工程规约 | `config/routes.ts` 单一来源 · 中间件切纯函数 · 文件头六段式（带【对应 frontend/】栏）· `i18n:check` |
+| 工程规约 | `config/routes.ts` 单一来源 · 中间件切纯函数 · 文件头六段式（带【对应 frontend/】栏）· `make i18n-check` |
 
 ## 验收口径
 
-| 维度 | 要求 | 验收方式 |
-| --- | --- | --- |
-| 功能 | **一致** | Playwright E2E，**同一份 spec 跑两个 app**（25 个硬合同 spec，不复制、`testDir` 指过去） |
-| 交互逻辑与体验 | **一致** | Playwright E2E + [05-invariants.md](05-invariants.md) 逐条勾选（A–N 共 14 组） |
-| 页面结构（DOM） | **一致** | E2E 选择器 + 逐页面 DOM 比对 |
-| 视觉样式 | 允许少许差异 | 关键页面人工回归，**不做像素级 diff** |
+| 维度 | 要求 | 验收方式 | 是否门禁 |
+| --- | --- | --- | --- |
+| 功能 | **一致** | Playwright E2E，**同一份 spec 跑两个 app**（25 个 spec / 约 120 个用例，不复制、`testDir` 指过去） | ✅ **唯一硬门禁** |
+| 交互逻辑与体验 | **一致** | Playwright E2E + [05-invariants.md](05-invariants.md) 逐条勾选（A–N 共 14 组） | ✅ |
+| 页面结构（DOM） | 选择器契约一致 | E2E 选择器；`structural-diff` 只作**诊断报告** | ❌ 不做门禁 |
+| 视觉样式 | 允许少许差异 | 关键页面人工回归，**不做像素级 diff** | ❌ |
+
+> ⚠️ **三条硬门禁里有两条无界，等于零条。** 「逐页面 DOM 一致」与「像素级还原」这类口径的失败方式是相同的：允许的差异类型会一直增长，最后要么被人为放宽、要么吃掉整个排期，门禁本身反而从未建成。所以本方案只保留 E2E 这一条硬门禁——它客观、有界、失败信息精确。DOM 结构比对降为诊断报告，理由见 [04 §7](04-architecture-decisions.md#️-为什么dom-结构一致不能当门禁)。
 
 采用 shadcn-vue 使结构与样式对标成为可能——曾评估过 Element Plus / ant-design-vue / Naive UI，它们都会让 41 个 `ui/` 组件的 cva 样式串作废、3.4 万行业务组件失去设计 token 基准。详见 [02-stack.md](02-stack.md) 的否决存档表。
 
@@ -58,18 +72,20 @@ LangChain 依赖全部移除：自写 REST client + openapi-typescript 生成类
 | `src/core/` 纯 TS，**需改 import** | 24 | 4,744 | 去 LangChain 类型 / `@/env` / 组件类型 |
 | `src/core/` React 耦合 | 26 | 5,365 | 改写为 composable |
 | `src/components/ui/` | 44（41 组件） | 5,573 | 30 个走 shadcn-vue CLI，5 个自写，6 个不迁 |
-| `src/components/ai-elements/` | 29 | 5,417 | 手工重写 |
+| `src/components/ai-elements/` | 29 → **22** | 5,417 → **5,107** | 手工重写（7 个 xyflow canvas 件不迁，见 [01](01-scope.md#4-xyflow-canvas-组件不迁)） |
 | `src/components/workspace/` | 103 → **104** | 21,478 → **21,533** | 手工重写（**工作量主体**） |
 | `src/components/auth/` | 1 | — | 手工重写 |
+| **`src/app/`（layout / page / providers）** | 39 → **22** | 4,143 | **改写为 Nuxt pages / layouts**（mock 12 + docs/blog 5 不迁）。早期版本漏了这一栏 |
+| `src/core/streamdown/` | 6 | 714 | 只有 `preprocess.ts`(389) 能原样搬，其余 325 行要重写，见 [02](02-stack.md#markdown-渲染层) |
 | `src/components/landing/` | 12 | 1,754 | 不迁 |
 | `src/components/docs/` | 4 | — | 不迁 |
 | `src/content/`（72 MDX + 14 `_meta.ts`） | 88 | 9,043 | 不迁 |
 | `src/app/mock/` | 12 route handler | — | 不迁 |
 | `public/demo/` + demo 封面图 | — | 约 15 MB | 不迁 |
 
-**需要手工重写的业务组件：133 个。** 这是工作量主体。
+**需要手工重写的业务组件：126 个**（104 workspace + 22 ai-elements）**，外加 22 个 `src/app/` 的 layout / page。合计 148 个文件。** 这是工作量主体。
 
-> ⚠️ **这些数字会漂。** 复核时（统计次日）`workspace/` 就已经从 103 / 21,478 变成 104 / 21,533——`frontend/` 近 3 个月有 151 次提交。不要把它们当常量，每个里程碑开头用 [06 里的那条命令](06-migration-plan.md#️-这些数字会漂每个里程碑开头重算一次)重算，并 diff 一次 `frontend/src/core/`。
+> 这些数字取自冻结基线 `27a425b0`，**是常量**。里程碑期间不重算、不 diff 上游——理由与同步策略见 [06](06-migration-plan.md#冻结基线与上游同步策略)。
 
 ## 文档索引
 
@@ -81,7 +97,7 @@ LangChain 依赖全部移除：自写 REST client + openapi-typescript 生成类
 | [04-architecture-decisions.md](04-architecture-decisions.md) | 七个关键架构决策及其理由 |
 | [05-invariants.md](05-invariants.md) | **必须保留的行为不变式** —— A–N 共 14 组 |
 | [06-migration-plan.md](06-migration-plan.md) | **M0–M8 里程碑**、按通用度排的执行顺序、风险登记 |
-| [07-parallel-run.md](07-parallel-run.md) | 与 `frontend/` 并行运行、共用后端的接线方式（零仓库改动） |
+| [07-parallel-run.md](07-parallel-run.md) | 与 `frontend/` 并行运行、共用后端的接线方式（端口、代理、WebSocket） |
 | [08-agent-core-contract.md](08-agent-core-contract.md) | **★ 产品定义** —— L1/L2/L3 分层、接口契约、禁入清单、依赖方向。**其他项目复用时读这份** |
 
 ## 阅读顺序建议
@@ -94,14 +110,16 @@ LangChain 依赖全部移除：自写 REST client + openapi-typescript 生成类
 
 ## 前置 Gate
 
-**M0 的四道 gate 加起来大约半天，但每一条不过都会让后面几个月的工作作废。** 明细见 [06-migration-plan.md](06-migration-plan.md#m0-的四道-gate)。
+**M0 的六道 gate 加起来大约半天，但每一条不过都会让后面几个月的工作作废。** 明细见 [06-migration-plan.md](06-migration-plan.md#m0-的六道-gate)。
 
 | Gate | 位置 | 决定什么 |
 | --- | --- | --- |
-| **G0-1 `nuxt preview` 下代理生效** | M0 | E2E 的 webServer 跑的就是 preview。**`nitro.devProxy` 只管 dev**，用它会让 `e2e-auth` / `e2e-real-backend` 直接不可用 → 必须用 `routeRules` |
-| **G0-2 共用 testDir 能收集到用例** | M0 | `playwright test --list` 列不出 25 个，说明撞上 `@playwright/test` 双实例——整套验收手段的前提 |
+| **G0-0 清掉孤儿 CI workflow** | M0，**第一件事** | `.github/workflows/frontend-vue-verify.yml` 已在仓库里，触发条件是 `paths: frontend-vue/**`，跑的是本方案不存在的 `make verify` 与 `playwright.vue.config.ts`。**不处理就是第一次 push 直接红**，且失败信息指不到真实原因 |
+| **G0-1 `nuxt preview` 下代理生效 + SSE 不被缓冲** | M0 | E2E 的 webServer 跑的就是 preview。**`nitro.devProxy` 只管 dev**，用它会让 `e2e-auth` / `e2e-real-backend` 直接不可用 → 必须用 `routeRules`。同时要验 `sendStream` / `streamRequest` 两个 flag，见 [03](03-project-shape.md#️-为什么代理必须是-routerules-而不是-nitrodevproxy) |
+| **G0-2 共用 testDir 能收集到用例** | M0 | `playwright test --list` 列不出 **25 个 spec / 约 120 个用例**，说明撞上 `@playwright/test` 双实例——整套验收手段的前提 |
 | **G0-3 鉴权可关** | M0 | Next 版靠 `DEER_FLOW_AUTH_DISABLED=1`，**25 个合同 spec 全依赖它**；Vue 版必须有等价开关 |
 | **G0-4 shadcn-vue 视觉基准** | M0 | Button 并排截图 + 暗色切换。样式基准没对齐就不该往下走 |
+| **G0-5 WebSocket 能否经 routeRules 转发** | M0（原为 M6） | routeRules 的 proxy 走 h3 `proxyRequest`（纯 HTTP），**大概率不处理 `Upgrade`**。结论若是"不通"，browser-view 要么直连 Gateway 要么改 nginx——**改 nginx 需要征得同意，越晚越贵**。验它 10 分钟，不要拖到 M6 |
 | splitpanes spike | M0/M1 | 三面板编排是**唯一没有同构关系**的组件，却原本排在最后的 M7。先花一天验 H1/H2/H6 能否表达 |
 | `hast-util-to-jsx-runtime` 输出比对 | M3 | **Vue 支持已核实**（readme 有 "Example: Vue"，需 `elementAttributeNameCase: 'html'`；且已实测它不用 `dangerouslySetInnerHTML`）。判据是**归一化 DOM 等价**，不是字符级一致 |
 
@@ -110,5 +128,5 @@ LangChain 依赖全部移除：自写 REST client + openapi-typescript 生成类
 **所有产出只落在 `frontend-vue/` 与 `frontend-vue-build-docs/`。**
 
 - `frontend/` 与 `backend/` 是 GitHub 上游在维护的项目——**对它们的任何修改都不提交**。需要改动来做验证时走 `git worktree` 开一次性分支，验证完删除（见 [06 M2](06-migration-plan.md)）
-- 仓库根的配置文件（`Makefile`、`docker/nginx/`、`docker-compose`、`scripts/`）**不改**，需要时先征得同意。当前方案设计为零改动：`.gitignore` 放 `frontend-vue/` 内，启动用 `cd frontend-vue && pnpm dev`
+- 仓库根的配置文件（`Makefile`、`docker/nginx/`、`docker-compose`、`scripts/`）**不改**，需要时先征得同意。当前方案设计为零改动：`.gitignore` 放 `frontend-vue/` 内，启动用 `cd frontend-vue && make dev`
 - **共用的 E2E spec 视为只读合同。** 选择器对不上时由 Vue 侧消化（复刻 `data-slot` 约定），不改 `frontend/tests/e2e/*.spec.ts`、也不给 React 组件加 `data-testid`；实在不行进[豁免登记表](03-project-shape.md#选择器失效时的口径spec-只读--豁免登记)。这条曾与 04 §7 的"两边同步改"冲突，已统一为本口径

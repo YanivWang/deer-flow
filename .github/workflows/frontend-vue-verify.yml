@@ -43,7 +43,10 @@ jobs:
         run: make verify
 
       - name: Install Playwright Chromium
-        run: corepack pnpm exec playwright install --with-deps chromium
+        run: make e2e-install
 
-      - name: Run Vue UI E2E suite
-        run: corepack pnpm exec playwright test -c playwright.vue.config.ts
+      # testDir points at ../frontend/tests/e2e -- the contract specs are shared
+      # with the React frontend and treated as read-only. See
+      # frontend-vue-build-docs/03-project-shape.md.
+      - name: Run contract E2E suite
+        run: make e2e
