@@ -1,0 +1,99 @@
+/*
+  由 scripts/rstest-to-vitest.mjs 从 frontend/tests/unit/core/auth/remember-login.test.ts 机械生成。
+  基线 27a425b0 · 改动仅限 @rstest/core → vitest、rs.* → vi.*。
+  勿手改：make codemod-check 会红。需要为 Vue 侧适配就登记进 HAND_MAINTAINED。
+*/
+
+import { afterEach, describe, expect, vi, test } from "vitest";
+
+import {
+  loadRememberLoginPreference,
+  saveRememberLoginPreference,
+} from "@/core/auth/remember-login";
+
+function makeStorage(initial: Record<string, string> = {}) {
+  const values = new Map(Object.entries(initial));
+  return {
+    getItem: vi.fn((key: string) => values.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      values.set(key, value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      values.delete(key);
+    }),
+    values,
+  };
+}
+
+describe("remember login helpers", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  test("loads default keep-signed-in preference without a saved email", () => {
+    const storage = makeStorage();
+    vi.stubGlobal("localStorage", storage);
+
+    expect(loadRememberLoginPreference()).toEqual({
+      email: "",
+      rememberMe: true,
+    });
+  });
+
+  test("saves only email and preference when enabled", () => {
+    const storage = makeStorage();
+    vi.stubGlobal("localStorage", storage);
+
+    saveRememberLoginPreference({
+      email: "admin@example.com",
+      rememberMe: true,
+    });
+
+    expect(storage.values.get("deerflow.auth.remember_login")).toBe("1");
+    expect(storage.values.get("deerflow.auth.remembered_email")).toBe(
+      "admin@example.com",
+    );
+    expect([...storage.values.values()]).not.toContain("password");
+  });
+
+  test("clears saved email when disabled", () => {
+    const storage = makeStorage({
+      "deerflow.auth.remember_login": "1",
+      "deerflow.auth.remembered_email": "admin@example.com",
+    });
+    vi.stubGlobal("localStorage", storage);
+
+    saveRememberLoginPreference({
+      email: "admin@example.com",
+      rememberMe: false,
+    });
+
+    expect(storage.values.get("deerflow.auth.remember_login")).toBe("0");
+    expect(storage.values.has("deerflow.auth.remembered_email")).toBe(false);
+  });
+
+  test("falls back safely when localStorage is unavailable", () => {
+    vi.stubGlobal("localStorage", {
+      getItem: () => {
+        throw new Error("blocked");
+      },
+      setItem: () => {
+        throw new Error("blocked");
+      },
+      removeItem: () => {
+        throw new Error("blocked");
+      },
+    });
+
+    expect(loadRememberLoginPreference()).toEqual({
+      email: "",
+      rememberMe: true,
+    });
+    expect(() =>
+      saveRememberLoginPreference({
+        email: "admin@example.com",
+        rememberMe: true,
+      }),
+    ).not.toThrow();
+  });
+});

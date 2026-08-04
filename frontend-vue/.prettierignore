@@ -2,3 +2,97 @@
 # prettier 会把短数组折成一行，JSON.stringify 不会——两边都格式化就会让
 # `make baseline-check` 在 `make format` 之后立刻变红。生成器是唯一权威。
 baseline/
+
+# 由 pnpm 维护，格式化它只会与 pnpm 的写法互相打架。
+pnpm-lock.yaml
+
+# COPIED:BEGIN 由 `make land-copied` 生成，勿手改
+# COPIED 档必须逐字节等同上游。prettier 3.9.6 与上游的 3.8.1 对 7 个文件意见不同，
+# 一次 `make format` 就会让 core-provenance.test.ts 变红。这里只挡 COPIED，
+# app/core/ 下我们自己写的文件照常格式化。
+app/core/agents/api.ts
+app/core/agents/feature-cache.ts
+app/core/agents/types.ts
+app/core/api/errors.ts
+app/core/api/feedback.ts
+app/core/api/fetcher.ts
+app/core/api/index.ts
+app/core/api/stream-mode.ts
+app/core/artifacts/api.ts
+app/core/artifacts/editing.ts
+app/core/artifacts/index.ts
+app/core/artifacts/preview.ts
+app/core/auth/constants.ts
+app/core/auth/next-path.ts
+app/core/auth/proxy-policy.ts
+app/core/auth/remember-login.ts
+app/core/auth/setup.ts
+app/core/auth/static-user.ts
+app/core/auth/types.ts
+app/core/channels/api.ts
+app/core/channels/connect-poll.ts
+app/core/channels/open-connect-url.ts
+app/core/channels/provider-state.ts
+app/core/channels/types.ts
+app/core/citations/sources.ts
+app/core/clipboard.ts
+app/core/features/api.ts
+app/core/i18n/client-translations.ts
+app/core/i18n/index.ts
+app/core/i18n/locale.ts
+app/core/i18n/locales/index.ts
+app/core/i18n/translations.ts
+app/core/input-polish/api.ts
+app/core/integrations/lark/api.ts
+app/core/integrations/lark/types.ts
+app/core/mcp/api.ts
+app/core/mcp/index.ts
+app/core/mcp/types.ts
+app/core/memory/api.ts
+app/core/memory/index.ts
+app/core/memory/types.ts
+app/core/messages/workspace-change-anchor.ts
+app/core/models/index.ts
+app/core/models/types.ts
+app/core/scheduled-tasks/api.ts
+app/core/scheduled-tasks/cron.ts
+app/core/scheduled-tasks/types.ts
+app/core/settings/local.ts
+app/core/settings/store.ts
+app/core/sidecar/api.ts
+app/core/sidecar/index.ts
+app/core/sidecar/reference-metadata.ts
+app/core/sidecar/reference-state.ts
+app/core/sidecar/thread.ts
+app/core/skills/api.ts
+app/core/skills/index.ts
+app/core/skills/slash.ts
+app/core/skills/type.ts
+app/core/streamdown/mermaid.ts
+app/core/streamdown/preprocess.ts
+app/core/suggestions/api.ts
+app/core/suggestions/placeholders.ts
+app/core/tasks/api.ts
+app/core/tasks/index.ts
+app/core/tasks/lifecycle.ts
+app/core/tasks/presentation.ts
+app/core/tasks/steps.ts
+app/core/tasks/subtask-update.ts
+app/core/threads/api.ts
+app/core/threads/composer-draft.ts
+app/core/threads/index.ts
+app/core/threads/thread-list-model.ts
+app/core/threads/token-usage.ts
+app/core/todos/index.ts
+app/core/todos/types.ts
+app/core/uploads/api.ts
+app/core/uploads/file-validation.ts
+app/core/uploads/prompt-input-files.ts
+app/core/utils/json.ts
+app/core/utils/markdown.ts
+app/core/utils/uuid.ts
+app/core/voice-input/speech-recognition.ts
+app/core/workspace-changes/api.ts
+app/core/workspace-changes/summary.ts
+app/core/workspace-changes/types.ts
+# COPIED:END

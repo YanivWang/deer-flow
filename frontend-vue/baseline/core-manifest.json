@@ -1,6 +1,6 @@
 {
   "$comment": "由 scripts/core-provenance.mjs 生成，勿手改。重建：make baseline-refresh",
-  "baselineCommit": "8f99d2c76bfb7a844a1548cf620f9b0dc20b5c67",
+  "baselineCommit": "27a425b0f1078baf8b2a361103a2b136ee342ab5",
   "sourceRoot": "frontend/src/core",
   "totals": {
     "files": 149,
@@ -542,9 +542,7 @@
           "detail": "所有 import 在 frontend-vue 中同形可解析，零改动复制。"
         }
       ],
-      "needsDeps": [
-        "zod"
-      ],
+      "needsDeps": [],
       "internalDeps": [],
       "blockedBy": []
     },
@@ -2562,9 +2560,7 @@
           "detail": "所有 import 在 frontend-vue 中同形可解析，零改动复制。"
         }
       ],
-      "needsDeps": [
-        "ai"
-      ],
+      "needsDeps": [],
       "internalDeps": [],
       "blockedBy": []
     },
@@ -2620,9 +2616,7 @@
           "detail": "所有 import 在 frontend-vue 中同形可解析，零改动复制。"
         }
       ],
-      "needsDeps": [
-        "best-effort-json-parser"
-      ],
+      "needsDeps": [],
       "internalDeps": [],
       "blockedBy": []
     },
@@ -2652,9 +2646,7 @@
           "detail": "所有 import 在 frontend-vue 中同形可解析，零改动复制。"
         }
       ],
-      "needsDeps": [
-        "uuid"
-      ],
+      "needsDeps": [],
       "internalDeps": [
         "utils/uuid.ts"
       ],

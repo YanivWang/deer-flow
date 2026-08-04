@@ -33,15 +33,40 @@ maps into `app/core/`. They are regenerated from git objects, never hand-edited:
 ```bash
 make baseline-refresh   # rebuild; needs a full clone, submit the diff for review
 make baseline-check     # fail if the checked-in ledgers are stale
+make land-copied        # copy the COPIED set into app/core byte for byte
+make codemod-tests      # regenerate tests/unit/core from the rstest sources
+make migration-check    # baseline-check + codemod-check; needs a full clone
 ```
 
-`make verify` deliberately does **not** run `baseline-check`: ordinary CI must not
-depend on whether history objects are present. What CI does enforce is
-`tests/guards/core-provenance.test.ts`, which reads only checked-in files — every
-file under `app/core/` must appear in [app/core/PROVENANCE.md](app/core/PROVENANCE.md),
-and anything classified `COPIED` must match `baseline/core-sha256.json` byte for byte.
-If a `COPIED` file needs an edit, downgrade it to `RETYPED`/`ADAPTED` with a reason;
-do not refresh the baseline to make the guard green.
+The ledgers are anchored to the **frozen baseline commit**, pinned as `BASELINE` in
+the Makefile — never `HEAD`. `HEAD` self-invalidates: the ledgers record the commit
+they were built from, so committing them moves `HEAD` and makes `baseline-check`
+stale on the spot. Changing baselines is an explicit edit plus a reviewed diff.
+
+`make verify` deliberately does **not** run `baseline-check` or `codemod-check`:
+ordinary CI must not depend on whether history objects are present. What CI does
+enforce is:
+
+- `tests/guards/core-provenance.test.ts` — every file under `app/core/` must appear
+  in [app/core/PROVENANCE.md](app/core/PROVENANCE.md), and anything classified
+  `COPIED` must match `baseline/core-sha256.json` byte for byte. If a `COPIED` file
+  needs an edit, downgrade it to `RETYPED`/`ADAPTED` with a reason; do not refresh
+  the baseline to make the guard green.
+- `make collected-check` — vitest only reports the tests it collected, so a suite
+  that quietly stops collecting a file still passes. This compares the collected
+  set against `baseline/core-test-manifest.json`, including which project each test
+  ran in, and fails if they differ in either direction.
+- `make typecheck` — a budget over `baseline/typecheck-known.json` rather than raw
+  `vue-tsc`. Landing `COPIED` before `RETYPED` necessarily leaves known
+  missing-module errors; the budget fails on **one more or one fewer**, so the list
+  must shrink explicitly as each batch lands. It must reach zero by the end of M1.
+  `make typecheck-raw` shows the unfiltered output.
+
+`COPIED` files are excluded from prettier and eslint — measured, not assumed:
+prettier 3.9.6 wants to reformat 7 of them (upstream runs 3.8.1) and eslint reports
+5 problems across 4. One `make format` would breach the byte-identity guard. Only
+that class is excluded; files we write under `app/core/` stay fully checked, and a
+file downgraded out of `COPIED` is re-checked automatically.
 
 `NUXT_PUBLIC_AUTH_DISABLED=1` is limited to M0/mock tests. `NUXT_PUBLIC_M0_TEST_PAGES=1` exposes the isolated `/__m0/*` visual and splitpanes fixtures; they return 404 in normal production configuration.
 

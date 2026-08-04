@@ -1,7 +1,7 @@
 {
   "$comment": "由 scripts/core-test-manifest.mjs 生成，勿手改。重建：make baseline-refresh",
-  "baselineCommit": "8f99d2c76bfb7a844a1548cf620f9b0dc20b5c67",
-  "coreManifestCommit": "8f99d2c76bfb7a844a1548cf620f9b0dc20b5c67",
+  "baselineCommit": "27a425b0f1078baf8b2a361103a2b136ee342ab5",
+  "coreManifestCommit": "27a425b0f1078baf8b2a361103a2b136ee342ab5",
   "sourceRoot": "frontend/tests/unit/core",
   "totals": {
     "files": 83,

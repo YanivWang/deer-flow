@@ -4,7 +4,8 @@
 	e2e-install e2e-list e2e-m0 e2e-external e2e e2e-auth e2e-real-backend e2e-visual \
 	proxy-smoke auth-disabled-smoke auth-cookie-smoke visual-baseline-smoke splitpanes-smoke \
 	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke \
-	baseline-refresh baseline-check
+	baseline-refresh baseline-check land-copied codemod-tests codemod-check \
+	collected-check migration-check typecheck-raw typecheck-refresh
 
 PYTHON ?= python3
 PNPM = $(PYTHON) ../scripts/pnpm.py --dir frontend-vue
@@ -24,6 +25,12 @@ help:
 	@echo "  make container-smoke           non-root /health / SIGTERM production image smoke"
 	@echo "  make baseline-refresh          rebuild core provenance + test manifests (needs full clone)"
 	@echo "  make baseline-check            fail if the checked-in manifests are stale"
+	@echo "  make land-copied               copy the COPIED set into app/core byte-for-byte"
+	@echo "  make codemod-tests             regenerate tests/unit/core from rstest sources"
+	@echo "  make collected-check           fail if vitest collects a different set than the manifest"
+	@echo "  make migration-check           baseline-check + codemod-check (needs full clone)"
+	@echo "  make typecheck-raw             unfiltered vue-tsc output"
+	@echo "  make typecheck-refresh         rebuild the known-typecheck-error budget"
 
 install:
 	$(PNPM) install
@@ -46,13 +53,23 @@ format:
 format-check:
 	$(EXEC) prettier --check .
 
+# 预算门禁而不是裸 vue-tsc：M1 分窗口推进期间，COPIED 引用尚未落地的 RETYPED
+# 必然报错。把 typecheck 移出 verify 会连带放过真正的类型错误，所以改成钉预算。
 typecheck:
+	node scripts/typecheck-budget.mjs
+
+typecheck-raw:
 	$(EXEC) vue-tsc --noEmit
+
+typecheck-refresh:
+	node scripts/typecheck-budget.mjs --refresh
 
 test:
 	$(EXEC) vitest run
 
-verify: lint format-check typecheck test build
+# collected-check 只读签入的台账与 vitest 的收集结果，不碰 git 历史，所以能进 verify。
+# 它防的是「少收集几个测试换全绿」——vitest run 本身报告不了没被收集的东西。
+verify: lint format-check typecheck test collected-check build
 
 e2e-install:
 	$(EXEC) playwright install --with-deps chromium
@@ -115,7 +132,14 @@ proxy-security:
 
 # 迁移台账维护命令。读 git 对象重建 baseline，因此必须在完整 clone 中运行，
 # 且 diff 要交 review（06 §1e）。普通 CI 跑 make test 即可，不碰 git 历史。
-BASELINE ?= HEAD
+#
+# 锚必须是**固定 commit**，不能是 HEAD。两个理由：
+#   1. 对标对象就是冻结基线 27a425b0（06 §冻结基线与上游同步策略，README 同）。
+#      里程碑进行中完全不看上游，台账自然要锚在那一份树上。
+#   2. HEAD 会自我作废：台账把 baselineCommit 写进产物，一提交 HEAD 就变，
+#      baseline-check 逐字节比对必红。上一窗口正是这样——提交前绿、提交后红。
+# 换基线是一次显式动作：改这里 + make baseline-refresh + diff 交 review。
+BASELINE ?= 27a425b0f1078baf8b2a361103a2b136ee342ab5
 
 baseline-refresh:
 	node scripts/core-provenance.mjs --refresh --baseline=$(BASELINE)
@@ -124,6 +148,25 @@ baseline-refresh:
 baseline-check:
 	node scripts/core-provenance.mjs --baseline=$(BASELINE)
 	node scripts/core-test-manifest.mjs --baseline=$(BASELINE)
+
+# 已落地的分类。搬完 RETYPED 的那个窗口把它改成 COPIED,RETYPED，
+# codemod 与对账脚本会同时按新值重算期望集。
+LANDED ?= COPIED
+
+land-copied:
+	node scripts/land-copied.mjs --write
+
+codemod-tests:
+	node scripts/rstest-to-vitest.mjs --write --landed=$(LANDED)
+
+codemod-check:
+	node scripts/rstest-to-vitest.mjs --landed=$(LANDED)
+
+collected-check:
+	node scripts/collected-vs-manifest.mjs --landed=$(LANDED)
+
+# 需要完整 clone（要读 baseline commit 的 git 对象），因此不进 verify。
+migration-check: baseline-check codemod-check
 
 audit:
 	$(PNPM) audit --audit-level moderate --registry https://registry.npmjs.org
