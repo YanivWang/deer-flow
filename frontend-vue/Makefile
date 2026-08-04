@@ -60,10 +60,11 @@ e2e-list:
 
 e2e-m0: proxy-smoke auth-disabled-smoke visual-baseline-smoke splitpanes-smoke auth-cookie-smoke run-protocol-smoke
 
-# G0-6 and G0-7 cannot run against the repository replay Gateway: they need a
-# browser runtime and a controlled IdP with two callback origins. They are kept
-# out of e2e-m0 so the repository-runnable suite stays honest, and are driven by
-# the external-gates workflow job once those prerequisites exist.
+# G0-6 and G0-7. Separate from e2e-m0 only because they need the backend browser
+# extra (uv sync --extra browser && playwright install chromium) and a Gateway
+# whose toolset includes browser_navigate — enabling that changes the system
+# prompt and would break the run-protocol replay fixture's hash. Both gates are
+# otherwise hermetic: the IdP is tests/support/run_m0_idp.py, no external service.
 e2e-external: ws-smoke oidc-smoke
 
 e2e:

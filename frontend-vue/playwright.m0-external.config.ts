@@ -35,7 +35,14 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "../backend/.venv/bin/python tests/support/run_m0_gateway.py --port 8011 --cors http://localhost:3101 --queue-maxsize 32 --browser",
+        "../backend/.venv/bin/python tests/support/run_m0_idp.py --port 8013",
+      url: "http://127.0.0.1:8013/health",
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command:
+        "../backend/.venv/bin/python tests/support/run_m0_gateway.py --port 8011 --cors http://localhost:3101 --queue-maxsize 32 --browser --oidc-issuer http://127.0.0.1:8013",
       url: "http://127.0.0.1:8011/health",
       reuseExistingServer: false,
       timeout: 180_000,

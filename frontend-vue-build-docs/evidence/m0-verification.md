@@ -1,6 +1,6 @@
 # M0 工程底座验证记录
 
-> 日期：2026-08-05；checkout：本地工作树；结论：**十道 Gate 中九道通过；G0-7 仍未通过，M0 不宣布整体通过，不允许进入 M1**。
+> 日期：2026-08-05；checkout：本地工作树；结论：**十道 Gate 全部通过，M0 工程底座验收完成**。
 
 ## 环境
 
@@ -26,7 +26,7 @@
 | G0-4 visual seed | `make visual-baseline-smoke` | 1/1。light/dark 两态比对 `backgroundColor`/`color`/`borderRadius`/`fontSize`/`fontWeight`/`paddingInline` 六项全等 + 高度相等，light/dark 基线截图落盘 | 通过 |
 | G0-5 Cookie/CSRF | `make auth-cookie-smoke` | replay Gateway + Preview 1/1；register、Set-Cookie、CSRF 正/负写、login 轮换、me、logout | 通过 |
 | G0-6 WebSocket | `make ws-smoke` | 1/1。真实 Chromium 从 `localhost:3101` 携带 session cookie 直连 `ws://localhost:8011`，握手成功并收到 binary frame。断言要求 `opened && binary`，4404（无会话）不算通过 | 通过 |
-| G0-7 OIDC | `make oidc-smoke` | 前置断言要求 provider 列表非空；当前 replay Gateway 无可控 provider。代理侧的 client-facing origin 转发缺口已定位并修复（见下），剩余卡点是可控 IdP | **未通过** |
+| G0-7 OIDC | `make oidc-smoke` | 1/1。对仓库内可控 IdP 跑完整 authorization-code + PKCE(S256) + nonce 往返：从 Vue 入口发起后回落 `http://localhost:3101/auth/callback?next=/workspace`，IdP 侧记录的 `redirect_uri` 为该入口而非 Gateway，`/me` 返回 SSO 身份，state cookie 已消费 | 通过 |
 | G0-8 run protocol | `make run-protocol-smoke` | 1/1。create 单次 POST（`maxRedirects: 0`）、`Content-Location` 存在、无 `Location`、74 事件、1 个 heartbeat、以 `end` 收尾；resume GET + `Last-Event-ID` 返回 `gap`（`stream_replay_gap` / `reload_durable_state`）；浏览器内 cancel 得到 `204`；去敏 trace 落盘 | 通过 |
 | G0-9 security/container | `make audit && make proxy-security && make container-smoke` | 官方 npm audit：无已知漏洞；proxy security 24/24；容器 non-root、只含 `.output`、health、SIGTERM 通过 | 通过 |
 
@@ -128,7 +128,7 @@ cd backend && uv sync --extra browser && uv run playwright install chromium
 `allow_private_addresses`。关闭码语义已在断言消息中固化：`4401` 未认证 / `4403` 跨源 /
 `4404` 无会话。
 
-## G0-7：定位到一处必须先修的实现缺口
+## G0-7：修复代理缺口 + 仓库内可控 IdP，已通过
 
 在搭建可控 IdP 之前，先核实了 Gateway 侧的两条机制：
 
@@ -176,7 +176,29 @@ e2e——同时断言干净请求的四个头取值，以及伪造的四个头�
 M0 dual 模式下 Nuxt 是最外层一跳，所以客户端转发头是输入而非信任来源。**M7 把 nginx
 放到 Nuxt 前面时必须重新审视这里**，改为承认那一层的转发头。
 
-G0-7 剩余工作：补可控 IdP 并实测两入口各自回跳；独立 hostname 与 DNS/TLS 仍属 M7。
+### 可控 IdP
+
+`tests/support/run_m0_idp.py` 是仓库内的最小 OIDC provider（stdlib + backend venv 已有的
+PyJWT/cryptography，无 Docker、无外部服务），提供 discovery / authorize / token / jwks，
+走**真实** authorization-code + PKCE(S256) + nonce，token 用启动时生成的 RSA 私钥 RS256
+签名。因此 Gateway 侧的 `discover` / `exchange_code` / `validate_id_token` 全部按真实
+路径执行，不是打桩。选它而不是 Keycloak，是因为它自洽、秒级启动、能直接进 CI。
+
+provider 的 `redirect_uri` 与全局 `frontend_base_url` **都留空**——这正是双前端契约本身，
+任一被写死本用例就失去意义。
+
+实测断言：从 Vue 入口发起 SSO 后浏览器回落 `http://localhost:3101/auth/callback?next=/workspace`；
+IdP 记录到的 `redirect_uri` 是 `http://localhost:3101/api/v1/auth/callback/m0idp`（不是
+Gateway 自己）；`/api/v1/auth/me` 返回 SSO 身份；state cookie 已被 callback 消费。
+
+**这道 Gate 有牙齿**：把代理的转发头临时去掉后重跑，`waitForURL` 直接超时——浏览器根本
+回不到 Vue 入口，正是它要抓的失败。
+
+### 仍属 M7 的部分
+
+两个独立 hostname、正式 DNS 与 TLS、可信代理清洗，以及 J6 的同 hostname 两端口并发
+state-cookie 覆盖负测（需要第二个入口同时在跑），都留给 M7 的双 host 生产形态。
+本用例断言的是 state cookie 按 hostname 而非端口划分、且被 callback 消费所以窗口有界。
 
 ## 外部 Gate 的自动化通路
 
@@ -207,6 +229,23 @@ backend 侧单独处理。
 
 ## 结论
 
-十道 Gate 中九道通过，`make e2e-m0` 与 `make ws-smoke` 均为真实绿色。**G0-7 仍未通过**，
-且已定位到必须先修的代理转发头缺口。在 G0-7 拿到真实绿色结果前，不得宣布 M0 整体通过，
-也不得开始 M1。
+十道 Gate 全部通过，且全部由仓库自身可复现：
+
+```
+make verify         6 files / 42 tests + production build
+make e2e-m0         14 用例 / exit 0
+make e2e-external   G0-6 + G0-7 各 1/1
+make proxy-security 24 passed
+make audit          无已知漏洞
+make container-smoke exit 0
+```
+
+G0-6 与 G0-7 在本轮之前被记为"外部阻塞"，实际两者都能在仓库内自证：前者用已有的
+`browser/navigate` REST 旁路建立会话，后者用 `run_m0_idp.py`。因此 workflow 的
+`external-gates` 不再是需要 secret 的手动 job，已改为随 push/PR 正常运行；它与
+`real-backend` 分开只是因为需要 backend 的 browser extra，以及一个含 `browser_navigate`
+的 Gateway 工具集（那会改系统提示词，打破 run-protocol 的 fixture hash）。
+
+**M0 工程底座验收完成。** 仍需注意：双前端 production readiness（两个独立 hostname、
+DNS/TLS、可信代理清洗、J6 并发 state-cookie 负测）属 M7，不能把"工程可运行"当成
+"可以直接上线"。

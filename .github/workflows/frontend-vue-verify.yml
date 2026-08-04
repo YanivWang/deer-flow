@@ -50,15 +50,7 @@ on:
       - "frontend-vue-build-docs/**"
       - ".github/workflows/frontend-vue-verify.yml"
 
-  # G0-6 (browser WebSocket) and G0-7 (OIDC dual callback) need a browser
-  # runtime and a controlled IdP that no push/PR runner provides. They get an
-  # explicit manual entry point instead of silently having no automation at all.
   workflow_dispatch:
-    inputs:
-      run_external_gates:
-        description: "Run the G0-6/G0-7 external gates (needs a browser runtime and a controlled IdP)"
-        type: boolean
-        default: false
 
 concurrency:
   group: fe-vue-${{ github.event.pull_request.number || github.ref }}
@@ -218,69 +210,73 @@ jobs:
         working-directory: frontend-vue
         run: make e2e-m0
 
-  # G0-6 / G0-7. Manual only, and it fails loudly on a missing prerequisite
-  # rather than skipping — a skipped external gate is what let these two stay
-  # unproven with no automation pointing at them.
+  # G0-6 (browser WebSocket) and G0-7 (OIDC dual callback). Separate from the
+  # real-backend job only because these need the backend browser extra and a
+  # Gateway whose toolset includes browser_navigate, which changes the system
+  # prompt and would break the run-protocol replay fixture's hash. Both are
+  # hermetic — the IdP is tests/support/run_m0_idp.py, no external service.
   external-gates:
-    if: github.event_name == 'workflow_dispatch' && inputs.run_external_gates
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      M0_BROWSER_RUNTIME_URL: ${{ vars.M0_BROWSER_RUNTIME_URL }}
-      M0_OIDC_ISSUER: ${{ secrets.M0_OIDC_ISSUER }}
-      M0_OIDC_CLIENT_ID: ${{ secrets.M0_OIDC_CLIENT_ID }}
-      M0_OIDC_CLIENT_SECRET: ${{ secrets.M0_OIDC_CLIENT_SECRET }}
-      M0_OIDC_REACT_CALLBACK: ${{ vars.M0_OIDC_REACT_CALLBACK }}
-      M0_OIDC_VUE_CALLBACK: ${{ vars.M0_OIDC_VUE_CALLBACK }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Assert external prerequisites are configured
+      - name: Detect frontend-vue project
+        id: project
         shell: bash
         run: |
-          missing=()
-          for name in M0_BROWSER_RUNTIME_URL M0_OIDC_ISSUER M0_OIDC_CLIENT_ID \
-                      M0_OIDC_CLIENT_SECRET M0_OIDC_REACT_CALLBACK M0_OIDC_VUE_CALLBACK; do
-            [[ -n "${!name}" ]] || missing+=("$name")
-          done
-          if (( ${#missing[@]} )); then
-            echo "::error::G0-6/G0-7 cannot run. Missing: ${missing[*]}." \
-                 "G0-6 needs a Gateway with browser control plus a reachable browser runtime;" \
-                 "G0-7 needs a controlled IdP with separate React and Vue callback URIs."
-            exit 1
+          if [[ -f frontend-vue/package.json ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Explain pre-project skip
+        if: steps.project.outputs.exists != 'true'
+        run: echo "frontend-vue/package.json does not exist yet; external gates are waiting for M0."
+
       - name: Set up Python
+        if: steps.project.outputs.exists == 'true'
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Install uv
+        if: steps.project.outputs.exists == 'true'
         uses: astral-sh/setup-uv@v7
 
-      - name: Install replay Gateway dependencies
+      - name: Install replay Gateway and browser dependencies
+        if: steps.project.outputs.exists == 'true'
         working-directory: backend
-        run: uv sync --group dev
+        run: |
+          uv sync --group dev --extra browser
+          uv run playwright install --with-deps chromium
 
       - name: Set up Node.js
+        if: steps.project.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "22.22.3"
 
       - name: Enable Corepack
+        if: steps.project.outputs.exists == 'true'
         run: corepack enable
 
       - name: Install React contract-test host
+        if: steps.project.outputs.exists == 'true'
         run: python3 scripts/pnpm.py install --frozen-lockfile
 
       - name: Install frontend-vue dependencies
+        if: steps.project.outputs.exists == 'true'
         run: python3 scripts/pnpm.py --dir frontend-vue install --frozen-lockfile --strict-peer-dependencies
 
       - name: Install Playwright Chromium
+        if: steps.project.outputs.exists == 'true'
         working-directory: frontend-vue
         run: make e2e-install
 
       - name: Run the external M0 gates
+        if: steps.project.outputs.exists == 'true'
         working-directory: frontend-vue
         run: make e2e-external

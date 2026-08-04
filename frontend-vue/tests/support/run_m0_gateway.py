@@ -48,6 +48,29 @@ def _enable_browser_control(config: str) -> str:
     return config.replace(_LAST_REPLAY_TOOL, f"{_LAST_REPLAY_TOOL}\n{_BROWSER_TOOL_BLOCK}", 1)
 
 
+def _oidc_block(issuer: str, client_id: str, client_secret: str) -> str:
+    """Enable SSO against the fixture IdP.
+
+    ``frontend_base_url`` and the provider's ``redirect_uri`` are both left
+    unset on purpose: that is exactly the dual-frontend contract G0-7 verifies —
+    the callback is derived from the entry the browser used, and the post-login
+    redirect stays relative so it resolves back to that same entry.
+    """
+    return f"""
+auth:
+  oidc:
+    enabled: true
+    providers:
+      m0idp:
+        display_name: M0 Fixture IdP
+        issuer: {issuer}
+        client_id: {client_id}
+        client_secret: {client_secret}
+        require_verified_email: true
+        auto_create_users: true
+"""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8011)
@@ -71,6 +94,13 @@ def main() -> int:
             "the system prompt, which would break the run-protocol replay fixture's hash."
         ),
     )
+    parser.add_argument(
+        "--oidc-issuer",
+        default="",
+        help="Enable an OIDC provider pointing at the M0 fixture IdP (see run_m0_idp.py).",
+    )
+    parser.add_argument("--oidc-client-id", default="deerflow-m0")
+    parser.add_argument("--oidc-client-secret", default="m0-idp-secret")
     args = parser.parse_args()
 
     from _replay_fixture import REPLAY_MODEL_BLOCK, build_config_yaml, prepare_hermetic_extras
@@ -83,6 +113,8 @@ def main() -> int:
     config = build_config_yaml(model_block=model_block, home=home)
     if args.browser:
         config = _enable_browser_control(config)
+    if args.oidc_issuer:
+        config += _oidc_block(args.oidc_issuer, args.oidc_client_id, args.oidc_client_secret)
     config += f"\nstream_bridge:\n  type: memory\n  queue_maxsize: {args.queue_maxsize}\n"
     config_path = home / "config.yaml"
     config_path.write_text(config, encoding="utf-8")

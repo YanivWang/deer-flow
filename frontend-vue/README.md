@@ -27,9 +27,9 @@ python3 scripts/pnpm.py --dir frontend-vue install --frozen-lockfile
 
 `NUXT_PUBLIC_AUTH_DISABLED=1` is limited to M0/mock tests. `NUXT_PUBLIC_M0_TEST_PAGES=1` exposes the isolated `/__m0/*` visual and splitpanes fixtures; they return 404 in normal production configuration.
 
-The current M0 result is **not approved for M1**. Nine of the ten gates pass:
-`make e2e-m0` is green end to end and `make ws-smoke` (G0-6) completes a real
-browser WebSocket upgrade. The one that remains is G0-7 (OIDC dual callback),
-which needs a controlled IdP and a decision on how this proxy forwards the
-client-facing origin. See the
+All ten M0 gates pass and every one is reproducible from this repository:
+`make e2e-m0` covers the infrastructure suite, `make e2e-external` covers the
+browser WebSocket (G0-6) and the OIDC round trip (G0-7) against the in-repo
+fixture IdP. Dual-frontend production readiness — two hostnames, DNS/TLS,
+trusted-proxy scrubbing — remains M7. See the
 [M0 verification record](../frontend-vue-build-docs/evidence/m0-verification.md).

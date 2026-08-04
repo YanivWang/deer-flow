@@ -136,10 +136,11 @@ cd frontend-vue && make e2e-m0    # repository-runnable M0 gate suite
 cd frontend-vue && make e2e-list  # collect shared contracts; does not claim pass
 ```
 
-`make e2e-external` is deliberately outside `make e2e-m0`: it holds the two gates
-that need a browser runtime (G0-6) and a controlled IdP (G0-7), which no ordinary
-CI runner provides. Keeping them separate is what stops the runnable suite from
-implying those gates passed.
+`make e2e-external` holds the browser-WebSocket (G0-6) and OIDC round-trip (G0-7)
+gates. Both are hermetic — the IdP is a fixture in `frontend-vue/tests/support/` —
+but they stay outside `make e2e-m0` because they need the backend browser extra and
+a Gateway whose toolset includes `browser_navigate`, which changes the system prompt
+and would break the run-protocol replay fixture's hash.
 
 Rule of thumb: **root `make` = application lifecycle**; **`backend/Makefile`,
 `frontend/` (`pnpm`), and `frontend-vue/Makefile` = per-module work.**
