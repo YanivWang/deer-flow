@@ -344,7 +344,7 @@ watchdog 的输入至少包含 `lastActivityAt`、session state、最后消息�
 | fake upstream 集成测试 | LF/CRLF、跨 chunk、buffer、断流、POST→GET 方法切换 | Gateway 当前 header 约定 |
 | real Gateway smoke | Content-Location/Location、Last-Event-ID、cancel、代理、认证 | 全量 UI 回归 |
 
-当前 checkout 的最终 fixture 是 **13 个 `thread.json` / `values.messages` 合计 516 条**；读取顶层 `messages` 会错误得到 0。M-1 的去敏运行证据见 [evidence/m1-replay-gateway-probe.md](evidence/m1-replay-gateway-probe.md)。
+当前 checkout 的最终 fixture 是 **13 个 `thread.json` / `values.messages` 合计 516 条**；读取顶层 `messages` 会错误得到 0。M-1 的去敏运行证据见 [evidence/m-1-replay-gateway-probe.md](evidence/m-1-replay-gateway-probe.md)。
 
 M2 的长期门禁必须同时包含前 3 类；第 4 类进入专门的 real-backend job。raw trace 至少覆盖富内容、reasoning、tool call 碎片、临时 id 重写、subagent namespace、`updates`/`custom`/`checkpoints`/`tasks`、heartbeat、gap、error/end、断线重连，并断言请求模式 `messages-tuple` 对应 wire event `messages`。
 

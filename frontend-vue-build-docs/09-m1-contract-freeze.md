@@ -105,7 +105,7 @@ M0 开始前没有必须购买或申请的外部资源。仓库自带 replay Gat
 
 **[测试覆盖]**：`test_gateway_services.py`、`test_stream_bridge.py`、`test_run_request_validation.py`、`test_cancel_run_idempotent.py`、`test_runtime_lifecycle_e2e.py`、`test_wait_disconnect_handling.py`、`test_multi_worker_run_ownership.py`、`test_run_worker_delta_resume.py`。
 
-**[运行探测]**：[去敏 Gateway replay 探针](evidence/m1-replay-gateway-probe.md) 确认 create `200`、`Content-Location`、无 `Location`、wire event、无 id 的 end，以及 GET + `Last-Event-ID` 排他恢复；本次业务 run 终态为 `error`，没有伪报成功。
+**[运行探测]**：[去敏 Gateway replay 探针](evidence/m-1-replay-gateway-probe.md) 确认 create `200`、`Content-Location`、无 `Location`、wire event、无 id 的 end，以及 GET + `Last-Event-ID` 排他恢复；本次业务 run 终态为 `error`，没有伪报成功。
 
 **[后续约束]**：M0 必须在 Nuxt preview 之后重复响应头/SSE/cancel/gap/heartbeat 探针，补齐 active `202/204` 与浏览器断连；不能用源码测试代替真实代理验证。
 
