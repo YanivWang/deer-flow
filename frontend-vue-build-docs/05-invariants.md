@@ -173,6 +173,10 @@
 | --- | --- |
 | J1 | 登录页的"保持登录"只向 Gateway 提交 `remember_me`，本地**只能持久化邮箱地址** |
 | J2 | **密码与 token 绝不能进前端存储**；`HttpOnly access_token` 与可读的 `csrf_token` cookie 归 Gateway 所有 |
+| J3 | auth-disabled 只用于 mock 合同；真实认证必须经 Nuxt preview 同源代理验证 register/login、Set-Cookie、CSRF 写请求、refresh 与 logout |
+| J4 | `localhost` cookie 不按端口隔离：React 与 Vue 会共享登录/退出状态，不能用两个端口模拟两个不同用户 |
+| J5 | 生产 OIDC 必须保证“从哪个前端发起就回哪个合法前端”；相对回跳方案要求 `frontend_base_url` 与 provider `redirect_uri` 同时留空、IdP 注册两个 callback URI、可信代理正确传 Host/Proto。若必须用任一单值绝对 URL，就要以后端签名 state + allowlist 扩展解决，未解决前属于发布阻断 |
+| J6 | OIDC state cookie 不按端口隔离，cookie 名又只按 provider 区分；同一 hostname 的 React/Vue 两个端口不能并发发起同一 provider 登录。生产认证隔离使用独立 hostname，G0-7 必须覆盖并发/覆盖风险 |
 
 ---
 
@@ -204,10 +208,17 @@
 | L7 | **看门狗阈值重定** | gamma 是固定 15 秒。DeerFlow 的 agent 会跑很长的工具调用（sandbox 执行、浏览器操作、子 agent），15 秒静默完全正常。需重定阈值或改成按事件类型动态判断 |
 | L8 | **不要模块级可变状态** | gamma 的 `merge-message.ts` 用了模块级 `imageBuffer` / `imageBufferMessageId`。DeerFlow 有 sidecar 子会话与多 thread 并存，必须改为放进 message 自身或 per-stream context |
 | **L9** | **心跳注释帧要识别、且不能当事件** | SSE 规范里以 `:` 开头的行是注释，常被代理与后端用作 keep-alive（`: ping`）。gamma 的解析器没处理这一类，会把它当成一个 `data` 为空的事件或直接丢掉。**两个后果**：一是可能产生空事件污染归约；二是**看门狗（L7）会把有心跳的连接误判成静默**。正确做法是解析成独立的 `heartbeat` 帧——不进 reducer，但**要重置看门狗计时** |
+| **L10** | **create POST 最多一次** | 初始请求创建 run；响应头前断网且后端没有 idempotency key 时必须 fail closed，不能自动重放 POST |
+| **L11** | **续传必须切到既有 run 的 GET stream** | 拿到 run handle 后，网络中断调用 `resume()` 并带 `Last-Event-ID`；不得复用 create URL/method/body |
+| **L12** | **Content-Location 与 Location 分开验证** | Gateway create 明确发 `Content-Location`；当前 SDK 的 metadata 与 reconnect 读取不同 header。Nuxt proxy 前后都要记录，不能假定二者等价 |
+| **L13** | **abort 不等于 cancel** | 本地停止读取只能释放连接；用户点 stop 时必须显式调用 Gateway cancel/cancel-then-drain，并观察最终 session 状态 |
+| **L14** | **最终 checkpoint 不是流式 oracle** | 516 条消息只能验证最终 adapter/state；raw SSE trace 才验证 chunk、id、namespace、heartbeat、gap 与重连时序 |
+| **L15** | **完整 state 与消息同一次归约** | `values` 会带 messages、artifacts、todos、goal 等；不能只维护 message map，再让组件各自补业务状态 |
+| **L16** | **cancel 结果不能压成 `void`** | UI stop 先进入 `stopping`；200 SSE 要 drain 尾帧，202 accepted 要轮询 durable run，204/已确认终态才能显示 stopped。创建阶段无 handle 的断开是“不确定”，不是“已取消” |
 
 同时，A 组（流式与重连）的全部约束仍然适用——自研 transport 不代表可以放弃那些语义，只是实现方从 SDK 变成了自己。
 
-> gamma 的 `tests/sse-transport.test.ts` 覆盖了 SSE 解析、buffer 分帧、游标续拉、以及"无游标失败时报 `segment_exhausted`"四个用例。移植时把这四个用例一起搬过来，再补 L1–L9 对应的测试。
+> gamma 的 transport 用例只能作为分帧起点。L1–L16 必须分别落到 raw trace、fake upstream、session 状态机和 real Gateway 测试，不能只移植四个旧用例。
 
 ### ⚠️ 不要从 gamma 那份开始写 —— git 历史里有更好的起点
 
@@ -228,9 +239,9 @@ git show 44309ae7:frontend-vue/app/core/api/stream/transport/parse-sse-event.ts
 | 流末残留数据 | ❌ | ✅ `flushSseRemainder` |
 | **L4 / L5 / L6**（退避、重试上限、buffer 上限） | ❌ | ❌ **仍要自己补** |
 
-**把这两个文件当 `packages/agent-core/transport/` 的第一版**，再补 L4–L6，比照抄 gamma 的 272 行然后逐条修 8 处规范差距划算。
+**只把这两个文件当分帧起点**。run session 必须按 L10–L16 另写协议状态机。
 
-⚠️ 它的 `stream-error.ts` 不要照搬——错误分类里有 `gap`，那是 DeerFlow 概念，进内核就破坏协议无关性（属 L3 适配层），且缺 `cursor_exhausted`。以 [08 的错误分类契约](08-agent-core-contract.md#错误分类)为准。
+⚠️ 它的 `stream-error.ts` 不照搬。以 [08 的错误与 watchdog](08-agent-core-contract.md#错误与-watchdog)为准。
 
 ---
 

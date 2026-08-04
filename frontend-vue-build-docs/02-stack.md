@@ -9,7 +9,7 @@ Nuxt 4  +  shadcn-vue / Reka UI  +  Tailwind 4
     ↓
 Agent 层：自研 SSE（照抄 gamma-project 的分层与判断，按 SSE 规范重写 transport）
     ↓
-状态：Pinia 管流式状态 · provide/inject 管 thread 作用域 UI 状态
+状态：L1 external store 管协议快照 · Vue/Pinia adapter 管 thread 作用域与 UI 派生状态
     ↓
 Markdown：unified 管线保留 + hast-util-to-jsx-runtime(vue/jsx-runtime) + remend
     ↓
@@ -79,21 +79,21 @@ switch  tabs  textarea  toggle  toggle-group  tooltip
 
 ## Agent 通信层：自研 SSE（内核 + 适配层）
 
-**不用 `@langchain/langgraph-sdk/react` 的 `useStream`，也不用 `./stream` 内核。** 改为参照 `gamma-project` 的分层自建。
+**终态不用 `@langchain/langgraph-sdk/react` 的 `useStream`，也不用 `./stream` 内核；但 M2 四类协议门禁通过前保留 SDK 作为 oracle/fallback。**
 
 ⚠️ **本层有第二个目标：可被后端非 LangGraph 的其他项目复用。** 因此切成协议无关内核与薄适配层，接口契约与禁入清单见 **[08-agent-core-contract.md](08-agent-core-contract.md)**。
 
 ```
 packages/agent-core/   L1 协议无关内核（可整包复用）
-  transport            SSE 分帧 + 重试退避 + buffer 上限   ← 不懂业务
-  cursor               CursorStrategy 接口（可插拔）
-  reducer              事件 → { ignore | error | merge }   ← 纯函数，可单测
+  transport            SSE 分帧 + buffer 上限              ← 不决定请求方法
+  session              RunProtocol + create/resume/cancel 状态机
+  reducer              完整 TState + 消息动作              ← 纯函数，可单测
   merge                动作 → 写进 AgentMessage
   watchdog             停表规则                            ← 纯函数
-  store                createAgentStore() 工厂，非单例
+  store                external store，无 Pinia
         ↑ 实现接口
 core/agent-deerflow/   L3 协议适配层（随项目走）
-  endpoints · cursor-last-event-id · event-map
+  endpoints · run-protocol · event-map
   message-adapt · stream-mode · gap-recovery
 ```
 
@@ -119,7 +119,7 @@ app/core/types/message.ts    ~120 行   手写 Message/AIMessage/ToolMessage/Too
 
 Gateway 有 **102 处 `response_model`**，REST 信封类型可以生成且比 SDK 类型更准；但消息结构在后端是 `Any`，必须手写。
 
-具体的移植边界、可直接搬的文件、以及必须补强的 8 处，见 [04-architecture-decisions.md §4](04-architecture-decisions.md#4-agent-通信层自研-sse参照-gamma-project)。
+具体的移植边界、可直接搬的文件、以及 L1–L16 补强项，见 [04-architecture-decisions.md §4](04-architecture-decisions.md#4-agent-通信层自研-sse参照-gamma-project) 与 [05 L 组](05-invariants.md#l-自研-sse-transport-的补强项)。
 
 ## Markdown 渲染层
 
@@ -248,7 +248,7 @@ Tailwind 4 靠这三行从 streamdown 的 dist 里扫 class。453 行主题搬�
 | `useStream` | **自研 SSE 分层**（见 §Agent 通信层） |
 | `@t3-oss/env-nextjs` | Nuxt `runtimeConfig` + 手工 zod 校验 |
 | `src/app/api/memory/**` route handler | 删除——浏览器经 nginx 直连 `/api/memory` |
-| — | **Pinia**（agent 流式状态；作用域约束见 [04 §3](04-architecture-decisions.md#3-状态管理pinia-管流式状态provideinject-管-ui-状态)） |
+| — | **Pinia（可选适配层）**：订阅 L1 external store，并承载 Vue UI 派生状态；不重做 reducer、续传或取消语义。作用域约束见 [04 §3](04-architecture-decisions.md#3-状态管理external-store-管协议状态vue-适配层管作用域与-ui-状态) |
 
 ### 内容渲染
 
@@ -283,16 +283,16 @@ Tailwind 4 靠这三行从 streamdown 的 dist 里扫 class。453 行主题搬�
 
 | 现在 | 新 |
 | --- | --- |
-| Rstest（node + happy-dom 双 project） | **Vitest 双 project：`node`（纯 TS）+ `nuxt`（composable）**——见下方 ⚠️。126 个测试文件先写 codemod，见 [03](03-project-shape.md#rstest-转-vitest先写-codemod不要手改) |
+| Rstest（node + happy-dom 双 project） | **Vitest 双 project：`node`（纯 TS）+ `nuxt`（composable）**。全部 unit 共 126 个，其中 core 83 个；按测试 manifest 分批 codemod，见 [03](03-project-shape.md#rstest-转-vitest按运行环境分组不把-126-个测试塞进-m1) |
 | Playwright | **原样保留**，`webServer` 指向 Nuxt |
 | ESLint 9 + `eslint-config-next` | ESLint 9 + `@nuxt/eslint` + `eslint-plugin-vue` + typescript-eslint |
 | Prettier + `prettier-plugin-tailwindcss` | 不变 |
 
-> ⚠️ **测试要两个 project，不是一个。** 早期只写了「Vitest + `@vue/test-utils` + happy-dom」，这对搬过来的 126 个纯 TS 测试够用，但对 [M4a](06-migration-plan.md#m4a--数据流) 的 composable 不够——它们要用 `useRuntimeConfig()`、`useCookie()`、`useRoute()`，裸 Vitest 里这些自动导入不存在。
+> ⚠️ **测试要两个 project，不是一个。** 纯 TS 子集走 node；需要 Nuxt plugin/middleware/composable 上下文的测试走 Nuxt environment。普通 core 接收注入的 runtime options，不直接调用 `useRuntimeConfig()`。
 >
 > | project | environment | 跑什么 |
 > | --- | --- | --- |
-> | `node` | node | `app/core/` 纯 TS（126 个搬来的测试）、`packages/agent-core/` 内核 |
+> | `node` | node | `app/core/` 的纯 TS 子集、`packages/agent-core/` 内核 |
 > | `nuxt` | `@nuxt/test-utils/config` 的 `environment: 'nuxt'` | `app/composables/`、`middleware/`、plugin |
 >
 > 参照 `nuxt-modern-starter` 的 `vitest.config.ts`（`defineVitestConfig({ test: { environment: 'nuxt' } })`）。代价是多一个 `@nuxt/test-utils` devDep 和更慢的启动——所以只让需要 Nuxt 上下文的那部分走它。
@@ -355,7 +355,7 @@ postcss                （Tailwind 4 走 Vite 插件后不再需要）
 
 ### ⚠️ 版本对齐约束
 
-"原样搬 `core/` 123 个文件"这个前提要求依赖行为一致。**新项目的 `package.json` 先对齐 `frontend/` 的版本，跑通 M1 后再逐个升级，不要用 `latest` 起项目。**
+"原样搬 `core/` 123 个文件"这个前提要求依赖行为一致。**行为敏感包先精确对齐 `frontend/pnpm-lock.yaml` 的 resolved version，不是只复制 caret 声明。** 首轮 parity 后再逐个升级。
 
 | 包 | frontend 现用 | npm latest | 风险 |
 | --- | --- | --- | --- |
@@ -363,7 +363,9 @@ postcss                （Tailwind 4 走 Vite 插件后不再需要）
 | **shiki** | `3.23.0`（精确锁） | 4.4.1 | ⚠️ 主版本跨越，高亮输出可能变 → 影响 1:1 |
 | **typescript** | `^5.8.2` | 7.0.2 | ⚠️ TS 7 是 Go 重写版，`vue-tsc` 兼容性需验证 |
 | **nanoid** | `^5.1.6` | 6.0.1 | 主版本跨越（`core/` 未使用，风险低） |
-| katex | `^0.16.28` | 0.18.1 | 跨两个 minor，输出结构变化会破坏 1:1 |
+| katex | `0.16.28` | 0.18.1 | 首轮精确锁定，输出结构进入视觉基线 |
+| tailwindcss | `4.1.18` resolved | 4.3.3 | 同一 caret 也可能解析出不同 CSS 输出 |
+| marked / mermaid | `17.0.6` / `11.12.2` resolved | — | Markdown/SVG 输出影响 DOM 与截图，首轮精确锁定 |
 
 `@langchain/langgraph-sdk` 与 `@langchain/core` **不再是依赖**（见上文），版本漂移问题随之消失。若要参考 SDK 1.9.0 的框架无关 `./stream` 实现，`npm pack` 下来读即可，不必装进项目。
 

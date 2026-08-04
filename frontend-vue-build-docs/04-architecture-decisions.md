@@ -32,7 +32,7 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层
 
 输出的 DOM 结构与 class 名与 React 版一致 → 现有 CSS 全部复用 → 样式天然对齐。换成 markdown-it 会产生不同的 AST 与 HTML 结构，样式与行为都要重调。
 
-消息正文是用户注视时间最长的区域，其 DOM 结构在硬性验收范围内（见 [§7](#7-验收只有一条硬门禁)），这一层不能妥协。
+消息正文是用户注视时间最长的区域，其功能、Markdown 子树和关键视觉状态都在硬性验收范围内（见 [§7](#7-验收分层功能合同与关键视觉门禁)），这一层不能妥协。
 
 ### 仍需自写的部分
 
@@ -110,13 +110,14 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层
 
 ---
 
-## 3. 状态管理：Pinia 管流式状态，provide/inject 管 UI 状态
+## 3. 状态管理：external store 管协议状态，Vue 适配层管作用域与 UI 状态
 
 **决策：按层次切分，不是二选一。**
 
 | 层 | 用什么 | 内容 |
 | --- | --- | --- |
-| **Agent 流式状态** | **Pinia** | 消息字典与顺序、run 生命周期、SSE 连接状态、subtask 状态、错误恢复状态 |
+| **Agent 协议状态** | **L1 external store** | 消息字典与顺序、run 生命周期、SSE 连接状态、游标、错误与 gap 状态；唯一写入口是 reducer |
+| **Vue 订阅与派生状态** | **每 thread 一个 composable/Pinia adapter** | 订阅 external store、暴露 readonly refs、承载纯 UI 派生状态；不得重复实现协议 reducer |
 | **thread 作用域 UI 状态** | **provide/inject** | artifacts 面板、browser-view、messages context、sidecar context |
 | **应用级** | Nuxt plugin + provide/inject | auth、i18n |
 
@@ -128,13 +129,15 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层
 - artifacts 面板 UI 状态按 thread 键存 sessionStorage
 - 切换 thread 时必须清空乐观 / 瞬态 / subtask 状态
 
-`gamma-project` 是**单会话**场景，靠 `resetStore()` 显式清理就够。DeerFlow 是**多 thread 并存 + 侧栏随时切换 + sidecar 子会话**，全局单例风险高得多。
+DeerFlow 是**多 thread 并存 + 侧栏随时切换 + sidecar 子会话**，全局单例风险高。external store 与 Vue adapter 都按 thread/run 实例化；离开 thread 时释放订阅并中止本地读取，但不能把本地 abort 偷换成服务端 cancel。
 
 `provide`/`inject` 的生命周期语义与 React Context 一致——随组件树挂载卸载，天然按 thread 隔离，不需要额外写清理逻辑来模拟卸载。
 
-### 为什么不是全用 provide/inject
+### 为什么协议状态不能直接写进 Pinia 或 provide/inject
 
-Agent 流式状态需要在 transport / reducer / store 之间形成清晰的单向数据流，且要能被独立单测。Pinia store 正好承担 gamma 分层里 store 那一层的角色——**边界落在 gamma 已经划好的地方：store 管流，组件树管 UI**。
+协议状态必须在 transport / session / reducer / external store 之间形成可脱离框架测试的单向数据流。同一套 `create → stream → resume/cancel → terminal` 语义既要被 Nuxt 使用，也要能被临时 consumer 和协议测试直接调用；若 reducer 藏进 Pinia action，L1 就不再是可复用的纯 TypeScript 包。
+
+Vue adapter 只做三件事：为当前 thread 创建或取得 external store、把 snapshot 映射成 readonly refs、在组件作用域结束时解除订阅。Pinia 可以作为该 adapter 的实现工具，但不是协议真相源。完整接口与实例隔离规则见 [08](08-agent-core-contract.md#框架无关-external-store)。
 
 需要映射为 provide/inject 的 7 个业务 Context：
 
@@ -154,7 +157,7 @@ core/i18n/context.tsx                          app 作用域
 
 ## 4. Agent 通信层：自研 SSE，参照 gamma-project
 
-**决策：不用 `useStream`，也不用 SDK 1.9 的 `./stream` 内核。参照 `gamma-project` 的分层自建，SDK 只留 `Client` 与类型。**
+**决策：目标终态不依赖 LangGraph SDK，但删除动作受 M2 四类协议证据门禁约束。** 在门禁通过前，SDK 保留为开发期 oracle/fallback，不能先删再凭最终页面补协议。
 
 ### ⚠️ 本层有第二个目标：可移植
 
@@ -164,17 +167,16 @@ core/i18n/context.tsx                          app 作用域
 
 ```
 packages/agent-core/   L1 协议无关内核（其他项目可整包复用）
-  transport            SSE 分帧 + 重试退避 + buffer 上限     ← 不懂业务
-  cursor               CursorStrategy 接口（协议差异最大处，可插拔）
-  reducer              泛型骨架 + 通用归属规则               ← 纯函数，可单测
+  transport            SSE 分帧 + buffer 上限                 ← 不决定请求 URL/方法
+  session              RunProtocol + create/resume/cancel 状态机
+  reducer              完整 TState + 消息归属规则             ← 纯函数，可单测
   merge                动作 → 写进 AgentMessage
   watchdog             停表规则                              ← 纯函数
-  store                createAgentStore() 工厂，非全局单例
+  store                external store（subscribe/getSnapshot），无 Pinia
         ↑ 实现接口
 core/agent-deerflow/   L3 协议适配层（随项目走）
-  endpoints            /threads/:id/runs/stream · join · cancel
-  cursor-last-event-id CursorStrategy 实现（SSE Last-Event-ID）
-  event-map            values / messages-tuple / updates / custom → 动作
+  run-protocol         create POST / resume GET / cancel + header 映射
+  event-map            完整 LangGraph 事件全集 → state/message/session 动作
   message-adapt        LangGraph Message ⇄ AgentMessage
   stream-mode          请求模式白名单
   gap-recovery         gap 控制帧与 rejoin
@@ -186,13 +188,13 @@ core/agent-deerflow/   L3 协议适配层（随项目走）
 
 | # | 设计 | 解决什么 |
 | --- | --- | --- |
-| 1 | **`CursorStrategy` 可插拔** | DeerFlow 用 SSE `Last-Event-ID`、gamma 用 `last_message_index` + `segment_continue`、别的后端可能没有续传能力。内核只定义"提取游标 / 写进下次请求 / 拿不到时放弃还是重来" |
-| 2 | **reducer 泛型化** | 内核提供归属规则骨架（按 id 查、按 `toolCall.id` 倒序反查、临时 id 重写），具体事件类型由适配层用类型参数与映射表注入 |
+| 1 | **`RunProtocol` 可插拔** | 初始创建与续传不是同一请求；协议适配器显式实现 create/resume/cancel，避免重试 create POST 制造重复 run |
+| 2 | **reducer 对完整 `TState` 泛型化** | 一次事件可同时更新 messages、artifacts、todos、goal、interrupt 和 session，避免组件各自补状态 |
 | 3 | **`AgentMessage.meta` 扩展位** | 适配层把协议特有字段（DeerFlow 的 `additional_kwargs` / `run_id` / `agent` 名）塞进 `meta`，**内核不解释它的内容**，只原样保留 |
 
 ### L2 通用 UI：逐模块抽取
 
-消息分组、run-duration 折叠、reasoning 位置规则、composer draft、human-input 协议、Markdown 流式渲染——这些是"agent 聊天 UI"的共性，也是本次的**产品目标**。边界在 M4b / M5 各抽一次、M8 收口，**不推到最后**（推到最后就会被磨掉）。时机与理由见 [08-agent-core-contract.md](08-agent-core-contract.md#l2-的抽取时机逐模块不是最后)。
+消息分组、run-duration 折叠、reasoning 位置规则、composer draft、human-input 协议、Markdown 流式渲染——这些是"agent 聊天 UI"的共性，也是本次的**产品目标**。边界在 M4b / M5 各抽一次、M8 收口，**不推到最后**。时机与理由见 [08-agent-core-contract.md](08-agent-core-contract.md#l2-抽取时机)。
 
 ### ⚠️ 搬的是模式，不是代码
 
@@ -231,7 +233,7 @@ gamma 的 agent 层针对**它自己的后端协议**编写，与 DeerFlow Gatew
 7. **transport 不读登录态** —— token 由调用方注入
 8. **看门狗停表规则** —— "没有新消息"有两种含义：真断流该重连，后端在等用户操作则不该重连。把判断收敛成一个纯函数，而不是散在各张卡片的 `onMounted` 里。**DeerFlow 有 human-input 卡片、`/goal` 确认、interrupt，完全同构，这个设计整个搬**
 
-### 必须补强的 7 处
+### 必须补强的 16 条
 
 见 [05-invariants.md](05-invariants.md) 的 **L 组**。核心是：gamma 只面向一个已知后端，而 DeerFlow 要经 nginx、依赖 SSE `Last-Event-ID` 做重放。
 
@@ -241,7 +243,7 @@ gamma 的 agent 层针对**它自己的后端协议**编写，与 DeerFlow Gatew
 
 ### LangChain 依赖：全部去掉
 
-**决策：`@langchain/langgraph-sdk` 与 `@langchain/core` 都不用。**
+**终态决策：`@langchain/langgraph-sdk` 与 `@langchain/core` 都移除。执行条件：raw checkpoint、raw SSE trace、fake upstream、real Gateway 四类验证全部通过。**
 
 早期方案曾建议保留 SDK 的 `Client` 与类型，理由是"纯 HTTP 封装，自己写没有增量价值"。补上实测数据后这个理由不成立：
 
@@ -279,9 +281,9 @@ gamma 的 agent 层针对**它自己的后端协议**编写，与 DeerFlow Gatew
 
 ### 代价
 
-1. 手写的 Message 类型要与后端保持同步，后端改结构时不会自动报错——靠 E2E 与契约测试兜底
-2. `openapi-typescript` 的生成步骤要进 CI；建议把 spec 快照签入仓库，避免生成依赖 Gateway 在线
-3. M2 多写约 300 行
+1. 手写 Message 必须保留 `string | content parts[]` 并做 round-trip；不能简化为字符串
+2. `openapi-typescript` 的生成与 diff 进入 CI；OpenAPI 不覆盖 SSE 动态 schema，另有 raw trace contract
+3. M2 不再估固定 300 行；run session、结构化 cancel/inspect、完整 reducer、adapter 与 fixtures 以门禁闭环为完成标准
 
 ---
 
@@ -336,28 +338,29 @@ Composable 的自动导入（`app/composables/`）保留。
 
 不需要像参照项目那样上一整套 `docs-sync` 校验（130 个文件的 manifest + claims 抽取 + 批次报告，对本项目太重）。**先靠 review 保证，等到 M8 收口时若发现漏得多，再补一个"检查每个文件是否有头注释"的最小脚本即可。**
 
-### ⚠️ 但 `app/core/` 那 99 个复制文件必须有机器守护
+### ⚠️ 但 `app/core/` 的 `COPIED` 集必须有机器守护
 
-文件头注释解决「这个文件为什么长这样」，解决不了「它还是不是上游那一份」。**这两件事不能都靠 review**：99 个零改动复制文件是整套 1:1 的护城河（[06 的两条底盘之一](06-migration-plan.md#两条底盘)），一旦有人「顺手改一行」，护城河属性就没了，而 review 看不出来。
+文件头注释解决「这个文件为什么长这样」，解决不了「它还是不是上游那一份」。**这两件事不能都靠 review**：最终 `COPIED` 集是整套迁移的护城河（[06 的两条底盘之一](06-migration-plan.md#两条底盘)），一旦有人「顺手改一行」，该文件的护城河属性就没了，而 review 看不出来。99 只是初筛候选数，不是最终 `COPIED` 数。
 
-所以 `app/core/` 额外配一份 `PROVENANCE.md` 台账 + `tests/guards/core-provenance.test.ts`：每个文件标 `COPIED` / `RETYPED` / `ADAPTED` / `ADDED` / `DROPPED`，其中 **`COPIED` 那一档对冻结基线做内容 hash 比对**。详见 [M1 的 1e](06-migration-plan.md#1e-provenance-台账与-copied-hash-守护)。
+所以 `app/core/` 额外配 `PROVENANCE.md`、签入的 `baseline/core-sha256.json` 与 `core-provenance.test.ts`：每个文件标 `COPIED` / `RETYPED` / `ADAPTED` / `ADDED` / `DROPPED`，`COPIED` 与 manifest 比对。普通 CI 不依赖 shallow checkout 中是否恰好存在旧 commit；基线更新命令才读取 git 历史。详见 [M1 的 1e](06-migration-plan.md#1e-provenance-台账与-copied-hash-守护)。
 
 这两套机制分工明确：**文件头给人看（为什么），PROVENANCE 给 CI 看（是不是还一致）。**
 
 ---
 
-## 7. 验收：只有一条硬门禁
+## 7. 验收分层：功能合同与关键视觉门禁
 
-**决策：Playwright E2E 是唯一硬门禁。DOM 结构比对降为诊断报告，视觉样式人工回归。**
+**决策：共享 Playwright 是功能/交互硬门禁；有限的关键状态截图是视觉硬门禁；全页面 DOM diff 仍然只是诊断。**
 
 采用 shadcn-vue 后，之前因引入有主见组件库而拆分的"分区验收"口径整个撤销。
 
 | 维度 | 要求 | 验收方式 | 是否门禁 |
 | --- | --- | --- | --- |
-| 功能 | **一致** | Playwright E2E，同一份 spec 跑两个 app | ✅ **唯一硬门禁** |
+| 功能 | **一致** | Playwright E2E，同一份 spec 跑两个 app | ✅ |
 | 交互逻辑与体验 | **一致** | Playwright E2E + [05-invariants.md](05-invariants.md) 逐条勾选（A–N 共 14 组） | ✅ |
 | 页面结构（DOM） | 选择器契约一致 | E2E 选择器；`structural-diff` 只产出报告 | ❌ |
-| 视觉样式 | 允许少许差异 | 关键页面人工回归，**不做像素级截图 diff** | ❌ |
+| 关键视觉状态 | 基线阈值内一致 | 固定 6–10 个截图状态，确定性数据 + 有限 mask | ✅ |
+| 非关键装饰/框架内部 DOM | 允许受控差异 | 人工回归 + structural report | ❌ |
 
 ### ⚠️ 为什么「DOM 结构一致」不能当门禁
 
@@ -372,7 +375,7 @@ Composable 的自动导入（`app/composables/`）保留。
 
 126 个组件会持续产生**新的差异类别**，那张登记表只会一直变长；而一张只增不减、又没有上限的登记表，等于没有门禁——最后一定是被人为放宽，或者反过来吃掉整个排期。
 
-**这个形状是有先例的。** 上一轮实现（ant-design-vue 路线）的验收口径是「UI 还原 ≥98% + 逐路由逐状态 screenshot diff + 动态区 mask + 阈值报告」；结果是功能做到全量 E2E 104/116，而那套视觉门禁**从未建成**。失败模式不是功能不够，是**验收门禁的工作量超过了功能本身**。把「像素级」换成「DOM 级」并不改变这个形状。
+全量逐路由逐状态截图是无界的；**有限关键状态不是**。本方案只冻结空聊天、流式消息、reasoning/tool、artifact、settings、mobile、dark mode 等 6–10 个状态。基线先由冻结 React 版本在固定 Chromium/locale/viewport 下生成并人工确认，Vue CI 只比较、不自动更新。随机 id、时间、光标和动画用确定性数据或局部 mask；mask 列表同样受 review，不能覆盖主体内容。
 
 ### 结构仍然重要，但由 E2E 选择器承担
 
@@ -398,15 +401,15 @@ Composable 的自动导入（`app/composables/`）保留。
 
 这样它回答的是一个有用且有界的问题：「shadcn-vue 的 DOM 复刻假设还成立吗」。若报告里的**差异类别**开始增长（而不只是数量），说明那个假设有问题，值得回头看——这是[中止判定](06-migration-plan.md#相对工作量与中止判定)里的一条观察项，不是失败条件。
 
-### 样式为什么可以放宽
+### 哪些样式差异可以放宽
 
 Reka UI 与 Radix 的内部结构在个别组件上本来就有出入，为了消掉几像素的偏差去改 shadcn-vue 的实现，性价比很低，而且会让组件偏离 shadcn-vue 上游、后续升级困难。
 
-### E2E 是唯一的验收合同
+### E2E 是功能/交互合同
 
-这套 E2E 用 `page.route()` 拦截后端、断言真实 DOM 与文本，**与框架无关**。它是验证 1:1 的唯一客观手段——人肉比对 126 个组件不可能可靠。
+这套 E2E 用 `page.route()` 拦截后端、断言真实 DOM 与文本，**与框架无关**。它验证功能与交互；视觉由上面的有限截图门禁补齐。
 
-实测规模：**32 个 spec 文件 + 4 个 playwright config**，其中 **25 个 spec / 约 120 个 `test()`** 是硬合同（`frontend/tests/e2e/` 实测 27 spec / **128 个 `test()`**，减去 2 个豁免 spec）。完整清单与豁免项见 [03-project-shape.md](03-project-shape.md#e2e共用-frontendtestse2e不复制)。
+当前规模：mock 目录 27 个 spec / 130 个 test，排除 landing/docs 两个 spec 的 10 个 test 后，硬合同是 25 个 spec / 120 个 test；另有 1 个 auth spec 与 3 个 real-backend spec。CI 用 `--list` 输出实时数量，本文只记录 2026-08-04 基线。
 
 ⚠️ **spec 是合同，config 也是合同的一部分。** Vue 侧的 `playwright.config.ts` 必须逐字镜像 `frontend/playwright.config.ts` 的 `use` 段（尤其 `locale: "en-US"`）——config 不同等于合同条件不同，见 [03](03-project-shape.md#e2e共用-frontendtestse2e不复制)。
 

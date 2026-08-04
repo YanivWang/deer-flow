@@ -9,13 +9,19 @@ frontend-vue/
 ├── Makefile                      # ★ 唯一开发者入口（对齐 backend/Makefile 的做法）
 ├── nuxt.config.ts
 ├── package.json                  # 只留 postinstall，不放开发者脚本；完整内容见下方
+├── Dockerfile                    # Node 22 多阶段构建；runtime 只复制 .output，非 root 用户
+├── .dockerignore                 # 排除 node_modules/.nuxt/.output/test-results 与本地 env
 ├── tsconfig.json                 # extends ./.nuxt/tsconfig.json
 ├── components.json               # shadcn-vue CLI 配置
 ├── vitest.config.ts              # 双 project：node（纯 TS）+ nuxt（composable）
 ├── playwright.config.ts          # webServer 指向 nuxt preview :3101（独立端口）
 ├── playwright.auth.config.ts     # 对应 frontend/ 的 auth 套件
+├── playwright.real-backend.config.ts # 真实 Gateway：认证、续传、并发 run
+├── playwright.visual.config.ts   # 6–10 个关键状态截图门禁
 ├── eslint.config.mjs
 ├── openapi.snapshot.json         # Gateway /openapi.json 的签入快照 → make gen-api-types
+├── baseline/
+│   └── core-sha256.json          # 冻结基线的 COPIED 文件 hash；CI 不依赖 git 历史对象
 ├── pnpm-workspace.yaml           # ★ 嵌套 workspace，只含本目录 —— 见「agent-core 怎么被解析」
 ├── .prettierrc
 ├── .gitignore
@@ -26,24 +32,27 @@ frontend-vue/
 │                                 #   —— 修改须同步 tests/unit/config/routes.test.ts
 │
 ├── scripts/
-│   └── i18n-manager.mjs          # ★ 词典体检：check / diff / unused（2,256 行词典，必须有工具）
+│   ├── i18n-manager.mjs          # ★ 词典体检：check / diff / unused（2,256 行词典，必须有工具）
+│   ├── check-api-types.mjs       # 临时生成 OpenAPI 类型并与签入产物 diff
+│   └── container-smoke.sh        # 动态回环端口起容器、探 /health、发 SIGTERM、trap 清理
 │
 ├── packages/                     # ★ 可复用产物，与 app/ 平级
 │   └── agent-core/               #   L1 协议无关内核 —— 其他项目整包搬走即可
 │       ├── package.json          #   独立包，被 app/ 以 workspace:* 引用
 │       ├── src/
+│       │   ├── index.ts                 # 唯一公共导出面
 │       │   ├── transport/
 │       │   │   ├── sse-buffer.ts        # 分帧（CRLF 归一化 + buffer 上限）
 │       │   │   ├── parse-sse-event.ts   # 解析 event/data/id（只剥一个空格）
-│       │   │   └── stream-reader.ts     # 连接 / 重试 / 指数退避 / abort
-│       │   ├── cursor/strategy.ts       # CursorStrategy 接口（协议差异最大处）
-│       │   ├── reducer/create-reducer.ts# 泛型骨架 + 通用归属规则，纯函数
+│       │   │   └── frame-reader.ts      # 只读 Response body，不决定 endpoint/method
+│       │   ├── session/
+│       │   │   ├── run-protocol.ts      # create/resume/cancel 协议接口
+│       │   │   └── run-session.ts       # POST→handle→GET 状态机、退避、watchdog
+│       │   ├── reducer/create-reducer.ts# 完整 TState + 消息动作，纯函数
 │       │   ├── merge/merge-message.ts   # 增量合并（禁模块级可变状态）
 │       │   ├── watchdog/stream-watchdog.ts
-│       │   ├── store/create-agent-store.ts # 工厂，非单例
+│       │   ├── store/create-external-store.ts # 框架无关 subscribe/getSnapshot
 │       │   └── types/contract.ts        # AgentMessage / SseFrame / 错误分类
-│       ├── adapters/
-│       │   └── use-stream-compat.ts     # M2 探针产物：用 L1 实现 SDK useStream 形状
 │       └── tests/                       # 内核自己的单测，随包搬走
 │
 ├── app/                          # Nuxt 4 srcDir —— @/* 与 ~/* 均指向此处
@@ -52,14 +61,14 @@ frontend-vue/
 │   │   └── css/
 │   │       └── main.css          # ← 由 frontend/src/styles/ 直接搬（Tailwind 4 + CSS 变量主题）
 │   │
-│   ├── core/                     # ★ 由 frontend/src/core/ 原样搬，99 个零改动 + 24 个改 import
+│   ├── core/                     # ★ 由 frontend/src/core/ 分类迁移；99/24/26 是初筛组，最终数量看 provenance
 │   │   ├── PROVENANCE.md         #   ★ 每个文件标 COPIED/RETYPED/ADAPTED/ADDED/DROPPED
 │   │   │                         #     COPIED 一档由 tests/core-provenance.test.ts 做 hash 守护
 │   │   │
 │   │   ├── agent-deerflow/       #   ★ L3 协议适配层 —— 随项目走，不可复用
-│   │   │   ├── endpoints.ts             # /threads/:id/runs/stream · join · cancel
-│   │   │   ├── cursor-last-event-id.ts  # CursorStrategy 实现
-│   │   │   ├── event-map.ts             # values/messages-tuple/updates/custom → 动作
+│   │   │   ├── endpoints.ts             # create/resume/cancel/cancel-then-drain
+│   │   │   ├── run-protocol.ts          # Content-Location handle + Last-Event-ID
+│   │   │   ├── event-map.ts             # 完整事件全集 → state/message/session 动作
 │   │   │   ├── message-adapt.ts         # LangGraph Message ⇄ AgentMessage
 │   │   │   ├── stream-mode.ts           # ← 白名单属于适配层（LangGraph 概念）
 │   │   │   └── gap-recovery.ts          # gap 控制帧处理与 rejoin
@@ -83,8 +92,9 @@ frontend-vue/
 │   │   ├── integrations/  input-polish/  voice-input/  uploads/
 │   │   ├── workspace-changes/  rehype/  utils/
 │   │
-│   ├── stores/                   # ← 新增：由 createAgentStore() 工厂生成，非全局单例
-│   │   └── register.ts                  # 把 deerflow 适配层接到内核 store 工厂
+│   ├── stores/                   # ← Vue/Pinia 适配层；L1 本身不依赖 Pinia
+│   │   ├── create-thread-store.ts       # 每 thread/sidecar 一实例
+│   │   └── registry.ts                  # 生命周期与销毁，不保存业务协议
 │   │
 │   ├── components/
 │   │   ├── ui/                   # shadcn-vue CLI 生成（30 个）+ 手写（resizable + 4 特效）
@@ -107,6 +117,7 @@ frontend-vue/
 │   ├── middleware/
 │   │   └── auth.global.ts        # 替代 Next 的 layout 内鉴权
 │   ├── plugins/
+│   │   ├── deerflow-runtime.ts          # useRuntimeConfig() → 纯 RuntimeOptions 注入
 │   │   ├── vue-query.ts
 │   │   └── i18n.ts
 │   ├── lib/
@@ -132,22 +143,25 @@ frontend-vue/
 │                   └── chats/
 │                       └── [thread_id].vue
 │
-├── server/                       # 目前为空；营销页需要接口时再加 Nitro route
+├── server/
+│   └── routes/health.get.ts      # Nuxt 自身存活探针；不代理 Gateway、不泄露配置
 ├── public/                       # 仅 favicon + logo（demo 资产 15 MB 全删）
 │
 └── tests/
     ├── architecture.test.ts      # ★ 依赖方向与内核禁入清单的自动守护（M0 就建）
     ├── core-provenance.test.ts   # ★ app/core/PROVENANCE.md 台账守护；COPIED 一档
-    │                             #   对基线 27a425b0 做内容 hash 比对（见 06 M1 1e）
+    │                             #   对签入 baseline/core-sha256.json 比对（见 06 M1 1e）
     ├── global-setup.ts           # ★ Playwright 的 Nuxt 冷启动预热（不预热首个 spec 假红）
     ├── structural-diff.spec.ts   # ★ 自有 E2E：同一脚本对两个 baseURL 各跑一遍，
     │                             #   提取选择器契约做 diff → 产出报告。
     │                             #   ⚠️ 是诊断不是门禁，见 04 §7。不碰 frontend/
+    ├── visual/                   # 关键状态截图：确定性 fixture + 受审 mask
+    │   └── critical-states.spec.ts
     ├── fixtures/
-    │   └── threads/              # ← 由 frontend/public/demo/threads/ 拷入
-    │                             #   13 个真实会话 / 516 条真实消息，M2 差分测试语料
+    │   ├── threads/              # 13 个最终 checkpoint / 516 条消息：只验最终状态
+    │   └── streams/              # raw SSE golden trace：chunk/id/heartbeat/gap/reconnect
     └── unit/                     # Vitest，镜像 app/ 结构
-        ├── core/                 # ← 由 frontend/tests/unit/core/ 原样搬（126 个测试文件）
+        ├── core/                 # ← frontend/tests/unit/core/ 共 83 个；按运行环境分批迁
         ├── config/
         │   └── routes.test.ts    # ★ 锁定代理前缀优先级与渲染分区（M0 G0-1 的永久回归）
         ├── middleware/
@@ -159,7 +173,7 @@ frontend-vue/
 
 ### `packages/agent-core/` 怎么被解析
 
-方案要求它「整包搬走、零改动」，因此它必须是一个**真包**而不是一个被相对路径 import 的目录。仓库根没有 `pnpm-workspace.yaml`（已确认），但 `frontend-vue/` 可以有自己的一份——这仍然是零仓库改动，因为文件落在本目录内：
+方案要求它「整包搬走后只改包名/接线配置」，因此它必须是一个**真包**而不是一个被相对路径 import 的目录。仓库根没有 `pnpm-workspace.yaml`，`frontend-vue/` 自己建立嵌套 workspace：
 
 ```yaml
 # frontend-vue/pnpm-workspace.yaml
@@ -168,7 +182,27 @@ packages:
   - "packages/*"
 ```
 
-然后 `app/` 用 `"@deerflow/agent-core": "workspace:*"` 引用。
+然后应用根 `package.json` **必须**用 `"@deerflow/agent-core": "workspace:*"` 引用；这行必须出现在下方完整 manifest 中，不能只写在正文。
+
+包本身的最小 manifest：
+
+```json
+{
+  "name": "@deerflow/agent-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts"
+}
+```
+
+M2 增加临时 consumer workspace 做 clean install/typecheck/test；若将来发布 npm 包，再增加 build 产物与 files 清单，应用侧不得依赖未导出的源码路径。
 
 **不这么做的后果**（早期版本写的「通过相对路径引用，不需要 workspace 协议」是错的）：
 
@@ -176,11 +210,20 @@ packages:
 - 它的 `exports` / `types` 字段不生效，消费方得写 `~~/packages/agent-core/src/index` 这种深路径
 - 「搬走零改动」的承诺随即不成立：复用方拿到的包，其依赖清单从没被验证过
 
-### Rstest 转 Vitest：先写 codemod，不要手改
+### Rstest 转 Vitest：按运行环境分组，不把 126 个测试塞进 M1
 
-M1 要搬 126 个测试文件。两者的 `describe` / `it` / `expect` 兼容，但 mock 层不同（`rstest.mock` / `rstest.fn` / `rstest.spyOn` ↔ `vi.*`），以及 `import { rstest } from "@rstest/core"` 这一行本身。
+当前真实清单是：`tests/unit/core/` 83 个、`components/` 35 个、`app/` 2 个、`hooks/` 2 个、`content/` 1 个、`scripts/` 1 个，另有 2 个根级测试，共 126 个。**126 是全部 unit tests，不是 core tests。**
 
-先写一个 codemod + 一张对照表跑一遍，剩下的手工收尾。逐个手改 126 个文件既慢又容易在替换 mock 语义时引入静默差异——而这批测试正是 [05-invariants.md](05-invariants.md) C / F 组语义的唯一保真手段，不能带伤。
+先生成 manifest，按依赖分组：
+
+| 批次 | 范围 | 进入条件 |
+| --- | --- | --- |
+| M1 | 83 个 core 中不依赖 React DOM、组件、hook 的纯 TS 子集 | `node` project 可独立运行 |
+| M4a | core 中的 DOM/composable、hooks | Nuxt test environment 和 runtime adapter 已存在 |
+| M4b–M6 | components/app/content | 对应 Vue 组件已经迁移 |
+| M7 | scripts 和剩余集成测试 | 完整验收 |
+
+每批用同一 codemod 转 import/mock，再人工复核 mock 语义。测试 manifest 和实际收集数量由脚本生成，文档只记录基线，不把手写数量当永久事实。
 
 ### `scripts/i18n-manager.mjs`：词典体检
 
@@ -279,7 +322,7 @@ export default defineConfig({
 
 这两条是同一个问题的两面。
 
-[G0-1](06-migration-plan.md#m0-的六道-gate) 的全部论证是「`routeRules` 在 preview 下生效而 `devProxy` 不生效，所以必须验 preview」。但如果 E2E 用 3100 且 `reuseExistingServer: !CI`，那么**本地只要有一个 `make dev` 正跑在 3100，Playwright 就直接复用那个 dev server，preview 根本没被启动过**——G0-1 的论证被完整架空，而且没有任何报错。
+[G0-1](06-migration-plan.md#m0-的十道-gate) 的全部论证是「`routeRules` 在 preview 下生效而 `devProxy` 不生效，所以必须验 preview」。但如果 E2E 用 3100 且 `reuseExistingServer: !CI`，那么**本地只要有一个 `make dev` 正跑在 3100，Playwright 就直接复用那个 dev server，preview 根本没被启动过**——G0-1 的论证被完整架空，而且没有任何报错。
 
 所以：**E2E 用独立端口 3101，且 `reuseExistingServer: false`。** 代价是每次 E2E 都要重新 build（`timeout` 已放到 240 s），换来的是「跑的确实是 preview 产物」这个前提成立。
 
@@ -294,20 +337,20 @@ export default defineConfig({
 M0 花几分钟先跑这一条：
 
 ```bash
-cd frontend-vue && make e2e -- --list
+cd frontend-vue && make e2e-list
 ```
 
-**期望是 25 个 spec 文件 / 约 120 个 `test()`。** 实测 `frontend/tests/e2e/` 有 **27 个 spec / 128 个 `test()`**，减去两个豁免 spec 后就是这个数。
+**期望是 25 个 spec 文件 / 120 个 `test()`。** 2026-08-04 当前 HEAD 实测 `frontend/tests/e2e/` 是 **27 个 spec / 130 个 test**；两个豁免 spec 合计 10 个 test，因此硬合同是 120 个。数量由 `playwright test --list` 在 CI 中实时打印，后续增量不靠手改本文。
 
 > ⚠️ 早期版本写的是「列不出 **25 个用例**」——`--list` 列的是 test case 不是 spec 文件，按 25 去比对会在第一次跑的时候直接把人带偏。
 
-列不出来就立刻处理。最省事的修法是让两边指向同一份物理安装：
+共享 spec 位于 `frontend/`，模块解析会从那里命中 `frontend/node_modules`；runner 位于 `frontend-vue/`。两边必须是同一个物理 Playwright 实例。采用以下方案：
 
 ```json
 "@playwright/test": "link:../frontend/node_modules/@playwright/test"
 ```
 
-（这是 `frontend-vue/package.json` 里的一行，仍属零仓库改动。）
+这意味着 **clean checkout 必须先安装 `frontend/`，再安装 `frontend-vue/`**。本机已有 `frontend/node_modules` 不能算成功证据；workflow 必须显式完成两次 frozen install，并在 Vue install 前断言 link target 存在。若未来不接受双安装成本，应把合同 spec 和 Playwright runner 抽到仓库级共享 harness，而不是再发明 symlink 技巧。
 
 ### 选择器失效时的口径：spec 只读 + 豁免登记
 
@@ -333,7 +376,7 @@ Reka UI 与 Radix 的内部结构在个别组件上有出入，一定会有选�
 | --- | --- | --- | --- |
 | `tests/e2e/` | 27 | `playwright.config.ts` | ✅ 除下面两条豁免外全部 |
 | `tests/e2e-auth/` | 1 | `playwright.auth.config.ts` | ✅ 需要对应的 Nuxt webServer |
-| `tests/e2e-real-backend/` | 3 | `playwright.real-backend.config.ts` | ⏸ M7 再接，需真实后端 |
+| `tests/e2e-real-backend/` | 3 | `playwright.real-backend.config.ts` | ✅ M0 先接网络/认证 smoke，M7 跑完整套 |
 | `tests/e2e-record/` | 1 | `playwright.record.config.ts` | ❌ 录制工具，不是验收 |
 
 **明确豁免的 2 个**（测的是 Vue 版故意不做的东西，见 [01-scope.md](01-scope.md)）：
@@ -351,29 +394,30 @@ Reka UI 与 Radix 的内部结构在个别组件上有出入，一定会有选�
 
 1. **与 `backend/` 对齐。** `backend/Makefile` 已经是这个形态（`dev` / `test` / `lint` / `format` / `migrate-rev`），仓库里已有先例。`frontend/` 用 pnpm 脚本是 create-t3-app 模板带来的，不是这个仓库的偏好
 2. **CI 已经在调 `make verify`。** 仓库里那个 workflow 就是这么写的（见 [06 G0-0](06-migration-plan.md#g0-0--ci-workflow-对齐)），入口统一后不用两头改
-3. **一个入口，不用记两套名字。** 有 `make verify` 又有 `make verify` 是纯粹的认知负担
+3. **一个入口，不用记两套名字。** 不同时维护 `make ...` 与 `pnpm ...` 两套同义脚本，避免 CI 和本地命令漂移
 
 ```makefile
 # frontend-vue/Makefile
 #
 # 唯一开发者入口。package.json 的 scripts 只保留 postinstall。
 #
-# ⚠️ 这里直接调 corepack pnpm，不走仓库根的 scripts/pnpm.py ——
-#    那个 runner 硬编码了 cwd=frontend/，在本目录调用会静默跑到
-#    Next.js 项目里去。理由见 07-parallel-run.md。
-#    corepack 会按 package.json 的 packageManager 字段取到 pnpm@10.26.2。
+# 仓库 pnpm runner 在 M0 扩展 --dir 参数；默认行为仍指向 frontend/。
+# 统一入口保证 direct pnpm 优先、Corepack fallback 和版本选择逻辑只有一份。
 
 .PHONY: help install dev build preview start generate \
-        lint lint-fix typecheck format format-write \
-        test test-watch e2e e2e-install \
+        lint lint-fix typecheck format format-write audit \
+        docker-build container-smoke \
+        test test-watch e2e e2e-list e2e-auth e2e-real-backend e2e-visual e2e-preflight e2e-install \
         i18n-check i18n-diff i18n-unused \
-        verify gen-api-types
+        verify gen-api-types gen-api-types-check
 
-PNPM ?= corepack pnpm
+PYTHON ?= python3
+PNPM = $(PYTHON) ../scripts/pnpm.py --dir frontend-vue
 EXEC  = $(PNPM) exec
 
 DEV_PORT     ?= 3100
 E2E_PORT     ?= 3101
+IMAGE        ?= deer-flow-frontend-vue:ci
 
 help:
 	@echo "frontend-vue commands:"
@@ -381,9 +425,15 @@ help:
 	@echo "  make dev            - Nuxt dev server (port $(DEV_PORT))"
 	@echo "  make build          - Production build (.output/)"
 	@echo "  make preview        - Preview the build (port $(DEV_PORT))"
-	@echo "  make verify         - Full gate: lint + format + types + i18n + build + unit tests"
+	@echo "  make verify         - Offline code gate: lint + format + types + i18n + build + unit tests"
+	@echo "  make audit          - Fail on moderate-or-higher dependency advisories"
+	@echo "  make container-smoke - Build the production image and verify health/SIGTERM"
 	@echo "  make test           - Unit tests (Vitest, both projects)"
 	@echo "  make e2e            - Contract E2E against ../frontend/tests/e2e"
+	@echo "  make e2e-list       - Collect and print the shared contract inventory"
+	@echo "  make e2e-auth       - Auth recovery contract"
+	@echo "  make e2e-real-backend - Replay Gateway integration contract"
+	@echo "  make e2e-visual     - Critical-state screenshot gate"
 	@echo "  make gen-api-types  - Regenerate REST types from openapi.snapshot.json"
 
 install:
@@ -421,6 +471,15 @@ format:
 format-write:
 	$(EXEC) prettier --write .
 
+audit:
+	$(PNPM) audit --audit-level moderate
+
+docker-build:
+	docker build --tag $(IMAGE) .
+
+container-smoke: docker-build
+	./scripts/container-smoke.sh "$(IMAGE)"
+
 ## Tests
 test:
 	$(EXEC) vitest run
@@ -429,8 +488,23 @@ test-watch:
 	$(EXEC) vitest
 
 # testDir 指向 ../frontend/tests/e2e —— spec 是只读合同，见本文档 E2E 一节。
-e2e:
+e2e: e2e-preflight
 	$(EXEC) playwright test
+
+e2e-list: e2e-preflight
+	$(EXEC) playwright test --list
+
+e2e-visual:
+	$(EXEC) playwright test -c playwright.visual.config.ts
+
+e2e-auth: e2e-preflight
+	$(EXEC) playwright test -c playwright.auth.config.ts
+
+e2e-real-backend: e2e-preflight
+	$(EXEC) playwright test -c playwright.real-backend.config.ts
+
+e2e-preflight:
+	test -f ../frontend/node_modules/@playwright/test/package.json
 
 e2e-install:
 	$(EXEC) playwright install --with-deps chromium
@@ -446,20 +520,23 @@ i18n-unused:
 	node scripts/i18n-manager.mjs unused
 
 ## 门禁：CI 调的就是这个
-verify: lint format typecheck i18n-check build test
+verify: lint format typecheck i18n-check gen-api-types-check build test
 
 ## 由签入的 openapi.snapshot.json 生成 REST 类型（不依赖 Gateway 在线）
 gen-api-types:
 	$(EXEC) openapi-typescript ./openapi.snapshot.json -o ./app/core/api/types.gen.ts
+
+gen-api-types-check:
+	node scripts/check-api-types.mjs
 ```
 
-> `verify` 用的是 make 的前置依赖（`verify: lint format typecheck ...`）而不是 `&&` 串联——任一目标失败即整体失败，且 `make -k` 可以一次跑完看全部问题。这比 `pnpm lint && pnpm format && ...` 好用。
+> `verify` 用的是 make 的前置依赖（`verify: lint format typecheck ...`）而不是 `&&` 串联——任一目标失败即整体失败，且 `make -k` 可以一次跑完看全部问题。它保持可离线复跑；需要 registry/advisory 网络的 `make audit` 由 CI 另行执行，二者共同构成 M0 gate。
 
-### ⚠️ 不要用 `scripts/pnpm.py`
+### 扩展 `scripts/pnpm.py`，不绕过仓库规则
 
-仓库根 `AGENTS.md` 要求 host 侧 pnpm 调用走 `scripts/pnpm.py`，但[那个 runner 硬编码了 `cwd=frontend/`](07-parallel-run.md#️-不要用-scriptspnpmpy-启动)——在 `frontend-vue/` 里调用它会**静默地跑到 Next.js 项目里去，且不报错**。
+M0 同步扩展根 runner：新增 `--dir frontend|frontend-vue`，默认仍为 `frontend`，并拒绝绝对路径、`..`、不存在目录和没有 `package.json` 的目录。`backend/tests/test_pnpm_script.py` 增加默认兼容、Vue 目录、非法目录三组测试。
 
-那条约束的对象是仓库既有的构建流程；`frontend-vue` 不接入根 `make`，直接用 `corepack pnpm`。`frontend-vue/package.json` 同样 pin `packageManager: "pnpm@10.26.2"`，corepack 会在本目录取到正确版本。
+这样现有 Makefile/doctor/check 行为不变，Vue 侧也遵守根 `AGENTS.md` 的 host pnpm 约束。不得用“新目录不属于既有流程”解释掉 source-of-truth。
 
 ## package.json
 
@@ -475,6 +552,7 @@ gen-api-types:
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@deerflow/agent-core": "workspace:*",
     "@codemirror/lang-css": "^6.3.1",
     "@codemirror/lang-html": "^6.4.11",
     "@codemirror/lang-javascript": "^6.2.4",
@@ -495,33 +573,33 @@ gen-api-types:
     "codemirror": "^6.0.2",
     "date-fns": "^4.1.0",
     "hast-util-to-jsx-runtime": "^2.3.6",
-    "katex": "^0.16.28",
+    "katex": "0.16.28",
     "lucide-vue-next": "^1.0.0",
-    "marked": "^17.0.1",
-    "mermaid": "^11.16.0",
+    "marked": "17.0.6",
+    "mermaid": "11.12.2",
     "motion-v": "^2.3.0",
     "nanoid": "^5.1.6",
     "pinia": "^4.0.2",
-    "rehype-harden": "^1.1.8",
-    "rehype-katex": "^7.0.1",
-    "rehype-raw": "^7.0.0",
-    "rehype-sanitize": "^6.0.0",
-    "rehype-slug": "^6.0.0",
+    "rehype-harden": "1.1.8",
+    "rehype-katex": "7.0.1",
+    "rehype-raw": "7.0.0",
+    "rehype-sanitize": "6.0.0",
+    "rehype-slug": "6.0.0",
     "reka-ui": "^2.10.1",
-    "remark-gfm": "^4.0.1",
-    "remark-math": "^6.0.0",
-    "remark-parse": "^11.0.0",
-    "remark-rehype": "^11.1.2",
+    "remark-gfm": "4.0.1",
+    "remark-math": "6.0.0",
+    "remark-parse": "11.0.0",
+    "remark-rehype": "11.1.2",
     "remend": "^1.3.0",
     "shiki": "3.23.0",
     "splitpanes": "^4.1.2",
     "tailwind-merge": "^3.4.0",
     "tokenlens": "^1.3.1",
-    "unified": "^11.0.5",
+    "unified": "11.0.5",
     "unist-util-visit": "^5.0.0",
     "uuid": "^14.0.0",
-    "vue": "^3.5.40",
-    "vue-router": "^4.5.0",
+    "vue": "3.5.40",
+    "vue-router": "5.2.0",
     "vue-sonner": "^2.0.9",
     "zod": "^3.24.2"
   },
@@ -531,19 +609,19 @@ gen-api-types:
     "@nuxtjs/color-mode": "^4.0.1",
     "@pinia/nuxt": "^1.0.1",
     "@playwright/test": "link:../frontend/node_modules/@playwright/test",
-    "@tailwindcss/vite": "^4.0.15",
-    "@types/node": "^20.14.10",
+    "@tailwindcss/vite": "4.1.18",
+    "@types/node": "^22.19.0",
     "@vue/test-utils": "^2.4.11",
     "@vueuse/nuxt": "^14.4.0",
     "eslint": "^9.23.0",
     "eslint-plugin-vue": "^10.10.0",
     "happy-dom": "^20.11.1",
-    "nuxt": "^4.5.1",
+    "nuxt": "4.5.1",
     "openapi-typescript": "^7.13.0",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "shadcn-nuxt": "^2.8.1",
-    "tailwindcss": "^4.0.15",
+    "tailwindcss": "4.1.18",
     "tw-animate-css": "^1.4.0",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.27.0",
@@ -556,23 +634,29 @@ gen-api-types:
 
 ### 版本选择说明
 
-**刻意对齐 `frontend/`（不用 latest）**
+**行为敏感依赖对齐 `frontend/pnpm-lock.yaml` 的 resolved version，不只对齐 caret 声明。** Tailwind、Markdown、KaTeX、Shiki 的输出会进入 DOM/截图；首轮达到 parity 后再逐包升级。
 
 | 包 | 采用 | npm latest | 原因 |
 | --- | --- | --- | --- |
+| `nuxt` / `vue` / `vue-router` | `4.5.1` / `3.5.40` / `5.2.0`（精确锁） | — | Nuxt 4.5.1 的官方 manifest 依赖 `vue-router ^5.2.0` 且要求 Node `^22.19.0`；不能再直依赖 Router 4 或 Node 20 类型 |
 | `zod` | `^3.24.2` | 4.4.3 | 被搬运的 `core/` 文件（`core/auth/types.ts` 等）用了 zod，3→4 是破坏性变更。`core/auth/gateway-config.ts` 虽也用 zod，但它是纯服务端文件、本次不迁，不构成理由 |
-| `shiki` | `3.23.0`（精确锁） | 4.4.1 | 高亮输出结构变化会直接破坏视觉 1:1 |
+| `shiki` | `3.23.0`（精确锁） | 4.4.1 | 高亮输出结构变化会破坏关键视觉截图基线 |
 | `typescript` | `^5.8.2` | 7.0.2 | TS 7 是 Go 重写版，`vue-tsc` 兼容性未验证 |
-| `katex` | `^0.16.28` | 0.18.1 | 输出结构变化会破坏 1:1 |
+| `katex` | `0.16.28` | 0.18.1 | 精确对齐现有 lockfile；输出结构变化会破坏视觉基线 |
 | `nanoid` | `^5.1.6` | 6.0.1 | 与 `frontend/` 保持一致 |
-| `tailwindcss` | `^4.0.15` | 4.3.3 | caret 范围内自动取新 4.x，与 `frontend/` 声明一致 |
-| `marked` | `^17.0.1` | 18.0.7 | 对齐 Streamdown 内部使用的版本。`preprocess.ts` 的嵌套截断阈值是针对该版本的递归行为调的（见 issue #3393），升 18 需重新验证 |
+| `tailwindcss` | `4.1.18` | 4.3.3 | 对齐当前 `frontend` lockfile；不能用同一 caret 代替相同行为 |
+| `marked` | `17.0.6` | 18.0.7 | 对齐 Streamdown 当前解析结果；升 18 需重跑 raw Markdown fixture |
+| `mermaid` | `11.12.2` | — | 对齐当前 Streamdown 传递依赖，避免首轮直接跳到不同 SVG 输出 |
+
+版本与代理假设的官方复核入口：[`nuxt@4.5.1` manifest](https://github.com/nuxt/nuxt/blob/v4.5.1/packages/nuxt/package.json)、[`@nuxt/nitro-server@4.5.1` manifest](https://github.com/nuxt/nuxt/blob/v4.5.1/packages/nitro-server/package.json)、[`h3@1.15.x` proxy implementation](https://github.com/unjs/h3/blob/v1.15.11/src/utils/proxy.ts)、[Nitro route-rule normalization](https://github.com/nitrojs/nitro/blob/v2.13.4/src/config/resolvers/route-rules.ts)。lockfile 落地后仍以 `pnpm why nuxt nitropack h3 vue-router` 的 resolved 结果和 `make audit` 为准，不能只信顶层 manifest。
+
+wildcard proxy 必须覆盖 Nitro 已公开的 [proxy scope bypass advisory](https://github.com/nitrojs/nitro/security/advisories/GHSA-5w89-w975-hf9q) 与 [protocol-relative redirect advisory](https://github.com/nitrojs/nitro/security/advisories/GHSA-9phm-9p8f-hw5m)；即使 resolved version 已修复，也保留恶意编码路径回归，防止以后降级或换代理实现时复发。
 
 **移除的包**
 
-`@langchain/langgraph-sdk`（4.7 MB）与 `@langchain/core`（7.6 MB）全部移除，理由见 [04 §4](04-architecture-decisions.md#langchain-依赖全部去掉)。替代为自写的 `core/api/client.ts` + `openapi-typescript` 生成的 REST 类型 + 手写的 Message 类型。
+`@langchain/langgraph-sdk` 与 `@langchain/core` 的终态是移除，但必须等 M2 的 checkpoint/raw trace/fake upstream/real Gateway 四类证据全绿。此前 SDK 保留为开发期 oracle/fallback。终态替代为自写 REST client、生成的 REST 类型、富 Message 类型和显式 RunProtocol。
 
-`openapi.snapshot.json` 是 Gateway `/openapi.json` 的签入快照，避免类型生成依赖 Gateway 在线。后端契约变更时重新拉取并提交。
+`openapi.snapshot.json` 是 Gateway `/openapi.json` 的签入快照，并在相邻 metadata 中记录 backend commit 与生成命令。`make gen-api-types-check` 临时生成后 diff，避免签入 spec 和 `types.gen.ts` 静默漂移。后端契约变更时二者同一提交更新；SSE 动态事件另走 raw trace contract，不能假装被 OpenAPI 覆盖。
 
 **新增的直接依赖（原先由 streamdown 传递提供）**
 
@@ -639,8 +723,8 @@ export default defineNuxtConfig({
     public: {
       // 留空 = 从 window.location.origin 拼 /api/langgraph，对齐
       // frontend/src/core/config/index.ts::getLangGraphBaseURL()。
-      // 运行时可由 NUXT_PUBLIC_LANGGRAPH_BASE_URL / NUXT_PUBLIC_BACKEND_BASE_URL 覆盖
-      // ——这点比 Next 的构建期内联 NEXT_PUBLIC_* 更灵活。
+      // 客户端 base URL 可由 NUXT_PUBLIC_* 运行时覆盖；但下方 routeRules
+      // 的有无与 upstream 是构建期拓扑，不能靠运行时变量重写。
       langgraphBaseUrl: "",
       backendBaseUrl: "",
 
@@ -689,20 +773,22 @@ export const buildProxyRules = (env = process.env) => ({
 });
 
 /**
- * ⚠️ 这两个 flag 会被 Nitro 透传给 h3 的 proxyRequest，是 SSE 与大 body 的关键。
- * 不带 streamRequest，h3 会先把整个请求体读进内存（readRawBody）——nginx 侧对
- * /api/langgraph/ 配的是 client_max_body_size 20M + proxy_request_buffering off，
- * 这里不对齐就是一个内存问题。
- * G0-1 要带/不带各跑一遍确认差异。
+ * ⚠️ Nuxt 4.5.1 → nitropack 2.13.x → h3 1.15.x 会把这两个 flag 传给
+ * proxyRequest。不带 streamRequest，h3 会先把整个请求体读进内存；sendStream
+ * 则明确保持响应流式发送。G0-1 要带/不带各跑一遍确认差异。
+ *
+ * 但这两个 flag 不提供 body 上限。现有 nginx 的 client_max_body_size 20M 不会
+ * 自动跟到独立 Nuxt 入口；生产必须由外层 nginx/ingress 重建同等限制，或改用
+ * 有流式字节计数的受测 server handler，不能把“不会缓冲”误当成“有大小保护”。
  */
 const streamOpts = { sendStream: true, streamRequest: true } as const;
 ```
 
-> `proxy` 既可以是字符串也可以是 `{ to, ... }` 对象；用对象形式才能把 `sendStream` / `streamRequest` 传下去。这两个字段是 M0 必须实测的东西之一，不要因为「字符串形式看起来更简洁」就退回去。
+> `proxy` 既可以是字符串也可以是 `{ to, ... }` 对象；Nuxt 4.5.1 对应的 Nitro 会把对象选项传给 h3 `proxyRequest`，所以这里用对象形式传 `sendStream` / `streamRequest`。这两个字段和生产 body limit 都是 M0 必须实测的东西，不要因为「字符串形式看起来更简洁」就退回去。
 
 **为什么值得多这一个文件**（做法参照内部项目 `nuxt-modern-starter` 的 `config/routes.ts`）：
 
-1. **[M0 G0-1](06-migration-plan.md#m0-的六道-gate) 那条断言有地方放了。** 「`/api/langgraph/**` 是否比 `/api/**` 优先命中」原本只能人工验一次；现在 `buildProxyRules` 接受注入的 `env`，是个纯函数，可以直接单测——G0-1 从一次性检查变成永久回归。
+1. **[M0 G0-1](06-migration-plan.md#m0-的十道-gate) 那条断言有地方放了。** 「`/api/langgraph/**` 是否比 `/api/**` 优先命中」原本只能人工验一次；现在 `buildProxyRules` 接受注入的 `env`，是个纯函数，可以直接单测——G0-1 从一次性检查变成永久回归。
 2. **两个 `NUXT_PUBLIC_*` 的条件分支能被穷举测。** 设 / 不设共 4 种组合，手工验容易漏。
 3. **渲染分区是一份可读的清单**，不用在 `nuxt.config.ts` 里翻。将来加 `/workspace/settings` 之类的新路由时，改一处。
 
@@ -728,7 +814,7 @@ const streamOpts = { sendStream: true, streamRequest: true } as const;
 1. **匹配优先级** —— Nitro 的 routeRules 走 radix 匹配并用 `defu` 合并 `matchAll` 结果，理论上 `/api/langgraph/**` 比 `/api/**` 更具体因而胜出。但这是本方案的命门（前缀语义反了会静默把 SSE 打到错误路径），M0 要用真实请求确认，而不是靠推断。
 2. **SSE 是否被缓冲** —— nginx 侧靠 `proxy_buffering off` 保证首字节即时到达。M0 用一个真实 run 确认 token 是逐条到达而不是攒到最后。现成脚本：`git show 44309ae7:frontend-vue/scripts/p0-nitro-proxy-sse.mjs`（它自起假 SSE upstream + Nuxt 断言帧到达；**但它跑的是 `nuxt dev`，要改成 `build && preview`**，并补一段 `\r\n\r\n` 分隔的用例，顺手把 [L1](05-invariants.md#l-自研-sse-transport-的补强项) 一起验了）。
 3. **`sendStream` / `streamRequest` 的有无差异** —— 带与不带各跑一遍，确认 (a) SSE 逐帧到达 (b) 20 MB 上传不整个进内存。
-4. **WebSocket 能否 upgrade**（[G0-5](06-migration-plan.md#m0-的六道-gate)）—— routeRules 的 proxy 走 h3 `proxyRequest`，是纯 HTTP 转发，**大概率不处理 `Upgrade`**。browser-view 依赖它，结论要在 M0 拿到而不是 M6。
+4. **WebSocket 最终路径**（[G0-6](06-migration-plan.md#m0-的十道-gate)）——先测 routeRules；不支持 Upgrade 时必须落实已选的 Nuxt handler、Gateway origin 白名单或 nginx 入口，并用真实浏览器 Origin 验证。
 
 ### ⚠️ E2E 必须能关掉鉴权
 
@@ -738,7 +824,9 @@ const streamOpts = { sendStream: true, streamRequest: true } as const;
 
 因此 `runtimeConfig.public.authDisabled` 从 M0 就要存在，由 `NUXT_PUBLIC_AUTH_DISABLED` 运行时注入，`auth.global.ts` 第一行判它。
 
-> **连带的事实修正**：`auth-disabled-user.ts` 读 `process.env`，Nuxt 客户端产物里没有 `process.env`——它**不能算进「99 个零改动」**。实测 `core/` 里碰 `process.env` 的只有 2 个文件（另一个是 `auth/gateway-config.ts`，纯服务端，Vue 版不迁），量很小，但这一个正好在 E2E 的关键路径上。
+`useRuntimeConfig()` 只能出现在 Nuxt plugin/middleware/setup 边界。`plugins/deerflow-runtime.ts` 启动时把三个值转换成普通 `DeerFlowRuntimeOptions` 注入；`core/config/index.ts`、API client 和测试只接收该普通对象，不能在纯函数或事件回调里临时调用 Nuxt composable。
+
+> **连带的事实修正**：`auth-disabled-user.ts` 读 `process.env`，Nuxt 客户端产物里没有 `process.env`——它虽然落在 99 个初筛候选中，却**不能进入最终 `COPIED` 集**。实测 `core/` 里碰 `process.env` 的只有 2 个文件（另一个是 `auth/gateway-config.ts`，纯服务端，Vue 版不迁），量很小，但这一个正好在 E2E 的关键路径上。
 
 ### ⚠️ 营销页预渲染的前提
 

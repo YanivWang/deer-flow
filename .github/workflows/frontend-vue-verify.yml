@@ -4,10 +4,42 @@ on:
   push:
     paths:
       - "frontend-vue/**"
+      - "frontend/tests/e2e/**"
+      - "frontend/tests/e2e-auth/**"
+      - "frontend/tests/e2e-real-backend/**"
+      - "frontend/package.json"
+      - "frontend/pnpm-lock.yaml"
+      - "backend/app/gateway/**"
+      - "backend/packages/harness/deerflow/runtime/**"
+      - "backend/scripts/run_replay_gateway.py"
+      - "backend/tests/fixtures/replay/**"
+      - "backend/tests/replay_provider.py"
+      - "backend/tests/_replay_fixture.py"
+      - "backend/tests/seed_runs_router.py"
+      - "backend/pyproject.toml"
+      - "backend/uv.lock"
+      - "scripts/pnpm.py"
+      - "backend/tests/test_pnpm_script.py"
       - ".github/workflows/frontend-vue-verify.yml"
   pull_request:
     paths:
       - "frontend-vue/**"
+      - "frontend/tests/e2e/**"
+      - "frontend/tests/e2e-auth/**"
+      - "frontend/tests/e2e-real-backend/**"
+      - "frontend/package.json"
+      - "frontend/pnpm-lock.yaml"
+      - "backend/app/gateway/**"
+      - "backend/packages/harness/deerflow/runtime/**"
+      - "backend/scripts/run_replay_gateway.py"
+      - "backend/tests/fixtures/replay/**"
+      - "backend/tests/replay_provider.py"
+      - "backend/tests/_replay_fixture.py"
+      - "backend/tests/seed_runs_router.py"
+      - "backend/pyproject.toml"
+      - "backend/uv.lock"
+      - "scripts/pnpm.py"
+      - "backend/tests/test_pnpm_script.py"
       - ".github/workflows/frontend-vue-verify.yml"
 
 concurrency:
@@ -20,33 +52,153 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    defaults:
-      run:
-        working-directory: frontend-vue
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      - name: Detect frontend-vue project
+        id: project
+        shell: bash
+        run: |
+          if [[ -f frontend-vue/package.json ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Explain pre-project skip
+        if: steps.project.outputs.exists != 'true'
+        run: echo "frontend-vue/package.json does not exist yet; workflow wiring is ready for M0."
 
       - name: Set up Node.js
+        if: steps.project.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "22.22.3"
 
       - name: Enable Corepack
+        if: steps.project.outputs.exists == 'true'
         run: corepack enable
 
-      - name: Install pinned pnpm dependencies
-        run: corepack pnpm install --frozen-lockfile --strict-peer-dependencies
+      # Shared specs resolve @playwright/test from frontend/node_modules.
+      # Install that physical instance before resolving frontend-vue's link: dependency.
+      - name: Install React contract-test host
+        if: steps.project.outputs.exists == 'true'
+        run: python3 scripts/pnpm.py install --frozen-lockfile
+
+      - name: Assert shared Playwright host exists
+        if: steps.project.outputs.exists == 'true'
+        run: test -f frontend/node_modules/@playwright/test/package.json
+
+      - name: Install frontend-vue dependencies
+        if: steps.project.outputs.exists == 'true'
+        run: python3 scripts/pnpm.py --dir frontend-vue install --frozen-lockfile --strict-peer-dependencies
 
       - name: Run fast verification
+        if: steps.project.outputs.exists == 'true'
+        working-directory: frontend-vue
         run: make verify
 
+      - name: Audit dependency advisories
+        if: steps.project.outputs.exists == 'true'
+        working-directory: frontend-vue
+        run: make audit
+
+      - name: Smoke-test production container
+        if: steps.project.outputs.exists == 'true'
+        working-directory: frontend-vue
+        run: make container-smoke
+
+      - name: Verify contract test inventory
+        if: steps.project.outputs.exists == 'true'
+        working-directory: frontend-vue
+        run: make e2e-list
+
       - name: Install Playwright Chromium
+        if: steps.project.outputs.exists == 'true'
+        working-directory: frontend-vue
         run: make e2e-install
 
-      # testDir points at ../frontend/tests/e2e -- the contract specs are shared
-      # with the React frontend and treated as read-only. See
-      # frontend-vue-build-docs/03-project-shape.md.
-      - name: Run contract E2E suite
+      - name: Run mock contract E2E suite
+        if: steps.project.outputs.exists == 'true'
+        working-directory: frontend-vue
         run: make e2e
+
+      - name: Run auth contract E2E suite
+        if: steps.project.outputs.exists == 'true'
+        working-directory: frontend-vue
+        run: make e2e-auth
+
+      - name: Run critical visual regression suite
+        if: steps.project.outputs.exists == 'true'
+        working-directory: frontend-vue
+        run: make e2e-visual
+
+  real-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Detect frontend-vue project
+        id: project
+        shell: bash
+        run: |
+          if [[ -f frontend-vue/package.json ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Explain pre-project skip
+        if: steps.project.outputs.exists != 'true'
+        run: echo "frontend-vue/package.json does not exist yet; real-backend job is waiting for M0."
+
+      - name: Set up Python
+        if: steps.project.outputs.exists == 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        if: steps.project.outputs.exists == 'true'
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install replay Gateway dependencies
+        if: steps.project.outputs.exists == 'true'
+        working-directory: backend
+        run: uv sync --group dev
+
+      - name: Set up Node.js
+        if: steps.project.outputs.exists == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.22.3"
+
+      - name: Enable Corepack
+        if: steps.project.outputs.exists == 'true'
+        run: corepack enable
+
+      - name: Install React contract-test host
+        if: steps.project.outputs.exists == 'true'
+        run: python3 scripts/pnpm.py install --frozen-lockfile
+
+      - name: Assert shared Playwright host exists
+        if: steps.project.outputs.exists == 'true'
+        run: test -f frontend/node_modules/@playwright/test/package.json
+
+      - name: Install frontend-vue dependencies
+        if: steps.project.outputs.exists == 'true'
+        run: python3 scripts/pnpm.py --dir frontend-vue install --frozen-lockfile --strict-peer-dependencies
+
+      - name: Install Playwright Chromium
+        if: steps.project.outputs.exists == 'true'
+        working-directory: frontend-vue
+        run: make e2e-install
+
+      - name: Run replay Gateway integration contract
+        if: steps.project.outputs.exists == 'true'
+        working-directory: frontend-vue
+        run: make e2e-real-backend

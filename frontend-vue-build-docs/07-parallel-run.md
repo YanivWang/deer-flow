@@ -2,23 +2,17 @@
 
 `frontend-vue/` 与现有 `frontend/` 在同一仓库内并存、同时运行、共用同一套 Gateway 接口。
 
-## 原则：仓库改动只有一处
+## 原则：隔离业务代码，但完整接入仓库
 
-`frontend/` 与 `backend/` 是 GitHub 上游在维护的项目，仓库根的配置文件（`Makefile`、`docker/nginx/`、`docker-compose`、`scripts/`）也不属于本次工作区。
+`frontend/` 的产品代码和共享 E2E spec 保持只读；`backend/` 只有在 OIDC 双入口确实需要扩展时才改。但 workflow、pnpm runner、README/AGENTS，以及生产 profile 需要的 nginx/compose 是正常集成范围。
 
-**因此接线方式必须做到零改动**——`frontend-vue` 自己解决代理，不碰 nginx、不碰 `serve.sh`、不碰 `scripts/pnpm.py`、不加 `make` 目标。
+“并存”不能靠一个孤立目录自称完成。开发、干净 CI、认证、WS 和生产入口都必须有明确接线与测试。
 
-### ⚠️ 但有一个已经存在的例外
+### 当前提前存在的 workflow
 
-**`.github/workflows/frontend-vue-verify.yml` 已经在仓库里且已提交**，触发条件是 `paths: frontend-vue/**`，执行的是本方案不存在的 `make verify` 与 `playwright.vue.config.ts`。它是上一轮实现留下的——目录清掉了，workflow 没清。
+`.github/workflows/frontend-vue-verify.yml` 已按 [06 G0-0](06-migration-plan.md#g0-0--ci-workflow-对齐) 修成预备态：目录不存在时安全跳过；目录存在时从 clean checkout 安装两个前端并运行真实命令。M0 仍必须用首个 Vue skeleton 提交证明它真的工作，不能把“YAML 已写”当通过。
 
-**不处理它，建完 `frontend-vue/` 的第一次 push 就会 CI 红**，且失败信息是 `make: command not found`，指不到真实原因。
-
-处理它要动 `.github/`，属于仓库根配置，**需要先征得同意**。三个选项与推荐做法见 [06 的 G0-0](06-migration-plan.md#g0-0--ci-workflow-对齐)——这是 M0 的第一件事。
-
-所以准确的表述是：**除这一个遗留文件外零仓库改动。**
-
-> 早期版本提议让两个前端对称地都走 nginx（新增 2027 入口、抽 `api-locations.conf`、改 `serve.sh` 与 compose）。那套方案的前提是「frontend-vue 将来取代 `frontend/`」。产品目标改为[通用模板](08-agent-core-contract.md)后前提不成立，且它要改 4 个仓库文件——**已废弃**，理由与取舍见[文末附录](#附录为什么不再让两个前端都走-nginx)。
+本地开发默认仍可直接访问 3100；若交付“DeerFlow 生产双前端”，推荐增加对称 nginx/ingress 入口，因为它能复用已验证的 SSE、body limit、WS Upgrade 和同源认证。是否交付该 profile 在 M-1 冻结，不能写到最后再讨论。
 
 ## 端口分配
 
@@ -134,7 +128,7 @@ export default defineNuxtConfig({
 
 ### 环境变量：比 Next 版更简单
 
-Next 的 `NEXT_PUBLIC_*` 是**构建时内联**的，换后端地址必须重新构建。Nuxt 的 `runtimeConfig.public` 由 `NUXT_PUBLIC_*` **运行时注入**，同一个产物可以换环境。这是本次重写少数几个净收益之一。
+Nuxt 的 `runtimeConfig.public` 可以在运行时改变客户端使用的 base URL；但 `buildProxyRules()` 读取的 `process.env` 会编译进 Nitro route rules。**同一产物可以换客户端直连地址，不代表可以运行时重写已经构建的代理拓扑。** 生产默认仍要求同源反代，不能把 public base URL 当万能逃生口。
 
 ## ⚠️ browser-view 的 WebSocket —— 提前到 M0 验
 
@@ -142,20 +136,21 @@ Next 的 `NEXT_PUBLIC_*` 是**构建时内联**的，换后端地址必须重新
 
 **Nitro 这边大概率不行**：`routeRules` 的 `proxy` 底层是 h3 的 `proxyRequest`，纯 HTTP 转发，不处理 `Upgrade` 握手；Nitro 自身的 WebSocket 能力服务的是它自己的 handler，不是 proxy 规则。
 
-**所以这条从 M6 提前到 [M0 的 G0-5](06-migration-plan.md#m0-的六道-gate)。** 理由不是它更重要，而是**它的两条出路里有一条需要征得同意**（改 nginx），而征得同意这件事越晚成本越高——M6 时再发现，等于在最后一个里程碑上卡一个需要跨团队决策的事。验它 10 分钟。
+**所以最终路径在 M-1 决策，并由 [M0 G0-6](06-migration-plan.md#m0-的十道-gate) 验证。** 先测 routeRules，但不能只得到“不通”结论而不落实替代方案。
 
-结论若是"不通"，两个选项：
+结论若是“不通”，三个选项：
 
-1. **让 WS 直连 Gateway**（`NUXT_PUBLIC_BACKEND_BASE_URL` 或单独给 WS 一个 base URL）
-2. 申请在 nginx 加一个入口
+1. Nuxt server 实现并测试真正的 WS proxy handler；
+2. WS 直连 Gateway，同时把 Vue public origin 加入 `GATEWAY_CORS_ORIGINS`；
+3. 为 Vue 增加 nginx/ingress 同源入口，复用现有 Upgrade location（DeerFlow 生产 profile 推荐）。
 
 > ⚠️ **不要把「跨源丢 cookie」直接套到 WebSocket 上。** 下一节讲的是 **fetch** 跨源：那是 CORS + `credentials` 的问题，需要 `Access-Control-Allow-Credentials` 与精确 origin 白名单。
 >
 > WebSocket 不走 CORS 那套。`localhost:3100` → `localhost:8001` 虽然是不同 **origin**，但**端口不属于 site**，两者是 **same-site**，所以 `SameSite=Lax` 的 `access_token` cookie 在 WS 握手时照样会被带上。
 >
-> 也就是说：**选项 1 对 WS 很可能是可行的，即使它对普通 REST 请求不可行。** 这两件事必须分开判断，混成一条会让人误以为唯一出路是改 nginx。真正要验的是握手能否完成、以及 Gateway 侧是否校验 `Origin`。
+> Cookie 可能会带上，但当前 Gateway 的 `_ws_origin_allowed()` 还会比较 Origin 与 target host 或显式 CORS allowlist。默认 `localhost:3100 → localhost:8001` 会因端口不同被拒绝；直连方案必须显式配置 `GATEWAY_CORS_ORIGINS=http://localhost:3100` 并测试。
 
-**在 G0-5 拿到结论之前，不要为这一个 L3 功能改 nginx。**
+**G0-6 的通过条件是选定方案已经工作，不是只记录 routeRules 不支持。**
 
 ## ⚠️ 跨源会丢认证 cookie —— 不要轻易绕开同源代理
 
@@ -170,6 +165,16 @@ Next 的 `NEXT_PUBLIC_*` 是**构建时内联**的，换后端地址必须重新
 
 所以 `NUXT_PUBLIC_LANGGRAPH_BASE_URL` / `NUXT_PUBLIC_BACKEND_BASE_URL` 这两个变量的正确定位是**「部署在同源反代之后时用来指向别处」**，不是「开发时图省事绕过代理」。默认必须留空。
 
+## OIDC 双前端回跳
+
+Gateway 当前只有一个 `auth.oidc.frontend_base_url`，每个 provider 也只有一个可选的 `redirect_uri`。任一项固定成 React 地址时，Vue 发起的 SSO 都会被固定送回 React；这不是前端路由能补救的问题。
+
+双前端 profile 的优先方案是：两个 public origin 都通过同源 `/api/v1/auth/*` 访问 Gateway，OIDC provider 注册两个 callback URI，同时让 Gateway 的 `frontend_base_url` **和 provider 的 `redirect_uri` 都留空**。这样登录发起与 callback 都由当前请求的 proxy-aware origin 生成，成功/失败 redirect 保持相对路径并回到本次 callback 所在 origin。必须确认 nginx/ingress 只接受可信代理并正确转发 Host/Proto，再用两个入口各跑一次真实或可控 OIDC provider 测试。
+
+开发环境若两个入口只是同一 hostname 的不同端口（例如 `localhost:2026` 与 `localhost:3100`），Cookie 仍按 hostname/path 而不是端口隔离。OIDC state cookie 名只按 provider 区分，所以两个端口**并发**发起同一 provider 登录会互相覆盖；G0-7 要验证此场景并明确限制。生产 dual profile 推荐使用两个独立 hostname，不能把“不同端口”当成认证隔离边界。
+
+如果部署环境必须配置绝对 `frontend_base_url` 或单个绝对 provider `redirect_uri`，则需要后端把合法 return origin/callback 写进受签名 state，并用服务端 allowlist 校验；不能接受客户端任意 return URL。该后端扩展及安全测试属于生产双前端 profile 的发布阻断。
+
 ## 运行
 
 ```bash
@@ -182,7 +187,7 @@ make dev
 cd frontend-vue && make dev
 ```
 
-不加 `make dev-vue` 目标——那要改根 `Makefile`。`scripts/pnpm.py` 同理不能用（它硬编码 `cwd=frontend/`，见下）。
+M0 先支持模块内 `make dev`。根 `make dev-vue` 或全栈 `make dev` 是否纳入 Vue，由 M-1 的交付 profile 决定；一旦纳入，根 Makefile/README/AGENTS 同步更新。
 
 | 检查 | 期望 |
 | --- | --- |
@@ -191,10 +196,12 @@ cd frontend-vue && make dev
 | `localhost:3100` 上调用 `/api/features` | 返回 Gateway 的真实响应，不是 404/502 |
 | **`PORT=3101 nuxt preview` 下同样调用 `/api/features`** | **同上**——这一条是 `routeRules` 相对 `devProxy` 的全部意义所在，必须在 **preview** 上单独验 |
 | `localhost:3100` 上发起一个 run | `/api/langgraph/threads/…/runs/stream` 命中 Gateway，且 token **逐条到达**而不是攒到最后（代理未缓冲） |
-| `ws://localhost:3100/api/threads/x/browser/stream` | 握手能否完成（[G0-5](06-migration-plan.md#m0-的六道-gate)）。大概率不行，结论要在 M0 拿到 |
-| `make e2e -- --list` | 列出 **25 个 spec / 约 120 个用例**。列不出来说明撞上了 `@playwright/test` 双实例，见 [03](03-project-shape.md#️-m0-必须先验证-spec-能被收集到) |
+| browser-view WS | 选定的最终路径在真实 Origin/cookie 下完成握手（[G0-6](06-migration-plan.md#m0-的十道-gate)） |
+| `make e2e-list` | clean install 后列出 **25 个 spec / 120 个 test**；实时数量由 CI 输出 |
+| 真实认证 smoke | 经 preview 完成 register/login、CSRF 写请求、refresh、logout |
+| run resume smoke | create POST 只发生一次，续传切 GET 并带 `Last-Event-ID` |
 
-### ⚠️ 不要用 `scripts/pnpm.py` 启动
+### 扩展并统一使用 `scripts/pnpm.py`
 
 [`scripts/pnpm.py:56`](../scripts/pnpm.py) 硬编码了工作目录：
 
@@ -203,11 +210,14 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 result = subprocess.run([*command, *arguments], check=False, shell=False, cwd=FRONTEND_DIR)
 ```
 
-「先 `cd frontend-vue` 再调用」无效——`cwd=` 覆盖 shell 的当前目录，实际在 `frontend/` 里执行，**启动的是 Next.js 而不是 Nuxt，且不报错**。
+当前 runner 默认目录确实硬编码为 `frontend/`，所以 M0 在开始调用它之前增加 `--dir frontend|frontend-vue`：
 
-仓库根 `AGENTS.md` 要求 host 侧 pnpm 调用走这个 runner，但那条约束的对象是**仓库既有的构建流程**；`frontend-vue` 不接入 `make`，直接用 `pnpm` 即可。`frontend-vue/` 同样 pin `packageManager: "pnpm@10.26.2"`，Corepack 会在该目录下取到正确版本。
+- 不传参数继续使用 `frontend`，现有调用完全兼容；
+- `--dir frontend-vue` 只允许仓库内白名单目录；
+- 拒绝绝对路径、`..`、不存在目录和无 `package.json` 目录；
+- `backend/tests/test_pnpm_script.py` 覆盖以上行为。
 
-> 若将来决定把 `frontend-vue` 接进 `make dev`，届时给 `pnpm.py` 加一个 `--dir` 参数（默认值保持 `frontend`，现有调用方行为不变）——**需要先征得同意**。
+Vue Makefile 使用 `python3 ../scripts/pnpm.py --dir frontend-vue`，不再为新目录另造直接 Corepack 例外。
 
 ## ⚠️ 两个前端共享 localhost 的 Cookie
 
@@ -239,33 +249,39 @@ playwright-report/
 
 仓库根没有 `pnpm-workspace.yaml`（已确认），两个前端各自独立安装。
 
-`frontend-vue/` 内部**自己放一份 `pnpm-workspace.yaml`**（`.` + `packages/*`），让 `packages/agent-core/` 成为真包、用 `workspace:*` 引用——文件在本目录内，仍属零仓库改动。理由见 [08](08-agent-core-contract.md#l1-为什么是独立包)。
+`frontend-vue/` 内部自己放一份 `pnpm-workspace.yaml`（`.` + `packages/*`），让 `packages/agent-core/` 成为真包、用 `workspace:*` 引用。理由见 [08](08-agent-core-contract.md#包与-workspace-契约)。
 
-唯一的跨目录引用是 `@playwright/test` 的 `link:../frontend/node_modules/@playwright/test`——它是**故意**的，为了让共用 testDir 的 spec 与 runner 命中同一个物理实例（见 [03](03-project-shape.md#️-m0-必须先验证-spec-能被收集到)）。代价：`frontend/` 必须已经 `pnpm install` 过。
+唯一的跨目录引用是 `@playwright/test` 的 `link:../frontend/node_modules/@playwright/test`。clean CI 必须先 frozen-install `frontend/`，再安装 Vue 并断言 link target；本机已有 node_modules 不算验证。
 
 ### 文档同步
 
-本次不改根 `AGENTS.md`（属于需要同意的范围）。等 `frontend-vue` 有可运行产物后再一并申请更新：Service Topology 表、Repository Map。
+首个可运行产物必须在同一变更集更新根 README/AGENTS：Repository Map、命令、开发端口、CI、是否包含生产 profile。架构变化不能先落代码、后补 source-of-truth。
 
 ## 生产部署
 
-**本文档只覆盖开发态。** `frontend-vue` 作为通用模板交付时，生产部署由**复用方**决定，我们只需要说清它需要什么：
+交付分为两个明确 profile：
+
+1. **Standalone template**：复用方提供同源 reverse proxy，满足下表要求；
+2. **DeerFlow dual-frontend production**：React 与 Vue 同时部署。推荐为 Vue 增加独立 public origin/nginx 或 ingress 入口，并复用同一组 API/SSE/WS location；同时完成 OIDC 双回跳。
+
+如果本期只完成开发 profile，发布说明必须标为“development preview”，不能称 production-ready。
 
 | 需求 | 说明 |
 | --- | --- |
 | 产物 | `nuxt build` → `.output/`，`node .output/server/index.mjs`（自包含，运行时不需要 pnpm / node_modules） |
-| 代理 | agent 流式前缀（默认 `/api/langgraph/*`）必须配 `proxy_read_timeout ≥ 600s`、`proxy_buffering off`、`client_max_body_size ≥ 20M`、`proxy_request_buffering off` |
-| WebSocket | 若启用 browser-view，需要 upgrade 转发 |
-| 环境变量 | `NUXT_PUBLIC_LANGGRAPH_BASE_URL` / `NUXT_PUBLIC_BACKEND_BASE_URL`，运行时注入。⚠️ 默认留空走同源代理，理由见[上文](#️-跨源会丢认证-cookie--不要轻易绕开同源代理) |
-| **安全响应头** | **默认不开，由复用方决定**——见下方说明 |
+| 镜像 | Node 22 多阶段构建；runtime stage 只复制 `.output`、使用非 root 用户、固定工作目录，不复制 `.env`/源码/node_modules；基础镜像与 resolved 依赖可追溯 |
+| 代理 | agent 流式前缀（默认 `/api/langgraph/*`）必须配 `proxy_read_timeout ≥ 600s`、`proxy_buffering off`、`proxy_request_buffering off`，并按当前合同以 `client_max_body_size 20M` 拒绝超限请求（413）；Nuxt 的 `streamRequest` 只防内存缓冲，不代替大小限制 |
+| WebSocket | browser-view 启用时必须同源 Upgrade，或显式 allowlist 的直连方案 |
+| 认证 | HTTPS Cookie、CSRF、register/login/logout、OIDC 两个入口回跳均有测试 |
+| 环境变量 | public base URL 可运行时注入；Nitro proxy topology 是构建配置，不能混为一谈 |
+| 运维 | Nuxt 自身 `/health` 与 Gateway health 分开；进程启动、stdout/stderr 日志、SIGTERM 优雅退出、失败重启、回滚版本与带 hash 静态资源缓存策略 |
+| 安全响应头 | 至少 `nosniff`、referrer policy、frame policy；CSP 先 report-only 验证 Mermaid/KaTeX/iframe/worker，再决定 enforce |
 
 ### 关于安全响应头（CSP 等）
 
 实测：**DeerFlow 当前 nginx 与 `next.config.js` 里一个安全响应头都没有**（`add_header` / `headers()` 均无）。
 
-所以 `frontend-vue` 也**不默认开启**——加上就是对 `frontend/` 的行为偏离，违反 [06](06-migration-plan.md#不做的事) 的「不要在移植过程中改行为」，而且 CSP 很容易在这个应用上误伤：Mermaid / Shiki 用 `blob:` worker，KaTeX 注入行内样式，artifacts 预览用 `iframe`。
-
-但作为**通用模板**交付时，零安全头是个真实缺口。所以写在这张交付清单里而不是代码里。Nuxt 侧的挂载点是 `routeRules` 的 `headers`：
+不能因为 React 当前没有安全头就把模板的生产缺口永久继承。基础无争议头可以启用；CSP 容易误伤 Mermaid/Shiki worker、KaTeX inline style 和 artifact iframe，所以先用 report-only 收集，再冻结策略。Nuxt 侧挂载点是 `routeRules.headers` 或外层 ingress：
 
 ```ts
 "/**": { headers: { "x-content-type-options": "nosniff", … } }
@@ -273,15 +289,15 @@ playwright-report/
 
 ⚠️ 有一个坑值得预先记下来（`nuxt-modern-starter` 已经踩过并在注释里写明）：**预渲染 / SWR 缓存的 HTML 与 CSP `nonce` 天然冲突**——nonce 要求每个响应唯一，而缓存 HTML 是复用的。要么保留 `script-src 'unsafe-inline'`，要么单独实现构建期 hash 注入。本项目营销区正是 `prerender: true`，一旦要开 CSP 就会直接撞上这条。
 
-如果 DeerFlow 自己也要部署 Vue 版，届时再讨论 nginx / compose 改动。
+dual-frontend profile 若被 M-1 选中，nginx/compose/health-check 改动就在本次范围，不再推迟。
 
 ---
 
-## 附录：为什么不再让两个前端都走 nginx
+## 附录：何时让两个前端都走 nginx
 
 对称部署（nginx 新增 2027 入口 → frontend-vue）在「frontend-vue 取代 `frontend/`」的前提下是更好的方案：两个前端拿到逐字相同的 `/api/*` 配置，SSE 调优、WebSocket、压缩全部复用，不会漂移。
 
-但它要求改 4 个仓库文件：
+它要求改至少以下仓库文件：
 
 | 文件 | 改动 |
 | --- | --- |
@@ -290,10 +306,10 @@ playwright-report/
 | `docker/docker-compose*.yaml` | 加服务与第二个发布端口 |
 | `backend/tests/test_compose_default_bind_host.py` | `test_nginx_entry_defaults_to_loopback` 断言的是单元素列表，加端口后会红 |
 
-产品目标确定为**通用模板**（不取代 `frontend/`）之后，这些代价换不回相应的收益：
+结论不再是“一律废弃”，而是按 profile：
 
-- 生产部署是复用方的事，DeerFlow 侧的 nginx 对称性不再是刚需
-- 唯一需要 WebSocket 的 browser-view 是 L3，且排在最后的 M6
-- 用 `routeRules` 的 `proxy` 复刻前缀重写，且**它在 preview 与生产产物里同样生效**，E2E 合同与 URL 约束都能满足
+- standalone template：不修改 DeerFlow nginx，由复用方提供等价入口；
+- 本地开发：3100 routeRules 足够，WS 用 G0-6 选定方案；
+- DeerFlow 生产双前端：**推荐对称 nginx/ingress**。它以有限根级改动换回 SSE 调优、WS、认证和压缩的一致性，收益明确。
 
-**保住全部 API URL（含 `/api/langgraph` 前缀）是这条决策的前提**——把 URL 丢掉再绕过 nginx，才是两头不落好。
+无论选择哪一档，都必须保住全部 API URL（含 `/api/langgraph` 前缀），并用同一套 real-backend contract 验证。

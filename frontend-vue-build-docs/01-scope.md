@@ -7,6 +7,7 @@
 - `/workspace/**` —— 聊天、自定义智能体、定时任务、artifacts、sidecar、browser view、设置
 - 认证流 —— `/login`、`/setup`、`/auth/callback`
 - 三个**营销占位页** —— `/`、`/pricing`、`/about`（当前为占位，未来替换为公司自定义内容）
+- 必需的仓库接入：pnpm runner、CI、根 README/AGENTS；若 M-1 选择 DeerFlow 生产双前端 profile，还包括 nginx/compose/health-check 和 OIDC 双回跳
 
 ## 不做什么
 
@@ -42,7 +43,7 @@
 | 项 | 量 |
 | --- | --- |
 | `src/content/` | 72 个 MDX + 14 个 `_meta.ts`，共 88 文件 / 9,043 行 |
-| `src/app/[lang]/docs/**`、`src/app/blog/**` | 5 个路由文件 |
+| `src/app/[lang]/docs/**`、`src/app/blog/**` | 6 个路由文件 |
 | `src/components/docs/` | 4 文件 |
 | `src/core/blog/` | — |
 | `nextra` 引用点 | 21 处 |
@@ -93,17 +94,17 @@ Nextra 没有 Vue 移植，重建需要自写文档主题；当前不在范围�
 | 分类 | 数 | 处置 |
 | --- | --- | --- |
 | `mock/api/**` route handlers | 12 | 不迁（见上文 §3） |
-| `[lang]/docs/**`、`blog/**` | 5 | 不迁（见上文 §2） |
+| `[lang]/docs/**`、`blog/**` | 6 | 不迁（见上文 §2） |
 | `api/memory/**` route handlers | 2 | 删除——浏览器经代理直连 `/api/memory` |
 | **`layout.tsx`（根 + `(auth)` + `workspace` + 各级嵌套）** | 6 | → `layouts/{default,auth,workspace}.vue` |
-| **`page.tsx` / `providers.tsx` / `workspace-content.tsx`** | 14 | → `pages/**`，见 [03 的路由映射](03-project-shape.md#路由映射) |
+| **`page.tsx` / `providers.tsx` / `workspace-content.tsx`** | 13 | → `pages/**`，见 [03 的路由映射](03-project-shape.md#路由映射) |
 
-**需要改写的是 20 个 layout/page + 2 个不迁 = 22 个进 [M4b](06-migration-plan.md#m4b--通用-agent-uil2-第一批--模板价值兑现点)。**
+**需要改写的是 19 个文件 / 3,215 行**（6 个 layout + 13 个 page/providers/workspace-content），进入 [M4b](06-migration-plan.md#m4b--通用-agent-uil2-第一批-模板价值兑现点)。其余 20 个文件（mock 12 + docs/blog 6 + memory route 2）不迁。
 
 其中两个值得单独留意：
 
 - `workspace/workspace-content.tsx` —— 服务端读 cookie，`ssr:false` 后改客户端（见 [03 的服务端边界变化](03-project-shape.md#服务端边界的变化)）
-- `workspace/chats/[thread_id]/providers.tsx` —— 7 个业务 Context 的挂载点之一，对应 [04 §3](04-architecture-decisions.md#3-状态管理pinia-管流式状态provideinject-管-ui-状态) 的 `provide`/`inject` 改写
+- `workspace/chats/[thread_id]/providers.tsx` —— 7 个业务 Context 的挂载点之一，对应 [04 §3](04-architecture-decisions.md#3-状态管理external-store-管协议状态vue-适配层管作用域与-ui-状态) 的 `provide`/`inject` 改写
 
 ### 6. `@radix-ui/react-icons`（换掉，不是删掉）
 
@@ -113,7 +114,7 @@ Nextra 没有 Vue 移植，重建需要自写文档主题；当前不在范围�
 
 `frontend/tests/e2e/utils/mock-api.ts` **必须保留**。
 
-它是 Playwright 的 `page.route()` 网络拦截，与产品内的 static demo 模式无关 —— 作用是让 E2E 能在没有后端的情况下测试真实交互。这套 E2E 是验证 Vue 版与 Next 版 1:1 的**唯一客观手段**：同一份 spec 两个 app 都跑绿，才算对标成功。
+它是 Playwright 的 `page.route()` 网络拦截，与产品内的 static demo 模式无关 —— 作用是让 E2E 能在没有后端的情况下测试功能与交互合同。同一份 spec 两个 app 都跑绿是必要条件；raw stream、真实认证/后端和关键视觉截图分别由独立门禁补足，不能让 mock E2E 一套测试证明所有层。
 
 ⚠️ **它实测有 39 个 `page.route()`**：7 个在 `**/api/langgraph/*`（threads、threads/\*、/history、/state、/search、runs/stream、threads/\*/runs/stream），**另外 32 个在裸 `/api/*`**——`/api/v1/auth/*`、`/api/threads/*`（含正则）、`/api/scheduled-tasks/*`、`/api/features`、`/api/models`、`/api/skills`、`/api/agents`、`/api/integrations/lark/*`、`/api/channels/*` 等。
 
