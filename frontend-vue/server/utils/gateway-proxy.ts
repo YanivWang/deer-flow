@@ -10,11 +10,18 @@
 import {
   createError,
   getHeader,
+  getRequestHost,
+  getRequestProtocol,
   getRequestURL,
   proxyRequest,
   type H3Event,
 } from "h3";
-import { MAX_PROXY_BODY_BYTES, hasUnsafeProxyPath } from "../../config/routes";
+import {
+  MAX_PROXY_BODY_BYTES,
+  buildForwardingHeaders,
+  hasUnsafeProxyPath,
+  isSafeForwardedHost,
+} from "../../config/routes";
 
 const METHODS_WITH_BODY = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -22,6 +29,9 @@ export function assertSafeGatewayRequest(event: H3Event) {
   const rawUrl = event.node.req.url ?? "";
   if (hasUnsafeProxyPath(rawUrl)) {
     throw createError({ statusCode: 400, statusMessage: "Unsafe proxy path" });
+  }
+  if (!isSafeForwardedHost(getRequestHost(event))) {
+    throw createError({ statusCode: 400, statusMessage: "Unsafe Host header" });
   }
   if (!METHODS_WITH_BODY.has(event.node.req.method ?? "")) return;
 
@@ -60,7 +70,21 @@ export function proxyGatewayRequest(event: H3Event) {
     : requestUrl.pathname;
   const target = `${config.gatewayInternalBaseUrl}${pathname}${requestUrl.search}`;
   const streamingEnabled = process.env.DEER_FLOW_PROXY_STREAMING !== "0";
+
+  // h3 drops `host` when the proxy target is an absolute URL, so without these
+  // the Gateway only ever sees its own address and derives an OIDC redirect_uri
+  // pointing at itself instead of this entry. Read without the x-forwarded
+  // options on purpose: this proxy is the outermost hop in M0's dual dev mode,
+  // so client-supplied forwarding headers are input, not trust. Putting a
+  // trusted proxy in front of Nuxt (M7) means revisiting this to honour that
+  // proxy's headers instead.
+  const forwarding = buildForwardingHeaders(
+    getRequestHost(event),
+    getRequestProtocol(event, { xForwardedProto: false }),
+  );
+
   return proxyRequest(event, target, {
+    headers: forwarding,
     fetchOptions: { redirect: "manual" },
     sendStream: streamingEnabled,
     streamRequest: streamingEnabled,

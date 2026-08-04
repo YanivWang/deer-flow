@@ -73,6 +73,37 @@ test("@proxy rewrites both API prefixes and preserves response headers", async (
   expect(specific.headers.location).toBe("/api/redirect-target");
 });
 
+test("@proxy forwards the client-facing origin and overwrites spoofed values", async ({
+  request,
+}) => {
+  const expected = {
+    forwarded: 'host="localhost:3101";proto=http',
+    xForwardedHost: "localhost:3101",
+    xForwardedProto: "http",
+    xForwardedPort: "3101",
+  };
+
+  const clean = await request.get("/api/probe/forwarded");
+  expect(clean.status()).toBe(200);
+  expect(await clean.json()).toEqual(expected);
+
+  // RFC 7239 `Forwarded` outranks `X-Forwarded-Host` in the Gateway's origin
+  // lookup, so passing any of these through would let a browser steer the OIDC
+  // redirect_uri. All four must be overwritten, not merged.
+  const spoofed = await request.get("/api/probe/forwarded", {
+    headers: {
+      forwarded: 'host="evil.example";proto=https',
+      "x-forwarded-host": "evil.example",
+      "x-forwarded-proto": "https",
+      "x-forwarded-port": "1337",
+    },
+  });
+  expect(spoofed.status()).toBe(200);
+  const body = await spoofed.json();
+  expect(JSON.stringify(body)).not.toContain("evil.example");
+  expect(body).toEqual(expected);
+});
+
 for (const ending of ["lf", "crlf"] as const) {
   test(`@proxy streams ${ending.toUpperCase()} SSE frames without buffering`, async () => {
     const response = await rawRequest(

@@ -19,21 +19,21 @@
 
 | Gate | 命令 | 实际结果 | 状态 |
 | --- | --- | --- | --- |
-| G0-0 clean install/verify | 根 runner 的 React frozen install；Vue `--frozen-lockfile --strict-peer-dependencies`；`make verify` | 两个 clean-style 重装均成功；最终 lint/format-check/typecheck、6 files / 29 unit、production build 全绿；workflow 已激活且 YAML 可解析 | 通过 |
-| G0-1 preview proxy | `make proxy-smoke` | 默认开启态 6/6；关闭流选项对照 2/2。覆盖两前缀 rewrite、LF/CRLF 首帧、请求流、307 与两个 location header、20 MiB、双编码 traversal | 通过 |
+| G0-0 clean install/verify | 根 runner 的 React frozen install；Vue `--frozen-lockfile --strict-peer-dependencies`；`make verify` | 两个 clean-style 重装均成功；最终 lint/format-check/typecheck、6 files / 42 unit、production build 全绿；workflow 已激活且 YAML 可解析 | 通过 |
+| G0-1 preview proxy | `make proxy-smoke` | 默认开启态 7/7；关闭流选项对照 2/2。覆盖两前缀 rewrite、LF/CRLF 首帧、请求流、307 与两个 location header、20 MiB、双编码 traversal、client-facing origin 转发与伪造覆盖 | 通过 |
 | G0-2 collection | `make e2e-list` | 精确 `25 files / 120 tests`；只证明 collection，不宣称业务 E2E 通过 | 通过 |
 | G0-3 auth disabled | `make auth-disabled-smoke` | 1/1；`/workspace` 不跳登录；Nuxt 数值型 runtime flag 的根因已修复并有单测 | 通过 |
 | G0-4 visual seed | `make visual-baseline-smoke` | 1/1。light/dark 两态比对 `backgroundColor`/`color`/`borderRadius`/`fontSize`/`fontWeight`/`paddingInline` 六项全等 + 高度相等，light/dark 基线截图落盘 | 通过 |
 | G0-5 Cookie/CSRF | `make auth-cookie-smoke` | replay Gateway + Preview 1/1；register、Set-Cookie、CSRF 正/负写、login 轮换、me、logout | 通过 |
 | G0-6 WebSocket | `make ws-smoke` | 1/1。真实 Chromium 从 `localhost:3101` 携带 session cookie 直连 `ws://localhost:8011`，握手成功并收到 binary frame。断言要求 `opened && binary`，4404（无会话）不算通过 | 通过 |
-| G0-7 OIDC | `make oidc-smoke` | 前置断言要求 provider 列表非空；当前 replay Gateway 无可控 provider。另已定位一处必须先修的实现缺口（见下） | **未通过** |
+| G0-7 OIDC | `make oidc-smoke` | 前置断言要求 provider 列表非空；当前 replay Gateway 无可控 provider。代理侧的 client-facing origin 转发缺口已定位并修复（见下），剩余卡点是可控 IdP | **未通过** |
 | G0-8 run protocol | `make run-protocol-smoke` | 1/1。create 单次 POST（`maxRedirects: 0`）、`Content-Location` 存在、无 `Location`、74 事件、1 个 heartbeat、以 `end` 收尾；resume GET + `Last-Event-ID` 返回 `gap`（`stream_replay_gap` / `reload_durable_state`）；浏览器内 cancel 得到 `204`；去敏 trace 落盘 | 通过 |
-| G0-9 security/container | `make audit && make proxy-security && make container-smoke` | 官方 npm audit：无已知漏洞；proxy security 11/11；容器 non-root、只含 `.output`、health、SIGTERM 通过 | 通过 |
+| G0-9 security/container | `make audit && make proxy-security && make container-smoke` | 官方 npm audit：无已知漏洞；proxy security 24/24；容器 non-root、只含 `.output`、health、SIGTERM 通过 | 通过 |
 
 ## 聚合结果
 
-`make e2e-m0` 首次一次性跑通：7 次 config 运行、**13 个用例全部通过、exit 0**
-（proxy 6、proxy-options 2、auth-disabled 1、visual-seed 1、splitpanes 1、
+`make e2e-m0` 一次性跑通：7 次 config 运行、**14 个用例全部通过、exit 0**
+（proxy 7、proxy-options 2、auth-disabled 1、visual-seed 1、splitpanes 1、
 auth-cookie 1、run-protocol 1）。产物在聚合结束后仍然存在：
 
 ```
@@ -144,12 +144,39 @@ cd backend && uv sync --extra browser && uv run playwright install chromium
 URL，所以 `host` 落入 `ignoredHeaders` 被丢弃。Gateway 因此只能看到 `Host: 127.0.0.1:8011`，
 推导出的 `redirect_uri` 指向 Gateway 自己而不是 `localhost:3101`。
 
-这是 G0-7 本该抓到的缺陷，且不需要 IdP 就能证实。**修复涉及可信代理的信任语义**
-（backend/AGENTS.md 明确要求外层可信代理必须替换或剥离客户端提供的转发头，盲目透传
-是伪造入口），属于设计决定，本轮未擅自更改。
+对照另外两个入口，Vue 是唯一一个什么都不传的：nginx 在 5 处 location 都写了
+`Host $http_host` + `X-Forwarded-Proto $scheme`，Next.js rewrites 由框架转发。
+后端本身是对的，不需要改。
 
-G0-7 剩余工作：先定下转发头的信任边界并实现，再补可控 IdP；独立 hostname 与 DNS/TLS
-仍属 M7 生产形态。
+**已修复。** `proxyGatewayRequest` 现在显式发送 `Forwarded` / `X-Forwarded-Host` /
+`X-Forwarded-Proto` / `X-Forwarded-Port`，取值来自 Nitro 直连请求本身
+（`getRequestHost(event)` 与 `getRequestProtocol(event, { xForwardedProto: false })`，
+都不读客户端的 x-forwarded 值）。四个头一律**覆盖而非透传**。
+
+覆盖是必需的，不是防御性冗余，已实测：
+
+| 直连 Gateway 的请求（CORS 允许清单故意不含 `localhost:3101`） | 结果 |
+| --- | --- |
+| A 不带转发头（修复前行为），`Origin: http://localhost:3101` | `403` |
+| B 带上代理现在发送的转发头，同一 Origin | `201` |
+| C 伪造 `Forwarded: host="evil.example";proto=http` + `Origin: http://evil.example` | **`201`** |
+
+A/B 证明修复真的让 Gateway 推导出 `http://localhost:3101` 而不是自己；C 证明若把
+客户端的 `Forwarded` 透传上去，敌对 origin 会被当成同源接受，即
+`is_allowed_auth_origin` 要防的 login-CSRF / session-fixation 被绕过。RFC 7239 的
+`Forwarded` 在 `_request_origin` 里**优先于** `X-Forwarded-Host`，所以只设后者不够。
+
+Host 头在插入带引号的 `Forwarded` 值前先过 `isSafeForwardedHost`；不合法的 Host 直接
+400，避免闭合引号后注入第二个 `host=` 参数。
+
+覆盖：`config/routes.ts` 的纯函数 13 条单测（unit 从 29 增至 42），加 `@proxy` 一条
+e2e——同时断言干净请求的四个头取值，以及伪造的四个头被完全覆盖（响应里不含
+`evil.example`）。`make proxy-security` 从 11 增至 24。
+
+M0 dual 模式下 Nuxt 是最外层一跳，所以客户端转发头是输入而非信任来源。**M7 把 nginx
+放到 Nuxt 前面时必须重新审视这里**，改为承认那一层的转发头。
+
+G0-7 剩余工作：补可控 IdP 并实测两入口各自回跳；独立 hostname 与 DNS/TLS 仍属 M7。
 
 ## 外部 Gate 的自动化通路
 
@@ -161,7 +188,7 @@ G0-7 剩余工作：先定下转发头的信任边界并实现，再补可控 Id
 ## 其他真实验证
 
 - runner 与启动链路：定向组合 `test_pnpm_script.py + test_frontend_vue_startup.py` 为 **20 passed**。
-- Vue fast gates：`make verify` 为 **6 files / 29 tests passed** 并完成 production build。
+- Vue fast gates：`make verify` 为 **6 files / 42 tests passed** 并完成 production build。
 - dual lifecycle：`serve.sh --dev --dual --skip-install` 实际启动 Gateway `8001`、React `3000`、Vue `3100`，三个 HTTP 探针均 200；`serve.sh --stop` 后三端口无残留。
 - Docker：clean-context 多阶段 build 成功；`container-smoke.sh` 退出 0。
 - workflow：三个 job（`verify` / `real-backend` / `external-gates`）YAML 解析成功。

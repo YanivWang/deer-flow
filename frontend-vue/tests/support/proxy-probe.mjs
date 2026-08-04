@@ -26,6 +26,18 @@ const server = createServer((request, response) => {
     response.end(JSON.stringify({ source: "proxy-probe", path: url.pathname }));
     return;
   }
+  if (url.pathname === "/api/probe/forwarded") {
+    response.setHeader("content-type", "application/json");
+    response.end(
+      JSON.stringify({
+        forwarded: request.headers.forwarded ?? null,
+        xForwardedHost: request.headers["x-forwarded-host"] ?? null,
+        xForwardedProto: request.headers["x-forwarded-proto"] ?? null,
+        xForwardedPort: request.headers["x-forwarded-port"] ?? null,
+      }),
+    );
+    return;
+  }
   if (url.pathname === "/api/probe/headers") {
     response.statusCode = 307;
     response.setHeader(
