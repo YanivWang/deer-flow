@@ -1,0 +1,2279 @@
+{
+  "$comment": "由 scripts/core-test-manifest.mjs 生成，勿手改。重建：make baseline-refresh",
+  "baselineCommit": "8f99d2c76bfb7a844a1548cf620f9b0dc20b5c67",
+  "coreManifestCommit": "8f99d2c76bfb7a844a1548cf620f9b0dc20b5c67",
+  "sourceRoot": "frontend/tests/unit/core",
+  "totals": {
+    "files": 83,
+    "buckets": {
+      "M1_DOM": 11,
+      "M1": 49,
+      "DEFERRED": 23
+    },
+    "rstestApisToPort": [
+      "advanceTimersByTimeAsync",
+      "doMock",
+      "doUnmock",
+      "fn",
+      "hoisted",
+      "mock",
+      "mocked",
+      "resetModules",
+      "restoreAllMocks",
+      "spyOn",
+      "stubGlobal",
+      "unstubAllGlobals",
+      "useFakeTimers",
+      "useRealTimers"
+    ]
+  },
+  "files": [
+    {
+      "source": "agents/api.test.ts",
+      "bucket": "M1_DOM",
+      "sha256": "1b126fab5eb29f1fb02112baf36d22e84d08384a4e26d7e8374bc7aab90c3263",
+      "lines": 187,
+      "reasons": [
+        {
+          "code": "dom-env",
+          "detail": "使用 DOM 全局但不依赖 React；happy-dom 环境即可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "agents/api.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "api/fetcher.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "mock",
+          "mocked"
+        ]
+      }
+    },
+    {
+      "source": "agents/feature-cache.test.ts",
+      "bucket": "M1_DOM",
+      "sha256": "a7519de8059a248f9c503bf8b6e920d96c57f1d960645d02642eca0d65806499",
+      "lines": 64,
+      "reasons": [
+        {
+          "code": "dom-env",
+          "detail": "使用 DOM 全局但不依赖 React；happy-dom 环境即可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "agents/feature-cache.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "agents/features.test.ts",
+      "bucket": "M1",
+      "sha256": "9a0c5fc51e6baa9a35887d883538296650f3682e6c344140bd06a28c248de27b",
+      "lines": 81,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "agents/api.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "api/fetcher.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "features/api.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "mock",
+          "mocked"
+        ]
+      }
+    },
+    {
+      "source": "api/api-client.test.ts",
+      "bucket": "M1_DOM",
+      "sha256": "1cfb75810f4498b6778cab4b9e5d0ac250f61e8619e2a599b562c18cbbf4de6a",
+      "lines": 675,
+      "reasons": [
+        {
+          "code": "dom-env",
+          "detail": "使用 DOM 全局但不依赖 React；happy-dom 环境即可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "api/api-client.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "stubGlobal",
+          "unstubAllGlobals"
+        ]
+      }
+    },
+    {
+      "source": "api/stream-mode.test.ts",
+      "bucket": "M1",
+      "sha256": "e30ba4fdcb62ac1d88a951d759551fbbc46233146cddd8b3e3589888c7df2fe2",
+      "lines": 63,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "api/stream-mode.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "artifacts/api.test.ts",
+      "bucket": "M1",
+      "sha256": "7628562912da2acc3089dc426c2aa2473a7a8d656fa1bb70cd109754c64959f7",
+      "lines": 60,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "artifacts/api.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "restoreAllMocks",
+          "spyOn"
+        ]
+      }
+    },
+    {
+      "source": "artifacts/editing.test.ts",
+      "bucket": "M1",
+      "sha256": "af4914ce18f6f122c05ae3a3e77be6b124ede9408595b1882b621eab8990d1cf",
+      "lines": 75,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "artifacts/editing.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "artifacts/hooks.dom.test.tsx",
+      "bucket": "DEFERRED",
+      "sha256": "4d5483989d9b587ed0e94a3382ed4c92ac5f8f7fa25d211907213795e87c9fa4",
+      "lines": 102,
+      "reasons": [
+        {
+          "code": "jsx",
+          "detail": ".tsx 测试渲染 React 组件。"
+        },
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"@tanstack/react-query\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"@testing-library/react\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 artifacts/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "artifacts/hooks.ts",
+          "class": "REWRITE"
+        },
+        {
+          "source": "artifacts/loader.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "mock",
+          "mocked"
+        ]
+      }
+    },
+    {
+      "source": "artifacts/loader.test.ts",
+      "bucket": "M1",
+      "sha256": "2d922c65143c32c233be72d9842ec855e40497a37417569af798f6e947b96942",
+      "lines": 148,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "artifacts/loader.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "restoreAllMocks",
+          "spyOn",
+          "stubGlobal",
+          "unstubAllGlobals"
+        ]
+      }
+    },
+    {
+      "source": "artifacts/preview.test.ts",
+      "bucket": "M1_DOM",
+      "sha256": "c70ed58ba8f28c7dc902f7db0d7159e1f0cd916c87885cc13603e9e8d11fa5fa",
+      "lines": 439,
+      "reasons": [
+        {
+          "code": "dom-env",
+          "detail": "使用 DOM 全局但不依赖 React；happy-dom 环境即可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "artifacts/preview.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "artifacts/utils.test.ts",
+      "bucket": "M1",
+      "sha256": "40c89836fd593977593cf1744907d1137af46739f3f7fe4bf91e1247ab477a70",
+      "lines": 289,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "artifacts/utils.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "resetModules"
+        ]
+      }
+    },
+    {
+      "source": "auth/gateway-config.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "9213b15df6ff4a25abf682a700fcb1a0c865beaed61456e3be98524b979157fd",
+      "lines": 118,
+      "reasons": [
+        {
+          "code": "target-dropped",
+          "detail": "被测模块 auth/gateway-config.ts 分类为 DROPPED，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "auth/gateway-config.ts",
+          "class": "DROPPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "resetModules"
+        ]
+      }
+    },
+    {
+      "source": "auth/next-path.test.ts",
+      "bucket": "M1",
+      "sha256": "99321ae2dd6bb1e1aed2134c7a71a670df3d8915f96aed7f7b615a0066ef2589",
+      "lines": 30,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "auth/next-path.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "auth/remember-login.test.ts",
+      "bucket": "M1_DOM",
+      "sha256": "b69d2710971b1f40ca527cbfcd1f6714683d7ce2c58a9f505bc1d9b45d7efebd",
+      "lines": 93,
+      "reasons": [
+        {
+          "code": "dom-env",
+          "detail": "使用 DOM 全局但不依赖 React；happy-dom 环境即可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "auth/remember-login.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "stubGlobal",
+          "unstubAllGlobals"
+        ]
+      }
+    },
+    {
+      "source": "auth/server.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "37006a65bd68562dbae9286514f99b2de64561e8843f797291bd585c80870e2a",
+      "lines": 177,
+      "reasons": [
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 auth/server.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "auth/auth-disabled-user.ts",
+          "class": "RETYPED"
+        },
+        {
+          "source": "auth/server.ts",
+          "class": "REWRITE"
+        },
+        {
+          "source": "auth/static-user.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "doMock",
+          "doUnmock",
+          "fn",
+          "mock",
+          "resetModules",
+          "stubGlobal",
+          "unstubAllGlobals"
+        ]
+      }
+    },
+    {
+      "source": "auth/setup.test.ts",
+      "bucket": "M1",
+      "sha256": "338d5ace1866f117b1825d90f7debd9ef037a647a3ca5982a18200c46bbfe035",
+      "lines": 208,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "auth/constants.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "auth/setup.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "advanceTimersByTimeAsync",
+          "fn",
+          "stubGlobal",
+          "unstubAllGlobals",
+          "useFakeTimers",
+          "useRealTimers"
+        ]
+      }
+    },
+    {
+      "source": "channels/api.test.ts",
+      "bucket": "M1",
+      "sha256": "0a201c08dbd46c3d7b5e3dbf1d3db6c1cedf08246e0699b54cc4c30c2c001202",
+      "lines": 220,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "api/fetcher.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "channels/api.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "mock",
+          "mocked"
+        ]
+      }
+    },
+    {
+      "source": "channels/connect-poll.test.ts",
+      "bucket": "M1_DOM",
+      "sha256": "ed48a87d98a32161bc81cdc31fc8789c68d80374f616b8c4780d85e27daa931d",
+      "lines": 108,
+      "reasons": [
+        {
+          "code": "dom-env",
+          "detail": "使用 DOM 全局但不依赖 React；happy-dom 环境即可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "channels/connect-poll.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "channels/types.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "advanceTimersByTimeAsync",
+          "fn",
+          "useFakeTimers",
+          "useRealTimers"
+        ]
+      }
+    },
+    {
+      "source": "channels/open-connect-url.test.ts",
+      "bucket": "M1_DOM",
+      "sha256": "d626349de2e136c504c5040f2583d33bcbe39cdea6d123d3a80a70f703d111b6",
+      "lines": 86,
+      "reasons": [
+        {
+          "code": "dom-env",
+          "detail": "使用 DOM 全局但不依赖 React；happy-dom 环境即可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "channels/open-connect-url.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "stubGlobal",
+          "unstubAllGlobals"
+        ]
+      }
+    },
+    {
+      "source": "channels/provider-state.test.ts",
+      "bucket": "M1",
+      "sha256": "f13511291c94f3c850453383f39b69c9ed1422549f770ae467026cfee2266ef6",
+      "lines": 89,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "channels/provider-state.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "channels/types.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "citations/sources.test.ts",
+      "bucket": "M1",
+      "sha256": "bf3be4fa88ec8fc2d1197be84d5d9d38bc2282c84136360c19ec89b516623013",
+      "lines": 143,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "citations/sources.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "clipboard.test.ts",
+      "bucket": "M1_DOM",
+      "sha256": "973680c42fea36d59ed2aa3e136d2a2fb9ef90756ee67887de609a38ae27145c",
+      "lines": 762,
+      "reasons": [
+        {
+          "code": "dom-env",
+          "detail": "使用 DOM 全局但不依赖 React；happy-dom 环境即可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "clipboard.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "restoreAllMocks",
+          "spyOn"
+        ]
+      }
+    },
+    {
+      "source": "dom/render-activity.dom.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "0a00ef866cd12adfb9422cdc818c7589174205dc4a898334787440eff4151012",
+      "lines": 137,
+      "reasons": [
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 dom/render-activity.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "dom/render-activity.ts",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "restoreAllMocks",
+          "spyOn",
+          "stubGlobal",
+          "unstubAllGlobals"
+        ]
+      }
+    },
+    {
+      "source": "i18n/context.dom.test.tsx",
+      "bucket": "DEFERRED",
+      "sha256": "6cfd3bd7ac6a347b7543c69b8c22aea76e1d1e90362aa10c6c87ea86d85d8a62",
+      "lines": 44,
+      "reasons": [
+        {
+          "code": "jsx",
+          "detail": ".tsx 测试渲染 React 组件。"
+        },
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"@testing-library/react\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 i18n/context.tsx 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "i18n/context.tsx",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "i18n/translations.test.ts",
+      "bucket": "M1",
+      "sha256": "33a54c5ef62d8d1c4cd13e6c823129dcf1c669e0aa60ebc413ba24032a0d84ee",
+      "lines": 18,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "i18n/translations.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "integrations/lark/api.test.ts",
+      "bucket": "M1",
+      "sha256": "5039a8fb00f8a27f24e66be471cd2f3974ff15751acfaf913e22d35e947b01c7",
+      "lines": 309,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "api/fetcher.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "integrations/lark/api.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "mock",
+          "mocked"
+        ]
+      }
+    },
+    {
+      "source": "mcp/api.test.ts",
+      "bucket": "M1",
+      "sha256": "b4c01ea3bf1717ebdc189c09d960ad5aae2b1b72c038dd17d386ebde96e96702",
+      "lines": 157,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "api/fetcher.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "mcp/api.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "mock",
+          "mocked"
+        ]
+      }
+    },
+    {
+      "source": "mcp/hooks.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "bbb1e6428b0a0715bfda939dea47b0f35c03668eff1a7bbff37d2b1cfaf53be5",
+      "lines": 141,
+      "reasons": [
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"@tanstack/react-query\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"sonner\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 mcp/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "api/fetcher.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "mcp/api.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "mcp/hooks.ts",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "mock",
+          "mocked",
+          "spyOn"
+        ]
+      }
+    },
+    {
+      "source": "messages/derived-state.test.ts",
+      "bucket": "M1",
+      "sha256": "ba701d0dabe93c3bd5b5d3b93d079f1f086ee8128260c25b5922112fa1fe4855",
+      "lines": 155,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "messages/derived-state.ts",
+          "class": "RETYPED"
+        },
+        {
+          "source": "messages/utils.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "messages/human-input.test.ts",
+      "bucket": "M1",
+      "sha256": "58b02528244ff779fea3042cba51bcfbf5c1f7e062001551ed5b3631c1a0bc91",
+      "lines": 573,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "messages/human-input.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "messages/run-duration.test.ts",
+      "bucket": "M1",
+      "sha256": "e325b33d6bef61eb848cd32789ebb0e4eccb82f446ef6b11200685606446db45",
+      "lines": 138,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "i18n/locales/en-US.ts",
+          "class": "RETYPED"
+        },
+        {
+          "source": "i18n/locales/zh-CN.ts",
+          "class": "RETYPED"
+        },
+        {
+          "source": "messages/run-duration.ts",
+          "class": "RETYPED"
+        },
+        {
+          "source": "messages/utils.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "messages/usage-model.test.ts",
+      "bucket": "M1",
+      "sha256": "f56eec17969c5c7c25e009bf80148b8b31d816e93efeb48bc484b1ddb408ba48",
+      "lines": 396,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "i18n/index.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "messages/usage-model.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "messages/usage.test.ts",
+      "bucket": "M1",
+      "sha256": "a747be2680dd1670aa21d8f1a78b818ba668db28dce86a9bde89919d089fafc9",
+      "lines": 184,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "messages/usage.ts",
+          "class": "RETYPED"
+        },
+        {
+          "source": "messages/utils.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "messages/utils.test.ts",
+      "bucket": "M1",
+      "sha256": "a6890ab7036643403f49d88fd0257504c989212ce9f0a58ab3bb045d151b8fa0",
+      "lines": 1239,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "messages/utils.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "messages/workspace-change-anchor.test.ts",
+      "bucket": "M1",
+      "sha256": "b0038f03f27629134bb291ba3eef82089c4559647963c7ff8196cc1353c1f6e8",
+      "lines": 110,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "messages/utils.ts",
+          "class": "RETYPED"
+        },
+        {
+          "source": "messages/workspace-change-anchor.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "notification/hooks.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "9f27fbf991a0b7e4ae161de878034813e0adb5e525828d1727439287663e1ab5",
+      "lines": 142,
+      "reasons": [
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 notification/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "notification/hooks.ts",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "doMock",
+          "doUnmock",
+          "fn",
+          "resetModules",
+          "restoreAllMocks",
+          "stubGlobal",
+          "unstubAllGlobals"
+        ]
+      }
+    },
+    {
+      "source": "reasoning-trigger.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "2260b45f5423179a5512c734f6c4bbd67731349d61dfdfefeaa14a394d2a58ed",
+      "lines": 28,
+      "reasons": [
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"react\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"react-dom/server\"：测试依赖 React 运行时。"
+        }
+      ],
+      "targets": [],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "mock"
+        ]
+      }
+    },
+    {
+      "source": "scheduled-tasks/cron.test.ts",
+      "bucket": "M1",
+      "sha256": "b96a64b9a6bf981c536c886754244572b9a60f6fddbdf951d716adec22706886",
+      "lines": 353,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "scheduled-tasks/cron.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "scheduled-tasks/hooks.test.ts",
+      "bucket": "M1",
+      "sha256": "af5142a758e47fb9a24ce5b9f52d17893714d6672fed082910eeb4ae28e7f926",
+      "lines": 125,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "api/fetcher.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "scheduled-tasks/api.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "mock",
+          "mocked"
+        ]
+      }
+    },
+    {
+      "source": "settings/local.test.ts",
+      "bucket": "M1_DOM",
+      "sha256": "b4ba045846d1d942e4ef7817ce1c61eae9503a758a0f8feae8080c5130329acf",
+      "lines": 33,
+      "reasons": [
+        {
+          "code": "dom-env",
+          "detail": "使用 DOM 全局但不依赖 React；happy-dom 环境即可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "settings/local.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "stubGlobal",
+          "unstubAllGlobals"
+        ]
+      }
+    },
+    {
+      "source": "sidecar/api.test.ts",
+      "bucket": "M1",
+      "sha256": "3b44a5edb41ff48d18978dc027eb1a9d117a1b75dec6bcbbd8a3ba9d0500be92",
+      "lines": 150,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "api/fetcher.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "sidecar/index.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "sidecar/api.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "threads/index.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "mock",
+          "mocked"
+        ]
+      }
+    },
+    {
+      "source": "sidecar/context.test.ts",
+      "bucket": "M1",
+      "sha256": "0e2d8e5ffdb803e1fab060a47b58b5ba6f39c4c5c521f41ccc65025f700cda2c",
+      "lines": 175,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "sidecar/context.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "sidecar/reference-metadata.test.ts",
+      "bucket": "M1",
+      "sha256": "5118b0491071c64454eaa8a3f36ef53bf717026cde57178b3f7780d34c59e63d",
+      "lines": 75,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "sidecar/index.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "sidecar/reference-state.test.ts",
+      "bucket": "M1",
+      "sha256": "b5bfd28e446ff5085ed678a65110b2a5bac4cfd622aa59166eee01f7a72262c3",
+      "lines": 52,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "sidecar/reference-state.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "sidecar/thread.test.ts",
+      "bucket": "M1",
+      "sha256": "bea9b1cfc68b213c3b9ec24ea4d72b4e5b2dd860eda54f2d8c0d01483e440f36",
+      "lines": 106,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "sidecar/thread.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "skills/slash-contract.test.ts",
+      "bucket": "M1",
+      "sha256": "a0c65afdf941980e5ab2075a731dd00878fbde53ebad56c1cd2ba277ada22030",
+      "lines": 39,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "skills/slash.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "skills/slash.test.ts",
+      "bucket": "M1",
+      "sha256": "58e11f5b173ea4f5bfbff753e20add51b7a6041787c388e391a35ea3b75c1d2d",
+      "lines": 66,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "skills/index.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "skills/slash.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "streamdown-plugins.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "517b266042c724e84371c57d88add7a4b111cef7662b5ce73e3794e7615c5dc6",
+      "lines": 49,
+      "reasons": [
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"react\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"react-dom/server\"：测试依赖 React 运行时。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "streamdown/index.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "streamdown/mermaid.test.ts",
+      "bucket": "M1",
+      "sha256": "40bd1f02d283771cda4c03af34d625c190f70a62bc086dcbca9f0ab9ab0c59e8",
+      "lines": 130,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "streamdown/mermaid.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "streamdown/preprocess.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "streamdown/plugins.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "6a203e9bfc23e7aceb8719ed0ac5418bbe15fae57cdd9808bfbf699f14838447",
+      "lines": 76,
+      "reasons": [
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"@streamdown/code\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"@streamdown/mermaid\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 streamdown/plugins.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "streamdown/plugins.ts",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "streamdown/preprocess.test.ts",
+      "bucket": "M1",
+      "sha256": "fea7d1126786992ec3fe75311ce78e7af7a170a82418e2d689a18d5044f190ca",
+      "lines": 447,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "streamdown/preprocess.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "suggestions/placeholders.test.ts",
+      "bucket": "M1",
+      "sha256": "1dd274dc0f096d386854dd9a5e46fd7624bc96042e698c1e118a9ce5da40449c",
+      "lines": 57,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "suggestions/placeholders.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "tasks/api.test.ts",
+      "bucket": "M1",
+      "sha256": "064e13e84ee2d957c651ef0194cfeb8abca7ca9a14e7c9f2f69b5c22349d970e",
+      "lines": 98,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "api/fetcher.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "tasks/api.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "mock",
+          "mocked"
+        ]
+      }
+    },
+    {
+      "source": "tasks/lifecycle.test.ts",
+      "bucket": "M1",
+      "sha256": "8fccc38a05bcb05267296a2d3c12d48aae8cb22d80e3a730034f01ee77b90e85",
+      "lines": 42,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "tasks/lifecycle.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "tasks/presentation.test.ts",
+      "bucket": "M1",
+      "sha256": "e240a45355dc67c03e0a64a9de8724a192cfa5db74bbec2651371af1666abfe0",
+      "lines": 36,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "tasks/presentation.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "tasks/steps.test.ts",
+      "bucket": "M1",
+      "sha256": "1d0619d23916d897132d08ed6e1537ef94853277e9364eaed4405940b2cf3c07",
+      "lines": 220,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "tasks/steps.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "tasks/subtask-result.test.ts",
+      "bucket": "M1",
+      "sha256": "8f4b3a6dbf730389f3d8808199eee6a06743c60fe69b21aa1c9b7201e98a92eb",
+      "lines": 358,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "tasks/subtask-result.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "tasks/subtask-update.test.ts",
+      "bucket": "M1",
+      "sha256": "249f8e528d7d1cf17de1edb11df2f9d2c50c22285f84ebe7d28fc7e54bb78c4e",
+      "lines": 216,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "tasks/steps.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "tasks/subtask-update.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "tasks/types.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "threads/api.test.ts",
+      "bucket": "M1",
+      "sha256": "f46daface7c764d4e3003977ef0a4f747aaae5a3446895bfa471dd8fd85e4a06",
+      "lines": 173,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/api.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "mock"
+        ]
+      }
+    },
+    {
+      "source": "threads/coalesce.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "866bf7676ae4b3d7156ad8017f0ae6e4973bee431c3b6f7d45788f3e8ba92279",
+      "lines": 97,
+      "reasons": [
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 threads/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/hooks.ts",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "threads/composer-draft.test.ts",
+      "bucket": "M1_DOM",
+      "sha256": "78002403ba6ff7fab6b3dae6289acea38b6c5bf12eea7e58a931ad4ff695d8b3",
+      "lines": 172,
+      "reasons": [
+        {
+          "code": "dom-env",
+          "detail": "使用 DOM 全局但不依赖 React；happy-dom 环境即可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/composer-draft.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "threads/delete-thread.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "ed97f08c310d1b757f3318f2d06a0058d01757427daf06d92c8de86472e4fe65",
+      "lines": 55,
+      "reasons": [
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 threads/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/hooks.ts",
+          "class": "REWRITE"
+        },
+        {
+          "source": "threads/types.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn"
+        ]
+      }
+    },
+    {
+      "source": "threads/export.test.ts",
+      "bucket": "M1",
+      "sha256": "99c754dcd3e15ba6872e883961260537b0fc329dd46c789286830c0d7826be40",
+      "lines": 333,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/export.ts",
+          "class": "RETYPED"
+        },
+        {
+          "source": "threads/types.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "threads/infinite.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "b9d9e7d53d88afa862274105d910ff8295a4b44275a2e23eeee505fd86dee01f",
+      "lines": 498,
+      "reasons": [
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"@tanstack/react-query\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 threads/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/hooks.ts",
+          "class": "REWRITE"
+        },
+        {
+          "source": "threads/types.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "advanceTimersByTimeAsync",
+          "fn",
+          "spyOn",
+          "useFakeTimers",
+          "useRealTimers"
+        ]
+      }
+    },
+    {
+      "source": "threads/local-turn-order.dom.test.tsx",
+      "bucket": "DEFERRED",
+      "sha256": "1cfd7be82b5d3aa2c2108f90765209a8e3295e64520221e4522a1945d50f35d8",
+      "lines": 110,
+      "reasons": [
+        {
+          "code": "jsx",
+          "detail": ".tsx 测试渲染 React 组件。"
+        },
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"@tanstack/react-query\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"@testing-library/react\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"react\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 i18n/context.tsx 分类为 REWRITE，随该模块一起推迟。"
+        },
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 threads/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "i18n/context.tsx",
+          "class": "REWRITE"
+        },
+        {
+          "source": "i18n/locales/en-US.ts",
+          "class": "RETYPED"
+        },
+        {
+          "source": "settings/local.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "threads/hooks.ts",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "hoisted",
+          "mock"
+        ]
+      }
+    },
+    {
+      "source": "threads/message-merge.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "ffbbb62accbdb3587126995a7a7b5488e93beafed9e5c25662781a3ab3a7949a",
+      "lines": 1740,
+      "reasons": [
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"@tanstack/react-query\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 threads/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/hooks.ts",
+          "class": "REWRITE"
+        },
+        {
+          "source": "threads/types.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "spyOn"
+        ]
+      }
+    },
+    {
+      "source": "threads/send-message.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "237c2cf83c557824a0cfc8b455267a8b5f1b2f3ca870bf9ce072afaabf165797",
+      "lines": 98,
+      "reasons": [
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 threads/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/hooks.ts",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "threads/static-demo.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "7c1d612aa905bb3867fe12f551a455710cc7ec2264091bb8fd98f160a84241a0",
+      "lines": 67,
+      "reasons": [
+        {
+          "code": "target-dropped",
+          "detail": "被测模块 threads/static-demo.ts 分类为 DROPPED，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/static-demo.ts",
+          "class": "DROPPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "threads/stream-options.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "dab6aba1a835323778b28244d8343bc38eeecd33407871b326cdde222a7b0e18",
+      "lines": 99,
+      "reasons": [
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 threads/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/hooks.ts",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "doMock",
+          "doUnmock",
+          "fn",
+          "resetModules"
+        ]
+      }
+    },
+    {
+      "source": "threads/stream-throttle.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "108af753f9e8c354a81e67b49302d12ee8181e49f911d95e64cb8f6c78c3458c",
+      "lines": 64,
+      "reasons": [
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"@tanstack/react-query\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"react\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"react-dom/server\"：测试依赖 React 运行时。"
+        },
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 i18n/context.tsx 分类为 REWRITE，随该模块一起推迟。"
+        },
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 threads/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "i18n/context.tsx",
+          "class": "REWRITE"
+        },
+        {
+          "source": "i18n/locales/en-US.ts",
+          "class": "RETYPED"
+        },
+        {
+          "source": "settings/local.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "threads/hooks.ts",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "hoisted",
+          "mock"
+        ]
+      }
+    },
+    {
+      "source": "threads/thread-history-options.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "225bc309be844e01e8d904e69f456bf990484bb6f011f1e11d6cc5c509f41319",
+      "lines": 12,
+      "reasons": [
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 threads/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/hooks.ts",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "threads/thread-list-model.test.ts",
+      "bucket": "M1_DOM",
+      "sha256": "73bc3125ae158ad13fdab84e315ec566edca99e68a917f28d7683aae735cd646",
+      "lines": 84,
+      "reasons": [
+        {
+          "code": "dom-env",
+          "detail": "使用 DOM 全局但不依赖 React；happy-dom 环境即可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/thread-list-model.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "threads/types.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "threads/thread-search-query.test.ts",
+      "bucket": "M1",
+      "sha256": "b81f1ceb710e14a243d197e6a5bf31aab6fa19969d5a2af4786b7b54c1685fd0",
+      "lines": 73,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/thread-search-query.ts",
+          "class": "RETYPED"
+        },
+        {
+          "source": "threads/types.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn"
+        ]
+      }
+    },
+    {
+      "source": "threads/token-usage.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "608da10108c4b1757cd49ea926093cd9c4dfd43461e44bde1abe67d7e5789896",
+      "lines": 184,
+      "reasons": [
+        {
+          "code": "react-runtime",
+          "detail": "值导入 \"@tanstack/react-query\"：测试依赖 React 运行时。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/token-usage.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "threads/types.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "threads/tool-result.test.ts",
+      "bucket": "DEFERRED",
+      "sha256": "4de19d68c01fe8efab86aa3032ad24aa55696abf7f54314618d802fc47f01519",
+      "lines": 60,
+      "reasons": [
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 threads/hooks.ts 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/hooks.ts",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "threads/utils.test.ts",
+      "bucket": "M1",
+      "sha256": "a1fe0616a5e56b2345a3ee5b0989125d6ad8a826dfb8cf2194bfccd9b4fb1c3c",
+      "lines": 185,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "threads/types.ts",
+          "class": "RETYPED"
+        },
+        {
+          "source": "threads/utils.ts",
+          "class": "RETYPED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "uploads/api.test.ts",
+      "bucket": "M1",
+      "sha256": "6ea95a2c05ae72b87b8bf7dee37f7761793748d604f22cfc46e666e8bc3abf7f",
+      "lines": 49,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "api/fetcher.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "uploads/api.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "mock",
+          "mocked"
+        ]
+      }
+    },
+    {
+      "source": "uploads/file-validation.test.ts",
+      "bucket": "M1",
+      "sha256": "8f7efc3684b5ebc05b3869afa241fccc6320ee0e7869ddc5e899efc8efce4784",
+      "lines": 124,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "uploads/file-validation.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "uploads/prompt-input-files.test.ts",
+      "bucket": "M1",
+      "sha256": "785da09e7b2528886f1143a8071894f0f8b03989fe2c52f8d4edd6c8dfea4a26",
+      "lines": 120,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "uploads/prompt-input-files.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "restoreAllMocks",
+          "spyOn",
+          "stubGlobal",
+          "unstubAllGlobals"
+        ]
+      }
+    },
+    {
+      "source": "utils/files.test.tsx",
+      "bucket": "DEFERRED",
+      "sha256": "e0be18c9a64ecee8cc7203ce9d97b687fa2feda835f44a629143d1c3f0614c10",
+      "lines": 31,
+      "reasons": [
+        {
+          "code": "jsx",
+          "detail": ".tsx 测试渲染 React 组件。"
+        },
+        {
+          "code": "target-rewrite",
+          "detail": "被测模块 utils/files.tsx 分类为 REWRITE，随该模块一起推迟。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "utils/files.tsx",
+          "class": "REWRITE"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "voice-input/speech-recognition.test.ts",
+      "bucket": "M1",
+      "sha256": "87a6c902bf4e213d1054f067ebe443f6335cc37675baf862c04ff48b19ebd53d",
+      "lines": 120,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "voice-input/speech-recognition.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    },
+    {
+      "source": "workspace-changes/api.test.ts",
+      "bucket": "M1",
+      "sha256": "03955ff011693ea04d29c773cc0f0cc8dc018ac259ee591afa65f460796b8e47",
+      "lines": 50,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "workspace-changes/api.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": [
+          "fn",
+          "stubGlobal",
+          "unstubAllGlobals"
+        ]
+      }
+    },
+    {
+      "source": "workspace-changes/summary.test.ts",
+      "bucket": "M1",
+      "sha256": "13eda61a47de819addba09204ca42dfbb3a4dd70229ef3609a661cb74f33b5a2",
+      "lines": 128,
+      "reasons": [
+        {
+          "code": "pure-node",
+          "detail": "纯 node 环境可运行。"
+        }
+      ],
+      "targets": [
+        {
+          "source": "workspace-changes/summary.ts",
+          "class": "COPIED"
+        },
+        {
+          "source": "workspace-changes/types.ts",
+          "class": "COPIED"
+        }
+      ],
+      "codemod": {
+        "fromRstest": true,
+        "rsApis": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# 生成物：由 scripts/core-provenance.mjs 与 scripts/core-test-manifest.mjs 写出。
+# prettier 会把短数组折成一行，JSON.stringify 不会——两边都格式化就会让
+# `make baseline-check` 在 `make format` 之后立刻变红。生成器是唯一权威。
+baseline/

@@ -3,7 +3,8 @@
 .PHONY: help install dev build preview lint format format-check typecheck test verify \
 	e2e-install e2e-list e2e-m0 e2e-external e2e e2e-auth e2e-real-backend e2e-visual \
 	proxy-smoke auth-disabled-smoke auth-cookie-smoke visual-baseline-smoke splitpanes-smoke \
-	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke
+	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke \
+	baseline-refresh baseline-check
 
 PYTHON ?= python3
 PNPM = $(PYTHON) ../scripts/pnpm.py --dir frontend-vue
@@ -21,6 +22,8 @@ help:
 	@echo "  make e2e-list                  list shared React business contract inventory"
 	@echo "  make e2e                       run full shared business contracts (M1+ delivery)"
 	@echo "  make container-smoke           non-root /health / SIGTERM production image smoke"
+	@echo "  make baseline-refresh          rebuild core provenance + test manifests (needs full clone)"
+	@echo "  make baseline-check            fail if the checked-in manifests are stale"
 
 install:
 	$(PNPM) install
@@ -109,6 +112,18 @@ run-protocol-smoke:
 
 proxy-security:
 	$(EXEC) vitest run tests/unit/config/routes.test.ts
+
+# 迁移台账维护命令。读 git 对象重建 baseline，因此必须在完整 clone 中运行，
+# 且 diff 要交 review（06 §1e）。普通 CI 跑 make test 即可，不碰 git 历史。
+BASELINE ?= HEAD
+
+baseline-refresh:
+	node scripts/core-provenance.mjs --refresh --baseline=$(BASELINE)
+	node scripts/core-test-manifest.mjs --refresh --baseline=$(BASELINE)
+
+baseline-check:
+	node scripts/core-provenance.mjs --baseline=$(BASELINE)
+	node scripts/core-test-manifest.mjs --baseline=$(BASELINE)
 
 audit:
 	$(PNPM) audit --audit-level moderate --registry https://registry.npmjs.org

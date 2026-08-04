@@ -25,6 +25,24 @@ python3 scripts/pnpm.py install --frozen-lockfile
 python3 scripts/pnpm.py --dir frontend-vue install --frozen-lockfile
 ```
 
+## Migration ledgers (M1)
+
+`baseline/` holds machine-generated ledgers describing how `../frontend/src/core`
+maps into `app/core/`. They are regenerated from git objects, never hand-edited:
+
+```bash
+make baseline-refresh   # rebuild; needs a full clone, submit the diff for review
+make baseline-check     # fail if the checked-in ledgers are stale
+```
+
+`make verify` deliberately does **not** run `baseline-check`: ordinary CI must not
+depend on whether history objects are present. What CI does enforce is
+`tests/guards/core-provenance.test.ts`, which reads only checked-in files — every
+file under `app/core/` must appear in [app/core/PROVENANCE.md](app/core/PROVENANCE.md),
+and anything classified `COPIED` must match `baseline/core-sha256.json` byte for byte.
+If a `COPIED` file needs an edit, downgrade it to `RETYPED`/`ADAPTED` with a reason;
+do not refresh the baseline to make the guard green.
+
 `NUXT_PUBLIC_AUTH_DISABLED=1` is limited to M0/mock tests. `NUXT_PUBLIC_M0_TEST_PAGES=1` exposes the isolated `/__m0/*` visual and splitpanes fixtures; they return 404 in normal production configuration.
 
 All ten M0 gates pass and every one is reproducible from this repository:
