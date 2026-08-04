@@ -1,6 +1,6 @@
 # DeerFlow - Unified Development Environment
 
-.PHONY: help config config-upgrade check install setup doctor support-bundle detect-thread-boundaries detect-blocking-io dev dev-vue dev-dual dev-daemon start start-daemon nginx stop up down clean docker-init docker-start docker-stop docker-logs docker-logs-frontend docker-logs-gateway docker-logs-redis
+.PHONY: help config config-upgrade check install setup doctor handoff-check support-bundle detect-thread-boundaries detect-blocking-io dev dev-vue dev-dual dev-daemon start start-daemon nginx stop up down clean docker-init docker-start docker-stop docker-logs docker-logs-frontend docker-logs-gateway docker-logs-redis
 
 BASH ?= bash
 BACKEND_UV_RUN = cd backend && uv run
@@ -22,6 +22,7 @@ help:
 	@echo "DeerFlow Development Commands:"
 	@echo "  make setup           - Interactive setup wizard (recommended for new users)"
 	@echo "  make doctor          - Check configuration and system requirements"
+	@echo "  make handoff-check   - Report handoff state before picking up in-flight work"
 	@echo "  make support-bundle  - Create a redacted issue summary, AI draft, and evidence bundle"
 	@echo "  make config          - Generate local config files (aborts if config already exists)"
 	@echo "  make config-upgrade  - Merge new fields from config.example.yaml into config.yaml"
@@ -59,6 +60,11 @@ setup:
 
 doctor:
 	@$(BACKEND_UV_RUN) python ../scripts/doctor.py
+
+# Deliberately plain python3, not the backend venv: this must work in a fresh
+# checkout before any install, which is exactly when a handoff happens.
+handoff-check:
+	@python3 scripts/handoff_check.py
 
 support-bundle:
 	@$(BACKEND_UV_RUN) python ../scripts/support_bundle.py --include-doctor

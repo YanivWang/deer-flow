@@ -167,6 +167,20 @@ the selected workspace so each frontend honors its own pinned package manager.
 
 These apply repo-wide; module guides own the module-specific detail.
 
+- **Picking up in-flight work** — run `make handoff-check` first. It prints uncommitted
+  changes, recent commits, each Playwright suite's last recorded status with its age, and
+  the evidence documents. **Treat a previous session's written summary as a claim, not a
+  result**: reproduce the gate before building on it. This rule exists because a handoff
+  once recorded two M0 gates as "not executed — browser quota exhausted" while the
+  artifacts on disk read `"status": "failed"`; they had run, and the real causes were a
+  test race and a truncating stream-bridge retention window. `make handoff-check` reports
+  state only and runs no gates, so it stays fast enough to be an unconditional first step.
+- **Handing off** — commit before the session ends; uncommitted work hands over nothing,
+  and the commit message is where a root cause stays attached to the code that carries it.
+  Record milestone conclusions under `frontend-vue-build-docs/evidence/` as commands plus
+  measured numbers, and state what is red or unverified. Do not restate what `git` and the
+  code already record — the handoff's job is what they cannot hold: why an approach was
+  chosen, what was tried and rejected, and what remains unproven.
 - **Documentation update policy** — keep docs in sync with code: update `README.md` for
   user-facing changes and the relevant `AGENTS.md` for development/architecture changes in
   the same change set.
