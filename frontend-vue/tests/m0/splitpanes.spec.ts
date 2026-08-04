@@ -32,13 +32,29 @@ test("@splitpanes one group supports three right panes, declarative collapse and
     .toEqual([0, 0, 0]);
 
   await page.locator("[data-restore]").click();
+  await expect
+    .poll(() =>
+      page
+        .locator("[data-pane^=right-]")
+        .evaluateAll((nodes) =>
+          nodes.every(
+            (node) =>
+              (node.parentElement?.getBoundingClientRect().width ?? 0) > 0,
+          ),
+        ),
+    )
+    .toBe(true);
+
   const splitter = page.locator(".splitpanes__splitter").first();
+  // Restore animates the layout back. hover() waits for actionability, which
+  // includes the element having stopped moving; a box read mid-transition puts
+  // mouse.down() beside the splitter and no resize event ever fires.
+  await splitter.hover();
   const box = await splitter.boundingBox();
   if (!box) throw new Error("splitter is not visible");
   const resizedBefore = Number(
     await page.locator("[data-resized-count]").textContent(),
   );
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + 80, box.y + box.height / 2, { steps: 5 });
   await expect

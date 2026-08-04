@@ -21,6 +21,33 @@ _SUPPORT = Path(__file__).resolve().parent
 sys.path[:0] = [str(_BACKEND), str(_BACKEND / "tests"), str(_SUPPORT)]
 
 
+_LAST_REPLAY_TOOL = "  - name: write_file\n    group: file:write\n    use: deerflow.sandbox.tools:write_file_tool"
+
+# allow_private_addresses is required because G0-6 navigates to the Nuxt preview on
+# localhost; the SSRF guard blocks private addresses by default. Keep this confined
+# to the M0 gateway fixture.
+_BROWSER_TOOL_BLOCK = """  - name: browser_navigate
+    group: browser
+    use: deerflow.community.browser_automation.tools:browser_navigate_tool
+    headless: true
+    timeout_ms: 30000
+    viewport_width: 1280
+    viewport_height: 720
+    allow_private_addresses: true"""
+
+
+def _enable_browser_control(config: str) -> str:
+    """Add browser_navigate so the browser REST/WS surface stops answering 404.
+
+    Injected into the existing ``tools:`` list rather than appended, because a
+    second top-level ``tools:`` key would replace the replay toolset entirely.
+    """
+    if _LAST_REPLAY_TOOL not in config:
+        raise RuntimeError("replay config layout changed; browser tool anchor not found")
+    config = config.replace("tool_groups:\n", "tool_groups:\n  - name: browser\n", 1)
+    return config.replace(_LAST_REPLAY_TOOL, f"{_LAST_REPLAY_TOOL}\n{_BROWSER_TOOL_BLOCK}", 1)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8011)
@@ -35,6 +62,15 @@ def main() -> int:
             "a resume from the first cursor is genuinely evicted."
         ),
     )
+    parser.add_argument(
+        "--browser",
+        action="store_true",
+        help=(
+            "Enable agentic browser control so the browser REST/WS surface is reachable. "
+            "Off by default: adding the tool changes the lead-agent toolset and therefore "
+            "the system prompt, which would break the run-protocol replay fixture's hash."
+        ),
+    )
     args = parser.parse_args()
 
     from _replay_fixture import REPLAY_MODEL_BLOCK, build_config_yaml, prepare_hermetic_extras
@@ -45,6 +81,8 @@ def main() -> int:
         "m0_replay_provider:M0ReplayChatModel",
     )
     config = build_config_yaml(model_block=model_block, home=home)
+    if args.browser:
+        config = _enable_browser_control(config)
     config += f"\nstream_bridge:\n  type: memory\n  queue_maxsize: {args.queue_maxsize}\n"
     config_path = home / "config.yaml"
     config_path.write_text(config, encoding="utf-8")

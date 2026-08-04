@@ -98,10 +98,10 @@ splitpanes-smoke:
 	$(EXEC) playwright test -c playwright.m0.config.ts --grep @splitpanes
 
 ws-smoke:
-	$(EXEC) playwright test -c playwright.m0-real-backend.config.ts --grep @ws
+	$(EXEC) playwright test -c playwright.m0-external.config.ts --grep @ws
 
 oidc-smoke:
-	$(EXEC) playwright test -c playwright.m0-real-backend.config.ts --grep @oidc
+	$(EXEC) playwright test -c playwright.m0-external.config.ts --grep @oidc
 
 run-protocol-smoke:
 	$(EXEC) playwright test -c playwright.m0-real-backend.config.ts --grep @run-protocol

@@ -1,6 +1,6 @@
 # M0 工程底座验证记录
 
-> 日期：2026-08-04；checkout：本地工作树；结论：**仓库可自证的八道 Gate 全部通过；G0-6 / G0-7 因外部前提未具备仍未通过，M0 不宣布整体通过，不允许进入 M1**。
+> 日期：2026-08-05；checkout：本地工作树；结论：**十道 Gate 中九道通过；G0-7 仍未通过，M0 不宣布整体通过，不允许进入 M1**。
 
 ## 环境
 
@@ -25,8 +25,8 @@
 | G0-3 auth disabled | `make auth-disabled-smoke` | 1/1；`/workspace` 不跳登录；Nuxt 数值型 runtime flag 的根因已修复并有单测 | 通过 |
 | G0-4 visual seed | `make visual-baseline-smoke` | 1/1。light/dark 两态比对 `backgroundColor`/`color`/`borderRadius`/`fontSize`/`fontWeight`/`paddingInline` 六项全等 + 高度相等，light/dark 基线截图落盘 | 通过 |
 | G0-5 Cookie/CSRF | `make auth-cookie-smoke` | replay Gateway + Preview 1/1；register、Set-Cookie、CSRF 正/负写、login 轮换、me、logout | 通过 |
-| G0-6 WebSocket | `make ws-smoke` | 真实 Chromium 从 `localhost:3101` 携带 session 发起直连；握手以浏览器 `1006` 结束。replay Gateway 没有可用 browser runtime/session | **未通过：外部前提缺失** |
-| G0-7 OIDC | `make oidc-smoke` | 前置断言要求 provider 列表非空；当前 replay Gateway 无可控 provider，也没有两个合法 callback origin | **未通过：外部前提缺失** |
+| G0-6 WebSocket | `make ws-smoke` | 1/1。真实 Chromium 从 `localhost:3101` 携带 session cookie 直连 `ws://localhost:8011`，握手成功并收到 binary frame。断言要求 `opened && binary`，4404（无会话）不算通过 | 通过 |
+| G0-7 OIDC | `make oidc-smoke` | 前置断言要求 provider 列表非空；当前 replay Gateway 无可控 provider。另已定位一处必须先修的实现缺口（见下） | **未通过** |
 | G0-8 run protocol | `make run-protocol-smoke` | 1/1。create 单次 POST（`maxRedirects: 0`）、`Content-Location` 存在、无 `Location`、74 事件、1 个 heartbeat、以 `end` 收尾；resume GET + `Last-Event-ID` 返回 `gap`（`stream_replay_gap` / `reload_durable_state`）；浏览器内 cancel 得到 `204`；去敏 trace 落盘 | 通过 |
 | G0-9 security/container | `make audit && make proxy-security && make container-smoke` | 官方 npm audit：无已知漏洞；proxy security 11/11；容器 non-root、只含 `.output`、health、SIGTERM 通过 | 通过 |
 
@@ -102,22 +102,61 @@ resume 与 cancel 断言也根本没执行到，所以“已补实现 cancel/gap
 自增后断言等于 1，证明不了任何事；后者才真的能让一次 307 暴露出来。run body 也改为
 直接使用 fixture 自带的 `context`，与 backend golden test 一致。
 
-## G0-6 / G0-7：外部阻塞，但不再是没有自动化通路
+**splitpanes：拖拽用例的间歇性失败。** 同一条用例在连续几轮聚合里两绿一红。根因与 G0-4
+同类：`[data-restore]` 会带动画回流，用例在动画结束前就读 `boundingBox()`，拿到过渡中间
+坐标，`mouse.down()` 落在 splitter 旁边，整段拖拽不产生任何 resize 事件。插桩证实：加一个
+固定等待后 `resize=5 / resized=1`，且 restore 前后 splitter 的 x 完全相同（674.703125）。
+改为先 `splitter.hover()`——Playwright 的 actionability 本身包含"元素已停止移动"——再读取
+坐标。修复后连续 6 次全绿，耗时稳定在 9.2s。
 
-这两道 Gate 之前既不在 `make e2e-m0` 里，也没有任何 workflow job 调用——即使外部条件
-到位也不会被自动验证。现在：
+## G0-6：本机解除阻塞并通过
+
+之前判定为"需要外部 browser runtime"，实际不需要：仓库自带 agentic browser control，
+且 `POST /api/threads/{id}/browser/navigate`（`routers/browser.py:74`）能在**不跑 agent**
+的前提下建立 live browser session，所以不必为此录一条新的 replay fixture。解除步骤：
+
+```bash
+cd backend && uv sync --extra browser && uv run playwright install chromium
+```
+
+`run_m0_gateway.py` 增加 `--browser`，把 `browser_navigate` 注入 replay config 的
+`tools:` 列表。它是 **opt-in**：启用该工具会改变 lead-agent 工具集，进而改变系统提示词，
+直接打破 run-protocol 依赖的 fixture hash。因此 G0-6 使用独立的
+`playwright.m0-external.config.ts`，`m0-real-backend` 那条链保持原工具集不变。
+
+探针为保持自洽（不依赖公网），导航目标就是 Nuxt preview 自身，配套在夹具里开启
+`allow_private_addresses`。关闭码语义已在断言消息中固化：`4401` 未认证 / `4403` 跨源 /
+`4404` 无会话。
+
+## G0-7：定位到一处必须先修的实现缺口
+
+在搭建可控 IdP 之前，先核实了 Gateway 侧的两条机制：
+
+- `_resolve_oidc_redirect_uri`（`routers/auth.py:604`）在 `redirect_uri` 留空时，**从请求
+  自身的 proxy-aware origin 推导** callback，这正是"两个入口各自拿到自己的 callback"的机制。
+- callback 回跳（`routers/auth.py:832`）在 `frontend_base_url` 留空时是**相对路径**，
+  由浏览器解析回发起请求的 origin。
+
+两者合起来才是"Vue 用户不会被送回 React"的真正防线。但 Vue 侧目前**满足不了前一条**：
+
+`server/utils/gateway-proxy.ts` 不设置任何 `X-Forwarded-*`，而 h3 的 `proxyRequest` 调用
+`getProxyRequestHeaders(event, { host: target.startsWith("/") })`——我们的 target 是绝对
+URL，所以 `host` 落入 `ignoredHeaders` 被丢弃。Gateway 因此只能看到 `Host: 127.0.0.1:8011`，
+推导出的 `redirect_uri` 指向 Gateway 自己而不是 `localhost:3101`。
+
+这是 G0-7 本该抓到的缺陷，且不需要 IdP 就能证实。**修复涉及可信代理的信任语义**
+（backend/AGENTS.md 明确要求外层可信代理必须替换或剥离客户端提供的转发头，盲目透传
+是伪造入口），属于设计决定，本轮未擅自更改。
+
+G0-7 剩余工作：先定下转发头的信任边界并实现，再补可控 IdP；独立 hostname 与 DNS/TLS
+仍属 M7 生产形态。
+
+## 外部 Gate 的自动化通路
 
 - `make e2e-external` 把 `ws-smoke` 与 `oidc-smoke` 聚成一对，刻意留在 `e2e-m0` 之外，
   以免把仓库可自证的套件掺假。
 - `.github/workflows/frontend-vue-verify.yml` 增加 `workflow_dispatch` 入口和
-  `external-gates` job；缺少任一前提（browser runtime URL、IdP issuer/client、
-  两个 callback）时**显式失败并列出缺什么**，不是静默 skip。
-
-前提到位后执行：
-
-```bash
-cd frontend-vue && make e2e-external
-```
+  `external-gates` job；缺少任一前提时**显式失败并列出缺什么**，不是静默 skip。
 
 ## 其他真实验证
 
@@ -141,5 +180,6 @@ backend 侧单独处理。
 
 ## 结论
 
-十道 Gate 中八道通过，`make e2e-m0` 已取得完整绿色。**G0-6 与 G0-7 仍未通过**，
-在这两道拿到真实绿色结果前，不得宣布 M0 整体通过，也不得开始 M1。
+十道 Gate 中九道通过，`make e2e-m0` 与 `make ws-smoke` 均为真实绿色。**G0-7 仍未通过**，
+且已定位到必须先修的代理转发头缺口。在 G0-7 拿到真实绿色结果前，不得宣布 M0 整体通过，
+也不得开始 M1。

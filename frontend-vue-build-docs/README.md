@@ -8,7 +8,7 @@
 
 这两条不冲突，靠**顺序**解决：先做通用层（L1 → L2），再做 DeerFlow 专有层（L3），L2 边界逐模块抽取而不是最后再抽。分层定义见 [08-agent-core-contract.md](08-agent-core-contract.md)，里程碑见 [06-migration-plan.md](06-migration-plan.md)。
 
-> **实施状态：M-1 已通过；M0 十道 Gate 中八道通过、`make e2e-m0` 已完整绿色，但 G0-6 与 G0-7 未通过，不允许开始 M1。** 当前逐项结果见 [evidence/m0-verification.md](evidence/m0-verification.md)。剩余两道卡在外部前提（browser runtime、可控 IdP 与两个 callback origin），已由 `make e2e-external` 与 workflow 的 `external-gates` job 承接；双前端 production readiness 仍在 M7 验收，不能把“工程可运行”写成“可以直接上线”。
+> **实施状态：M-1 已通过；M0 十道 Gate 中九道通过、`make e2e-m0` 与 `make ws-smoke` 均为真实绿色，但 G0-7 未通过，不允许开始 M1。** 当前逐项结果见 [evidence/m0-verification.md](evidence/m0-verification.md)。G0-7 已定位到必须先修的代理转发头缺口（Nitro 代理不传递 client-facing origin，Gateway 推导出的 OIDC `redirect_uri` 指向自己）；独立 hostname 与 DNS/TLS 仍属 M7。双前端 production readiness 仍在 M7 验收，不能把“工程可运行”写成“可以直接上线”。
 
 > 本目录是实施规格，不是完成记录。第三方包存在性与 peer 关系按 2026-08-04 核实；行为敏感包使用现有 `frontend/pnpm-lock.yaml` 的 resolved version，不能把“当前 latest”当迁移目标。
 
