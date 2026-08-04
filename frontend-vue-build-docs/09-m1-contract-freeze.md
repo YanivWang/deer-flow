@@ -156,7 +156,7 @@ thread 是长期会话/checkpoint/history/owner 边界；run 是该 thread 上�
 | frame | `binary` 时服务端发 JPEG binary；控制/metadata/tab/navigation/error 为 JSON，客户端输入也是 JSON |
 | 生命周期 | 组件启用时连接，禁用/卸载/thread 变化关闭；现 React 实现最多 6 次指数退避，`800ms * 2^n`，上限 10s，open 后重置 |
 
-开发冻结为：HTTP/SSE 仍走 `localhost:3100` 的同源 routeRules，browser WS 暂时直连 `ws://localhost:8001`，Gateway 精确配置 `GATEWAY_CORS_ORIGINS=http://localhost:3100,http://localhost:3101`，所有地址统一使用 hostname `localhost` 以共享 host Cookie。M0 G0-6 必须用真实浏览器 Origin+Cookie 握手；若 Nuxt 实现安全的同源 WS proxy，可替换该开发接线，但不能只假设 `routeRules` 支持 Upgrade。
+开发冻结为：HTTP/SSE 仍走 `localhost:3100` 的同源 Nitro handler，browser WS 暂时直连 `ws://localhost:8001`，Gateway 精确配置 `GATEWAY_CORS_ORIGINS=http://localhost:3100,http://localhost:3101`，所有地址统一使用 hostname `localhost` 以共享 host Cookie。M0 G0-6 必须用真实浏览器 Origin+Cookie 握手；若 Nuxt 实现安全的同源 WS proxy，可替换该开发接线，但不能只假设 HTTP handler 或 `routeRules` 支持 Upgrade。
 
 生产冻结为两个 hostname 各自由 nginx/ingress 同源 Upgrade。后续配置必须保留 `proxy_http_version 1.1`、`Upgrade`、`Connection` 与 600s 读写 timeout。
 
@@ -235,6 +235,10 @@ Cookie 不按端口隔离。同一 hostname 的 `2026/3100` 会共享 access/CSR
 | G0-7 OIDC | `cd frontend-vue && make oidc-smoke` | 可控 IdP，两个 callback origin | 两入口各自回跳；并发同-host state 风险测试；forwarded header负测 |
 | G0-8 run protocol | `cd frontend-vue && make run-protocol-smoke` | replay Gateway + preview | create仅一次；Content-Location；resume GET+Last-Event-ID；error/end/gap/heartbeat；200/202/204 cancel |
 | G0-9 security/container | `cd frontend-vue && make audit && make proxy-security && make container-smoke` | Docker用于最后一项 | resolved版本锁定；moderate+ policy；路径逃逸失败；非root、health、SIGTERM、最小产物通过 |
+
+G0-6 与 G0-7 依赖仓库无法自带的外部前提，因此聚合在 `make e2e-external` 而不是
+`make e2e-m0` 里，由 workflow 的手动 `external-gates` job 驱动；前提缺失时该 job
+显式失败并列出缺什么，不做 skip。其余八道由 `make e2e-m0` 一次性覆盖。
 
 M0 不得以 `e2e-list` 代替 `make e2e`。M1–M7 每个里程碑运行当时已实现范围的 Vue unit + 共享 25 spec；M7 production readiness 还必须跑 auth、real-backend、visual、container、SSE/WS ingress smoke。
 

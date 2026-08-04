@@ -137,7 +137,7 @@ git tag frontend-vue-baseline-v2 27a425b0
 - **`packages/agent-core/` 目录与 `architecture.test.ts` 第一天就建**——边界守护要先于代码存在，否则 M2 写的时候一定会渗
 - `frontend-vue/pnpm-workspace.yaml`（嵌套 workspace，让 `agent-core` 是真包）
 - **`config/routes.ts` + `tests/unit/config/routes.test.ts`** —— 代理规则、`ssr:false` 分区、prerender 分区的单一来源。`buildProxyRules(env)` 写成接受注入 env 的纯函数，好让 G0-1 变成永久回归而不是一次性检查
-- `nuxt.config.ts`（从 `config/routes.ts` 取 `routeRules`、端口 3100、`authDisabled`、关闭业务组件自动导入）
+- `nuxt.config.ts`（从 `config/routes.ts` 取渲染 `routeRules`、端口 3100、`authDisabled`、关闭业务组件自动导入）；生产 API 转发由 Nitro catch-all 消费同一模块的前缀/安全合同
 - `Dockerfile` / `.dockerignore` / `/health`：Node 22 多阶段构建、runtime 只带 `.output`、非 root 用户；容器健康检查和 SIGTERM 退出在 CI smoke 验证
 - Tailwind 4 接入，`frontend/src/styles/globals.css`（453 行）→ `app/assets/css/main.css`
 - `shadcn-nuxt` 初始化，CLI 拉取 30 个基础组件
@@ -157,7 +157,7 @@ git tag frontend-vue-baseline-v2 27a425b0
 | # | Gate | 怎么验 | 没过的后果 |
 | --- | --- | --- | --- |
 | **G0-0** | **clean checkout CI** | workflow 先用根 runner frozen-install `frontend/`，确认共享 Playwright 存在，再安装 `frontend-vue/`；设置完整基线历史或改用签入 hash manifest；跑 `verify`/E2E | 本机 node_modules 掩盖 dangling `link:`，或 provenance 在 shallow checkout 失败 |
-| **G0-1** | **`nuxt preview` 下代理生效 + SSE 不被缓冲** | `nuxt build && nuxt preview`，请求 `/api/features` 拿到 Gateway 真实响应；再发一个真实 run，确认 `/api/langgraph/**` 比 `/api/**` 优先命中、且 SSE token 逐条到达。**顺带验 `sendStream` / `streamRequest` 两个 flag 的有无差异**（见 [03](03-project-shape.md#️-为什么代理必须是-routerules-而不是-nitrodevproxy)）。**把前缀优先级断言沉进 `tests/unit/config/routes.test.ts`**，含两个 `NUXT_PUBLIC_*` 设/不设的 4 种组合 | E2E webServer 跑的就是 preview。这条不过，`e2e-auth` / `e2e-real-backend` 全不可用，合同 spec 的未 mock 请求会 404 |
+| **G0-1** | **`nuxt preview` 下代理生效 + SSE 不被缓冲** | `nuxt build && nuxt preview`，分别请求 `/api/langgraph/**` 与 `/api/**`，确认前者 rewrite 到 Gateway `/api/**`、后者原样透传，且 SSE token 逐条到达。**顺带验 `sendStream` / `streamRequest` 两个 flag 的有无差异**（见 [03](03-project-shape.md#️-为什么生产代理必须进入-nitro-产物而不是-nitrodevproxy)）。`tests/unit/config/routes.test.ts` 穷举两个 `NUXT_PUBLIC_*` 设/不设的 4 种合同组合；preview 测试锁定真正的 catch-all 行为 | E2E webServer 跑的就是 preview。这条不过，`e2e-auth` / `e2e-real-backend` 全不可用，合同 spec 的未 mock 请求会 404 |
 | **G0-2** | **共用 testDir 能收集到用例** | 先运行 React collection 得到当前总基线 **27 files / 130 tests**；Vue config 排除两个 React-only spec 后，clean install 的 `make e2e-list` 得 **25 / 120**。collection 不是 pass，后续还须 `make e2e` | `@playwright/test` 双实例会让用例收集为 0 或直接报错 |
 | **G0-3** | **鉴权可关** | 带 `NUXT_PUBLIC_AUTH_DISABLED=1` 起 preview，直接访问 `/workspace` 不跳 `/login`。决策逻辑写成纯函数 + 单测（见 [M4a](#m4a--数据流)），别只靠这一次手工验 | 25 个合同 spec 全红，且失败信息指向"页面没渲染"而不是真实原因 |
 | **G0-4** | **shadcn-vue 视觉基准** | `Button` 与原版 React `Button` 并排截图 + 暗色切换 | 样式基准没对齐，后面 41 个组件的 cva 复制全部建在流沙上 |
@@ -640,14 +640,14 @@ export default defineNuxtRouteMiddleware(async (to) => {
 | **结构 diff 门禁无界** | 与「视觉 98%」同一种失败形状：门禁工作量超过功能本身 | 已降为诊断报告、不做门禁、只覆盖固定少数容器（[04 §7](04-architecture-decisions.md#页面结构一致靠诊断报告不做门禁)） |
 | shadcn-vue 组件与 React 版有偏差 | 视觉不一致 | 逐个对照 cva 定义；M0 先做 Button 并排截图 gate |
 | E2E 选择器强依赖 React DOM | 验收合同失效 | shadcn-vue 复刻同样的 `data-slot` 约定；**spec 只读**，差异由 Vue 侧消化，实在不行进豁免登记表并复核该表长度 |
-| **代理只在 dev 生效** | auth/real-backend E2E 请求 404 | 用 `routeRules`，并由 [M0 G0-1](#m0-的十道-gate) 在 preview 实测 |
+| **代理只在 dev 生效** | auth/real-backend E2E 请求 404 | 用编译进 Nitro 的 server catch-all，并由 [M0 G0-1](#m0-的十道-gate) 在 preview 实测；不要改回会绕过 guard 的 `routeRules.proxy` |
 | **鉴权关不掉或真实 Cookie/CSRF 失败** | mock E2E 全红或生产登录不可用 | [G0-3/G0-5](#m0-的十道-gate) 分别验证测试开关和真实认证 |
 | **`@playwright/test` 双实例或 link target 不存在** | 共用 testDir 无法收集 | clean CI 先安装 `frontend`，再安装 Vue；[G0-0/G0-2](#m0-的十道-gate) |
 | **OIDC 固定回 React 的绝对 URL** | Vue 发起 SSO 后落回错误前端，或同 hostname 并发 state 被覆盖 | M-1 已冻结独立 hostname + 双 callback + 相对回跳；[G0-7](#m0-的十道-gate) 实测可信代理与 cookie 范围 |
 | **Nuxt wildcard proxy 或 body limit 未锁定** | 编码路径逃逸代理 scope，或绕过 20 MiB 上传限制 | [G0-9](#m0-的十道-gate) 锁 resolved dependency、audit、恶意路径回归与生产入口限制 |
 | **splitpanes 表达不了 H 组** | 最后一个里程碑才发现要换库或自写 | M0/M1 插入一天的 spike，只验 H1 / H2 / H6 |
 | **M2 探针变成兔子洞** | `useStream` 兼容层越写越大 | 探针只在 worktree、定 3 天；长期门禁是四类协议证据 |
-| 跨源直连 Gateway 丢认证 cookie | 登录态莫名失效，且容易误判成 Vue 版 auth 写错 | 默认走同源 `routeRules` 代理；`NUXT_PUBLIC_*_BASE_URL` 留空。见 [07](07-parallel-run.md#️-跨源会丢认证-cookie--不要轻易绕开同源代理) |
+| 跨源直连 Gateway 丢认证 cookie | 登录态莫名失效，且容易误判成 Vue 版 auth 写错 | 默认走同源 Nitro handler 代理；`NUXT_PUBLIC_*_BASE_URL` 留空。见 [07](07-parallel-run.md#️-跨源会丢认证-cookie--不要轻易绕开同源代理) |
 | 自写件工作量被低估 | 排期失真（`use-stick-to-bottom` 实测 486 行 vs 早期估 80 行） | M4b 单独留时间；其余自写件动手前先量一次原实现的真实行数 |
 
 ---

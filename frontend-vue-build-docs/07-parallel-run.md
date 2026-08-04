@@ -52,69 +52,44 @@ const frontendPort = process.env.E2E_AUTH_FRONTEND_PORT ?? "3001";
    nginx :2026 ─────┤                             ├─→ Gateway :8001
                     └─ /api/langgraph/* 重写 ──────┘        ↑
                                                             │
-   frontend-vue (Nuxt) :3100 ── routeRules proxy ───────────┘
+   frontend-vue (Nuxt) :3100 ── Nitro handler proxy ────────┘
                                 （直连，不经过 nginx）
 ```
 
-## 代理：用 `routeRules`，不要用 `nitro.devProxy`
+## 代理：用 Nitro server handler，不要用 `nitro.devProxy`
 
 关键点：**所有 API URL 与 `frontend/` 逐字一致**，包括 `/api/langgraph/*` 前缀和全部裸 `/api/*` 路径。
 
-`nginx.local.conf` 对 langgraph 前缀做的是 `rewrite ^/api/langgraph/(.*) /api/$1`；Nitro 的 `routeRules` 用 `**` 捕获实现同一件事：
+`nginx.local.conf` 对 langgraph 前缀做的是 `rewrite ^/api/langgraph/(.*) /api/$1`；Nuxt 生产入口由单一 `/api/**` Nitro catch-all 区分并转写两个前缀：
 
 ```ts
-// 条件分支逐条复刻 frontend/next.config.js:30-79
-const gateway =
-  process.env.DEER_FLOW_INTERNAL_GATEWAY_BASE_URL ?? "http://127.0.0.1:8001";
+// server/routes/api/[...path].ts
+export default defineEventHandler((event) => proxyGatewayRequest(event));
 
-export default defineNuxtConfig({
-  devServer: { port: 3100 },
+// server/utils/gateway-proxy.ts
+const pathname = requestUrl.pathname.startsWith("/api/langgraph/")
+  ? requestUrl.pathname.replace(/^\/api\/langgraph(?=\/|$)/, "/api")
+  : requestUrl.pathname;
 
-  routeRules: {
-    // ⚠️ sendStream / streamRequest 会被 Nitro 透传给 h3 的 proxyRequest。
-    // 不带 streamRequest，h3 会先把整个请求体读进内存（readRawBody）——nginx 侧
-    // 对 /api/langgraph/ 配的是 client_max_body_size 20M + proxy_request_buffering off。
-    // G0-1 要带/不带各跑一遍确认差异。
-    //
-    // 复刻 nginx: /api/langgraph/* → Gateway /api/*
-    ...(process.env.NUXT_PUBLIC_LANGGRAPH_BASE_URL
-      ? {}
-      : {
-          "/api/langgraph/**": {
-            proxy: { to: `${gateway}/api/**`, sendStream: true, streamRequest: true },
-          },
-        }),
-    // 其余 REST 路由 1:1 透传
-    ...(process.env.NUXT_PUBLIC_BACKEND_BASE_URL
-      ? {}
-      : {
-          "/api/**": {
-            proxy: { to: `${gateway}/api/**`, sendStream: true, streamRequest: true },
-          },
-        }),
-  },
-
-  runtimeConfig: {
-    public: {
-      // 留空 = 从 window.location.origin 拼 /api/langgraph，
-      // 对齐 frontend/src/core/config/index.ts::getLangGraphBaseURL()。
-      // 运行时可由 NUXT_PUBLIC_LANGGRAPH_BASE_URL / NUXT_PUBLIC_BACKEND_BASE_URL 覆盖。
-      langgraphBaseUrl: "",
-      backendBaseUrl: "",
-      // E2E 合同的前置条件，对应 frontend 的 DEER_FLOW_AUTH_DISABLED
-      authDisabled: "",
-    },
-  },
+return proxyRequest(event, `${gateway}${pathname}${requestUrl.search}`, {
+  fetchOptions: { redirect: "manual" },
+  sendStream: true,
+  streamRequest: true,
 });
 ```
+
+`config/routes.ts` 仍是渲染分区、两个 public prefix、环境分支、20 MiB
+常量和 traversal 判定的单一合同来源；`buildProxyRules(env)` 作为四组合纯函数
+固定目标映射，但不再展开进生产 `routeRules`。M0 preview 实测表明一旦展开，
+`routeRules.proxy` 会先于 handler 接管请求，使 body/path guard 失效。
 
 ### ⚠️ 为什么不是 `devProxy`
 
 `nitro.devProxy` **只在 `nuxt dev` 生效**。而 Next 版的代理在 [`frontend/next.config.js:30-79`](../frontend/next.config.js) 的 `rewrites()` 里，`next start` 下同样生效——两版的网络行为因此在 E2E、preview、生产三种形态下都一致。
 
-用 devProxy 会让 Vue 版只在 dev 下正确：E2E 的 `webServer` 跑的是 `nuxt build && nuxt preview`，那个进程里没有任何代理，`tests/e2e-auth/` 与 `tests/e2e-real-backend/` 直接不可用，合同 spec 里凡是没被 `page.route()` 覆盖到的请求会 404 而不是打到 Gateway。完整后果表见 [03-project-shape.md](03-project-shape.md#️-为什么代理必须是-routerules-而不是-nitrodevproxy)。
+用 devProxy 会让 Vue 版只在 dev 下正确：E2E 的 `webServer` 跑的是 `nuxt build && nuxt preview`，那个进程里没有任何代理，`tests/e2e-auth/` 与 `tests/e2e-real-backend/` 直接不可用，合同 spec 里凡是没被 `page.route()` 覆盖到的请求会 404 而不是打到 Gateway。完整后果表见 [03-project-shape.md](03-project-shape.md#️-为什么生产代理必须进入-nitro-产物而不是-nitrodevproxy)。
 
-`routeRules` 编译进 Nitro 产物，三种形态共用一份规则。**M0 要实测两件事**：`/api/langgraph/**` 是否确实比 `/api/**` 更优先命中，以及 SSE 是否被缓冲。
+server route 同样编译进 Nitro 产物，三种形态共用一份实现。**M0 实测两件事**：`/api/langgraph/**` 是否按特例 rewrite、`/api/**` 是否原样透传，以及 SSE 是否被缓冲。
 
 ### 为什么必须保住这些 URL
 
@@ -130,7 +105,7 @@ export default defineNuxtConfig({
 
 ### 环境变量：比 Next 版更简单
 
-Nuxt 的 `runtimeConfig.public` 可以在运行时改变客户端使用的 base URL；但 `buildProxyRules()` 读取的 `process.env` 会编译进 Nitro route rules。**同一产物可以换客户端直连地址，不代表可以运行时重写已经构建的代理拓扑。** 生产默认仍要求同源反代，不能把 public base URL 当万能逃生口。
+Nuxt 的 `runtimeConfig.public` 可以在运行时改变客户端使用的 base URL；Nitro handler 的内部 Gateway 地址则来自 private runtime config。**同一产物可以注入受控的内部 upstream，但 public base URL 仍不能当万能逃生口。** 生产默认要求同源反代。
 
 ## ⚠️ browser-view 的 WebSocket —— 路径已冻结，M0 验证
 
@@ -138,7 +113,7 @@ Nuxt 的 `runtimeConfig.public` 可以在运行时改变客户端使用的 base 
 
 不能假定 Nitro `routeRules` 会处理 `Upgrade`。M-1 已把实现路径冻结为：
 
-1. **开发**：browser WS 直连 `ws://localhost:8001`，Gateway 精确配置 `GATEWAY_CORS_ORIGINS=http://localhost:3100,http://localhost:3101`；HTTP/SSE 仍经 Nuxt 同源 routeRules。所有地址统一写 `localhost`，不混用 `127.0.0.1`，否则 host Cookie 不共享。
+1. **开发**：browser WS 直连 `ws://localhost:8001`，Gateway 精确配置 `GATEWAY_CORS_ORIGINS=http://localhost:3100,http://localhost:3101`；HTTP/SSE 仍经 Nuxt 同源 handler。所有地址统一写 `localhost`，不混用 `127.0.0.1`，否则 host Cookie 不共享。
 2. **生产**：React/Vue 各自的 hostname 都由 nginx/ingress 同源处理 Upgrade，保留 `proxy_http_version 1.1`、`Upgrade`、`Connection` 和 600s timeout。
 3. 如果 M0 后续实现并安全验证了 Nuxt WS proxy handler，它可以替换“开发直连”，但不能改变生产同源 ingress 合同。
 
@@ -152,7 +127,7 @@ Nuxt 的 `runtimeConfig.public` 可以在运行时改变客户端使用的 base 
 
 ## ⚠️ 跨源会丢认证 cookie —— 不要轻易绕开同源代理
 
-`localhost:3100` 与 `localhost:2026` 是**不同 origin**（端口不同）。走 `routeRules` 同源代理时这不构成问题：浏览器看到的一直是 `:3100` 自己。但一旦改用 `NUXT_PUBLIC_BACKEND_BASE_URL` 直连 Gateway，请求就变成跨源的，两件事同时发生：
+`localhost:3100` 与 `localhost:2026` 是**不同 origin**（端口不同）。走 Nitro handler 同源代理时这不构成问题：浏览器看到的一直是 `:3100` 自己。但一旦改用 `NUXT_PUBLIC_BACKEND_BASE_URL` 直连 Gateway，请求就变成跨源的，两件事同时发生：
 
 1. **认证 cookie 不会被带上**（除非同时配 `credentials: "include"` + Gateway 侧 `Access-Control-Allow-Credentials` + 精确 origin 白名单，通配 `*` 不允许）
 2. **CSRF 校验可能失败**——Gateway 的 `csrf_token` 机制若比对 Origin / Referer，跨源请求会被拒
@@ -192,7 +167,7 @@ M0 先支持模块内 `make dev`，并在根级新增显式 `make dev-vue` / `ma
 | `localhost:2026` | 现有 Next 前端正常，未受影响 |
 | `localhost:3100` | Nuxt 前端可访问 |
 | `localhost:3100` 上调用 `/api/features` | 返回 Gateway 的真实响应，不是 404/502 |
-| **`PORT=3101 nuxt preview` 下同样调用 `/api/features`** | **同上**——这一条是 `routeRules` 相对 `devProxy` 的全部意义所在，必须在 **preview** 上单独验 |
+| **`PORT=3101 nuxt preview` 下同样调用 `/api/features`** | **同上**——这一条证明 server handler 已进入生产 Nitro 产物，必须在 **preview** 上单独验 |
 | `localhost:3100` 上发起一个 run | `/api/langgraph/threads/…/runs/stream` 命中 Gateway，且 token **逐条到达**而不是攒到最后（代理未缓冲） |
 | browser-view WS | 开发直连 8001 + exact allowlist，在真实 Origin/cookie 下完成握手（[G0-6](06-migration-plan.md#m0-的十道-gate)） |
 | `make e2e-list` | clean install 后列出 **25 个 spec / 120 个 test**；实时数量由 CI 输出 |
@@ -307,7 +282,7 @@ dual-frontend profile 已由 M-1 选中；nginx/compose/health-check 在 M7 prod
 冻结结论按 profile：
 
 - standalone template：不修改 DeerFlow nginx，由复用方提供等价入口；
-- 本地开发：3100 routeRules 负责 HTTP/SSE，WS 直连 8001 + exact allowlist；
+- 本地开发：3100 Nitro handler 负责 HTTP/SSE，WS 直连 8001 + exact allowlist；
 - DeerFlow 生产双前端：**必须使用两个独立 hostname 的对称同源 nginx/ingress**。它以有限根级改动换回 SSE 调优、WS、认证和压缩的一致性。
 
 每个 profile 都必须保住全部 API URL（含 `/api/langgraph` 前缀），并用同一套 real-backend contract 验证。

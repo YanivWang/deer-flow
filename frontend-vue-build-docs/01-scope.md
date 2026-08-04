@@ -120,7 +120,7 @@ Nextra 没有 Vue 移植，重建需要自写文档主题；当前不在范围�
 
 ⚠️ **它实测有 39 个 `page.route()`**：7 个在 `**/api/langgraph/*`（threads、threads/\*、/history、/state、/search、runs/stream、threads/\*/runs/stream），**另外 32 个在裸 `/api/*`**——`/api/v1/auth/*`、`/api/threads/*`（含正则）、`/api/scheduled-tasks/*`、`/api/features`、`/api/models`、`/api/skills`、`/api/agents`、`/api/integrations/lark/*`、`/api/channels/*` 等。
 
-因此 Vue 版发出的 **API URL 必须逐字一致，不只是保住一个前缀**——这是 [07-parallel-run.md](07-parallel-run.md) 里"用 `routeRules` 复刻 nginx 的前缀重写"那条决策的首要理由。
+因此 Vue 版发出的 **API URL 必须逐字一致，不只是保住一个前缀**——这是 [07-parallel-run.md](07-parallel-run.md) 里“用 Nitro handler 复刻 nginx 的前缀重写”那条决策的首要理由。
 
 ⚠️ 同样重要：`frontend/playwright.config.ts` 起 webServer 时传 `DEER_FLOW_AUTH_DISABLED=1`，**25 个合同 spec 全部依赖鉴权被关掉**。Vue 版必须有等价开关，见 [03-project-shape.md](03-project-shape.md#️-e2e-必须能关掉鉴权)。
 

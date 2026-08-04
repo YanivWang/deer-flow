@@ -22,7 +22,7 @@ LangChain 依赖全部移除：自写 REST client + openapi-typescript 生成类
 
 1. **营销页需要预渲染。** 价格页、关于我们、落地页最需要 SEO 与 OG 卡片，裸 Vite SPA 没有预渲染能力，等这些页面要做时就得二次迁移构建体系、路由和测试配置。
 2. **Nuxt 支持逐路由混合渲染。** `routeRules` 让应用区 `ssr: false`、营销区 `prerender: true`。
-3. **代理能进生产产物。** `routeRules` 的 `proxy` 在 dev / preview / `node .output/server/index.mjs` 里都生效，与 Next 的 `next.config.js` rewrites 同构——这是 E2E 与生产行为一致的前提，裸 Vite 的 `server.proxy` 同样只管 dev。见 [03-project-shape.md](03-project-shape.md#️-为什么代理必须是-routerules-而不是-nitrodevproxy)。
+3. **代理能进生产产物。** Nitro server catch-all 在 dev / preview / `node .output/server/index.mjs` 里都生效，与 Next 的 `next.config.js` rewrites 同构——这是 E2E 与生产行为一致的前提，裸 Vite 的 `server.proxy` 和 `nitro.devProxy` 都只管 dev。M0 实测还证明 `routeRules.proxy` 会先于自定义安全 guard 接管请求，因此生产转发必须由 handler 执行。见 [03-project-shape.md](03-project-shape.md#️-为什么生产代理必须进入-nitro-产物而不是-nitrodevproxy)。
 
 > ⚠️ 预渲染有一个前提要写清楚：`prerender: true` 的产物在**构建期**定死，包括 locale；而 Next 版营销页是按 cookie 派生 locale 服务端渲染的。当前三页是占位页无所谓，但「将来替换真实内容零迁移成本」这句话只在单语言静态内容下成立。细节见 [03-project-shape.md](03-project-shape.md#️-营销页预渲染的前提)。
 

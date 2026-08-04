@@ -11,6 +11,8 @@ guide rather than expecting full detail here:
   config system, test layout.
 - **[frontend/AGENTS.md](frontend/AGENTS.md)** — frontend depth: Next.js App Router layout,
   thread/streaming data flow, code style, commands.
+- **[frontend-vue/README.md](frontend-vue/README.md)** — Nuxt M0 engineering
+  foundation; business migration remains governed by `frontend-vue-build-docs/`.
 
 ## What is DeerFlow
 
@@ -28,7 +30,8 @@ A single `make dev` / Docker stack runs four cooperating services:
 | --------------- | ------ | ------------------------------------------------------------------- |
 | **Nginx**       | `2026` | Unified reverse-proxy entry point — open this in the browser        |
 | **Gateway API** | `8001` | FastAPI REST API + embedded LangGraph-compatible agent runtime      |
-| **Frontend**    | `3000` | Next.js web interface                                               |
+| **React frontend** | `3000` | Existing Next.js web interface                                  |
+| **Vue frontend** | `3100` | Explicit M0 dev mode only; not part of the default Docker stack     |
 | **Provisioner** | `8002` | Optional — only when sandbox is configured for provisioner/K8s mode |
 
 Nginx is the single public entry: it serves the frontend and proxies `/api/langgraph/*`
@@ -60,6 +63,8 @@ deer-flow/
 │   ├── packages/harness/           # deerflow-harness package (import: deerflow.*) — agent framework
 │   └── app/                        # FastAPI Gateway + IM channels (import: app.*)
 ├── frontend/                       # Next.js frontend (pnpm) — see frontend/AGENTS.md
+├── frontend-vue/                   # Nuxt/Vue M0 foundation; independent pnpm workspace
+├── frontend-vue-build-docs/        # Frozen migration contracts and gate evidence
 ├── docker/                         # docker-compose files, nginx config, provisioner
 ├── skills/                         # Agent skills: public/ (committed), custom/ (gitignored)
 │                                    # Managed integration skill packs are global at .deer-flow/integrations/skills/{provider}/
@@ -100,6 +105,8 @@ make config      # Generate local config files from the examples
 make check       # Check that required tools are installed
 make install     # Install all dependencies (frontend + backend + pre-commit hooks)
 make dev         # Start all services with hot-reload (Gateway + Frontend + Nginx)
+make dev-vue     # Start Gateway + Vue/Nuxt on 3100
+make dev-dual    # Start Gateway + React 3000 + Vue 3100; no M7 dual ingress
 make start       # Start all services in production mode (local, optimized)
 make stop        # Stop all running services
 make up / down   # Build/stop the production Docker stack (browser at localhost:2026)
@@ -121,17 +128,33 @@ cd backend && make format     # ruff format
 cd frontend && pnpm dev       # Dev server with Turbopack (port 3000)
 cd frontend && pnpm check     # Lint + type check (run before committing)
 cd frontend && pnpm test      # Unit tests
+
+# Vue M0 foundation (Makefile is the only developer command surface)
+cd frontend-vue && make dev       # Nuxt dev server (port 3100)
+cd frontend-vue && make verify    # lint + format + types + unit + build
+cd frontend-vue && make e2e-m0    # repository-runnable M0 gate suite
+cd frontend-vue && make e2e-list  # collect shared contracts; does not claim pass
 ```
 
-Rule of thumb: **root `make` = the full application**; **`backend/Makefile` and `frontend/`
-(`pnpm`) = per-module work.**
+`make e2e-external` is deliberately outside `make e2e-m0`: it holds the two gates
+that need a browser runtime (G0-6) and a controlled IdP (G0-7), which no ordinary
+CI runner provides. Keeping them separate is what stops the runnable suite from
+implying those gates passed.
 
-Host-side pnpm consumers, including the root/frontend Makefiles and local diagnostic scripts, must run through `scripts/pnpm.py`. The runner preserves direct `pnpm`/`pnpm.cmd` priority, falls back to `corepack pnpm`, and is invoked from `frontend/` so Corepack honors the package-manager version pinned by that project.
+Rule of thumb: **root `make` = application lifecycle**; **`backend/Makefile`,
+`frontend/` (`pnpm`), and `frontend-vue/Makefile` = per-module work.**
+
+Host-side pnpm consumers, including both frontend workspaces and local diagnostic
+scripts, must run through `scripts/pnpm.py`. It accepts only
+`--dir frontend|frontend-vue`, defaults to `frontend`, preserves direct
+`pnpm`/`pnpm.cmd` priority, and falls back to `corepack pnpm`. Corepack runs from
+the selected workspace so each frontend honors its own pinned package manager.
 
 ## Where to Go Next
 
 - Backend work → **[backend/AGENTS.md](backend/AGENTS.md)**
 - Frontend work → **[frontend/AGENTS.md](frontend/AGENTS.md)**
+- Vue migration work → **[frontend-vue-build-docs/README.md](frontend-vue-build-docs/README.md)**
 - Setup & install → **[Install.md](Install.md)**, **[CONTRIBUTING.md](CONTRIBUTING.md)**
 - Project overview & usage → **[README.md](README.md)** (translations: `README_zh.md`,
   `README_ja.md`, `README_fr.md`, `README_ru.md`)

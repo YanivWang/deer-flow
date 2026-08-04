@@ -1,0 +1,74 @@
+/*
+  【文件职责】     提供 Tailwind 4、主题变量与全局基础样式。
+  【对应 frontend/】 frontend/src/styles/globals.css
+  【架构位置】     L2
+  【主要导出】     全局 CSS
+  【依赖关系】     由 nuxt.config.ts 加载
+  【边界与注意】   M0 只冻结 Button/light/dark 基线，不提前迁移业务样式。
+*/
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(0.9855 0.0098 87.47);
+  --foreground: oklch(0.145 0 0);
+  --primary: oklch(0 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.9455 0.0098 87.47);
+  --secondary-foreground: oklch(0.205 0 0);
+  --accent: oklch(0.94 0.0098 87.47);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0.0098 87.47);
+  --input: oklch(0.88 0.0098 87.47);
+  --ring: oklch(0.58 0.18 255);
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: oklch(0.24 0.0036 106.64);
+  --foreground: oklch(0.985 0 0);
+  --primary: oklch(1 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.3 0.0036 106.64);
+  --secondary-foreground: oklch(0.985 0 0);
+  --accent: oklch(0.32 0.0036 106.64);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.74 0.16 255);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}

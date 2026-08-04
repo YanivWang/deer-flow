@@ -4,6 +4,20 @@
 
 > M-1 已冻结：开发端口为 3100、E2E preview 为 3101；生产使用两个独立 hostname 的同源 ingress。完整合同见 [09](09-m1-contract-freeze.md)。
 
+> **M0 实施修正（2026-08-04）**：Nuxt 4.5.1/Nitro 2.13.4 的
+> `routeRules.proxy` 会先于自定义 handler 接管请求，因而绕过 20 MiB 与
+> traversal guard；两个重叠 wildcard 还会产生 `/api/langgraph/**` 遮蔽。
+> 生产实现改为单一 `server/routes/api/[...path].ts` catch-all，统一完成
+> guard、前缀 rewrite、`redirect:"manual"` 与 h3 流选项。渲染分区仍使用
+> `routeRules`；`buildProxyRules(env)` 保留为四组合纯合同和目标映射单测，
+> 不能重新 spread 回 `nuxt.config.ts`。Preview 的开启/关闭对照已证明两个
+> 流选项的实际影响，见 [M0 证据](evidence/m0-verification.md)。
+
+> 同一轮还确认 Nuxt 4.5.1 builder 在当前解析树调用 Vite 8 的 Oxc API；
+> 强行降到早期冻结草案中的 Vite 7 会在 build 阶段缺少
+> `transformWithOxc`。因此锁文件显式解析 Vite 8.2.0，并将这一实施后才可见
+> 的 peer 例外写入 workspace 配置，而不是伪报 Vite 7 可运行。
+
 ## 目录结构
 
 ```
@@ -159,7 +173,7 @@ frontend-vue/
     │                             #   提取选择器契约做 diff → 产出报告。
     │                             #   ⚠️ 是诊断不是门禁，见 04 §7。不碰 frontend/
     ├── m0/                       # ★ M0 独有的网络/运行合同，不复制 React 业务 spec
-    │   ├── proxy.spec.ts         # @proxy：preview routeRules、SSE、20 MiB 边界
+    │   ├── proxy.spec.ts         # @proxy：preview handler、SSE、20 MiB 边界
     │   ├── auth-disabled.spec.ts # @auth-disabled：空壳 workspace 的守卫决策
     │   ├── visual-seed.spec.ts   # @visual-seed：Button/light/dark 基准
     │   ├── ws.spec.ts            # @ws：真实 Origin+Cookie Upgrade
@@ -332,7 +346,7 @@ export default defineConfig({
 
 这两条是同一个问题的两面。
 
-[G0-1](06-migration-plan.md#m0-的十道-gate) 的全部论证是「`routeRules` 在 preview 下生效而 `devProxy` 不生效，所以必须验 preview」。但如果 E2E 用 3100 且 `reuseExistingServer: !CI`，那么**本地只要有一个 `make dev` 正跑在 3100，Playwright 就直接复用那个 dev server，preview 根本没被启动过**——G0-1 的论证被完整架空，而且没有任何报错。
+[G0-1](06-migration-plan.md#m0-的十道-gate) 的全部论证是「生产 Nitro handler 在 preview 下生效而 `devProxy` 不生效，所以必须验 preview」。但如果 E2E 用 3100 且 `reuseExistingServer: !CI`，那么**本地只要有一个 `make dev` 正跑在 3100，Playwright 就直接复用那个 dev server，preview 根本没被启动过**——G0-1 的论证被完整架空，而且没有任何报错。
 
 所以：**E2E 用独立端口 3101，且 `reuseExistingServer: false`。** 代价是每次 E2E 都要重新 build（`timeout` 已放到 240 s），换来的是「跑的确实是 preview 产物」这个前提成立。
 
@@ -718,11 +732,12 @@ wildcard proxy 必须覆盖 Nitro 已公开的 [proxy scope bypass advisory](htt
 
 ## nuxt.config.ts
 
-路由规则本身不写在这里，全部来自 `config/routes.ts`（见下节）：
+渲染路由规则本身不写在这里，全部来自 `config/routes.ts`（见下节）；
+API 转发由 `server/routes/api/[...path].ts` 进入同一模块约束的 handler：
 
 ```ts
 import tailwindcss from "@tailwindcss/vite";
-import { buildProxyRules, csrRoutes, prerenderRoutes } from "./config/routes";
+import { csrRoutes, prerenderRoutes } from "./config/routes";
 
 export default defineNuxtConfig({
   compatibilityDate: "2026-08-03",
@@ -748,10 +763,9 @@ export default defineNuxtConfig({
 
   devServer: { port: 3100 },        // 与 frontend/(3000) 并行，见 07-parallel-run.md
 
-  // 三份规则全部来自 config/routes.ts，这里只做映射。
-  // ⚠️ 顺序有意义：代理规则在前，见 config/routes.ts 的说明。
+  // 渲染规则全部来自 config/routes.ts，这里只做映射。
+  // API proxy 不放在 routeRules：它会抢先于自定义安全 guard 接管请求。
   routeRules: {
-    ...buildProxyRules(),
     ...Object.fromEntries(csrRoutes.map((r) => [r, { ssr: false }])),
     ...Object.fromEntries(prerenderRoutes.map((r) => [r, { prerender: true }])),
   },
@@ -760,8 +774,7 @@ export default defineNuxtConfig({
     public: {
       // 留空 = 从 window.location.origin 拼 /api/langgraph，对齐
       // frontend/src/core/config/index.ts::getLangGraphBaseURL()。
-      // 客户端 base URL 可由 NUXT_PUBLIC_* 运行时覆盖；但下方 routeRules
-      // 的有无与 upstream 是构建期拓扑，不能靠运行时变量重写。
+      // 客户端 base URL 可由 NUXT_PUBLIC_* 运行时覆盖。
       langgraphBaseUrl: "",
       backendBaseUrl: "",
 
@@ -779,7 +792,7 @@ export default defineNuxtConfig({
 });
 ```
 
-### `config/routes.ts`：渲染分区与代理的单一来源
+### `config/routes.ts`：渲染分区与代理合同的单一来源
 
 **路由规则不散在 `nuxt.config.ts` 里，抽成一个有单测的 config 模块。**
 
@@ -792,22 +805,23 @@ export const csrRoutes = ["/workspace/**", "/login", "/setup", "/auth/**"] as co
 /** 营销区：构建期预渲染。⚠️ locale 在构建期定死，见「营销页预渲染的前提」 */
 export const prerenderRoutes = ["/", "/pricing", "/about"] as const;
 
-const gateway =
-  process.env.DEER_FLOW_INTERNAL_GATEWAY_BASE_URL ?? "http://127.0.0.1:8001";
-
 /**
  * 条件分支逐条复刻 frontend/next.config.js:30-79：显式配了外部地址就不再本地代理。
- * ⚠️ 插入顺序：langgraph 前缀必须在 /api/** 兜底之前 —— 与 next.config.js 里那条
- * NOTE 同源。Nitro 按具体度匹配，但这是本方案的命门，由单测锁定而不是靠推断。
+ * 该纯函数固定两个前缀到 upstream 的合同映射；生产 handler 复用相同前缀语义，
+ * 但不能把返回值直接展开回 nuxt routeRules。
  */
-export const buildProxyRules = (env = process.env) => ({
+export const buildProxyRules = (env = process.env) => {
+  const gateway =
+    env.DEER_FLOW_INTERNAL_GATEWAY_BASE_URL ?? "http://127.0.0.1:8001";
+  return {
   ...(env.NUXT_PUBLIC_LANGGRAPH_BASE_URL
     ? {}
     : { "/api/langgraph/**": { proxy: { to: `${gateway}/api/**`, ...streamOpts } } }),
   ...(env.NUXT_PUBLIC_BACKEND_BASE_URL
     ? {}
     : { "/api/**": { proxy: { to: `${gateway}/api/**`, ...streamOpts } } }),
-});
+  };
+};
 
 /**
  * ⚠️ Nuxt 4.5.1 → nitropack 2.13.x → h3 1.15.x 会把这两个 flag 传给
@@ -821,17 +835,20 @@ export const buildProxyRules = (env = process.env) => ({
 const streamOpts = { sendStream: true, streamRequest: true } as const;
 ```
 
-> `proxy` 既可以是字符串也可以是 `{ to, ... }` 对象；Nuxt 4.5.1 对应的 Nitro 会把对象选项传给 h3 `proxyRequest`，所以这里用对象形式传 `sendStream` / `streamRequest`。这两个字段和生产 body limit 都是 M0 必须实测的东西，不要因为「字符串形式看起来更简洁」就退回去。
+> `buildProxyRules` 返回对象形式是为了让四组合单测显式固定 `to`、
+> `sendStream`、`streamRequest` 合同；生产调用点是 `gateway-proxy.ts` 内的
+> `proxyRequest`，不是 Nuxt `routeRules.proxy`。这两个字段和 production body
+> limit 都由 preview E2E 实测。
 
 **为什么值得多这一个文件**（做法参照内部项目 `nuxt-modern-starter` 的 `config/routes.ts`）：
 
-1. **[M0 G0-1](06-migration-plan.md#m0-的十道-gate) 那条断言有地方放了。** 「`/api/langgraph/**` 是否比 `/api/**` 优先命中」原本只能人工验一次；现在 `buildProxyRules` 接受注入的 `env`，是个纯函数，可以直接单测——G0-1 从一次性检查变成永久回归。
+1. **[M0 G0-1](06-migration-plan.md#m0-的十道-gate) 那条合同有地方放了。** 「`/api/langgraph/**` rewrite、`/api/**` 透传」原本只能人工验一次；现在 `buildProxyRules` 接受注入的 `env`，是个纯函数，可以直接单测，真正的 handler 行为再由 preview E2E 固定。
 2. **两个 `NUXT_PUBLIC_*` 的条件分支能被穷举测。** 设 / 不设共 4 种组合，手工验容易漏。
 3. **渲染分区是一份可读的清单**，不用在 `nuxt.config.ts` 里翻。将来加 `/workspace/settings` 之类的新路由时，改一处。
 
 配套约定：`config/routes.ts` 的文件头写明「修改须同步 `tests/unit/config/routes.test.ts`」。
 
-### ⚠️ 为什么代理必须是 `routeRules` 而不是 `nitro.devProxy`
+### ⚠️ 为什么生产代理必须进入 Nitro 产物而不是 `nitro.devProxy`
 
 早期版本用的是 `nitro.devProxy`。**这是错的**——`devProxy` 只在 `nuxt dev` 生效，而本项目的 E2E `webServer` 跑的是 `nuxt build && nuxt preview`，那个进程里没有任何代理。
 
@@ -844,11 +861,14 @@ const streamOpts = { sendStream: true, streamRequest: true } as const;
 | `tests/e2e-real-backend/` | 直接不可用 |
 | production build 手工验证 | 全部 404 |
 
-`routeRules` 的 `proxy` 编译进 Nitro 产物，dev / preview / `node .output/server/index.mjs` 三种形态共用同一份规则，与 Next 的 `rewrites` 同构。
+M0 最终使用编译进 Nitro 产物的 server catch-all；dev / preview /
+`node .output/server/index.mjs` 三种形态共用同一实现。最初计划的
+`routeRules.proxy` 虽也会进产物，但实测会绕过 handler guard，因此不再作为
+生产转发器。该修正不改变两个 public prefix 的合同。
 
 **四个 M0 必须实测的点**（不要假设）：
 
-1. **匹配优先级** —— Nitro 的 routeRules 走 radix 匹配并用 `defu` 合并 `matchAll` 结果，理论上 `/api/langgraph/**` 比 `/api/**` 更具体因而胜出。但这是本方案的命门（前缀语义反了会静默把 SSE 打到错误路径），M0 要用真实请求确认，而不是靠推断。
+1. **前缀语义** —— catch-all 必须先识别 `/api/langgraph/**` 并 rewrite 为 Gateway `/api/**`，普通 `/api/**` 原样透传。M0 要用两类真实 preview 请求确认，而不是靠源码推断。
 2. **SSE 是否被缓冲** —— nginx 侧靠 `proxy_buffering off` 保证首字节即时到达。M0 用一个真实 run 确认 token 是逐条到达而不是攒到最后。现成脚本：`git show 44309ae7:frontend-vue/scripts/p0-nitro-proxy-sse.mjs`（它自起假 SSE upstream + Nuxt 断言帧到达；**但它跑的是 `nuxt dev`，要改成 `build && preview`**，并补一段 `\r\n\r\n` 分隔的用例，顺手把 [L1](05-invariants.md#l-自研-sse-transport-的补强项) 一起验了）。
 3. **`sendStream` / `streamRequest` 的有无差异** —— 带与不带各跑一遍，确认 (a) SSE 逐帧到达 (b) 20 MB 上传不整个进内存。
 4. **WebSocket 最终路径**（[G0-6](06-migration-plan.md#m0-的十道-gate)）——先测 routeRules；不支持 Upgrade 时必须落实已选的 Nuxt handler、Gateway origin 白名单或 nginx 入口，并用真实浏览器 Origin 验证。

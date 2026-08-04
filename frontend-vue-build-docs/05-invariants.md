@@ -155,6 +155,13 @@ M-1 对这些不变式所依赖的 wire/status/auth 合同已经冻结在 [09-m1
 | H7 | 上下文窗口控件**故意常驻**：`context_usage` 不可用时渲染仪表占位而不是卸载 | — |
 | H8 | `useThreadTokenUsage` 只在响应的 `thread_id` 仍匹配当前路由时保留占位数据 | 同 thread 刷新不闪烁，跨 thread 导航永不显示上一个会话的用量 |
 
+**M0 spike 结论（2026-08-04）**：H1/H2/H6 可行，不换库。真实
+`splitpanes@4.1.2` + Chromium 测试确认一个 group 可承载主 pane 与三个右侧
+pane；响应式 `:size` 能把三者从正值收至 `0` 并恢复；`resize` 在拖拽的
+requestAnimationFrame 中发出，而 `resized` 只在 pointer release 后发出。
+测试因此必须等待响应式 flush/rAF，不能在 click/mousemove 返回的同一 tick
+读取状态。M7 仍需实现 H3/H4/H5 与业务状态镜像，但无需自研 splitter。
+
 ---
 
 ## I. Browser view

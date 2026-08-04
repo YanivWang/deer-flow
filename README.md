@@ -345,6 +345,23 @@ On Windows, run the local development flow from Git Bash. Native `cmd.exe` and P
 
 6. **Access**: http://localhost:2026
 
+The experimental Vue/Nuxt frontend lives in `frontend-vue/` and remains
+milestone-gated. The existing command above is unchanged and still starts the
+React frontend. For M0 development, use one of the explicit alternatives:
+
+```bash
+make dev-vue   # Gateway :8001 + Vue :3100
+make dev-dual  # Gateway :8001 + React :3000 + Vue :3100
+make stop      # stops either mode, including the Vue process
+```
+
+`dev-dual` exposes both framework development ports directly. A production
+dual-host nginx/compose profile is intentionally deferred to M7; the existing
+React nginx entry at `http://localhost:2026` is not presented as dual ingress.
+See [`frontend-vue/README.md`](frontend-vue/README.md) for module commands and
+[`frontend-vue-build-docs/evidence/m0-verification.md`](frontend-vue-build-docs/evidence/m0-verification.md)
+for the current gate status.
+
 #### Startup Modes
 
 DeerFlow runs the agent runtime inside the Gateway API. Development mode enables hot-reload; production mode uses a pre-built frontend.

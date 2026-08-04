@@ -9,7 +9,9 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_PROJECT = "frontend"
+ALLOWED_PROJECTS = ("frontend", "frontend-vue")
 COREPACK_NOTICE = "Using pnpm via Corepack."
 
 
@@ -31,8 +33,38 @@ def find_pnpm_command() -> list[str] | None:
     return None
 
 
-def run_pnpm(arguments: Sequence[str]) -> int:
+def resolve_project_directory(project: str, repo_root: Path = REPO_ROOT) -> Path:
+    """Resolve a validated, allowlisted pnpm project directory."""
+    requested_path = Path(project)
+    if requested_path.is_absolute():
+        raise ValueError("--dir must not be an absolute path")
+    if ".." in requested_path.parts:
+        raise ValueError("--dir must not contain '..' path traversal")
+    if project not in ALLOWED_PROJECTS:
+        raise ValueError("--dir must be frontend or frontend-vue")
+
+    project_dir = repo_root / project
+    if not project_dir.is_dir():
+        raise ValueError(f"project directory does not exist: {project_dir}")
+    if not (project_dir / "package.json").is_file():
+        raise ValueError(f"project directory has no package.json: {project_dir}")
+    return project_dir
+
+
+def parse_runner_arguments(arguments: Sequence[str]) -> tuple[str, list[str]]:
+    """Remove the runner-only leading --dir option from pnpm arguments."""
+    forwarded = list(arguments)
+    if not forwarded or forwarded[0] != "--dir":
+        return DEFAULT_PROJECT, forwarded
+    if len(forwarded) < 2:
+        raise ValueError("--dir requires a value")
+    return forwarded[1], forwarded[2:]
+
+
+def run_pnpm(arguments: Sequence[str], project_dir: Path | None = None) -> int:
     """Run pnpm with the supplied arguments and propagate its exit status."""
+    if project_dir is None:
+        project_dir = resolve_project_directory(DEFAULT_PROJECT)
     command = find_pnpm_command()
     if command is None:
         print(
@@ -53,7 +85,7 @@ def run_pnpm(arguments: Sequence[str]) -> int:
             [*command, *arguments],
             check=False,
             shell=False,
-            cwd=FRONTEND_DIR,
+            cwd=project_dir,
         )
     except OSError as exc:
         print(f"Error: Failed to run pnpm via {command[0]}: {exc}", file=sys.stderr)
@@ -69,7 +101,14 @@ def run_pnpm(arguments: Sequence[str]) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    return run_pnpm(sys.argv[1:] if argv is None else argv)
+    arguments = sys.argv[1:] if argv is None else argv
+    try:
+        project, forwarded = parse_runner_arguments(arguments)
+        project_dir = resolve_project_directory(project)
+    except ValueError as exc:
+        print(f"Error: {exc}.", file=sys.stderr)
+        return 2
+    return run_pnpm(forwarded, project_dir)
 
 
 if __name__ == "__main__":

@@ -3,12 +3,14 @@
 # serve.sh — Unified DeerFlow service launcher
 #
 # Usage:
-#   ./scripts/serve.sh [--dev|--prod] [--daemon] [--stop|--restart]
+#   ./scripts/serve.sh [--dev|--prod] [--vue|--dual] [--daemon] [--stop|--restart]
 #
 # Modes:
 #   --dev       Development mode with hot-reload (default)
 #   --prod      Production mode, pre-built frontend, no hot-reload
 #   --daemon    Run all services in background (nohup), exit after startup
+#   --vue       Start Gateway + Vue frontend; omit the React-only nginx entry
+#   --dual      Start both frontends directly; dual-host nginx remains M7 scope
 #
 # Actions:
 #   --skip-install  Skip dependency installation (faster restart)
@@ -53,6 +55,7 @@ _pick_python() {
 DEV_MODE=true
 DAEMON_MODE=false
 SKIP_INSTALL=false
+FRONTEND_MODE="react"
 ACTION="start"   # start | stop | restart
 
 for arg in "$@"; do
@@ -60,12 +63,14 @@ for arg in "$@"; do
         --dev)     DEV_MODE=true ;;
         --prod)    DEV_MODE=false ;;
         --daemon)  DAEMON_MODE=true ;;
+        --vue)     FRONTEND_MODE="vue" ;;
+        --dual)    FRONTEND_MODE="dual" ;;
         --skip-install) SKIP_INSTALL=true ;;
         --stop)    ACTION="stop" ;;
         --restart) ACTION="restart" ;;
         *)
             echo "Unknown argument: $arg"
-            echo "Usage: $0 [--dev|--prod] [--daemon] [--skip-install] [--stop|--restart]"
+            echo "Usage: $0 [--dev|--prod] [--vue|--dual] [--daemon] [--skip-install] [--stop|--restart]"
             exit 1
             ;;
     esac
@@ -74,7 +79,7 @@ done
 # ── Stop helper ──────────────────────────────────────────────────────────────
 
 # Every deer-flow worktree (the main checkout + each linked worktree) hardcodes
-# the same dev ports (8001/3000/2026), so a service started from ANY of them
+# the same dev ports (8001/3000/3100/2026), so a service started from ANY of them
 # must be reclaimable from here — otherwise `make stop`/`make dev` in this
 # worktree can neither kill nor take over a port held by a sibling worktree.
 # DEERFLOW_ROOTS is that set of roots; processes living outside all of them
@@ -119,7 +124,7 @@ _is_deerflow_pid() {
 # (or starting, which stops first) isn't silently killing someone else's run.
 _report_reclaimed_ports() {
     local port pid files root owner
-    for port in 8001 3000 2026; do
+    for port in 8001 3000 3100 2026; do
         for pid in $(lsof -nP -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null); do
             _is_deerflow_pid "$pid" || continue
             files=$(lsof -b -w -p "$pid" 2>/dev/null)
@@ -254,6 +259,9 @@ stop_all() {
     _kill_repo_processes "next dev"
     _kill_repo_processes "next start"
     _kill_repo_processes "next-server"
+    _kill_repo_processes "nuxt dev"
+    _kill_repo_processes "nuxt preview"
+    _kill_repo_processes "frontend-vue/.output/server/index.mjs"
     nginx -c "$REPO_ROOT/docker/nginx/nginx.local.conf" -p "$REPO_ROOT" -s quit 2>/dev/null || true
     sleep 1
     _kill_repo_nginx
@@ -263,6 +271,7 @@ stop_all() {
     # nginx port preflight.
     _kill_repo_port 8001
     _kill_repo_port 3000
+    _kill_repo_port 3100
     _kill_repo_port 2026
     ./scripts/cleanup-containers.sh deer-flow-sandbox 2>/dev/null || true
     echo "✓ All services stopped"
@@ -302,11 +311,13 @@ fi
 DEERFLOW_PNPM_RUNNER="$REPO_ROOT/scripts/pnpm.py"
 export DEERFLOW_PNPM_PYTHON DEERFLOW_PNPM_RUNNER
 
-# Frontend command
+# Frontend commands. The default deliberately remains React.
 if $DEV_MODE; then
-    FRONTEND_CMD='"$DEERFLOW_PNPM_PYTHON" "$DEERFLOW_PNPM_RUNNER" run dev'
+    REACT_FRONTEND_CMD='"$DEERFLOW_PNPM_PYTHON" "$DEERFLOW_PNPM_RUNNER" run dev'
+    VUE_FRONTEND_CMD='"$DEERFLOW_PNPM_PYTHON" "$DEERFLOW_PNPM_RUNNER" --dir frontend-vue exec nuxt dev --port 3100'
 else
-    FRONTEND_CMD="env BETTER_AUTH_SECRET=$($DEERFLOW_PNPM_PYTHON -c 'import secrets; print(secrets.token_hex(16))') \"\$DEERFLOW_PNPM_PYTHON\" \"\$DEERFLOW_PNPM_RUNNER\" run preview"
+    REACT_FRONTEND_CMD="env BETTER_AUTH_SECRET=$($DEERFLOW_PNPM_PYTHON -c 'import secrets; print(secrets.token_hex(16))') \"\$DEERFLOW_PNPM_PYTHON\" \"\$DEERFLOW_PNPM_RUNNER\" run preview"
+    VUE_FRONTEND_CMD='"$DEERFLOW_PNPM_PYTHON" "$DEERFLOW_PNPM_RUNNER" --dir frontend-vue exec nuxt build && PORT=3100 HOST=127.0.0.1 "$DEERFLOW_PNPM_PYTHON" "$DEERFLOW_PNPM_RUNNER" --dir frontend-vue exec nuxt preview'
 fi
 
 # Runtime path defaults. Local `make dev` launches Gateway from `backend/`,
@@ -392,6 +403,9 @@ if ! $SKIP_INSTALL; then
     # Intentionally unquoted to splat multiple `--extra X` pairs.
     (cd backend && uv sync --quiet --all-packages $UV_EXTRAS_FLAGS) || { echo "✗ Backend dependency install failed"; exit 1; }
     (cd frontend && "$DEERFLOW_PNPM_PYTHON" "$DEERFLOW_PNPM_RUNNER" install --silent) || { echo "✗ Frontend dependency install failed"; exit 1; }
+    if [ "$FRONTEND_MODE" = "vue" ] || [ "$FRONTEND_MODE" = "dual" ]; then
+        "$DEERFLOW_PNPM_PYTHON" "$DEERFLOW_PNPM_RUNNER" --dir frontend-vue install --silent || { echo "✗ Vue frontend dependency install failed"; exit 1; }
+    fi
     echo "✓ Dependencies synced"
 else
     echo "⏩ Skipping dependency install (--skip-install)"
@@ -408,8 +422,15 @@ echo "  Mode: $MODE_LABEL"
 echo ""
 echo "  Services:"
 echo "    Gateway     → localhost:8001  (REST API + agent runtime)"
-echo "    Frontend    → localhost:3000  (Next.js)"
-echo "    Nginx       → localhost:2026  (reverse proxy)"
+if [ "$FRONTEND_MODE" = "react" ] || [ "$FRONTEND_MODE" = "dual" ]; then
+    echo "    React       → localhost:3000  (Next.js)"
+fi
+if [ "$FRONTEND_MODE" = "vue" ] || [ "$FRONTEND_MODE" = "dual" ]; then
+    echo "    Vue         → localhost:3100  (Nuxt)"
+fi
+if [ "$FRONTEND_MODE" = "react" ]; then
+    echo "    Nginx       → localhost:2026  (existing React reverse proxy)"
+fi
 echo ""
 
 # ── Cleanup handler ──────────────────────────────────────────────────────────
@@ -467,15 +488,26 @@ run_service "Gateway" \
     "cd backend && PYTHONPATH=. uv run uvicorn app.gateway.app:app --host 0.0.0.0 --port 8001 $GATEWAY_EXTRA_FLAGS > ../logs/gateway.log 2>&1" \
     8001 30
 
-# 2. Frontend
-run_service "Frontend" \
-    "cd frontend && $FRONTEND_CMD > ../logs/frontend.log 2>&1" \
-    3000 120
+# 2. Explicit frontend selection.
+if [ "$FRONTEND_MODE" = "react" ] || [ "$FRONTEND_MODE" = "dual" ]; then
+    run_service "React Frontend" \
+        "cd frontend && $REACT_FRONTEND_CMD > ../logs/frontend.log 2>&1" \
+        3000 120
+fi
 
-# 3. Nginx
-run_service "Nginx" \
-    "nginx -g 'daemon off;' -c '$REPO_ROOT/docker/nginx/nginx.local.conf' -p '$REPO_ROOT' > logs/nginx.log 2>&1" \
-    2026 10
+if [ "$FRONTEND_MODE" = "vue" ] || [ "$FRONTEND_MODE" = "dual" ]; then
+    run_service "Vue Frontend" \
+        "cd frontend-vue && $VUE_FRONTEND_CMD > ../logs/frontend-vue.log 2>&1" \
+        3100 180
+fi
+
+# 3. The current nginx config remains React-only until M7. Dual mode exposes
+# both framework dev ports directly and must not pretend to provide dual ingress.
+if [ "$FRONTEND_MODE" = "react" ]; then
+    run_service "Nginx" \
+        "nginx -g 'daemon off;' -c '$REPO_ROOT/docker/nginx/nginx.local.conf' -p '$REPO_ROOT' > logs/nginx.log 2>&1" \
+        2026 10
+fi
 
 # ── Ready ────────────────────────────────────────────────────────────────────
 
@@ -484,13 +516,23 @@ echo "=========================================="
 echo "  ✓ DeerFlow is running!  [$MODE_LABEL]"
 echo "=========================================="
 echo ""
-echo "  🌐 http://localhost:2026"
+if [ "$FRONTEND_MODE" = "vue" ]; then
+    echo "  🌐 http://localhost:3100"
+elif [ "$FRONTEND_MODE" = "dual" ]; then
+    echo "  🌐 React http://localhost:3000 · Vue http://localhost:3100"
+else
+    echo "  🌐 http://localhost:2026"
+fi
 echo ""
-echo "  Routing: Frontend → Nginx → Gateway"
+if [ "$FRONTEND_MODE" = "react" ]; then
+    echo "  Routing: Frontend → Nginx → Gateway"
+else
+    echo "  Routing: Frontend development servers → Gateway"
+fi
 echo "  API:     /api/langgraph/*  →  Gateway agent runtime"
 echo "           /api/*              →  Gateway REST API (8001)"
 echo ""
-echo "  📋 Logs: logs/{gateway,frontend,nginx}.log"
+echo "  📋 Logs: logs/{gateway,frontend,frontend-vue,nginx}.log (as applicable)"
 echo ""
 
 if $DAEMON_MODE; then

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -9,6 +10,16 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PNPM_SCRIPT = REPO_ROOT / "scripts" / "pnpm.py"
 FRONTEND_DIR = REPO_ROOT / "frontend"
+FRONTEND_VUE_DIR = REPO_ROOT / "frontend-vue"
+
+
+def _load_pnpm_module():
+    spec = importlib.util.spec_from_file_location("deerflow_pnpm_runner", PNPM_SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _write_fake_command(bin_dir: Path, name: str, label: str, exit_code: int = 0) -> Path:
@@ -85,6 +96,133 @@ def test_runner_uses_frontend_directory_when_called_from_repo_root(tmp_path: Pat
     assert result.stdout.strip() == f"corepack|{FRONTEND_DIR}|pnpm --version"
 
 
+def test_runner_uses_frontend_directory_when_called_from_unrelated_directory(
+    tmp_path: Path,
+):
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    unrelated_dir = tmp_path / "unrelated"
+    unrelated_dir.mkdir()
+    _write_fake_command(bin_dir, "pnpm", "direct")
+
+    result = _run_pnpm(bin_dir, "--version", cwd=unrelated_dir)
+
+    assert result.returncode == 0
+    assert result.stdout.strip() == f"direct|{FRONTEND_DIR}|--version"
+
+
+def test_runner_strips_explicit_frontend_directory_and_forwards_remaining_arguments(
+    tmp_path: Path,
+):
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    _write_fake_command(bin_dir, "pnpm", "direct")
+
+    result = _run_pnpm(
+        bin_dir,
+        "--dir",
+        "frontend",
+        "run",
+        "dev",
+        "--host",
+        "127.0.0.1",
+        cwd=REPO_ROOT,
+    )
+
+    assert result.returncode == 0
+    assert result.stdout.strip() == f"direct|{FRONTEND_DIR}|run dev --host 127.0.0.1"
+
+
+def test_runner_resolves_frontend_vue_from_whitelist(tmp_path: Path):
+    module = _load_pnpm_module()
+    repo_root = tmp_path / "repo"
+    project_dir = repo_root / "frontend-vue"
+    project_dir.mkdir(parents=True)
+    (project_dir / "package.json").write_text("{}\n", encoding="utf-8")
+
+    assert module.resolve_project_directory("frontend-vue", repo_root) == project_dir
+
+
+def test_runner_rejects_absolute_directory(tmp_path: Path):
+    module = _load_pnpm_module()
+
+    try:
+        module.resolve_project_directory(str(tmp_path.resolve()), REPO_ROOT)
+    except ValueError as exc:
+        assert "absolute" in str(exc).lower()
+    else:
+        raise AssertionError("absolute project directory was accepted")
+
+
+def test_runner_rejects_parent_directory_traversal():
+    module = _load_pnpm_module()
+
+    try:
+        module.resolve_project_directory("../frontend", REPO_ROOT)
+    except ValueError as exc:
+        assert ".." in str(exc)
+    else:
+        raise AssertionError("parent path traversal was accepted")
+
+
+def test_runner_rejects_directory_outside_allowlist():
+    module = _load_pnpm_module()
+
+    try:
+        module.resolve_project_directory("backend", REPO_ROOT)
+    except ValueError as exc:
+        assert "frontend or frontend-vue" in str(exc)
+    else:
+        raise AssertionError("directory outside allowlist was accepted")
+
+
+def test_runner_rejects_missing_allowed_directory(tmp_path: Path):
+    module = _load_pnpm_module()
+
+    try:
+        module.resolve_project_directory("frontend-vue", tmp_path)
+    except ValueError as exc:
+        assert "does not exist" in str(exc)
+    else:
+        raise AssertionError("missing project directory was accepted")
+
+
+def test_runner_rejects_allowed_directory_without_package_json(tmp_path: Path):
+    module = _load_pnpm_module()
+    (tmp_path / "frontend-vue").mkdir()
+
+    try:
+        module.resolve_project_directory("frontend-vue", tmp_path)
+    except ValueError as exc:
+        assert "package.json" in str(exc)
+    else:
+        raise AssertionError("project directory without package.json was accepted")
+
+
+def test_runner_rejects_missing_dir_value(tmp_path: Path):
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    _write_fake_command(bin_dir, "pnpm", "unused")
+
+    result = _run_pnpm(bin_dir, "--dir", cwd=REPO_ROOT)
+
+    assert result.returncode == 2
+    assert "requires a value" in result.stderr
+
+
+def test_runner_can_select_pnpm_cmd_before_corepack(tmp_path: Path):
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    _write_fake_command(bin_dir, "pnpm.cmd", "direct-cmd")
+    _write_fake_command(bin_dir, "corepack", "corepack")
+
+    result = _run_pnpm(bin_dir, "--version")
+
+    assert result.returncode == 0
+    assert result.stdout.strip() == f"direct-cmd|{FRONTEND_DIR}|--version"
+    assert "via Corepack" not in result.stderr
+
+
 def test_runner_reports_actionable_error_when_pnpm_and_corepack_are_missing(tmp_path: Path):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -120,7 +258,12 @@ def test_official_entrypoints_route_pnpm_through_shared_runner():
     assert "PNPM = $(PYTHON) ../scripts/pnpm.py" in frontend_makefile
     assert '"$DEERFLOW_PNPM_PYTHON" "$DEERFLOW_PNPM_RUNNER" install --silent' in serve_script
     assert 'DEERFLOW_PNPM_RUNNER="$REPO_ROOT/scripts/pnpm.py"' in serve_script
-    assert 'FRONTEND_CMD=\'"$DEERFLOW_PNPM_PYTHON" "$DEERFLOW_PNPM_RUNNER" run dev\'' in serve_script
+    assert 'REACT_FRONTEND_CMD=\'"$DEERFLOW_PNPM_PYTHON" "$DEERFLOW_PNPM_RUNNER" run dev\'' in serve_script
+    assert (
+        'VUE_FRONTEND_CMD=\'"$DEERFLOW_PNPM_PYTHON" "$DEERFLOW_PNPM_RUNNER" '
+        "--dir frontend-vue exec nuxt dev --port 3100'"
+        in serve_script
+    )
     assert '"\\$DEERFLOW_PNPM_RUNNER\\" run preview"' in serve_script
     assert 'Path(__file__).with_name("pnpm.py")' in doctor_script
     assert 'project_root / "scripts" / "pnpm.py"' in support_bundle_script
