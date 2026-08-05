@@ -35,7 +35,6 @@
 | `api/errors.ts` | `COPIED` | `api/errors.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `api/feedback.ts` | `COPIED` | `api/feedback.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `api/fetcher.ts` | `COPIED` | `api/fetcher.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
-| `api/index.ts` | `COPIED` | `api/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `api/stream-mode.ts` | `COPIED` | `api/stream-mode.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `artifacts/api.ts` | `COPIED` | `artifacts/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `artifacts/editing.ts` | `COPIED` | `artifacts/editing.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
@@ -78,7 +77,6 @@
 | `scheduled-tasks/types.ts` | `COPIED` | `scheduled-tasks/types.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `settings/local.ts` | `COPIED` | `settings/local.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `settings/store.ts` | `COPIED` | `settings/store.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
-| `sidecar/api.ts` | `COPIED` | `sidecar/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `sidecar/index.ts` | `COPIED` | `sidecar/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `sidecar/reference-metadata.ts` | `COPIED` | `sidecar/reference-metadata.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `sidecar/reference-state.ts` | `COPIED` | `sidecar/reference-state.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
@@ -118,8 +116,7 @@
 
 <!-- RETYPED:BEGIN 由 `make land-retyped` 生成，勿手改 -->
 
-| `api/api-client.ts` | `RETYPED` | `api/api-client.ts` | 依赖不迁的模块（static-mode.ts、threads/static-demo.ts），该 import 必须删除或改写。 删掉 static demo client 分支（01-scope 已排除静态模式），保留真实 LangGraph client。 |
-| `artifacts/loader.ts` | `RETYPED` | `artifacts/loader.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（type-only：@langchain/langgraph-sdk/react） |
+| `artifacts/loader.ts` | `RETYPED` | `artifacts/loader.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk/react → @/core/types/message） |
 | `artifacts/utils.ts` | `RETYPED` | `artifacts/utils.ts` | 依赖不迁的模块（static-mode.ts），该 import 必须删除或改写。 删掉 isStaticWebsiteOnly 早返回与随之无消费方的 staticDemoArtifactURL。 |
 | `auth/auth-disabled-user.ts` | `RETYPED` | `auth/auth-disabled-user.ts` | 读 process.env；Nuxt 客户端产物没有该全局，改为接收注入的 runtime options。 |
 | `config/index.ts` | `RETYPED` | `config/index.ts` | 改为接收普通 runtime options，纯 core 不调用 useRuntimeConfig()。（@/env → runtime options） |

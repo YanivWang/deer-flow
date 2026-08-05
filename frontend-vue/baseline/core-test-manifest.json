@@ -6,9 +6,9 @@
   "totals": {
     "files": 83,
     "buckets": {
-      "M1_DOM": 11,
+      "M1_DOM": 10,
       "M1": 49,
-      "DEFERRED": 23
+      "DEFERRED": 24
     },
     "rstestApisToPort": [
       "advanceTimersByTimeAsync",
@@ -116,19 +116,19 @@
     },
     {
       "source": "api/api-client.test.ts",
-      "bucket": "M1_DOM",
+      "bucket": "DEFERRED",
       "sha256": "1cfb75810f4498b6778cab4b9e5d0ac250f61e8619e2a599b562c18cbbf4de6a",
       "lines": 675,
       "reasons": [
         {
-          "code": "dom-env",
-          "detail": "使用 DOM 全局但不依赖 React；happy-dom 环境即可运行。"
+          "code": "target-rewrite",
+          "detail": "被测模块 api/api-client.ts 分类为 REWRITE，随该模块一起推迟。"
         }
       ],
       "targets": [
         {
           "source": "api/api-client.ts",
-          "class": "RETYPED"
+          "class": "REWRITE"
         }
       ],
       "codemod": {
@@ -1146,7 +1146,7 @@
         },
         {
           "source": "sidecar/api.ts",
-          "class": "COPIED"
+          "class": "BLOCKED"
         },
         {
           "source": "threads/index.ts",

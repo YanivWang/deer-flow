@@ -5,7 +5,7 @@
   【主要导出】     ARTIFACT_PREVIEW_MAX_BYTES / loadArtifactContent / loadArtifactContentFromToolCall
   【依赖关系】     见下方 import；改写清单由 scripts/land-retyped.mjs 声明
   【边界与注意】   RETYPED：内容**不是**上游逐字节等同，因此不参与 COPIED hash 护城河。
-                   相对上游的改动只有这些：SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（type-only：@langchain/langgraph-sdk/react）
+                   相对上游的改动只有这些：SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk/react → @/core/types/message）
                    勿手改——`make land-retyped-check` 会红；确需手改就登记进
                    land-retyped.mjs 的 HAND_MAINTAINED 并写明理由。
 */

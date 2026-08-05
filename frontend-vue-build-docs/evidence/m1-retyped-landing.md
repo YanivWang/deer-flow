@@ -1,10 +1,14 @@
-# M1 窗口 3：24 个 RETYPED 落地，60 个测试全解锁，typecheck 预算归零
+# M1 窗口 3：23 个 RETYPED 落地，58 个测试解锁，typecheck 预算归零
 
-> 交接单说「32 个 RETYPED」。复核后落地 **24** 个，另外 8 个不属于 M1——
-> 理由见「8 个 barrel：既不是 RETYPED 也不是 COPIED」，这是本窗口第一个结论。
+> 交接单说「32 个 RETYPED」。复核后落地 **23** 个，另外 9 个不属于 M1——
+> 理由见「9 个 BLOCKED：既不是 RETYPED 也不是 COPIED」。
 >
-> 交接单说「需装 @langchain/core 与 date-fns」。两个都**不需要**，
-> 但需要一个交接单没预料到的：`@langchain/langgraph-sdk`。见「装包：换了一个」。
+> 交接单说「需装 @langchain/core 与 date-fns」。**一个包都不装**，见「装包：一个都不装」。
+
+> ⚠️ **本文件先写了一版把 `@langchain/langgraph-sdk` 装进 frontend-vue 的结论，
+> 那是错的，已在同一窗口内推翻并回退。** 保留经过见
+> 「订正：装 SDK 是错的」一节——它是这次窗口里唯一一个查错了文档得出的决定，
+> 值得留着，因为犯法很典型。
 
 ## 复跑命令
 
@@ -18,13 +22,14 @@ make migration-check  # baseline-check + codemod-check + land-retyped-check（�
 
 | 指标                | 上一窗口         | 本窗口                     |
 | ------------------- | ---------------- | -------------------------- |
-| `make verify`       | 28 文件 / 247 用例 | **69 文件 / 643 用例**     |
-| 搬运的 core 测试    | 20（node 13 · dom 7） | **60（node 49 · dom 11）** |
-| 等依赖的测试        | 40               | **0**                      |
+| `make verify`       | 28 文件 / 247 用例 | **67 文件 / 617 用例**     |
+| 搬运的 core 测试    | 20（node 13 · dom 7） | **58（node 48 · dom 10）** |
+| 等依赖的测试        | 40               | **1**（`sidecar/api.test.ts`，等 M2 的自写 client） |
 | typecheck 预算      | 58 条            | **0 条**                   |
-| `app/core/` 磁盘文件 | 86               | **113**                    |
+| `app/core/` 磁盘文件 | 86               | **110**                    |
+| 新装的 npm 包       | —                | **0**                      |
 
-`make e2e-m0` 收工时重跑（本窗口动了 `eslint.config.mjs` 并加了一个运行时依赖）。
+`make e2e-m0` 收工时重跑（本窗口动了 `eslint.config.mjs`）。
 
 重建产物：
 
@@ -32,10 +37,10 @@ make migration-check  # baseline-check + codemod-check + land-retyped-check（�
 make baseline-refresh && make land-copied && make land-retyped && make codemod-tests && make typecheck-refresh
 ```
 
-## 8 个 barrel：既不是 RETYPED 也不是 COPIED
+## 9 个 BLOCKED：既不是 RETYPED 也不是 COPIED
 
 上一窗口给这 8 个留了话：「落地时逐个复核，若确实无需改动可降级回 COPIED」。
-逐个看完，**两头都不对**：
+逐个看完这 8 个 barrel，**两头都不对**：
 
 - 内容确实一个字节都不用改 → 不是 `RETYPED`；
 - 但 7 个 barrel 都写着 `export * from "./hooks"`，而 `*/hooks.ts` 是 `REWRITE` 档、
@@ -79,12 +84,17 @@ make baseline-refresh && make land-copied && make land-retyped && make codemod-t
 （`core-provenance.mjs` 的 `RETYPE_DROPS`，manifest 里产出 `droppedImports` / `landedDeps`），
 闭包改读 `landedDeps`。5 个测试一次性解锁，**测试文件一个字节都没动**。
 
-判据一改，`waiting` 从 5 直接归零：
+判据一改，`artifacts/{api,loader,utils}.test.ts` 3 个直接解锁：
 
 ```
 COPIED         → 20 (node 13 · dom 7) · waiting 40
-COPIED,RETYPED → 60 (node 49 · dom 11) · waiting 0
+COPIED,RETYPED → 58 (node 48 · dom 10) · waiting 1
 ```
+
+另外 2 个（`api/api-client.test.ts`、`sidecar/api.test.ts`）本来也解锁了，
+但随后因为「订正：装 SDK 是错的」把 `api/api-client.ts` 判回 REWRITE 而重新卡住——
+它们等的不再是 static-mode，而是 M2 的自写 client。前者的被测对象成了 REWRITE 档，
+测试台账自动把它归入 `DEFERRED`；后者留在 `waiting`。
 
 代价是这份声明必须与实际改写一致。两头都有门禁兜住：声明的 import 在基线上解析不到
 → `baseline-check` 报「声明已过期」；声明了却没删掉 → `land-retyped` 的残留检查报错。
@@ -157,31 +167,72 @@ SDK 的 `MessageContentComplex` 是 `text | image_url` 闭合联合。**照 08 �
 **TS 只给类型别名隐式 index signature，不给 interface**。SDK 那边写的就是 `type` 交叉，
 改回去才对。这条钉在 `message.ts` 的注释里。
 
-## 装包：换了一个
+## 装包：一个都不装
 
-| 包                         | 交接单 | 实际           | 为什么 |
-| -------------------------- | ------ | -------------- | ------ |
-| `@langchain/core`          | 要装   | **不装**       | 只为一个 `ToolCall` 类型。06 §M1 1b 本来就把它列在「改指向 `@/core/types/message`」的 8 个符号里。而且它是 SDK 的 optional peer，没被 link 进 `node_modules/@langchain/`，装了才有 |
-| `date-fns`                 | 要装   | **不装**       | 只有 `utils/datetime.ts` 用，而它是 `BLOCKED`，M4 才落地 |
-| `@langchain/langgraph-sdk` | 没提   | **装了 1.6.0** | `api/api-client.ts` 里 `import { Client }` 是**值导入**，不是类型——任何 retype 都去不掉它 |
+| 包                         | 交接单 | 实际         | 为什么 |
+| -------------------------- | ------ | ------------ | ------ |
+| `@langchain/core`          | 要装   | **不装**     | 只为一个 `ToolCall` 类型。06 §M1 1b 本来就把它列在「改指向 `@/core/types/message`」的 8 个符号里 |
+| `date-fns`                 | 要装   | **不装**     | 只有 `utils/datetime.ts` 用，而它是 `BLOCKED`，M4 才落地 |
+| `@langchain/langgraph-sdk` | 没提   | **不装**     | 02 §372 逐字写了「不必装进项目」。它的值导入者 `api/api-client.ts` 因此不是 M1 的活——见下节 |
 
-SDK 这个决定值得展开，因为 M2 要把它删掉：
+`frontend-vue/package.json` 的依赖列表本窗口**净变化为零**。
 
-- 分类规则原本对 `@langchain/langgraph-sdk` 一律重定向。这对 15 个 type-only 的文件是对的，
-  对 api-client 是错的——换成自写类型就没有 `new Client()` 可用了。
-  规则加了 `typeOnly: true`，值导入落回「装包」这条路。
-- 装它的依据是 08「删除 SDK 的条件：raw trace 差分、session 状态机测试和 real Gateway smoke
-  全部通过」——那是 M2 的门槛，M1 期间 SDK 作为开发期 oracle 是被允许的。
-- 版本**钉死 1.6.0**（`package.json` 里不带 caret），与 `frontend` 实装的一致。
-  `pnpm add @langchain/langgraph-sdk@^1.6.0` 会解析到 1.9.28，跨 3 个 minor；
-  M1 的前提是行为保真，同时换 SDK 版本会让任何测试失败都说不清是谁的锅。
-- 实测没有拉进 React（它是 optional peer），`node_modules/react` 不存在。
+## 订正：装 SDK 是错的
+
+本窗口一度把 `@langchain/langgraph-sdk@1.6.0` 装进了 frontend-vue，理由写得很像样：
+`api/api-client.ts` 里的 `import { Client }` 是值导入，任何 retype 都去不掉；
+08 §351 写着「LangGraph SDK 可以作为开发期 oracle」，还给了删除条件。
+
+**这个理由是查错了文档得出的。** 依赖决策不在 08（那是 agent-core 合同），在 02/04：
+
+| 出处 | 原文 |
+| --- | --- |
+| 02 §106 | `@langchain/langgraph-sdk`｜4.7 MB｜`Client` 的 7 个方法 / 10 个调用点 + 类型｜**❌ 移除** |
+| 02 §249 | `@langchain/langgraph-sdk/client` → **移除** → 自写 `core/api/client.ts`（~180 行） |
+| 02 §372 | 「…**不必装进项目**」 |
+| 03 §100 | `api/` ← **改写**：不再依赖 LangChain SDK |
+
+08 说的「保留为开发期 oracle/fallback」指的是继续跑着的 `frontend/`（07 的并行运行），
+以及 M2 那个**一次性 worktree** 里的兼容探针（06 §358、08 §68）——
+都不是往 frontend-vue 的 `package.json` 里加一行。
+
+正确结论：`api/api-client.ts` 的处置在计划里早就写好了——**自写 `core/api/client.ts`，
+属于 M2**，不是 M1 的 retype。分类规则相应改成 `REMOVED_DEPS`：
+这两个包的 type-only 导入 → `RETYPED`（重定向到自写类型），
+**值导入 → `REWRITE`**（没有包可装，只能自写替代物）。
+
+回退代价实测（这也是当初该先算的数）：
+
+```
+api/api-client.ts   RETYPED → REWRITE
+api/index.ts        COPIED  → BLOCKED   （re-export 了 api-client）
+sidecar/api.ts      COPIED  → BLOCKED   （import 了 api/index）
+可搬测试            60 → 58
+api/api-client.test.ts  → DEFERRED（被测对象成了 REWRITE）
+sidecar/api.test.ts     → waiting（等 M2 的自写 client）
+```
+
+### 顺带暴露的两个真缺陷
+
+**1. `BLOCKED` 的传播只做了一轮，不是不动点。**
+`api/index.ts` 因为 re-export `api-client.ts`（REWRITE）而 BLOCKED，
+但 `sidecar/api.ts` 的阻塞源头是 `api/index.ts`——它是 **BLOCKED 而不是 REWRITE**，
+单轮扫描看不见，`sidecar/api.ts` 会被留在 COPIED 并落地成一个悬空 import。
+改成对 `{REWRITE, BLOCKED}` 求不动点。原来那 8 个 barrel 恰好都只有一跳，
+所以这个 bug 在回退之前不会显形。
+
+**2. 两个 `land-*` 脚本只写不删。**
+分类变化会让文件降级出落地档（这次是 3 个），旧文件留在磁盘上变成幽灵：
+已经不在台账里，却还能被 import 到。`core-provenance.test.ts` 能报出来
+（「磁盘上的每个文件都已登记」），但让人手动 `rm` 不如脚本扫掉——
+`land-copied.mjs` 现在开工前先清理非落地档的残留。
+这条正好补上了上一窗口留的第 6 条红项（「land-copied 没有 --check 模式」）的一半。
 
 ## 严格度差异：`frontend` 关了 `noImplicitAny`
 
 落地后 vue-tsc 报 7 条。**5 条与我们的类型无关**——
 `frontend/tsconfig.json` 显式写了 `"noImplicitAny": false`，
-`frontend-vue` 继承 `strict: true` 因而是 `true`。实测把它关掉，7 条只剩 2 条。
+`frontend-vue` 继承 `strict: true` 因而是 `true`。实测把它关掉，7 条只剩 2 条。（回退 SDK 后 api-client.ts 不再落地，实际只剩 3 条要打补丁。）
 
 上游 `frontend` 自己跑 `tsc --noEmit` 是 **exit 0 / 0 条报错**，所以这不是上游有 bug，
 是两个工作区的门槛不同。
@@ -189,10 +240,11 @@ SDK 这个决定值得展开，因为 M2 要把它删掉：
 没有选择「跟着关掉 `noImplicitAny`」：那是拿全仓永久的检查强度换 5 处一次性的方便。
 改成逐条声明补丁（都是纯类型断言，编译后一个字节不变）：
 
-| 位置                                  | 上游为什么不报                                   |
-| ------------------------------------- | ------------------------------------------------ |
-| `messages/utils.ts` × 3（`fileMatch[n]`） | `let fileMatch;` 是隐式 any，索引访问不受检      |
-| `api/api-client.ts` × 2（SDK 泛型）    | 生成器形参是隐式 any，SDK 两个重载与 `TypedAsyncGenerator` 的泛型都不必解 |
+| 位置                                  | 上游为什么不报                              |
+| ------------------------------------- | ------------------------------------------- |
+| `messages/utils.ts` × 3（`fileMatch[n]`） | `let fileMatch;` 是隐式 any，索引访问不受检 |
+
+> 原本还有 `api/api-client.ts` 的 2 处（SDK 泛型），随该文件判回 REWRITE 一起没了。
 
 > **这条留给后面的窗口：目前没有一个 `COPIED` 文件踩到隐式 any。**
 > 一旦有，就没有「打补丁」这个选项了——`COPIED` 改一个字节 hash 就废。
@@ -242,14 +294,15 @@ SDK 这个决定值得展开，因为 M2 要把它删掉：
 | 文件                                          | 作用                                             |
 | --------------------------------------------- | ------------------------------------------------ |
 | `scripts/land-retyped.mjs`                    | 按声明改写落地 RETYPED + 生成台账行；`--check` 防手改 |
-| `app/core/types/message.ts`                   | 替代 SDK 的 wire 类型，16 个文件指向它           |
+| `app/core/types/message.ts`                   | 替代 SDK 的 wire 类型，15 个落地文件指向它       |
 | `app/core/types/message.contract.ts`          | 联合塌陷的类型层护栏（骑 typecheck 预算门禁）    |
 | `app/core/scheduled-tasks/schedule.ts`        | `ScheduleValue` 搬进 core，纠正依赖方向          |
 | `tests/guards/message-content-contract.test.ts` | 真实夹具双向往返（7 个用例）                   |
 | `tests/fixtures/message-content-shapes.json`  | 从 516 条真实消息抽的 22 + 3 条                  |
 
-`core-provenance.mjs` 新增 `BLOCKED` 档与 `RETYPE_DROPS`；
-`test-selection.mjs` 的闭包改读 `landedDeps`；
+`core-provenance.mjs` 新增 `BLOCKED` 档（对 `{REWRITE, BLOCKED}` 求不动点）、
+`REMOVED_DEPS` 与 `RETYPE_DROPS`；`test-selection.mjs` 的闭包改读 `landedDeps`；
+`land-copied.mjs` 开工前清理降级出落地档的残留文件；
 `Makefile` 的 `LANDED` 改成 `COPIED,RETYPED`，`migration-check` 加上 `land-retyped-check`。
 
 ### 夹具重建
@@ -275,7 +328,7 @@ console.log(total,arrays.length,strings.length);
 
 ## 红的 / 未验证的
 
-1. **`config/index.ts` 的 retype 没有任何测试覆盖。** 60 个测试里有 8 个用到 `@/core/config`，
+1. **`config/index.ts` 的 retype 没有任何测试覆盖。** 58 个测试里有 8 个用到 `@/core/config`，
    但**全部整个 mock 掉它**（`vi.mock("@/core/config", () => ({ getBackendBaseURL: () => "" }))`）。
    注入式 runtime options 这条路径一次都没被执行过。
 2. **`auth/auth-disabled-user.ts` 同样没有覆盖，而且有一处已知行为变更。**
@@ -288,16 +341,18 @@ console.log(total,arrays.length,strings.length);
    与上游 env 未设置时同行为，所以测试不受影响；但真接线之前 `getBackendBaseURL()`
    在浏览器里恒返回 `""`。这属于 M4a 的活，本窗口有意没做（M1 = core 落地，不接线）。
 4. **`tests/**` 完全不过 vue-tsc**（`.nuxt/tsconfig.app.json` 的 include 只有 `../tests/nuxt/`）。
-   60 个迁移测试与所有 guard 测试的类型错误不会被任何门禁发现。本窗口只针对
+   58 个迁移测试与所有 guard 测试的类型错误不会被任何门禁发现。本窗口只针对
    message 契约绕开了（断言挪进 `app/`），**没有普遍解决**。要解决得单独引
    `vitest --typecheck` 或加 tsconfig project，代价没评估。
-5. **`api/api-client.ts` 顶上还留着 `"use client"`。** Next 的指令，在 Vue 侧无意义也无害，
-   属于上游正文，没有声明改写它。
+5. **`api/` 整个目录还没有落点。** `api/api-client.ts` 判回 REWRITE 后，
+   `api/index.ts`、`sidecar/api.ts` 连带 BLOCKED，`sidecar/api.test.ts` 留在 waiting。
+   解锁它们要等 02 §249 说的自写 `core/api/client.ts`（~180 行，7 个 REST 方法
+   + CSRF 头 + 错误规范化），属于 M2。**这是本窗口唯一一个 waiting 的测试。**
 6. **没跑过 `make e2e`（共享业务合同）。** 本窗口仍然只有 core 与其单测，没有页面接线。
    `make e2e-m0` 跑了，证明的是 M0 的地基没被破坏，不是业务行为没退化。
 7. **`land-retyped.mjs` 的补丁是文本锚点，不是 AST。** 上游改一个空格，
    `find` 就命中 0 次并报错——会红而不是悄悄改错，这是有意的取舍，
-   但换基线时这 12 条补丁大概率要逐条重写。
+   但换基线时这 11 条补丁（分布在 5 个文件）大概率要逐条重写。
 8. **`rs.hoisted` 等价性仍未验证**（上一窗口的第 3 条红项原样留着）。
    codemod 仍会拒绝改写用到它的文件，目前只有 DEFERRED 的
    `threads/stream-throttle.test.ts` 用到。

@@ -48,17 +48,11 @@ const END = "<!-- RETYPED:END -->";
 /**
  * specifier 机械重定向。口径必须与 core-provenance.mjs 的 SPECIFIER_REWRITES 一致：
  * 那边决定「这个文件是 RETYPED」，这边决定「具体改成什么」，对不上就会出现
- * 分类说要改、落地却没改的洞。`typeOnly` 的理由见 core-provenance.mjs 同名字段。
+ * 分类说要改、落地却没改的洞。哪些包不装、值导入怎么处理，见 core-provenance.mjs 的 REMOVED_DEPS。
  */
 const IMPORT_REWRITES = [
   {
-    match: /^@langchain\/langgraph-sdk(\/.*)?$/,
-    typeOnly: true,
-    to: "@/core/types/message",
-  },
-  {
-    match: /^@langchain\/core(\/.*)?$/,
-    typeOnly: true,
+    match: /^@langchain\/(langgraph-sdk|core)(\/.*)?$/,
     to: "@/core/types/message",
   },
   { match: /^lucide-react$/, to: "lucide-vue-next" },
@@ -128,49 +122,6 @@ export async function loadModels(): Promise<ModelsResponse> {
   const res`,
     },
   ],
-  "api/api-client.ts": [
-    {
-      why: "createCompatibleClient 里的 static 分支；真实 client 路径原样保留。",
-      find: `  if (isStaticWebsiteOnly() && !isMock) {
-    return createStaticClient();
-  }
-`,
-      replace: "",
-    },
-    {
-      why: "createStaticClient 整个函数随 static-demo 一起删，它是 loadStaticDemoThread* 的唯一消费方。",
-      find: `function createStaticClient(): LangGraphClient {`,
-      replace: "__DROP_FUNCTION__",
-    },
-    {
-      why: [
-        "严格度差异（见文件头 noImplicitAny 一节）：上游把这个生成器的形参交给隐式 any，",
-        "于是 SDK 那两个重载（threadId: null | string）与 TypedAsyncGenerator 的泛型都不必解。",
-        "frontend-vue 是 strict 的，两处必须显式收敛。这段本身是 SDK glue，M2 会整体换掉。",
-        "threadId 走的是有 thread 的那个重载——createCompatibleClient 只在有 thread 时被调。",
-      ].join(" "),
-      find: `    const initialStream = originalRunStream(threadId, assistantId, {`,
-      replace: `    const initialStream = originalRunStream(threadId as string, assistantId, {`,
-    },
-    {
-      why: "同上：SDK 的 TypedAsyncGenerator 与本文件自定义的 StreamPart 只是结构对不齐，运行时同一个对象。",
-      find: `      expectedRunId: () => runId,
-      initialStream,`,
-      replace: `      expectedRunId: () => runId,
-      initialStream: initialStream as AsyncIterable<StreamPart>,`,
-    },
-    {
-      why: [
-        "createStaticClient 是 AgentThreadState 的唯一使用点（`client as LangGraphClient<AgentThreadState>`），",
-        "函数删掉后这条 import 就是死的，eslint no-unused-vars 会红。",
-        "它属于删分支的连带后果，所以跟着一起声明。",
-      ].join(" "),
-      find: `import type { AgentThreadState } from "../threads/types";
-`,
-      replace: "",
-    },
-  ],
-
   // --- runtime options（06 §M1 1a、08 §Runtime config 与认证边界） ---
   "config/index.ts": [
     {
@@ -319,22 +270,8 @@ const HEADERS = {
 // 改写
 // ---------------------------------------------------------------------------
 
-function findRewrite(specifier, typeOnly) {
-  return IMPORT_REWRITES.find(
-    (rule) => rule.match.test(specifier) && (!rule.typeOnly || typeOnly),
-  );
-}
-
-function importIsTypeOnly(clause) {
-  if (!clause) return false;
-  if (clause.isTypeOnly) return true;
-  if (clause.name) return false;
-  const bindings = clause.namedBindings;
-  if (!bindings || !ts.isNamedImports(bindings)) return false;
-  return (
-    bindings.elements.length > 0 &&
-    bindings.elements.every((element) => element.isTypeOnly)
-  );
+function findRewrite(specifier) {
+  return IMPORT_REWRITES.find((rule) => rule.match.test(specifier));
 }
 
 /** 收集 import 改写与整条删除的字节区间。 */
@@ -365,10 +302,7 @@ function collectImportEdits(sourceFile, dropped) {
       continue;
     }
 
-    const rule = findRewrite(
-      specifier,
-      importIsTypeOnly(statement.importClause),
-    );
+    const rule = findRewrite(specifier);
     if (!rule) continue;
     rewritten.add(specifier);
 

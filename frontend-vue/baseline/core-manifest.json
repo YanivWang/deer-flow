@@ -5,17 +5,17 @@
   "totals": {
     "files": 149,
     "counts": {
-      "COPIED": 85,
-      "REWRITE": 28,
-      "BLOCKED": 8,
-      "RETYPED": 24,
+      "COPIED": 83,
+      "REWRITE": 29,
+      "BLOCKED": 10,
+      "RETYPED": 23,
       "DROPPED": 4
     },
     "lines": {
-      "COPIED": 6301,
-      "REWRITE": 5444,
-      "BLOCKED": 61,
-      "RETYPED": 7573,
+      "COPIED": 6200,
+      "REWRITE": 5915,
+      "BLOCKED": 162,
+      "RETYPED": 7102,
       "DROPPED": 586
     }
   },
@@ -86,7 +86,7 @@
       "reasons": [
         {
           "code": "blocked-rewrite-dep",
-          "detail": "内容零改动，但 import 的 agents/hooks.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
+          "detail": "内容零改动，但 import 的 agents/hooks.ts 当前落不了（REWRITE 或同样 BLOCKED），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -116,17 +116,13 @@
     },
     {
       "source": "api/api-client.ts",
-      "class": "RETYPED",
+      "class": "REWRITE",
       "sha256": "9a05cec2b7337eb20216797f50641776ea343aa5c693233f4b3003424a1b8eb4",
       "lines": 471,
       "reasons": [
         {
-          "code": "retype-dropped-dep",
-          "detail": "依赖不迁的模块（static-mode.ts、threads/static-demo.ts），该 import 必须删除或改写。"
-        },
-        {
-          "code": "retype-drop-import",
-          "detail": "删掉 static demo client 分支（01-scope 已排除静态模式），保留真实 LangGraph client。"
+          "code": "removed-dep-runtime",
+          "detail": "值导入 \"@langchain/langgraph-sdk/client\"：该包明确不装进 frontend-vue（02 §372「不必装进项目」），没有可装的替代，只能自写（02 §249：core/api/client.ts，~180 行）。"
         }
       ],
       "needsDeps": [],
@@ -141,16 +137,6 @@
       "blockedBy": [
         "static-mode.ts",
         "threads/static-demo.ts"
-      ],
-      "droppedImports": [
-        "../static-mode",
-        "../threads/static-demo"
-      ],
-      "landedDeps": [
-        "api/fetcher.ts",
-        "api/stream-mode.ts",
-        "config/index.ts",
-        "threads/types.ts"
       ]
     },
     {
@@ -205,20 +191,22 @@
     },
     {
       "source": "api/index.ts",
-      "class": "COPIED",
+      "class": "BLOCKED",
       "sha256": "27e39a48a68b4b3d4ab7259839cc27149dc6ebdceaa0206fc83a77749ebdfef7",
       "lines": 1,
       "reasons": [
         {
-          "code": "portable",
-          "detail": "所有 import 在 frontend-vue 中同形可解析，零改动复制。"
+          "code": "blocked-rewrite-dep",
+          "detail": "内容零改动，但 import 的 api/api-client.ts 当前落不了（REWRITE 或同样 BLOCKED），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
       "internalDeps": [
         "api/api-client.ts"
       ],
-      "blockedBy": []
+      "blockedBy": [
+        "api/api-client.ts"
+      ]
     },
     {
       "source": "api/stream-mode.ts",
@@ -320,7 +308,7 @@
       "reasons": [
         {
           "code": "retype-langgraph-sdk",
-          "detail": "SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（type-only：@langchain/langgraph-sdk/react）"
+          "detail": "SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk/react → @/core/types/message）"
         }
       ],
       "needsDeps": [],
@@ -800,7 +788,7 @@
       "reasons": [
         {
           "code": "blocked-rewrite-dep",
-          "detail": "内容零改动，但 import 的 features/hooks.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
+          "detail": "内容零改动，但 import 的 features/hooks.ts 当前落不了（REWRITE 或同样 BLOCKED），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -1096,7 +1084,7 @@
       "reasons": [
         {
           "code": "blocked-rewrite-dep",
-          "detail": "内容零改动，但 import 的 integrations/lark/hooks.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
+          "detail": "内容零改动，但 import 的 integrations/lark/hooks.ts 当前落不了（REWRITE 或同样 BLOCKED），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -1481,7 +1469,9 @@
       "internalDeps": [
         "settings/index.ts"
       ],
-      "blockedBy": []
+      "blockedBy": [
+        "settings/index.ts"
+      ]
     },
     {
       "source": "scheduled-tasks/api.ts",
@@ -1598,7 +1588,7 @@
       "reasons": [
         {
           "code": "blocked-rewrite-dep",
-          "detail": "内容零改动，但 import 的 settings/hooks.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
+          "detail": "内容零改动，但 import 的 settings/hooks.ts 当前落不了（REWRITE 或同样 BLOCKED），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -1647,13 +1637,13 @@
     },
     {
       "source": "sidecar/api.ts",
-      "class": "COPIED",
+      "class": "BLOCKED",
       "sha256": "5cd2bfabc9e134d45e16bbe0543e364f670f4ee33f5306dd51ce844ceb39b871",
       "lines": 100,
       "reasons": [
         {
-          "code": "portable",
-          "detail": "所有 import 在 frontend-vue 中同形可解析，零改动复制。"
+          "code": "blocked-rewrite-dep",
+          "detail": "内容零改动，但 import 的 api/index.ts 当前落不了（REWRITE 或同样 BLOCKED），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -1665,7 +1655,9 @@
         "sidecar/thread.ts",
         "threads/index.ts"
       ],
-      "blockedBy": []
+      "blockedBy": [
+        "api/index.ts"
+      ]
     },
     {
       "source": "sidecar/context.ts",
@@ -1908,7 +1900,7 @@
       "reasons": [
         {
           "code": "blocked-rewrite-dep",
-          "detail": "内容零改动，但 import 的 streamdown/components.tsx、streamdown/plugins.ts、streamdown/safe-children.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
+          "detail": "内容零改动，但 import 的 streamdown/components.tsx、streamdown/plugins.ts、streamdown/safe-children.ts 当前落不了（REWRITE 或同样 BLOCKED），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -2294,8 +2286,8 @@
           "detail": "SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk/client → @/core/types/message）"
         },
         {
-          "code": "react-runtime",
-          "detail": "值导入 \"@langchain/langgraph-sdk/react\"：运行时依赖 React。"
+          "code": "removed-dep-runtime",
+          "detail": "值导入 \"@langchain/langgraph-sdk/react\"：该包明确不装进 frontend-vue（02 §372「不必装进项目」），没有可装的替代，只能自写（02 §249：core/api/client.ts，~180 行）。"
         },
         {
           "code": "react-runtime",
@@ -2331,8 +2323,11 @@
         "uploads/index.ts"
       ],
       "blockedBy": [
+        "api/index.ts",
         "i18n/hooks.ts",
-        "tasks/context.tsx"
+        "settings/index.ts",
+        "tasks/context.tsx",
+        "uploads/index.ts"
       ]
     },
     {
@@ -2575,7 +2570,7 @@
       "reasons": [
         {
           "code": "blocked-rewrite-dep",
-          "detail": "内容零改动，但 import 的 uploads/hooks.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
+          "detail": "内容零改动，但 import 的 uploads/hooks.ts 当前落不了（REWRITE 或同样 BLOCKED），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -2612,7 +2607,7 @@
       "reasons": [
         {
           "code": "blocked-rewrite-dep",
-          "detail": "内容零改动，但 import 的 i18n/cookies.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
+          "detail": "内容零改动，但 import 的 i18n/cookies.ts 当前落不了（REWRITE 或同样 BLOCKED），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [
@@ -2751,7 +2746,7 @@
       "reasons": [
         {
           "code": "blocked-rewrite-dep",
-          "detail": "内容零改动，但 import 的 workspace-changes/hooks.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
+          "detail": "内容零改动，但 import 的 workspace-changes/hooks.ts 当前落不了（REWRITE 或同样 BLOCKED），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],

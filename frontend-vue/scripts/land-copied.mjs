@@ -16,7 +16,13 @@
                    台账里只有标记块内的行由本脚本生成，块外的手写行（如 M0 的 ADDED）原样保留。
 */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -98,6 +104,22 @@ async function main() {
     process.stdout.write(`${copied.length} 个 COPIED 待落地（--write 执行）\n`);
     for (const entry of copied) process.stdout.write(`  ${entry.source}\n`);
     return;
+  }
+
+  // 先清理**降级出落地档**的文件。分类会变（`api/index.ts` 就从 COPIED 变成了
+  // BLOCKED，因为它 re-export 的 api-client.ts 改判 REWRITE），
+  // 而两个 land-* 脚本都只写不删，旧文件会留在磁盘上变成幽灵——
+  // 它已经不在台账里，却还能被 import 到。
+  // core-provenance.test.ts 能报出来（「磁盘上的每个文件都已登记」），
+  // 但让人手动 rm 不如这里直接扫掉。
+  const LANDING_CLASSES = new Set(["COPIED", "RETYPED"]);
+  for (const entry of manifest.files) {
+    if (LANDING_CLASSES.has(entry.class)) continue;
+    const stale = join(ROOT, "app/core", entry.source);
+    if (existsSync(stale)) {
+      rmSync(stale);
+      process.stdout.write(`清理降级出落地档的文件：${entry.source}\n`);
+    }
   }
 
   for (const entry of copied) {
