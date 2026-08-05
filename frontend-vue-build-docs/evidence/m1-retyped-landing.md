@@ -22,7 +22,7 @@ make migration-check  # baseline-check + codemod-check + land-retyped-check（�
 
 | 指标                | 上一窗口         | 本窗口                     |
 | ------------------- | ---------------- | -------------------------- |
-| `make verify`       | 28 文件 / 247 用例 | **68 文件 / 619 用例**     |
+| `make verify`       | 28 文件 / 247 用例 | **68 文件 / 625 用例**     |
 | 搬运的 core 测试    | 20（node 13 · dom 7） | **58（node 48 · dom 10）** |
 | 等依赖的测试        | 40               | **1**（`sidecar/api.test.ts`，等 M2 的自写 client） |
 | typecheck 预算      | 58 条            | **0 条**                   |
@@ -318,6 +318,9 @@ sidecar/api.test.ts     → waiting（等 M2 的自写 client）
 | `baseline-check`（RETYPE_DROPS） | 声明一个基线上不存在的 import | exit 1「声明已过期」✅ |
 | `typecheck`（message.contract） | 联合塌向任一侧               | 两个方向各 2 条 TS2344 ✅ |
 | `forbidden-deps.test.ts`   | 无需制造——`ai` 本来就装着     | 首次运行即红，指出 02 §321 ✅ |
+| `i18n-check`               | zh-CN 单独删一个 key          | exit 1「zh-CN 缺 key」✅ |
+| `i18n-check`               | 两个 locale 一起删（typecheck 抓不到） | exit 1「基线里有、现在没了」✅ |
+| `architecture.test.ts`     | 8 条规则逐条越界              | 每条各自红，无一漏网 ✅ |
 
 还验了两条幂等性：`make land-copied` 不会吃掉 PROVENANCE 里的 `RETYPED` 块
 （两个块并列，不是嵌套）；`make codemod-tests` 不会删掉手工维护的测试（md5 前后一致）。
@@ -333,6 +336,8 @@ sidecar/api.test.ts     → waiting（等 M2 的自写 client）
 | `tests/guards/message-content-contract.test.ts` | 真实夹具双向往返（7 个用例）                   |
 | `tests/fixtures/message-content-shapes.json`  | 从 516 条真实消息抽的 22 + 3 条                  |
 | `tests/guards/forbidden-deps.test.ts`         | 计划点名不装的包不许出现在依赖或 `needsDeps` 里 |
+| `scripts/i18n-manager.mjs`                    | 词典体检 check / diff / unused（06 §1d）        |
+| `baseline/i18n-keys.json`                     | 751 个 key 的基线，趁词典原样时取               |
 
 `core-provenance.mjs` 新增 `BLOCKED` 档（对 `{REWRITE, BLOCKED}` 求不动点）、
 `REMOVED_DEPS`（@langchain/* 与 ai）与 `RETYPE_DROPS`；`test-selection.mjs` 的闭包改读 `landedDeps`；
@@ -359,6 +364,78 @@ console.log(total,arrays.length,strings.length);
 ```
 
 数据源在 `frontend/` 工作区，只在重建夹具时读，不进 `frontend-vue` 的运行时依赖。
+
+## 顺手做的一轮「文档记了、实现没做」审计
+
+`ai` 那件事说明这类偏离不止一处，所以把 01–08 里**可机械核对**的裁决逐条对了一遍。
+结论是只有一处真缺口，其余要么已在、要么是后续里程碑的正常进度：
+
+| 检查项 | 出处 | 结果 |
+| --- | --- | --- |
+| `tests/architecture.test.ts` 存在 | 08 §32 | ✅ 在 |
+| `packages/agent-core` 的 workspace 契约 | 08 §36 | ✅ package.json / exports / src/index.ts / tests 齐 |
+| `package.json` 的 scripts 只留 postinstall | 03 §415 | ✅ |
+| 行为敏感包对齐 frontend 的 resolved 版本 | 02 §360 | ✅ zod / tailwindcss / typescript 三个已装的都一致 |
+| 我们自己写的文件都有六段式文件头 | 04 §6 | ✅ 无一缺失 |
+| 文档提到的 make 目标都存在 | — | ✅ 除下面两条，其余都在根 Makefile |
+| **`scripts/i18n-manager.mjs`** | **06 §1d** | **❌ 不存在** |
+| `make gen-api-types` | 02 | ⏳ M2（`openapi-typescript` 也还没装，进度正常） |
+| 03 规定的 package.json 里 38 个包未装 | 03 §592 | ⏳ 全是 M2/M4 的内容渲染与状态管理，进度正常 |
+
+### 补上 `i18n-manager.mjs`（06 §1d，本来就是 M1 的活）
+
+06 把它放在 M1 而不是 M4b，理由是**时序**：
+
+> `i18n:diff` 的基线要在词典还是原样的时候取，此后每次组件重写都能立刻看出漏了哪个 key。
+> 等 M4b 写完再补，基线就没了。
+
+词典（3,209 行）正是本窗口随 RETYPED 落地的，所以现在就是那个时刻。三个子命令：
+
+| 命令 | 判据 | 是否进 verify |
+| --- | --- | --- |
+| `make i18n-check` | 两个 locale 的 key 集必须一致 + 基线里的 key 不许消失 | ✅ 已进 |
+| `make i18n-diff` | 当前 key 集 vs 基线，少的报错、多的只报告 | 否（诊断用） |
+| `make i18n-unused` | 词典里有但代码里没人引用的 key | 否（M4b 前几乎全部未引用，只报告不判错） |
+
+基线：`baseline/i18n-keys.json`，**751 个 key**。
+
+key 用 TS AST 抽，不用正则——词典里全是嵌套对象和 `searchFor(query)` 这种模板函数，
+正则分不清「对象字面量的属性」和「函数体里的对象」。
+
+两种失效都造出来验过：
+
+```
+zh-CN 单独删一个 key        → ✗ zh-CN 缺 key：common.renameFailed
+两个 locale 一起删          → ✗ 基线里有、现在没了：common.renameFailed
+```
+
+**第二种是 typecheck 抓不到的**——两边一起删之后 `Translations` 接口也改了，
+类型完全自洽，只有基线知道这个 key 曾经存在。这正是 06 要求「趁原样取基线」的原因。
+
+### 补齐 `architecture.test.ts`
+
+M0 版只查 import specifier，也就是 08 §L1 禁入清单 7 条里的第 4 条和半条第 7 条。
+其余 5 条当时没查——`packages/agent-core/src/` 只有一个 10 行 stub，查不查都绿。
+
+**M2 马上要往这个目录里写东西**，而边界靠的是「越界当场红」；等目录满了再补，
+越界的代码已经进来了。现在补齐 7 条，另加一条反方向的
+（08 §54「禁止从应用中深路径 import `packages/agent-core/src/*`」——
+绕过 `src/index.ts` 会让「整包搬走」当场作废）。
+
+8 条规则逐条造故障验过能红：
+
+```
+import { ref } from "vue"                        → 1 failed
+const url = "/api/langgraph/threads"             → 2 failed
+const mode = "messages-tuple"                    → 1 failed
+const a = document.cookie                        → 1 failed
+let cache = new Map()                            → 1 failed   ← 全局单例
+import … from "../../../app/core/config"         → 1 failed
+应用侧 import "@deerflow/agent-core/src/index"   → 1 failed
+```
+
+业务词按**整词**匹配、且先剥注释：按子串匹配会把 `getValues`、`stateKey` 误伤，
+而误报会逼人去改测试——那正是这个文件开头禁止的事。
 
 ## 红的 / 未验证的
 

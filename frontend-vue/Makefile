@@ -6,7 +6,7 @@
 	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke \
 	baseline-refresh baseline-check land-copied land-retyped land-retyped-check \
 	codemod-tests codemod-check collected-check migration-check typecheck-raw \
-	typecheck-refresh
+	typecheck-refresh i18n-check i18n-diff i18n-unused i18n-refresh
 
 PYTHON ?= python3
 PNPM = $(PYTHON) ../scripts/pnpm.py --dir frontend-vue
@@ -33,6 +33,8 @@ help:
 	@echo "  make migration-check           baseline-check + codemod-check (needs full clone)"
 	@echo "  make typecheck-raw             unfiltered vue-tsc output"
 	@echo "  make typecheck-refresh         rebuild the known-typecheck-error budget"
+	@echo "  make i18n-check                dictionary health: locales in sync, no key lost"
+	@echo "  make i18n-diff / i18n-unused   key drift against the baseline / unreferenced keys"
 
 install:
 	$(PNPM) install
@@ -69,9 +71,23 @@ typecheck-refresh:
 test:
 	$(EXEC) vitest run
 
+# 词典体检（06 §M1 1d）。只读签入的词典与基线，不碰 git 历史，所以能进 verify。
+# 基线必须趁词典还是上游原样时取——等 M4b 重写完再补，「这次漏了哪个 key」就无从判断。
+i18n-check:
+	node scripts/i18n-manager.mjs check
+
+i18n-diff:
+	node scripts/i18n-manager.mjs diff
+
+i18n-unused:
+	node scripts/i18n-manager.mjs unused
+
+i18n-refresh:
+	node scripts/i18n-manager.mjs --refresh
+
 # collected-check 只读签入的台账与 vitest 的收集结果，不碰 git 历史，所以能进 verify。
 # 它防的是「少收集几个测试换全绿」——vitest run 本身报告不了没被收集的东西。
-verify: lint format-check typecheck test collected-check build
+verify: lint format-check typecheck test collected-check i18n-check build
 
 e2e-install:
 	$(EXEC) playwright install --with-deps chromium

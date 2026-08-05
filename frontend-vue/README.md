@@ -37,7 +37,15 @@ make land-copied        # copy the COPIED set into app/core byte for byte
 make land-retyped       # apply the declared retypes into app/core
 make codemod-tests      # regenerate tests/unit/core from the rstest sources
 make migration-check    # baseline-check + codemod-check + land-retyped-check
+make i18n-check         # dictionary health; also runs inside `make verify`
+make i18n-diff          # key drift against baseline/i18n-keys.json
+make i18n-unused        # keys no code references (report only until M4b)
 ```
+
+The i18n baseline is deliberately taken while the dictionaries are still
+byte-faithful to upstream: once component rewrites start, "which key did this
+rewrite drop?" is unanswerable without it. Deleting a key from _both_ locales
+stays type-correct — only the baseline notices.
 
 `COPIED` files are byte-identical to upstream and guarded by SHA-256; `RETYPED`
 files are ours — they carry the six-part header, get formatted and linted, and

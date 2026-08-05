@@ -258,7 +258,7 @@ artifacts/loader.ts      api/api-client.ts          threads/static-demo.ts(不�
 
 **先写 codemod，不逐个手改。** 每批转换后生成 collected-test 报告，与 manifest 对账；不能以“某些测试暂时不收集”换取 M1 全绿。
 
-**1d. 建 `scripts/i18n-manager.mjs`**（`diff` / `unused` / `check`，见 [03](03-project-shape.md#scriptsi18n-managermjs词典体检)）。
+**1d. 建 `scripts/i18n-manager.mjs`**（`diff` / `unused` / `check`，见 [03](03-project-shape.md#scriptsi18n-managermjs词典体检)）。**已完成**：基线 `baseline/i18n-keys.json` 共 751 个 key，`make i18n-check` 已进 `make verify`。
 
 词典正是在这一步搬进来的（`core/i18n/locales/` 三个文件共 3,170 行）。工具要在**开始重写组件之前**就位——`i18n:diff` 的基线要在词典还是原样的时候取，此后每次组件重写都能立刻看出漏了哪个 key。等 M4b 写完再补，基线就没了。
 
