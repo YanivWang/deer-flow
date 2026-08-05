@@ -181,6 +181,25 @@ core 真正调用的 7 个方法，SDK 的其余几十个没有——让人写�
 
 ---
 
+## 第 3 类证据：假的是**后端**，不是 `RunProtocol`
+
+`tests/unit/agent-deerflow/fake-upstream.test.ts` 起一个真的 `node:http` 服务器，
+让完整会话（L1 状态机 + L3 适配层 + 真 `fetch`）对着它跑一趟。
+
+它与 `run-session.test.ts` 的分工不能混。后者假的是 `RunProtocol` 这一层，
+验的是状态机；**状态机那一层再全，也证明不了「`Last-Event-ID` 这个 header 真的
+发出去了」**——`fetch` 会把 header 名规范化成小写，而假 fetch 不会，两边各自
+「正确」也能对不上。同理，帧被 TCP 切在分隔符中间、多字节字符跨 write、
+连接被 RST，这些只有真网络栈才产生。
+
+写的过程中撞到一个**测试自己的**坑，值得记下来免得下次再踩：
+`response.write(...)` 之后立刻 `response.destroy()`，连接会在 undici 交付响应头
+之前就被重置，于是 `create` 本身失败——测到的是 `missing_handle` 而不是重连。
+真实的网络中断发生在响应头**之后**。所以「意外 EOF」用 `response.end()`
+（确定性的），「连接重置」单独一个用例并显式延时让响应头先到。
+
+---
+
 ## 红的 / 未验证的
 
 1. **golden trace 只覆盖 7 种事件。** `metadata` / `values` / `updates` /
@@ -189,22 +208,17 @@ core 真正调用的 7 个方法，SDK 的其余几十个没有——让人写�
    tool-call 碎片、临时 id 重写**一个都没有 golden 覆盖**——replay 场景
    （`write_read_file.ultra`）本身不产生它们。要补得换录制场景或造 fake upstream。
    `parseWireEventName` 的 namespace 处理因此**只有合成用例，没有真实录制佐证**。
-2. **第 3 类证据（fake upstream 集成测试）只做了一半。** L1 的
-   `run-session.test.ts` 用假协议覆盖了 create-once / resume 切 GET / 退避 /
-   abort 与 cancel 分离，但它假的是 `RunProtocol` 这一层，**不是 HTTP 那一层**。
-   06 §M2 B 说的 fake upstream 是「起一个假后端」，能覆盖真实 `fetch`、
-   真实 `Response`、真实 chunk 边界。现在这一层是空的。
-3. **useStream worktree 探针（06 §M2 A）没做。** 它有 3 天时间盒且**明确不是门禁**，
+2. **useStream worktree 探针（06 §M2 A）没做。** 它有 3 天时间盒且**明确不是门禁**，
    本窗口有意跳过。要做必须在 `git worktree` 里，不得改主工作区的 `frontend/`，
    且不得复制回 `packages/agent-core/`（会把 React 类型带进 L1）。
-4. **没有任何东西在跑这个内核。** L1 与 L3 都还没被 Nuxt 应用接线——
+3. **没有任何东西在跑这个内核。** L1 与 L3 都还没被 Nuxt 应用接线——
    没有 plugin 调 `setDeerFlowRuntimeOptions()`，没有组件消费 external store。
    接线是 M4a。所以本窗口证明的是「这些模块各自的行为正确」，
    **不是**「DeerFlow 在 Vue 里能流起来」。
-5. **`test-selection` 的闭包对新写模块不完整。** 台账里没有条目的 source
+4. **`test-selection` 的闭包对新写模块不完整。** 台账里没有条目的 source
    （`api/client.ts`、`agent-deerflow/*`）被直接当作已落地，**它们自己的依赖没有
    继续展开**。目前这些模块只依赖已落地的 COPIED/RETYPED，所以不影响判断；
    真要补，得让台账也覆盖非基线来源的文件。
-6. **M1 的九条红项原样有效**，尤其 `config/index.ts` 与 `auth/auth-disabled-user.ts`
+5. **M1 的九条红项原样有效**，尤其 `config/index.ts` 与 `auth/auth-disabled-user.ts`
    的 retype 至今零覆盖，以及 `tests/**` 不过 vue-tsc（本窗口只解决了
    `packages/agent-core/` 那一半，`tests/` 那一半没动）。
