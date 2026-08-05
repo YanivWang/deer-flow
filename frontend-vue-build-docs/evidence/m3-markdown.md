@@ -134,13 +134,29 @@ chunk 都把它整块卸载重建，`invariants.dom.test.ts` 的「追加后已�
 
 ## 5. 红项与未证实（做 M4 时必须知道）
 
-1. **shiki 高亮之后的 token DOM 没有对照。** 夹具录的是 React SSR，那时 shiki 还没跑完，
-   拿到的是未高亮的回退结构。M3 比对的正是这一帧（逐属性全等），**高亮之后两边 token
-   拆分是否一致，本窗口没有回答**。要答就得把录制从 SSR 换成真实浏览器。
-2. **mermaid 画出来的 SVG 完全没有对照。** 同上，且更彻底——mermaid 只在浏览器里渲染，
-   SSR 录不到任何图。`tests/unit/markdown/mermaid.dom.test.ts` 把 mermaid 包整个 mock 掉，
+1. **shiki 高亮之后的 token DOM 没有对照**（但高亮本身已验证真的发生）。
+   夹具录的是 React SSR，那时 shiki 还没跑完，拿到的是未高亮的回退结构。M3 比对的正是
+   这一帧（逐属性全等），**高亮之后两边 token 拆分是否一致，本窗口没有回答**。
+   要答就得把录制从 SSR 换成真实浏览器。
+
+   > **⚠️ 这一条差点变成假绿，值得单独记。** 第一版用例只断言「高亮回来之后文本还在」，
+   > 而组件在 shiki 失败时是**静默回退**到未高亮结构——文本一模一样还在，用例照绿。
+   > 收口后补测才发现：`await flushPromises()` 一次根本不够，shiki 的 `codeToTokens`
+   > 内部还要按需动态 import 语法与主题，每个都是独立模块加载。实测第 1 轮与第 5 轮
+   > 拿到的都还是回退结构（每行 1 个 token span），**到第 20 轮才变成 11 个**。
+   > 现在的断言改成「token 数 > 1 且 `--sdm-c` / `--shiki-dark` 是真实色值而不是 inherit」，
+   > 并把等待轮数写进 `settle()` 的注释。**结论：shiki 这条路径是通的**，
+   > 上一版评估里说它「跑不通」是等待轮数不足造成的误判。
+
+2. **mermaid 在本仓的测试环境里画不出图，真实浏览器下未验证。**
+   实测（直调真包，非组件）：`mermaid.parse` 通过、`mermaid.render` 也 resolve，
+   但 **`svg.length === 0`** ——happy-dom 没有文本测量能力，mermaid 拿不到尺寸。
+   组件对空串走 `v-if="svg"` 的假值分支，回退成代码块，行为上是对的，
+   但这意味着**真实 mermaid 的成功路径在本仓一次都没跑通过**。
+   `tests/unit/markdown/mermaid.dom.test.ts` 把 mermaid 包整个 mock 掉，
    验的是**分派与容错**（成功出图、失败保持代码块、晚到结果不覆盖新内容、
-   `securityLevel: "strict"`），不是它画得对不对。
+   `securityLevel: "strict"`），不是它画得对不对，也不是它在浏览器里画不画得出来。
+   要证实只能上 Playwright（M4b 接线之后）。
 3. **本层还没有任何消费方。** 与 M2 的内核同样的处境：`StreamMarkdown` 一个调用方都没有，
    `richContentComponents` 也没有。接线在 M4b（`markdown-content.tsx` 的 Vue 版）。
    也就是说「流式追加时的真实表现」只被单测覆盖，没被真实 SSE 流验证过。

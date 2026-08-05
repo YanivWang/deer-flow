@@ -39,6 +39,21 @@ const PIPELINE = {
   components: richContentComponents as unknown as Record<string, unknown>,
 };
 
+/**
+ * 等到 shiki 真的高亮完。
+ *
+ * ⚠️ **一次 `flushPromises()` 不够**，这是实测数字：shiki 的 `codeToTokens` 内部还要
+ * 按需动态 import 语法与主题，每个都是独立的模块加载。实测第 1 轮与第 5 轮拿到的都还是
+ * 未高亮的回退结构（每行 1 个 token span），到第 20 轮才变成 11 个。
+ * 等不够的后果不是红，是**假绿**——组件失败时静默回退，文本一样在。
+ */
+async function settle(wrapper: { vm: unknown }): Promise<void> {
+  void wrapper;
+  for (let round = 0; round < 40; round += 1) {
+    await flushPromises();
+  }
+}
+
 /** 在归一化树里找第一个带指定 data-streamdown 槽位名的元素。 */
 function findSlot(
   nodes: NormalizedNode[],
@@ -79,14 +94,27 @@ describe("代码块槽位 · 首帧 DOM 与上游一致", () => {
     });
   }
 
-  it("高亮回来之后代码文本不丢、结构还在同一个槽位里", async () => {
+  it("真的高亮了（不是静默回退到未高亮结构）", async () => {
     const wrapper = mount(StreamMarkdown, {
       props: { content: "```ts\nconst x: number = 1;\n```", ...PIPELINE },
     });
-    await flushPromises();
-    const body = wrapper.find('[data-streamdown="code-block-body"]');
-    expect(body.exists()).toBe(true);
-    expect(body.text()).toContain("const x: number = 1;");
+    await settle(wrapper);
+
+    const tokens = wrapper.findAll(
+      '[data-streamdown="code-block-body"] code span span',
+    );
+    // ⚠️ 这条断言的形状是被实测逼出来的。原来只断言「文本还在」——
+    // 而 shiki 失败时组件是**静默回退**到未高亮结构，文本一样还在，用例照样绿。
+    // 实测：回退结构是每行 1 个 token span，真高亮是 11 个。
+    expect(tokens.length).toBeGreaterThan(1);
+    // 颜色变量真的落到了 style 上，不是占位的 inherit。
+    expect(tokens[0]?.attributes("style")).toMatch(/--sdm-c:\s*#[0-9a-f]{6}/i);
+    expect(tokens[0]?.attributes("style")).toMatch(
+      /--shiki-dark:\s*#[0-9a-f]{6}/i,
+    );
+    expect(
+      wrapper.find('[data-streamdown="code-block-body"]').text(),
+    ).toContain("const x: number = 1;");
     wrapper.unmount();
   });
 
@@ -97,7 +125,13 @@ describe("代码块槽位 · 首帧 DOM 与上游一致", () => {
         ...PIPELINE,
       },
     });
-    await flushPromises();
+    await settle(wrapper);
+    // 回退的形状：每行只有一个 token span，颜色是占位的 inherit。
+    const tokens = wrapper.findAll(
+      '[data-streamdown="code-block-body"] code span span',
+    );
+    expect(tokens).toHaveLength(1);
+    expect(tokens[0]?.attributes("style")).toContain("inherit");
     expect(
       wrapper.find('[data-streamdown="code-block-body"]').text(),
     ).toContain("x := 1");
