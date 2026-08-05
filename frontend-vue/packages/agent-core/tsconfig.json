@@ -1,0 +1,35 @@
+{
+  "$comment": [
+    "L1 自己的 tsconfig，不继承 Nuxt 的。两个理由，第二个是本窗口实测出来的：",
+    "1. 这个包的卖点是能被整包搬进别的项目（08 §36）。它的类型正确性不能依赖",
+    "   宿主的 tsconfig——消费方的 Nuxt 配置与我们的不会一样。",
+    "2. `.nuxt/tsconfig.app.json` 的 include 只有 app/** 与 tests/nuxt/**，",
+    "   `packages/agent-core/src/**` 根本不在里面。也就是说在加这个文件之前，",
+    "   vue-tsc 从头到尾没有检查过这个内核一行。",
+    "`types: []` 是有意的：src 不许认识 Node 的全局与模块。它一旦能 import",
+    "`node:fs`，「这个包能跑在浏览器里」就只剩口头承诺。测试要读 fixture 文件，",
+    "所以测试走 tsconfig.test.json，那里才打开 node types——两份配置的差就是",
+    "这条边界本身。",
+    "lib 要 DOM：内核用 ReadableStream / Response / RequestInit / AbortSignal /",
+    "TextDecoder。它们是 web 标准而不是框架，用它们不违反 L1 禁入清单——",
+    "禁的是 Vue/Nuxt/React 运行时与 cookie/runtime config 读取。"
+  ],
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": [],
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts"]
+}

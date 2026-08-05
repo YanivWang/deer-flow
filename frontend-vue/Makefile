@@ -1,6 +1,6 @@
 # frontend-vue M0 developer entrypoint. package.json intentionally contains only postinstall.
 
-.PHONY: help install dev build preview lint format format-check typecheck test verify \
+.PHONY: help install dev build preview lint format format-check typecheck typecheck-core test verify \
 	e2e-install e2e-list e2e-m0 e2e-external e2e e2e-auth e2e-real-backend e2e-visual \
 	proxy-smoke auth-disabled-smoke auth-cookie-smoke visual-baseline-smoke splitpanes-smoke \
 	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke \
@@ -32,6 +32,7 @@ help:
 	@echo "  make collected-check           fail if vitest collects a different set than the manifest"
 	@echo "  make migration-check           baseline-check + codemod-check (needs full clone)"
 	@echo "  make typecheck-raw             unfiltered vue-tsc output"
+	@echo "  make typecheck-core            standalone tsc for packages/agent-core"
 	@echo "  make typecheck-refresh         rebuild the known-typecheck-error budget"
 	@echo "  make i18n-check                dictionary health: locales in sync, no key lost"
 	@echo "  make i18n-diff / i18n-unused   key drift against the baseline / unreferenced keys"
@@ -65,6 +66,17 @@ typecheck:
 typecheck-raw:
 	$(EXEC) vue-tsc --noEmit
 
+# packages/agent-core 走**自己的** tsconfig，不走 vue-tsc。
+#
+# 这不是洁癖，是本窗口实测出来的洞：`.nuxt/tsconfig.app.json` 的 include 只有
+# app/** 与 tests/nuxt/**，`packages/agent-core/src/**` 一行都不在里面——
+# 也就是说 M2 的整个交付物在加这条之前从未被类型检查过（首次运行 6 条错误）。
+# 顺带满足 08 §54：包要能在自己的 tsconfig 下独立 typecheck，
+# 否则「整包搬给别的项目」这个卖点没有任何机器证据。
+typecheck-core:
+	$(EXEC) tsc --noEmit -p packages/agent-core
+	$(EXEC) tsc --noEmit -p packages/agent-core/tsconfig.test.json
+
 typecheck-refresh:
 	node scripts/typecheck-budget.mjs --refresh
 
@@ -87,7 +99,7 @@ i18n-refresh:
 
 # collected-check 只读签入的台账与 vitest 的收集结果，不碰 git 历史，所以能进 verify。
 # 它防的是「少收集几个测试换全绿」——vitest run 本身报告不了没被收集的东西。
-verify: lint format-check typecheck test collected-check i18n-check build
+verify: lint format-check typecheck typecheck-core test collected-check i18n-check build
 
 e2e-install:
 	$(EXEC) playwright install --with-deps chromium

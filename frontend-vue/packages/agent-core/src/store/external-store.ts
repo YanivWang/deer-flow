@@ -27,16 +27,19 @@ export interface AgentExternalStore<TState, TEvent> {
 }
 
 function mergeMessage(base: AgentMessage, patch: AgentMessage): AgentMessage {
+  const reasoningChunks =
+    base.reasoningChunks || patch.reasoningChunks
+      ? [...(base.reasoningChunks ?? []), ...(patch.reasoningChunks ?? [])]
+      : undefined;
   return {
     ...base,
     ...patch,
     // chunk 是**追加**语义，不是覆盖。用展开的默认行为会让后到的 delta
     // 把之前收到的整段替换掉，流式文本表现为「越流越短」。
     contentChunks: [...base.contentChunks, ...patch.contentChunks],
-    reasoningChunks:
-      base.reasoningChunks || patch.reasoningChunks
-        ? [...(base.reasoningChunks ?? []), ...(patch.reasoningChunks ?? [])]
-        : undefined,
+    // 两边都没有 reasoning 时**不写这个键**，而不是写 undefined：
+    // 消息会被导出成 JSON，也会被 UI 用 `in` 判断有没有 reasoning。
+    ...(reasoningChunks === undefined ? {} : { reasoningChunks }),
   };
 }
 

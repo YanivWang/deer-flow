@@ -86,13 +86,6 @@ export async function* readSseFrames(
       buffer += decoder.decode(chunk.value, { stream: true });
       pendingBytes += chunk.value.byteLength;
 
-      if (pendingBytes > maxBufferBytes) {
-        throw new AgentStreamError(
-          "parse_error",
-          `SSE buffer exceeded ${maxBufferBytes} bytes without a frame separator.`,
-        );
-      }
-
       while (true) {
         const next = readNextSseFrame(buffer);
         if (!next) break;
@@ -103,6 +96,18 @@ export async function* readSseFrames(
 
         const frame = parseSseFrame(next.frame);
         if (frame) yield frame;
+      }
+
+      // 上限**必须在排干成帧之后**判，不能在收到 chunk 时就判。
+      // 前者量的是「还没成帧的残留」——正是 05 L6 要防的东西；后者量的是吞吐，
+      // 一个塞了 50 个完整帧的 chunk 会当场触发上限，而缓冲其实一直很小。
+      // 这条是被 transport.test.ts 的「正常长流不会误触发」抓出来的，
+      // 不是设计出来的：先写的版本正是错的那一版。
+      if (pendingBytes > maxBufferBytes) {
+        throw new AgentStreamError(
+          "parse_error",
+          `SSE buffer exceeded ${maxBufferBytes} bytes without a frame separator.`,
+        );
       }
     }
 

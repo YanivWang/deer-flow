@@ -89,6 +89,20 @@ export function createRunSession<TStart, THandle>(
     return { kind: "state", state: next };
   }
 
+  /**
+   * 可选字段：没有就**不写这个键**，而不是写一个 undefined。
+   *
+   * `exactOptionalPropertyTypes` 会把 `{ cursor: undefined }` 判成错，这不是
+   * 编译器挑剔——两者在 `"cursor" in state`、`Object.keys()` 和 JSON 序列化下
+   * 表现不同。会话状态会被适配层原样透传给 UI 与日志，留一个显式 undefined
+   * 等于对外声称「这个字段存在，只是没值」。
+   */
+  const optional = <K extends string, V>(
+    key: K,
+    value: V | undefined,
+  ): Record<K, V> | Record<string, never> =>
+    value === undefined ? {} : ({ [key]: value } as Record<K, V>);
+
   function terminalFromOutcome(
     outcome: RunOutcome | undefined,
     reason: string | undefined,
@@ -110,7 +124,11 @@ export function createRunSession<TStart, THandle>(
       // 适配层没给出 outcome 时，把它读成「取消成功」比读成 completed 安全——
       // 后者会让 UI 显示一条其实被打断的回答已经正常完成。
       default:
-        return { status: "cancelled", handle: currentHandle, reason };
+        return {
+          status: "cancelled",
+          handle: currentHandle,
+          ...optional("reason", reason),
+        };
     }
   }
 
@@ -145,12 +163,20 @@ export function createRunSession<TStart, THandle>(
       yield setState({
         status: "stopping",
         handle: currentHandle,
-        cursor,
+        ...optional("cursor", cursor),
         mode: "draining",
       });
       // 尾帧照常归约：cancel 之后后端仍会把已经产生的内容发完，
       // 丢掉它们等于让用户看到的答案比后端存下来的短一截。
-      const drained = yield* pump(result.response, currentHandle);
+      // drain 必须用 control signal：stop() 刚刚 abort 掉了 stream signal，
+      // 拿它去读尾帧会在第一次 read 之前就抛 abort——表现是用户每点一次停止，
+      // 最后一段回答就被吞掉一截。这条是被 run-session.test.ts 的 drain 用例
+      // 抓出来的，先写的版本正是错的那一版。
+      const drained = yield* pump(
+        result.response,
+        currentHandle,
+        controlController.signal,
+      );
       if (drained !== "open") return;
       // drain 读完了却没有终止事件：run 确实停了，但没人说它是怎么停的。
       yield setState({ status: "cancelled", handle: currentHandle });
@@ -160,7 +186,7 @@ export function createRunSession<TStart, THandle>(
     yield setState({
       status: "stopping",
       handle: currentHandle,
-      cursor,
+      ...optional("cursor", cursor),
       mode: "polling",
     });
     for (let attempt = 0; attempt < inspectPolling.maxAttempts; attempt += 1) {
@@ -211,6 +237,7 @@ export function createRunSession<TStart, THandle>(
   async function* pump(
     response: Response,
     currentHandle: THandle,
+    signal: AbortSignal,
   ): AsyncGenerator<SessionOutput<THandle>, "open" | "settled"> {
     if (!response.body) {
       yield setState({
@@ -221,10 +248,7 @@ export function createRunSession<TStart, THandle>(
       return "settled";
     }
 
-    const frames = readSseFrames(response.body, {
-      maxBufferBytes,
-      signal: streamController.signal,
-    });
+    const frames = readSseFrames(response.body, { maxBufferBytes, signal });
 
     try {
       for await (const frame of frames) {
@@ -320,8 +344,12 @@ export function createRunSession<TStart, THandle>(
         return;
       }
 
-      yield setState({ status: "streaming", handle: runHandle, cursor });
-      const outcome = yield* pump(response, runHandle);
+      yield setState({
+        status: "streaming",
+        handle: runHandle,
+        ...optional("cursor", cursor),
+      });
+      const outcome = yield* pump(response, runHandle, streamController.signal);
       if (outcome === "settled") return;
 
       if (stopRequested) {
@@ -346,7 +374,7 @@ export function createRunSession<TStart, THandle>(
       yield setState({
         status: "reconnecting",
         handle: runHandle,
-        cursor,
+        ...optional("cursor", cursor),
         attempt: reconnects,
       });
       await sleep(computeBackoffDelay(reconnects, backoff));

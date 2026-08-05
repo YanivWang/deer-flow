@@ -1,0 +1,14 @@
+{
+  "$comment": [
+    "L1 测试的 tsconfig。与 src 那份的差别只有一处：这里打开 node types。",
+    "src 那边 `types: []` 就是边界本身——内核不许 import `node:fs` 之类；",
+    "测试要读 tests/fixtures/streams/*.sse，必须能。",
+    "把两者合成一份，src 就能悄悄用上 Node 全局而没人发现，",
+    "而「这个包能整包搬走」正是靠这条边界撑着的。"
+  ],
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}
