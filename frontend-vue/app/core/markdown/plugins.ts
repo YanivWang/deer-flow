@@ -1,0 +1,183 @@
+/*
+  【文件职责】     Markdown 管线的插件与预设：可搬的 rehype 插件、Streamdown 的内建插件等价物、
+                   以及三套插件组合（默认 / 应用 / 带 raw HTML）。
+  【对应 frontend/】 frontend/src/core/streamdown/plugins.ts（只有 rehypeStreamingListItems 可搬）
+  【架构位置】     L2 候选 —— 渲染层，不认识任何 DeerFlow 业务概念
+  【主要导出】     rehypeStreamingListItems · remarkHtmlToText · remarkCodeMeta ·
+                   streamdownSanitizeSchema · hardenOptions · katexOptions ·
+                   defaultRemarkPlugins / defaultRehypePlugins / appRemarkPlugins /
+                   appRehypePlugins / rawHtmlRehypePlugins · wordAnimation
+  【依赖关系】     unist-util-visit · rehype-{raw,sanitize,harden,katex} · remark-{gfm,math}
+  【边界与注意】   上游 `plugins.ts` 98 行里**只有 `rehypeStreamingListItems` 能搬**，其余
+                   import 了 `@streamdown/code` / `@streamdown/mermaid` / `streamdown` 三个
+                   React-only 包。它导出的 `streamdownWordAnimation` 等常量是**规格说明**
+                   （Streamdown 自己的动画 API 参数），不是可搬代码——这里按规格重新给出，
+                   消费方是本层自写的动画实现。
+
+                   `defaultRemarkPlugins` / `defaultRehypePlugins` 是 **Streamdown 2.5 内建
+                   默认链的等价物**，从它 dist 里读出来后按同样的顺序、同样的选项重建：
+
+                     rehype: [rehypeRaw, [rehypeSanitize, schema], [harden, {...}]]
+                     remark: [[remarkGfm, {}], codeMeta]
+
+                   ⚠️ **DeerFlow 的消息路径把这条默认链整条换掉了**（`markdown-content.tsx`
+                   显式传 `remarkPlugins` / `rehypePlugins`，而 Streamdown 的语义是**替换**
+                   而非追加）。也就是说线上消息渲染既没有 rehype-raw，也没有 sanitize 与
+                   harden——raw HTML 走 `remarkHtmlToText` 变成转义文本，所以净化没有作用
+                   对象。`appRehypePlugins` 如实反映这一点；要给它加回 sanitize/harden 是
+                   一次行为变更，不属于「照搬」。
+*/
+
+import { harden } from "rehype-harden";
+import rehypeKatex from "rehype-katex";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import { visit } from "unist-util-visit";
+
+import type { Root as HastRoot } from "hast";
+import type { Root as MdastRoot } from "mdast";
+import type { PluggableList } from "unified";
+
+/**
+ * Keeps native list markers in step with the word reveal.
+ *
+ * A trailing `2.` or `-` is parsed as an empty list item while content is
+ * streaming. Hide that transient item, then mark it for a matching marker
+ * animation as soon as its first child arrives. Keep mid-list empty items in
+ * the box tree so ordered-list counters never renumber later items.
+ */
+export function rehypeStreamingListItems() {
+  return (tree: HastRoot) => {
+    visit(tree, "element", (node, index, parent) => {
+      if (node.tagName !== "li") {
+        return;
+      }
+
+      if (node.children.length === 0) {
+        const isTrailingListItem =
+          index !== undefined &&
+          parent?.type === "element" &&
+          (parent.tagName === "ol" || parent.tagName === "ul") &&
+          !parent.children
+            .slice(index + 1)
+            .some(
+              (sibling) =>
+                sibling.type === "element" && sibling.tagName === "li",
+            );
+        if (isTrailingListItem) {
+          node.properties.hidden = true;
+        }
+        return;
+      }
+
+      node.properties["data-streaming-list-item"] = "true";
+    });
+  };
+}
+
+/**
+ * 没有 rehype-raw 时，把 mdast 的 `html` 节点降级成文本。
+ *
+ * 不做这一步，`remark-rehype` 产出的 `raw` 节点会被渲染器直接丢弃——原始 HTML
+ * 会**静默消失**而不是以转义文本出现。Streamdown 在「rehype 链里没有 rehype-raw」
+ * 时自动挂这个插件，本层保持同样的条件（见 `pipeline.ts`）。
+ */
+export function remarkHtmlToText() {
+  return (tree: MdastRoot) => {
+    visit(tree, "html", (node, index, parent) => {
+      if (!parent || typeof index !== "number") return;
+      parent.children[index] = { type: "text", value: node.value };
+    });
+  };
+}
+
+/** 把围栏代码块的 meta 字符串带到 hast 的 `metastring` 属性上。 */
+export function remarkCodeMeta() {
+  return (tree: MdastRoot) => {
+    visit(tree, "code", (node) => {
+      if (!node.meta) return;
+      node.data ??= {};
+      node.data.hProperties = {
+        ...(node.data.hProperties ?? {}),
+        metastring: node.meta,
+      };
+    });
+  };
+}
+
+/** `hast-util-sanitize` 默认 schema + `tel:` 协议 + `code[metastring]`。 */
+export const streamdownSanitizeSchema = {
+  ...defaultSchema,
+  protocols: {
+    ...defaultSchema.protocols,
+    href: [...(defaultSchema.protocols?.href ?? []), "tel"],
+  },
+  attributes: {
+    ...defaultSchema.attributes,
+    code: [...(defaultSchema.attributes?.code ?? []), "metastring"],
+  },
+};
+
+/** Streamdown 内建 harden 的选项：全放行前缀，但保留 URL 归一化与阻断标记。 */
+export const hardenOptions = {
+  allowedImagePrefixes: ["*"],
+  allowedLinkPrefixes: ["*"],
+  allowedProtocols: ["*"],
+  defaultOrigin: undefined,
+  allowDataImages: true,
+} as const;
+
+/** KaTeX 选项（上游 `plugins.ts` 原值）。 */
+export const katexOptions = {
+  output: "html",
+  throwOnError: false,
+  strict: false,
+} as const;
+
+/** GFM / math 选项（上游 `plugins.ts` 原值）。 */
+export const gfmOptions = { singleTilde: false } as const;
+export const mathOptions = { singleDollarTextMath: true } as const;
+
+/** Streamdown 内建默认 remark 链。 */
+export const defaultRemarkPlugins: PluggableList = [
+  [remarkGfm, {}],
+  remarkCodeMeta,
+];
+
+/** Streamdown 内建默认 rehype 链。 */
+export const defaultRehypePlugins: PluggableList = [
+  rehypeRaw,
+  [rehypeSanitize, streamdownSanitizeSchema],
+  [harden, hardenOptions],
+];
+
+/** DeerFlow 消息路径实际使用的 remark 链。 */
+export const appRemarkPlugins: PluggableList = [
+  [remarkGfm, gfmOptions],
+  [remarkMath, mathOptions],
+];
+
+/** DeerFlow 消息路径实际使用的 rehype 链（**没有** raw / sanitize / harden）。 */
+export const appRehypePlugins: PluggableList = [[rehypeKatex, katexOptions]];
+
+/** `streamdownPlugins` 那一档：同上再加 rehype-raw（artifacts 预览路径）。 */
+export const rawHtmlRehypePlugins: PluggableList = [
+  rehypeRaw,
+  [rehypeKatex, katexOptions],
+];
+
+/**
+ * 逐词动画参数。
+ *
+ * 上游把它写成 Streamdown 的 `animated` prop 值；本层没有那个 API，所以这里
+ * 是自写动画实现的输入。`stagger: 0` 的理由原样保留：Streamdown 默认每个新词
+ * 延迟 40ms，一个大 chunk 会把靠后的列表项文本推迟数秒，而它的原生标记早已可见。
+ */
+export const wordAnimation = {
+  animation: "fadeIn",
+  duration: 200,
+  sep: "word",
+  stagger: 0,
+} as const;

@@ -34,6 +34,15 @@ const FORBIDDEN: Record<string, string> = {
   "@langchain/core":
     "02 §107 ❌ 移除；唯一的 type-only 引用（ToolCall）内联进 app/core/types/message.ts",
   ai: "02 §321「决策：内联定义，不装这个包」；FileUIPart 内联进 app/core/types/message.ts",
+  // M3 补的三条。同一个形状第三次出现：搬 `core/streamdown/` 时遇到解析不了的
+  // `import { code } from "@streamdown/code"`，装包最省事，而「不装」的裁决
+  // 躺在 02 §259 的「内容渲染」表里。这次在写代码之前就先把门关上。
+  streamdown:
+    "02 §259 内容渲染表：streamdown → `hast-util-to-jsx-runtime` + `remend` + `rehype-harden` + 自写流式层（M3 已落地 app/core/markdown/）",
+  "@streamdown/code":
+    "02 §259 同上；代码块 UI 由 app/components/markdown/CodeBlock.vue 自写",
+  "@streamdown/mermaid":
+    "02 §259 同上；mermaid UI 由 app/components/markdown/MermaidDiagram.vue 自写",
 };
 
 const pkg = JSON.parse(

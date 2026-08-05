@@ -150,6 +150,14 @@ git show 44309ae7:frontend-vue/tests/p0/jsx-runtime-hast.test.ts
 
 **⚠️ streamdown 同时用了 `rehype-harden` 和 `rehype-sanitize`**，本方案早期只列了前者。在 `rehype-raw` 开启的前提下漏掉 `rehype-sanitize` 是安全降级，两个都要带。
 
+> **限定（M3 落地实测）**：上面说的是 streamdown 的**默认链**。DeerFlow 的消息路径
+> （`markdown-content.tsx`）显式传 `remarkPlugins` / `rehypePlugins`，而 Streamdown 的语义是
+> **替换**不是追加——所以线上消息渲染实际用的是 `[[remarkGfm,{singleTilde:false}],[remarkMath,…]]`
+> + `[[rehypeKatex,…]]`，既没有 `rehype-raw`，也没有 sanitize 与 harden。原始 HTML 在那条链上
+> 被降级成转义文本（`remarkHtmlToText`），净化没有作用对象。Vue 侧三套预设都按实际情况给出
+> （`app/core/markdown/plugins.ts` 的 `defaultRehypePlugins` / `appRehypePlugins` /
+> `rawHtmlRehypePlugins`）。**给消息路径加回 sanitize/harden 是一次行为变更，不属于「照搬」。**
+
 React 侧的真实分层（由两边依赖对比得出）：
 
 ```
@@ -171,12 +179,12 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层(marked/re
 | `components.tsx` 组件覆盖 map                                   | **重写**（90 行 React）                                                                 | ~120        |
 | `mermaid.ts`（`normalizeMermaidMarkdown`）                      | **已按 `COPIED` 落地** —— 98 行零 import 的纯函数，不是 React               | 0           |
 | `safe-children.ts`                                              | **重写**（34 行 React）                                                                 | ~40         |
-| **mermaid 渲染组件**                                            | **新写** —— 与代码块同源，也在 streamdown 内部（见下）                                  | **未估**    |
+| **mermaid 渲染组件**                                            | **新写** —— 与代码块同源，也在 streamdown 内部（见下）                                  | 52（实测）  |
 | **代码块组件**（渲染 shiki tokens + 复制 + 语言标签 + 主题）    | **重写**（见下，它在 streamdown 内部）                                                  | ~250        |
 | 分块 + memo                                                     | 自写（用 `marked`，同 Streamdown 策略）                                                 | ~100        |
 | 逐词动画                                                        | 自写                                                                                    | ~120        |
 | 错误边界                                                        | 自写（`onErrorCaptured`）                                                               | ~30         |
-|                                                                 |                                                                                         | **~790 行 + mermaid 组件（未估）** |
+|                                                                 |                                                                                         | **~840 行**（实测交付 980 行代码，见 [06 §M3 落地实测](06-migration-plan.md#m3--markdown-渲染层)） |
 
 最易出错的部分——属性名转换、key 生成、raw HTML、URL 安全——仍然交给成熟库。但**整层的量是 ~900 行，不是早期写的 230 行**，三个实测事实把它顶了上去：
 
@@ -345,6 +353,9 @@ remend                    未完成 markdown 自愈
 rehype-harden             URL 安全过滤
 rehype-sanitize           HTML 净化（与 harden 配套，streamdown 两个都用）
 hast-util-to-jsx-runtime  hast → vnode
+remark-parse remark-rehype  管线两端；上游由 streamdown 传递提供，自建管线后要直接依赖
+@types/mdast              remark 插件的 mdast 类型（与 @types/hast 配套）
+@vitejs/plugin-vue        dom 测试 project 编译 SFC 用；不经过 Nuxt 就没人编译 .vue
 openapi-typescript        从 Gateway /openapi.json 生成 REST 类型
 @vue/test-utils  happy-dom  vue-tsc  vitest
 @nuxt/test-utils          composable / middleware 测试的 nuxt project

@@ -1958,12 +1958,7 @@
         }
       ],
       "needsDeps": [
-        "hast",
-        "rehype-katex",
-        "rehype-raw",
-        "remark-gfm",
-        "remark-math",
-        "unist-util-visit"
+        "hast"
       ],
       "internalDeps": [],
       "blockedBy": []

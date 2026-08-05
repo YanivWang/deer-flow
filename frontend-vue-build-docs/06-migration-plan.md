@@ -549,12 +549,24 @@ expect(wrapper.find("p").element).toBe(firstParagraph); // 同一个 DOM 节点�
 | `components.tsx` 的组件覆盖 map                         | **重写**（90 行 React）                        | ~120 行          |
 | `mermaid.ts`（`normalizeMermaidMarkdown`）              | **已按 `COPIED` 落地**（零 import 纯函数）     | 0                |
 | `safe-children.ts`                                      | **重写**（34 行 React）                        | ~40 行           |
-| **mermaid 渲染组件**                                    | **新写** —— 与代码块同源，见下                 | **未估**         |
+| **mermaid 渲染组件**                                    | **新写** —— 与代码块同源，见下                 | ~50 行（实测 52）|
 | **代码块组件**（shiki 高亮 + 复制 + 语言标签 + 主题）   | **重写** —— 见下，这块在 streamdown 内部       | ~250 行          |
 | 分块 + memo                                             | 自写（用 `marked`）                            | ~100 行          |
 | 逐词动画（**不要用 per-word rehype 插件**）             | 自写                                           | ~120 行          |
 | 错误边界（`onErrorCaptured`）                           | 自写                                           | ~30 行           |
-|                                                         |                                                | **合计 ~790 行 + mermaid 组件（未估）** |
+|                                                         |                                                | **合计 ~840 行**  |
+
+### 落地实测（2026-08-06，本表的收口修正）
+
+交付量 **980 行代码**（`app/core/markdown/` 534 + `app/components/markdown/` 446，均已剔除注释与空行；连文件头注释在内是 1,537 行）。比 ~840 行的估算高 17%，估算成立。证据与可复跑命令见 [evidence/m3-markdown.md](evidence/m3-markdown.md)。
+
+三处**上表没有覆盖到**的事实，落地时才看见：
+
+1. **`components.tsx` 那一行（~120 行）估的是 DeerFlow 自己的覆盖适配器，不是 Streamdown 的默认组件映射。** 后者有 **37 个槽位**（`data-streamdown="heading-1|table-wrapper|link-safety-modal|…"`），含表格工具栏、链接安全弹窗、图片放大、全屏门户等交互 UI，整表不在 M3 交付范围——02/04 已裁决 UI 层走 shadcn-vue 逐字复制 cva，不从 streamdown 的 dist 里搬 Vercel 的产品 UI。**归属在组件层（M4b）**，规格已录进 `frontend-vue/tests/fixtures/react-markdown-dom.json` 的 `styledHtml` 字段。M3 只复刻代码块与 mermaid 两个槽位，理由是它们是**行为**（shiki 高亮、复制/下载、mermaid 解析与流式容错）而不是样式。
+
+2. **DeerFlow 的消息路径把 Streamdown 的默认插件链整条换掉了。** `markdown-content.tsx` 显式传 `remarkPlugins` / `rehypePlugins`，而 Streamdown 的语义是**替换**不是追加——所以线上消息渲染既没有 `rehype-raw`，也没有 `rehype-sanitize` 与 `rehype-harden`。02 §Markdown 渲染层写的「streamdown 两个都用」说的是它的**默认链**，对消息路径不成立。原始 HTML 走 `remarkHtmlToText` 变成转义文本，因此净化在这条路径上没有作用对象；但这层事实此前没有任何文档记录，**给这条链加回 sanitize/harden 是一次行为变更，不是「照搬」**。
+
+3. **分块的 key 只能是序号，不能掺内容哈希。** 掺哈希（`${index}-${hash(content)}`）看起来更精确，但流式的最后一块每个 chunk 都在变，于是每个 chunk 都把它整块卸载重建——05 M4「逐词动画 key 稳定」当场失守。这条是实测撞出来的，测试在 `tests/unit/markdown/invariants.dom.test.ts`。
 
 ### ⚠️ 早期的「约 230 行」是错的，实测低估了 3–4 倍
 

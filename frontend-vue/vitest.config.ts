@@ -12,10 +12,17 @@
                    加 project 时必须同步 node 的 exclude，否则一个文件会被跑两遍。
                    node/dom 两个 project 不经过 Nuxt，拿不到 Nuxt 注入的路径别名，
                    所以 `@` 要在这里显式补上——迁移过来的 core 测试全都写 `@/core/…`。
+
+                   dom project 额外挂 `@vitejs/plugin-vue`：M3 起有组件测试要 mount `.vue`，
+                   而不经过 Nuxt 就没人编译 SFC（表现是 vite 报「invalid JS syntax」）。
+                   放在 dom 而不是让组件测试改走 nuxt project，是因为 `@vue/test-utils`
+                   要的只是一个 document，不是整个 Nuxt 运行时——上 nuxt 会把
+                   「只渲染一段 markdown」的用例拖成整套应用启动。
 */
 
 import { fileURLToPath } from "node:url";
 
+import vue from "@vitejs/plugin-vue";
 import { defineConfig, defineProject } from "vitest/config";
 import { defineVitestProject } from "@nuxt/test-utils/config";
 
@@ -38,6 +45,7 @@ export default defineConfig({
         },
       }),
       defineProject({
+        plugins: [vue()],
         resolve: { alias: { "@": appDir } },
         test: {
           // 迁移过来的 core 测试里有一批用 DOM 全局（Response、FormData、

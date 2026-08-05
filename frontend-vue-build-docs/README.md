@@ -8,7 +8,7 @@
 
 这两条不冲突，靠**顺序**解决：先做通用层（L1 → L2），再做 DeerFlow 专有层（L3），L2 边界逐模块抽取而不是最后再抽。分层定义见 [08-agent-core-contract.md](08-agent-core-contract.md)，里程碑见 [06-migration-plan.md](06-migration-plan.md)。
 
-> **实施状态：M-1 与 M0 均已通过；十道 Gate 全部由仓库自身可复现。** 逐项结果见 [evidence/m0-verification.md](evidence/m0-verification.md)。`make e2e-m0` 覆盖基础设施套件，`make e2e-external` 覆盖 G0-6 浏览器 WebSocket 与 G0-7 OIDC 往返（对仓库内的 fixture IdP）。双前端 production readiness（两个独立 hostname、DNS/TLS、可信代理清洗、J6 并发 state-cookie 负测）仍在 M7 验收，不能把“工程可运行”写成“可以直接上线”。
+> **实施状态：M-1 / M0 / M1 / M2 / M3 已通过；十道 M0 Gate 全部由仓库自身可复现。** 逐项结果见 evidence/：[M0](evidence/m0-verification.md) · [M1 COPIED](evidence/m1-copied-landing.md)/[RETYPED](evidence/m1-retyped-landing.md) · [M2 内核](evidence/m2-agent-core.md) · [M3 Markdown](evidence/m3-markdown.md)。**各里程碑的证据文档末尾都有红项清单，「通过」指的是 gate 绿，不等于该层已接线可用。** `make e2e-m0` 覆盖基础设施套件，`make e2e-external` 覆盖 G0-6 浏览器 WebSocket 与 G0-7 OIDC 往返（对仓库内的 fixture IdP）。双前端 production readiness（两个独立 hostname、DNS/TLS、可信代理清洗、J6 并发 state-cookie 负测）仍在 M7 验收，不能把“工程可运行”写成“可以直接上线”。
 
 > 本目录是实施规格，不是完成记录。第三方包存在性与 peer 关系按 2026-08-04 核实；行为敏感包使用现有 `frontend/pnpm-lock.yaml` 的 resolved version，不能把“当前 latest”当迁移目标。
 
