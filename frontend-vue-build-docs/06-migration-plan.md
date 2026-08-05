@@ -271,10 +271,24 @@ artifacts/loader.ts      api/api-client.ts          threads/static-demo.ts(不�
 | 分类 | 含义 | 数量 |
 | --- | --- | --- |
 | `COPIED` | 从 `frontend/src/core/` **零改动**复制 | M1 manifest 生成 |
-| `RETYPED` | 只改 import（去 LangChain 类型 / `@/env`） | M1 manifest 生成 |
+| `RETYPED` | 只改 import（去 LangChain 类型 / `@/env` / 依赖不迁的模块） | M1 manifest 生成 |
+| `BLOCKED` | 内容零改动，但 import 指向 `REWRITE` 档（M4 才存在）；**随被依赖方一起落地** | M1 manifest 生成 |
 | `ADAPTED` | runtime/mock/React 耦合改写 | 随 M1/M4a 生成 |
 | `ADDED` | 无 React 对应物（`agent-deerflow/`、`markdown/`、`api/client.ts`） | — |
 | `DROPPED` | 明确不迁（`static-demo.ts`、`static-mode.ts`、`gateway-config.ts`、`core/blog/`） | — |
+
+> `BLOCKED` 是 M1 落地时补的一档，因为 7 个 barrel（`agents/index.ts` 那类）落在了
+> `COPIED` 与 `RETYPED` 中间：内容一个字节都不用改（所以不是 `RETYPED`），
+> 但里面的 `export * from "./hooks"` 指向 `REWRITE` 档，现在落地就是个悬空引用
+> （所以也不是 `COPIED`）。详见
+> [evidence/m1-retyped-landing.md](evidence/m1-retyped-landing.md)。
+
+**`RETYPED` 删掉的 import 必须声明进台账。** 依赖闭包按上游 import 图算，而
+`DROPPED` 档永远不落地——于是「依赖 `static-mode.ts`」的文件和测试会被判成
+**永远搬不了**，靠推进里程碑解不开。但 1b 早就写了处置方式（删分支），删完那条边根本不存在。
+所以 `core-provenance.mjs` 有一份 `RETYPE_DROPS`，产出 manifest 的 `droppedImports` /
+`landedDeps`，闭包读后者。这一条直接决定了 5 个测试是「解锁」还是「记为不迁」——
+实测是前者，且测试文件一个字节没改。
 
 配套 `tests/guards/core-provenance.test.ts`：
 

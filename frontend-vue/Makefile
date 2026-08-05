@@ -4,8 +4,9 @@
 	e2e-install e2e-list e2e-m0 e2e-external e2e e2e-auth e2e-real-backend e2e-visual \
 	proxy-smoke auth-disabled-smoke auth-cookie-smoke visual-baseline-smoke splitpanes-smoke \
 	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke \
-	baseline-refresh baseline-check land-copied codemod-tests codemod-check \
-	collected-check migration-check typecheck-raw typecheck-refresh
+	baseline-refresh baseline-check land-copied land-retyped land-retyped-check \
+	codemod-tests codemod-check collected-check migration-check typecheck-raw \
+	typecheck-refresh
 
 PYTHON ?= python3
 PNPM = $(PYTHON) ../scripts/pnpm.py --dir frontend-vue
@@ -26,6 +27,7 @@ help:
 	@echo "  make baseline-refresh          rebuild core provenance + test manifests (needs full clone)"
 	@echo "  make baseline-check            fail if the checked-in manifests are stale"
 	@echo "  make land-copied               copy the COPIED set into app/core byte-for-byte"
+	@echo "  make land-retyped              apply the declared retypes into app/core"
 	@echo "  make codemod-tests             regenerate tests/unit/core from rstest sources"
 	@echo "  make collected-check           fail if vitest collects a different set than the manifest"
 	@echo "  make migration-check           baseline-check + codemod-check (needs full clone)"
@@ -149,12 +151,19 @@ baseline-check:
 	node scripts/core-provenance.mjs --baseline=$(BASELINE)
 	node scripts/core-test-manifest.mjs --baseline=$(BASELINE)
 
-# 已落地的分类。搬完 RETYPED 的那个窗口把它改成 COPIED,RETYPED，
-# codemod 与对账脚本会同时按新值重算期望集。
-LANDED ?= COPIED
+# 已落地的分类。codemod 与对账脚本按这个值重算期望集。
+# BLOCKED 档永远不进这里：那 8 个文件内容零改动但 import 指向 M4 才存在的 REWRITE 模块，
+# 它们随被依赖方一起落地，不是靠这里放行。
+LANDED ?= COPIED,RETYPED
 
 land-copied:
 	node scripts/land-copied.mjs --write
+
+land-retyped:
+	node scripts/land-retyped.mjs --write
+
+land-retyped-check:
+	node scripts/land-retyped.mjs
 
 codemod-tests:
 	node scripts/rstest-to-vitest.mjs --write --landed=$(LANDED)
@@ -166,7 +175,7 @@ collected-check:
 	node scripts/collected-vs-manifest.mjs --landed=$(LANDED)
 
 # 需要完整 clone（要读 baseline commit 的 git 对象），因此不进 verify。
-migration-check: baseline-check codemod-check
+migration-check: baseline-check codemod-check land-retyped-check
 
 audit:
 	$(PNPM) audit --audit-level moderate --registry https://registry.npmjs.org

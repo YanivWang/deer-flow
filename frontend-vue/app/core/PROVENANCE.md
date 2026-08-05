@@ -20,9 +20,12 @@
 
 ## 台账
 
-| 文件               | 分类    | 来源 | 说明                                                                                                        |
-| ------------------ | ------- | ---- | ----------------------------------------------------------------------------------------------------------- |
-| `auth/decision.ts` | `ADDED` | —    | M0 路由跳转纯函数。上游 `auth/auth-disabled-user.ts` 读 `process.env`，此处改为接收注入值，不是它的复制品。 |
+| 文件                          | 分类    | 来源 | 说明                                                                                                                     |
+| ----------------------------- | ------- | ---- | ------------------------------------------------------------------------------------------------------------------------ |
+| `auth/decision.ts`            | `ADDED` | —    | M0 路由跳转纯函数。上游 `auth/auth-disabled-user.ts` 读 `process.env`，此处改为接收注入值，不是它的复制品。              |
+| `types/message.ts`            | `ADDED` | —    | 替代 `@langchain/langgraph-sdk` 的 wire 类型，16 个 RETYPED 指向它（06 §M1 1b）。上游没有对应文件——它借的是 SDK 的类型。 |
+| `types/message.contract.ts`   | `ADDED` | —    | `AgentMessageContent` 联合的类型层护栏。放 `app/` 而不是 `tests/`，因为 `tests/` 不过 vue-tsc。                          |
+| `scheduled-tasks/schedule.ts` | `ADDED` | —    | `ScheduleValue` 从 React 组件文件搬进 core，纠正依赖方向（06 §M1 1b 的 `retype-component-type`）。                       |
 
 <!-- COPIED:BEGIN 由 `make land-copied` 生成，勿手改 -->
 
@@ -112,3 +115,31 @@
 | `workspace-changes/summary.ts` | `COPIED` | `workspace-changes/summary.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `workspace-changes/types.ts` | `COPIED` | `workspace-changes/types.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 <!-- COPIED:END -->
+
+<!-- RETYPED:BEGIN 由 `make land-retyped` 生成，勿手改 -->
+
+| `api/api-client.ts` | `RETYPED` | `api/api-client.ts` | 依赖不迁的模块（static-mode.ts、threads/static-demo.ts），该 import 必须删除或改写。 删掉 static demo client 分支（01-scope 已排除静态模式），保留真实 LangGraph client。 |
+| `artifacts/loader.ts` | `RETYPED` | `artifacts/loader.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（type-only：@langchain/langgraph-sdk/react） |
+| `artifacts/utils.ts` | `RETYPED` | `artifacts/utils.ts` | 依赖不迁的模块（static-mode.ts），该 import 必须删除或改写。 删掉 isStaticWebsiteOnly 早返回与随之无消费方的 staticDemoArtifactURL。 |
+| `auth/auth-disabled-user.ts` | `RETYPED` | `auth/auth-disabled-user.ts` | 读 process.env；Nuxt 客户端产物没有该全局，改为接收注入的 runtime options。 |
+| `config/index.ts` | `RETYPED` | `config/index.ts` | 改为接收普通 runtime options，纯 core 不调用 useRuntimeConfig()。（@/env → runtime options） |
+| `i18n/locales/en-US.ts` | `RETYPED` | `i18n/locales/en-US.ts` | 图标包换 Vue 版；LucideIcon 与所用图标名在 lucide-vue-next 中同名（已实测）。（lucide-react → lucide-vue-next） |
+| `i18n/locales/types.ts` | `RETYPED` | `i18n/locales/types.ts` | 图标包换 Vue 版；LucideIcon 与所用图标名在 lucide-vue-next 中同名（已实测）。（lucide-react → lucide-vue-next） |
+| `i18n/locales/zh-CN.ts` | `RETYPED` | `i18n/locales/zh-CN.ts` | 图标包换 Vue 版；LucideIcon 与所用图标名在 lucide-vue-next 中同名（已实测）。（lucide-react → lucide-vue-next） |
+| `messages/derived-state.ts` | `RETYPED` | `messages/derived-state.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `messages/human-input.ts` | `RETYPED` | `messages/human-input.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `messages/run-duration.ts` | `RETYPED` | `messages/run-duration.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `messages/usage-model.ts` | `RETYPED` | `messages/usage-model.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `messages/usage.ts` | `RETYPED` | `messages/usage.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `messages/utils.ts` | `RETYPED` | `messages/utils.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `models/api.ts` | `RETYPED` | `models/api.ts` | 依赖不迁的模块（static-mode.ts），该 import 必须删除或改写。 删掉 isStaticWebsiteOnly 早返回与随之无消费方的 STATIC_MODELS_RESPONSE。 |
+| `scheduled-tasks/recipes.ts` | `RETYPED` | `scheduled-tasks/recipes.ts` | 被引用的类型搬进 core（例：recipes.ts 的 ScheduleValue）。（@/components/workspace/scheduled-task-schedule-input → @/core/…） |
+| `sidecar/context.ts` | `RETYPED` | `sidecar/context.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `tasks/subtask-result.ts` | `RETYPED` | `tasks/subtask-result.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `tasks/types.ts` | `RETYPED` | `tasks/types.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `threads/export.ts` | `RETYPED` | `threads/export.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `threads/thread-search-query.ts` | `RETYPED` | `threads/thread-search-query.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk/client → @/core/types/message） |
+| `threads/types.ts` | `RETYPED` | `threads/types.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `threads/utils.ts` | `RETYPED` | `threads/utils.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `tools/utils.ts` | `RETYPED` | `tools/utils.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/core/messages → @/core/types/message） SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+<!-- RETYPED:END -->

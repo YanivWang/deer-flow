@@ -7,13 +7,15 @@
     "counts": {
       "COPIED": 85,
       "REWRITE": 28,
-      "RETYPED": 32,
+      "BLOCKED": 8,
+      "RETYPED": 24,
       "DROPPED": 4
     },
     "lines": {
       "COPIED": 6301,
       "REWRITE": 5444,
-      "RETYPED": 7634,
+      "BLOCKED": 61,
+      "RETYPED": 7573,
       "DROPPED": 586
     }
   },
@@ -78,13 +80,13 @@
     },
     {
       "source": "agents/index.ts",
-      "class": "RETYPED",
+      "class": "BLOCKED",
       "sha256": "9c9af7de519f8873d3a6f37cf3f3ac2afad70e238c5b264576ae2f657df5c504",
       "lines": 3,
       "reasons": [
         {
-          "code": "retype-rewrite-dep",
-          "detail": "依赖需重写的模块（agents/hooks.ts），其导出面不保证同名；落地时逐个复核，若确实无需改动可降级回 COPIED。"
+          "code": "blocked-rewrite-dep",
+          "detail": "内容零改动，但 import 的 agents/hooks.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -119,8 +121,12 @@
       "lines": 471,
       "reasons": [
         {
-          "code": "retype-langgraph-sdk",
-          "detail": "SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk/client → @/core/types/message）"
+          "code": "retype-dropped-dep",
+          "detail": "依赖不迁的模块（static-mode.ts、threads/static-demo.ts），该 import 必须删除或改写。"
+        },
+        {
+          "code": "retype-drop-import",
+          "detail": "删掉 static demo client 分支（01-scope 已排除静态模式），保留真实 LangGraph client。"
         }
       ],
       "needsDeps": [],
@@ -135,6 +141,16 @@
       "blockedBy": [
         "static-mode.ts",
         "threads/static-demo.ts"
+      ],
+      "droppedImports": [
+        "../static-mode",
+        "../threads/static-demo"
+      ],
+      "landedDeps": [
+        "api/fetcher.ts",
+        "api/stream-mode.ts",
+        "config/index.ts",
+        "threads/types.ts"
       ]
     },
     {
@@ -339,6 +355,10 @@
         {
           "code": "retype-dropped-dep",
           "detail": "依赖不迁的模块（static-mode.ts），该 import 必须删除或改写。"
+        },
+        {
+          "code": "retype-drop-import",
+          "detail": "删掉 isStaticWebsiteOnly 早返回与随之无消费方的 staticDemoArtifactURL。"
         }
       ],
       "needsDeps": [],
@@ -349,6 +369,13 @@
       ],
       "blockedBy": [
         "static-mode.ts"
+      ],
+      "droppedImports": [
+        "../static-mode"
+      ],
+      "landedDeps": [
+        "config/index.ts",
+        "threads/index.ts"
       ]
     },
     {
@@ -767,13 +794,13 @@
     },
     {
       "source": "features/index.ts",
-      "class": "RETYPED",
+      "class": "BLOCKED",
       "sha256": "df7f21d9f4354129375846e9b7ca7a9de5924c4ceb15b2bc145d7cd5ca43fe17",
       "lines": 2,
       "reasons": [
         {
-          "code": "retype-rewrite-dep",
-          "detail": "依赖需重写的模块（features/hooks.ts），其导出面不保证同名；落地时逐个复核，若确实无需改动可降级回 COPIED。"
+          "code": "blocked-rewrite-dep",
+          "detail": "内容零改动，但 import 的 features/hooks.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -1063,13 +1090,13 @@
     },
     {
       "source": "integrations/lark/index.ts",
-      "class": "RETYPED",
+      "class": "BLOCKED",
       "sha256": "9c9af7de519f8873d3a6f37cf3f3ac2afad70e238c5b264576ae2f657df5c504",
       "lines": 3,
       "reasons": [
         {
-          "code": "retype-rewrite-dep",
-          "detail": "依赖需重写的模块（integrations/lark/hooks.ts），其导出面不保证同名；落地时逐个复核，若确实无需改动可降级回 COPIED。"
+          "code": "blocked-rewrite-dep",
+          "detail": "内容零改动，但 import 的 integrations/lark/hooks.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -1366,6 +1393,10 @@
         {
           "code": "retype-dropped-dep",
           "detail": "依赖不迁的模块（static-mode.ts），该 import 必须删除或改写。"
+        },
+        {
+          "code": "retype-drop-import",
+          "detail": "删掉 isStaticWebsiteOnly 早返回与随之无消费方的 STATIC_MODELS_RESPONSE。"
         }
       ],
       "needsDeps": [],
@@ -1376,6 +1407,13 @@
       ],
       "blockedBy": [
         "static-mode.ts"
+      ],
+      "droppedImports": [
+        "../static-mode"
+      ],
+      "landedDeps": [
+        "config/index.ts",
+        "models/types.ts"
       ]
     },
     {
@@ -1554,13 +1592,13 @@
     },
     {
       "source": "settings/index.ts",
-      "class": "RETYPED",
+      "class": "BLOCKED",
       "sha256": "9a7a96b2d06ff84d50f63901d3e50015f7017cf868b81b30eecea710ebf9f248",
       "lines": 2,
       "reasons": [
         {
-          "code": "retype-rewrite-dep",
-          "detail": "依赖需重写的模块（settings/hooks.ts），其导出面不保证同名；落地时逐个复核，若确实无需改动可降级回 COPIED。"
+          "code": "blocked-rewrite-dep",
+          "detail": "内容零改动，但 import 的 settings/hooks.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -1864,13 +1902,13 @@
     },
     {
       "source": "streamdown/index.ts",
-      "class": "RETYPED",
+      "class": "BLOCKED",
       "sha256": "7cb01edd100837f6536ad23b4e74e0ab8585089706775236b2f2217f750f6657",
       "lines": 5,
       "reasons": [
         {
-          "code": "retype-rewrite-dep",
-          "detail": "依赖需重写的模块（streamdown/components.tsx、streamdown/plugins.ts、streamdown/safe-children.ts），其导出面不保证同名；落地时逐个复核，若确实无需改动可降级回 COPIED。"
+          "code": "blocked-rewrite-dep",
+          "detail": "内容零改动，但 import 的 streamdown/components.tsx、streamdown/plugins.ts、streamdown/safe-children.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -2459,12 +2497,14 @@
       "reasons": [
         {
           "code": "retype-langgraph-sdk",
+          "detail": "SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/core/messages → @/core/types/message）"
+        },
+        {
+          "code": "retype-langgraph-sdk",
           "detail": "SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message）"
         }
       ],
-      "needsDeps": [
-        "@langchain/core"
-      ],
+      "needsDeps": [],
       "internalDeps": [
         "i18n/index.ts",
         "messages/utils.ts"
@@ -2529,13 +2569,13 @@
     },
     {
       "source": "uploads/index.ts",
-      "class": "RETYPED",
+      "class": "BLOCKED",
       "sha256": "50b4322526dd897d543b1e5c96f8f273596461256891dcf2ee674b3b73967a25",
       "lines": 8,
       "reasons": [
         {
-          "code": "retype-rewrite-dep",
-          "detail": "依赖需重写的模块（uploads/hooks.ts），其导出面不保证同名；落地时逐个复核，若确实无需改动可降级回 COPIED。"
+          "code": "blocked-rewrite-dep",
+          "detail": "内容零改动，但 import 的 uploads/hooks.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],
@@ -2566,13 +2606,13 @@
     },
     {
       "source": "utils/datetime.ts",
-      "class": "RETYPED",
+      "class": "BLOCKED",
       "sha256": "170c252a4b0cadf0c8bd57fcf836aa7247eb40179c8a037568f44691952ab938",
       "lines": 34,
       "reasons": [
         {
-          "code": "retype-rewrite-dep",
-          "detail": "依赖需重写的模块（i18n/cookies.ts），其导出面不保证同名；落地时逐个复核，若确实无需改动可降级回 COPIED。"
+          "code": "blocked-rewrite-dep",
+          "detail": "内容零改动，但 import 的 i18n/cookies.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [
@@ -2705,13 +2745,13 @@
     },
     {
       "source": "workspace-changes/index.ts",
-      "class": "RETYPED",
+      "class": "BLOCKED",
       "sha256": "7d983badfccd4f1bdfe8042b871d998d9e0b15b1df2a2abb99a5f890244fe5f1",
       "lines": 4,
       "reasons": [
         {
-          "code": "retype-rewrite-dep",
-          "detail": "依赖需重写的模块（workspace-changes/hooks.ts），其导出面不保证同名；落地时逐个复核，若确实无需改动可降级回 COPIED。"
+          "code": "blocked-rewrite-dep",
+          "detail": "内容零改动，但 import 的 workspace-changes/hooks.ts 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。"
         }
       ],
       "needsDeps": [],

@@ -61,9 +61,18 @@ const VERIFIED_APIS = new Set([
 /**
  * 生成物一律不许手改（--check 会红）。确实需要针对 Vue 侧改写某个测试时，
  * 它就不再是机器生成的：登记到这里并写明理由，codemod 从此不碰它。
- * 目前为空——M1 的 core 测试测的都是纯 TS，没有需要适配的理由。
+ *
+ * 登记之后 codemod 不再生成它，但**文件必须留在磁盘上并签入**——
+ * collected-check 的期望集来自台账而不是 codemod，少一个文件照样红。
  */
-const HAND_MAINTAINED = {};
+const HAND_MAINTAINED = {
+  "artifacts/utils.test.ts": [
+    "上游有 2 个用例测 isStaticWebsiteOnly() 早返回，而 01-scope 已把静态模式排除出迁移范围，",
+    "artifacts/utils.ts 落地时按 06 §M1 1b 删掉了那两个分支——留着就是在测一段故意不存在的行为。",
+    "顺带删掉整套 NEXT_PUBLIC_* 环境变量夹具：配置改成注入 runtime options 之后它一个字节都读不到。",
+    "只删不加，其余用例逐字保留。理由与边界写在该文件的六段式文件头里。",
+  ].join(" "),
+};
 
 // ---------------------------------------------------------------------------
 // 改写
@@ -234,8 +243,14 @@ async function main() {
     readFileSync(join(ROOT, "baseline/core-manifest.json"), "utf8"),
   );
   const commit = resolveCommit(manifest.baselineCommit);
-  const selected = selectPortableTests(manifest, coreManifest, landed).filter(
-    (entry) => !HAND_MAINTAINED[entry.source],
+  const portable = selectPortableTests(manifest, coreManifest, landed);
+  const selected = portable.filter((entry) => !HAND_MAINTAINED[entry.source]);
+  // 手工维护的那些也在台账的期望集里，只是不由这里生成：既不能被清理掉，
+  // 也不能被判成「不该存在」。它们的存在由 collected-check 继续盯着。
+  const handMaintained = new Set(
+    portable
+      .filter((entry) => HAND_MAINTAINED[entry.source])
+      .map((entry) => targetPathOf(entry)),
   );
 
   const generated = new Map();
@@ -247,7 +262,13 @@ async function main() {
   }
 
   if (write) {
-    rmSync(join(ROOT, OUT_DIR), { recursive: true, force: true });
+    // 不能整目录 rm：手工维护的文件就在里面，删了内容就没了。
+    // 只清理「既不是本次生成、也不是手工维护」的残留。
+    for (const rel of listGenerated(OUT_DIR)) {
+      if (!generated.has(rel) && !handMaintained.has(rel)) {
+        rmSync(join(ROOT, rel), { force: true });
+      }
+    }
     for (const [rel, content] of generated) {
       mkdirSync(dirname(join(ROOT, rel)), { recursive: true });
       writeFileSync(join(ROOT, rel), content);
@@ -276,9 +297,19 @@ async function main() {
     }
   }
   for (const rel of listGenerated(OUT_DIR)) {
-    if (!generated.has(rel)) {
+    if (!generated.has(rel) && !handMaintained.has(rel)) {
       drift = true;
       process.stderr.write(`不该存在（codemod 不会生成它）：${rel}\n`);
+    }
+  }
+  for (const rel of handMaintained) {
+    try {
+      readFileSync(join(ROOT, rel), "utf8");
+    } catch {
+      drift = true;
+      process.stderr.write(
+        `登记为 HAND_MAINTAINED 但文件不在磁盘上：${rel}（它必须被签入）\n`,
+      );
     }
   }
   if (drift) {

@@ -1,0 +1,268 @@
+{
+  "$comment": "M1 round-trip 夹具。从 frontend/public/demo/threads/*/thread.json 的 516 条 values.messages 里抽取： 全部 22 条数组内容的消息 + 每种 type 各一条字符串内容的消息。 用途：证明 AgentMessageContent 的两侧都能原样往返，数组不会被 join 成 string。 重建：见 tests/unit/core-types/message-round-trip.test.ts 文件头。",
+  "sourceMessages": 516,
+  "arrayContent": [
+    {
+      "source_thread": "21cfea46-34bd-4aa6-9e1f-3009452fbeb9",
+      "type": "human",
+      "id": "47dcc555-9787-4ce6-88fd-cb4d728243ac",
+      "content": [
+        {
+          "type": "text",
+          "text": "Explain what MOE is to a 12-year-old boy"
+        }
+      ]
+    },
+    {
+      "source_thread": "21cfea46-34bd-4aa6-9e1f-3009452fbeb9",
+      "type": "human",
+      "id": "800c7d6e-d553-4f30-90e1-5c8d1d71c083",
+      "content": [
+        {
+          "type": "text",
+          "text": "The one related to AI models"
+        }
+      ]
+    },
+    {
+      "source_thread": "21cfea46-34bd-4aa6-9e1f-3009452fbeb9",
+      "type": "human",
+      "id": "e46db0ab-38c5-4f02-bbdd-fdef7c7a708c",
+      "content": [
+        {
+          "type": "text",
+          "text": "Cool! Now generate an comic strip image featuring Doraemon to introduce the concept of MOE."
+        }
+      ]
+    },
+    {
+      "source_thread": "3823e443-4e2b-4679-b496-a9506eae462b",
+      "type": "human",
+      "id": "ef6ba42d-88c7-4f64-80c0-e3d0dc8fc381",
+      "content": [
+        {
+          "type": "text",
+          "text": "Find recent podcast appearances by Dr. Fei-Fei Li and list out the key highlights from each episode."
+        }
+      ]
+    },
+    {
+      "source_thread": "3823e443-4e2b-4679-b496-a9506eae462b",
+      "type": "human",
+      "id": "1a49946d-9b79-4805-a959-5eb983010982",
+      "content": [
+        {
+          "type": "text",
+          "text": "last 6 months"
+        }
+      ]
+    },
+    {
+      "source_thread": "4f3e55ee-f853-43db-bfb3-7d1a411f03cb",
+      "type": "human",
+      "id": "bd5f52dd-e7c1-4a05-9511-870fb47c6950",
+      "content": [
+        {
+          "type": "text",
+          "text": "Search for the scene from the original book \"Pride and Prejudice\" — the moment when Darcy proposes to Elizabeth and is rejected.\n\nThen make a 8-second video clip of it."
+        }
+      ]
+    },
+    {
+      "source_thread": "5aa47db1-d0cb-4eb9-aea5-3dac1b371c5a",
+      "type": "human",
+      "id": "83dfd9e0-19b9-4248-8770-6f67d90547f8",
+      "content": [
+        {
+          "type": "text",
+          "text": "为苏超联赛第一季做一个酷炫的足球网站吧！"
+        }
+      ]
+    },
+    {
+      "source_thread": "5aa47db1-d0cb-4eb9-aea5-3dac1b371c5a",
+      "type": "human",
+      "id": "a9c98762-488c-4475-8742-f56e377f797c",
+      "content": [
+        {
+          "type": "text",
+          "text": "好像叫江苏城市足球联赛2025赛季，其他你决定"
+        }
+      ]
+    },
+    {
+      "source_thread": "7cfa5f8f-a2f8-47ad-acbd-da7137baf990",
+      "type": "human",
+      "id": "c6794328-e667-41fd-8067-b7314bcc4838",
+      "content": [
+        {
+          "type": "text",
+          "text": "What might be the trends and opportunities in 2026?"
+        }
+      ]
+    },
+    {
+      "source_thread": "7cfa5f8f-a2f8-47ad-acbd-da7137baf990",
+      "type": "human",
+      "id": "177797fd-7a9f-480a-8c6e-005dd2db3e59",
+      "content": [
+        {
+          "type": "text",
+          "text": "Create a modern and minimalist website for this topic"
+        }
+      ]
+    },
+    {
+      "source_thread": "7f9dc56c-e49c-4671-a3d2-c492ff4dce0c",
+      "type": "human",
+      "id": "37aacd32-f56f-4bb3-8184-ebcafde0bd14",
+      "content": [
+        {
+          "type": "text",
+          "text": "Can you conduct a research on Leica master photos, then generate 2-3 truly authentic AIGC street photos that captures the spirit of a Leica master photographer?\nAnd finally, write an article which includes these photos"
+        }
+      ]
+    },
+    {
+      "source_thread": "90040b36-7eba-4b97-ba89-02c3ad47a8b9",
+      "type": "human",
+      "id": "82879088-d086-4aa3-aa90-9d1cfaf25a12",
+      "content": [
+        {
+          "type": "text",
+          "text": "Imagine a photo of an American woman walking down the street in Shanghai"
+        }
+      ]
+    },
+    {
+      "source_thread": "90040b36-7eba-4b97-ba89-02c3ad47a8b9",
+      "type": "human",
+      "id": "f97120b2-0071-4454-85b8-8bb636833401",
+      "content": [
+        {
+          "type": "text",
+          "text": "1. 20s\n2. sunny\n3. bustling Nanjing Road\n4. tourist\n5. 16:9"
+        }
+      ]
+    },
+    {
+      "source_thread": "90040b36-7eba-4b97-ba89-02c3ad47a8b9",
+      "type": "human",
+      "id": "9da6213d-a1eb-4170-a61d-8378e6a680a1",
+      "content": [
+        {
+          "type": "text",
+          "text": "Now create a new photo of the same woman, but changing the place to the busy street in New York."
+        }
+      ]
+    },
+    {
+      "source_thread": "ad76c455-5bf9-4335-8517-fc03834ab828",
+      "type": "human",
+      "id": "ac8f27cd-0f2e-4a82-a432-f4b37d18a846",
+      "content": [
+        {
+          "type": "text",
+          "text": "What interesting findings can be made from this dataset?"
+        }
+      ]
+    },
+    {
+      "source_thread": "b83fbb2a-4e36-4d82-9de0-7b2a02c2092a",
+      "type": "human",
+      "id": "fbac3ddc-53d4-4a7f-b34e-8d73d6a3f748",
+      "content": [
+        {
+          "type": "text",
+          "text": "Create a stunning landing page for a new skincare brand named \"Caren\". Use AIGC to generate all the images you may use in the page.\n\nThe Caren branding is young and minimalist. Make sure you would \"wow\" our client."
+        }
+      ]
+    },
+    {
+      "source_thread": "c02bb4d5-4202-490e-ae8f-ff4864fc0d2e",
+      "type": "human",
+      "id": "69411c14-efea-4c7f-a322-2dd541b98fda",
+      "content": [
+        {
+          "type": "text",
+          "text": "Make me a super cool website to introduce the novel pride and prejudice"
+        }
+      ]
+    },
+    {
+      "source_thread": "c02bb4d5-4202-490e-ae8f-ff4864fc0d2e",
+      "type": "human",
+      "id": "5b5a187a-5b2d-4c9e-b6f7-817fe9c12330",
+      "content": [
+        {
+          "type": "text",
+          "text": "now please deploy to vercel"
+        }
+      ]
+    },
+    {
+      "source_thread": "d3e5adaf-084c-4dd5-9d29-94f1d6bccd98",
+      "type": "human",
+      "id": "7093f725-fdee-47b0-b135-abeaea804aff",
+      "content": [
+        {
+          "type": "text",
+          "text": "I'm the tech lead of a startup. Watch https://www.youtube.com/watch?v=rP7bpYsfa6Q and take notes for me.\n\nI'm also interested in her background, so conduct deep researches on any content in the video that you think might interest me."
+        }
+      ]
+    },
+    {
+      "source_thread": "f4125791-0128-402a-8ca9-50e0947557e4",
+      "type": "human",
+      "id": "6409a240-5eeb-4df5-8681-4ad80a1daf7e",
+      "content": [
+        {
+          "type": "text",
+          "text": "Create a liquid glass-style weather forecast. Below, you can add buttons to simulate sunny, rainy, and snowy weather. When you hover the mouse over it, the forecast will transform in 3D as the mouse moves."
+        }
+      ]
+    },
+    {
+      "source_thread": "fe3f7974-1bcb-4a01-a950-79673baafefd",
+      "type": "human",
+      "id": "7da141e4-3ab2-43d0-8485-5128f623c0c4",
+      "content": [
+        {
+          "type": "text",
+          "text": "Conduct a research on https://github.com/bytedance/deer-flow"
+        }
+      ]
+    },
+    {
+      "source_thread": "fe3f7974-1bcb-4a01-a950-79673baafefd",
+      "type": "human",
+      "id": "6f621f69-d5b7-40c4-b812-3de65e029821",
+      "content": [
+        {
+          "type": "text",
+          "text": "Great job! Then make a cool webpage according to your report."
+        }
+      ]
+    }
+  ],
+  "stringContent": [
+    {
+      "source_thread": "21cfea46-34bd-4aa6-9e1f-3009452fbeb9",
+      "type": "system",
+      "id": "7de4db5d-2739-461a-b1af-6b60b171bfc9",
+      "content": "<uploaded_files>\nNo files have been uploaded yet.\n</uploaded_files>"
+    },
+    {
+      "source_thread": "21cfea46-34bd-4aa6-9e1f-3009452fbeb9",
+      "type": "ai",
+      "id": "lc_run--019bf482-43cb-7702-acea-df30353780cb",
+      "content": ""
+    },
+    {
+      "source_thread": "21cfea46-34bd-4aa6-9e1f-3009452fbeb9",
+      "type": "tool",
+      "id": "0f2d92f7-61d1-4e1b-8fc1-79c08dd601cd",
+      "content": "🤔 MOE could refer to multiple things: Moe Szyslak from The Simpsons, Ministry of Education in some countries, or other meanings. For a 12-year-old boy, it's likely the Simpsons character, but I need to be sure.\n\nWhen you say \"MOE\", do you mean the character Moe from The Simpsons, or something else like Ministry of Education? I want to make sure I explain the right thing to a 12-year-old.\n\n  1. Moe from The Simpsons\n  2. Ministry of Education\n  3. Something else"
+    }
+  ]
+}

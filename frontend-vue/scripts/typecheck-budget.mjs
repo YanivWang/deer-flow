@@ -66,8 +66,9 @@ function main() {
       `${JSON.stringify(
         {
           $comment:
-            "COPIED 先于 RETYPED 落地造成的已知类型报错。由 `make typecheck-refresh` 生成。" +
-            "M1 收口时必须为空——每搬完一批 RETYPED 就该缩小一次。",
+            "分窗口推进期间的已知类型报错豁免。由 `make typecheck-refresh` 生成。" +
+            "RETYPED 全部落地后已归零，此后**任何非空都是回退**：" +
+            "要么修掉，要么在 review 里说清为什么必须留着。",
           total: Object.values(actual).reduce((a, b) => a + b, 0),
           errors: actual,
         },

@@ -39,6 +39,36 @@ const DROP_POLICY = {
 };
 
 // ---------------------------------------------------------------------------
+// 人工输入 2/2：retype 时**声明删除**的 import。
+//
+// 为什么必须显式声明而不是让脚本猜：DROPPED 档永远不落地，而闭包判据是按上游
+// import 图算的，所以「依赖 static-mode」的文件与测试会被判定为**永远搬不了**——
+// 靠推进里程碑解不开。实际情况是 06 §M1 1b 早就写了处置方式（「删分支」），
+// 删掉之后那条边就不存在了。
+//
+// 把删除声明进台账，闭包才是**我们落地后的图**而不是上游的图。代价是这份声明
+// 必须与 scripts/land-retyped.mjs 的实际改写一致——由 land-retyped 的
+// 「改写后不许残留该 specifier」检查兜住，声明了没删或删了没声明都会红。
+// ---------------------------------------------------------------------------
+const RETYPE_DROPS = {
+  "api/api-client.ts": {
+    imports: ["../static-mode", "../threads/static-demo"],
+    detail:
+      "删掉 static demo client 分支（01-scope 已排除静态模式），保留真实 LangGraph client。",
+  },
+  "artifacts/utils.ts": {
+    imports: ["../static-mode"],
+    detail:
+      "删掉 isStaticWebsiteOnly 早返回与随之无消费方的 staticDemoArtifactURL。",
+  },
+  "models/api.ts": {
+    imports: ["../static-mode"],
+    detail:
+      "删掉 isStaticWebsiteOnly 早返回与随之无消费方的 STATIC_MODELS_RESPONSE。",
+  },
+};
+
+// ---------------------------------------------------------------------------
 // import 分类规则
 // ---------------------------------------------------------------------------
 const rx = (...patterns) => patterns.map((p) => new RegExp(p));
@@ -62,10 +92,29 @@ const REACT_RUNTIME = rx(
 /** Next.js 框架专属；Nuxt 侧没有对应物，且 ssr:false 下多数无消费方。 */
 const NEXT_ONLY = rx("^next$", "^next/", "^nextra$", "^nextra/");
 
-/** 只改 import specifier 就能过的重定向。目标已实测存在同名导出。 */
+/**
+ * 只改 import specifier 就能过的重定向。目标已实测存在同名导出。
+ *
+ * `typeOnly: true` 的规则只对 `import type` 生效。这不是洁癖：`api/api-client.ts`
+ * 里的 `import { Client } from "@langchain/langgraph-sdk/client"` 是**值导入**，
+ * 换成自写类型就没有 `new Client()` 可用了。值导入只能靠装包解决，
+ * 所以它走下面的 vueDeps 分支（SDK 已按 frontend 实装的 1.6.0 装进 frontend-vue），
+ * 由 08「删除 SDK 的条件」在 M2 收口。
+ */
 const SPECIFIER_REWRITES = [
   {
     match: /^@langchain\/langgraph-sdk(\/.*)?$/,
+    typeOnly: true,
+    to: "@/core/types/message",
+    code: "retype-langgraph-sdk",
+    detail: "SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。",
+  },
+  {
+    // 06 §M1 1b 的 8 个符号里 ToolCall 来自这里。@langchain/core 是 SDK 的
+    // optional peer，没有被 link 进 node_modules/@langchain/，
+    // 为一个类型单独装这个包不值当——它同样指向自写类型。
+    match: /^@langchain\/core(\/.*)?$/,
+    typeOnly: true,
     to: "@/core/types/message",
     code: "retype-langgraph-sdk",
     detail: "SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。",
@@ -96,6 +145,26 @@ const ALIAS_PORTABLE = rx("^@/core/");
 
 function matchesAny(list, specifier) {
   return list.some((re) => re.test(specifier));
+}
+
+/**
+ * 分类的严重度序。`BLOCKED` 排在 `RETYPED` 之后、`REWRITE` 之前：
+ * 它的**内容零改动**（比 RETYPED 轻），但**当下一行都落不了**（比 RETYPED 重），
+ * 因为它 import 的模块要等 M4 重写完才存在。
+ */
+const CLASS_ORDER = {
+  COPIED: 0,
+  RETYPED: 1,
+  BLOCKED: 2,
+  REWRITE: 3,
+  DROPPED: 4,
+};
+
+/** `typeOnly: true` 的规则只认 `import type`；值导入必须另找出路（装包或重写）。 */
+function findRewrite(specifier, typeOnly) {
+  return SPECIFIER_REWRITES.find(
+    (rule) => rule.match.test(specifier) && (!rule.typeOnly || typeOnly),
+  );
 }
 
 function isInternal(specifier) {
@@ -133,8 +202,7 @@ function classify(facts, relPath, vueDeps) {
   let cls = "COPIED";
 
   const escalate = (next) => {
-    const order = { COPIED: 0, RETYPED: 1, REWRITE: 2, DROPPED: 3 };
-    if (order[next] > order[cls]) cls = next;
+    if (CLASS_ORDER[next] > CLASS_ORDER[cls]) cls = next;
   };
 
   if (DROP_POLICY[relPath]) {
@@ -195,7 +263,7 @@ function classify(facts, relPath, vueDeps) {
       continue;
     }
 
-    const rewrite = SPECIFIER_REWRITES.find((r) => r.match.test(specifier));
+    const rewrite = findRewrite(specifier, typeOnly);
     if (rewrite) {
       escalate("RETYPED");
       reasons.push({
@@ -271,10 +339,20 @@ function build(commit) {
     };
   });
 
-  // 传递阻塞。依赖 DROPPED 的文件**必然**要改（那行 import 没有落点），
-  // 依赖 REWRITE 的文件导出面不再保证同名——两种都不能算零改动。
-  // 宁可保守：把 COPIED 说大了会架空 hash 护城河，说小了只是少省点事。
-  // RETYPED 不传染：它只改自己的 import，导出面按约定保持结构等价。
+  // 传递阻塞，两种性质完全不同：
+  //
+  //   依赖 DROPPED  → RETYPED。那行 import 没有落点，**必须自己动手删**，
+  //                   删法记在 RETYPE_DROPS 里。这是 M1 的活。
+  //   依赖 REWRITE  → BLOCKED。内容一个字节都不用改，但被依赖方要等 M4 重写完
+  //                   才存在，所以**现在落不了**。这不是 M1 的活。
+  //
+  // 上一版把后者也判成 RETYPED，注了「落地时逐个复核，确实无需改动可降级回 COPIED」。
+  // 本窗口逐个复核了这 8 个（7 个 barrel + utils/datetime.ts），结论是两头都不对：
+  // 内容确实零改动（所以不是 RETYPED），但降级成 COPIED 会落下一个
+  // `export * from "./hooks"` 指向不存在的模块（所以也不是 COPIED）。
+  // 它们真正的状态是「等被依赖方」，于是有了 BLOCKED 这一档。
+  // 代价为零：这 8 个在 core 内的消费方只有 REWRITE 档的 hooks，
+  // 测试台账里也只有一个 DEFERRED 的 streamdown-plugins.test.ts 碰到。
   const classOf = new Map(entries.map((e) => [e.source, e.class]));
   for (const entry of entries) {
     const droppedDeps = entry.internalDeps.filter(
@@ -285,20 +363,55 @@ function build(commit) {
     );
     entry.blockedBy = [...droppedDeps, ...rewriteDeps].sort();
 
-    if (entry.class === "COPIED" && droppedDeps.length) {
+    // DROPPED 依赖：即使文件已经因为别的理由是 RETYPED（如 api/api-client.ts
+    // 的值导入换包），这条理由也要单独记上——否则台账会漏报它必须做的改动。
+    if (
+      ["COPIED", "RETYPED"].includes(entry.class) &&
+      droppedDeps.length &&
+      !entry.reasons.some((r) => r.code === "retype-dropped-dep")
+    ) {
       entry.class = "RETYPED";
       entry.reasons = entry.reasons.filter((r) => r.code !== "portable");
       entry.reasons.push({
         code: "retype-dropped-dep",
         detail: `依赖不迁的模块（${droppedDeps.join("、")}），该 import 必须删除或改写。`,
       });
-    } else if (entry.class === "COPIED" && rewriteDeps.length) {
-      entry.class = "RETYPED";
+    }
+
+    if (["COPIED", "RETYPED"].includes(entry.class) && rewriteDeps.length) {
+      entry.class = "BLOCKED";
       entry.reasons = entry.reasons.filter((r) => r.code !== "portable");
       entry.reasons.push({
-        code: "retype-rewrite-dep",
-        detail: `依赖需重写的模块（${rewriteDeps.join("、")}），其导出面不保证同名；落地时逐个复核，若确实无需改动可降级回 COPIED。`,
+        code: "blocked-rewrite-dep",
+        detail: `内容零改动，但 import 的 ${rewriteDeps.join("、")} 属 REWRITE 档（M4 才存在），因此随被依赖方一起落地。`,
       });
+    }
+
+    // 声明删除的 import：落地后的依赖图去掉这些边。闭包判据读 landedDeps，
+    // 台账仍保留 internalDeps 记录上游真实形状，两者的差就是 review 要看的东西。
+    const drops = RETYPE_DROPS[entry.source];
+    if (drops) {
+      const resolved = drops.imports
+        .map((specifier) =>
+          resolveInternal(
+            specifier,
+            `${SOURCE_PREFIX}/${entry.source}`,
+            fileSet,
+          ),
+        )
+        .filter(Boolean)
+        .map((p) => p.slice(`${SOURCE_PREFIX}/`.length));
+      const missing = drops.imports.length - resolved.length;
+      if (missing > 0) {
+        throw new Error(
+          `${entry.source}: RETYPE_DROPS 里有 ${missing} 条 import 在基线上解析不到，声明已过期。`,
+        );
+      }
+      entry.droppedImports = drops.imports;
+      entry.landedDeps = entry.internalDeps.filter(
+        (dep) => !resolved.includes(dep),
+      );
+      entry.reasons.push({ code: "retype-drop-import", detail: drops.detail });
     }
   }
 

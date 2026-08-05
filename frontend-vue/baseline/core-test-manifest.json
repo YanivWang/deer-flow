@@ -1316,7 +1316,7 @@
       "targets": [
         {
           "source": "streamdown/index.ts",
-          "class": "RETYPED"
+          "class": "BLOCKED"
         }
       ],
       "codemod": {

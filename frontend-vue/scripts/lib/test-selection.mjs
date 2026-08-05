@@ -12,6 +12,12 @@
                    一个 COPIED 模块完全可能 import 到还没落地的 RETYPED（实测 43 个里有 23 个
                    这样），跑起来就是 Cannot find package。
 
+                   闭包走的是 landedDeps（落地后的图）而不是 internalDeps（上游的图）。
+                   两者的差来自 core-provenance.mjs 的 RETYPE_DROPS：retype 声明删掉的
+                   import，落地后那条边就不存在了。不这么算的话，依赖 static-mode.ts
+                   的 5 个测试会被判成**永远搬不了**——DROPPED 档不会落地，
+                   靠推进里程碑解不开，而它们其实只是在等一次早就计划好的删分支。
+
                    试过、否决了：按 vi.mock 剪枝。被 mock 的模块理论上不会加载，
                    据此剪枝能多搬 7 个。实测这 7 个全部失败——vi.mock 仍然要求
                    路径可解析，而且只在**导入方的 specifier 与 mock 的 specifier 同形**时
@@ -64,7 +70,11 @@ export function partition(testManifest, coreManifest, landed) {
   const landedSet = new Set(landed);
   const classOf = new Map(coreManifest.files.map((f) => [f.source, f.class]));
   const bySourceMap = new Map(coreManifest.files.map((f) => [f.source, f]));
-  const depsOf = (source) => bySourceMap.get(source)?.internalDeps ?? [];
+  const depsOf = (source) => {
+    const entry = bySourceMap.get(source);
+    // landedDeps 只在声明过删除 import 的文件上存在；其余等同 internalDeps。
+    return entry?.landedDeps ?? entry?.internalDeps ?? [];
+  };
 
   const portable = [];
   const waiting = [];

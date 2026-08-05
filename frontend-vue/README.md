@@ -34,9 +34,16 @@ maps into `app/core/`. They are regenerated from git objects, never hand-edited:
 make baseline-refresh   # rebuild; needs a full clone, submit the diff for review
 make baseline-check     # fail if the checked-in ledgers are stale
 make land-copied        # copy the COPIED set into app/core byte for byte
+make land-retyped       # apply the declared retypes into app/core
 make codemod-tests      # regenerate tests/unit/core from the rstest sources
-make migration-check    # baseline-check + codemod-check; needs a full clone
+make migration-check    # baseline-check + codemod-check + land-retyped-check
 ```
+
+`COPIED` files are byte-identical to upstream and guarded by SHA-256; `RETYPED`
+files are ours — they carry the six-part header, get formatted and linted, and
+their every difference from upstream is declared in `scripts/land-retyped.mjs`.
+`make land-retyped-check` fails if a landed `RETYPED` file was hand-edited, the
+same contract `codemod-check` enforces for generated tests.
 
 The ledgers are anchored to the **frozen baseline commit**, pinned as `BASELINE` in
 the Makefile — never `HEAD`. `HEAD` self-invalidates: the ledgers record the commit
