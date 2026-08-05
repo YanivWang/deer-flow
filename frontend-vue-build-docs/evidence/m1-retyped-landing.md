@@ -30,7 +30,12 @@ make migration-check  # baseline-check + codemod-check + land-retyped-check（�
 | 落地分类            | COPIED 85        | COPIED 82 · RETYPED 24 · BLOCKED 10 |
 | npm 依赖净变化      | —                | **−1**（卸载 `ai`）        |
 
-`make e2e-m0` 收工时重跑（本窗口动了 `eslint.config.mjs`）。
+`make e2e-m0` 收工时重跑，**exit 0**（7 个子套件）。
+
+> ⚠️ `make e2e-m0` 与 `make verify` **不能并发跑**。本窗口把前者放后台、
+> 同时跑后者，两个 `nuxt build` 撞锁，e2e 报
+> `Another Nuxt build is already running`——看起来像回归，其实是自己踩自己。
+> 串行重跑才是 exit 0。
 
 重建产物：
 
