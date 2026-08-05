@@ -8,19 +8,20 @@
 
 ## 清单
 
-| 文件                      | 来源                                                        | 内容                                                                                                                                          |
-| ------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `deerflow-create.sse`     | `POST /api/langgraph/threads/:id/runs/stream` 的完整响应体  | 74 个事件帧（`metadata` 1 · `values` 13 · `updates` 50 · `messages` 9 · `end` 1）+ 1 个 `: heartbeat` 注释帧。73 个帧带 `id:`，`end` **不带** |
-| `deerflow-resume-gap.sse` | `GET …/runs/:runId/stream` 带一个已被逐出的 `Last-Event-ID` | 单个 `gap` 事件，payload 为 `stream_replay_gap` / `reload_durable_state`                                                                      |
+| 文件                      | 来源                                                        | 内容                                                                                                                                                                                                      |
+| ------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `deerflow-create.sse`     | `POST /api/langgraph/threads/:id/runs/stream` 的完整响应体  | 226 个事件帧（`metadata` 1 · `values` 13 · `updates` 50 · `messages` 9 · `checkpoints` 52 · `tasks` 100 · `end` 1）+ 1 个 `: heartbeat` 注释帧。225 个帧带 `id:`，`end` **不带**。1.1 MB（gzip 后 18 KB） |
+| `deerflow-resume-gap.sse` | `GET …/runs/:runId/stream` 带一个已被逐出的 `Last-Event-ID` | 单个 `gap` 事件，payload 为 `stream_replay_gap` / `reload_durable_state`                                                                                                                                  |
 
 ## 元数据
 
 | 字段                | 值                                                                                                |
 | ------------------- | ------------------------------------------------------------------------------------------------- |
 | schema              | `deerflow-gateway-sse/1`                                                                          |
-| 录制时的仓库 commit | `055d593c`                                                                                        |
+| 录制时的仓库 commit | `548bf3ae`（M2 收尾重录，加入 `checkpoints` / `tasks`）                                           |
 | 录制场景            | `backend/tests/fixtures/replay/write_read_file.ultra.json`（仓库自带 replay fixture，非用户内容） |
-| Gateway             | `tests/support/run_m0_gateway.py --queue-maxsize 32`                                              |
+| Gateway             | `tests/support/run_m0_gateway.py --queue-maxsize 128`                                             |
+| 请求的 stream_mode  | `values` `messages-tuple` `updates` `custom` `checkpoints` `tasks`                                |
 | 路径                | 经 Nuxt preview 代理，不是直连 Gateway                                                            |
 
 ## 重新录制
@@ -42,10 +43,26 @@ cp test-results/real-backend/run-protocol*/resume-gap.redacted.sse tests/fixture
 帧结构、chunk 边界、`id:` 值一律不动。`id:` 是 bridge 的序号游标不是凭据，
 而且它正是续传测试要重放的东西。
 
+## 为什么 `checkpoints` / `tasks` 是靠改请求拿到的，不是重新录一次 LLM
+
+它们是**请求模式**，不是场景产物：同一份 replay fixture 换一个 `stream_mode`
+就会产出。所以 08 §402 点名要的这两种，代价只是改 `run-protocol.spec.ts` 的一行。
+
+**`debug` 有意不录。** 08 §402 的 raw-trace 清单里没有它（§349 的 event-map
+清单里才有），而它一个人就把 fixture 从 1.1 MB 顶到 2.1 MB、事件数从 226 顶到 378。
+实测数据留在 `playwright.m0-real-backend.config.ts` 的注释里，要录随时能录。
+
+`--queue-maxsize` 必须跟着重调：它要**大于 live burst、小于总事件数**。
+实测 32 会让 create 流自己被 gap（原来的 74 帧下没问题），128 通过；
+加上 `debug` 之后 384 又会大到不再逐出首个游标。run-protocol spec 的两条失败
+消息会直接告诉你破在哪一侧，照着调即可。
+
 ## 已知缺口
 
-录制场景里**没有** `custom`、`checkpoints`、`tasks`、`debug` 事件，也没有
-subagent namespace、reasoning、tool-call 碎片与临时 id 重写。08 §349 要求 raw
-trace 覆盖这些。当前这份只覆盖了 `metadata`/`values`/`updates`/`messages`/`end`/
-`gap`/heartbeat 七种，其余仍未被任何 golden 证据覆盖——见
-`frontend-vue-build-docs/evidence/m2-agent-core.md`。
+录制场景里仍然**没有** `custom`、`debug` 事件，也没有 subagent namespace 与
+reasoning。前两者是场景不产生（`custom` 已在请求里、这个场景就是不发），
+后两者要换录制场景——`write_read_file.ultra` 的提示词明确禁止委派子 agent，
+而 replay 模型不产出 reasoning。**tool-call 碎片与临时 id 重写不在缺口里**：
+上一份 README 说它们没覆盖，那是错的，录制里本来就有（9 个 `messages` 帧里
+2 个带 `tool_call_chunks`，human 消息的 id 从 `X` 变成 `X__user`）。
+详见 `frontend-vue-build-docs/evidence/m2-agent-core.md`。

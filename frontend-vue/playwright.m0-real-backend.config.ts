@@ -32,11 +32,20 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // queue-maxsize sits between the live burst (measured safe down to 8) and
-      // the scenario's 74 published events, so the create stream is never gapped
-      // while a resume from the first cursor always is.
+      // queue-maxsize sits between the live burst and the scenario's published
+      // event count, so the create stream is never gapped while a resume from
+      // the first cursor always is.
+      //
+      // M2 raised this from 32 to 128 when `checkpoints` and `tasks` joined the
+      // recorded stream_mode (08 §402 names both in the raw-trace coverage list).
+      // The run went from 74 to 226 events and the live burst outgrew a window of
+      // 32 — the run-protocol spec reports exactly which side of the window broke,
+      // so re-tune from its message rather than guessing. Measured: 32 gaps the
+      // create stream; 128 passes; with `debug` added the run reaches 378 events
+      // and 384 stops evicting the first cursor. `debug` is deliberately not
+      // recorded — 08 §402 does not ask for it, and it alone doubled the fixture.
       command:
-        "../backend/.venv/bin/python tests/support/run_m0_gateway.py --port 8011 --cors http://localhost:3101 --queue-maxsize 32",
+        "../backend/.venv/bin/python tests/support/run_m0_gateway.py --port 8011 --cors http://localhost:3101 --queue-maxsize 128",
       url: "http://127.0.0.1:8011/health",
       reuseExistingServer: false,
       timeout: 180_000,

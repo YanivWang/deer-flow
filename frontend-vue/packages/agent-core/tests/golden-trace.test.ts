@@ -43,11 +43,11 @@ const namesOf = (frames: SseFrame[]) =>
   frames.flatMap((f) => (f.kind === "event" ? [f.event.event] : []));
 
 describe("真实 create 流", () => {
-  it("整体读一遍：74 个事件 + 1 个心跳帧", async () => {
+  it("整体读一遍：226 个事件 + 1 个心跳帧", async () => {
     const frames = await read([CREATE]);
     const events = frames.filter((f) => f.kind === "event");
     const heartbeats = frames.filter((f) => f.kind === "heartbeat");
-    expect(events).toHaveLength(74);
+    expect(events).toHaveLength(226);
     expect(heartbeats).toHaveLength(1);
     expect(heartbeats[0]).toEqual({ kind: "heartbeat", comment: "heartbeat" });
   });
@@ -62,16 +62,18 @@ describe("真实 create 流", () => {
       values: 13,
       updates: 50,
       messages: 9,
+      checkpoints: 52,
+      tasks: 100,
       end: 1,
     });
   });
 
-  it("73 个帧带 id，最后一个不带——终止帧没有游标", async () => {
+  it("225 个帧带 id，最后一个不带——终止帧没有游标", async () => {
     const events = (await read([CREATE])).flatMap((f) =>
       f.kind === "event" ? [f.event] : [],
     );
     const withId = events.filter((e) => e.id !== undefined);
-    expect(withId).toHaveLength(73);
+    expect(withId).toHaveLength(225);
     // 这条不是凑数：续传游标只能取自带 id 的帧。如果实现「记住最后一帧的 id」，
     // 终止帧会把游标覆盖成 undefined，重连就退回从头开始。
     expect(events.at(-1)?.id).toBeUndefined();
@@ -96,9 +98,27 @@ describe("真实 create 流", () => {
 
   it("逐字节喂进去，结果与整体读一致", async () => {
     // 最狠的一种切分：每个 chunk 一个字节，所有分隔符与多字节字符都被切开。
+    //
+    // 录制加进 checkpoints/tasks 之后从 53KB 涨到 1.1MB，而**逐字节的代价是超线性的**：
+    // 每来一个字节都要在累积 buffer 上找一次分隔符，而 checkpoints 帧单帧就有 ~16KB。
+    // 实测整份 2.1MB 版本跑 42 秒仍未跑完。所以逐字节只跑**前 64KB**——
+    // 它含 6 种事件的完整帧，也含第一个多字节字符（第 28,352 字节），
+    // 正是这条用例要打的两个点。整份改用 997 字节定长切：质数长度保证切点不会与
+    // 任何帧长对齐，分隔符与多字节字符照样被切开，但读的次数降到千级。
     const bytes = bytesOf(CREATE);
-    const chunks = Array.from({ length: bytes.length }, (_, i) =>
-      bytes.slice(i, i + 1),
+    const head = bytes.slice(0, 64 * 1024);
+    const byteChunks = Array.from({ length: head.length }, (_, i) =>
+      head.slice(i, i + 1),
+    );
+    const headNames = namesOf(await read([head]));
+    expect(namesOf(await read(byteChunks))).toEqual(headNames);
+    // 前 64KB 必须真的含多种事件，否则上面那条退化成只验了几帧。
+    expect(new Set(headNames).size).toBeGreaterThanOrEqual(5);
+
+    const stride = 997;
+    const chunks = Array.from(
+      { length: Math.ceil(bytes.length / stride) },
+      (_, i) => bytes.slice(i * stride, i * stride + stride),
     );
     expect(namesOf(await read(chunks))).toEqual(namesOf(await read([CREATE])));
   });

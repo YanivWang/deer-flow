@@ -107,7 +107,14 @@ test("@run-protocol covers create, resume, cancel, gap and heartbeat", async ({
     assistant_id: "lead_agent",
     input: { messages: [{ role: "user", content: fixture.prompt }] },
     context: fixture.context,
-    stream_mode: ["values", "messages-tuple", "updates", "custom"],
+    stream_mode: [
+      "values",
+      "messages-tuple",
+      "updates",
+      "custom",
+      "checkpoints",
+      "tasks",
+    ],
     on_disconnect: "continue",
   };
 

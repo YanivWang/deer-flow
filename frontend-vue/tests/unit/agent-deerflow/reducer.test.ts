@@ -7,10 +7,13 @@
                    tests/fixtures/streams/deerflow-create.sse（M0 真实录制）
   【边界与注意】   **哪些断言有真实录制佐证、哪些是合成的，本文件分成两个 describe
                    写清楚。** 上一窗口的红项说过：golden trace 只覆盖 7 种事件，
-                   `custom` / `checkpoints` / `tasks` / `debug`、subagent namespace、
-                   reasoning delta 在 replay 场景（write_read_file.ultra）里
-                   根本不产生。拿合成载荷当"覆盖了"是自欺；分开写，读的人才知道
-                   哪条结论的证据强度是多少。
+                   `custom` / `debug`、subagent namespace、reasoning delta 在
+                   replay 场景（write_read_file.ultra）里根本不产生。拿合成载荷当
+                   "覆盖了"是自欺；分开写，读的人才知道哪条结论的证据强度是多少。
+
+                   **`checkpoints` / `tasks` 已经不在合成那一档了**：M2 收尾时把这
+                   两个请求模式加进了 M0 的录制（08 §402 点名要求），录制从 74 帧
+                   涨到 226 帧，两者各 52 / 100 帧都是真实数据。
 
                    录制那一半的主断言是**整条流跑完之后的消息集合逐字段等于最后
                    一帧 `values`**。这条断言同时压住 adapter 与 reducer：
@@ -89,10 +92,21 @@ describe("golden trace 全流回放（M0 真实录制）", () => {
     unknown
   > & { messages: unknown[] };
 
-  it("录制里确实有 74 帧、13 个 values、9 个 messages", () => {
-    expect(events).toHaveLength(74);
-    expect(events.filter((e) => e.event === "values")).toHaveLength(13);
-    expect(events.filter((e) => e.event === "messages")).toHaveLength(9);
+  it("录制里确实有 226 帧，覆盖 08 §402 点名的 checkpoints 与 tasks", () => {
+    const byName = events.reduce<Record<string, number>>(
+      (acc, e) => ({ ...acc, [e.event]: (acc[e.event] ?? 0) + 1 }),
+      {},
+    );
+    expect(events).toHaveLength(226);
+    expect(byName).toEqual({
+      metadata: 1,
+      values: 13,
+      updates: 50,
+      messages: 9,
+      checkpoints: 52,
+      tasks: 100,
+      end: 1,
+    });
   });
 
   it("跑完整条流之后，消息集合逐字段等于最后一帧 values", () => {
@@ -342,17 +356,11 @@ describe("合成载荷（write_read_file.ultra 不产生这些帧）", () => {
     expect(store.getSnapshot().state.title).toBe("from subagent");
   });
 
-  it("custom / checkpoints / tasks / debug 是明确忽略，不是漏网", () => {
+  it("custom / debug 是明确忽略，不是漏网（checkpoints/tasks 已由录制覆盖）", () => {
     const { store, unknown } = harness();
     send(store, "values", { messages: [], title: "t0" });
     const before = store.getSnapshot();
-    for (const name of [
-      "custom",
-      "checkpoints",
-      "tasks",
-      "debug",
-      "metadata",
-    ]) {
+    for (const name of ["custom", "debug", "metadata"]) {
       send(store, name, { anything: true });
     }
     expect(unknown).not.toHaveBeenCalled();

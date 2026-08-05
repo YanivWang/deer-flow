@@ -92,7 +92,7 @@ git tag frontend-vue-baseline-v2 27a425b0
 | M1      | 中（机械量大）                       | 149 个 core 文件要分类、83 个 core 测试要按 node/DOM/composable 分组；富 Message 类型是否等价            |
 | M2      | **中偏大，方差最大**                 | 自研 SSE 的正确性；探针是否收敛。transport 层有现成起点，但 run session/gap/cancel 不能按普通 fetch 估算 |
 | M3      | **中偏大**（早期估「小」是错的）     | ~900 行而非 230；代码块组件要从零写；归一化 DOM 等价能否达成                                             |
-| M4a     | **中偏大**                           | `threads/hooks.ts` 3,169 行 + A/C 两组不变式                                                             |
+| M4a     | **中偏大**                           | `threads/hooks.ts` 3,169 行 + C 组 9 条 + 从 M2 顺延来的 A7/A8（缓存失效与恢复警告，随 vue-query 一起做） |
 | M4b     | **最大（约占全部组件工作量的一半）** | 68 个组件 / ~16,100 行 + stick-to-bottom 自写 + 19 个 `src/app/` 文件 / 3,215 行                         |
 | M5 / M6 | 大                                   | 51 个 L3 组件；L2 接口会被反向修正                                                                       |
 | M7      | 中                                   | H 组重写（spike 已降低方差）、完整验收                                                                   |
