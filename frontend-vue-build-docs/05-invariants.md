@@ -8,6 +8,15 @@ M-1 对这些不变式所依赖的 wire/status/auth 合同已经冻结在 [09-m1
 
 移植每个模块前先读对应小节；实现完成后逐条对照。原始表述以 `frontend/AGENTS.md` 为准，本文是移植视角的提取。
 
+> **本文回答"是什么"，不回答"什么时候验"。**
+> 每一条在哪个里程碑验收，唯一来源是
+> [06 §验收项归属：05 全表 × 里程碑](06-migration-plan.md#验收项归属05-全表--里程碑)。
+>
+> 不要拿本文的**组名**当验收单位。A–K 组是从没有分层的 React 应用里按**话题**提取的，
+> 而里程碑是按**层**切的——A、C、F、H、J、K 六个组都横跨里程碑。早期版本用组名做引用，
+> 造成过三处实锤错误（M2 被要求交付需要 vue-query 的 A7/A8；C 组被三个里程碑同时认领；
+> J 组被挂在"通用 agent UI"下，而它在 M0 就验完了）。
+
 全表 **A–N 共 14 组**。A–K 来自 `frontend/AGENTS.md`；**L 组**是参照 `gamma-project` 实现自研 SSE 时必须补齐的规范差距；**M 组**是 React → Vue 的语义差异，与业务无关但同样会造成"看起来搬对了、行为不对"；**N 组**是已知的覆盖空白，需要在动到对应模块前先读源码补上。
 
 ---
@@ -28,6 +37,12 @@ M-1 对这些不变式所依赖的 wire/status/auth 合同已经冻结在 [09-m1
 | A8  | Stop 后立即失效 4 类缓存（当前 thread、thread history、token usage、侧栏/搜索），并**再安排一次延迟 refetch** | SDK 的 stop 可能在后端标题定稿提交前就以 abort + fire-and-forget cancel 结束                                                                                                                                                                                                                                                                         |
 
 > 参考实现：`frontend/src/core/api/api-client.ts`、`core/api/stream-mode.ts`、`core/threads/hooks.ts`
+
+> **本组横跨两个里程碑。** A1–A6 是 transport / session 语义，落在 L1+L3，**M2 已验收**；
+> **A7 / A8 落在 Pinia + vue-query 缓存层，验收在 M4a**——两条都要求"失效持久化缓存"
+> 与"本地化恢复警告"，在 vue-query plugin 引入之前没有验收对象。
+> M2 已为 A7 留好接口：gap 恢复时合成一帧 `values`（全量替换正是 gap 之后要的 durable 语义），
+> UI 侧的清空与警告挂在这一帧上。
 
 ### A1 的落地形状（M2）
 
@@ -104,6 +119,16 @@ false，**一声不响地放行**。适配层必须显式桥接两种命名再�
 | C9  | 该本地顺序锚点要**保持到 finish / stop / stream error**；下次本地提交时替换，切换 thread 或 replay-gap 恢复时清除                                                            |
 
 > 这一组是全文档最容易在重写中丢失的部分。建议原样复制 `core/threads/` 与 `core/messages/` 的纯 TS 实现及其单测，不要重新设计。
+
+> ⚠️ **验收在 M4a，不在 M1，也不在 M4b。** 本组的实现主体是 `core/threads/hooks.ts`
+> （3,169 行，`REWRITE` 档），M1 一行都没搬。
+>
+> **而且"搬了单测就保真"对本组今天并不成立**：`core/threads/` 的 25 个上游单测里
+> **只落地了 6 个**（api / composer-draft / export / thread-list-model /
+> thread-search-query / utils），没落地的恰恰是 C 组那几个——`coalesce`、`infinite`
+> （分页）、`local-turn-order`（C8/C9）、`message-merge`（C1/C3）、
+> `thread-history-options`（C6）。它们依赖 `hooks.ts`，随它一起在 M4a 落地。
+> 在那之前，**`make verify` 全绿不代表 C 组保真**。
 
 ---
 
@@ -238,6 +263,14 @@ requestAnimationFrame 中发出，而 `resized` 只在 pointer release 后发出
 | K5  | 设置 > 工具的 MCP 开关调用定向的 `PATCH /api/mcp/config`；在该 mutation 的成功 refetch 完成前禁用开关；通过 toast 显示后端错误 `detail`；**成功后才**失效 `["mcpConfig"]`                 |
 | K6  | 定时后台运行是**非交互**的：`context.non_interactive=true` 时 lead-agent 工具集排除 `ask_clarification`。该键只对内部认证的调用方生效，客户端提交的会被丢弃（后端行为，前端不要伪造）     |
 
+> **K6 不是前端验收项。** 它描述的是后端行为，前端能做的只有"不伪造这个键"——
+> 那是一个否定式约束，没有对应的前端断言。把它放进任何前端验收清单，
+> 勾上的只能是一个假钩。[归属表](06-migration-plan.md#验收项归属05-全表--里程碑)
+> 里它标为"不是前端验收项"。
+>
+> 本组其余五条也不同属一个里程碑：K1 是 `threads/utils.ts` 的纯 TS（M1 已落地），
+> K2/K3（编辑并重跑）在 M4b 且**25 个 spec 里没有对应的 E2E**，K4/K5 在 M6。
+
 ---
 
 ## L. 自研 SSE transport 的补强项
@@ -322,8 +355,15 @@ git show 44309ae7:frontend-vue/app/core/api/stream/transport/parse-sse-event.ts
 
 ## 使用建议
 
-1. 移植 `app/core/` 时**连同单测一起搬**。C 组（历史与顺序）和 F 组（human input 协议）的语义几乎全部由单测固定，测试全绿 = 语义已保真。
+1. 移植 `app/core/` 时**连同单测一起搬**。**但"测试全绿 = 语义已保真"只对能整体搬走的那部分成立**：
+   F1–F7（`messages/human-input.ts`）确实是这样，M1 随单测一起落地即验收完成；
+   而 C 组的实现主体 `threads/hooks.ts` 是 `REWRITE` 档，它的单测**大半还没落地**
+   （25 个里只落了 6 个），所以 M1 的全绿**不覆盖 C 组**。
 2. 组件层的约束（B、D、H 组）没有单测覆盖的部分，靠 Playwright E2E 兜底。
 3. A 组与 L 组是自研 SSE 的正确性基线，必须有对应单测，**不能只靠 E2E**——流式的时序问题在 E2E 里既难复现也难定位。
-4. M 组（Vue 专有陷阱）在**每个**模块都适用，不对应某一个业务域——M4（数据流 + 通用 UI）与 M5/M6（L3 组件）尤其要留意 M1 / M5。
+4. M 组（Vue 专有陷阱）在**每个**模块都适用，不对应某一个业务域，因此它**不属于任何单一里程碑的验收清单**——
+   把它塞进某一个，等于宣布其余里程碑不用查。落法是：M3/M4/M6 三条在 **M3**（Markdown 渲染层）
+   首次有验收对象；M1/M2（`provide` 传 ref）在 **M4a**（7 个业务 Context 转 provide/inject）；
+   **M5（`watch` 惰性）从 M3 起每个写 Vue 代码的里程碑都查一遍**，A7 / D1 / D4 都踩在它上面。
+   （早期版本写的是"M4"，那是 06 把 M4 拆成 M4a/M4b 之前的旧编号。）
 5. 每完成一个模块，回到本文档对应小节逐条勾选。

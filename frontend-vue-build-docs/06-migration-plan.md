@@ -111,6 +111,64 @@ git tag frontend-vue-baseline-v2 27a425b0
 
 ---
 
+## 验收项归属：05 全表 × 里程碑
+
+**规则：验收项归属于「拥有它那一层」的里程碑，不引用 05 的组名。**
+
+[05](05-invariants.md) 的 A–K 组是从 `frontend/AGENTS.md` 提取的，那是一个**没有分层的
+React 应用**，所以它按**话题**聚类（"流式与重连""消息渲染"）。本文档的里程碑按**层**切
+（L1 内核 / L3 适配 / 数据流 / 组件 / L3 业务）。两套切法不同构——用组名当验收单位，
+等于假设"一个话题只落在一层"，而 A、C、F、H、J、K 六个组都横跨里程碑。
+
+早期版本正是这么写的，结果是三处实锤错误：M2 被要求交付需要 vue-query 的 A7/A8；
+C 组同时被 §M2（经 A 组）、§M4a（"hooks.ts 独自承载 A 组与 C 组"）和 §M4b 认领；
+J 组（认证与存储）被挂在"通用 agent UI"下，而它其实在 M0 就已经验完了。
+
+下表是**唯一的归属来源**，各里程碑的「验收清单」只引用它。
+
+| 条目            | 落在哪一层                                        | 验收里程碑                       | 依据                                                                       |
+| --------------- | ------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------- |
+| **A1**          | L1 store                                          | M2 ✅                            | `packages/agent-core/src/store/external-store.ts`                          |
+| **A2 A3**       | L3 请求构造                                       | M2 ✅                            | `agent-deerflow/run-protocol.ts`                                           |
+| **A4 A5 A6**    | L3 会话 / gap 恢复                                | M2 ✅                            | `agent-deerflow/gap-recovery.ts`                                           |
+| **A7 A8**       | **Pinia + vue-query 缓存层**                      | **M4a**                          | 二者都要求"失效缓存"；vue-query plugin 在 M4a 才引入                       |
+| **B1–B11**      | 组件（消息分组与渲染）                            | M4b                              | `workspace/messages/`                                                      |
+| **C1–C9**       | **数据流（`threads/hooks.ts`，REWRITE 未落地）**  | **M4a**                          | §M4a 原文「hooks.ts 独自承载 A 组与 C 组」；gate 跑两个 ordering/history spec |
+| **D1–D8**       | L3 artifacts                                      | M5                               | —                                                                          |
+| **E1–E11**      | 组件 composer                                     | M4b                              | —                                                                          |
+| **F1–F7**       | core 纯 TS（`messages/human-input.ts`，M1 已落地） | **M1**（单测）                   | RETYPED 已落地，语义由随搬的单测固定                                       |
+| **F8–F11**      | 组件 human-input 卡片                             | M4b                              | —                                                                          |
+| **G1–G6**       | 组件 subtask 卡片 + 事件回填                      | M4b                              | —                                                                          |
+| **H1–H6**       | 面板编排（splitpanes 重写）                       | **M7**                           | 05 H 组自述「M7 仍需实现 H3/H4/H5 与业务状态镜像」                         |
+| **H7 H8**       | **组件 + 查询**（context-usage / token-usage）    | **M4b**                          | §M4b 组件清单里就有这两个散件                                              |
+| **I1–I5**       | L3 browser view                                   | M6                               | —                                                                          |
+| **J1–J4**       | 认证与存储                                        | **M0 ✅**（G0-3 / G0-5）         | 与"通用 agent UI"无关                                                      |
+| **J5 J6**       | 生产 OIDC / 并发 state                            | **M0 ✅**（G0-7）+ **M7** 生产 readiness | 单前端验完，双 hostname 并发留 M7                                    |
+| **K1**          | core 纯 TS（`threads/utils.ts`，M1 已落地）        | **M1**                           | RETYPED 已落地                                                             |
+| **K2 K3**       | 编辑并重跑                                        | **M4b**，⚠️ **无专门 E2E spec**   | 25 个 spec 里没有 edit-regenerate；只能靠单测 + 手验                       |
+| **K4**          | 重命名 409                                        | **M6**                           | `sidebar.spec.ts`                                                          |
+| **K5**          | 设置 > 工具的 MCP 开关                            | **M6**                           | `settings/`                                                                |
+| **K6**          | **后端行为**                                      | **不是前端验收项**               | 05 原文「后端行为，前端不要伪造」                                          |
+| **L1–L16**      | L1 transport + session                            | M2 ✅                            | —                                                                          |
+| **M1 M2**       | `provide` / `inject`                              | **M4a**                          | 7 个业务 Context 在 M4a 转 provide/inject                                  |
+| **M3 M4 M6**    | Markdown 渲染语义                                 | **M3**                           | `elementAttributeNameCase`、动画 key、`onErrorCaptured`                    |
+| **M5**          | `watch` 惰性                                      | **每个写 Vue 代码的里程碑**（M3 起），首查 M4a | 它不对应业务域；A7/D1/D4 都踩在它上面                        |
+| **N1**          | `uploads/hooks.ts`（REWRITE 未落地）              | **M4a**                          | 05 N1：pre-submit 上传状态归 `threads/hooks.ts` 所有                       |
+| **N2**          | `notification/hooks.ts`（REWRITE 未落地）         | **M6**                           | `settings-notification.spec.ts`                                            |
+| **N3**          | `voice-input/`（COPIED 已落地）                   | **M4b**                          | composer 的一部分                                                          |
+| **N4**          | `i18n/cookies.ts`（REWRITE 未落地）               | **M4a**                          | i18n plugin 在 M4a                                                         |
+
+三点读法：
+
+1. **N 组不是约束清单，是"移植前先去读源码补齐约束"的登记**（05 原话）。它的验收
+   动作是「补完这一格并把结论写回 05」，不是「跑通某个断言」。
+2. **M 组不属于任何单一里程碑。** M5（`watch` 惰性）在每个写 Vue 代码的里程碑都要查一遍；
+   把它塞进某一个里程碑的清单，等于宣布其余里程碑不用查。
+3. **M7 的「全表逐条勾选」是复核，不是首次验收。** 每条都该在上表指定的里程碑先验过一次；
+   M7 复核的是"是否还成立"，不是"是否做过"。
+
+---
+
 ## M-1 · 契约冻结（先改方案，再写应用）
 
 **状态：已通过（2026-08-04）。** 以下七项已在 [09](09-m1-contract-freeze.md) 逐项给出源码证据、测试/运行证据与后续 gate。
@@ -299,6 +357,11 @@ artifacts/loader.ts      api/api-client.ts          threads/static-demo.ts(不�
 
 > 这也是 `COPIED` 这一档必须真的零改动的原因——只要有人「顺手改一行」，hash 就废了，该文件的护城河属性随之消失。真需要改，就把它降级成 `RETYPED`/`ADAPTED` 并写明理由。
 
+**验收清单**（依据[归属表](#验收项归属05-全表--里程碑)）：**F1–F7** 与 **K1** ——
+两者的纯 TS 实现（`messages/human-input.ts`、`threads/utils.ts`）在本里程碑随单测一起落地，
+语义由随搬的单测固定。**C 组不在这里**：它的实现主体 `threads/hooks.ts` 是 `REWRITE` 档，
+M1 一行都没搬，验收在 M4a。
+
 **产出**：单测全绿 = 业务语义已保真。1b 的 24 个改完仍全绿，说明手写类型与 SDK 类型确实等价——比"能编译"强得多的信号。`make i18n-check` 通过，`core-provenance` 守护全绿。
 
 ---
@@ -417,7 +480,17 @@ M2 一度卡在这句话上，因为 `frontend-vue` **从来没装过 SDK**，�
 > 部署状态变色——那是环境问题不是代码问题。后者由 real-backend job 与
 > raw trace 契约承担。
 
-**验收清单**：[05-invariants.md](05-invariants.md) 的 **A 组全部** + **L1–L16 全部**。
+**验收清单**（依据[归属表](#验收项归属05-全表--里程碑)）：
+
+- **A1–A6** + **L1–L16 全部**；
+- **接缝**：新模块之间至少一条组合路径有测试——`gap-recovery` 合成的 durable 帧要真的
+  走进 reducer 与 store。模块各自全绿不能替代它：「每个模块都对、合起来不对」正是
+  这一层最典型的失效形状，而它在 M4a 的 3,169 行 `hooks.ts` 里归因要贵一个数量级。
+
+**A7 / A8 不在 M2**（早期版本写的是"A 组全部"，那是错的）。两条都要求"失效持久化缓存"
+与"本地化恢复警告"，依赖 Pinia 与 `@tanstack/vue-query`，而 vue-query plugin 在 M4a 才引入。
+M2 已经为 A7 留好唯一接口：gap 恢复时合成一帧 `values` 交给 reducer（全量替换正是
+gap 之后要的 durable 语义），UI 侧的清空与警告挂在这一帧上。
 
 **必须在这里停下来验证。** 不要带着未验证的流式实现进入组件迁移。
 
@@ -458,6 +531,11 @@ expect(wrapper.find("p").element).toBe(firstParagraph); // 同一个 DOM 节点�
 > `style` 属性顺序、自闭合写法、空白处理上本来就不同，`@vue/server-renderer` 还会吐
 > `<!--[-->` 这类 fragment 锚点注释——字符级判据一定会红然后被人为放宽，gate 就废了。
 > 理由与允许的差异类型见 [04 §1](04-architecture-decisions.md#️-gate-的判据是归一化-dom-等价不是字符级一致)。
+
+**验收清单**（依据[归属表](#验收项归属05-全表--里程碑)）：**M3**（自定义组件收到 `class`
+而非 `className`）、**M4**（逐词动画 key 稳定）、**M6**（`onErrorCaptured` 要显式返回
+`false`）。这三条是本里程碑**首次**有对象可验——在此之前没有 Vue 渲染路径。
+**M5**（`watch` 惰性）从这里开始每个里程碑都查一遍。
 
 | 部分                                                    | 处置                                           | 量               |
 | ------------------------------------------------------- | ---------------------------------------------- | ---------------- |
@@ -555,8 +633,19 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
 - **3,169 行**——实测全仓最大的文件
 - 是 `useStream` 的唯一消费方，M2 自研 transport 的所有语义在这里落地
-- 独自承载 [05-invariants.md](05-invariants.md) **A 组（流式与重连）与 C 组（历史加载与顺序）**——C 组文档自己标注为"全文档最容易在重写中丢失的部分"
+- 是 [05-invariants.md](05-invariants.md) **A7/A8 与 C 组（历史加载与顺序）**的载体——C 组文档自己标注为"全文档最容易在重写中丢失的部分"。
+  （早期版本这里写的是"独自承载 A 组与 C 组"，与 §M2 的"A 组全部"直接打架。准确说法是：
+  **A1–A6 已由 M2 的 L1+L3 交付，`hooks.ts` 是它们的消费方而不是实现方**；
+  `hooks.ts` 自己实现的是 A7/A8 与 C 组）
 - `isMock` 在里面出现 **23 次**，删掉 mock 分支后结构会变，等于边搬边改
+
+**验收清单**（依据[归属表](#验收项归属05-全表--里程碑)）：**A7 A8**、**C1–C9**、
+**M1 M2**（`provide` 必须传 ref）、**M5**、**N1**（uploads）、**N4**（i18n）。
+
+C 组落在这里而不是 M4b：它的实现主体 `threads/hooks.ts` 就在这个里程碑重写，
+而下面 gate 里的两个 spec（`chat-thread-init-ordering` / `thread-history`）验的正是 C 组。
+A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑引入——它们是本里程碑
+**唯一**从 M2 顺延过来的项，M2 已把接口留好（gap 恢复合成的那帧 `values`）。
 
 **Gate**：这个文件改完后，先只接一个最小可用的聊天页（发消息 → 流式 → 停止 → 刷新恢复顺序），跑通 `chat` / `chat-thread-init-ordering` / `thread-history` 三个 spec，再往下做组件。**不要在 126 个组件都堆上来之后才发现流式顺序是错的**——那时候归因成本会高一个数量级。
 
@@ -580,7 +669,17 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
 **做完立刻抽 L2 边界并写进 [08](08-agent-core-contract.md)**，不等最后。这一批抽出来的接口，是 M5/M6 建 L3 时要用的。
 
-**验收清单**：B、C、E、F、G、J 组。
+**验收清单**（依据[归属表](#验收项归属05-全表--里程碑)）：**B1–B11**、**E1–E11**、
+**F8–F11**、**G1–G6**、**H7 H8**、**K2 K3**、**N3**（voice-input）。
+
+三处与早期版本不同，都是实锤订正：
+
+- **C 组移到 M4a**（实现主体 `threads/hooks.ts` 在 M4a 重写，两个 ordering spec 也在 M4a 的 gate 上）；
+- **J 组整组移出**（认证与存储；J1–J4 在 M0 的 G0-3/G0-5 就验完了，J5/J6 是 G0-7 + M7 生产 readiness。它与"通用 agent UI"没有关系）；
+- **F 组拆开**：F1–F7 是 `messages/human-input.ts` 的协议语义，M1 随单测已落地；这里只验 F8–F11 的卡片交互。
+
+⚠️ **K2/K3（编辑并重跑）在 25 个 spec 里没有对应的 E2E**——`branch-thread` 不覆盖它。
+这一条只能靠单测加手验，属于已知覆盖缺口，不要因为"E2E 全绿"就认为它验过了。
 
 **E2E**：`chat` `streaming-reasoning-order` `user-message-plain-text` `thread-history` `thread-history-mermaid` `chat-thread-init-ordering` `agent-chat` `branch-thread` `subtask-card` `thread-list-infinite-scroll` `thread-list-pin`
 
@@ -598,7 +697,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
 **这一步会反向修正 M4b 抽的 L2 接口**——这是预期的，也是不把 L2 抽取推到最后的理由。
 
-**验收清单**：D 组（8 条）。
+**验收清单**（依据[归属表](#验收项归属05-全表--里程碑)）：**D1–D8**，外加复查 **M5**
+（`watch` 惰性）——D1 与 D4 都是"初始状态不得被覆盖"，正好踩在这条上。
 
 **E2E**：`artifact-preview` `artifact-stream-state` `artifact-batched-stream` `artifact-panel-resize` `workspace-changes` `sidecar-chat`
 
@@ -608,7 +708,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
 **范围**：`settings/` 15 + `browser-view/` 8 + `agents/` 5 + `channels/` 3 + 剩余散件（`goal-status`、`scheduled-task-*`、`thread-channel-source`、`workspace-settings-deep-link`、`mode-hover-guide`）≈ 37 个 / 5,100 行。
 
-**验收清单**：I 组（browser view）、K 组（路由与其他）。
+**验收清单**（依据[归属表](#验收项归属05-全表--里程碑)）：**I1–I5**、**K4**（重命名 409）、
+**K5**（MCP 开关）、**N2**（notification）。
+
+**K 组不整组归这里**：K1 是 `threads/utils.ts` 的纯 TS，M1 已落地；K2/K3 是编辑并重跑，
+属于 M4b；**K6 根本不是前端验收项**——05 原文就写着「后端行为，前端不要伪造」，
+把它放进任何前端清单都只能勾一个假的钩。
 
 **E2E**：`sidebar` `settings-notification` `integrations` `channels` `scheduled-tasks` `browser-feature` `agents-feature-disabled` `ui-polish-mobile`
 
@@ -627,7 +732,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
 - **豁免登记表复核**：[03 的 EX 表](03-project-shape.md#选择器失效时的口径spec-只读--豁免登记)有几条、每条的替代验证手段是否真的存在。这张表的长度就是合同被侵蚀的程度
 - `tests/e2e-auth/` 全绿；M0 已先跑过真实 Cookie/CSRF smoke，这里跑完整认证套件
 - `tests/e2e-real-backend/` 三个 spec 全绿，并补 run resume/gap/cancel 契约用例
-- [05-invariants.md](05-invariants.md) 全表逐条勾选（A–N 共 14 组）
+- **本里程碑首次验收的项**：**H1–H6**（splitpanes 三面板编排，重写而非替换）、
+  **J5 J6** 的双 hostname 并发部分（M0 G0-7 只覆盖了单前端往返）
+- [05-invariants.md](05-invariants.md) 全表**复核**（A–N 共 14 组）——注意这是复核不是首次验收：
+  每条都该在[归属表](#验收项归属05-全表--里程碑)指定的里程碑先验过一次，
+  M7 查的是"是否还成立"。**若某条到这里才第一次被检查，说明归属表漏了它**，
+  应当回头补进对应里程碑而不是在 M7 补做
 - `tests/structural-diff.spec.ts` 继续作为诊断报告，不比较全页面 DOM
 - 关键视觉状态截图门禁全绿：空聊天、流式消息、reasoning/tool、artifact、settings、mobile、dark mode；动态时间、光标、动画区域使用固定数据或有限 mask
 - 生产 readiness gate 全绿：选定 public origin、SSE timeout/buffering/body limit、WS Upgrade、HTTPS Cookie、OIDC 回跳、非 root 最小镜像、health check、SIGTERM/优雅退出、进程启动和回滚说明
