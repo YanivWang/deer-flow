@@ -6,6 +6,11 @@ baseline/
 # 由 pnpm 维护，格式化它只会与 pnpm 的写法互相打架。
 pnpm-lock.yaml
 
+# 生成物：由 scripts/gen-api-types.mjs 写出（openapi-typescript）。
+# 格式化它会让 `make gen-api-types-check` 在一次 `make format` 之后立刻变红——
+# 与上面 baseline/ 同一个道理，生成器是唯一权威。
+app/core/api/types.gen.ts
+
 # COPIED:BEGIN 由 `make land-copied` 生成，勿手改
 # COPIED 档必须逐字节等同上游。prettier 3.9.6 与上游的 3.8.1 对 7 个文件意见不同，
 # 一次 `make format` 就会让 core-provenance.test.ts 变红。这里只挡 COPIED，

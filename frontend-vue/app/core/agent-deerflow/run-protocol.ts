@@ -39,6 +39,9 @@ import {
   runStreamUrl,
 } from "./endpoints";
 
+/** 这一层反复出现的具体化，给它一个名字省得每处都写两个类型参数。 */
+export type DeerFlowProtocol = RunProtocol<DeerFlowRunInput, DeerFlowRunHandle>;
+
 export interface DeerFlowRunInput {
   threadId: string;
   /** 原样转发给 Gateway 的 run 请求体（assistant_id / input / context / …）。 */

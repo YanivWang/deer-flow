@@ -406,6 +406,17 @@ M2 一度卡在这句话上，因为 `frontend-vue` **从来没装过 SDK**，�
 - `architecture.test.ts` 全绿：内核里没有任何 endpoint 路径、stream mode 概念、DeerFlow 业务词
 - 临时 consumer workspace clean install/typecheck/test 全绿，证明包的 dependencies/exports 完整
 
+> **落地对照（M2 收口）**：快照在 `frontend-vue/baseline/openapi.snapshot.json`
+> （103 条路径 / 128 个 schema），刷新命令与它受哪个环境变量影响见同目录的
+> `openapi.snapshot.README.md`。`make gen-api-types` 生成、`make gen-api-types-check`
+> 查漂移（已进 `make verify`）、`make consumer-check` 做 08 §54 的可移植性验收
+> （**不**进 verify，它要联网）。
+>
+> `gen-api-types-check` 检的是**幂等性**（同一份快照生成两次结果一致），
+> 不是「和线上后端对不对得上」。让 CI 去 curl 一个跑着的 Gateway，门禁就会随
+> 部署状态变色——那是环境问题不是代码问题。后者由 real-backend job 与
+> raw trace 契约承担。
+
 **验收清单**：[05-invariants.md](05-invariants.md) 的 **A 组全部** + **L1–L16 全部**。
 
 **必须在这里停下来验证。** 不要带着未验证的流式实现进入组件迁移。

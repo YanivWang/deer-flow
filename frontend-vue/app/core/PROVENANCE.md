@@ -20,18 +20,22 @@
 
 ## 台账
 
-| 文件                             | 分类      | 来源                | 说明                                                                                                                     |
-| -------------------------------- | --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `auth/decision.ts`               | `ADDED`   | —                   | M0 路由跳转纯函数。上游 `auth/auth-disabled-user.ts` 读 `process.env`，此处改为接收注入值，不是它的复制品。              |
-| `types/message.ts`               | `ADDED`   | —                   | 替代 `@langchain/langgraph-sdk` 的 wire 类型，16 个 RETYPED 指向它（06 §M1 1b）。上游没有对应文件——它借的是 SDK 的类型。 |
-| `types/message.contract.ts`      | `ADDED`   | —                   | `AgentMessageContent` 联合的类型层护栏。放 `app/` 而不是 `tests/`，因为 `tests/` 不过 vue-tsc。                          |
-| `scheduled-tasks/schedule.ts`    | `ADDED`   | —                   | `ScheduleValue` 从 React 组件文件搬进 core，纠正依赖方向（06 §M1 1b 的 `retype-component-type`）。                       |
-| `api/client.ts`                  | `ADDED`   | —                   | M2 自写的 7 个 REST 方法，替代 SDK `Client`（02 §249）。上游没有对应文件——那部分职责在 SDK 里。                          |
-| `api/api-client.ts`              | `ADAPTED` | `api/api-client.ts` | M2 REWRITE。上游 471 行里大部分是给 SDK 打补丁，没有 SDK 就没有补丁的对象；有意不搬的三样写在文件头。                    |
-| `agent-deerflow/endpoints.ts`    | `ADDED`   | —                   | L3：run 相关 URL 与 `Content-Location` 解析（05 L12）。上游散在 SDK 内部。                                               |
-| `agent-deerflow/event-map.ts`    | `ADDED`   | —                   | L3：wire 事件名 → 流走向，内核唯一的协议知识入口（08 §288）。                                                            |
-| `agent-deerflow/gap.ts`          | `ADDED`   | —                   | L3：重放缺口载荷解析与 `gap → replay_gap` 映射。解析逻辑取自上游 `api-client.ts`，但落点与用途都变了。                   |
-| `agent-deerflow/run-protocol.ts` | `ADDED`   | —                   | L3：内核 `RunProtocol` 的 DeerFlow 实现（create/resume/cancel/inspect）。                                                |
+| 文件                              | 分类      | 来源                | 说明                                                                                                                                             |
+| --------------------------------- | --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `auth/decision.ts`                | `ADDED`   | —                   | M0 路由跳转纯函数。上游 `auth/auth-disabled-user.ts` 读 `process.env`，此处改为接收注入值，不是它的复制品。                                      |
+| `types/message.ts`                | `ADDED`   | —                   | 替代 `@langchain/langgraph-sdk` 的 wire 类型，16 个 RETYPED 指向它（06 §M1 1b）。上游没有对应文件——它借的是 SDK 的类型。                         |
+| `types/message.contract.ts`       | `ADDED`   | —                   | `AgentMessageContent` 联合的类型层护栏。放 `app/` 而不是 `tests/`，因为 `tests/` 不过 vue-tsc。                                                  |
+| `scheduled-tasks/schedule.ts`     | `ADDED`   | —                   | `ScheduleValue` 从 React 组件文件搬进 core，纠正依赖方向（06 §M1 1b 的 `retype-component-type`）。                                               |
+| `api/client.ts`                   | `ADDED`   | —                   | M2 自写的 7 个 REST 方法，替代 SDK `Client`（02 §249）。上游没有对应文件——那部分职责在 SDK 里。                                                  |
+| `api/types.gen.ts`                | `ADDED`   | —                   | **生成物，勿手改。** `make gen-api-types` 从 `baseline/openapi.snapshot.json` 生成（02 §340 / 04 §267）。上游对应物是 SDK 借来的 REST 信封类型。 |
+| `api/api-client.ts`               | `ADAPTED` | `api/api-client.ts` | M2 REWRITE。上游 471 行里大部分是给 SDK 打补丁，没有 SDK 就没有补丁的对象；有意不搬的三样写在文件头。                                            |
+| `agent-deerflow/endpoints.ts`     | `ADDED`   | —                   | L3：run 相关 URL 与 `Content-Location` 解析（05 L12）。上游散在 SDK 内部。                                                                       |
+| `agent-deerflow/event-map.ts`     | `ADDED`   | —                   | L3：wire 事件名 → 流走向，内核唯一的协议知识入口（08 §288）。                                                                                    |
+| `agent-deerflow/gap.ts`           | `ADDED`   | —                   | L3：重放缺口载荷解析与 `gap → replay_gap` 映射。解析逻辑取自上游 `api-client.ts`，但落点与用途都变了。                                           |
+| `agent-deerflow/run-protocol.ts`  | `ADDED`   | —                   | L3：内核 `RunProtocol` 的 DeerFlow 实现（create/resume/cancel/inspect）。                                                                        |
+| `agent-deerflow/message-adapt.ts` | `ADDED`   | —                   | L3：wire 消息 ⇄ 内核归一化消息的双向适配（08 §111 点名的 round-trip）。上游没有这一层——它直接用 SDK 的 wire 类型当内存模型。                     |
+| `agent-deerflow/reducer.ts`       | `ADDED`   | —                   | L3：wire 事件 → 归约动作（08 §事件与完整状态归约）。上游散在 SDK StreamManager 与组件生命周期里。                                                |
+| `agent-deerflow/gap-recovery.ts`  | `ADDED`   | `api/api-client.ts` | L3：05 A4–A6 的 rejoin 预算。**不是** `recoverStreamReplayGaps` 的搬运——上游的 sessionStorage 重连簿记在这里没有对象，见文件头。                 |
 
 <!-- COPIED:BEGIN 由 `make land-copied` 生成，勿手改 -->
 

@@ -40,6 +40,9 @@ export default withNuxt(
       ".output/**",
       "playwright-report/**",
       "test-results/**",
+      // 生成物（scripts/gen-api-types.mjs）。9000 行 openapi-typescript 输出，
+      // 它的写法由生成器决定，改不动也不该改。
+      "app/core/api/types.gen.ts",
       ...copied,
     ],
   },

@@ -33,6 +33,7 @@
     "eslint-plugin-vue": "^10.10.0",
     "happy-dom": "^20.11.1",
     "nuxt": "4.5.1",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "shadcn-nuxt": "^2.8.1",

@@ -222,3 +222,246 @@ core 真正调用的 7 个方法，SDK 的其余几十个没有——让人写�
 5. **M1 的九条红项原样有效**，尤其 `config/index.ts` 与 `auth/auth-disabled-user.ts`
    的 retype 至今零覆盖，以及 `tests/**` 不过 vue-tsc（本窗口只解决了
    `packages/agent-core/` 那一半，`tests/` 那一半没动）。
+
+---
+
+# 第 2 个窗口：L3 收口（message-adapt / reducer / gap-recovery / A1 / types.gen / consumer-check）
+
+## 复跑命令与实测
+
+```bash
+cd frontend-vue
+make verify           # 新增 gen-api-types-check
+make migration-check
+make consumer-check   # 新增。不在 verify 里，理由见下
+make e2e-m0           # 与 verify 串行，不能并发
+```
+
+| 命令                 | 结果       | 数字                                            |
+| -------------------- | ---------- | ----------------------------------------------- |
+| `make verify`        | **exit 0** | 82 文件 / 835 用例（上一窗口 79 / 782）         |
+| `make migration-check` | **exit 0** | 4 条                                            |
+| `make consumer-check` | **exit 0** | pack → clean install → typecheck → 最小 session |
+| `make e2e-m0`        | **exit 0** | 7 个子套件 / 14 个用例                          |
+
+新增用例 53 个：message-adapt 16、reducer 20、gap-recovery 11、store A1 6。
+
+两个新门禁**都造故障验过红**：
+- 把 `packages/agent-core/package.json` 的 `exports.import` 指到一个不存在的文件 →
+  `make consumer-check` exit 1；
+- 往 `types.gen.ts` 末尾加一行 → `make gen-api-types-check` exit 1，并报出字节差。
+
+---
+
+## 录制里本来就有的东西，上一窗口漏读了
+
+上一窗口的红项 #1 写「tool-call 碎片、临时 id 重写一个都没有 golden 覆盖」。
+把 `deerflow-create.sse` 的 9 个 `messages` 帧逐个解出来之后，**两条都不成立**：
+
+1. **工具调用碎片有真实录制。** 2 个帧带 `tool_call_chunks`，其中 `write_file`
+   那帧只有碎片没有成品（`tool_calls: []`），`read_file` 那帧两者都有。
+   这直接决定了 `mergeToolCallFragments` 的归并键：先看 `id` 再看 `index`，
+   **两个都要登记**。只按 index 会让录制里 `index: null` 的碎片全挤进一个桶；
+   只按 id 会让 OpenAI 那种「只有第一片带 id」的增量流被拆成好几个调用。
+   第一版只按 id，当场被用例抓住。
+
+2. **临时 id 重写是真实存在的，而且是最强的一条反浅合并证据。**
+   第 4 帧 `values` 里，原来 id 为 `X` 的 human 消息变成了 `X__user`，
+   同时一条 system-reminder **顶替**了 `X`。这是 DeerFlow 中间件切分用户输入的
+   产物。浅合并的后果不是「少一条」而是「多一条」——用户看到自己发的消息出现两次。
+
+还发现 3 条**幽灵 AI 消息**：id 只出现在 `messages` 帧里，从没进过任何 `values`。
+它们靠 `values` 的全量语义被清掉，而且清理不是发生在流末尾——每个 `values` 帧
+都会当场清掉当时存在的那些。测试为此改成**逐帧记账**：先证明它们真的被造出来过，
+再断言末态干净。否则「末态干净」可能只是因为它们压根没产生，那样这条断言什么都没测。
+
+> 教训：**录制不是"覆盖了 7 种事件"就没别的信息了。** 上一窗口按事件名统计就
+> 收工了，没有把载荷解开看。真正的证据密度比事件名多得多。
+
+---
+
+## round-trip 为什么不能逐字段枚举
+
+08 §111 要的是「text/image/tool-call 内容不会丢失」。写法有两种：
+
+- 逐字段枚举 wire → 内核 → wire；
+- `meta` 收下除内核有字段承载之外的**全部**键，回程原样摊开。
+
+选后者，理由是**测试抓不到前者的失效方式**：round-trip 测试用的是今天的 fixture，
+后端明天加一个字段，枚举版会静默丢掉它而所有断言依然全绿。构造式的写法让
+「不丢」变成结构性质，不依赖夹具的完备性。
+
+两处**有意不可逆**，都写在代码里：
+- wire 没有 `id` 时赋一个（516 条 fixture 全部带 id；没有 id 的消息本来就无法
+  在按 id 归并的存储里存活）；
+- 工具调用回程一律补 `type: "tool_call"`——那是这个字段唯一的合法值，属于规范化。
+
+reasoning 是**搬出**`additional_kwargs.reasoning_content` 而不是复制：留一份在
+meta 里，流式追加 `reasoningChunks` 之后两份就对不上，而对不上的那份会被回程写回去。
+
+## 流式累积必须在 L3 做，不能靠 L1 的 mergeMessage
+
+L1 的 `mergeMessage` 是 `{ ...base, ...patch }`，只对 `contentChunks` 做追加。
+把分片直接交给它，`content` 会被后到的 delta **整段替换**——流式文本每来一片
+就把前面的擦掉。所以 `accumulateStreamedMessage` 在适配层算好累积值再交给内核。
+
+这不是绕路：**「什么算一次追加」是协议知识**。让 L1 认识它，就等于让内核知道
+`AIMessageChunk` 的 `content` 是增量而 `values` 的 `content` 是全量。
+
+---
+
+## `values` 的一处已知限制（做了取舍，不是疏忽）
+
+`values` 对**已存在**的消息用 `upsert-message`（合并），不是替换。后果是可选字段
+（`reasoning` / `toolCalls`）只增不减。
+
+做成真替换要 remove + upsert 整段，代价两条：丢掉 `contentChunks`（真实 delta
+历史），以及长 thread 上每帧 O(n) 次对象展开 → O(n²)。而**今天不会分叉**，因为
+DeerFlow 的 durable checkpoint 保留 `additional_kwargs.reasoning_content`
+（516 条里 203 条带着它）。哪天后端在 checkpoint 里删掉它，这条会显形。
+
+顺带实现了「已知 id 相对顺序被改」的整段重建路径——`upsert-message` 表达不了重排。
+录制里没触发过（LangGraph 的 messages 通道是追加式的），但有合成用例钉住。
+
+---
+
+## gap 恢复：上游那份为什么不能照搬
+
+上游 `recoverStreamReplayGaps` 的 `clearReconnectRun` / `lg:stream:` sessionStorage
+记账是 **SDK 的重连簿记**——SDK 靠它记住「这个 thread 上有个 run 要重连」，
+所以恢复时要先清再写回。我们的游标是 SSE `Last-Event-ID`，由 run session 自己持有，
+**没有这本账**。照搬等于把一套不存在的状态机搬进来。
+
+真正要保的两条已经逐条钉住：A5（正好 5 次 rejoin，共 6 次流调用）、
+A6（末态 `failed` 而不是 `completed`；整条 gap 路径 `cancel` 与 `inspect`
+调用次数都断言为 0）。
+
+### 实现上最关键的一个决定：把 `resume` 伪装成 `create`
+
+内核只从 `create()` 开流，而 rejoin 要走 GET + `Last-Event-ID`。两条路：
+
+- 给内核加一个「从游标开始」的入口 → 重连语义泄进 L1；
+- 换一个 protocol，它的 `create` 内部调 `protocol.resume` → 内核什么都不用知道。
+
+选后者。08 硬规则 3「重连必须调 resume」仍然成立——真正发出去的就是 resume。
+
+### 一个只有写测试才会发现的账：两个预算会互相抵消
+
+05 L5 的重连总量上限是**会话内**计数的，而每次 rejoin 会新建一个 run session——
+新建就归零了。不处理的话 6 段流可以合起来重连 `6 × maxReconnects` 次，
+而 L5 明说「成功后不清零」。现在把已用掉的重连数从下一段额度里扣掉，
+有一条用例（EOF → gap → EOF）钉住它。
+
+---
+
+## A1：为什么默认档必须用真的 `queueMicrotask` 来测
+
+A1 的实现是一个 `pending` 短路：一个宏任务里派发一百次也只**登记一次**调度。
+每次都重新排队就退化成尾部防抖，那正是 A1 禁的。
+
+测试**不用注入的假调度器**。假调度器只能证明「代码调用了注入的那个函数」，
+证明不了默认档到底是合并还是防抖——而 A1 禁的恰恰是默认档被写成防抖。
+所以用真的 `queueMicrotask` 与真的宏任务边界，三档行为在同一组断言下可分辨：
+
+| 断言                      | 合并档 | 同步档 | 固定延时防抖档 |
+| ------------------------- | ------ | ------ | -------------- |
+| 一个宏任务里派发 50 次    | 1      | 50     | 0              |
+| 三个宏任务、每个派发 5 次 | 3      | 15     | 0（被饿死）    |
+
+`flushNotifications()` 是补出来的：合并之后，同步读者（卸载前落盘、测试断言、
+同一 tick 内量尺寸）唯一的等待方式变成「再 await 一个微任务」——那是在猜实现。
+
+---
+
+## OpenAPI：check 检的是幂等性，不是「和线上后端对不对得上」
+
+06 的两句话连起来只有一种读法：生成源是**签入的**快照，CI 临时生成并 diff。
+让 CI 去 curl 一个跑着的 Gateway，门禁就会随后端部署状态变色——那是环境问题
+不是代码问题。「和线上对不对得上」由 real-backend job 与 raw trace 契约承担。
+
+装 `openapi-typescript` 之前按规矩过了 `forbidden-deps` 清单，并回到 **02 §340 /
+04 §267** 确认这条裁决还成立（依赖增删的裁决不在 06 也不在 08）。
+
+抓快照有一个**没有任何报错的坑**：不设 `DEER_FLOW_ALLOW_UNVERIFIED_GITHUB_WEBHOOKS=1`，
+`/api/webhooks/github` 不挂载，快照少一条路径而 `create_app()` 只打一行 warning
+（102 vs 103 条）。`sort_keys=True` 同样不是洁癖：FastAPI 的输出顺序随路由注册
+顺序变，不排序的话后端加一个不相干的 router 就能让整份快照 diff 成一片红。
+两条都写进 `baseline/openapi.snapshot.README.md`。
+
+---
+
+## consumer-check：上一窗口的独立 tsconfig 证明不了这件事
+
+上一窗口给包配了两份 tsconfig，那证明的是「包自己能独立类型检查」。
+它**证明不了** `exports` 与 `dependencies` 完整，理由很具体：
+自家 tsconfig 按相对路径 `include: src/**`，**根本不经过 `package.json` 的
+`exports`**；而少声明的依赖在本仓库里会被 workspace 根的 `node_modules` 兜住。
+
+所以三步缺一不可：`pnpm pack` 打真包 → 系统临时目录 clean install（往上找不到
+本仓库的 node_modules）→ 从 **bare specifier** 消费。最小 session 还要**真跑**：
+`exports.import` 指错文件时 tsc 一样绿——这是实测的，故障注入当场红。
+
+一个实现约束：Node 的类型擦除对 `node_modules` 下的 `.ts` 是关闭的，而这个包的
+`exports` 指的正是 TS 源码（它是给打包器消费的 workspace 包）。所以运行时先用
+esbuild 打包再交给 node——用打包器不是绕路，就是真实消费方式。
+
+`pnpm` 走 `scripts/pnpm.py`（仓库规矩）。它只认 `--dir frontend|frontend-vue`，
+临时目录靠 pnpm **自己的** `--dir` 覆盖 cwd：第一个 `--dir` 被 wrapper 吃掉，
+第二个原样转发。
+
+**它不进 `make verify`**：要联网装 typescript/esbuild，而 verify 必须能离线跑。
+
+---
+
+## M2 收口状态：**A 组没有全绿**
+
+06 §M2 的验收清单是「05 的 A 组全部 + L1–L16 全部」。实测：
+
+| 条目    | 状态                                                             |
+| ------- | ---------------------------------------------------------------- |
+| L1–L16  | ✅ 全部落地（上一窗口）                                          |
+| A1      | ✅ 本窗口                                                        |
+| A2 · A3 | ✅ 上一窗口                                                      |
+| A4 · A5 · A6 | ✅ 本窗口                                                   |
+| **A7**  | ❌ **没做**。要清空乐观/瞬态/subtask 状态、失效持久化历史缓存、显示本地化恢复警告——三样都需要 UI 与查询层 |
+| **A8**  | ❌ **没做**。Stop 后失效 4 类缓存 + 延迟 refetch，同样需要查询层  |
+
+A7/A8 属于 M4a，本窗口按交接说明有意不做。**所以严格按 06 §M2 的字面清单，
+M2 没有收口**——差的这两条不是遗漏而是依赖倒置：它们要求的东西在 M4a 才存在。
+要么把 06 §M2 的清单改成「A1–A6 + L1–L16」并把 A7/A8 挪进 M4a 的验收，
+要么承认 M2 带着两条红项进 M3。**这个决定没有人做过，留给下一个窗口。**
+
+gap-recovery 已经为 A7 留好了唯一的接口：恢复时合成一帧 `values` 交给 reducer
+（全量替换正是 gap 之后要的 durable 语义），UI 侧的清空与警告挂在这一帧上即可。
+
+---
+
+## 红的 / 未验证的（替换上一窗口的清单）
+
+1. **golden trace 仍然不产生 `custom` / `checkpoints` / `tasks` / `debug`、
+   subagent namespace、reasoning delta。** 这几样的用例是**合成载荷**，测试里
+   分成两个 `describe` 明确标了。replay 场景（`write_read_file.ultra`）本身
+   不产生它们，要补得换录制场景。
+   （上一窗口把 tool-call 碎片与临时 id 重写也列在这里——**那两条是错的**，
+   录制里本来就有，见上文。）
+2. **`parseWireEventName` 的 namespace 处理仍然只有合成用例。** 录制里所有事件名
+   都不带 `|`。
+3. **`values` 对已存在消息是合并不是替换**（上文有取舍理由）。今天不显形，
+   依赖的是「后端 checkpoint 保留 reasoning_content」这个观察，不是保证。
+4. **useStream worktree 探针（06 §M2 A）仍然没做。** 3 天时间盒且明确不是门禁。
+5. **没有任何东西在跑这个内核。** L1 + L3 都还没被 Nuxt 应用接线：没有 plugin
+   调 `setDeerFlowRuntimeOptions()`，没有组件消费 external store，
+   `reducer` / `gap-recovery` / `message-adapt` 三个新模块**一个调用方都没有**。
+   接线是 M4a。本窗口证明的是「这些模块各自的行为正确」，
+   **不是**「DeerFlow 在 Vue 里能流起来」。
+6. **`types.gen.ts` 也没有任何消费方。** 9027 行生成类型签进来了，
+   `core/api/client.ts` 目前用的还是手写形状。让 client 改用生成类型是 M4a
+   的事，那时才会知道两者对不对得上。
+7. **快照与 `config.yaml` 开关的关系没验证。** memory / scheduler / tracing
+   看上去只影响启动期行为，但没实测它们会不会改 schema 细节。
+8. **`test-selection` 的闭包对新写模块仍不完整**（上一窗口第 4 条原样有效）。
+9. **M1 的九条红项原样有效**，尤其 `config/index.ts` 与 `auth/auth-disabled-user.ts`
+   的 retype 至今零覆盖，以及 `tests/**` 不过 vue-tsc。
+10. **`app/core/messages/utils.ts:853` 有一条 eslint warning**（无用的
+    eslint-disable 指令），M1 起就在，`make lint` 仍 exit 0。没动它：
+    那是 RETYPED 档，改它要走 land-retyped 的声明流程。

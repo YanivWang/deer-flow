@@ -6,7 +6,8 @@
 	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke \
 	baseline-refresh baseline-check land-copied land-retyped land-retyped-check \
 	codemod-tests codemod-check collected-check migration-check typecheck-raw \
-	typecheck-refresh i18n-check i18n-diff i18n-unused i18n-refresh
+	typecheck-refresh i18n-check i18n-diff i18n-unused i18n-refresh \
+	gen-api-types gen-api-types-check consumer-check
 
 PYTHON ?= python3
 PNPM = $(PYTHON) ../scripts/pnpm.py --dir frontend-vue
@@ -33,6 +34,8 @@ help:
 	@echo "  make migration-check           baseline-check + codemod-check (needs full clone)"
 	@echo "  make typecheck-raw             unfiltered vue-tsc output"
 	@echo "  make typecheck-core            standalone tsc for packages/agent-core"
+	@echo "  make gen-api-types             regenerate app/core/api/types.gen.ts from the snapshot"
+	@echo "  make consumer-check            clean-install packages/agent-core into a temp consumer"
 	@echo "  make typecheck-refresh         rebuild the known-typecheck-error budget"
 	@echo "  make i18n-check                dictionary health: locales in sync, no key lost"
 	@echo "  make i18n-diff / i18n-unused   key drift against the baseline / unreferenced keys"
@@ -80,6 +83,22 @@ typecheck-core:
 typecheck-refresh:
 	node scripts/typecheck-budget.mjs --refresh
 
+# REST 信封类型（02 §340 / 04 §267）。生成源是**签入的**快照，不是活着的 Gateway：
+# 让 CI 去 curl 一个跑着的后端，门禁就会随部署状态变色。
+# check 检的是幂等性——同一份快照生成两次必须一致。刷新快照的命令见
+# baseline/openapi.snapshot.README.md。OpenAPI 不承担 SSE schema（06 原话）。
+gen-api-types:
+	node scripts/gen-api-types.mjs
+
+gen-api-types-check:
+	node scripts/gen-api-types.mjs --check
+
+# 08 §54 的可移植性验收。打真包 → 临时目录 clean install → typecheck → 跑一次最小
+# session。**不进 verify**：它要联网装 typescript/esbuild，而 verify 必须能离线跑。
+# 里程碑收口与改动 packages/agent-core/package.json 时必须跑一次。
+consumer-check:
+	node scripts/consumer-check.mjs
+
 test:
 	$(EXEC) vitest run
 
@@ -99,7 +118,7 @@ i18n-refresh:
 
 # collected-check 只读签入的台账与 vitest 的收集结果，不碰 git 历史，所以能进 verify。
 # 它防的是「少收集几个测试换全绿」——vitest run 本身报告不了没被收集的东西。
-verify: lint format-check typecheck typecheck-core test collected-check i18n-check build
+verify: lint format-check typecheck typecheck-core test collected-check i18n-check gen-api-types-check build
 
 e2e-install:
 	$(EXEC) playwright install --with-deps chromium

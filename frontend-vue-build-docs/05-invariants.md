@@ -29,6 +29,25 @@ M-1 对这些不变式所依赖的 wire/status/auth 合同已经冻结在 [09-m1
 
 > 参考实现：`frontend/src/core/api/api-client.ts`、`core/api/stream-mode.ts`、`core/threads/hooks.ts`
 
+### A1 的落地形状（M2）
+
+实现在 L1：`packages/agent-core/src/store/external-store.ts`。默认调度器是
+`queueMicrotask`——微任务检查点就是「同一个宏任务」的边界，且发生在渲染之前。
+合并的关键是一个 `pending` 短路：一个宏任务里派发一百次也只**登记一次**调度。
+每次都重新排队就退化成尾部防抖了，那正是 A1 禁的。
+
+三条回归钉在 `packages/agent-core/tests/store.test.ts`，用的是**真的**
+`queueMicrotask` 与真的宏任务边界，不是注入的假调度器（假调度器只能证明
+「代码调用了注入的函数」，证明不了默认档是合并还是防抖）：
+
+| 断言                                       | 合并档 | 同步档 | 固定延时防抖档 |
+| ------------------------------------------ | ------ | ------ | -------------- |
+| 一个宏任务里派发 50 次                     | 1 次   | 50 次  | 0 次           |
+| 三个宏任务、每个派发 5 次                  | 3 次   | 15 次  | 0 次（被饿死） |
+| 派发之后立刻 `getSnapshot()`               | 最新   | 最新   | 最新           |
+
+`getSnapshot()` 同步最新，合并的只有通知。`flushNotifications()` 给同步读者留出口。
+
 ### ⚠️ A2 的两处修正（M2 实测）
 
 **1. 文件落在 `app/core/api/stream-mode.ts`，不是 `core/agent-deerflow/`。**

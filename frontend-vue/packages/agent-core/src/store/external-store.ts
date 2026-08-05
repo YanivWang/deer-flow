@@ -13,6 +13,19 @@
 
                    `applyReduceActions` 单独导出且是纯函数：归约逻辑要能脱离
                    store 单测，否则每个 reducer 用例都得先造一个 store。
+
+                   **通知是合并的，不是同步的（05 A1）。** 同一个宏任务里派发的
+                   若干个流事件只产生**一次**通知。默认调度器是 `queueMicrotask`：
+                   微任务检查点正好在当前宏任务末尾、渲染之前，所以「合并」与
+                   「绝不拖到下一帧」两件事同时成立。
+
+                   **不能做成 `setTimeout(fn, N)` 那种尾部防抖。** 05 A1 逐字写了
+                   理由：chunk 持续到达时尾部防抖会一直往后推，UI 更新被饿死——
+                   而流式回答恰恰就是 chunk 持续到达。这是 SDK `throttle: true`
+                   （boolean 档）与数字档的区别，不是同一件事的两种写法。
+
+                   `getSnapshot()` 始终是**同步最新**的：合并的只有通知，不是数据。
+                   订阅者被通知晚一点没关系，读到旧数据不行。
 */
 
 import type { AgentMessage } from "../message";
@@ -24,6 +37,14 @@ export interface AgentExternalStore<TState, TEvent> {
   subscribe(listener: () => void): () => void;
   dispatch(event: TEvent): void;
   reset(next: TState): void;
+  /**
+   * 把挂起的通知立刻发出去。
+   *
+   * 存在的理由是**同步读者**：卸载前的最后一次落盘、测试里的断言、
+   * 需要在同一个 tick 里量尺寸的适配器。没有它，唯一的等待方式是
+   * 「再 await 一个微任务」——那是在猜调度器的实现。
+   */
+  flushNotifications(): void;
 }
 
 function mergeMessage(base: AgentMessage, patch: AgentMessage): AgentMessage {
@@ -148,14 +169,40 @@ function insertId(ids: string[], id: string, afterId?: string): string[] {
   return [...ids.slice(0, at + 1), id, ...ids.slice(at + 1)];
 }
 
+/**
+ * 默认调度器：微任务检查点。
+ *
+ * 它就是「同一个宏任务」的边界——当前宏任务里的所有同步派发都排在这次检查点
+ * 之前，检查点又发生在浏览器渲染之前。换成 `setTimeout(fn, 0)` 会晚一整个
+ * 宏任务，换成固定延时就变成 05 A1 明令禁止的尾部防抖。
+ */
+const defaultSchedule = (flush: () => void): void => {
+  queueMicrotask(flush);
+};
+
 export function createAgentExternalStore<TState, TEvent>(options: {
   initialState: TState;
   reducer: EventReducer<TState, TEvent>;
   createId: () => string;
   now: () => number;
+  /**
+   * 通知的调度方式（05 A1）。默认合并到当前宏任务末尾。
+   *
+   * 可替换是为了宿主适配：Vue 侧可以换成 `nextTick`，测试可以换成同步执行。
+   * **但换成带延时的实现就违反 A1**——这个扩展点是给「换一个宏任务边界的
+   * 定义」用的，不是给「加一点防抖」用的。
+   */
+  scheduleNotify?: (flush: () => void) => void;
 }): AgentExternalStore<TState, TEvent> {
-  const { initialState, reducer, createId, now } = options;
+  const {
+    initialState,
+    reducer,
+    createId,
+    now,
+    scheduleNotify = defaultSchedule,
+  } = options;
   const listeners = new Set<() => void>();
+  let pending = false;
 
   const blank = (state: TState): AgentSnapshot<TState> => ({
     state,
@@ -173,6 +220,24 @@ export function createAgentExternalStore<TState, TEvent>(options: {
     for (const listener of [...listeners]) listener();
   };
 
+  const flush = () => {
+    // 已经被 flushNotifications() 提前发过：这次调度是空转，不能再发一遍。
+    if (!pending) return;
+    pending = false;
+    notify();
+  };
+
+  /**
+   * 合并的关键就是这个 `pending` 短路：一个宏任务里派发一百次，
+   * 也只登记一次调度。**每次都重新调度**（哪怕只是重排队列）就退化成
+   * 尾部防抖了——A1 禁的正是那个。
+   */
+  const scheduleFlush = () => {
+    if (pending) return;
+    pending = true;
+    scheduleNotify(flush);
+  };
+
   return {
     getSnapshot: () => snapshot,
     subscribe(listener) {
@@ -186,12 +251,14 @@ export function createAgentExternalStore<TState, TEvent>(options: {
       if (actions.length === 0) return;
       const next = applyReduceActions(snapshot, actions, now());
       if (next === snapshot) return;
+      // 快照同步换新，通知才合并：读者永远读得到最新数据。
       snapshot = next;
-      notify();
+      scheduleFlush();
     },
     reset(nextState) {
       snapshot = blank(nextState);
-      notify();
+      scheduleFlush();
     },
+    flushNotifications: flush,
   };
 }

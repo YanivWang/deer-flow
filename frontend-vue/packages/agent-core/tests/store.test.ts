@@ -5,8 +5,13 @@
   【主要导出】     无
   【依赖关系】     ../src/store/* · ../src/message
   【边界与注意】   不断言「Vue 组件会不会重渲染」——那是 L3 adapter 的测试。
-                   这里只断言 store 该有的两个性质：快照按引用换新、
-                   订阅者被通知到。
+                   这里只断言 store 该有的三个性质：快照按引用换新、
+                   订阅者被通知到、通知按 05 A1 合并到同一个宏任务。
+
+                   A1 那一组用的是**真的 `queueMicrotask` 与真的宏任务边界**，
+                   不是注入的假调度器。假调度器只能证明「代码调用了注入的函数」，
+                   证明不了默认档到底是合并还是防抖——而 A1 禁的恰恰是默认档
+                   被写成防抖。注入档另有一条用例单独覆盖。
 */
 
 import { describe, expect, it, vi } from "vitest";
@@ -194,6 +199,7 @@ describe("external store", () => {
     s.subscribe(listener);
     const before = s.getSnapshot();
     s.dispatch({ kind: "m1" });
+    s.flushNotifications();
     expect(listener).toHaveBeenCalledTimes(1);
     // 引用必须变：useSyncExternalStore 与 shallowRef 都靠引用比较判断重渲染。
     expect(s.getSnapshot()).not.toBe(before);
@@ -204,6 +210,7 @@ describe("external store", () => {
     const listener = vi.fn();
     s.subscribe(listener);
     s.dispatch({ kind: "noop" });
+    s.flushNotifications();
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -213,6 +220,7 @@ describe("external store", () => {
     const off = s.subscribe(listener);
     off();
     s.dispatch({ kind: "m1" });
+    s.flushNotifications();
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -222,6 +230,7 @@ describe("external store", () => {
     const off = s.subscribe(() => off());
     s.subscribe(second);
     s.dispatch({ kind: "m1" });
+    s.flushNotifications();
     expect(second).toHaveBeenCalledTimes(1);
   });
 
@@ -241,5 +250,100 @@ describe("external store", () => {
     const b = store();
     a.dispatch({ kind: "only-a" });
     expect(b.getSnapshot().messageIds).toEqual([]);
+  });
+});
+
+describe("通知合并（05 A1）", () => {
+  const store = (scheduleNotify?: (flush: () => void) => void) =>
+    createAgentExternalStore<State, { kind: string }>({
+      initialState: { todos: [] },
+      reducer: (event) => [
+        { type: "upsert-message", message: msg(event.kind) },
+      ],
+      createId: () => "id",
+      now: () => 42,
+      ...(scheduleNotify === undefined ? {} : { scheduleNotify }),
+    });
+
+  /** 让出一个宏任务。`setTimeout` 只出现在测试里，实现里一个都没有。 */
+  const macrotask = () =>
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
+
+  it("同一个宏任务里派发 50 次，只通知一次", async () => {
+    const s = store();
+    const listener = vi.fn();
+    s.subscribe(listener);
+
+    for (let i = 0; i < 50; i += 1) s.dispatch({ kind: `m${i}` });
+    // 通知还没发，但数据已经全在了——合并的是通知，不是数据。
+    expect(listener).not.toHaveBeenCalled();
+    expect(s.getSnapshot().messageIds).toHaveLength(50);
+
+    await macrotask();
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("不是尾部防抖：chunk 持续到达时每个宏任务都会通知，不会被饿死", async () => {
+    const s = store();
+    const listener = vi.fn();
+    s.subscribe(listener);
+
+    // 三个宏任务，每个里面派发 5 次。合并档 = 3 次通知；
+    // 同步档 = 15 次；固定延时的尾部防抖 = 0 次（一直被后面的 chunk 推后）。
+    for (let turn = 0; turn < 3; turn += 1) {
+      for (let i = 0; i < 5; i += 1) s.dispatch({ kind: `t${turn}-${i}` });
+      await macrotask();
+      expect(listener).toHaveBeenCalledTimes(turn + 1);
+    }
+  });
+
+  it("flushNotifications 立刻发出，且不会在检查点再发一次", async () => {
+    const s = store();
+    const listener = vi.fn();
+    s.subscribe(listener);
+
+    s.dispatch({ kind: "m1" });
+    s.flushNotifications();
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    await macrotask();
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("没有挂起的通知时 flush 是空操作", () => {
+    const s = store();
+    const listener = vi.fn();
+    s.subscribe(listener);
+    s.flushNotifications();
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("调度器可替换（宿主可以换成自己的宏任务边界）", () => {
+    const scheduled: (() => void)[] = [];
+    const s = store((flush) => scheduled.push(flush));
+    const listener = vi.fn();
+    s.subscribe(listener);
+
+    s.dispatch({ kind: "m1" });
+    s.dispatch({ kind: "m2" });
+    expect(scheduled).toHaveLength(1);
+    expect(listener).not.toHaveBeenCalled();
+
+    scheduled[0]?.();
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("reset 也走同一条合并路径", async () => {
+    const s = store();
+    const listener = vi.fn();
+    s.subscribe(listener);
+
+    s.dispatch({ kind: "m1" });
+    s.reset({ todos: ["fresh"] });
+    await macrotask();
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(s.getSnapshot().messageIds).toEqual([]);
   });
 });

@@ -53,6 +53,16 @@ agent-core ──✗──→ Vue / Nuxt / Pinia / LangGraph / DeerFlow 业务�
 
 禁止从应用中深路径 import `packages/agent-core/src/*`。可移植性的验收不是“复制目录后能编译”，而是把包放进一个临时 consumer workspace，执行 clean install、typecheck 和最小 session 测试。
 
+> **M2 落地：`make consumer-check`（`frontend-vue/scripts/consumer-check.mjs`）。**
+> 三步缺一不可：`pnpm pack` 打真包（只有真进 tarball 的文件才存在）→
+> 系统临时目录 clean install（往上找不到本仓库的 `node_modules`，没有兜底）→
+> 从 **bare specifier** 消费（深路径 import 会绕过 `exports`）。
+> 最小 session 要**真跑**而不只是编译：`exports.import` 指错文件时 tsc 一样绿——
+> 这条是实测的，把 `exports` 改指一个不存在的文件之后 `make consumer-check` 当场红。
+>
+> 它**不进 `make verify`**：要联网装 typescript/esbuild，而 verify 必须能离线跑。
+> 里程碑收口与改动 `packages/agent-core/package.json` 时必须跑一次。
+
 ## L1 禁入清单
 
 `packages/agent-core/src/` 不允许出现：
@@ -109,6 +119,21 @@ export interface AgentMessage {
 ```
 
 DeerFlow 的 `additional_kwargs`、`response_metadata`、run id、agent 名和未知字段进入 `meta`。适配器必须有 round-trip 测试，证明 text/image/tool-call 内容不会丢失。
+
+> **M2 落地：`app/core/agent-deerflow/message-adapt.ts`。**
+> round-trip 由**构造**保证而不是逐字段枚举：`meta` 收下 wire 对象里除
+> `id` / `content` / `tool_calls` / `tool_call_chunks` 之外的全部键，回程原样摊开。
+> 逐字段枚举会在后端加字段那天静默丢掉它，而 round-trip 测试用的是今天的 fixture。
+>
+> round-trip 的范围是 **durable 消息**（checkpoint / `values` 形状），
+> 13 个 fixture 的 516 条逐条往返（`tests/unit/agent-deerflow/message-adapt.test.ts`）。
+> `messages-tuple` 的流式分片（`AIMessageChunk` + `tool_call_chunks`）是**单向**的：
+> 分片并进 `toolCalls.argsChunks`，回程只写规范化后的 `tool_calls`。分片不落库，
+> 把它原样写回去等于让 UI 看到一个既有分片又有成品的四不像。
+>
+> 两处不可逆，都是有意的：wire 没有 `id` 时会被赋一个（没有 id 的消息本来就无法
+> 在按 id 归并的存储里存活；516 条**全部**带 id）；工具调用回程一律补
+> `type: "tool_call"`（那是这个字段唯一的合法值，属于规范化）。
 
 ## SSE 分帧契约
 
@@ -308,6 +333,24 @@ export type EventReducer<TState, TEvent> = (
 
 reducer 必须是纯函数。多 action 返回值允许一次 `values` 同时更新完整 state、消息顺序和 session 状态；不能把 artifact/todo/goal 更新散落到组件生命周期里。
 
+> **M2 落地：`app/core/agent-deerflow/reducer.ts`。**
+> `values` 的全量语义有一处 M0 录制当场证伪浅合并的证据：第 4 帧 `values` 里，
+> 原来 id 为 `X` 的 human 消息变成 `X__user`，而 `X` 被一条 system-reminder
+> **顶替**了。浅合并会让旧的 human 永远留在列表里，用户看到自己发的消息出现两次。
+> 同一条录制里还有 3 条只出现在 `messages` 帧、从没进过任何 `values` 的
+> AI 分片消息——它们必须被 `values` 清掉。
+>
+> `updates` 的通道 reducer：`messages` 走 LangGraph 的 `add_messages`
+> （按 id 归并、`type: "remove"` 删除、新 id 追加），其余通道是 `LastValue`。
+> 把 `messages` 当整段替换，任何只写单个通道的节点更新都会清空消息列表。
+>
+> **一处已知限制：`values` 对已存在的消息是 `upsert`（合并）而不是替换**，
+> 所以可选字段（`reasoning` / `toolCalls`）只增不减。要做成真替换就得
+> remove+upsert 整段，那会丢掉 `contentChunks` 并在长 thread 上退化成 O(n²)。
+> 今天不会分叉，因为 DeerFlow 的 durable checkpoint **保留**
+> `additional_kwargs.reasoning_content`（516 条里 203 条带着它）。
+> 哪天后端在 checkpoint 里删掉它，这条就会显形。
+
 Gateway durable status 与 UI session 的冻结映射是：`pending → creating`、`running → streaming/reconnecting`、`success → completed`、`interrupted → cancelled`、`error|timeout → failed`。`stopping` 只是客户端瞬态，Gateway 没有 `completed/cancelled/failed/stopping` 这些枚举。
 
 ## 框架无关 external store
@@ -320,6 +363,8 @@ export interface AgentExternalStore<TState, TEvent> {
   subscribe(listener: () => void): () => void;
   dispatch(event: TEvent): void;
   reset(next: TState): void;
+  /** 立刻把挂起的通知发出去。 */
+  flushNotifications(): void;
 }
 
 export function createAgentExternalStore<TState, TEvent>(options: {
@@ -327,8 +372,23 @@ export function createAgentExternalStore<TState, TEvent>(options: {
   reducer: EventReducer<TState, TEvent>;
   createId: () => string;
   now: () => number;
+  /** 通知调度（05 A1）。默认合并到当前宏任务末尾。 */
+  scheduleNotify?: (flush: () => void) => void;
 }): AgentExternalStore<TState, TEvent>;
 ```
+
+> **通知是合并的，不是同步的（05 A1，M2 补上）。** 同一个宏任务里派发的若干个
+> 流事件只产生**一次**通知，默认调度器是 `queueMicrotask`——微任务检查点正好在
+> 当前宏任务末尾、渲染之前，所以「合并」与「绝不拖到下一帧」同时成立。
+> **不能做成 `setTimeout(fn, N)` 那种尾部防抖**：chunk 持续到达时它会一直往后推，
+> 而流式回答恰恰就是 chunk 持续到达。
+>
+> `getSnapshot()` 始终同步最新——合并的只有通知，不是数据。
+> `flushNotifications()` 是给同步读者的出口（卸载前的最后一次落盘、测试断言、
+> 需要在同一 tick 里量尺寸的适配器）；没有它，唯一的等待方式是「再 await 一个
+> 微任务」，那是在猜调度器的实现。
+> `scheduleNotify` 是给宿主换**宏任务边界的定义**用的（Vue 侧可换 `nextTick`），
+> 不是给「加一点防抖」用的。
 
 `app/core/agent-deerflow/vue/create-thread-store.ts` 再把这个 store 包成 Pinia/composable。每个 thread id 和 sidecar session 都创建独立实例；Vue adapter 测试负责证明卸载、切 thread 和并发 sidecar 不串状态。
 
