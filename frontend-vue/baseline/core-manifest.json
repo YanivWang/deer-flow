@@ -5,16 +5,16 @@
   "totals": {
     "files": 149,
     "counts": {
-      "COPIED": 82,
+      "COPIED": 84,
       "REWRITE": 29,
-      "BLOCKED": 10,
+      "BLOCKED": 8,
       "RETYPED": 24,
       "DROPPED": 4
     },
     "lines": {
-      "COPIED": 6148,
+      "COPIED": 6249,
       "REWRITE": 5915,
-      "BLOCKED": 162,
+      "BLOCKED": 61,
       "RETYPED": 7154,
       "DROPPED": 586
     }
@@ -123,6 +123,10 @@
         {
           "code": "removed-dep-runtime",
           "detail": "值导入 \"@langchain/langgraph-sdk/client\"：该包明确不装进 frontend-vue（02 §372「不必装进项目」），没有可装的替代，只能自写（02 §249：core/api/client.ts，~180 行）。"
+        },
+        {
+          "code": "rewrite-landed",
+          "detail": "M2 自写：core/api/client.ts 之上的薄包装，替代 SDK 的 Client（02 §249）。"
         }
       ],
       "needsDeps": [],
@@ -133,6 +137,12 @@
         "static-mode.ts",
         "threads/static-demo.ts",
         "threads/types.ts"
+      ],
+      "handWritten": true,
+      "landedDeps": [
+        "agent-deerflow/gap.ts",
+        "api/client.ts",
+        "config/index.ts"
       ],
       "blockedBy": [
         "static-mode.ts",
@@ -191,22 +201,20 @@
     },
     {
       "source": "api/index.ts",
-      "class": "BLOCKED",
+      "class": "COPIED",
       "sha256": "27e39a48a68b4b3d4ab7259839cc27149dc6ebdceaa0206fc83a77749ebdfef7",
       "lines": 1,
       "reasons": [
         {
-          "code": "blocked-rewrite-dep",
-          "detail": "内容零改动，但 import 的 api/api-client.ts 当前落不了（REWRITE 或同样 BLOCKED），因此随被依赖方一起落地。"
+          "code": "portable",
+          "detail": "所有 import 在 frontend-vue 中同形可解析，零改动复制。"
         }
       ],
       "needsDeps": [],
       "internalDeps": [
         "api/api-client.ts"
       ],
-      "blockedBy": [
-        "api/api-client.ts"
-      ]
+      "blockedBy": []
     },
     {
       "source": "api/stream-mode.ts",
@@ -1637,13 +1645,13 @@
     },
     {
       "source": "sidecar/api.ts",
-      "class": "BLOCKED",
+      "class": "COPIED",
       "sha256": "5cd2bfabc9e134d45e16bbe0543e364f670f4ee33f5306dd51ce844ceb39b871",
       "lines": 100,
       "reasons": [
         {
-          "code": "blocked-rewrite-dep",
-          "detail": "内容零改动，但 import 的 api/index.ts 当前落不了（REWRITE 或同样 BLOCKED），因此随被依赖方一起落地。"
+          "code": "portable",
+          "detail": "所有 import 在 frontend-vue 中同形可解析，零改动复制。"
         }
       ],
       "needsDeps": [],
@@ -1655,9 +1663,7 @@
         "sidecar/thread.ts",
         "threads/index.ts"
       ],
-      "blockedBy": [
-        "api/index.ts"
-      ]
+      "blockedBy": []
     },
     {
       "source": "sidecar/context.ts",
@@ -2323,7 +2329,6 @@
         "uploads/index.ts"
       ],
       "blockedBy": [
-        "api/index.ts",
         "i18n/hooks.ts",
         "settings/index.ts",
         "tasks/context.tsx",

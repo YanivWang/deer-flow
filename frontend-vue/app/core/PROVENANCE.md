@@ -20,12 +20,18 @@
 
 ## 台账
 
-| 文件                          | 分类    | 来源 | 说明                                                                                                                     |
-| ----------------------------- | ------- | ---- | ------------------------------------------------------------------------------------------------------------------------ |
-| `auth/decision.ts`            | `ADDED` | —    | M0 路由跳转纯函数。上游 `auth/auth-disabled-user.ts` 读 `process.env`，此处改为接收注入值，不是它的复制品。              |
-| `types/message.ts`            | `ADDED` | —    | 替代 `@langchain/langgraph-sdk` 的 wire 类型，16 个 RETYPED 指向它（06 §M1 1b）。上游没有对应文件——它借的是 SDK 的类型。 |
-| `types/message.contract.ts`   | `ADDED` | —    | `AgentMessageContent` 联合的类型层护栏。放 `app/` 而不是 `tests/`，因为 `tests/` 不过 vue-tsc。                          |
-| `scheduled-tasks/schedule.ts` | `ADDED` | —    | `ScheduleValue` 从 React 组件文件搬进 core，纠正依赖方向（06 §M1 1b 的 `retype-component-type`）。                       |
+| 文件                             | 分类      | 来源                | 说明                                                                                                                     |
+| -------------------------------- | --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `auth/decision.ts`               | `ADDED`   | —                   | M0 路由跳转纯函数。上游 `auth/auth-disabled-user.ts` 读 `process.env`，此处改为接收注入值，不是它的复制品。              |
+| `types/message.ts`               | `ADDED`   | —                   | 替代 `@langchain/langgraph-sdk` 的 wire 类型，16 个 RETYPED 指向它（06 §M1 1b）。上游没有对应文件——它借的是 SDK 的类型。 |
+| `types/message.contract.ts`      | `ADDED`   | —                   | `AgentMessageContent` 联合的类型层护栏。放 `app/` 而不是 `tests/`，因为 `tests/` 不过 vue-tsc。                          |
+| `scheduled-tasks/schedule.ts`    | `ADDED`   | —                   | `ScheduleValue` 从 React 组件文件搬进 core，纠正依赖方向（06 §M1 1b 的 `retype-component-type`）。                       |
+| `api/client.ts`                  | `ADDED`   | —                   | M2 自写的 7 个 REST 方法，替代 SDK `Client`（02 §249）。上游没有对应文件——那部分职责在 SDK 里。                          |
+| `api/api-client.ts`              | `ADAPTED` | `api/api-client.ts` | M2 REWRITE。上游 471 行里大部分是给 SDK 打补丁，没有 SDK 就没有补丁的对象；有意不搬的三样写在文件头。                    |
+| `agent-deerflow/endpoints.ts`    | `ADDED`   | —                   | L3：run 相关 URL 与 `Content-Location` 解析（05 L12）。上游散在 SDK 内部。                                               |
+| `agent-deerflow/event-map.ts`    | `ADDED`   | —                   | L3：wire 事件名 → 流走向，内核唯一的协议知识入口（08 §288）。                                                            |
+| `agent-deerflow/gap.ts`          | `ADDED`   | —                   | L3：重放缺口载荷解析与 `gap → replay_gap` 映射。解析逻辑取自上游 `api-client.ts`，但落点与用途都变了。                   |
+| `agent-deerflow/run-protocol.ts` | `ADDED`   | —                   | L3：内核 `RunProtocol` 的 DeerFlow 实现（create/resume/cancel/inspect）。                                                |
 
 <!-- COPIED:BEGIN 由 `make land-copied` 生成，勿手改 -->
 
@@ -35,6 +41,7 @@
 | `api/errors.ts` | `COPIED` | `api/errors.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `api/feedback.ts` | `COPIED` | `api/feedback.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `api/fetcher.ts` | `COPIED` | `api/fetcher.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
+| `api/index.ts` | `COPIED` | `api/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `api/stream-mode.ts` | `COPIED` | `api/stream-mode.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `artifacts/api.ts` | `COPIED` | `artifacts/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `artifacts/editing.ts` | `COPIED` | `artifacts/editing.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
@@ -77,6 +84,7 @@
 | `scheduled-tasks/types.ts` | `COPIED` | `scheduled-tasks/types.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `settings/local.ts` | `COPIED` | `settings/local.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `settings/store.ts` | `COPIED` | `settings/store.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
+| `sidecar/api.ts` | `COPIED` | `sidecar/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `sidecar/index.ts` | `COPIED` | `sidecar/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `sidecar/reference-metadata.ts` | `COPIED` | `sidecar/reference-metadata.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `sidecar/reference-state.ts` | `COPIED` | `sidecar/reference-state.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |

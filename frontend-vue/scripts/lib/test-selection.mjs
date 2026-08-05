@@ -76,6 +76,27 @@ export function partition(testManifest, coreManifest, landed) {
     return entry?.landedDeps ?? entry?.internalDeps ?? [];
   };
 
+  /**
+   * 一个模块「已落地」有两种情况：分类在 landed 集合里（COPIED/RETYPED，
+   * 由脚本落地），或者它是**已经手写完成的 REWRITE**（台账的 handWritten）。
+   * 只看分类的话，`sidecar/api.test.ts` 会因为 `api/api-client.ts` 永远是
+   * REWRITE 而永远等下去——即使那个文件早就写好躺在 app/core/ 里了。
+   */
+  const isLanded = (source) => {
+    const entry = bySourceMap.get(source);
+    if (entry?.handWritten === true) return true;
+    // 台账里根本没有这个 source：它是 M2 之后**新写的** core 模块
+    // （`api/client.ts`、`agent-deerflow/*`），基线里不存在所以不会被分类。
+    // 它只可能通过 LANDED_REWRITES 的 landedDeps 进到闭包里，而那份声明由
+    // core-provenance 拿磁盘上的真实 import 逐条比对过——文件不存在就不会走到这。
+    //
+    // ⚠️ 已知不足：这类模块**自己的**依赖没有被继续展开（台账里没有它的条目）。
+    // 目前它们只依赖已落地的 COPIED/RETYPED，所以不影响判断；
+    // 真要补，得让台账也覆盖非基线来源的文件。
+    if (!entry) return true;
+    return landedSet.has(classOf.get(source));
+  };
+
   const portable = [];
   const waiting = [];
   for (const entry of testManifest.files) {
@@ -85,9 +106,7 @@ export function partition(testManifest, coreManifest, landed) {
       entry.targets.map((t) => t.source),
       depsOf,
     );
-    const missing = [...needed]
-      .filter((source) => !landedSet.has(classOf.get(source)))
-      .sort();
+    const missing = [...needed].filter((source) => !isLanded(source)).sort();
 
     if (entry.targets.length > 0 && missing.length === 0) portable.push(entry);
     else waiting.push({ ...entry, missing });

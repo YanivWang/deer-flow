@@ -1146,7 +1146,7 @@
         },
         {
           "source": "sidecar/api.ts",
-          "class": "BLOCKED"
+          "class": "COPIED"
         },
         {
           "source": "threads/index.ts",

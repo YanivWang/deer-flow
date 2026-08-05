@@ -112,9 +112,15 @@ async function main() {
   // 它已经不在台账里，却还能被 import 到。
   // core-provenance.test.ts 能报出来（「磁盘上的每个文件都已登记」），
   // 但让人手动 rm 不如这里直接扫掉。
+  //
+  // 手写落地的 REWRITE 必须排除在清理之外。它的分类确实不在落地档里
+  // （REWRITE 永远不由脚本落地），但文件是人写的、已签入的——照着分类扫会把它
+  // 当幽灵删掉。实测就是这么发生的：加完 LANDED_REWRITES 之后第一次
+  // `make land-copied` 直接删掉了刚写完的 api/api-client.ts。
+  // 判据用台账的 handWritten，与 core-provenance 的 LANDED_REWRITES 同源。
   const LANDING_CLASSES = new Set(["COPIED", "RETYPED"]);
   for (const entry of manifest.files) {
-    if (LANDING_CLASSES.has(entry.class)) continue;
+    if (LANDING_CLASSES.has(entry.class) || entry.handWritten) continue;
     const stale = join(ROOT, "app/core", entry.source);
     if (existsSync(stale)) {
       rmSync(stale);

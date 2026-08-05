@@ -11,7 +11,7 @@
                    本脚本读 git 对象而不是工作树：baseline 锚在 commit 上才有护城河意义。
 */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -60,6 +60,37 @@ const RETYPE_DROPS = {
     imports: ["../static-mode"],
     detail:
       "删掉 isStaticWebsiteOnly 早返回与随之无消费方的 STATIC_MODELS_RESPONSE。",
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 已经手写落地的 REWRITE。
+//
+// REWRITE 的含义是「没有可搬的东西，只能自写」，不是「永远不存在」。写完之后它
+// 就不该再阻塞下游了——否则 `api/index.ts` 会因为一个**已经躺在磁盘上**的
+// 被依赖方而永远 BLOCKED，台账与现实脱节。
+//
+// 为什么要显式声明而不是「扫一眼磁盘上有没有这个文件」：REWRITE 是人写的，
+// 文件存在不等于它把上游的职责补齐了（M2 的 api-client 就只补了 core 真正调用
+// 的 7 个方法，SDK 的其余几十个没有）。让人写一行声明，是逼这个判断被看见一次。
+//
+// 两头都有门禁：声明了但文件不在磁盘上 → 下面的 staleness 检查报错；
+// 文件在磁盘上但没登记进 PROVENANCE.md → core-provenance.test.ts 报错。
+// ---------------------------------------------------------------------------
+//
+// `landedDeps` 是**落地后**这个文件真正 import 的 core 模块，必须显式写出来。
+// 台账记的 internalDeps 是上游那一版的依赖（api-client 的上游 import 了
+// static-mode 与 static-demo，两个都是 DROPPED），而手写版根本没有这些边。
+// 不声明的话，闭包会顺着上游的图判定 `sidecar/api.test.ts` 永远搬不了——
+// 与 M1 给 RETYPE_DROPS 加 landedDeps 是同一个问题的第二次出现。
+//
+// 下面的 staleness 检查会拿磁盘上的真实 import 与这份声明逐条比对，
+// 所以它不会悄悄过期。
+const LANDED_REWRITES = {
+  "api/api-client.ts": {
+    detail:
+      "M2 自写：core/api/client.ts 之上的薄包装，替代 SDK 的 Client（02 §249）。",
+    landedDeps: ["api/client.ts", "agent-deerflow/gap.ts", "config/index.ts"],
   },
 };
 
@@ -199,6 +230,36 @@ function resolveInternal(specifier, fromPath, fileSet) {
     `${base}/index.tsx`,
   ];
   return candidates.find((candidate) => fileSet.has(candidate)) ?? null;
+}
+
+/**
+ * 手写 REWRITE 在**磁盘上**真正 import 到的 core 模块。
+ *
+ * 解析针对 `app/core/` 而不是 baseline 的文件列表：M2 新写的模块
+ * （`agent-deerflow/gap.ts`）在基线里根本不存在，拿基线解析会全部落空，
+ * 于是「声明与实际一致」这条检查退化成「两边都是空」——永远绿。
+ */
+function coreImportsOnDisk(source, content) {
+  const facts = collectFacts(source, content);
+  const found = new Set();
+  for (const record of facts.imports) {
+    const specifier = record.specifier;
+    let base;
+    if (specifier.startsWith("@/core/")) {
+      base = specifier.slice("@/core/".length);
+    } else if (specifier.startsWith(".")) {
+      base = posix.normalize(posix.join(posix.dirname(source), specifier));
+    } else {
+      continue;
+    }
+    // 顺序要紧，且只接受 `.ts` 结尾：`@/core/config` 既是一个目录也可能是
+    // 一个文件，先试裸路径会 existsSync 命中**目录**，声明就永远对不上。
+    const hit = [`${base}.ts`, `${base}/index.ts`].find((candidate) =>
+      existsSync(join(ROOT, "app/core", candidate)),
+    );
+    if (hit) found.add(hit);
+  }
+  return [...found].sort();
 }
 
 // ---------------------------------------------------------------------------
@@ -386,6 +447,20 @@ function build(commit) {
   // 只扫一轮会把 sidecar/api.ts 留在 COPIED，落地后就是个悬空 import。
   const classOf = new Map(entries.map((e) => [e.source, e.class]));
   const blockingClasses = new Set(["REWRITE", "BLOCKED"]);
+  // 已手写落地的 REWRITE 不再阻塞下游，并在台账里带上 handWritten 标记，
+  // 让 test-selection 的闭包也能把它算作「已落地」。
+  for (const entry of entries) {
+    if (LANDED_REWRITES[entry.source]) {
+      entry.handWritten = true;
+      entry.reasons.push({
+        code: "rewrite-landed",
+        detail: LANDED_REWRITES[entry.source].detail,
+      });
+      entry.landedDeps = [...LANDED_REWRITES[entry.source].landedDeps].sort();
+    }
+  }
+  const isBlocking = (dep) =>
+    blockingClasses.has(classOf.get(dep)) && !LANDED_REWRITES[dep];
   let settling = true;
   while (settling) {
     settling = false;
@@ -393,9 +468,7 @@ function build(commit) {
       const droppedDeps = entry.internalDeps.filter(
         (dep) => classOf.get(dep) === "DROPPED",
       );
-      const blockedDeps = entry.internalDeps.filter((dep) =>
-        blockingClasses.has(classOf.get(dep)),
-      );
+      const blockedDeps = entry.internalDeps.filter(isBlocking);
       entry.blockedBy = [...droppedDeps, ...blockedDeps].sort();
 
       // DROPPED 依赖：即使文件已经因为别的理由是 RETYPED，这条理由也要单独记上——
@@ -425,6 +498,36 @@ function build(commit) {
         });
         settling = true;
       }
+    }
+  }
+
+  // 声明了「已手写落地」却不在磁盘上 → 台账在撒谎，下游会按「可以落地」去搬，
+  // 然后在 import 解析时才炸。宁可在这里红。
+  for (const source of Object.keys(LANDED_REWRITES)) {
+    if (!entries.some((entry) => entry.source === source)) {
+      throw new Error(
+        `LANDED_REWRITES 里的 ${source} 不在基线的 core 文件列表里，声明已过期。`,
+      );
+    }
+    const onDisk = join(ROOT, "app/core", source);
+    if (!existsSync(onDisk)) {
+      throw new Error(
+        `LANDED_REWRITES 声明 ${source} 已手写落地，但 app/core/${source} 不存在。` +
+          "先把文件写出来，或者去掉这条声明。",
+      );
+    }
+
+    // 声明的 landedDeps 必须与磁盘上真实的 core 内 import 完全一致。
+    // 少写一条 → 闭包以为不依赖它，搬过去的测试在 import 时才炸；
+    // 多写一条 → 无谓地把下游卡住。两种都当过期处理。
+    const actual = coreImportsOnDisk(source, readFileSync(onDisk, "utf8"));
+    const declared = [...LANDED_REWRITES[source].landedDeps].sort();
+    if (actual.join("|") !== declared.join("|")) {
+      throw new Error(
+        `${source}: LANDED_REWRITES 的 landedDeps 与磁盘上的 import 不一致，声明已过期。\n` +
+          `  声明：${declared.join("、") || "（空）"}\n` +
+          `  实际：${actual.join("、") || "（空）"}`,
+      );
     }
   }
 

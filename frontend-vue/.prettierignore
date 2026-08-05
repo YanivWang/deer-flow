@@ -16,6 +16,7 @@ app/core/agents/types.ts
 app/core/api/errors.ts
 app/core/api/feedback.ts
 app/core/api/fetcher.ts
+app/core/api/index.ts
 app/core/api/stream-mode.ts
 app/core/artifacts/api.ts
 app/core/artifacts/editing.ts
@@ -58,6 +59,7 @@ app/core/scheduled-tasks/cron.ts
 app/core/scheduled-tasks/types.ts
 app/core/settings/local.ts
 app/core/settings/store.ts
+app/core/sidecar/api.ts
 app/core/sidecar/index.ts
 app/core/sidecar/reference-metadata.ts
 app/core/sidecar/reference-state.ts
