@@ -55,6 +55,7 @@ const IMPORT_REWRITES = [
     match: /^@langchain\/(langgraph-sdk|core)(\/.*)?$/,
     to: "@/core/types/message",
   },
+  { match: /^ai(\/.*)?$/, to: "@/core/types/message" },
   { match: /^lucide-react$/, to: "lucide-vue-next" },
   {
     match: /^@\/components\/workspace\/scheduled-task-schedule-input$/,

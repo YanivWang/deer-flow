@@ -6,9 +6,9 @@
 > 交接单说「需装 @langchain/core 与 date-fns」。**一个包都不装**，见「装包：一个都不装」。
 
 > ⚠️ **本文件先写了一版把 `@langchain/langgraph-sdk` 装进 frontend-vue 的结论，
-> 那是错的，已在同一窗口内推翻并回退。** 保留经过见
-> 「订正：装 SDK 是错的」一节——它是这次窗口里唯一一个查错了文档得出的决定，
-> 值得留着，因为犯法很典型。
+> 那是错的，已在同一窗口内推翻并回退。** 经过保留在「订正：装 SDK 是错的」一节。
+> 顺着这条线查下去发现**上一个窗口犯过同一个错**（悄悄装了 `ai`），
+> 于是补了机器门禁 `tests/guards/forbidden-deps.test.ts`——见「同一个坑踩了两次」。
 
 ## 复跑命令
 
@@ -22,12 +22,13 @@ make migration-check  # baseline-check + codemod-check + land-retyped-check（�
 
 | 指标                | 上一窗口         | 本窗口                     |
 | ------------------- | ---------------- | -------------------------- |
-| `make verify`       | 28 文件 / 247 用例 | **67 文件 / 617 用例**     |
+| `make verify`       | 28 文件 / 247 用例 | **68 文件 / 619 用例**     |
 | 搬运的 core 测试    | 20（node 13 · dom 7） | **58（node 48 · dom 10）** |
 | 等依赖的测试        | 40               | **1**（`sidecar/api.test.ts`，等 M2 的自写 client） |
 | typecheck 预算      | 58 条            | **0 条**                   |
 | `app/core/` 磁盘文件 | 86               | **110**                    |
-| 新装的 npm 包       | —                | **0**                      |
+| 落地分类            | COPIED 85        | COPIED 82 · RETYPED 24 · BLOCKED 10 |
+| npm 依赖净变化      | —                | **−1**（卸载 `ai`）        |
 
 `make e2e-m0` 收工时重跑（本窗口动了 `eslint.config.mjs`）。
 
@@ -174,8 +175,9 @@ SDK 的 `MessageContentComplex` 是 `text | image_url` 闭合联合。**照 08 �
 | `@langchain/core`          | 要装   | **不装**     | 只为一个 `ToolCall` 类型。06 §M1 1b 本来就把它列在「改指向 `@/core/types/message`」的 8 个符号里 |
 | `date-fns`                 | 要装   | **不装**     | 只有 `utils/datetime.ts` 用，而它是 `BLOCKED`，M4 才落地 |
 | `@langchain/langgraph-sdk` | 没提   | **不装**     | 02 §372 逐字写了「不必装进项目」。它的值导入者 `api/api-client.ts` 因此不是 M1 的活——见下节 |
+| `ai`（Vercel AI SDK）      | 没提   | **卸载了**   | 02 §321「决策：内联定义，不装这个包」。上一个窗口装的，见下下节 |
 
-`frontend-vue/package.json` 的依赖列表本窗口**净变化为零**。
+`frontend-vue/package.json` 的依赖**净减一个**（`ai`）。
 
 ## 订正：装 SDK 是错的
 
@@ -227,6 +229,36 @@ sidecar/api.test.ts     → waiting（等 M2 的自写 client）
 （「磁盘上的每个文件都已登记」），但让人手动 `rm` 不如脚本扫掉——
 `land-copied.mjs` 现在开工前先清理非落地档的残留。
 这条正好补上了上一窗口留的第 6 条红项（「land-copied 没有 --check 模式」）的一半。
+
+## 同一个坑踩了两次，所以补了机器门禁
+
+回退 SDK 之后顺手查了一遍 02 点名不装的其他包，发现 `ai`（Vercel AI SDK）**已经在
+`package.json` 里**——`058836aa`（上一个窗口）装的，提交说明里一个字没提。
+而 02 §321 写着「**决策：内联定义，不装这个包**」，连落点都指好了
+（「写进 `app/core/types/message.ts` 即可」）。
+
+两次的形状完全一样：
+
+| | 上一窗口 | 本窗口 |
+| --- | --- | --- |
+| 触发 | COPIED 的 `uploads/prompt-input-files.ts` 解析不了 `ai` | RETYPED 的 `api/api-client.ts` 解析不了 SDK |
+| 出路 | 装包（最省事） | 装包（最省事） |
+| 计划里的裁决 | 02 §321「不装这个包」 | 02 §372「不必装进项目」 |
+| 裁决躺在哪 | 另一个文档，没人翻 | 另一个文档，翻的是 08 |
+
+**光写文档挡不住这个**——第二次恰恰是在读了文档之后发生的（读的是 08，
+而依赖裁决在 02）。所以加了 `tests/guards/forbidden-deps.test.ts`，两条断言：
+
+1. 禁装清单里的包不许出现在 `dependencies` / `devDependencies`；
+2. 台账的 `needsDeps` 里也不许出现——`needsDeps` 的语义是「落地前置条件：先装这个包」，
+   禁装的包出现在那儿，说明分类规则漏了一条，下一个人照着台账做就会装回来。
+
+清单每条都带 02/04 的出处。改这张表 = 推翻一条已记录的裁决，要先改 02 并进 review。
+**门禁写完第一次跑就是红的**（`ai` 还装着），这不是设计出来的演示，是它本来就该报的。
+
+`ai` 的处置按 02 §321 执行：`FileUIPart` 内联进 `app/core/types/message.ts`，
+`uploads/prompt-input-files.ts` 从 `COPIED` 降级为 `RETYPED`（只改 import specifier）。
+代价是它退出了 hash 护城河——但那正是 02 选好的取舍，不是新决定。
 
 ## 严格度差异：`frontend` 关了 `noImplicitAny`
 
@@ -285,6 +317,7 @@ sidecar/api.test.ts     → waiting（等 M2 的自写 client）
 | `land-retyped`（PATCHES）  | 把一条 `find` 改得对不上上游      | exit 1「补丁命中 0 次（应为 1 次），声明已过期」✅ |
 | `baseline-check`（RETYPE_DROPS） | 声明一个基线上不存在的 import | exit 1「声明已过期」✅ |
 | `typecheck`（message.contract） | 联合塌向任一侧               | 两个方向各 2 条 TS2344 ✅ |
+| `forbidden-deps.test.ts`   | 无需制造——`ai` 本来就装着     | 首次运行即红，指出 02 §321 ✅ |
 
 还验了两条幂等性：`make land-copied` 不会吃掉 PROVENANCE 里的 `RETYPED` 块
 （两个块并列，不是嵌套）；`make codemod-tests` 不会删掉手工维护的测试（md5 前后一致）。
@@ -299,9 +332,10 @@ sidecar/api.test.ts     → waiting（等 M2 的自写 client）
 | `app/core/scheduled-tasks/schedule.ts`        | `ScheduleValue` 搬进 core，纠正依赖方向          |
 | `tests/guards/message-content-contract.test.ts` | 真实夹具双向往返（7 个用例）                   |
 | `tests/fixtures/message-content-shapes.json`  | 从 516 条真实消息抽的 22 + 3 条                  |
+| `tests/guards/forbidden-deps.test.ts`         | 计划点名不装的包不许出现在依赖或 `needsDeps` 里 |
 
 `core-provenance.mjs` 新增 `BLOCKED` 档（对 `{REWRITE, BLOCKED}` 求不动点）、
-`REMOVED_DEPS` 与 `RETYPE_DROPS`；`test-selection.mjs` 的闭包改读 `landedDeps`；
+`REMOVED_DEPS`（@langchain/* 与 ai）与 `RETYPE_DROPS`；`test-selection.mjs` 的闭包改读 `landedDeps`；
 `land-copied.mjs` 开工前清理降级出落地档的残留文件；
 `Makefile` 的 `LANDED` 改成 `COPIED,RETYPED`，`migration-check` 加上 `land-retyped-check`。
 

@@ -85,7 +85,6 @@ app/core/todos/index.ts
 app/core/todos/types.ts
 app/core/uploads/api.ts
 app/core/uploads/file-validation.ts
-app/core/uploads/prompt-input-files.ts
 app/core/utils/json.ts
 app/core/utils/markdown.ts
 app/core/utils/uuid.ts

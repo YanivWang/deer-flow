@@ -109,6 +109,10 @@ const REMOVED_DEPS = rx(
   "^@langchain/langgraph-sdk/",
   "^@langchain/core$",
   "^@langchain/core/",
+  // 02 §321：「决策：内联定义，不装这个包」。core 里只有
+  // uploads/prompt-input-files.ts 一处 type-only 引用（FileUIPart）。
+  "^ai$",
+  "^ai/",
 );
 
 /** 只改 import specifier 就能过的重定向。目标已实测存在同名导出。 */
@@ -118,6 +122,13 @@ const SPECIFIER_REWRITES = [
     to: "@/core/types/message",
     code: "retype-langgraph-sdk",
     detail: "SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。",
+  },
+  {
+    match: /^ai(\/.*)?$/,
+    to: "@/core/types/message",
+    code: "retype-vercel-ai",
+    detail:
+      "Vercel AI SDK 的类型内联进 @/core/types/message，不装这个包（02 §321）。",
   },
   {
     match: /^lucide-react$/,

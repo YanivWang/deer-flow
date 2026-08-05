@@ -231,3 +231,26 @@ export interface BaseStream<TState = Record<string, unknown>> {
   messages: Message[];
   values?: TState;
 }
+
+// ---------------------------------------------------------------------------
+// Vercel AI SDK（`ai` 包）借来的类型
+// ---------------------------------------------------------------------------
+
+/**
+ * 与 `ai` 包的 `FileUIPart` 结构等价。02 §321 的裁决是**内联定义、不装这个包**：
+ * core 里只有 `uploads/prompt-input-files.ts` 一处 type-only 引用，
+ * 为一个类型挂一个 SDK 不划算，而且它会把 React 相关的传递依赖带进来。
+ *
+ * `providerMetadata` 上游是 `ProviderMetadata`（`ai` 内部的嵌套 record）。
+ * core 只透传不解释，用 `Record<string, unknown>` 表达即可——
+ * 收窄它反而会在透传时逼出强转。
+ */
+export interface FileUIPart {
+  type: "file";
+  /** IANA media type。 */
+  mediaType: string;
+  filename?: string;
+  /** 托管 URL 或 data URL。 */
+  url: string;
+  providerMetadata?: Record<string, unknown>;
+}

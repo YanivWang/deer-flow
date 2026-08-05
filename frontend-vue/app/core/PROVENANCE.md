@@ -104,7 +104,6 @@
 | `todos/types.ts` | `COPIED` | `todos/types.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `uploads/api.ts` | `COPIED` | `uploads/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `uploads/file-validation.ts` | `COPIED` | `uploads/file-validation.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
-| `uploads/prompt-input-files.ts` | `COPIED` | `uploads/prompt-input-files.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `utils/json.ts` | `COPIED` | `utils/json.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `utils/markdown.ts` | `COPIED` | `utils/markdown.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `utils/uuid.ts` | `COPIED` | `utils/uuid.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
@@ -139,4 +138,5 @@
 | `threads/types.ts` | `RETYPED` | `threads/types.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
 | `threads/utils.ts` | `RETYPED` | `threads/utils.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
 | `tools/utils.ts` | `RETYPED` | `tools/utils.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/core/messages → @/core/types/message） SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
+| `uploads/prompt-input-files.ts` | `RETYPED` | `uploads/prompt-input-files.ts` | Vercel AI SDK 的类型内联进 @/core/types/message，不装这个包（02 §321）。（ai → @/core/types/message） |
 <!-- RETYPED:END -->

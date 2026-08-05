@@ -5,17 +5,17 @@
   "totals": {
     "files": 149,
     "counts": {
-      "COPIED": 83,
+      "COPIED": 82,
       "REWRITE": 29,
       "BLOCKED": 10,
-      "RETYPED": 23,
+      "RETYPED": 24,
       "DROPPED": 4
     },
     "lines": {
-      "COPIED": 6200,
+      "COPIED": 6148,
       "REWRITE": 5915,
       "BLOCKED": 162,
-      "RETYPED": 7102,
+      "RETYPED": 7154,
       "DROPPED": 586
     }
   },
@@ -2586,13 +2586,13 @@
     },
     {
       "source": "uploads/prompt-input-files.ts",
-      "class": "COPIED",
+      "class": "RETYPED",
       "sha256": "90b702546f4882631cdcc29dc1f2387ae65dd41ddf6688eb60e7a912b3c04200",
       "lines": 52,
       "reasons": [
         {
-          "code": "portable",
-          "detail": "所有 import 在 frontend-vue 中同形可解析，零改动复制。"
+          "code": "retype-vercel-ai",
+          "detail": "Vercel AI SDK 的类型内联进 @/core/types/message，不装这个包（02 §321）。（ai → @/core/types/message）"
         }
       ],
       "needsDeps": [],

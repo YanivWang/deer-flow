@@ -350,6 +350,10 @@ M2 的长期门禁必须同时包含前 3 类；第 4 类进入专门的 real-ba
 
 旧实现或 LangGraph SDK 可以作为开发期 oracle，但不能只比较最终 516 条消息就宣布 transport 等价。删除 SDK 的条件是：raw trace 差分、session 状态机测试和 real Gateway smoke 全部通过。
 
+> ⚠️ **「作为 oracle」不等于「装进 `frontend-vue`」。** oracle 是继续跑着的 `frontend/`（见 [07](07-parallel-run.md)）和 M2 那个一次性 worktree 里的兼容探针（[06 §M2](06-migration-plan.md)、本文 §L1 禁入清单），两者都不需要往 `frontend-vue/package.json` 里加依赖。**依赖增删的裁决在 [02 §LangChain 依赖全部去掉](02-stack.md) 与 [04 §移除 LangChain](04-architecture-decisions.md)，不在本文**——02 逐字写了 `@langchain/langgraph-sdk` 与 `@langchain/core`「不必装进项目」，`api/api-client.ts` 的值导入对应的处置是自写 `core/api/client.ts`（~180 行），属于 M2。
+>
+> 这条警告是补出来的：M1 有一个窗口正是读了上面那句就把 SDK 装了进去，回退过程见 [evidence/m1-retyped-landing.md](evidence/m1-retyped-landing.md#订正装-sdk-是错的)。
+
 ## L2 抽取时机
 
 L2 按实现反馈逐步抽取，不预先冻结所有 UI：

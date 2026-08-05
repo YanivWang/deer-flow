@@ -15,9 +15,6 @@ importers:
       '@deerflow/agent-core':
         specifier: workspace:*
         version: link:packages/agent-core
-      ai:
-        specifier: ^6.0.241
-        version: 6.0.241(zod@3.25.76)
       best-effort-json-parser:
         specifier: ^1.5.1
         version: 1.5.1
@@ -122,22 +119,6 @@ importers:
   packages/agent-core: {}
 
 packages:
-
-  '@ai-sdk/gateway@3.0.163':
-    resolution: {integrity: sha512-tYm3F4Wcwer6ViO/5sCAQnOd9hjuY8Wu4HPK1SfQgDBkyT5Fv/bWh7X7XMMgFqGWJU1MzVxHV9dLpZUkLb8X5w==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
-
-  '@ai-sdk/provider-utils@4.0.41':
-    resolution: {integrity: sha512-I7hhjfw01yEI8NkuAsT8Mv6xbWFr/lqLXMdaJQ2zWfXEpxog1eT7skDcv1+RY29/+5btzH8wD+vVvy48bk9oNQ==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
-
-  '@ai-sdk/provider@3.0.14':
-    resolution: {integrity: sha512-5X1k57JBJ4H7H1QjX7CnJYAB1I19r/trVZTMcSms7/kLNZ8RaU4Nt2agcwZzv82Hfx6Q7/TOLU7agAKeFfc8cA==}
-    engines: {node: '>=18'}
 
   '@antfu/install-pkg@1.1.0':
     resolution: {integrity: sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ==}
@@ -565,10 +546,6 @@ packages:
   '@eslint/plugin-kit@0.4.1':
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-
-  '@fastify/busboy@2.1.1':
-    resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
-    engines: {node: '>=14'}
 
   '@floating-ui/core@1.8.0':
     resolution: {integrity: sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ==}
@@ -1665,10 +1642,6 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@vercel/oidc@3.2.0':
-    resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
-    engines: {node: '>= 20'}
-
   '@vitejs/plugin-vue-jsx@5.1.6':
     resolution: {integrity: sha512-YXvi4as2clxt6DFw5+a0tTA97ntiQXm/raR8ofNj3aNwwdlVGTiG2gp7EvfZW17P50acL/9bP0ccF4XnqNmlgA==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -1843,12 +1816,6 @@ packages:
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
-
-  ai@6.0.241:
-    resolution: {integrity: sha512-3QdRudGkU7oo2jqayeIiwlgT2RpW2N5xvtS/8vh/C154iwURwj1UMvU7PQh4OODMsm6HAUG1RASe1EBknsBd2g==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
 
   ajv@6.15.0:
     resolution: {integrity: sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw==}
@@ -2598,10 +2565,6 @@ packages:
     resolution: {integrity: sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==}
     engines: {node: '>=0.8.x'}
 
-  eventsource-parser@3.1.0:
-    resolution: {integrity: sha512-kJezFj9YFAMLeORyi7aCLxLbD5/qWMQnoMVlVPyHIll7lgRJCc3JVln9Vgl9nwQi0YkMnhdGTMNn7CkRRAptMg==}
-    engines: {node: '>=18.0.0'}
-
   execa@8.0.1:
     resolution: {integrity: sha512-VyhnebXciFV2DESc+p6B+y0LjSm0krU4OgJN44qFAhBY0TJ+1V61tYD2+wHusZ6F9n5K+vl8k0sTy7PEfV4qpg==}
     engines: {node: '>=16.17'}
@@ -3001,9 +2964,6 @@ packages:
 
   json-schema-traverse@0.4.1:
     resolution: {integrity: sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==}
-
-  json-schema@0.4.0:
-    resolution: {integrity: sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==}
 
   json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
@@ -4315,10 +4275,6 @@ packages:
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
-  undici@5.29.0:
-    resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
-    engines: {node: '>=14.0'}
-
   undici@8.10.0:
     resolution: {integrity: sha512-HvltHd7avK13QIw/oLe4qoOLyoVSoafqJ2jYOrtMRBkbYT31eiBQ8O0ehRKZiEZCMEyLFQNIADpgCWC5fALvYQ==}
     engines: {node: '>=22.19.0'}
@@ -4818,25 +4774,6 @@ packages:
 
 snapshots:
 
-  '@ai-sdk/gateway@3.0.163(zod@3.25.76)':
-    dependencies:
-      '@ai-sdk/provider': 3.0.14
-      '@ai-sdk/provider-utils': 4.0.41(zod@3.25.76)
-      '@vercel/oidc': 3.2.0
-      zod: 3.25.76
-
-  '@ai-sdk/provider-utils@4.0.41(zod@3.25.76)':
-    dependencies:
-      '@ai-sdk/provider': 3.0.14
-      '@standard-schema/spec': 1.1.0
-      eventsource-parser: 3.1.0
-      undici: 5.29.0
-      zod: 3.25.76
-
-  '@ai-sdk/provider@3.0.14':
-    dependencies:
-      json-schema: 0.4.0
-
   '@antfu/install-pkg@1.1.0':
     dependencies:
       package-manager-detector: 1.8.0
@@ -5264,8 +5201,6 @@ snapshots:
     dependencies:
       '@eslint/core': 0.17.0
       levn: 0.4.1
-
-  '@fastify/busboy@2.1.1': {}
 
   '@floating-ui/core@1.8.0':
     dependencies:
@@ -5896,7 +5831,8 @@ snapshots:
 
   '@one-ini/wasm@0.1.1': {}
 
-  '@opentelemetry/api@1.9.1': {}
+  '@opentelemetry/api@1.9.1':
+    optional: true
 
   '@oxc-parser/binding-android-arm64@0.102.0':
     optional: true
@@ -6517,8 +6453,6 @@ snapshots:
       - rollup
       - supports-color
 
-  '@vercel/oidc@3.2.0': {}
-
   '@vitejs/plugin-vue-jsx@5.1.6(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.1)(yaml@2.9.0))(vue@3.5.40(typescript@5.9.3))':
     dependencies:
       '@babel/core': 7.29.7
@@ -6753,14 +6687,6 @@ snapshots:
   acorn@8.18.0: {}
 
   agent-base@7.1.4: {}
-
-  ai@6.0.241(zod@3.25.76):
-    dependencies:
-      '@ai-sdk/gateway': 3.0.163(zod@3.25.76)
-      '@ai-sdk/provider': 3.0.14
-      '@ai-sdk/provider-utils': 4.0.41(zod@3.25.76)
-      '@opentelemetry/api': 1.9.1
-      zod: 3.25.76
 
   ajv@6.15.0:
     dependencies:
@@ -7525,8 +7451,6 @@ snapshots:
 
   events@3.3.0: {}
 
-  eventsource-parser@3.1.0: {}
-
   execa@8.0.1:
     dependencies:
       cross-spawn: 7.0.6
@@ -7905,8 +7829,6 @@ snapshots:
       '@types/json-schema': 7.0.15
 
   json-schema-traverse@0.4.1: {}
-
-  json-schema@0.4.0: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
 
@@ -9318,10 +9240,6 @@ snapshots:
       unplugin: 3.3.0(esbuild@0.28.1)(rolldown@1.2.2)(rollup@4.62.4)(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.1)(yaml@2.9.0))
 
   undici-types@6.21.0: {}
-
-  undici@5.29.0:
-    dependencies:
-      '@fastify/busboy': 2.1.1
 
   undici@8.10.0: {}
 

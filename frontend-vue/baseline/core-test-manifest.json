@@ -2161,7 +2161,7 @@
       "targets": [
         {
           "source": "uploads/prompt-input-files.ts",
-          "class": "COPIED"
+          "class": "RETYPED"
         }
       ],
       "codemod": {
