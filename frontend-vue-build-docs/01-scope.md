@@ -15,26 +15,27 @@
 
 ### 1. 落地页（不迁）
 
-| 项 | 量 |
-| --- | --- |
-| `frontend/src/components/landing/` | 12 文件 / 1,754 行 |
-| `frontend/src/app/page.tsx` | 改为占位页 |
-| landing 独占特效组件 | `galaxy`(.jsx+.css)、`magic-bento`(.tsx+.css)、`number-ticker`、`terminal` |
+| 项                                 | 量                                                                         |
+| ---------------------------------- | -------------------------------------------------------------------------- |
+| `frontend/src/components/landing/` | 12 文件 / 1,754 行                                                         |
+| `frontend/src/app/page.tsx`        | 改为占位页                                                                 |
+| landing 独占特效组件               | `galaxy`(.jsx+.css)、`magic-bento`(.tsx+.css)、`number-ticker`、`terminal` |
 
 **随之消失的依赖**：`gsap`（仅 magic-bento 使用）、`ogl`（仅 galaxy 使用）。
 
 **顺带发现的死代码**（当前 `frontend/` 里已无引用，不要迁）：
+
 - `src/components/ui/spotlight-card.tsx` + `.css`
 - `src/components/ui/carousel.tsx` —— 是 `embla-carousel-react` 的唯一消费者
 
 **仍需移植的 4 个特效组件**（它们不属于落地页，shadcn-vue 也不提供，全部手写）：
 
-| 组件 | 使用方 |
-| --- | --- |
-| `aurora-text` | `src/components/workspace/welcome.tsx` |
-| `flickering-grid` | `src/app/(auth)/login/page.tsx`、`setup/page.tsx` |
-| `shine-border` | `src/components/workspace/messages/subtask-card.tsx` |
-| `confetti-button`（→ 保留 `canvas-confetti`） | `src/components/workspace/input-box.tsx` |
+| 组件                                          | 使用方                                               |
+| --------------------------------------------- | ---------------------------------------------------- |
+| `aurora-text`                                 | `src/components/workspace/welcome.tsx`               |
+| `flickering-grid`                             | `src/app/(auth)/login/page.tsx`、`setup/page.tsx`    |
+| `shine-border`                                | `src/components/workspace/messages/subtask-card.tsx` |
+| `confetti-button`（→ 保留 `canvas-confetti`） | `src/components/workspace/input-box.tsx`             |
 
 这 4 个都是"CSS 渐变文字 / canvas 网格 / 边框动画 / 调一次 confetti"级别，手写即可，**不需要引入 Inspira UI 之类的整包依赖**。
 
@@ -42,13 +43,13 @@
 
 ### 2. 文档站与博客（不迁）
 
-| 项 | 量 |
-| --- | --- |
-| `src/content/` | 72 个 MDX + 14 个 `_meta.ts`，共 88 文件 / 9,043 行 |
-| `src/app/[lang]/docs/**`、`src/app/blog/**` | 6 个路由文件 |
-| `src/components/docs/` | 4 文件 |
-| `src/core/blog/` | — |
-| `nextra` 引用点 | 21 处 |
+| 项                                          | 量                                                  |
+| ------------------------------------------- | --------------------------------------------------- |
+| `src/content/`                              | 72 个 MDX + 14 个 `_meta.ts`，共 88 文件 / 9,043 行 |
+| `src/app/[lang]/docs/**`、`src/app/blog/**` | 6 个路由文件                                        |
+| `src/components/docs/`                      | 4 文件                                              |
+| `src/core/blog/`                            | —                                                   |
+| `nextra` 引用点                             | 21 处                                               |
 
 **随之消失的依赖**：`nextra`、`nextra-theme-docs`。
 
@@ -58,14 +59,14 @@ Nextra 没有 Vue 移植，重建需要自写文档主题；当前不在范围�
 
 这是"把真实 agent 会话录制成静态文件、无后端回放"的展示模式，由落地页 Case Studies 卡片进入（`href = pathOfThread(threadId) + "?mock=true"`）。落地页不做后，唯一入口消失。
 
-| 项 | 量 |
-| --- | --- |
-| `src/app/mock/**` route handlers | 12 个 |
-| `src/core/threads/static-demo.ts` + `src/core/static-mode.ts` | 198 行 |
-| `frontend/scripts/save-demo.js` + `demo:save` script | 61 行 |
-| `public/demo/`（13 段会话）+ 6 张封面图 | 约 15 MB |
-| `NEXT_PUBLIC_STATIC_WEBSITE_ONLY` 环境变量 | env schema + `perf:check` 分支 |
-| 单测 | `tests/unit/app/mock/static-artifact-route.test.ts`、`tests/unit/core/threads/static-demo.test.ts` |
+| 项                                                            | 量                                                                                                 |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `src/app/mock/**` route handlers                              | 12 个                                                                                              |
+| `src/core/threads/static-demo.ts` + `src/core/static-mode.ts` | 198 行                                                                                             |
+| `frontend/scripts/save-demo.js` + `demo:save` script          | 61 行                                                                                              |
+| `public/demo/`（13 段会话）+ 6 张封面图                       | 约 15 MB                                                                                           |
+| `NEXT_PUBLIC_STATIC_WEBSITE_ONLY` 环境变量                    | env schema + `perf:check` 分支                                                                     |
+| 单测                                                          | `tests/unit/app/mock/static-artifact-route.test.ts`、`tests/unit/core/threads/static-demo.test.ts` |
 
 **真正的收益：27 个文件可以直接写"干净版本"。**
 
@@ -81,8 +82,8 @@ Nextra 没有 Vue 移植，重建需要自写文档主题；当前不在范围�
 
 `ai-elements/` 里有 7 个组件只服务于 `@xyflow/react` 的画布：
 
-| 文件 | 行 |
-| --- | --- |
+| 文件                                                                                         | 行     |
+| -------------------------------------------------------------------------------------------- | ------ |
 | `canvas.tsx` `node.tsx` `edge.tsx` `connection.tsx` `controls.tsx` `panel.tsx` `toolbar.tsx` | 共 310 |
 
 实测这 7 个在 `frontend/src/` 内**零外部引用**——`@xyflow/react` 的全部引用点就是它们自己。删掉依赖，它们随之不用写。
@@ -93,13 +94,13 @@ Nextra 没有 Vue 移植，重建需要自写文档主题；当前不在范围�
 
 `frontend/src/app/` 实测 **39 个文件 / 4,143 行**，此前不在任何一张工作量表里。
 
-| 分类 | 数 | 处置 |
-| --- | --- | --- |
-| `mock/api/**` route handlers | 12 | 不迁（见上文 §3） |
-| `[lang]/docs/**`、`blog/**` | 6 | 不迁（见上文 §2） |
-| `api/memory/**` route handlers | 2 | 删除——浏览器经代理直连 `/api/memory` |
-| **`layout.tsx`（根 + `(auth)` + `workspace` + 各级嵌套）** | 6 | → `layouts/{default,auth,workspace}.vue` |
-| **`page.tsx` / `providers.tsx` / `workspace-content.tsx`** | 13 | → `pages/**`，见 [03 的路由映射](03-project-shape.md#路由映射) |
+| 分类                                                       | 数  | 处置                                                           |
+| ---------------------------------------------------------- | --- | -------------------------------------------------------------- |
+| `mock/api/**` route handlers                               | 12  | 不迁（见上文 §3）                                              |
+| `[lang]/docs/**`、`blog/**`                                | 6   | 不迁（见上文 §2）                                              |
+| `api/memory/**` route handlers                             | 2   | 删除——浏览器经代理直连 `/api/memory`                           |
+| **`layout.tsx`（根 + `(auth)` + `workspace` + 各级嵌套）** | 6   | → `layouts/{default,auth,workspace}.vue`                       |
+| **`page.tsx` / `providers.tsx` / `workspace-content.tsx`** | 13  | → `pages/**`，见 [03 的路由映射](03-project-shape.md#路由映射) |
 
 **需要改写的是 19 个文件 / 3,215 行**（6 个 layout + 13 个 page/providers/workspace-content），进入 [M4b](06-migration-plan.md#m4b--通用-agent-uil2-第一批-模板价值兑现点)。其余 20 个文件（mock 12 + docs/blog 6 + memory route 2）不迁。
 

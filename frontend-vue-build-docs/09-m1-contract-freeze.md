@@ -19,10 +19,10 @@ M0 开始前没有必须购买或申请的外部资源。仓库自带 replay Gat
 
 ### 1.1 冻结拓扑
 
-| 环境 | React/Next | Vue/Nuxt | Gateway | 公共入口与边界 |
-| --- | --- | --- | --- | --- |
-| 开发 | `localhost:3000`；现有 nginx `localhost:2026` 仍指向它 | `localhost:3100`；E2E preview 固定 `3101` | `localhost:8001` | Vue 的 HTTP/SSE 由 Nitro `routeRules` 同源转发；WS 开发期直连 `ws://localhost:8001` 并精确允许 `http://localhost:3100`/`3101` |
-| 生产 | 独立 hostname，例如 `react.example.com` | 独立 hostname，例如 `vue.example.com` | 一个共享、非公开的 Gateway pool | 每个 hostname 都由 nginx/ingress 提供相同的 `/api/**`、`/api/langgraph/**` 和 browser WS location；浏览器不直接访问 Gateway |
+| 环境 | React/Next                                             | Vue/Nuxt                                  | Gateway                         | 公共入口与边界                                                                                                                |
+| ---- | ------------------------------------------------------ | ----------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 开发 | `localhost:3000`；现有 nginx `localhost:2026` 仍指向它 | `localhost:3100`；E2E preview 固定 `3101` | `localhost:8001`                | Vue 的 HTTP/SSE 由 Nitro `routeRules` 同源转发；WS 开发期直连 `ws://localhost:8001` 并精确允许 `http://localhost:3100`/`3101` |
+| 生产 | 独立 hostname，例如 `react.example.com`                | 独立 hostname，例如 `vue.example.com`     | 一个共享、非公开的 Gateway pool | 每个 hostname 都由 nginx/ingress 提供相同的 `/api/**`、`/api/langgraph/**` 和 browser WS location；浏览器不直接访问 Gateway   |
 
 **生产默认是“两个 hostname、相同路径、同一个 Gateway”，不是不同 pathname，也不是把端口当认证隔离边界。** 两个入口分别拥有 `/`，避免 Next/Nuxt 的 asset、base path、SSR、OIDC 和 Cookie 规则互相耦合；API 保持同源，能长期复用已经验证的 SSE buffering/timeout/body-limit、WS Upgrade、CSRF 和 OIDC 回跳规则。
 
@@ -30,27 +30,27 @@ M0 开始前没有必须购买或申请的外部资源。仓库自带 replay Gat
 
 ### 1.2 公共转发边界
 
-| 浏览器路径 | 入口行为 | Gateway 原生路径 |
-| --- | --- | --- |
-| `/api/langgraph/**` | 去掉 `langgraph/`，SSE 不缓冲、请求流式、read timeout ≥ 600s、body ≤ 20 MiB | `/api/**` |
-| `/api/**` | 1:1 REST 转发，认证 Cookie/CSRF header 保持 | `/api/**` |
-| `/api/threads/:threadId/browser/stream` | WebSocket Upgrade，`Connection/Upgrade` 保持，读写 timeout ≥ 600s | 同路径 |
-| 页面、Nuxt/Next assets | 只进入该 hostname 对应的前端 | 不进入 Gateway |
+| 浏览器路径                              | 入口行为                                                                    | Gateway 原生路径 |
+| --------------------------------------- | --------------------------------------------------------------------------- | ---------------- |
+| `/api/langgraph/**`                     | 去掉 `langgraph/`，SSE 不缓冲、请求流式、read timeout ≥ 600s、body ≤ 20 MiB | `/api/**`        |
+| `/api/**`                               | 1:1 REST 转发，认证 Cookie/CSRF header 保持                                 | `/api/**`        |
+| `/api/threads/:threadId/browser/stream` | WebSocket Upgrade，`Connection/Upgrade` 保持，读写 timeout ≥ 600s           | 同路径           |
+| 页面、Nuxt/Next assets                  | 只进入该 hostname 对应的前端                                                | 不进入 Gateway   |
 
 ### 1.3 当前仓库能力与后续修改
 
 **[源码确认]** 根 `Makefile`/`scripts/serve.sh` 只管理 `8001/3000/2026`；两个 compose 只有一个 `frontend` 服务；两个 nginx 配置只有一个 frontend upstream 和一个 catch-all server。因此当前 checkout 可运行现有 React 栈，但**不能直接部署冻结的双前端生产拓扑**。
 
-| 文件/范围 | 原因 | 里程碑 | 验收 |
-| --- | --- | --- | --- |
-| `frontend-vue/` package、Makefile、Dockerfile、health | 建立 Nuxt dev/preview/最小生产产物 | M0 | G0-0/G0-1/G0-9 |
-| `scripts/pnpm.py` + `backend/tests/test_pnpm_script.py` | runner 当前 cwd 固定 `frontend/`；需白名单 `--dir frontend-vue` 且保持旧调用兼容 | M0 第一项 | Python 单测 + clean install |
-| 根 `Makefile`、`scripts/serve.sh` | 新增明确的 `dev-vue`/`dev-dual` 和 3100 生命周期；现有 `make dev` 保持 React 默认，避免破坏现有用户 | M0 | shell/Make target smoke，停止后端口无残留 |
-| `.github/workflows/frontend-vue-verify.yml` | 当前只是目录不存在时跳过的预备 workflow；需用真实 skeleton 证明 | M0 | clean checkout 全命令实际执行 |
-| 根 README/AGENTS | source of truth 必须公布新目录、命令、端口和边界 | M0 | 文档链接/命令检查 |
-| `docker/docker-compose*.yaml`、`docker/nginx/nginx*.conf`（可抽共享 API location） | 加 Nuxt service 与第二 hostname/入口，保持 loopback 默认发布和统一 SSE/WS 行为 | M7 production readiness | compose config、默认 bind 测试、SSE/WS/body-limit/container smoke |
-| deploy/health 脚本、container workflow | 构建、健康、SIGTERM、回滚和最小镜像 | M7 | G0-9 的长期版 + container CI |
-| 锁文件/`frontend-vue/pnpm-workspace.yaml` | 两前端独立依赖；Vue 内 agent-core 使用 workspace | M0 | frozen install、重复 Playwright 检查 |
+| 文件/范围                                                                          | 原因                                                                                                | 里程碑                  | 验收                                                              |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------- | ----------------------------------------------------------------- |
+| `frontend-vue/` package、Makefile、Dockerfile、health                              | 建立 Nuxt dev/preview/最小生产产物                                                                  | M0                      | G0-0/G0-1/G0-9                                                    |
+| `scripts/pnpm.py` + `backend/tests/test_pnpm_script.py`                            | runner 当前 cwd 固定 `frontend/`；需白名单 `--dir frontend-vue` 且保持旧调用兼容                    | M0 第一项               | Python 单测 + clean install                                       |
+| 根 `Makefile`、`scripts/serve.sh`                                                  | 新增明确的 `dev-vue`/`dev-dual` 和 3100 生命周期；现有 `make dev` 保持 React 默认，避免破坏现有用户 | M0                      | shell/Make target smoke，停止后端口无残留                         |
+| `.github/workflows/frontend-vue-verify.yml`                                        | 当前只是目录不存在时跳过的预备 workflow；需用真实 skeleton 证明                                     | M0                      | clean checkout 全命令实际执行                                     |
+| 根 README/AGENTS                                                                   | source of truth 必须公布新目录、命令、端口和边界                                                    | M0                      | 文档链接/命令检查                                                 |
+| `docker/docker-compose*.yaml`、`docker/nginx/nginx*.conf`（可抽共享 API location） | 加 Nuxt service 与第二 hostname/入口，保持 loopback 默认发布和统一 SSE/WS 行为                      | M7 production readiness | compose config、默认 bind 测试、SSE/WS/body-limit/container smoke |
+| deploy/health 脚本、container workflow                                             | 构建、健康、SIGTERM、回滚和最小镜像                                                                 | M7                      | G0-9 的长期版 + container CI                                      |
+| 锁文件/`frontend-vue/pnpm-workspace.yaml`                                          | 两前端独立依赖；Vue 内 agent-core 使用 workspace                                                    | M0                      | frozen install、重复 Playwright 检查                              |
 
 **当前不改**：React 业务源码和共享 E2E spec（只读合同）、Gateway 业务实现、根现有 compose/nginx/serve 脚本。本窗口只冻结合同；上述根级实现从 M0/M7 按表进入。
 
@@ -60,17 +60,17 @@ M0 开始前没有必须购买或申请的外部资源。仓库自带 replay Gat
 
 ### 2.1 路由矩阵
 
-| 动作 | method 与公共路径 | 请求/headers | 成功 | 主要失败 |
-| --- | --- | --- | --- | --- |
-| 创建后台 run | `POST /api/langgraph/threads/{thread}/runs`（`/api/threads/{thread}/runs`） | JSON `RunCreateRequest`；`Content-Type`、auth Cookie、`X-CSRF-Token` | `200 RunResponse`，通常先为 `pending` | `404` thread、`409` 并发/lease、`422` 请求校验、`401/403` auth/CSRF |
-| 创建并流式消费 | `POST .../threads/{thread}/runs/stream` | 同上；默认 `on_disconnect=cancel`，Vue 显式选择 | `200 text/event-stream`；`Content-Location: /api/threads/{thread}/runs/{run}` | 同上；响应前断网结果不确定 |
-| 等待最终结果 | `POST .../threads/{thread}/runs/wait` | 同 create | `200` 最终 state/status | `404/409/422` |
-| 检查 run | `GET .../threads/{thread}/runs/{run}` | auth Cookie | `200 RunResponse` | `404` 不存在或 thread 不匹配 |
-| 恢复/重连 | `GET .../threads/{thread}/runs/{run}/stream` | 有 cursor 时 `Last-Event-ID` | `200 SSE`，从 cursor 后继续 | `404`；store/worker 能力不足时 `409` |
-| join 兼容路径 | `GET .../threads/{thread}/runs/{run}/join` | 同 resume | `200 SSE` | `404/409` |
-| 取消 | `POST .../threads/{thread}/runs/{run}/cancel?action=interrupt|rollback&wait=false|true` | auth Cookie + CSRF | `202` 已接受；`wait=true` 且确认终止时 `204` | `404`、`409` 已终态/不可取得 lease；冲突可带 `Retry-After` |
-| 取消后继续 drain | `POST .../threads/{thread}/runs/{run}/stream?action=interrupt|rollback&wait=...` | 可带 `Last-Event-ID` | 本 worker 可 `200 SSE`；跨 worker可 `202`；确认终止可 `204` | `404/409` |
-| stateless 兼容 create | `POST /api/langgraph/runs/stream`（`/api/runs/stream`） | create body；thread id 可从 config 提供或自动生成 | `200 SSE` + `Content-Location` | 与 create 相同 |
+| 动作                  | method 与公共路径                                                           | 请求/headers                                                         | 成功                                                                          | 主要失败                                                            |
+| --------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 创建后台 run          | `POST /api/langgraph/threads/{thread}/runs`（`/api/threads/{thread}/runs`） | JSON `RunCreateRequest`；`Content-Type`、auth Cookie、`X-CSRF-Token` | `200 RunResponse`，通常先为 `pending`                                         | `404` thread、`409` 并发/lease、`422` 请求校验、`401/403` auth/CSRF |
+| 创建并流式消费        | `POST .../threads/{thread}/runs/stream`                                     | 同上；默认 `on_disconnect=cancel`，Vue 显式选择                      | `200 text/event-stream`；`Content-Location: /api/threads/{thread}/runs/{run}` | 同上；响应前断网结果不确定                                          |
+| 等待最终结果          | `POST .../threads/{thread}/runs/wait`                                       | 同 create                                                            | `200` 最终 state/status                                                       | `404/409/422`                                                       |
+| 检查 run              | `GET .../threads/{thread}/runs/{run}`                                       | auth Cookie                                                          | `200 RunResponse`                                                             | `404` 不存在或 thread 不匹配                                        |
+| 恢复/重连             | `GET .../threads/{thread}/runs/{run}/stream`                                | 有 cursor 时 `Last-Event-ID`                                         | `200 SSE`，从 cursor 后继续                                                   | `404`；store/worker 能力不足时 `409`                                |
+| join 兼容路径         | `GET .../threads/{thread}/runs/{run}/join`                                  | 同 resume                                                            | `200 SSE`                                                                     | `404/409`                                                           |
+| 取消                  | `POST .../threads/{thread}/runs/{run}/cancel?action=interrupt               | rollback&wait=false                                                  | true`                                                                         | auth Cookie + CSRF                                                  | `202` 已接受；`wait=true` 且确认终止时 `204` | `404`、`409` 已终态/不可取得 lease；冲突可带 `Retry-After` |
+| 取消后继续 drain      | `POST .../threads/{thread}/runs/{run}/stream?action=interrupt               | rollback&wait=...`                                                   | 可带 `Last-Event-ID`                                                          | 本 worker 可 `200 SSE`；跨 worker可 `202`；确认终止可 `204`         | `404/409`                                    |
+| stateless 兼容 create | `POST /api/langgraph/runs/stream`（`/api/runs/stream`）                     | create body；thread id 可从 config 提供或自动生成                    | `200 SSE` + `Content-Location`                                                | 与 create 相同                                                      |
 
 `/api/runs/stream` 是无 thread path 的兼容 create，不是可恢复 run 的“旧版 resume”；Vue 新实现统一用 thread-scoped create。恢复永远针对已经取得 handle 的 run，不能重新调用任何 create 路径。
 
@@ -80,14 +80,14 @@ M0 开始前没有必须购买或申请的外部资源。仓库自带 replay Gat
 
 ### 2.2 SSE frame 合同
 
-| 帧 | id | data | reducer 行为 |
-| --- | --- | --- | --- |
-| `metadata` | 普通发布事件有服务端 id | JSON，含 thread/run metadata | 控制面；捕获 handle，不进入业务 state |
-| `values/messages/updates/custom/tasks/checkpoints/debug`，含 `mode|namespace...` | 有 | JSON | 业务/状态数据，按 L3 显式映射 |
-| `error` | 有 | `{"message":...,"name":...}` | 控制面失败；不自动重连 |
-| `gap` | 无 | 含 `stream_replay_gap`、requested/earliest/latest id、`recovery=reload_durable_state` | 控制面；停止消费并重载 durable state |
-| `end` | 无 | JSON `null` | 控制面终止；不推进 cursor |
-| heartbeat | 无；SSE comment | 精确为 `: heartbeat\n\n`，无 event/data | 只刷新 watchdog，不进入 reducer |
+| 帧                                                                 | id                      | data                                                                                  | reducer 行为                          |
+| ------------------------------------------------------------------ | ----------------------- | ------------------------------------------------------------------------------------- | ------------------------------------- |
+| `metadata`                                                         | 普通发布事件有服务端 id | JSON，含 thread/run metadata                                                          | 控制面；捕获 handle，不进入业务 state |
+| `values/messages/updates/custom/tasks/checkpoints/debug`，含 `mode | namespace...`           | 有                                                                                    | JSON                                  | 业务/状态数据，按 L3 显式映射 |
+| `error`                                                            | 有                      | `{"message":...,"name":...}`                                                          | 控制面失败；不自动重连                |
+| `gap`                                                              | 无                      | 含 `stream_replay_gap`、requested/earliest/latest id、`recovery=reload_durable_state` | 控制面；停止消费并重载 durable state  |
+| `end`                                                              | 无                      | JSON `null`                                                                           | 控制面终止；不推进 cursor             |
+| heartbeat                                                          | 无；SSE comment         | 精确为 `: heartbeat\n\n`，无 event/data                                               | 只刷新 watchdog，不进入 reducer       |
 
 普通 event id 由 bridge 生成并单调推进；内存 bridge 的格式与 Redis native id 不同，客户端必须把它当 opaque string，只回送服务端发出的 cursor。恢复 cursor 是排他的：从该 id **之后**重放。未知/恶意 cursor 在不同 bridge 的降级行为并不完全相同，Vue 不得自行构造或解析 id。
 
@@ -123,13 +123,13 @@ M0 开始前没有必须购买或申请的外部资源。仓库自带 replay Gat
 
 thread 是长期会话/checkpoint/history/owner 边界；run 是该 thread 上一次 invocation 的生命周期。一个 thread 可有多个历史 run；当前 run 状态不能覆盖 thread id 或污染另一个 thread。
 
-| Gateway durable status | Vue session 语义 |
-| --- | --- |
-| `pending` | `creating`/等待 lease |
-| `running` | `streaming` 或连接断开时 `reconnecting` |
-| `success` | `completed` |
-| `interrupted` | `cancelled` |
-| `error`、`timeout` | `failed` |
+| Gateway durable status | Vue session 语义                        |
+| ---------------------- | --------------------------------------- |
+| `pending`              | `creating`/等待 lease                   |
+| `running`              | `streaming` 或连接断开时 `reconnecting` |
+| `success`              | `completed`                             |
+| `interrupted`          | `cancelled`                             |
+| `error`、`timeout`     | `failed`                                |
 
 `stopping` 仅是用户点击停止后的客户端瞬态，没有同名 backend status。它必须一直等到 cancel SSE/inspect 得到 durable 终态再映射；不能假定所有 stop 都成为 `interrupted`。Backend 没有 `completed/cancelled/failed` 这些枚举，它们是 adapter 的 UI 语义。
 
@@ -146,15 +146,15 @@ thread 是长期会话/checkpoint/history/owner 边界；run 是该 thread 上�
 
 全仓业务 WebSocket 只有 browser-view；chat/run 使用 SSE，不能混为一谈。browser control 未启用时，聊天主链没有必需的业务 WebSocket；启用 browser-view 时下表就是硬合同。Next/Nuxt HMR 是开发框架连接，不是业务合同。
 
-| 项目 | 冻结行为 |
-| --- | --- |
-| 路径 | `GET Upgrade /api/threads/{thread_id}/browser/stream?frame_format=binary[&seed=...]` |
-| 鉴权 | WebSocket 不走 HTTP middleware；Gateway 只读 `access_token` Cookie（auth disabled 时例外），不接受 bearer/query token |
-| Origin | 无 Origin 的原生 client 可进；浏览器必须同 host:port（含 forwarded host）或命中精确 `GATEWAY_CORS_ORIGINS` |
-| owner/feature | thread 必须有当前 owner，browser feature/session 可用；否则关闭 |
-| close/error | `4401` 未认证、`4403` Origin、`4404` 不存在/非 owner/feature disabled、`4429` capacity、`4501` runtime；未知 frame format 先 JSON error 后 `1008` |
-| frame | `binary` 时服务端发 JPEG binary；控制/metadata/tab/navigation/error 为 JSON，客户端输入也是 JSON |
-| 生命周期 | 组件启用时连接，禁用/卸载/thread 变化关闭；现 React 实现最多 6 次指数退避，`800ms * 2^n`，上限 10s，open 后重置 |
+| 项目          | 冻结行为                                                                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 路径          | `GET Upgrade /api/threads/{thread_id}/browser/stream?frame_format=binary[&seed=...]`                                                              |
+| 鉴权          | WebSocket 不走 HTTP middleware；Gateway 只读 `access_token` Cookie（auth disabled 时例外），不接受 bearer/query token                             |
+| Origin        | 无 Origin 的原生 client 可进；浏览器必须同 host:port（含 forwarded host）或命中精确 `GATEWAY_CORS_ORIGINS`                                        |
+| owner/feature | thread 必须有当前 owner，browser feature/session 可用；否则关闭                                                                                   |
+| close/error   | `4401` 未认证、`4403` Origin、`4404` 不存在/非 owner/feature disabled、`4429` capacity、`4501` runtime；未知 frame format 先 JSON error 后 `1008` |
+| frame         | `binary` 时服务端发 JPEG binary；控制/metadata/tab/navigation/error 为 JSON，客户端输入也是 JSON                                                  |
+| 生命周期      | 组件启用时连接，禁用/卸载/thread 变化关闭；现 React 实现最多 6 次指数退避，`800ms * 2^n`，上限 10s，open 后重置                                   |
 
 开发冻结为：HTTP/SSE 仍走 `localhost:3100` 的同源 Nitro handler，browser WS 暂时直连 `ws://localhost:8001`，Gateway 精确配置 `GATEWAY_CORS_ORIGINS=http://localhost:3100,http://localhost:3101`，所有地址统一使用 hostname `localhost` 以共享 host Cookie。M0 G0-6 必须用真实浏览器 Origin+Cookie 握手；若 Nuxt 实现安全的同源 WS proxy，可替换该开发接线，但不能只假设 HTTP handler 或 `routeRules` 支持 Upgrade。
 
@@ -166,27 +166,27 @@ thread 是长期会话/checkpoint/history/owner 边界；run 是该 thread 上�
 
 ### 5.1 HTTP 认证合同
 
-| 动作 | 路径/method | 成功/备注 |
-| --- | --- | --- |
-| 本地登录 | `POST /api/v1/auth/login/local`，form username/password/remember_me | `200`；bootstrap CSRF exempt，但校验 browser Origin |
-| 注册 | `POST /api/v1/auth/register` JSON email/password/remember_me | `201`；关闭注册为 `403`，重复/非法为 `400` |
-| 会话检查 | `GET /api/v1/auth/me` | `200`；缺失、过期、版本失效或非法 session 为 `401` |
-| 登出 | `POST /api/v1/auth/logout` | `200`；删除 session/CSRF cookies，不补发 CSRF |
-| 首次设置 | `GET /api/v1/auth/setup-status`；`POST /api/v1/auth/initialize` | `200` / `201`；已初始化 `409` |
-| 改密码 | `POST /api/v1/auth/change-password` | `200`，增加 token_version 并重发 session/CSRF；需当前 session + CSRF |
-| provider 列表/发起 | `GET /api/v1/auth/providers`；`GET /api/v1/auth/oauth/{provider}` | `200` / `302` |
-| callback | `GET /api/v1/auth/callback/{provider}` | 校验 state/nonce/PKCE 后 `302` 到前端 callback/login |
+| 动作               | 路径/method                                                         | 成功/备注                                                            |
+| ------------------ | ------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 本地登录           | `POST /api/v1/auth/login/local`，form username/password/remember_me | `200`；bootstrap CSRF exempt，但校验 browser Origin                  |
+| 注册               | `POST /api/v1/auth/register` JSON email/password/remember_me        | `201`；关闭注册为 `403`，重复/非法为 `400`                           |
+| 会话检查           | `GET /api/v1/auth/me`                                               | `200`；缺失、过期、版本失效或非法 session 为 `401`                   |
+| 登出               | `POST /api/v1/auth/logout`                                          | `200`；删除 session/CSRF cookies，不补发 CSRF                        |
+| 首次设置           | `GET /api/v1/auth/setup-status`；`POST /api/v1/auth/initialize`     | `200` / `201`；已初始化 `409`                                        |
+| 改密码             | `POST /api/v1/auth/change-password`                                 | `200`，增加 token_version 并重发 session/CSRF；需当前 session + CSRF |
+| provider 列表/发起 | `GET /api/v1/auth/providers`；`GET /api/v1/auth/oauth/{provider}`   | `200` / `302`                                                        |
+| callback           | `GET /api/v1/auth/callback/{provider}`                              | 校验 state/nonce/PKCE 后 `302` 到前端 callback/login                 |
 
 浏览器 fetch 一律 `credentials:"include"`。所有非豁免 POST/PUT/PATCH/DELETE 从可读 `csrf_token` Cookie 取值并发 `X-CSRF-Token`，两者必须完全相等；登录/注册/初始化/登出是 bootstrap 豁免但仍做 exact origin 检查。CSRF 没有单独的“refresh API”：session-creating auth POST 和 OIDC callback 通过 `Set-Cookie` 获取；除 logout 外的 auth POST 会重新生成 Cookie；`GET /me` 只刷新用户状态、不轮换 token。前端不把 CSRF 另存 localStorage/Pinia，而是在**每次**写请求发出前读取最新 `document.cookie`；logout 删除 cookie 并抑制 middleware 补发。
 
 ### 5.2 Cookie 冻结值
 
-| Cookie | 属性 |
-| --- | --- |
-| `access_token` | HttpOnly、SameSite=Lax、Secure 取决于 proxy-aware HTTPS、默认 path `/`；remember 的持久 max-age 仅在安全 HTTPS、直接 localhost HTTP或显式不安全 opt-in 条件下启用 |
-| `deerflow_session_persistent` | HttpOnly、SameSite=Lax，secure/max-age 与 session 一致 |
-| `csrf_token` | JS 可读、SameSite=Strict，secure/max-age 随 session |
-| `df_oidc_state_{provider}` | signed、HttpOnly、SameSite=Lax、max-age 300、path 精确 callback；含 state/nonce/PKCE/next/remember |
+| Cookie                        | 属性                                                                                                                                                              |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `access_token`                | HttpOnly、SameSite=Lax、Secure 取决于 proxy-aware HTTPS、默认 path `/`；remember 的持久 max-age 仅在安全 HTTPS、直接 localhost HTTP或显式不安全 opt-in 条件下启用 |
+| `deerflow_session_persistent` | HttpOnly、SameSite=Lax，secure/max-age 与 session 一致                                                                                                            |
+| `csrf_token`                  | JS 可读、SameSite=Strict，secure/max-age 随 session                                                                                                               |
+| `df_oidc_state_{provider}`    | signed、HttpOnly、SameSite=Lax、max-age 300、path 精确 callback；含 state/nonce/PKCE/next/remember                                                                |
 
 Cookie 不按端口隔离。同一 hostname 的 `2026/3100` 会共享 access/CSRF；一端 logout 会使另一端掉线。同 provider 并发 OIDC 会覆盖同名且同 path 的 state cookie，导致其中一次 callback 失败。因此开发只能把它当已知限制并用不同 browser profile 隔离测试，生产必须使用独立 hostnames。
 
@@ -205,15 +205,15 @@ Cookie 不按端口隔离。同一 hostname 的 `2026/3100` 会共享 access/CSR
 
 ### 6.1 当前 checkout 实时 inventory
 
-| 范围 | 数量 | 口径 |
-| --- | --- | --- |
-| React unit | **126 files** | `frontend/tests/unit/**/*.{test,spec}.{ts,tsx}`；其中 core 83、其余 43 |
-| mock Playwright | **27 files / 130 tests** | 本轮真实执行 `playwright test --list` |
-| Vue 硬合同 | **25 files / 120 tests** | 同一 mock testDir 排除仅 React 范围的 `landing.spec.ts`、`docs-localized-links.spec.ts`（合计 10 tests） |
-| auth | 1 spec | Vue 专属 config/server，spec 原则上复用 |
-| real-backend | 3 spec | Vue 专属 config/server，场景复用并补 Vue proxy assertions |
-| record | 1 spec | 证据采集工具，不等于产品 gate |
-| 最终 thread fixture | 13 files / 516 messages | `values.messages` 口径，不是顶层 `messages` |
+| 范围                | 数量                     | 口径                                                                                                     |
+| ------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------- |
+| React unit          | **126 files**            | `frontend/tests/unit/**/*.{test,spec}.{ts,tsx}`；其中 core 83、其余 43                                   |
+| mock Playwright     | **27 files / 130 tests** | 本轮真实执行 `playwright test --list`                                                                    |
+| Vue 硬合同          | **25 files / 120 tests** | 同一 mock testDir 排除仅 React 范围的 `landing.spec.ts`、`docs-localized-links.spec.ts`（合计 10 tests） |
+| auth                | 1 spec                   | Vue 专属 config/server，spec 原则上复用                                                                  |
+| real-backend        | 3 spec                   | Vue 专属 config/server，场景复用并补 Vue proxy assertions                                                |
+| record              | 1 spec                   | 证据采集工具，不等于产品 gate                                                                            |
+| 最终 thread fixture | 13 files / 516 messages  | `values.messages` 口径，不是顶层 `messages`                                                              |
 
 “收集到”只证明配置和依赖有效，不等于 130/120 tests 通过。Vue 必须复用 25 个共享 mock spec；不得为适配 Vue 修改共享 spec。React unit 不能直接在 Vue 上运行：纯 TS/协议语义迁到 agent-core Vitest，组件/hook 测试写 Vue 专属版本，React 自身 126 files 继续由既有 CI守护。
 
@@ -223,18 +223,18 @@ Cookie 不按端口隔离。同一 hostname 的 `2026/3100` 会共享 access/CSR
 
 下表命令在 `frontend-vue/` 尚不存在时**预期不可执行**；M0 创建相应 Make target 是 gate 的一部分。React collection 命令已在本轮真实执行。
 
-| Gate | 准确命令与范围 | 前置服务 | 通过条件 |
-| --- | --- | --- | --- |
-| G0-0 clean CI | 根目录：`python3 scripts/pnpm.py install --frozen-lockfile`；`python3 scripts/pnpm.py --dir frontend-vue install --frozen-lockfile`；`cd frontend-vue && make verify` | 无 | clean checkout 安装；lint/type/unit/build 全绿；workflow 不再走 skip |
-| G0-1 HTTP/SSE proxy | `cd frontend-vue && make proxy-smoke` | replay Gateway `8011`；Nuxt preview `3101` | `/api/features`、两类 API rewrite、SSE逐帧且 header保留；20 MiB边界明确 |
-| G0-2 collection | 当前基线：`cd frontend && python3 ../scripts/pnpm.py exec playwright test --list`；Vue：`cd frontend-vue && make e2e-list` | Vue preview由 Playwright webServer 启动 | React实时 inventory；Vue精确收集 25 files/120 tests，且输出 exclusions |
-| G0-3 auth disabled | `cd frontend-vue && make auth-disabled-smoke` | preview `3101`，`NUXT_PUBLIC_AUTH_DISABLED=1` | `/workspace` 不跳 `/login`；纯决策单测通过 |
-| G0-4 visual seed | `cd frontend-vue && make visual-baseline-smoke` | preview | light/dark Button 基准产物与阈值通过 |
-| G0-5 Cookie/CSRF | `cd frontend-vue && make e2e-auth` | 可写 test DB/Gateway + preview | register/login/me/受保护写/CSRF refresh/logout 实际通过 |
-| G0-6 WS | `cd frontend-vue && make ws-smoke` | browser feature Gateway；exact origin allowlist | 真实浏览器 Cookie+Origin upgrade、binary frame、关闭/重连通过 |
-| G0-7 OIDC | `cd frontend-vue && make oidc-smoke` | 可控 IdP，两个 callback origin | 两入口各自回跳；并发同-host state 风险测试；forwarded header负测 |
-| G0-8 run protocol | `cd frontend-vue && make run-protocol-smoke` | replay Gateway + preview | create仅一次；Content-Location；resume GET+Last-Event-ID；error/end/gap/heartbeat；200/202/204 cancel |
-| G0-9 security/container | `cd frontend-vue && make audit && make proxy-security && make container-smoke` | Docker用于最后一项 | resolved版本锁定；moderate+ policy；路径逃逸失败；非root、health、SIGTERM、最小产物通过 |
+| Gate                    | 准确命令与范围                                                                                                                                                        | 前置服务                                        | 通过条件                                                                                              |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| G0-0 clean CI           | 根目录：`python3 scripts/pnpm.py install --frozen-lockfile`；`python3 scripts/pnpm.py --dir frontend-vue install --frozen-lockfile`；`cd frontend-vue && make verify` | 无                                              | clean checkout 安装；lint/type/unit/build 全绿；workflow 不再走 skip                                  |
+| G0-1 HTTP/SSE proxy     | `cd frontend-vue && make proxy-smoke`                                                                                                                                 | replay Gateway `8011`；Nuxt preview `3101`      | `/api/features`、两类 API rewrite、SSE逐帧且 header保留；20 MiB边界明确                               |
+| G0-2 collection         | 当前基线：`cd frontend && python3 ../scripts/pnpm.py exec playwright test --list`；Vue：`cd frontend-vue && make e2e-list`                                            | Vue preview由 Playwright webServer 启动         | React实时 inventory；Vue精确收集 25 files/120 tests，且输出 exclusions                                |
+| G0-3 auth disabled      | `cd frontend-vue && make auth-disabled-smoke`                                                                                                                         | preview `3101`，`NUXT_PUBLIC_AUTH_DISABLED=1`   | `/workspace` 不跳 `/login`；纯决策单测通过                                                            |
+| G0-4 visual seed        | `cd frontend-vue && make visual-baseline-smoke`                                                                                                                       | preview                                         | light/dark Button 基准产物与阈值通过                                                                  |
+| G0-5 Cookie/CSRF        | `cd frontend-vue && make e2e-auth`                                                                                                                                    | 可写 test DB/Gateway + preview                  | register/login/me/受保护写/CSRF refresh/logout 实际通过                                               |
+| G0-6 WS                 | `cd frontend-vue && make ws-smoke`                                                                                                                                    | browser feature Gateway；exact origin allowlist | 真实浏览器 Cookie+Origin upgrade、binary frame、关闭/重连通过                                         |
+| G0-7 OIDC               | `cd frontend-vue && make oidc-smoke`                                                                                                                                  | 可控 IdP，两个 callback origin                  | 两入口各自回跳；并发同-host state 风险测试；forwarded header负测                                      |
+| G0-8 run protocol       | `cd frontend-vue && make run-protocol-smoke`                                                                                                                          | replay Gateway + preview                        | create仅一次；Content-Location；resume GET+Last-Event-ID；error/end/gap/heartbeat；200/202/204 cancel |
+| G0-9 security/container | `cd frontend-vue && make audit && make proxy-security && make container-smoke`                                                                                        | Docker用于最后一项                              | resolved版本锁定；moderate+ policy；路径逃逸失败；非root、health、SIGTERM、最小产物通过               |
 
 G0-6 与 G0-7 依赖仓库无法自带的外部前提，因此聚合在 `make e2e-external` 而不是
 `make e2e-m0` 里，由 workflow 的手动 `external-gates` job 驱动；前提缺失时该 job
@@ -248,14 +248,14 @@ M0 不得以 `e2e-list` 代替 `make e2e`。M1–M7 每个里程碑运行当时�
 
 固定 viewport：桌面 `1440x900`，移动端 `390x844`，`deviceScaleFactor=1`；固定 Chromium、locale `en-US`、时区、light/dark theme、字体和 reduced motion。每个截图使用确定性 mock/thread fixture，关闭网络波动和动画，等待 fonts/stream state marker 后再截。
 
-| 页面/区域 | 必须冻结的状态 |
-| --- | --- |
-| `/workspace/chats/new` | 空状态、composer 可用/禁用、上传/技能入口、桌面/移动导航 |
-| `/workspace/chats/{thread}` | history loading、流式 reasoning/answer、tool running/result、error、stopping、completed、长列表与移动端 |
-| `/workspace/agents` 与 agent thread | gallery、disabled、agent badge/新会话/历史会话 |
-| `/workspace/scheduled-tasks` | 列表空/加载/详情、启停和最近 run 状态 |
-| artifact/sidecar/browser panels | 收起/展开、加载、错误、完成；browser frame 使用确定性占位或 mask |
-| `/login`、`/setup`、`/auth/callback` | 默认、提交中、字段/服务端错误、redirect loading |
+| 页面/区域                            | 必须冻结的状态                                                                                          |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `/workspace/chats/new`               | 空状态、composer 可用/禁用、上传/技能入口、桌面/移动导航                                                |
+| `/workspace/chats/{thread}`          | history loading、流式 reasoning/answer、tool running/result、error、stopping、completed、长列表与移动端 |
+| `/workspace/agents` 与 agent thread  | gallery、disabled、agent badge/新会话/历史会话                                                          |
+| `/workspace/scheduled-tasks`         | 列表空/加载/详情、启停和最近 run 状态                                                                   |
+| artifact/sidecar/browser panels      | 收起/展开、加载、错误、完成；browser frame 使用确定性占位或 mask                                        |
+| `/login`、`/setup`、`/auth/callback` | 默认、提交中、字段/服务端错误、redirect loading                                                         |
 
 最少场景：空 workspace/chat、加载 skeleton、流式生成（含 reasoning/chunk）、tool call running/result、错误、`stopping`、`completed`、artifact/sidecar 展开；核心场景覆盖桌面与移动端，登录页和 browser-view 至少各有一张确定性状态。M0 只建立 Button/theme seed；M4–M7 随页面实现补齐。
 
@@ -263,47 +263,47 @@ M0 不得以 `e2e-list` 代替 `make e2e`。M1–M7 每个里程碑运行当时�
 
 ## 8. 根级集成总表
 
-| 范围 | 必须性 | 里程碑/测试 | 当前 M-1 是否修改 |
-| --- | --- | --- | --- |
-| `scripts/pnpm.py` + Python tests | 必须，双目录 runner | M0/G0-0 | 否 |
-| 根 Makefile + `scripts/serve.sh` | 必须，显式 dev-vue/dev-dual 生命周期 | M0/端口 smoke | 否 |
-| workflow | 必须，clean CI | M0/G0-0 | 否；已有预备态 |
-| README/AGENTS | 必须，source of truth | M0/links/commands | 否 |
-| Vue lock/workspace | 必须，agent-core 真包且隔离 React install | M0/frozen install | 否 |
-| Dockerfile/compose/nginx/deploy | production dual profile 必须 | M0 Dockerfile；M7 ingress/compose/production gates | 否 |
-| 根/Backend 测试 | 仅为被改的 runner/compose/nginx/OIDC 补回归 | M0/M7 对应测试 | 否 |
-| React 业务代码与共享 E2E spec | 不应为 Vue 迁移修改 | 全程 React CI + spec只读校验 | 否 |
-| Gateway 路由实现 | 当前合同已足够；只有单 callback外部限制迫使安全扩展时才改 | 独立安全设计，不得夹带 | 否 |
+| 范围                             | 必须性                                                    | 里程碑/测试                                        | 当前 M-1 是否修改 |
+| -------------------------------- | --------------------------------------------------------- | -------------------------------------------------- | ----------------- |
+| `scripts/pnpm.py` + Python tests | 必须，双目录 runner                                       | M0/G0-0                                            | 否                |
+| 根 Makefile + `scripts/serve.sh` | 必须，显式 dev-vue/dev-dual 生命周期                      | M0/端口 smoke                                      | 否                |
+| workflow                         | 必须，clean CI                                            | M0/G0-0                                            | 否；已有预备态    |
+| README/AGENTS                    | 必须，source of truth                                     | M0/links/commands                                  | 否                |
+| Vue lock/workspace               | 必须，agent-core 真包且隔离 React install                 | M0/frozen install                                  | 否                |
+| Dockerfile/compose/nginx/deploy  | production dual profile 必须                              | M0 Dockerfile；M7 ingress/compose/production gates | 否                |
+| 根/Backend 测试                  | 仅为被改的 runner/compose/nginx/OIDC 补回归               | M0/M7 对应测试                                     | 否                |
+| React 业务代码与共享 E2E spec    | 不应为 Vue 迁移修改                                       | 全程 React CI + spec只读校验                       | 否                |
+| Gateway 路由实现                 | 当前合同已足够；只有单 callback外部限制迫使安全扩展时才改 | 独立安全设计，不得夹带                             | 否                |
 
 ## 9. 可追踪矩阵
 
-| 需求/决定 | 源码证据 | 测试/运行证据 | 后续 gate/里程碑 |
-| --- | --- | --- | --- |
-| 双 host 同源入口，共享 Gateway | compose/nginx/serve 当前单入口限制；auth/proxy实现 | compose bind/nginx tests | M0 dev；M7 prod |
-| `/api/langgraph` rewrite 与 SSE参数 | 两个 nginx配置、Next rewrites、Gateway routers | Gateway service/lifecycle tests；本轮探针 | G0-1/G0-8/G0-9 |
-| create不可重试、resume GET | run routers/models/services | 生命周期/断连测试；本轮排他恢复 | G0-8 |
-| cancel 200/202/204分流 | thread run router/service | cancel、multi-worker、wait tests | G0-8 |
-| values全量、updates按channel增量 | thread_state、worker stream map | delta channel/worker resume tests | M2 adapter tests |
-| content string/parts | backend message schema + React model | 13/516 fixture + raw traces | M2/M4 |
-| thread/run隔离、per-thread store | run persistence + frontend manager | architecture/isolation tests待建 | M0 architecture；M2 |
-| browser WS不是SSE | browser router + React hook + nginx location | browser router tests；本轮 DNS相关单测受环境限制 | G0-6/M7 |
-| Cookie/CSRF credentials | session/csrf middleware + frontend fetcher | auth/csrf tests | G0-5 |
-| 双 OIDC callback、独立 hostname | OIDC callback/state cookie与proxy origin | oidc tests；真实双入口待验证 | G0-7/M7 |
-| 126 unit、27/130、硬合同25/120 | 当前 tests tree/config | 本轮 `--list` 130/27 | G0-2；各里程碑 |
-| 有界视觉状态 | React页面/共享fixtures | Vue截图尚不存在 | G0-4；M4–M7 |
-| 根级接入不是孤岛目录 | Makefile/runner/workflow现状 | runner/workflow测试待激活 | G0-0/M7 |
+| 需求/决定                           | 源码证据                                           | 测试/运行证据                                    | 后续 gate/里程碑    |
+| ----------------------------------- | -------------------------------------------------- | ------------------------------------------------ | ------------------- |
+| 双 host 同源入口，共享 Gateway      | compose/nginx/serve 当前单入口限制；auth/proxy实现 | compose bind/nginx tests                         | M0 dev；M7 prod     |
+| `/api/langgraph` rewrite 与 SSE参数 | 两个 nginx配置、Next rewrites、Gateway routers     | Gateway service/lifecycle tests；本轮探针        | G0-1/G0-8/G0-9      |
+| create不可重试、resume GET          | run routers/models/services                        | 生命周期/断连测试；本轮排他恢复                  | G0-8                |
+| cancel 200/202/204分流              | thread run router/service                          | cancel、multi-worker、wait tests                 | G0-8                |
+| values全量、updates按channel增量    | thread_state、worker stream map                    | delta channel/worker resume tests                | M2 adapter tests    |
+| content string/parts                | backend message schema + React model               | 13/516 fixture + raw traces                      | M2/M4               |
+| thread/run隔离、per-thread store    | run persistence + frontend manager                 | architecture/isolation tests待建                 | M0 architecture；M2 |
+| browser WS不是SSE                   | browser router + React hook + nginx location       | browser router tests；本轮 DNS相关单测受环境限制 | G0-6/M7             |
+| Cookie/CSRF credentials             | session/csrf middleware + frontend fetcher         | auth/csrf tests                                  | G0-5                |
+| 双 OIDC callback、独立 hostname     | OIDC callback/state cookie与proxy origin           | oidc tests；真实双入口待验证                     | G0-7/M7             |
+| 126 unit、27/130、硬合同25/120      | 当前 tests tree/config                             | 本轮 `--list` 130/27                             | G0-2；各里程碑      |
+| 有界视觉状态                        | React页面/共享fixtures                             | Vue截图尚不存在                                  | G0-4；M4–M7         |
+| 根级接入不是孤岛目录                | Makefile/runner/workflow现状                       | runner/workflow测试待激活                        | G0-0/M7             |
 
 ## 10. 外部前提、剩余未知与 M0 首项
 
 ### M-1 本轮验证记录
 
-| 命令/检查 | 真实结果 | 结论边界 |
-| --- | --- | --- |
+| 命令/检查                                                                                                                                                                                                                                                                                                                                                                  | 真实结果                                | 结论边界                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `cd backend && ./.venv/bin/python -m pytest -q tests/test_gateway_services.py tests/test_stream_bridge.py tests/test_run_request_validation.py tests/test_cancel_run_idempotent.py tests/test_openapi_operation_ids.py tests/test_browser_router.py tests/test_csrf_middleware.py tests/test_oidc_auth.py -k 'not test_validate_browser_url_rejects_private_and_non_http'` | **269 passed, 7 skipped, 1 deselected** | Gateway/SSE/request/cancel/OpenAPI/WS/auth/CSRF/OIDC 目标测试通过；deselected 项单独说明如下 |
-| `cd backend && ./.venv/bin/python -m pytest -q tests/test_runtime_lifecycle_e2e.py tests/test_wait_disconnect_handling.py tests/test_multi_worker_run_ownership.py -k 'cancel or stream or reconnect or last_event or disconnect or content_location or runtime_lifecycle'` | **47 passed, 63 deselected** | 仅执行表达式选中的生命周期/断连/所有权合同 |
-| `cd frontend && python3 ../scripts/pnpm.py exec playwright test --list` | **130 tests in 27 files** | 只证明当前 React mock suite 可收集，不是 E2E 通过 |
-| workflow `yaml.safe_load` | **15 files parse** | 只证明 YAML 语法可解析；`frontend-vue` 不存在，预备 workflow 的实际 job 仍待 G0-0 |
-| Markdown relative target + GitHub slugger anchor check | **11 files 通过** | 覆盖本目录全部 Markdown（含 evidence） |
+| `cd backend && ./.venv/bin/python -m pytest -q tests/test_runtime_lifecycle_e2e.py tests/test_wait_disconnect_handling.py tests/test_multi_worker_run_ownership.py -k 'cancel or stream or reconnect or last_event or disconnect or content_location or runtime_lifecycle'`                                                                                                | **47 passed, 63 deselected**            | 仅执行表达式选中的生命周期/断连/所有权合同                                                   |
+| `cd frontend && python3 ../scripts/pnpm.py exec playwright test --list`                                                                                                                                                                                                                                                                                                    | **130 tests in 27 files**               | 只证明当前 React mock suite 可收集，不是 E2E 通过                                            |
+| workflow `yaml.safe_load`                                                                                                                                                                                                                                                                                                                                                  | **15 files parse**                      | 只证明 YAML 语法可解析；`frontend-vue` 不存在，预备 workflow 的实际 job 仍待 G0-0            |
+| Markdown relative target + GitHub slugger anchor check                                                                                                                                                                                                                                                                                                                     | **11 files 通过**                       | 覆盖本目录全部 Markdown（含 evidence）                                                       |
 
 未过滤运行时，`backend/tests/test_browser_router.py::test_validate_browser_url_rejects_private_and_non_http` 在当前机器把公开 `github.com` 解析为 private address，导致该依赖公网 DNS 的 URL 安全测试失败；在 sandbox 外重跑仍是同一环境解析结果。它不否定本轮 WebSocket 路由合同，但也没有被伪报为通过。M0/CI 应在正常公共 DNS 环境重跑该测试，或把 DNS resolver 变成可注入 fixture 后做确定性断言。
 

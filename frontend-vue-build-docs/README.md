@@ -40,28 +40,28 @@ Markdown：unified 管线保留 + hast-util-to-jsx-runtime(vue/jsx-runtime) + re
 LangChain 依赖在 M2 四类协议门禁通过后移除
 ```
 
-| 维度 | 结论 |
-| --- | --- |
-| 框架 | Nuxt 4（Vue 3.5 + Vite），端口 **3100** |
-| 运行方式 | 开发：Next `3000`、Vue `3100`、共享 Gateway `8001`；生产：两个独立 hostname 的对称 nginx/ingress，共享 Gateway |
-| L1 内核 | **`frontend-vue/packages/agent-core/`** —— 独立包，可整包搬走 |
-| 组件库 | **shadcn-vue + Reka UI + Tailwind 4** —— cva 样式串可逐字复制 |
-| 服务端状态 | `@tanstack/vue-query` |
-| Agent 通信 | raw SSE + `RunProtocol`；create、resume、cancel 分请求，禁止重放 create POST |
-| 状态管理 | L1 框架无关 external store + Vue/Pinia adapter + provide/inject |
-| Markdown | unified 管线保留，渲染层用 `hast-util-to-jsx-runtime` + `remend` |
-| 测试 | Vitest 双 project（`node` 纯 TS + `nuxt` composable）；Playwright E2E **共用 `frontend/tests/e2e/`，不复制** |
-| 工程规约 | `config/routes.ts` 单一来源 · 中间件切纯函数 · 文件头六段式（带【对应 frontend/】栏）· `make i18n-check` |
+| 维度       | 结论                                                                                                           |
+| ---------- | -------------------------------------------------------------------------------------------------------------- |
+| 框架       | Nuxt 4（Vue 3.5 + Vite），端口 **3100**                                                                        |
+| 运行方式   | 开发：Next `3000`、Vue `3100`、共享 Gateway `8001`；生产：两个独立 hostname 的对称 nginx/ingress，共享 Gateway |
+| L1 内核    | **`frontend-vue/packages/agent-core/`** —— 独立包，可整包搬走                                                  |
+| 组件库     | **shadcn-vue + Reka UI + Tailwind 4** —— cva 样式串可逐字复制                                                  |
+| 服务端状态 | `@tanstack/vue-query`                                                                                          |
+| Agent 通信 | raw SSE + `RunProtocol`；create、resume、cancel 分请求，禁止重放 create POST                                   |
+| 状态管理   | L1 框架无关 external store + Vue/Pinia adapter + provide/inject                                                |
+| Markdown   | unified 管线保留，渲染层用 `hast-util-to-jsx-runtime` + `remend`                                               |
+| 测试       | Vitest 双 project（`node` 纯 TS + `nuxt` composable）；Playwright E2E **共用 `frontend/tests/e2e/`，不复制**   |
+| 工程规约   | `config/routes.ts` 单一来源 · 中间件切纯函数 · 文件头六段式（带【对应 frontend/】栏）· `make i18n-check`       |
 
 ## 验收口径
 
-| 维度 | 要求 | 验收方式 | 是否门禁 |
-| --- | --- | --- | --- |
-| 功能 | **一致** | Playwright E2E；当前 mock 总基线 27 files / 130 tests，Vue 硬合同排除两个 React-only spec 后为 25 / 120 | ✅ |
-| 交互逻辑与体验 | **一致** | Playwright E2E + [05-invariants.md](05-invariants.md) 逐条勾选（A–N 共 14 组） | ✅ |
-| 页面结构（DOM） | 选择器契约一致 | E2E 选择器；`structural-diff` 只作**诊断报告** | ❌ 不做门禁 |
-| 关键视觉状态 | 基线阈值内一致 | 6–10 个确定性截图状态 | ✅ |
-| 非关键装饰/框架内部 DOM | 允许受控差异 | structural report + 人工回归 | ❌ |
+| 维度                    | 要求           | 验收方式                                                                                                | 是否门禁    |
+| ----------------------- | -------------- | ------------------------------------------------------------------------------------------------------- | ----------- |
+| 功能                    | **一致**       | Playwright E2E；当前 mock 总基线 27 files / 130 tests，Vue 硬合同排除两个 React-only spec 后为 25 / 120 | ✅          |
+| 交互逻辑与体验          | **一致**       | Playwright E2E + [05-invariants.md](05-invariants.md) 逐条勾选（A–N 共 14 组）                          | ✅          |
+| 页面结构（DOM）         | 选择器契约一致 | E2E 选择器；`structural-diff` 只作**诊断报告**                                                          | ❌ 不做门禁 |
+| 关键视觉状态            | 基线阈值内一致 | 6–10 个确定性截图状态                                                                                   | ✅          |
+| 非关键装饰/框架内部 DOM | 允许受控差异   | structural report + 人工回归                                                                            | ❌          |
 
 > 全页面 DOM/像素 diff 仍然无界，所以不做；有限关键状态截图是有界门禁，用来避免“口头视觉一致、实际无人验收”。详见 [04 §7](04-architecture-decisions.md#7-验收分层功能合同与关键视觉门禁)。
 
@@ -69,22 +69,22 @@ LangChain 依赖在 M2 四类协议门禁通过后移除
 
 ## 规模底数
 
-| 范围 | 文件数 | 行数 | 处置 |
-| --- | --- | --- | --- |
-| `src/core/` 纯 TS，初筛零-import 改动候选 | 99 | 9,856 | 逐个归类；只有真正零改动者进 `COPIED` hash 集，最终数量由 manifest 生成 |
-| `src/core/` 纯 TS，**需改 import** | 24 | 4,744 | 去 LangChain 类型 / `@/env` / 组件类型 |
-| `src/core/` React 耦合 | 26 | 5,365 | 改写为 composable |
-| `src/components/ui/` | 44（41 组件） | 5,573 | 30 个走 shadcn-vue CLI，5 个自写，6 个不迁 |
-| `src/components/ai-elements/` | 29 → **22** | 5,417 → **5,107** | 手工重写（7 个 xyflow canvas 件不迁，见 [01](01-scope.md#4-xyflow-canvas-组件不迁)） |
-| `src/components/workspace/` | 103 → **104** | 21,478 → **21,533** | 手工重写（**工作量主体**） |
-| `src/components/auth/` | 1 | — | 手工重写 |
-| **`src/app/`（layout / page / providers）** | 39 → **19** | 4,143 → **3,215** | **改写为 Nuxt pages / layouts**（mock 12 + docs/blog 6 + memory route 2 不迁）。早期版本漏了这一栏 |
-| `src/core/streamdown/` | 6 | 714 | 只有 `preprocess.ts`(389) 能原样搬，其余 325 行要重写，见 [02](02-stack.md#markdown-渲染层) |
-| `src/components/landing/` | 12 | 1,754 | 不迁 |
-| `src/components/docs/` | 4 | — | 不迁 |
-| `src/content/`（72 MDX + 14 `_meta.ts`） | 88 | 9,043 | 不迁 |
-| `src/app/mock/` | 12 route handler | — | 不迁 |
-| `public/demo/` + demo 封面图 | — | 约 15 MB | 不迁 |
+| 范围                                        | 文件数           | 行数                | 处置                                                                                               |
+| ------------------------------------------- | ---------------- | ------------------- | -------------------------------------------------------------------------------------------------- |
+| `src/core/` 纯 TS，初筛零-import 改动候选   | 99               | 9,856               | 逐个归类；只有真正零改动者进 `COPIED` hash 集，最终数量由 manifest 生成                            |
+| `src/core/` 纯 TS，**需改 import**          | 24               | 4,744               | 去 LangChain 类型 / `@/env` / 组件类型                                                             |
+| `src/core/` React 耦合                      | 26               | 5,365               | 改写为 composable                                                                                  |
+| `src/components/ui/`                        | 44（41 组件）    | 5,573               | 30 个走 shadcn-vue CLI，5 个自写，6 个不迁                                                         |
+| `src/components/ai-elements/`               | 29 → **22**      | 5,417 → **5,107**   | 手工重写（7 个 xyflow canvas 件不迁，见 [01](01-scope.md#4-xyflow-canvas-组件不迁)）               |
+| `src/components/workspace/`                 | 103 → **104**    | 21,478 → **21,533** | 手工重写（**工作量主体**）                                                                         |
+| `src/components/auth/`                      | 1                | —                   | 手工重写                                                                                           |
+| **`src/app/`（layout / page / providers）** | 39 → **19**      | 4,143 → **3,215**   | **改写为 Nuxt pages / layouts**（mock 12 + docs/blog 6 + memory route 2 不迁）。早期版本漏了这一栏 |
+| `src/core/streamdown/`                      | 6                | 714                 | 只有 `preprocess.ts`(389) 能原样搬，其余 325 行要重写，见 [02](02-stack.md#markdown-渲染层)        |
+| `src/components/landing/`                   | 12               | 1,754               | 不迁                                                                                               |
+| `src/components/docs/`                      | 4                | —                   | 不迁                                                                                               |
+| `src/content/`（72 MDX + 14 `_meta.ts`）    | 88               | 9,043               | 不迁                                                                                               |
+| `src/app/mock/`                             | 12 route handler | —                   | 不迁                                                                                               |
+| `public/demo/` + demo 封面图                | —                | 约 15 MB            | 不迁                                                                                               |
 
 **需要手工重写的业务组件：126 个**（104 workspace + 22 ai-elements）**，外加 19 个 `src/app/` 的 layout / page / providers。合计 145 个文件。** 这是工作量主体；UI 基础件与 auth 组件另按各自行计入。
 
@@ -92,17 +92,17 @@ LangChain 依赖在 M2 四类协议门禁通过后移除
 
 ## 文档索引
 
-| 文档 | 内容 |
-| --- | --- |
-| [01-scope.md](01-scope.md) | 范围界定：做什么、不做什么、砍掉部分的量化清单 |
-| [02-stack.md](02-stack.md) | 技术栈逐库映射 + 完整依赖清单 + 版本对齐约束 + 否决存档 |
-| [03-project-shape.md](03-project-shape.md) | 目录结构、`nuxt.config.ts`、路由映射表 |
-| [04-architecture-decisions.md](04-architecture-decisions.md) | 七个关键架构决策及其理由 |
-| [05-invariants.md](05-invariants.md) | **必须保留的行为不变式** —— A–N 共 14 组 |
-| [06-migration-plan.md](06-migration-plan.md) | **M-1–M8 里程碑**、按通用度排的执行顺序、风险登记 |
-| [07-parallel-run.md](07-parallel-run.md) | 与 `frontend/` 并行运行、共用后端的接线方式（端口、代理、WebSocket） |
-| [08-agent-core-contract.md](08-agent-core-contract.md) | **★ 产品定义** —— L1/L2/L3 分层、接口契约、禁入清单、依赖方向。**其他项目复用时读这份** |
-| [09-m1-contract-freeze.md](09-m1-contract-freeze.md) | **★ M-1 冻结结论** —— 双前端部署、Gateway/SSE/WS、认证、测试、视觉与根级集成追踪矩阵 |
+| 文档                                                         | 内容                                                                                    |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| [01-scope.md](01-scope.md)                                   | 范围界定：做什么、不做什么、砍掉部分的量化清单                                          |
+| [02-stack.md](02-stack.md)                                   | 技术栈逐库映射 + 完整依赖清单 + 版本对齐约束 + 否决存档                                 |
+| [03-project-shape.md](03-project-shape.md)                   | 目录结构、`nuxt.config.ts`、路由映射表                                                  |
+| [04-architecture-decisions.md](04-architecture-decisions.md) | 七个关键架构决策及其理由                                                                |
+| [05-invariants.md](05-invariants.md)                         | **必须保留的行为不变式** —— A–N 共 14 组                                                |
+| [06-migration-plan.md](06-migration-plan.md)                 | **M-1–M8 里程碑**、按通用度排的执行顺序、风险登记                                       |
+| [07-parallel-run.md](07-parallel-run.md)                     | 与 `frontend/` 并行运行、共用后端的接线方式（端口、代理、WebSocket）                    |
+| [08-agent-core-contract.md](08-agent-core-contract.md)       | **★ 产品定义** —— L1/L2/L3 分层、接口契约、禁入清单、依赖方向。**其他项目复用时读这份** |
+| [09-m1-contract-freeze.md](09-m1-contract-freeze.md)         | **★ M-1 冻结结论** —— 双前端部署、Gateway/SSE/WS、认证、测试、视觉与根级集成追踪矩阵    |
 
 ## 阅读顺序建议
 
@@ -116,20 +116,20 @@ LangChain 依赖在 M2 四类协议门禁通过后移除
 
 先完成 M-1 契约冻结，再完成 M0 十道 gate。明细见 [06-migration-plan.md](06-migration-plan.md#m0-的十道-gate)。
 
-| Gate | 位置 | 决定什么 |
-| --- | --- | --- |
-| **G0-0 clean checkout CI** | M0 | 先安装 `frontend` 的共享 Playwright，再安装 Vue；目录未创建时 workflow 安全跳过；provenance 不依赖偶然存在的 git object |
-| **G0-1 `nuxt preview` 下代理生效 + SSE 不被缓冲** | M0 | E2E 的 webServer 跑的就是 preview。**`nitro.devProxy` 只管 dev**；生产使用 Nitro server catch-all，并实测 `sendStream` / `streamRequest` 两个 flag。`routeRules.proxy` 因会绕过 body/path guard 而只保留为纯合同映射测试，见 [03](03-project-shape.md#️-为什么生产代理必须进入-nitro-产物而不是-nitrodevproxy) |
-| **G0-2 共用 testDir 能收集到用例** | M0 | 先用当前可执行命令确认 React mock 总基线 27 files / 130 tests；Vue config 明确排除两个 React-only spec 后列出 25 / 120。收集成功不等于测试通过 |
-| **G0-3 鉴权可关** | M0 | Next 版靠 `DEER_FLOW_AUTH_DISABLED=1`，**25 个合同 spec 全依赖它**；Vue 版必须有等价开关 |
-| **G0-4 shadcn-vue 视觉基准** | M0 | Button 并排截图 + 暗色切换。样式基准没对齐就不该往下走 |
-| **G0-5 真实 Cookie/CSRF** | M0 | 经 preview 完成 register/login、写请求、refresh、logout |
-| **G0-6 WebSocket 最终路径** | M0 | 开发冻结为直连 `ws://localhost:8001` + 精确 Origin allowlist；生产冻结为各 hostname 同源 nginx/ingress Upgrade。真实 Cookie+Origin 握手必须通过 |
-| **G0-7 OIDC 双回跳** | M0 | 生产使用独立 hostname；IdP 注册两个 callback，`frontend_base_url` 与 provider `redirect_uri` 同时留空；开发同 host 不同端口的 state-cookie 覆盖必须有负测 |
-| **G0-8 Run session 协议** | M0 | create POST 一次、捕获 run handle、resume GET + Last-Event-ID、cancel/gap/heartbeat 全部录成 trace |
-| **G0-9 依赖与代理安全** | M0 | 锁 Nuxt/Nitro/h3 resolved version，moderate+ audit、编码路径逃逸回归与生产 20 MiB body limit 全部通过 |
-| splitpanes spike | M0/M1 | 三面板编排是**唯一没有同构关系**的组件，却原本排在最后的 M7。先花一天验 H1/H2/H6 能否表达 |
-| `hast-util-to-jsx-runtime` 输出比对 | M3 | **Vue 支持已核实**（readme 有 "Example: Vue"，需 `elementAttributeNameCase: 'html'`；且已实测它不用 `dangerouslySetInnerHTML`）。判据是**归一化 DOM 等价**，不是字符级一致 |
+| Gate                                              | 位置  | 决定什么                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **G0-0 clean checkout CI**                        | M0    | 先安装 `frontend` 的共享 Playwright，再安装 Vue；目录未创建时 workflow 安全跳过；provenance 不依赖偶然存在的 git object                                                                                                                                                                                       |
+| **G0-1 `nuxt preview` 下代理生效 + SSE 不被缓冲** | M0    | E2E 的 webServer 跑的就是 preview。**`nitro.devProxy` 只管 dev**；生产使用 Nitro server catch-all，并实测 `sendStream` / `streamRequest` 两个 flag。`routeRules.proxy` 因会绕过 body/path guard 而只保留为纯合同映射测试，见 [03](03-project-shape.md#️-为什么生产代理必须进入-nitro-产物而不是-nitrodevproxy) |
+| **G0-2 共用 testDir 能收集到用例**                | M0    | 先用当前可执行命令确认 React mock 总基线 27 files / 130 tests；Vue config 明确排除两个 React-only spec 后列出 25 / 120。收集成功不等于测试通过                                                                                                                                                                |
+| **G0-3 鉴权可关**                                 | M0    | Next 版靠 `DEER_FLOW_AUTH_DISABLED=1`，**25 个合同 spec 全依赖它**；Vue 版必须有等价开关                                                                                                                                                                                                                      |
+| **G0-4 shadcn-vue 视觉基准**                      | M0    | Button 并排截图 + 暗色切换。样式基准没对齐就不该往下走                                                                                                                                                                                                                                                        |
+| **G0-5 真实 Cookie/CSRF**                         | M0    | 经 preview 完成 register/login、写请求、refresh、logout                                                                                                                                                                                                                                                       |
+| **G0-6 WebSocket 最终路径**                       | M0    | 开发冻结为直连 `ws://localhost:8001` + 精确 Origin allowlist；生产冻结为各 hostname 同源 nginx/ingress Upgrade。真实 Cookie+Origin 握手必须通过                                                                                                                                                               |
+| **G0-7 OIDC 双回跳**                              | M0    | 生产使用独立 hostname；IdP 注册两个 callback，`frontend_base_url` 与 provider `redirect_uri` 同时留空；开发同 host 不同端口的 state-cookie 覆盖必须有负测                                                                                                                                                     |
+| **G0-8 Run session 协议**                         | M0    | create POST 一次、捕获 run handle、resume GET + Last-Event-ID、cancel/gap/heartbeat 全部录成 trace                                                                                                                                                                                                            |
+| **G0-9 依赖与代理安全**                           | M0    | 锁 Nuxt/Nitro/h3 resolved version，moderate+ audit、编码路径逃逸回归与生产 20 MiB body limit 全部通过                                                                                                                                                                                                         |
+| splitpanes spike                                  | M0/M1 | 三面板编排是**唯一没有同构关系**的组件，却原本排在最后的 M7。先花一天验 H1/H2/H6 能否表达                                                                                                                                                                                                                     |
+| `hast-util-to-jsx-runtime` 输出比对               | M3    | **Vue 支持已核实**（readme 有 "Example: Vue"，需 `elementAttributeNameCase: 'html'`；且已实测它不用 `dangerouslySetInnerHTML`）。判据是**归一化 DOM 等价**，不是字符级一致                                                                                                                                    |
 
 ## 工作区边界
 

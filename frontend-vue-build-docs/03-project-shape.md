@@ -240,12 +240,12 @@ M2 增加临时 consumer workspace 做 clean install/typecheck/test；若将来�
 
 先生成 manifest，按依赖分组：
 
-| 批次 | 范围 | 进入条件 |
-| --- | --- | --- |
-| M1 | 83 个 core 中不依赖 React DOM、组件、hook 的纯 TS 子集 | `node` project 可独立运行 |
-| M4a | core 中的 DOM/composable、hooks | Nuxt test environment 和 runtime adapter 已存在 |
-| M4b–M6 | components/app/content | 对应 Vue 组件已经迁移 |
-| M7 | scripts 和剩余集成测试 | 完整验收 |
+| 批次   | 范围                                                   | 进入条件                                        |
+| ------ | ------------------------------------------------------ | ----------------------------------------------- |
+| M1     | 83 个 core 中不依赖 React DOM、组件、hook 的纯 TS 子集 | `node` project 可独立运行                       |
+| M4a    | core 中的 DOM/composable、hooks                        | Nuxt test environment 和 runtime adapter 已存在 |
+| M4b–M6 | components/app/content                                 | 对应 Vue 组件已经迁移                           |
+| M7     | scripts 和剩余集成测试                                 | 完整验收                                        |
 
 每批用同一 codemod 转 import/mock，再人工复核 mock 语义。测试 manifest 和实际收集数量由脚本生成，文档只记录基线，不把手写数量当永久事实。
 
@@ -253,21 +253,21 @@ M2 增加临时 consumer workspace 做 clean install/typecheck/test；若将来�
 
 frontend-vue 保留自研 i18n（[04 §5](04-architecture-decisions.md#5-i18n-保留自研不引-vue-i18n)），搬过来的是：
 
-| 文件 | 行数 |
-| --- | --- |
+| 文件                         | 行数  |
+| ---------------------------- | ----- |
 | `core/i18n/locales/en-US.ts` | 1,155 |
 | `core/i18n/locales/zh-CN.ts` | 1,101 |
-| `core/i18n/locales/types.ts` | 914 |
+| `core/i18n/locales/types.ts` | 914   |
 
 **两千多条文案、两份词典、零工具。** 重写 126 个组件期间最容易发生的就是漏 key、两份词典不同步、留下一堆再没人用的 key——而这三类问题**编译器都不会报**（`types.ts` 只约束结构，不约束"每个 key 都被用到"）。
 
 照 `nuxt-modern-starter` 的 `i18n-manager.mjs` 做一个，三个子命令：
 
-| 命令 | 作用 |
-| --- | --- |
-| `make i18n-diff` | 列出 `en-US` 与 `zh-CN` 的 key 差集——**任一边缺 key 就该红** |
+| 命令               | 作用                                                                                      |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `make i18n-diff`   | 列出 `en-US` 与 `zh-CN` 的 key 差集——**任一边缺 key 就该红**                              |
 | `make i18n-unused` | 扫 `app/` 找出没有任何引用的 key。移植期间用来确认"这个 key 是不是跟着不迁的模块一起废了" |
-| `make i18n-check` | 上面两项的 CI 形态，是 `make verify` 的前置目标之一 |
+| `make i18n-check`  | 上面两项的 CI 形态，是 `make verify` 的前置目标之一                                       |
 
 差别：那个项目的词典是 JSON，这里是 TS 模块，扫描要走 AST（或直接 `import` 后遍历对象，反正是纯数据）。
 
@@ -309,16 +309,17 @@ export default defineConfig({
   timeout: 30_000,
   use: {
     baseURL,
-    locale: "en-US",        // ★ 漏掉这条会大面积假红，见下
+    locale: "en-US", // ★ 漏掉这条会大面积假红，见下
     trace: "on-first-retry",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   // ↑↑↑ 到这里 ↑↑↑
 
   webServer: {
-    command: "./node_modules/.bin/nuxt build && PORT=3101 ./node_modules/.bin/nuxt preview",
+    command:
+      "./node_modules/.bin/nuxt build && PORT=3101 ./node_modules/.bin/nuxt preview",
     url: baseURL,
-    reuseExistingServer: false,   // ★ 不是 !CI，见下
+    reuseExistingServer: false, // ★ 不是 !CI，见下
     timeout: 240_000,
     env: {
       // 对应 frontend/playwright.config.ts:38 的 DEER_FLOW_AUTH_DISABLED=1
@@ -334,13 +335,13 @@ export default defineConfig({
 
 上面标注「逐字镜像」的六项不是抄写洁癖。**spec 只读、但 spec 的运行条件由 config 决定**，config 不同等于合同条件不同：
 
-| 字段 | 漏掉的后果 |
-| --- | --- |
-| **`use.locale: "en-US"`** | **最危险的一条。** 25 个 spec 里绝大多数断言英文文案（`getByRole("button", { name: "Regenerate" })`、`getByPlaceholder(/how can i assist you/i)`…），而 `chat.spec.ts` 有一个用例主动写 `document.cookie = "locale=zh-CN"` 再 reload。不锁 locale，Vue 版会跟随宿主机语言（本机是 zh-CN），**大面积假红且失败信息毫无指向性** |
-| `timeout: 30_000` | Next 版 30 s；Vue 版用 Playwright 默认 30 s 恰好相同，但显式写出来才不会在将来漂 |
-| `fullyParallel` / `workers` | 并发度不同会改变 spec 之间的竞态暴露程度，两边跑出不同结果时无法归因 |
-| `retries` | CI 上 Next 版重试 2 次。Vue 版不重试会显得更不稳，不是真实差异 |
-| `projects: [chromium]` | 不写会用默认 project，`devices["Desktop Chrome"]` 的 viewport / UA / deviceScaleFactor 都不一样——`ui-polish-mobile.spec.ts` 这类断言尺寸的 spec 直接失真 |
+| 字段                        | 漏掉的后果                                                                                                                                                                                                                                                                                                                    |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`use.locale: "en-US"`**   | **最危险的一条。** 25 个 spec 里绝大多数断言英文文案（`getByRole("button", { name: "Regenerate" })`、`getByPlaceholder(/how can i assist you/i)`…），而 `chat.spec.ts` 有一个用例主动写 `document.cookie = "locale=zh-CN"` 再 reload。不锁 locale，Vue 版会跟随宿主机语言（本机是 zh-CN），**大面积假红且失败信息毫无指向性** |
+| `timeout: 30_000`           | Next 版 30 s；Vue 版用 Playwright 默认 30 s 恰好相同，但显式写出来才不会在将来漂                                                                                                                                                                                                                                              |
+| `fullyParallel` / `workers` | 并发度不同会改变 spec 之间的竞态暴露程度，两边跑出不同结果时无法归因                                                                                                                                                                                                                                                          |
+| `retries`                   | CI 上 Next 版重试 2 次。Vue 版不重试会显得更不稳，不是真实差异                                                                                                                                                                                                                                                                |
+| `projects: [chromium]`      | 不写会用默认 project，`devices["Desktop Chrome"]` 的 viewport / UA / deviceScaleFactor 都不一样——`ui-polish-mobile.spec.ts` 这类断言尺寸的 spec 直接失真                                                                                                                                                                      |
 
 ### ⚠️ 为什么 E2E 不能用 3100，以及为什么 `reuseExistingServer: false`
 
@@ -386,22 +387,22 @@ Reka UI 与 Radix 的内部结构在个别组件上有出入，一定会有选�
 2. 实在对不上的，**记进豁免登记表**（下表），标编号、原因、影响的断言范围。
 3. **豁免表只增不减地公开。** 它是「合同被侵蚀了多少」的唯一可见指标——一旦这张表开始变长，说明结构 1:1 正在失守，该停下来看而不是继续豁免。
 
-| 编号 | spec / 断言 | 原因 | 替代验证手段 |
-| --- | --- | --- | --- |
-| EX-01 | `landing.spec.ts` | 落地页不迁（[01-scope.md](01-scope.md)） | 无需 |
-| EX-02 | `docs-localized-links.spec.ts` | 文档站不迁（[01-scope.md](01-scope.md)） | 无需 |
-| _（后续新增在此追加）_ | | | |
+| 编号                   | spec / 断言                    | 原因                                     | 替代验证手段 |
+| ---------------------- | ------------------------------ | ---------------------------------------- | ------------ |
+| EX-01                  | `landing.spec.ts`              | 落地页不迁（[01-scope.md](01-scope.md)） | 无需         |
+| EX-02                  | `docs-localized-links.spec.ts` | 文档站不迁（[01-scope.md](01-scope.md)） | 无需         |
+| _（后续新增在此追加）_ |                                |                                          |              |
 
 ### 真实规模
 
 `frontend/` 的 E2E 不是两个 spec，实测是 **32 个 spec 文件 + 4 个 playwright config**：
 
-| 目录 | spec 数 | config | 是否进合同 |
-| --- | --- | --- | --- |
-| `tests/e2e/` | 27 | `playwright.config.ts` | ✅ 除下面两条豁免外全部 |
-| `tests/e2e-auth/` | 1 | `playwright.auth.config.ts` | ✅ 需要对应的 Nuxt webServer |
-| `tests/e2e-real-backend/` | 3 | `playwright.real-backend.config.ts` | ✅ M0 先接网络/认证 smoke，M7 跑完整套 |
-| `tests/e2e-record/` | 1 | `playwright.record.config.ts` | ❌ 录制工具，不是验收 |
+| 目录                      | spec 数 | config                              | 是否进合同                             |
+| ------------------------- | ------- | ----------------------------------- | -------------------------------------- |
+| `tests/e2e/`              | 27      | `playwright.config.ts`              | ✅ 除下面两条豁免外全部                |
+| `tests/e2e-auth/`         | 1       | `playwright.auth.config.ts`         | ✅ 需要对应的 Nuxt webServer           |
+| `tests/e2e-real-backend/` | 3       | `playwright.real-backend.config.ts` | ✅ M0 先接网络/认证 smoke，M7 跑完整套 |
+| `tests/e2e-record/`       | 1       | `playwright.record.config.ts`       | ❌ 录制工具，不是验收                  |
 
 **明确豁免的 2 个**（测的是 Vue 版故意不做的东西，见 [01-scope.md](01-scope.md)）：
 
@@ -687,17 +688,17 @@ M0 同步扩展根 runner：新增 `--dir frontend|frontend-vue`，默认仍为 
 
 **行为敏感依赖对齐 `frontend/pnpm-lock.yaml` 的 resolved version，不只对齐 caret 声明。** Tailwind、Markdown、KaTeX、Shiki 的输出会进入 DOM/截图；首轮达到 parity 后再逐包升级。
 
-| 包 | 采用 | npm latest | 原因 |
-| --- | --- | --- | --- |
-| `nuxt` / `vue` / `vue-router` | `4.5.1` / `3.5.40` / `5.2.0`（精确锁） | — | Nuxt 4.5.1 的官方 manifest 依赖 `vue-router ^5.2.0` 且要求 Node `^22.19.0`；不能再直依赖 Router 4 或 Node 20 类型 |
-| `zod` | `^3.24.2` | 4.4.3 | 被搬运的 `core/` 文件（`core/auth/types.ts` 等）用了 zod，3→4 是破坏性变更。`core/auth/gateway-config.ts` 虽也用 zod，但它是纯服务端文件、本次不迁，不构成理由 |
-| `shiki` | `3.23.0`（精确锁） | 4.4.1 | 高亮输出结构变化会破坏关键视觉截图基线 |
-| `typescript` | `^5.8.2` | 7.0.2 | TS 7 是 Go 重写版，`vue-tsc` 兼容性未验证 |
-| `katex` | `0.16.28` | 0.18.1 | 精确对齐现有 lockfile；输出结构变化会破坏视觉基线 |
-| `nanoid` | `^5.1.6` | 6.0.1 | 与 `frontend/` 保持一致 |
-| `tailwindcss` | `4.1.18` | 4.3.3 | 对齐当前 `frontend` lockfile；不能用同一 caret 代替相同行为 |
-| `marked` | `17.0.6` | 18.0.7 | 对齐 Streamdown 当前解析结果；升 18 需重跑 raw Markdown fixture |
-| `mermaid` | `11.12.2` | — | 对齐当前 Streamdown 传递依赖，避免首轮直接跳到不同 SVG 输出 |
+| 包                            | 采用                                   | npm latest | 原因                                                                                                                                                           |
+| ----------------------------- | -------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nuxt` / `vue` / `vue-router` | `4.5.1` / `3.5.40` / `5.2.0`（精确锁） | —          | Nuxt 4.5.1 的官方 manifest 依赖 `vue-router ^5.2.0` 且要求 Node `^22.19.0`；不能再直依赖 Router 4 或 Node 20 类型                                              |
+| `zod`                         | `^3.24.2`                              | 4.4.3      | 被搬运的 `core/` 文件（`core/auth/types.ts` 等）用了 zod，3→4 是破坏性变更。`core/auth/gateway-config.ts` 虽也用 zod，但它是纯服务端文件、本次不迁，不构成理由 |
+| `shiki`                       | `3.23.0`（精确锁）                     | 4.4.1      | 高亮输出结构变化会破坏关键视觉截图基线                                                                                                                         |
+| `typescript`                  | `^5.8.2`                               | 7.0.2      | TS 7 是 Go 重写版，`vue-tsc` 兼容性未验证                                                                                                                      |
+| `katex`                       | `0.16.28`                              | 0.18.1     | 精确对齐现有 lockfile；输出结构变化会破坏视觉基线                                                                                                              |
+| `nanoid`                      | `^5.1.6`                               | 6.0.1      | 与 `frontend/` 保持一致                                                                                                                                        |
+| `tailwindcss`                 | `4.1.18`                               | 4.3.3      | 对齐当前 `frontend` lockfile；不能用同一 caret 代替相同行为                                                                                                    |
+| `marked`                      | `17.0.6`                               | 18.0.7     | 对齐 Streamdown 当前解析结果；升 18 需重跑 raw Markdown fixture                                                                                                |
+| `mermaid`                     | `11.12.2`                              | —          | 对齐当前 Streamdown 传递依赖，避免首轮直接跳到不同 SVG 输出                                                                                                    |
 
 版本与代理假设的官方复核入口：[`nuxt@4.5.1` manifest](https://github.com/nuxt/nuxt/blob/v4.5.1/packages/nuxt/package.json)、[`@nuxt/nitro-server@4.5.1` manifest](https://github.com/nuxt/nuxt/blob/v4.5.1/packages/nitro-server/package.json)、[`h3@1.15.x` proxy implementation](https://github.com/unjs/h3/blob/v1.15.11/src/utils/proxy.ts)、[Nitro route-rule normalization](https://github.com/nitrojs/nitro/blob/v2.13.4/src/config/resolvers/route-rules.ts)。lockfile 落地后仍以 `pnpm why nuxt nitropack h3 vue-router` 的 resolved 结果和 `make audit` 为准，不能只信顶层 manifest。
 
@@ -721,10 +722,10 @@ wildcard proxy 必须覆盖 Nitro 已公开的 [proxy scope bypass advisory](htt
 
 **需要留意的两个包**
 
-| 包 | 最后发布 | 判断 |
-| --- | --- | --- |
+| 包                               | 最后发布   | 判断                                                                                                                                                                                                                                                                                  |
+| -------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `hast-util-to-jsx-runtime` 2.3.6 | 2025-03-05 | 纯函数式工具库、无框架 peer、被 react-markdown 与 Streamdown 同时依赖，停在稳定态可接受。Vue 支持已核实（readme 有 "Example: Vue"，需 `elementAttributeNameCase: 'html'`）。**另已实测其 `lib/index.js` 不使用 `dangerouslySetInnerHTML`**——这是 Vue 移植最容易出问题的地方，它不存在 |
-| `vue-sonner` 2.0.9 | 2025-10-01 | 小体量 toast 移植，功能面窄，风险可控 |
+| `vue-sonner` 2.0.9               | 2025-10-01 | 小体量 toast 移植，功能面窄，风险可控                                                                                                                                                                                                                                                 |
 
 **明确不使用**
 
@@ -758,10 +759,10 @@ export default defineNuxtConfig({
   // 一一对应，迁移期间保持可追溯。
   components: { dirs: [] },
 
-  colorMode: { classSuffix: "" },   // .dark 挂在 html 上，对齐 Tailwind
+  colorMode: { classSuffix: "" }, // .dark 挂在 html 上，对齐 Tailwind
   shadcn: { prefix: "", componentDir: "./app/components/ui" },
 
-  devServer: { port: 3100 },        // 与 frontend/(3000) 并行，见 07-parallel-run.md
+  devServer: { port: 3100 }, // 与 frontend/(3000) 并行，见 07-parallel-run.md
 
   // 渲染规则全部来自 config/routes.ts，这里只做映射。
   // API proxy 不放在 routeRules：它会抢先于自定义安全 guard 接管请求。
@@ -788,7 +789,7 @@ export default defineNuxtConfig({
     },
   },
 
-  typescript: { typeCheck: false },   // 交给 make typecheck 里的 vue-tsc
+  typescript: { typeCheck: false }, // 交给 make typecheck 里的 vue-tsc
 });
 ```
 
@@ -800,7 +801,12 @@ export default defineNuxtConfig({
 // frontend-vue/config/routes.ts
 
 /** 产品区：纯客户端渲染 */
-export const csrRoutes = ["/workspace/**", "/login", "/setup", "/auth/**"] as const;
+export const csrRoutes = [
+  "/workspace/**",
+  "/login",
+  "/setup",
+  "/auth/**",
+] as const;
 
 /** 营销区：构建期预渲染。⚠️ locale 在构建期定死，见「营销页预渲染的前提」 */
 export const prerenderRoutes = ["/", "/pricing", "/about"] as const;
@@ -814,12 +820,16 @@ export const buildProxyRules = (env = process.env) => {
   const gateway =
     env.DEER_FLOW_INTERNAL_GATEWAY_BASE_URL ?? "http://127.0.0.1:8001";
   return {
-  ...(env.NUXT_PUBLIC_LANGGRAPH_BASE_URL
-    ? {}
-    : { "/api/langgraph/**": { proxy: { to: `${gateway}/api/**`, ...streamOpts } } }),
-  ...(env.NUXT_PUBLIC_BACKEND_BASE_URL
-    ? {}
-    : { "/api/**": { proxy: { to: `${gateway}/api/**`, ...streamOpts } } }),
+    ...(env.NUXT_PUBLIC_LANGGRAPH_BASE_URL
+      ? {}
+      : {
+          "/api/langgraph/**": {
+            proxy: { to: `${gateway}/api/**`, ...streamOpts },
+          },
+        }),
+    ...(env.NUXT_PUBLIC_BACKEND_BASE_URL
+      ? {}
+      : { "/api/**": { proxy: { to: `${gateway}/api/**`, ...streamOpts } } }),
   };
 };
 
@@ -854,12 +864,12 @@ const streamOpts = { sendStream: true, streamRequest: true } as const;
 
 对照 Next 版：[`frontend/next.config.js:30-79`](../frontend/next.config.js) 的 `rewrites()` 在 `next start` 下**同样生效**，所以 Next 版在 E2E、preview、生产三种形态下的网络行为是一致的。用 devProxy 会让 Vue 版只在 dev 下正确，具体后果：
 
-| 场景 | devProxy 的后果 |
-| --- | --- |
-| 25 个合同 spec | 靠 `page.route()` 侥幸能跑，但落在 mock-api 39 个 pattern **之外**的请求会 404，而 Next 版是打到 Gateway 的 —— 行为不等价，失败信息误导 |
-| `tests/e2e-auth/` | 直接不可用（M7 明确要接） |
-| `tests/e2e-real-backend/` | 直接不可用 |
-| production build 手工验证 | 全部 404 |
+| 场景                      | devProxy 的后果                                                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 25 个合同 spec            | 靠 `page.route()` 侥幸能跑，但落在 mock-api 39 个 pattern **之外**的请求会 404，而 Next 版是打到 Gateway 的 —— 行为不等价，失败信息误导 |
+| `tests/e2e-auth/`         | 直接不可用（M7 明确要接）                                                                                                               |
+| `tests/e2e-real-backend/` | 直接不可用                                                                                                                              |
+| production build 手工验证 | 全部 404                                                                                                                                |
 
 M0 最终使用编译进 Nitro 产物的 server catch-all；dev / preview /
 `node .output/server/index.mjs` 三种形态共用同一实现。最初计划的
@@ -899,24 +909,24 @@ M0 最终使用编译进 Nitro 产物的 server catch-all；dev / preview /
 
 ## 路由映射
 
-| 现在（Next App Router） | 新（Nuxt pages） | 渲染 |
-| --- | --- | --- |
-| `app/page.tsx`（落地页） | `pages/index.vue` **占位** | prerender |
-| — | `pages/pricing.vue` **占位** | prerender |
-| — | `pages/about.vue` **占位** | prerender |
-| `app/(auth)/login/page.tsx` | `pages/login.vue` | `ssr:false` |
-| `app/(auth)/setup/page.tsx` | `pages/setup.vue` | `ssr:false` |
-| `app/(auth)/auth/callback/page.tsx` | `pages/auth/callback.vue` | `ssr:false` |
-| `app/workspace/page.tsx` | `pages/workspace/index.vue` → redirect `/workspace/chats/new` | `ssr:false` |
-| `app/workspace/chats/page.tsx` | `pages/workspace/chats/index.vue` | `ssr:false` |
-| `app/workspace/chats/[thread_id]/page.tsx` | `pages/workspace/chats/[thread_id].vue` | `ssr:false` |
-| `app/workspace/agents/page.tsx` | `pages/workspace/agents/index.vue` | `ssr:false` |
-| `app/workspace/agents/new/page.tsx` | `pages/workspace/agents/new.vue` | `ssr:false` |
-| `app/workspace/agents/[agent_name]/chats/[thread_id]/page.tsx` | `pages/workspace/agents/[agent_name]/chats/[thread_id].vue` | `ssr:false` |
-| `app/workspace/scheduled-tasks/page.tsx` | `pages/workspace/scheduled-tasks.vue` | `ssr:false` |
-| `app/api/memory/**` | **删除** —— 浏览器经 nginx 直连 `/api/memory` | — |
-| `app/mock/**`（12 个） | **删除** | — |
-| `app/[lang]/docs/**`、`app/blog/**` | **删除** | — |
+| 现在（Next App Router）                                        | 新（Nuxt pages）                                              | 渲染        |
+| -------------------------------------------------------------- | ------------------------------------------------------------- | ----------- |
+| `app/page.tsx`（落地页）                                       | `pages/index.vue` **占位**                                    | prerender   |
+| —                                                              | `pages/pricing.vue` **占位**                                  | prerender   |
+| —                                                              | `pages/about.vue` **占位**                                    | prerender   |
+| `app/(auth)/login/page.tsx`                                    | `pages/login.vue`                                             | `ssr:false` |
+| `app/(auth)/setup/page.tsx`                                    | `pages/setup.vue`                                             | `ssr:false` |
+| `app/(auth)/auth/callback/page.tsx`                            | `pages/auth/callback.vue`                                     | `ssr:false` |
+| `app/workspace/page.tsx`                                       | `pages/workspace/index.vue` → redirect `/workspace/chats/new` | `ssr:false` |
+| `app/workspace/chats/page.tsx`                                 | `pages/workspace/chats/index.vue`                             | `ssr:false` |
+| `app/workspace/chats/[thread_id]/page.tsx`                     | `pages/workspace/chats/[thread_id].vue`                       | `ssr:false` |
+| `app/workspace/agents/page.tsx`                                | `pages/workspace/agents/index.vue`                            | `ssr:false` |
+| `app/workspace/agents/new/page.tsx`                            | `pages/workspace/agents/new.vue`                              | `ssr:false` |
+| `app/workspace/agents/[agent_name]/chats/[thread_id]/page.tsx` | `pages/workspace/agents/[agent_name]/chats/[thread_id].vue`   | `ssr:false` |
+| `app/workspace/scheduled-tasks/page.tsx`                       | `pages/workspace/scheduled-tasks.vue`                         | `ssr:false` |
+| `app/api/memory/**`                                            | **删除** —— 浏览器经 nginx 直连 `/api/memory`                 | —           |
+| `app/mock/**`（12 个）                                         | **删除**                                                      | —           |
+| `app/[lang]/docs/**`、`app/blog/**`                            | **删除**                                                      | —           |
 
 `layout.tsx`（根 + `(auth)` + `workspace` + 各级嵌套）→ `layouts/{default,auth,workspace}.vue`，页面用 `definePageMeta({ layout: "workspace" })` 声明。
 
@@ -926,12 +936,12 @@ M0 最终使用编译进 Nitro 产物的 server catch-all；dev / preview /
 
 原有的服务端 cookie 读取只有 4 处，全部改为客户端读取（Nuxt 的 `useCookie` 或 `@vueuse/core`）：
 
-| 文件 | 用途 |
-| --- | --- |
-| `src/core/auth/server.ts` | 服务端读认证 cookie |
-| `src/core/i18n/server.ts` | 服务端派生 locale |
-| `src/core/i18n/cookies.ts:45` | 动态 `import("next/headers")` |
-| `src/app/workspace/workspace-content.tsx` | 服务端读 cookie |
+| 文件                                      | 用途                          |
+| ----------------------------------------- | ----------------------------- |
+| `src/core/auth/server.ts`                 | 服务端读认证 cookie           |
+| `src/core/i18n/server.ts`                 | 服务端派生 locale             |
+| `src/core/i18n/cookies.ts:45`             | 动态 `import("next/headers")` |
+| `src/app/workspace/workspace-content.tsx` | 服务端读 cookie               |
 
 随之消失的两块复杂设计（`ssr: false` 下不再需要）：
 

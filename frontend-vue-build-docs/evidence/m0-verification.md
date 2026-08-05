@@ -4,31 +4,31 @@
 
 ## 环境
 
-| 工具 | 实测版本 |
-| --- | --- |
-| Node | `v22.22.3` |
-| Corepack | `0.35.0` |
-| pnpm（仓库 runner） | `10.26.2` |
-| Python | `3.12.9` |
-| uv | `0.11.3` |
-| Docker / Compose | `28.2.2` / `2.37.1` |
-| Playwright | `1.59.1` |
-| resolved app stack | Nuxt `4.5.1`、Nitro `2.13.4`、h3 `1.15.11`、Vue `3.5.40`、Vue Router `5.2.0`、Vite `8.2.0` |
+| 工具                | 实测版本                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------ |
+| Node                | `v22.22.3`                                                                                 |
+| Corepack            | `0.35.0`                                                                                   |
+| pnpm（仓库 runner） | `10.26.2`                                                                                  |
+| Python              | `3.12.9`                                                                                   |
+| uv                  | `0.11.3`                                                                                   |
+| Docker / Compose    | `28.2.2` / `2.37.1`                                                                        |
+| Playwright          | `1.59.1`                                                                                   |
+| resolved app stack  | Nuxt `4.5.1`、Nitro `2.13.4`、h3 `1.15.11`、Vue `3.5.40`、Vue Router `5.2.0`、Vite `8.2.0` |
 
 ## Gate 结果
 
-| Gate | 命令 | 实际结果 | 状态 |
-| --- | --- | --- | --- |
-| G0-0 clean install/verify | 根 runner 的 React frozen install；Vue `--frozen-lockfile --strict-peer-dependencies`；`make verify` | 两个 clean-style 重装均成功；最终 lint/format-check/typecheck、6 files / 42 unit、production build 全绿；workflow 已激活且 YAML 可解析 | 通过 |
-| G0-1 preview proxy | `make proxy-smoke` | 默认开启态 7/7；关闭流选项对照 2/2。覆盖两前缀 rewrite、LF/CRLF 首帧、请求流、307 与两个 location header、20 MiB、双编码 traversal、client-facing origin 转发与伪造覆盖 | 通过 |
-| G0-2 collection | `make e2e-list` | 精确 `25 files / 120 tests`；只证明 collection，不宣称业务 E2E 通过 | 通过 |
-| G0-3 auth disabled | `make auth-disabled-smoke` | 1/1；`/workspace` 不跳登录；Nuxt 数值型 runtime flag 的根因已修复并有单测 | 通过 |
-| G0-4 visual seed | `make visual-baseline-smoke` | 1/1。light/dark 两态比对 `backgroundColor`/`color`/`borderRadius`/`fontSize`/`fontWeight`/`paddingInline` 六项全等 + 高度相等，light/dark 基线截图落盘 | 通过 |
-| G0-5 Cookie/CSRF | `make auth-cookie-smoke` | replay Gateway + Preview 1/1；register、Set-Cookie、CSRF 正/负写、login 轮换、me、logout | 通过 |
-| G0-6 WebSocket | `make ws-smoke` | 1/1。真实 Chromium 从 `localhost:3101` 携带 session cookie 直连 `ws://localhost:8011`，握手成功并收到 binary frame。断言要求 `opened && binary`，4404（无会话）不算通过 | 通过 |
-| G0-7 OIDC | `make oidc-smoke` | 1/1。对仓库内可控 IdP 跑完整 authorization-code + PKCE(S256) + nonce 往返：从 Vue 入口发起后回落 `http://localhost:3101/auth/callback?next=/workspace`，IdP 侧记录的 `redirect_uri` 为该入口而非 Gateway，`/me` 返回 SSO 身份，state cookie 已消费 | 通过 |
-| G0-8 run protocol | `make run-protocol-smoke` | 1/1。create 单次 POST（`maxRedirects: 0`）、`Content-Location` 存在、无 `Location`、74 事件、1 个 heartbeat、以 `end` 收尾；resume GET + `Last-Event-ID` 返回 `gap`（`stream_replay_gap` / `reload_durable_state`）；浏览器内 cancel 得到 `204`；去敏 trace 落盘 | 通过 |
-| G0-9 security/container | `make audit && make proxy-security && make container-smoke` | 官方 npm audit：无已知漏洞；proxy security 24/24；容器 non-root、只含 `.output`、health、SIGTERM 通过 | 通过 |
+| Gate                      | 命令                                                                                                 | 实际结果                                                                                                                                                                                                                                                         | 状态 |
+| ------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| G0-0 clean install/verify | 根 runner 的 React frozen install；Vue `--frozen-lockfile --strict-peer-dependencies`；`make verify` | 两个 clean-style 重装均成功；最终 lint/format-check/typecheck、6 files / 42 unit、production build 全绿；workflow 已激活且 YAML 可解析                                                                                                                           | 通过 |
+| G0-1 preview proxy        | `make proxy-smoke`                                                                                   | 默认开启态 7/7；关闭流选项对照 2/2。覆盖两前缀 rewrite、LF/CRLF 首帧、请求流、307 与两个 location header、20 MiB、双编码 traversal、client-facing origin 转发与伪造覆盖                                                                                          | 通过 |
+| G0-2 collection           | `make e2e-list`                                                                                      | 精确 `25 files / 120 tests`；只证明 collection，不宣称业务 E2E 通过                                                                                                                                                                                              | 通过 |
+| G0-3 auth disabled        | `make auth-disabled-smoke`                                                                           | 1/1；`/workspace` 不跳登录；Nuxt 数值型 runtime flag 的根因已修复并有单测                                                                                                                                                                                        | 通过 |
+| G0-4 visual seed          | `make visual-baseline-smoke`                                                                         | 1/1。light/dark 两态比对 `backgroundColor`/`color`/`borderRadius`/`fontSize`/`fontWeight`/`paddingInline` 六项全等 + 高度相等，light/dark 基线截图落盘                                                                                                           | 通过 |
+| G0-5 Cookie/CSRF          | `make auth-cookie-smoke`                                                                             | replay Gateway + Preview 1/1；register、Set-Cookie、CSRF 正/负写、login 轮换、me、logout                                                                                                                                                                         | 通过 |
+| G0-6 WebSocket            | `make ws-smoke`                                                                                      | 1/1。真实 Chromium 从 `localhost:3101` 携带 session cookie 直连 `ws://localhost:8011`，握手成功并收到 binary frame。断言要求 `opened && binary`，4404（无会话）不算通过                                                                                          | 通过 |
+| G0-7 OIDC                 | `make oidc-smoke`                                                                                    | 1/1。对仓库内可控 IdP 跑完整 authorization-code + PKCE(S256) + nonce 往返：从 Vue 入口发起后回落 `http://localhost:3101/auth/callback?next=/workspace`，IdP 侧记录的 `redirect_uri` 为该入口而非 Gateway，`/me` 返回 SSO 身份，state cookie 已消费               | 通过 |
+| G0-8 run protocol         | `make run-protocol-smoke`                                                                            | 1/1。create 单次 POST（`maxRedirects: 0`）、`Content-Location` 存在、无 `Location`、74 事件、1 个 heartbeat、以 `end` 收尾；resume GET + `Last-Event-ID` 返回 `gap`（`stream_replay_gap` / `reload_durable_state`）；浏览器内 cancel 得到 `204`；去敏 trace 落盘 | 通过 |
+| G0-9 security/container   | `make audit && make proxy-security && make container-smoke`                                          | 官方 npm audit：无已知漏洞；proxy security 24/24；容器 non-root、只含 `.output`、health、SIGTERM 通过                                                                                                                                                            | 通过 |
 
 ## 聚合结果
 
@@ -46,11 +46,21 @@ test-results/real-backend/.../run-protocol-redacted.json
 
 ```json
 {
-  "create":  { "status": 200, "followedRedirect": false, "contentLocation": "present",
-               "location": "absent", "eventCount": 74, "heartbeatFrames": 1 },
-  "resume":  { "status": 200, "firstEvent": "gap",
-               "gapCode": "stream_replay_gap", "gapRecovery": "reload_durable_state" },
-  "cancel":  { "createStatus": 200, "status": 204 }
+  "create": {
+    "status": 200,
+    "followedRedirect": false,
+    "contentLocation": "present",
+    "location": "absent",
+    "eventCount": 74,
+    "heartbeatFrames": 1
+  },
+  "resume": {
+    "status": 200,
+    "firstEvent": "gap",
+    "gapCode": "stream_replay_gap",
+    "gapRecovery": "reload_durable_state"
+  },
+  "cancel": { "createStatus": 200, "status": 204 }
 }
 ```
 
@@ -76,14 +86,14 @@ resume 与 cancel 断言也根本没执行到，所以“已补实现 cancel/gap
 
 保留窗口实测扫描（每档一次完整真实 run，事件总数恒为 74）：
 
-| `queue_maxsize` | 创建流被 gap | heartbeat | resume（首游标） |
-| --- | --- | --- | --- |
-| 256 | 否 | 1 | `values`（未淘汰，拿不到 gap） |
-| 64 | 否 | 1 | `gap` |
-| 32 | 否 | 1 | `gap` |
-| 16 | 否 | 1 | `gap` |
-| 8 | 否 | 1 | `gap` |
-| 2 | **是（0.17s）** | 0 | — |
+| `queue_maxsize` | 创建流被 gap    | heartbeat | resume（首游标）               |
+| --------------- | --------------- | --------- | ------------------------------ |
+| 256             | 否              | 1         | `values`（未淘汰，拿不到 gap） |
+| 64              | 否              | 1         | `gap`                          |
+| 32              | 否              | 1         | `gap`                          |
+| 16              | 否              | 1         | `gap`                          |
+| 8               | 否              | 1         | `gap`                          |
+| 2               | **是（0.17s）** | 0         | —                              |
 
 窗口必须同时高于实时突发、低于本 run 的事件总数。定为 **32**：下界实测到 8 仍安全，
 上界距 74 有 2.3 倍余量。`run_m0_gateway.py` 增加 `--queue-maxsize`
@@ -155,10 +165,10 @@ URL，所以 `host` 落入 `ignoredHeaders` 被丢弃。Gateway 因此只能看�
 
 覆盖是必需的，不是防御性冗余，已实测：
 
-| 直连 Gateway 的请求（CORS 允许清单故意不含 `localhost:3101`） | 结果 |
-| --- | --- |
-| A 不带转发头（修复前行为），`Origin: http://localhost:3101` | `403` |
-| B 带上代理现在发送的转发头，同一 Origin | `201` |
+| 直连 Gateway 的请求（CORS 允许清单故意不含 `localhost:3101`）                      | 结果      |
+| ---------------------------------------------------------------------------------- | --------- |
+| A 不带转发头（修复前行为），`Origin: http://localhost:3101`                        | `403`     |
+| B 带上代理现在发送的转发头，同一 Origin                                            | `201`     |
 | C 伪造 `Forwarded: host="evil.example";proto=http` + `Origin: http://evil.example` | **`201`** |
 
 A/B 证明修复真的让 Gateway 推导出 `http://localhost:3101` 而不是自己；C 证明若把

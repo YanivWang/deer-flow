@@ -48,13 +48,13 @@ make baseline-refresh && make land-copied && make codemod-tests && make typechec
 
 阻塞集中在少数几个模块，全是 `RETYPED`：
 
-| 模块                | 卡住几个测试 |
-| ------------------- | ------------ |
-| `config/index.ts`   | 17           |
-| `messages/utils.ts` | 16           |
-| `threads/types.ts`  | 13           |
-| `messages/usage.ts` | 7            |
-| `sidecar/context.ts`| 6            |
+| 模块                 | 卡住几个测试 |
+| -------------------- | ------------ |
+| `config/index.ts`    | 17           |
+| `messages/utils.ts`  | 16           |
+| `threads/types.ts`   | 13           |
+| `messages/usage.ts`  | 7            |
+| `sidecar/context.ts` | 6            |
 
 **下一窗口搬完 `RETYPED` 后，这 40 个（20 个原 M1 + 20 个新解锁）会一次性解锁**，
 把 `LANDED` 改成 `COPIED,RETYPED` 即可，codemod 与对账脚本同时按新值重算。
@@ -104,10 +104,10 @@ rstest 0.10.6 的 `dist/` 里打包了 `@vitest/*`，JSDoc 里甚至直接写着
 
 这条此前没人提过，但落地当场就撞上：
 
-| 工具                | 想改几个 `COPIED` | 原因                              |
-| ------------------- | ----------------- | --------------------------------- |
+| 工具                | 想改几个 `COPIED` | 原因                                     |
+| ------------------- | ----------------- | ---------------------------------------- |
 | prettier 3.9.6      | 7 个              | 上游是 3.8.1，两版对联合类型换行意见不同 |
-| eslint（Nuxt 预设） | 4 个文件 5 处     | `no-empty`、`import/first` 等上游写法 |
+| eslint（Nuxt 预设） | 4 个文件 5 处     | `no-empty`、`import/first` 等上游写法    |
 
 一次 `make format` 或 `eslint --fix` 就会让 `core-provenance.test.ts` 变红——
 护城河靠的正是「改一个字节就红」，所以这不是误报，是必须把工具挡在外面。
@@ -134,12 +134,12 @@ rstest 0.10.6 的 `dist/` 里打包了 `@vitest/*`，JSDoc 里甚至直接写着
 
 不是「写了个检查」，是四条都跑出过红再跑回绿：
 
-| 门禁                        | 制造的故障              | 结果                            |
-| --------------------------- | ----------------------- | ------------------------------- |
-| `core-provenance.test.ts`   | `COPIED` 文件多一个换行 | exit 1 ✅                       |
-| `codemod-check`             | 手改一个生成的测试      | exit 1，并指向 `HAND_MAINTAINED` ✅ |
-| `collected-check`           | 删掉一个生成的测试      | exit 1「台账要求收集但没收集到」✅ |
-| `collected-check`           | dom 测试改名成 node 收集 | 同时报缺失与多余 ✅             |
+| 门禁                      | 制造的故障               | 结果                                |
+| ------------------------- | ------------------------ | ----------------------------------- |
+| `core-provenance.test.ts` | `COPIED` 文件多一个换行  | exit 1 ✅                           |
+| `codemod-check`           | 手改一个生成的测试       | exit 1，并指向 `HAND_MAINTAINED` ✅ |
+| `collected-check`         | 删掉一个生成的测试       | exit 1「台账要求收集但没收集到」✅  |
+| `collected-check`         | dom 测试改名成 node 收集 | 同时报缺失与多余 ✅                 |
 
 `collected-check` 是交接单点名的第 3 项前置。它进了 `verify`（只读台账与 vitest 收集结果，
 不碰 git 历史）；`codemod-check` 要读 baseline commit 的 git 对象，因此和 `baseline-check`
@@ -147,15 +147,15 @@ rstest 0.10.6 的 `dist/` 里打包了 `@vitest/*`，JSDoc 里甚至直接写着
 
 ## 产出
 
-| 文件                                      | 作用                                       |
-| ----------------------------------------- | ------------------------------------------ |
-| `scripts/land-copied.mjs`                 | 按字节落地 `COPIED` + 生成台账行与忽略清单 |
-| `scripts/rstest-to-vitest.mjs`            | AST 改写 + prettier；`--check` 防手改      |
-| `scripts/collected-vs-manifest.mjs`       | 收集结果 ↔ 台账对账                       |
-| `scripts/typecheck-budget.mjs`            | 已知类型报错预算                           |
-| `scripts/lib/test-selection.mjs`          | 闭包判据，codemod 与对账**共用**           |
-| `tests/guards/rstest-vitest-parity.test.ts` | 9 条 rs.*/vi.* 等价性断言                |
-| `baseline/typecheck-known.json`           | 58 条已知报错                              |
+| 文件                                        | 作用                                       |
+| ------------------------------------------- | ------------------------------------------ |
+| `scripts/land-copied.mjs`                   | 按字节落地 `COPIED` + 生成台账行与忽略清单 |
+| `scripts/rstest-to-vitest.mjs`              | AST 改写 + prettier；`--check` 防手改      |
+| `scripts/collected-vs-manifest.mjs`         | 收集结果 ↔ 台账对账                        |
+| `scripts/typecheck-budget.mjs`              | 已知类型报错预算                           |
+| `scripts/lib/test-selection.mjs`            | 闭包判据，codemod 与对账**共用**           |
+| `tests/guards/rstest-vitest-parity.test.ts` | 9 条 rs._/vi._ 等价性断言                  |
+| `baseline/typecheck-known.json`             | 58 条已知报错                              |
 
 `vitest.config.ts` 加了第三个 project（`dom` / happy-dom，收 `*.dom.test.ts`），
 并给 node/dom 补了 `@` → `app/` 别名（这两个 project 不过 Nuxt，拿不到注入的别名）。

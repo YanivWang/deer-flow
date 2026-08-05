@@ -20,15 +20,15 @@ make migration-check  # baseline-check + codemod-check + land-retyped-check（�
 
 本窗口实测：两条都 **exit 0**。
 
-| 指标                | 上一窗口         | 本窗口                     |
-| ------------------- | ---------------- | -------------------------- |
-| `make verify`       | 28 文件 / 247 用例 | **68 文件 / 625 用例**     |
-| 搬运的 core 测试    | 20（node 13 · dom 7） | **58（node 48 · dom 10）** |
-| 等依赖的测试        | 40               | **1**（`sidecar/api.test.ts`，等 M2 的自写 client） |
-| typecheck 预算      | 58 条            | **0 条**                   |
-| `app/core/` 磁盘文件 | 86               | **110**                    |
-| 落地分类            | COPIED 85        | COPIED 82 · RETYPED 24 · BLOCKED 10 |
-| npm 依赖净变化      | —                | **−1**（卸载 `ai`）        |
+| 指标                 | 上一窗口              | 本窗口                                              |
+| -------------------- | --------------------- | --------------------------------------------------- |
+| `make verify`        | 28 文件 / 247 用例    | **68 文件 / 625 用例**                              |
+| 搬运的 core 测试     | 20（node 13 · dom 7） | **58（node 48 · dom 10）**                          |
+| 等依赖的测试         | 40                    | **1**（`sidecar/api.test.ts`，等 M2 的自写 client） |
+| typecheck 预算       | 58 条                 | **0 条**                                            |
+| `app/core/` 磁盘文件 | 86                    | **110**                                             |
+| 落地分类             | COPIED 85             | COPIED 82 · RETYPED 24 · BLOCKED 10                 |
+| npm 依赖净变化       | —                     | **−1**（卸载 `ai`）                                 |
 
 `make e2e-m0` 收工时重跑，**exit 0**（7 个子套件）。
 
@@ -58,16 +58,16 @@ make baseline-refresh && make land-copied && make land-retyped && make codemod-t
 
 不落地的代价实测为零：
 
-| barrel                        | core 内消费方              |
-| ----------------------------- | -------------------------- |
-| `agents/index.ts`             | 无                         |
-| `features/index.ts`           | 无                         |
-| `integrations/lark/index.ts`  | 无                         |
-| `streamdown/index.ts`         | 无                         |
-| `workspace-changes/index.ts`  | 无                         |
-| `utils/datetime.ts`           | 无                         |
-| `settings/index.ts`           | 只有 REWRITE 档的 hooks    |
-| `uploads/index.ts`            | 只有 REWRITE 档的 hooks    |
+| barrel                       | core 内消费方           |
+| ---------------------------- | ----------------------- |
+| `agents/index.ts`            | 无                      |
+| `features/index.ts`          | 无                      |
+| `integrations/lark/index.ts` | 无                      |
+| `streamdown/index.ts`        | 无                      |
+| `workspace-changes/index.ts` | 无                      |
+| `utils/datetime.ts`          | 无                      |
+| `settings/index.ts`          | 只有 REWRITE 档的 hooks |
+| `uploads/index.ts`           | 只有 REWRITE 档的 hooks |
 
 测试台账里只有一个 `streamdown-plugins.test.ts` 碰到它们，而它本来就是 `DEFERRED`。
 
@@ -129,9 +129,9 @@ grep 和依赖闭包都看不见。是搬完之后跑测试才红出来的。
 
 06 说塌成 `string` 会让 B1/B11 **静默**走形。实测**一半静默、一半不静默**：
 
-| 消费方写法                                              | 塌成 `string` 后 |
-| ------------------------------------------------------- | ---------------- |
-| `message.content.map(…)`（`extractTextFromMessage`）     | **红**。`typeof === "string"` 之后剩 `never`，`.map` 不存在 |
+| 消费方写法                                                                          | 塌成 `string` 后                                                                     |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `message.content.map(…)`（`extractTextFromMessage`）                                | **红**。`typeof === "string"` 之后剩 `never`，`.map` 不存在                          |
 | `message.content[0]` + `"thinking" in part`（`extractReasoningContentFromMessage`） | **不红**。string 的 index 访问返回 string，分支静默变死代码，reasoning 从此恒为 null |
 
 所以「24 个改完能编译」不构成证据。护栏分两层：
@@ -175,12 +175,12 @@ SDK 的 `MessageContentComplex` 是 `text | image_url` 闭合联合。**照 08 �
 
 ## 装包：一个都不装
 
-| 包                         | 交接单 | 实际         | 为什么 |
-| -------------------------- | ------ | ------------ | ------ |
-| `@langchain/core`          | 要装   | **不装**     | 只为一个 `ToolCall` 类型。06 §M1 1b 本来就把它列在「改指向 `@/core/types/message`」的 8 个符号里 |
-| `date-fns`                 | 要装   | **不装**     | 只有 `utils/datetime.ts` 用，而它是 `BLOCKED`，M4 才落地 |
-| `@langchain/langgraph-sdk` | 没提   | **不装**     | 02 §372 逐字写了「不必装进项目」。它的值导入者 `api/api-client.ts` 因此不是 M1 的活——见下节 |
-| `ai`（Vercel AI SDK）      | 没提   | **卸载了**   | 02 §321「决策：内联定义，不装这个包」。上一个窗口装的，见下下节 |
+| 包                         | 交接单 | 实际       | 为什么                                                                                           |
+| -------------------------- | ------ | ---------- | ------------------------------------------------------------------------------------------------ |
+| `@langchain/core`          | 要装   | **不装**   | 只为一个 `ToolCall` 类型。06 §M1 1b 本来就把它列在「改指向 `@/core/types/message`」的 8 个符号里 |
+| `date-fns`                 | 要装   | **不装**   | 只有 `utils/datetime.ts` 用，而它是 `BLOCKED`，M4 才落地                                         |
+| `@langchain/langgraph-sdk` | 没提   | **不装**   | 02 §372 逐字写了「不必装进项目」。它的值导入者 `api/api-client.ts` 因此不是 M1 的活——见下节      |
+| `ai`（Vercel AI SDK）      | 没提   | **卸载了** | 02 §321「决策：内联定义，不装这个包」。上一个窗口装的，见下下节                                  |
 
 `frontend-vue/package.json` 的依赖**净减一个**（`ai`）。
 
@@ -192,12 +192,12 @@ SDK 的 `MessageContentComplex` 是 `text | image_url` 闭合联合。**照 08 �
 
 **这个理由是查错了文档得出的。** 依赖决策不在 08（那是 agent-core 合同），在 02/04：
 
-| 出处 | 原文 |
-| --- | --- |
+| 出处    | 原文                                                                                       |
+| ------- | ------------------------------------------------------------------------------------------ |
 | 02 §106 | `@langchain/langgraph-sdk`｜4.7 MB｜`Client` 的 7 个方法 / 10 个调用点 + 类型｜**❌ 移除** |
-| 02 §249 | `@langchain/langgraph-sdk/client` → **移除** → 自写 `core/api/client.ts`（~180 行） |
-| 02 §372 | 「…**不必装进项目**」 |
-| 03 §100 | `api/` ← **改写**：不再依赖 LangChain SDK |
+| 02 §249 | `@langchain/langgraph-sdk/client` → **移除** → 自写 `core/api/client.ts`（~180 行）        |
+| 02 §372 | 「…**不必装进项目**」                                                                      |
+| 03 §100 | `api/` ← **改写**：不再依赖 LangChain SDK                                                  |
 
 08 说的「保留为开发期 oracle/fallback」指的是继续跑着的 `frontend/`（07 的并行运行），
 以及 M2 那个**一次性 worktree** 里的兼容探针（06 §358、08 §68）——
@@ -244,12 +244,12 @@ sidecar/api.test.ts     → waiting（等 M2 的自写 client）
 
 两次的形状完全一样：
 
-| | 上一窗口 | 本窗口 |
-| --- | --- | --- |
-| 触发 | COPIED 的 `uploads/prompt-input-files.ts` 解析不了 `ai` | RETYPED 的 `api/api-client.ts` 解析不了 SDK |
-| 出路 | 装包（最省事） | 装包（最省事） |
-| 计划里的裁决 | 02 §321「不装这个包」 | 02 §372「不必装进项目」 |
-| 裁决躺在哪 | 另一个文档，没人翻 | 另一个文档，翻的是 08 |
+|              | 上一窗口                                                | 本窗口                                      |
+| ------------ | ------------------------------------------------------- | ------------------------------------------- |
+| 触发         | COPIED 的 `uploads/prompt-input-files.ts` 解析不了 `ai` | RETYPED 的 `api/api-client.ts` 解析不了 SDK |
+| 出路         | 装包（最省事）                                          | 装包（最省事）                              |
+| 计划里的裁决 | 02 §321「不装这个包」                                   | 02 §372「不必装进项目」                     |
+| 裁决躺在哪   | 另一个文档，没人翻                                      | 另一个文档，翻的是 08                       |
 
 **光写文档挡不住这个**——第二次恰恰是在读了文档之后发生的（读的是 08，
 而依赖裁决在 02）。所以加了 `tests/guards/forbidden-deps.test.ts`，两条断言：
@@ -277,8 +277,8 @@ sidecar/api.test.ts     → waiting（等 M2 的自写 client）
 没有选择「跟着关掉 `noImplicitAny`」：那是拿全仓永久的检查强度换 5 处一次性的方便。
 改成逐条声明补丁（都是纯类型断言，编译后一个字节不变）：
 
-| 位置                                  | 上游为什么不报                              |
-| ------------------------------------- | ------------------------------------------- |
+| 位置                                      | 上游为什么不报                              |
+| ----------------------------------------- | ------------------------------------------- |
 | `messages/utils.ts` × 3（`fileMatch[n]`） | `let fileMatch;` 是隐式 any，索引访问不受检 |
 
 > 原本还有 `api/api-client.ts` 的 2 处（SDK 泛型），随该文件判回 REWRITE 一起没了。
@@ -301,11 +301,11 @@ sidecar/api.test.ts     → waiting（等 M2 的自写 client）
 剩下 28 条全在**我们没碰过的正文**里，消掉它们就得改上游逻辑。处理方式是关掉三条具体规则
 （不是豁免文件——同一个文件里别的问题照报），每条都写了理由：
 
-| 规则                                   | 范围                     | 为什么 |
-| -------------------------------------- | ------------------------ | ------ |
-| `@typescript-eslint/no-empty-object-type` | RETYPED 档（从 manifest 推） | `interface X extends Generic<"a"> {}` 是给泛型实例化取名的常见写法，`messages/utils.ts` 有 6 处 |
-| `no-case-declarations`                 | 同上                     | `switch` 的 case 里声明 const；Next 预设不开，Nuxt 预设开 |
-| `import/first`                         | `tests/unit/core/**`     | 上游把 `vi.mock(…)` 写在 import 之前，**这是 vitest 的提升语义要求的**，9 个文件 21 处。按规则挪到 import 之后 mock 就不生效了——这条在这里是误报 |
+| 规则                                      | 范围                         | 为什么                                                                                                                                           |
+| ----------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@typescript-eslint/no-empty-object-type` | RETYPED 档（从 manifest 推） | `interface X extends Generic<"a"> {}` 是给泛型实例化取名的常见写法，`messages/utils.ts` 有 6 处                                                  |
+| `no-case-declarations`                    | 同上                         | `switch` 的 case 里声明 const；Next 预设不开，Nuxt 预设开                                                                                        |
+| `import/first`                            | `tests/unit/core/**`         | 上游把 `vi.mock(…)` 写在 import 之前，**这是 vitest 的提升语义要求的**，9 个文件 21 处。按规则挪到 import 之后 mock 就不生效了——这条在这里是误报 |
 
 余一条 warning 未处理：`messages/utils.ts:853` 有个上游写的
 `eslint-disable @typescript-eslint/prefer-regexp-exec`，而 Nuxt 预设没开这条规则。
@@ -315,34 +315,34 @@ sidecar/api.test.ts     → waiting（等 M2 的自写 client）
 
 沿用上一窗口的标准：不是「写了个检查」，是造出故障看它红，再还原看它绿。
 
-| 门禁                       | 制造的故障                        | 结果 |
-| -------------------------- | --------------------------------- | ---- |
-| `land-retyped-check`       | 手改一个已落地的 RETYPED 文件     | exit 1，并指向 `HAND_MAINTAINED` ✅ |
-| `codemod-check`            | 删掉 `HAND_MAINTAINED` 的测试文件 | exit 1「登记为 HAND_MAINTAINED 但文件不在磁盘上」✅ |
-| `land-retyped`（PATCHES）  | 把一条 `find` 改得对不上上游      | exit 1「补丁命中 0 次（应为 1 次），声明已过期」✅ |
-| `baseline-check`（RETYPE_DROPS） | 声明一个基线上不存在的 import | exit 1「声明已过期」✅ |
-| `typecheck`（message.contract） | 联合塌向任一侧               | 两个方向各 2 条 TS2344 ✅ |
-| `forbidden-deps.test.ts`   | 无需制造——`ai` 本来就装着     | 首次运行即红，指出 02 §321 ✅ |
-| `i18n-check`               | zh-CN 单独删一个 key          | exit 1「zh-CN 缺 key」✅ |
-| `i18n-check`               | 两个 locale 一起删（typecheck 抓不到） | exit 1「基线里有、现在没了」✅ |
-| `architecture.test.ts`     | 8 条规则逐条越界              | 每条各自红，无一漏网 ✅ |
+| 门禁                             | 制造的故障                             | 结果                                                |
+| -------------------------------- | -------------------------------------- | --------------------------------------------------- |
+| `land-retyped-check`             | 手改一个已落地的 RETYPED 文件          | exit 1，并指向 `HAND_MAINTAINED` ✅                 |
+| `codemod-check`                  | 删掉 `HAND_MAINTAINED` 的测试文件      | exit 1「登记为 HAND_MAINTAINED 但文件不在磁盘上」✅ |
+| `land-retyped`（PATCHES）        | 把一条 `find` 改得对不上上游           | exit 1「补丁命中 0 次（应为 1 次），声明已过期」✅  |
+| `baseline-check`（RETYPE_DROPS） | 声明一个基线上不存在的 import          | exit 1「声明已过期」✅                              |
+| `typecheck`（message.contract）  | 联合塌向任一侧                         | 两个方向各 2 条 TS2344 ✅                           |
+| `forbidden-deps.test.ts`         | 无需制造——`ai` 本来就装着              | 首次运行即红，指出 02 §321 ✅                       |
+| `i18n-check`                     | zh-CN 单独删一个 key                   | exit 1「zh-CN 缺 key」✅                            |
+| `i18n-check`                     | 两个 locale 一起删（typecheck 抓不到） | exit 1「基线里有、现在没了」✅                      |
+| `architecture.test.ts`           | 8 条规则逐条越界                       | 每条各自红，无一漏网 ✅                             |
 
 还验了两条幂等性：`make land-copied` 不会吃掉 PROVENANCE 里的 `RETYPED` 块
 （两个块并列，不是嵌套）；`make codemod-tests` 不会删掉手工维护的测试（md5 前后一致）。
 
 ## 产出
 
-| 文件                                          | 作用                                             |
-| --------------------------------------------- | ------------------------------------------------ |
-| `scripts/land-retyped.mjs`                    | 按声明改写落地 RETYPED + 生成台账行；`--check` 防手改 |
-| `app/core/types/message.ts`                   | 替代 SDK 的 wire 类型，15 个落地文件指向它       |
-| `app/core/types/message.contract.ts`          | 联合塌陷的类型层护栏（骑 typecheck 预算门禁）    |
-| `app/core/scheduled-tasks/schedule.ts`        | `ScheduleValue` 搬进 core，纠正依赖方向          |
-| `tests/guards/message-content-contract.test.ts` | 真实夹具双向往返（7 个用例）                   |
-| `tests/fixtures/message-content-shapes.json`  | 从 516 条真实消息抽的 22 + 3 条                  |
-| `tests/guards/forbidden-deps.test.ts`         | 计划点名不装的包不许出现在依赖或 `needsDeps` 里 |
-| `scripts/i18n-manager.mjs`                    | 词典体检 check / diff / unused（06 §1d）        |
-| `baseline/i18n-keys.json`                     | 751 个 key 的基线，趁词典原样时取               |
+| 文件                                            | 作用                                                  |
+| ----------------------------------------------- | ----------------------------------------------------- |
+| `scripts/land-retyped.mjs`                      | 按声明改写落地 RETYPED + 生成台账行；`--check` 防手改 |
+| `app/core/types/message.ts`                     | 替代 SDK 的 wire 类型，15 个落地文件指向它            |
+| `app/core/types/message.contract.ts`            | 联合塌陷的类型层护栏（骑 typecheck 预算门禁）         |
+| `app/core/scheduled-tasks/schedule.ts`          | `ScheduleValue` 搬进 core，纠正依赖方向               |
+| `tests/guards/message-content-contract.test.ts` | 真实夹具双向往返（7 个用例）                          |
+| `tests/fixtures/message-content-shapes.json`    | 从 516 条真实消息抽的 22 + 3 条                       |
+| `tests/guards/forbidden-deps.test.ts`           | 计划点名不装的包不许出现在依赖或 `needsDeps` 里       |
+| `scripts/i18n-manager.mjs`                      | 词典体检 check / diff / unused（06 §1d）              |
+| `baseline/i18n-keys.json`                       | 751 个 key 的基线，趁词典原样时取                     |
 
 `core-provenance.mjs` 新增 `BLOCKED` 档（对 `{REWRITE, BLOCKED}` 求不动点）、
 `REMOVED_DEPS`（@langchain/* 与 ai）与 `RETYPE_DROPS`；`test-selection.mjs` 的闭包改读 `landedDeps`；
@@ -375,17 +375,17 @@ console.log(total,arrays.length,strings.length);
 `ai` 那件事说明这类偏离不止一处，所以把 01–08 里**可机械核对**的裁决逐条对了一遍。
 结论是只有一处真缺口，其余要么已在、要么是后续里程碑的正常进度：
 
-| 检查项 | 出处 | 结果 |
-| --- | --- | --- |
-| `tests/architecture.test.ts` 存在 | 08 §32 | ✅ 在 |
-| `packages/agent-core` 的 workspace 契约 | 08 §36 | ✅ package.json / exports / src/index.ts / tests 齐 |
-| `package.json` 的 scripts 只留 postinstall | 03 §415 | ✅ |
-| 行为敏感包对齐 frontend 的 resolved 版本 | 02 §360 | ✅ zod / tailwindcss / typescript 三个已装的都一致 |
-| 我们自己写的文件都有六段式文件头 | 04 §6 | ✅ 无一缺失 |
-| 文档提到的 make 目标都存在 | — | ✅ 除下面两条，其余都在根 Makefile |
-| **`scripts/i18n-manager.mjs`** | **06 §1d** | **❌ 不存在** |
-| `make gen-api-types` | 02 | ⏳ M2（`openapi-typescript` 也还没装，进度正常） |
-| 03 规定的 package.json 里 38 个包未装 | 03 §592 | ⏳ 全是 M2/M4 的内容渲染与状态管理，进度正常 |
+| 检查项                                     | 出处       | 结果                                                |
+| ------------------------------------------ | ---------- | --------------------------------------------------- |
+| `tests/architecture.test.ts` 存在          | 08 §32     | ✅ 在                                               |
+| `packages/agent-core` 的 workspace 契约    | 08 §36     | ✅ package.json / exports / src/index.ts / tests 齐 |
+| `package.json` 的 scripts 只留 postinstall | 03 §415    | ✅                                                  |
+| 行为敏感包对齐 frontend 的 resolved 版本   | 02 §360    | ✅ zod / tailwindcss / typescript 三个已装的都一致  |
+| 我们自己写的文件都有六段式文件头           | 04 §6      | ✅ 无一缺失                                         |
+| 文档提到的 make 目标都存在                 | —          | ✅ 除下面两条，其余都在根 Makefile                  |
+| **`scripts/i18n-manager.mjs`**             | **06 §1d** | **❌ 不存在**                                       |
+| `make gen-api-types`                       | 02         | ⏳ M2（`openapi-typescript` 也还没装，进度正常）    |
+| 03 规定的 package.json 里 38 个包未装      | 03 §592    | ⏳ 全是 M2/M4 的内容渲染与状态管理，进度正常        |
 
 ### 补上 `i18n-manager.mjs`（06 §1d，本来就是 M1 的活）
 
@@ -396,11 +396,11 @@ console.log(total,arrays.length,strings.length);
 
 词典（3,209 行）正是本窗口随 RETYPED 落地的，所以现在就是那个时刻。三个子命令：
 
-| 命令 | 判据 | 是否进 verify |
-| --- | --- | --- |
-| `make i18n-check` | 两个 locale 的 key 集必须一致 + 基线里的 key 不许消失 | ✅ 已进 |
-| `make i18n-diff` | 当前 key 集 vs 基线，少的报错、多的只报告 | 否（诊断用） |
-| `make i18n-unused` | 词典里有但代码里没人引用的 key | 否（M4b 前几乎全部未引用，只报告不判错） |
+| 命令               | 判据                                                  | 是否进 verify                            |
+| ------------------ | ----------------------------------------------------- | ---------------------------------------- |
+| `make i18n-check`  | 两个 locale 的 key 集必须一致 + 基线里的 key 不许消失 | ✅ 已进                                  |
+| `make i18n-diff`   | 当前 key 集 vs 基线，少的报错、多的只报告             | 否（诊断用）                             |
+| `make i18n-unused` | 词典里有但代码里没人引用的 key                        | 否（M4b 前几乎全部未引用，只报告不判错） |
 
 基线：`baseline/i18n-keys.json`，**751 个 key**。
 
@@ -463,7 +463,7 @@ import … from "../../../app/core/config"         → 1 failed
 5. **`api/` 整个目录还没有落点。** `api/api-client.ts` 判回 REWRITE 后，
    `api/index.ts`、`sidecar/api.ts` 连带 BLOCKED，`sidecar/api.test.ts` 留在 waiting。
    解锁它们要等 02 §249 说的自写 `core/api/client.ts`（~180 行，7 个 REST 方法
-   + CSRF 头 + 错误规范化），属于 M2。**这是本窗口唯一一个 waiting 的测试。**
+   - CSRF 头 + 错误规范化），属于 M2。**这是本窗口唯一一个 waiting 的测试。**
 6. **没跑过 `make e2e`（共享业务合同）。** 本窗口仍然只有 core 与其单测，没有页面接线。
    `make e2e-m0` 跑了，证明的是 M0 的地基没被破坏，不是业务行为没退化。
 7. **`land-retyped.mjs` 的补丁是文本锚点，不是 AST。** 上游改一个空格，

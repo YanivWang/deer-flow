@@ -15,11 +15,11 @@ L1 解决通用问题：SSE 分帧、连接生命周期、消息归并、可观�
 
 ## 三层定义
 
-| 层 | 目录 | 职责 | 何时完成 |
-| --- | --- | --- | --- |
-| **L1 · agent-core** | `frontend-vue/packages/agent-core/` | 框架与协议无关的 transport、session、reducer、external store | M2 |
-| **L2 · agent-ui-kit** | `app/core/markdown/`、`app/components/elements/`、通用消息组件 | 通用 UI 行为和扩展点 | M4b/M5 抽取，M8 收口 |
-| **L3 · deerflow** | `app/core/agent-deerflow/` 及 DeerFlow 业务目录 | Gateway 协议、Pinia/Nuxt 绑定和业务状态 | M4a 起 |
+| 层                    | 目录                                                           | 职责                                                         | 何时完成             |
+| --------------------- | -------------------------------------------------------------- | ------------------------------------------------------------ | -------------------- |
+| **L1 · agent-core**   | `frontend-vue/packages/agent-core/`                            | 框架与协议无关的 transport、session、reducer、external store | M2                   |
+| **L2 · agent-ui-kit** | `app/core/markdown/`、`app/components/elements/`、通用消息组件 | 通用 UI 行为和扩展点                                         | M4b/M5 抽取，M8 收口 |
+| **L3 · deerflow**     | `app/core/agent-deerflow/` 及 DeerFlow 业务目录                | Gateway 协议、Pinia/Nuxt 绑定和业务状态                      | M4a 起               |
 
 依赖方向：
 
@@ -120,8 +120,7 @@ export interface SseEvent {
 }
 
 export type SseFrame =
-  | { kind: "event"; event: SseEvent }
-  | { kind: "heartbeat"; comment: string };
+  { kind: "event"; event: SseEvent } | { kind: "heartbeat"; comment: string };
 
 export interface FrameReaderOptions {
   maxBufferBytes: number;
@@ -133,6 +132,25 @@ export function readSseFrames(
   options: FrameReaderOptions,
 ): AsyncIterable<SseFrame>;
 ```
+
+内核不认识 `end` / `error` / `gap` 这些名字（它们是 DeerFlow 的 wire 事件名，
+写进 L1 就等于把协议塞进内核），但它必须知道「这一帧意味着流正常结束 / 后端报错 /
+出现重放缺口」，否则**意外 EOF 与正常完成永远分不出来**。所以协议知识由适配层通过
+一个纯函数传入，这是 L1 唯一的协议知识入口：
+
+```ts
+export type StreamSignal =
+  | { kind: "data" }
+  | { kind: "completed" }
+  | { kind: "failed"; error: AgentStreamError }
+  | { kind: "gap" };
+
+export type ClassifyEvent = (event: SseEvent) => StreamSignal;
+```
+
+`maxBufferBytes` 量的是**还没成帧的残留**，不是吞吐：上限必须在把完整帧排干**之后**
+判。收到 chunk 就判的写法会让一个装了 50 个完整帧的 chunk 触发一个小上限，
+而缓冲其实一直很小。
 
 L1 负责：
 
@@ -164,13 +182,17 @@ export interface OpenedStream<THandle> {
   response: Response;
 }
 
+export type RunOutcome = "completed" | "cancelled" | "failed";
+
 export type CancelResult =
   | { kind: "drain"; response: Response }
   | { kind: "accepted" }
-  | { kind: "terminal"; reason?: string };
+  | { kind: "terminal"; outcome?: RunOutcome; reason?: string };
 
 export interface InspectedRun {
   terminal: boolean;
+  /** 终态时必须给出。durable status → outcome 的映射由适配层做，见下方说明。 */
+  outcome?: RunOutcome;
   reason?: string;
 }
 
@@ -178,9 +200,17 @@ export interface RunProtocol<TStart, THandle> {
   /** 只调用一次；网络错误发生在拿到 handle 之前时默认 fail closed。 */
   create(input: TStart, signal: AbortSignal): Promise<OpenedStream<THandle>>;
   /** 只针对已存在的 run；由协议适配器决定 GET、header 或 query cursor。 */
-  resume(handle: THandle, cursor: string | undefined, signal: AbortSignal): Promise<Response>;
+  resume(
+    handle: THandle,
+    cursor: string | undefined,
+    signal: AbortSignal,
+  ): Promise<Response>;
   /** 不得把 200 SSE、202 accepted 和 204 terminal 压成 void。 */
-  cancel(handle: THandle, cursor: string | undefined, signal: AbortSignal): Promise<CancelResult>;
+  cancel(
+    handle: THandle,
+    cursor: string | undefined,
+    signal: AbortSignal,
+  ): Promise<CancelResult>;
   /** cancel 只返回 accepted 时，用 durable run resource 收敛到终态。 */
   inspect(handle: THandle, signal: AbortSignal): Promise<InspectedRun>;
 }
@@ -189,8 +219,18 @@ export type RunSessionState<THandle> =
   | { status: "idle" }
   | { status: "creating" }
   | { status: "streaming"; handle: THandle; cursor?: string }
-  | { status: "reconnecting"; handle: THandle; cursor?: string; attempt: number }
-  | { status: "stopping"; handle: THandle; cursor?: string; mode: "draining" | "polling" }
+  | {
+      status: "reconnecting";
+      handle: THandle;
+      cursor?: string;
+      attempt: number;
+    }
+  | {
+      status: "stopping";
+      handle: THandle;
+      cursor?: string;
+      mode: "draining" | "polling";
+    }
   | { status: "completed"; handle: THandle }
   | { status: "cancelled"; handle?: THandle; reason?: string }
   | { status: "failed"; handle?: THandle; error: AgentStreamError }
@@ -208,17 +248,30 @@ export type RunSessionState<THandle> =
 7. cancel 与 stream abort 分开：abort 本地读取不等于服务端 run 已取消。
 8. UI stop 先进入 `stopping`。`cancel()` 返回 `drain` 时继续归约尾帧直到 `end/error`；返回 `accepted` 时用 `inspect()` 有界轮询 durable run；只有 durable `interrupted` 才进入 `cancelled`，`success` 进入 `completed`，`error/timeout` 进入 `failed`。创建阶段尚无 handle 就断开属于不确定结果，不能伪装成已取消。
 
+> **`outcome` 是 M2 补上的，原来的 `{ terminal, reason }` 表达不了硬规则 8。**
+> 上一条要求分出 `cancelled` / `completed` / `failed` **三个**去向，而
+> `terminal: boolean` 只有两个值。要在原形状下分路，内核就得认识
+> `"interrupted"`、`"timeout"` 这类 DeerFlow durable status 字符串——那正是
+> §L1 禁入清单第 2、3 条禁止的。所以映射留在适配层
+> （`app/core/agent-deerflow/run-protocol.ts` 的 `DEERFLOW_DURABLE_STATUS`），
+> 内核只接收映射结果。适配层没给 `outcome` 时内核按 `cancelled` 处理：
+> 走到那里说明用户点了 stop 且后端确认了终态，读成 `completed` 会让 UI 显示
+> 一条其实被打断的回答已经正常完成。
+
+> **未知 durable status 当作「还没到终态」，不是失败。** 后端加一个枚举值就把
+> run 判死，会在加字段那天让所有停止操作报错；有界轮询本身会兜底。
+
 ## DeerFlow RunProtocol 的已知映射
 
 M-1 已由源码、测试和 replay Gateway 固化下表；M0 必须再验证 Nuxt preview 不改变这些行为：
 
-| 动作 | 方法与路径 | 关键响应/请求 |
-| --- | --- | --- |
-| create | `POST /api/langgraph/threads/:threadId/runs/stream` | 从 `Content-Location` 提取 thread/run；同时记录实际是否存在 `Location` |
-| resume/join | `GET /api/langgraph/threads/:threadId/runs/:runId/stream` | 带 `Last-Event-ID`（有 cursor 时） |
-| inspect | `GET /api/langgraph/threads/:threadId/runs/:runId` | 202 cancel 后读取 durable `status`，有界退避直到终态或明确超时 |
-| cancel | `POST /api/langgraph/threads/:threadId/runs/:runId/cancel` | 明确 `action`/`wait`；202 进入 durable status poll，204 才是已完成 |
-| cancel-then-drain | `POST /api/langgraph/threads/:threadId/runs/:runId/stream?action=interrupt` | 200 SSE 继续读尾帧；跨 worker 可能只回 202，不能假定总有 body |
+| 动作              | 方法与路径                                                                  | 关键响应/请求                                                          |
+| ----------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| create            | `POST /api/langgraph/threads/:threadId/runs/stream`                         | 从 `Content-Location` 提取 thread/run；同时记录实际是否存在 `Location` |
+| resume/join       | `GET /api/langgraph/threads/:threadId/runs/:runId/stream`                   | 带 `Last-Event-ID`（有 cursor 时）                                     |
+| inspect           | `GET /api/langgraph/threads/:threadId/runs/:runId`                          | 202 cancel 后读取 durable `status`，有界退避直到终态或明确超时         |
+| cancel            | `POST /api/langgraph/threads/:threadId/runs/:runId/cancel`                  | 明确 `action`/`wait`；202 进入 durable status poll，204 才是已完成     |
+| cancel-then-drain | `POST /api/langgraph/threads/:threadId/runs/:runId/stream?action=interrupt` | 200 SSE 继续读尾帧；跨 worker 可能只回 202，不能假定总有 body          |
 
 当前 Gateway 的 create 响应与本轮运行探针均明确提供 `Content-Location`，没有观察到 `Location`；当前 SDK 用前者提取 run metadata，而重连 helper 查找后者。这不是可忽略的命名差异。M0 的 raw-response 测试必须记录最终经过 Nuxt proxy 后的两个 header，禁止凭 SDK 假设补齐。
 
@@ -337,12 +390,12 @@ watchdog 的输入至少包含 `lastActivityAt`、session state、最后消息�
 
 ## 测试资产：四类证据不能混用
 
-| 资产 | 验证什么 | 不能证明什么 |
-| --- | --- | --- |
-| 13 个 `thread.json` / 516 条最终消息 | message adapter、最终 state、导出和渲染输入 | SSE 时序、cursor、重连 |
-| raw SSE golden traces | 分帧、事件顺序、chunk merge、heartbeat、gap、end/error | 真实代理和网络行为 |
-| fake upstream 集成测试 | LF/CRLF、跨 chunk、buffer、断流、POST→GET 方法切换 | Gateway 当前 header 约定 |
-| real Gateway smoke | Content-Location/Location、Last-Event-ID、cancel、代理、认证 | 全量 UI 回归 |
+| 资产                                 | 验证什么                                                     | 不能证明什么             |
+| ------------------------------------ | ------------------------------------------------------------ | ------------------------ |
+| 13 个 `thread.json` / 516 条最终消息 | message adapter、最终 state、导出和渲染输入                  | SSE 时序、cursor、重连   |
+| raw SSE golden traces                | 分帧、事件顺序、chunk merge、heartbeat、gap、end/error       | 真实代理和网络行为       |
+| fake upstream 集成测试               | LF/CRLF、跨 chunk、buffer、断流、POST→GET 方法切换           | Gateway 当前 header 约定 |
+| real Gateway smoke                   | Content-Location/Location、Last-Event-ID、cancel、代理、认证 | 全量 UI 回归             |
 
 当前 checkout 的最终 fixture 是 **13 个 `thread.json` / `values.messages` 合计 516 条**；读取顶层 `messages` 会错误得到 0。M-1 的去敏运行证据见 [evidence/m-1-replay-gateway-probe.md](evidence/m-1-replay-gateway-probe.md)。
 
@@ -358,10 +411,10 @@ M2 的长期门禁必须同时包含前 3 类；第 4 类进入专门的 real-ba
 
 L2 按实现反馈逐步抽取，不预先冻结所有 UI：
 
-| 时机 | 动作 |
-| --- | --- |
-| M4b | 抽消息分组、reasoning、tool call、composer、human-input、Markdown 流式接口 |
-| M5 | 用 artifacts/sidecar 反向验证扩展点 |
-| M8 | 冻结公共导出、consumer 示例和迁移指南 |
+| 时机 | 动作                                                                       |
+| ---- | -------------------------------------------------------------------------- |
+| M4b  | 抽消息分组、reasoning、tool call、composer、human-input、Markdown 流式接口 |
+| M5   | 用 artifacts/sidecar 反向验证扩展点                                        |
+| M8   | 冻结公共导出、consumer 示例和迁移指南                                      |
 
 每次抽取只移动已经被 React 基线、Vue 实现和共享 E2E 同时证明过的行为，禁止为了“通用”提前发明业务接口。

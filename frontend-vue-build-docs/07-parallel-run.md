@@ -18,14 +18,14 @@
 
 ## 端口分配
 
-| 服务 | 端口 | 说明 |
-| --- | --- | --- |
-| Nginx | `2026` | 现有统一入口 → `frontend`(3000) + `gateway`(8001)，不动 |
-| Gateway API | `8001` | 共用 |
-| `frontend`（Next.js） | `3000` | 现状 |
-| **`frontend-vue`（Nuxt）** | **`3100`** | 新增，`make dev` / `make preview` |
+| 服务                           | 端口       | 说明                                                                                                                                                                   |
+| ------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nginx                          | `2026`     | 现有统一入口 → `frontend`(3000) + `gateway`(8001)，不动                                                                                                                |
+| Gateway API                    | `8001`     | 共用                                                                                                                                                                   |
+| `frontend`（Next.js）          | `3000`     | 现状                                                                                                                                                                   |
+| **`frontend-vue`（Nuxt）**     | **`3100`** | 新增，`make dev` / `make preview`                                                                                                                                      |
 | **`frontend-vue` E2E preview** | **`3101`** | ★ 独立端口。E2E 必须跑在自己的 preview 上，不能复用 3100 上的 dev server——理由见 [03](03-project-shape.md#️-为什么-e2e-不能用-3100以及为什么-reuseexistingserver-false) |
-| Provisioner | `8002` | 可选 |
+| Provisioner                    | `8002`     | 可选                                                                                                                                                                   |
 
 ### ⚠️ 本机其他项目也会抢端口
 
@@ -95,11 +95,11 @@ server route 同样编译进 Nitro 产物，三种形态共用一份实现。**M
 
 不是为了兼容历史，是三条硬约束：
 
-| 约束 | 说明 |
-| --- | --- |
-| **E2E 合同** | [`frontend/tests/e2e/utils/mock-api.ts`](../frontend/tests/e2e/utils/mock-api.ts) 实测有 **39 个 `page.route()`**：7 个在 `/api/langgraph/*`（threads、threads/\*、/history、/state、/search、runs/stream、threads/\*/runs/stream），**另外 32 个在裸 `/api/*`**——`/api/v1/auth/*`、`/api/threads/*`（含正则 `/\/api\/threads\/[^/]+$/`）、`/api/scheduled-tasks/*`、`/api/features`、`/api/models`、`/api/skills`、`/api/agents`、`/api/integrations/lark/*`、`/api/channels/*`、`/api/suggestions/config`…… 换句话说 **URL 合同不是「一个前缀」，是全部 REST 路径逐字一致** |
-| **生产代理调优** | `/api/langgraph/` 是 nginx 里唯一带 `proxy_read_timeout 600s`、`client_max_body_size 20M`、`proxy_request_buffering off` 的 location（[`nginx.local.conf:67`](../docker/nginx/nginx.local.conf)）。裸 `/api/threads/...` 命中的是 `location ~ ^/api/threads`，走默认 60s 超时——DeerFlow 的长工具调用会被掐断 |
-| **复用方的接入点** | 模板交付给其他项目时，「agent 流式走哪个前缀」是一个显式配置项，不该散在各处 |
+| 约束               | 说明                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **E2E 合同**       | [`frontend/tests/e2e/utils/mock-api.ts`](../frontend/tests/e2e/utils/mock-api.ts) 实测有 **39 个 `page.route()`**：7 个在 `/api/langgraph/*`（threads、threads/\*、/history、/state、/search、runs/stream、threads/\*/runs/stream），**另外 32 个在裸 `/api/*`**——`/api/v1/auth/*`、`/api/threads/*`（含正则 `/\/api\/threads\/[^/]+$/`）、`/api/scheduled-tasks/*`、`/api/features`、`/api/models`、`/api/skills`、`/api/agents`、`/api/integrations/lark/*`、`/api/channels/*`、`/api/suggestions/config`…… 换句话说 **URL 合同不是「一个前缀」，是全部 REST 路径逐字一致** |
+| **生产代理调优**   | `/api/langgraph/` 是 nginx 里唯一带 `proxy_read_timeout 600s`、`client_max_body_size 20M`、`proxy_request_buffering off` 的 location（[`nginx.local.conf:67`](../docker/nginx/nginx.local.conf)）。裸 `/api/threads/...` 命中的是 `location ~ ^/api/threads`，走默认 60s 超时——DeerFlow 的长工具调用会被掐断                                                                                                                                                                                                                                                                  |
+| **复用方的接入点** | 模板交付给其他项目时，「agent 流式走哪个前缀」是一个显式配置项，不该散在各处                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 > 早期版本写的是「7 个 route pattern 拦在 langgraph 前缀上」。这个说法本身没错，但会让人以为只要保住一个前缀就安全——实际要保的是 39 条路径的全集。
 
@@ -162,17 +162,17 @@ cd frontend-vue && make dev
 
 M0 先支持模块内 `make dev`，并在根级新增显式 `make dev-vue` / `make dev-dual` 生命周期；现有 `make dev` 继续作为 React 默认，避免无提示地改变已有开发入口。根 Makefile、`scripts/serve.sh`、README/AGENTS 同步更新。
 
-| 检查 | 期望 |
-| --- | --- |
-| `localhost:2026` | 现有 Next 前端正常，未受影响 |
-| `localhost:3100` | Nuxt 前端可访问 |
-| `localhost:3100` 上调用 `/api/features` | 返回 Gateway 的真实响应，不是 404/502 |
-| **`PORT=3101 nuxt preview` 下同样调用 `/api/features`** | **同上**——这一条证明 server handler 已进入生产 Nitro 产物，必须在 **preview** 上单独验 |
-| `localhost:3100` 上发起一个 run | `/api/langgraph/threads/…/runs/stream` 命中 Gateway，且 token **逐条到达**而不是攒到最后（代理未缓冲） |
-| browser-view WS | 开发直连 8001 + exact allowlist，在真实 Origin/cookie 下完成握手（[G0-6](06-migration-plan.md#m0-的十道-gate)） |
-| `make e2e-list` | clean install 后列出 **25 个 spec / 120 个 test**；实时数量由 CI 输出 |
-| 真实认证 smoke | 经 preview 完成 register/login、CSRF 写请求、refresh、logout |
-| run resume smoke | create POST 只发生一次，续传切 GET 并带 `Last-Event-ID` |
+| 检查                                                    | 期望                                                                                                            |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `localhost:2026`                                        | 现有 Next 前端正常，未受影响                                                                                    |
+| `localhost:3100`                                        | Nuxt 前端可访问                                                                                                 |
+| `localhost:3100` 上调用 `/api/features`                 | 返回 Gateway 的真实响应，不是 404/502                                                                           |
+| **`PORT=3101 nuxt preview` 下同样调用 `/api/features`** | **同上**——这一条证明 server handler 已进入生产 Nitro 产物，必须在 **preview** 上单独验                          |
+| `localhost:3100` 上发起一个 run                         | `/api/langgraph/threads/…/runs/stream` 命中 Gateway，且 token **逐条到达**而不是攒到最后（代理未缓冲）          |
+| browser-view WS                                         | 开发直连 8001 + exact allowlist，在真实 Origin/cookie 下完成握手（[G0-6](06-migration-plan.md#m0-的十道-gate)） |
+| `make e2e-list`                                         | clean install 后列出 **25 个 spec / 120 个 test**；实时数量由 CI 输出                                           |
+| 真实认证 smoke                                          | 经 preview 完成 register/login、CSRF 写请求、refresh、logout                                                    |
+| run resume smoke                                        | create POST 只发生一次，续传切 GET 并带 `Last-Event-ID`                                                         |
 
 ### 扩展并统一使用 `scripts/pnpm.py`
 
@@ -239,16 +239,16 @@ playwright-report/
 
 如果本期只完成开发 profile，发布说明必须标为“development preview”，不能称 production-ready。
 
-| 需求 | 说明 |
-| --- | --- |
-| 产物 | `nuxt build` → `.output/`，`node .output/server/index.mjs`（自包含，运行时不需要 pnpm / node_modules） |
-| 镜像 | Node 22 多阶段构建；runtime stage 只复制 `.output`、使用非 root 用户、固定工作目录，不复制 `.env`/源码/node_modules；基础镜像与 resolved 依赖可追溯 |
-| 代理 | agent 流式前缀（默认 `/api/langgraph/*`）必须配 `proxy_read_timeout ≥ 600s`、`proxy_buffering off`、`proxy_request_buffering off`，并按当前合同以 `client_max_body_size 20M` 拒绝超限请求（413）；Nuxt 的 `streamRequest` 只防内存缓冲，不代替大小限制 |
-| WebSocket | browser-view 启用时必须同源 Upgrade，或显式 allowlist 的直连方案 |
-| 认证 | HTTPS Cookie、CSRF、register/login/logout、OIDC 两个入口回跳均有测试 |
-| 环境变量 | public base URL 可运行时注入；Nitro proxy topology 是构建配置，不能混为一谈 |
-| 运维 | Nuxt 自身 `/health` 与 Gateway health 分开；进程启动、stdout/stderr 日志、SIGTERM 优雅退出、失败重启、回滚版本与带 hash 静态资源缓存策略 |
-| 安全响应头 | 至少 `nosniff`、referrer policy、frame policy；CSP 先 report-only 验证 Mermaid/KaTeX/iframe/worker，再决定 enforce |
+| 需求       | 说明                                                                                                                                                                                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 产物       | `nuxt build` → `.output/`，`node .output/server/index.mjs`（自包含，运行时不需要 pnpm / node_modules）                                                                                                                                                 |
+| 镜像       | Node 22 多阶段构建；runtime stage 只复制 `.output`、使用非 root 用户、固定工作目录，不复制 `.env`/源码/node_modules；基础镜像与 resolved 依赖可追溯                                                                                                    |
+| 代理       | agent 流式前缀（默认 `/api/langgraph/*`）必须配 `proxy_read_timeout ≥ 600s`、`proxy_buffering off`、`proxy_request_buffering off`，并按当前合同以 `client_max_body_size 20M` 拒绝超限请求（413）；Nuxt 的 `streamRequest` 只防内存缓冲，不代替大小限制 |
+| WebSocket  | browser-view 启用时必须同源 Upgrade，或显式 allowlist 的直连方案                                                                                                                                                                                       |
+| 认证       | HTTPS Cookie、CSRF、register/login/logout、OIDC 两个入口回跳均有测试                                                                                                                                                                                   |
+| 环境变量   | public base URL 可运行时注入；Nitro proxy topology 是构建配置，不能混为一谈                                                                                                                                                                            |
+| 运维       | Nuxt 自身 `/health` 与 Gateway health 分开；进程启动、stdout/stderr 日志、SIGTERM 优雅退出、失败重启、回滚版本与带 hash 静态资源缓存策略                                                                                                               |
+| 安全响应头 | 至少 `nosniff`、referrer policy、frame policy；CSP 先 report-only 验证 Mermaid/KaTeX/iframe/worker，再决定 enforce                                                                                                                                     |
 
 ### 关于安全响应头（CSP 等）
 
@@ -272,12 +272,12 @@ dual-frontend profile 已由 M-1 选中；nginx/compose/health-check 在 M7 prod
 
 它要求改至少以下仓库文件：
 
-| 文件 | 改动 |
-| --- | --- |
-| `docker/nginx/nginx.local.conf` + `nginx.conf` | 抽出共享 API location；为 Vue 增加按 hostname 的 server/入口，本地 profile 可用第二 loopback 端口验证 |
-| `scripts/serve.sh` | 五处端口接线 |
-| `docker/docker-compose*.yaml` | 加服务与第二个发布端口 |
-| `backend/tests/test_compose_default_bind_host.py` | `test_nginx_entry_defaults_to_loopback` 断言的是单元素列表，加端口后会红 |
+| 文件                                              | 改动                                                                                                  |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `docker/nginx/nginx.local.conf` + `nginx.conf`    | 抽出共享 API location；为 Vue 增加按 hostname 的 server/入口，本地 profile 可用第二 loopback 端口验证 |
+| `scripts/serve.sh`                                | 五处端口接线                                                                                          |
+| `docker/docker-compose*.yaml`                     | 加服务与第二个发布端口                                                                                |
+| `backend/tests/test_compose_default_bind_host.py` | `test_nginx_entry_defaults_to_loopback` 断言的是单元素列表，加端口后会红                              |
 
 冻结结论按 profile：
 

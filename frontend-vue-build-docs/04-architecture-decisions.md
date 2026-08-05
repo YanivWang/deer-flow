@@ -25,10 +25,10 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层
 
 顺带两个可直接使用的框架无关包：
 
-| 包 | 作用 |
-| --- | --- |
-| **`remend`** 1.3.0 | "Self-healing markdown. Intelligently parses and styles incomplete Markdown blocks." —— 即 Streamdown 的 `parseIncompleteMarkdown` |
-| **`rehype-harden`** 1.1.8 | 按前缀白名单过滤 URL 的安全插件 |
+| 包                        | 作用                                                                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **`remend`** 1.3.0        | "Self-healing markdown. Intelligently parses and styles incomplete Markdown blocks." —— 即 Streamdown 的 `parseIncompleteMarkdown` |
+| **`rehype-harden`** 1.1.8 | 按前缀白名单过滤 URL 的安全插件                                                                                                    |
 
 ### 为什么这是 1:1 的关键
 
@@ -102,11 +102,11 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层
 
 ### 组件分工
 
-| 类别 | 数量 | 处置 |
-| --- | --- | --- |
-| shadcn-vue CLI 拉取 | 30 | 逐个对照 cva 定义，样式串逐字复制 |
-| 必须自写 | 5 | `resizable`(→splitpanes) + 4 个特效 |
-| 不迁 | 6 | 落地页独占 + 死代码 |
+| 类别                | 数量 | 处置                                |
+| ------------------- | ---- | ----------------------------------- |
+| shadcn-vue CLI 拉取 | 30   | 逐个对照 cva 定义，样式串逐字复制   |
+| 必须自写            | 5    | `resizable`(→splitpanes) + 4 个特效 |
+| 不迁                | 6    | 落地页独占 + 死代码                 |
 
 完整清单见 [02-stack.md](02-stack.md#ui-层41-个-ui-组件的处置)。
 
@@ -116,12 +116,12 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层
 
 **决策：按层次切分，不是二选一。**
 
-| 层 | 用什么 | 内容 |
-| --- | --- | --- |
-| **Agent 协议状态** | **L1 external store** | 消息字典与顺序、run 生命周期、SSE 连接状态、游标、错误与 gap 状态；唯一写入口是 reducer |
-| **Vue 订阅与派生状态** | **每 thread 一个 composable/Pinia adapter** | 订阅 external store、暴露 readonly refs、承载纯 UI 派生状态；不得重复实现协议 reducer |
-| **thread 作用域 UI 状态** | **provide/inject** | artifacts 面板、browser-view、messages context、sidecar context |
-| **应用级** | Nuxt plugin + provide/inject | auth、i18n |
+| 层                        | 用什么                                      | 内容                                                                                    |
+| ------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Agent 协议状态**        | **L1 external store**                       | 消息字典与顺序、run 生命周期、SSE 连接状态、游标、错误与 gap 状态；唯一写入口是 reducer |
+| **Vue 订阅与派生状态**    | **每 thread 一个 composable/Pinia adapter** | 订阅 external store、暴露 readonly refs、承载纯 UI 派生状态；不得重复实现协议 reducer   |
+| **thread 作用域 UI 状态** | **provide/inject**                          | artifacts 面板、browser-view、messages context、sidecar context                         |
+| **应用级**                | Nuxt plugin + provide/inject                | auth、i18n                                                                              |
 
 ### 为什么不是全用 Pinia
 
@@ -188,11 +188,11 @@ core/agent-deerflow/   L3 协议适配层（随项目走）
 
 ### 三个使内核保持通用的关键设计
 
-| # | 设计 | 解决什么 |
-| --- | --- | --- |
-| 1 | **`RunProtocol` 可插拔** | 初始创建与续传不是同一请求；协议适配器显式实现 create/resume/cancel，避免重试 create POST 制造重复 run |
-| 2 | **reducer 对完整 `TState` 泛型化** | 一次事件可同时更新 messages、artifacts、todos、goal、interrupt 和 session，避免组件各自补状态 |
-| 3 | **`AgentMessage.meta` 扩展位** | 适配层把协议特有字段（DeerFlow 的 `additional_kwargs` / `run_id` / `agent` 名）塞进 `meta`，**内核不解释它的内容**，只原样保留 |
+| #   | 设计                               | 解决什么                                                                                                                       |
+| --- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **`RunProtocol` 可插拔**           | 初始创建与续传不是同一请求；协议适配器显式实现 create/resume/cancel，避免重试 create POST 制造重复 run                         |
+| 2   | **reducer 对完整 `TState` 泛型化** | 一次事件可同时更新 messages、artifacts、todos、goal、interrupt 和 session，避免组件各自补状态                                  |
+| 3   | **`AgentMessage.meta` 扩展位**     | 适配层把协议特有字段（DeerFlow 的 `additional_kwargs` / `run_id` / `agent` 名）塞进 `meta`，**内核不解释它的内容**，只原样保留 |
 
 ### L2 通用 UI：逐模块抽取
 
@@ -202,27 +202,27 @@ core/agent-deerflow/   L3 协议适配层（随项目走）
 
 gamma 的 agent 层针对**它自己的后端协议**编写，与 DeerFlow Gateway 差异很大：
 
-| | gamma | DeerFlow Gateway |
-| --- | --- | --- |
-| 发起 | `POST /api/freedom_card/dr/task/create` | `POST /api/threads/:id/runs/stream` |
-| 续拉 | `GET .../task/result` + `last_message_index` | SSE `Last-Event-ID` |
-| 分片 | `segment_continue` 事件 | `gap` 控制帧 + rejoin |
+|      | gamma                                                             | DeerFlow Gateway                                   |
+| ---- | ----------------------------------------------------------------- | -------------------------------------------------- |
+| 发起 | `POST /api/freedom_card/dr/task/create`                           | `POST /api/threads/:id/runs/stream`                |
+| 续拉 | `GET .../task/result` + `last_message_index`                      | SSE `Last-Event-ID`                                |
+| 分片 | `segment_continue` 事件                                           | `gap` 控制帧 + rejoin                              |
 | 事件 | `message_chunk` / `tool_calls` / `tool_call_result` / `interrupt` | `values` / `messages-tuple` / `updates` / `custom` |
-| 会话 | 单会话 | 多 thread + checkpoint + branch |
+| 会话 | 单会话                                                            | 多 thread + checkpoint + branch                    |
 
 **实际可搬量：**
 
-| 来源 | 行数 | 处置 |
-| --- | --- | --- |
-| `agentCore/stream/sse-buffer.ts` | ~30 | ✅ 直接搬（需补 CRLF，见下） |
-| `agentCore/stream/parse-sse-event.ts` | ~20 | ✅ 直接搬（需补 `id:` 字段，见下） |
-| `agentCore/view-model/order-messages.ts` | ~20 | ✅ 直接搬 |
-| `deepResearch/state/stream-watchdog.ts` | ~90 | ✅ **设计整个搬**（见下） |
-| `deepResearch/api/core/sse/fetch-stream.ts` | 272 | 🔄 抄结构，按 DeerFlow 协议重写 |
-| `deepResearch/api/core/merge-message.ts` | 304 | 🔄 抄结构，重写事件类型 |
-| `deepResearch/reducers/event-reducer.ts` | 357 | 🔄 抄结构，重写归约规则 |
-| `deepResearch/state/error-recovery.ts` | — | 🔄 抄错误分类与恢复动作设计 |
-| `deepResearch/store/index.ts` | 933 | ❌ 重写（多 thread 场景不同） |
+| 来源                                        | 行数 | 处置                               |
+| ------------------------------------------- | ---- | ---------------------------------- |
+| `agentCore/stream/sse-buffer.ts`            | ~30  | ✅ 直接搬（需补 CRLF，见下）       |
+| `agentCore/stream/parse-sse-event.ts`       | ~20  | ✅ 直接搬（需补 `id:` 字段，见下） |
+| `agentCore/view-model/order-messages.ts`    | ~20  | ✅ 直接搬                          |
+| `deepResearch/state/stream-watchdog.ts`     | ~90  | ✅ **设计整个搬**（见下）          |
+| `deepResearch/api/core/sse/fetch-stream.ts` | 272  | 🔄 抄结构，按 DeerFlow 协议重写    |
+| `deepResearch/api/core/merge-message.ts`    | 304  | 🔄 抄结构，重写事件类型            |
+| `deepResearch/reducers/event-reducer.ts`    | 357  | 🔄 抄结构，重写归约规则            |
+| `deepResearch/state/error-recovery.ts`      | —    | 🔄 抄错误分类与恢复动作设计        |
+| `deepResearch/store/index.ts`               | 933  | ❌ 重写（多 thread 场景不同）      |
 
 ### gamma 值得直接继承的判断
 
@@ -249,23 +249,23 @@ gamma 的 agent 层针对**它自己的后端协议**编写，与 DeerFlow Gatew
 
 早期方案曾建议保留 SDK 的 `Client` 与类型，理由是"纯 HTTP 封装，自己写没有增量价值"。补上实测数据后这个理由不成立：
 
-| 事实 | 数据 |
-| --- | --- |
-| `Client` 的实际用量 | **7 个方法 / 10 个调用点**：`threads.search/get/update/updateState/delete`、`runs.get/list` |
-| `Client` 的配置复杂度 | `new LangGraphClient({ apiUrl, onRequest: injectCsrfHeader })` —— 无鉴权逻辑（cookie 由浏览器同源携带）、无重试、无拦截器 |
-| `@langchain/langgraph-sdk` 体积 | **4.7 MB** unpacked |
-| `@langchain/core` 体积 | **7.6 MB** unpacked，而 `frontend/` 里**只有 1 处 type-only 引用**（`core/tools/utils.ts` 的 `ToolCall`） |
-| `@langchain/core` 的传递依赖 | `langsmith`（可观测平台 SDK）、`js-tiktoken`（tokenizer）、`mustache`（模板引擎）、`@cfworker/json-schema` —— **前端一个都用不到** |
+| 事实                            | 数据                                                                                                                               |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `Client` 的实际用量             | **7 个方法 / 10 个调用点**：`threads.search/get/update/updateState/delete`、`runs.get/list`                                        |
+| `Client` 的配置复杂度           | `new LangGraphClient({ apiUrl, onRequest: injectCsrfHeader })` —— 无鉴权逻辑（cookie 由浏览器同源携带）、无重试、无拦截器          |
+| `@langchain/langgraph-sdk` 体积 | **4.7 MB** unpacked                                                                                                                |
+| `@langchain/core` 体积          | **7.6 MB** unpacked，而 `frontend/` 里**只有 1 处 type-only 引用**（`core/tools/utils.ts` 的 `ToolCall`）                          |
+| `@langchain/core` 的传递依赖    | `langsmith`（可观测平台 SDK）、`js-tiktoken`（tokenizer）、`mustache`（模板引擎）、`@cfworker/json-schema` —— **前端一个都用不到** |
 
 既然流式层——真正难的部分——已经自研，REST 层继续挂着 12.3 MB 的 SDK 是分裂的。
 
 ### 替代方案
 
-| 原来 | 现在 | 量 |
-| --- | --- | --- |
-| `Client` | `app/core/api/client.ts` —— 7 个方法 + CSRF 头注入 + 错误规范化 | ~180 行 |
-| REST 信封类型（`Thread` / `Run` / checkpoint 响应） | **`openapi-typescript` 从 Gateway 的 `/openapi.json` 生成** | 0（生成） |
-| `Message` / `AIMessage` / `ToolMessage` / `ToolCall` / `ThreadState` / `ThreadsClient` / `BaseStream` | `app/core/types/message.ts` 手写 | ~120 行 |
+| 原来                                                                                                  | 现在                                                            | 量        |
+| ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | --------- |
+| `Client`                                                                                              | `app/core/api/client.ts` —— 7 个方法 + CSRF 头注入 + 错误规范化 | ~180 行   |
+| REST 信封类型（`Thread` / `Run` / checkpoint 响应）                                                   | **`openapi-typescript` 从 Gateway 的 `/openapi.json` 生成**     | 0（生成） |
+| `Message` / `AIMessage` / `ToolMessage` / `ToolCall` / `ThreadState` / `ThreadsClient` / `BaseStream` | `app/core/types/message.ts` 手写                                | ~120 行   |
 
 **URL 前缀保持 `/api/langgraph/*`。** 移除的是 SDK，不是路由约定——该前缀是 nginx 侧 SSE 超时 / body 上限的挂载点，也是 E2E `mock-api.ts` 的拦截依据。详见 [07-parallel-run.md](07-parallel-run.md#为什么必须保住这些-url)。
 
@@ -293,11 +293,11 @@ gamma 的 agent 层针对**它自己的后端协议**编写，与 DeerFlow Gatew
 
 **决策：保留现有词典结构，只把 React Context 换成 Nuxt plugin + `provide`/`inject`。**
 
-| 文件 | 行数 |
-| --- | --- |
+| 文件                         | 行数  |
+| ---------------------------- | ----- |
 | `core/i18n/locales/en-US.ts` | 1,155 |
 | `core/i18n/locales/zh-CN.ts` | 1,101 |
-| `core/i18n/locales/types.ts` | 914 |
+| `core/i18n/locales/types.ts` | 914   |
 
 引入 vue-i18n 意味着 2,000+ 条文案重新 key，风险与收益不成比例。`ssr: false` 下不存在"函数不能跨 RSC 边界"的限制，两份带 formatter 的词典直接在客户端持有即可——比现在的 Next 版本还简单。
 
@@ -332,11 +332,11 @@ Composable 的自动导入（`app/composables/`）保留。
 
 三栏是为本项目加的，各自解决一个具体问题：
 
-| 栏 | 解决什么 |
-| --- | --- |
-| **【对应 frontend/】** | 上游持续演进（近 3 个月 239 次提交）。基线冻结在 `27a425b0` 后不再逐里程碑 diff，但换基线时要知道上游某个文件改了该跟到哪 |
-| **【架构位置】L1/L2/L3** | [08](08-agent-core-contract.md) 要求 L2 边界在 M4b / M5 逐模块抽。没有标记就得靠回忆挑文件，而"L2 会被磨掉"正是 [06 风险登记](06-migration-plan.md#风险登记)里的一条 |
-| **【边界与注意】写不变式编号** | [05-invariants.md](05-invariants.md) 有 A–N 共 14 组。约束散在文档里、代码里没有痕迹，改动时不会有人回去查。写上 `B4`、`H6` 这类编号，改到该文件的人才看得见 |
+| 栏                             | 解决什么                                                                                                                                                             |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **【对应 frontend/】**         | 上游持续演进（近 3 个月 239 次提交）。基线冻结在 `27a425b0` 后不再逐里程碑 diff，但换基线时要知道上游某个文件改了该跟到哪                                            |
+| **【架构位置】L1/L2/L3**       | [08](08-agent-core-contract.md) 要求 L2 边界在 M4b / M5 逐模块抽。没有标记就得靠回忆挑文件，而"L2 会被磨掉"正是 [06 风险登记](06-migration-plan.md#风险登记)里的一条 |
+| **【边界与注意】写不变式编号** | [05-invariants.md](05-invariants.md) 有 A–N 共 14 组。约束散在文档里、代码里没有痕迹，改动时不会有人回去查。写上 `B4`、`H6` 这类编号，改到该文件的人才看得见         |
 
 不需要像参照项目那样上一整套 `docs-sync` 校验（130 个文件的 manifest + claims 抽取 + 批次报告，对本项目太重）。**先靠 review 保证，等到 M8 收口时若发现漏得多，再补一个"检查每个文件是否有头注释"的最小脚本即可。**
 
@@ -384,13 +384,13 @@ Composable 的自动导入（`app/composables/`）保留。
 
 采用 shadcn-vue 后，之前因引入有主见组件库而拆分的"分区验收"口径整个撤销。
 
-| 维度 | 要求 | 验收方式 | 是否门禁 |
-| --- | --- | --- | --- |
-| 功能 | **一致** | Playwright E2E，同一份 spec 跑两个 app | ✅ |
-| 交互逻辑与体验 | **一致** | Playwright E2E + [05-invariants.md](05-invariants.md) 逐条勾选（A–N 共 14 组） | ✅ |
-| 页面结构（DOM） | 选择器契约一致 | E2E 选择器；`structural-diff` 只产出报告 | ❌ |
-| 关键视觉状态 | 基线阈值内一致 | 固定 6–10 个截图状态，确定性数据 + 有限 mask | ✅ |
-| 非关键装饰/框架内部 DOM | 允许受控差异 | 人工回归 + structural report | ❌ |
+| 维度                    | 要求           | 验收方式                                                                       | 是否门禁 |
+| ----------------------- | -------------- | ------------------------------------------------------------------------------ | -------- |
+| 功能                    | **一致**       | Playwright E2E，同一份 spec 跑两个 app                                         | ✅       |
+| 交互逻辑与体验          | **一致**       | Playwright E2E + [05-invariants.md](05-invariants.md) 逐条勾选（A–N 共 14 组） | ✅       |
+| 页面结构（DOM）         | 选择器契约一致 | E2E 选择器；`structural-diff` 只产出报告                                       | ❌       |
+| 关键视觉状态            | 基线阈值内一致 | 固定 6–10 个截图状态，确定性数据 + 有限 mask                                   | ✅       |
+| 非关键装饰/框架内部 DOM | 允许受控差异   | 人工回归 + structural report                                                   | ❌       |
 
 ### ⚠️ 为什么「DOM 结构一致」不能当门禁
 
@@ -413,10 +413,10 @@ Composable 的自动导入（`app/composables/`）保留。
 
 但这三件事**都不需要全量 DOM 等价**，只需要：
 
-| 需要什么 | 由谁保证 |
-| --- | --- |
-| E2E 选择器能复用 | **25 个合同 spec 本身**——选择器对不上就是红的，客观、有界、失败信息精确 |
-| 主题能直接搬 | shadcn-vue 逐字复制 cva + 复刻 `data-slot` / `data-variant` 属性约定 |
+| 需要什么            | 由谁保证                                                                                                                                                                      |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E2E 选择器能复用    | **25 个合同 spec 本身**——选择器对不上就是红的，客观、有界、失败信息精确                                                                                                       |
+| 主题能直接搬        | shadcn-vue 逐字复制 cva + 复刻 `data-slot` / `data-variant` 属性约定                                                                                                          |
 | Markdown CSS 能对上 | [M3 的归一化 DOM 等价 gate](06-migration-plan.md#m3--markdown-渲染层)——**范围限定在 Markdown 输出这一个子树**，那里确实是有界的（unified 管线两边共用，差异只可能来自渲染器） |
 
 换句话说：**Markdown 那棵子树做严格 DOM 等价（有界、且是同一条管线的输出），整页 DOM 不做。**
@@ -454,6 +454,7 @@ Reka UI 与 Radix 的内部结构在个别组件上本来就有出入，为了�
 > ⚠️ 第 5 条早期写的是「两边同步改，保持一份 spec」。**这条与 [06](06-migration-plan.md) 的「不提交对 `frontend/` 的任何修改」直接冲突**——改 spec 或给 React 组件加 `data-testid` 都落在 `frontend/` 里。已改为「spec 只读 + 豁免登记」，冲突消除。
 
 已知需要复核的 spec：
+
 - `tests/e2e/chat.spec.ts` —— 固定了"斜杠只在输入起始位置打开技能列表"
 - `tests/e2e/sidecar-chat.spec.ts` —— 固定了"面板动画期间不得触发消息列表滚动"
 

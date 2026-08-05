@@ -76,11 +76,11 @@ Last-Event-ID: <metadata-event-id>
 
 ## 证据分级
 
-| 结论 | 证据等级 |
-| --- | --- |
-| create SSE 为 `200`，使用 `Content-Location` 而非 `Location` | 当前 Gateway 运行探针 |
-| resume GET + `Last-Event-ID` 从 cursor 后一帧继续 | 当前 Gateway 运行探针 |
-| `messages-tuple` 请求映射到 `messages` wire event | 当前 Gateway 运行探针 + 源码/测试 |
-| 普通帧有 id，heartbeat/end 不应推进 cursor | 当前 Gateway 运行探针（end）+ 源码/测试（heartbeat） |
-| active cancel 的 `200/202/204`、gap、跨 worker行为 | 仅源码/测试；M0 继续运行验证 |
-| 外部模型、生产 Redis、TLS/OIDC、Nuxt 代理 | 未验证；不能由此探针推出 |
+| 结论                                                         | 证据等级                                             |
+| ------------------------------------------------------------ | ---------------------------------------------------- |
+| create SSE 为 `200`，使用 `Content-Location` 而非 `Location` | 当前 Gateway 运行探针                                |
+| resume GET + `Last-Event-ID` 从 cursor 后一帧继续            | 当前 Gateway 运行探针                                |
+| `messages-tuple` 请求映射到 `messages` wire event            | 当前 Gateway 运行探针 + 源码/测试                    |
+| 普通帧有 id，heartbeat/end 不应推进 cursor                   | 当前 Gateway 运行探针（end）+ 源码/测试（heartbeat） |
+| active cancel 的 `200/202/204`、gap、跨 worker行为           | 仅源码/测试；M0 继续运行验证                         |
+| 外部模型、生产 Redis、TLS/OIDC、Nuxt 代理                    | 未验证；不能由此探针推出                             |
