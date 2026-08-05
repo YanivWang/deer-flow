@@ -169,12 +169,14 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层(marked/re
 | `rehypeStreamingListItems`                                      | 从 `plugins.ts` 里**摘出来**搬                                                          | ~50         |
 | `plugins.ts` 其余部分                                           | **重写**（它 import 三个 React-only 包，见下）                                          | ~50         |
 | `components.tsx` 组件覆盖 map                                   | **重写**（90 行 React）                                                                 | ~120        |
-| `mermaid.ts` + `safe-children.ts`                               | **重写**（132 行 React）                                                                | ~150        |
+| `mermaid.ts`（`normalizeMermaidMarkdown`）                      | **已按 `COPIED` 落地** —— 98 行零 import 的纯函数，不是 React               | 0           |
+| `safe-children.ts`                                              | **重写**（34 行 React）                                                                 | ~40         |
+| **mermaid 渲染组件**                                            | **新写** —— 与代码块同源，也在 streamdown 内部（见下）                                  | **未估**    |
 | **代码块组件**（渲染 shiki tokens + 复制 + 语言标签 + 主题）    | **重写**（见下，它在 streamdown 内部）                                                  | ~250        |
 | 分块 + memo                                                     | 自写（用 `marked`，同 Streamdown 策略）                                                 | ~100        |
 | 逐词动画                                                        | 自写                                                                                    | ~120        |
 | 错误边界                                                        | 自写（`onErrorCaptured`）                                                               | ~30         |
-|                                                                 |                                                                                         | **~900 行** |
+|                                                                 |                                                                                         | **~790 行 + mermaid 组件（未估）** |
 
 最易出错的部分——属性名转换、key 生成、raw HTML、URL 安全——仍然交给成熟库。但**整层的量是 ~900 行，不是早期写的 230 行**，三个实测事实把它顶了上去：
 
@@ -185,7 +187,7 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层(marked/re
 | `preprocess.ts`    | 389 | 原样搬               | ✅                                                                                                                                                                                              |
 | `plugins.ts`       | 98  | **「原样搬，0 行」** | ❌ 它 `import { code } from "@streamdown/code"`、`import { mermaid } from "@streamdown/mermaid"`、`import type { StreamdownProps } from "streamdown"`。**只有 `rehypeStreamingListItems` 可搬** |
 | `components.tsx`   | 90  | 未提及               | 重写                                                                                                                                                                                            |
-| `mermaid.ts`       | 98  | 未提及               | 重写                                                                                                                                                                                            |
+| `mermaid.ts`       | 98  | 未提及               | ✅ **零 import 的纯函数**，M1 已按 `COPIED` 逐字节落地。早期把它和 `safe-children.ts` 合并写成「132 行 React」是错的——React 的只有后者那 34 行                                                    |
 | `safe-children.ts` | 34  | 未提及               | 重写                                                                                                                                                                                            |
 
 `plugins.ts` 还导出 `streamdownWordAnimation` / `streamdownSmoothStreamingAnimation`（`{ animation: "fadeIn", duration: 200, sep: "word", stagger: 0 }`）——那是 **Streamdown 自己的动画配置 API**。它们是「逐词动画要实现成什么样」的规格，不是可搬的代码。
@@ -193,6 +195,12 @@ Streamdown     = unified 管线 + hast-util-to-jsx-runtime + 流式层(marked/re
 **② 代码块 UI 在 `streamdown` 包里，不在 `@streamdown/code` 里。**
 
 实测 `@streamdown/code` 的 dist 只有 **1,568 字节**——纯 **shiki tokenizer 插件**（语言别名归一化、highlighter 缓存、返回 tokens），零 DOM。真正的代码块渲染在 `streamdown` 的 `chunk-*.js`，**67,773 字节**。「保留 shiki」只解决高亮，组件本身要重写。
+
+**`@streamdown/mermaid` 是同一个形状，而且更极端：dist 只有 489 字节。** mermaid 的
+渲染 UI 也在上面那个 67,773 字节的 chunk 里（`grep mermaid` 命中的就是它）。所以
+`core/streamdown/mermaid.ts` 那 98 行**不是** mermaid 组件——它只是
+`normalizeMermaidMarkdown` 一个纯函数，早期把它当成「要重写的 React 代码」，
+既高估了它（它是 0 行工作量），又**漏掉了真正要新写的 mermaid 组件**。
 
 **③ ⚠️ `globals.css` 直接搬会静默丢样式。**
 

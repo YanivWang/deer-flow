@@ -91,7 +91,7 @@ git tag frontend-vue-baseline-v2 27a425b0
 | M0      | **中偏大、风险密度高**               | 十道 gate 包含 clean CI、preview 代理、真实认证、WS、OIDC、供应链与生产入口安全，不是普通脚手架工作      |
 | M1      | 中（机械量大）                       | 149 个 core 文件要分类、83 个 core 测试要按 node/DOM/composable 分组；富 Message 类型是否等价            |
 | M2      | **中偏大，方差最大**                 | 自研 SSE 的正确性；探针是否收敛。transport 层有现成起点，但 run session/gap/cancel 不能按普通 fetch 估算 |
-| M3      | **中偏大**（早期估「小」是错的）     | ~900 行而非 230；代码块组件要从零写；归一化 DOM 等价能否达成                                             |
+| M3      | **中偏大**（早期估「小」是错的）     | ~790 行而非 230，另加一个未估的 mermaid 组件；代码块组件要从零写；归一化 DOM 等价能否达成                |
 | M4a     | **中偏大**                           | `threads/hooks.ts` 3,169 行 + C 组 9 条 + 从 M2 顺延来的 A7/A8（缓存失效与恢复警告，随 vue-query 一起做） |
 | M4b     | **最大（约占全部组件工作量的一半）** | 68 个组件 / ~16,100 行 + stick-to-bottom 自写 + 19 个 `src/app/` 文件 / 3,215 行                         |
 | M5 / M6 | 大                                   | 51 个 L3 组件；L2 接口会被反向修正                                                                       |
@@ -547,12 +547,14 @@ expect(wrapper.find("p").element).toBe(firstParagraph); // 同一个 DOM 节点�
 | `rehypeStreamingListItems`                              | 从 `plugins.ts` 里**摘出来**搬（见下）         | ~50 行           |
 | `plugins.ts` 的其余部分                                 | **重写** —— 它 import 了三个 React-only 包     | ~50 行           |
 | `components.tsx` 的组件覆盖 map                         | **重写**（90 行 React）                        | ~120 行          |
-| `mermaid.ts` + `safe-children.ts`                       | **重写**（132 行 React）                       | ~150 行          |
+| `mermaid.ts`（`normalizeMermaidMarkdown`）              | **已按 `COPIED` 落地**（零 import 纯函数）     | 0                |
+| `safe-children.ts`                                      | **重写**（34 行 React）                        | ~40 行           |
+| **mermaid 渲染组件**                                    | **新写** —— 与代码块同源，见下                 | **未估**         |
 | **代码块组件**（shiki 高亮 + 复制 + 语言标签 + 主题）   | **重写** —— 见下，这块在 streamdown 内部       | ~250 行          |
 | 分块 + memo                                             | 自写（用 `marked`）                            | ~100 行          |
 | 逐词动画（**不要用 per-word rehype 插件**）             | 自写                                           | ~120 行          |
 | 错误边界（`onErrorCaptured`）                           | 自写                                           | ~30 行           |
-|                                                         |                                                | **合计 ~900 行** |
+|                                                         |                                                | **合计 ~790 行 + mermaid 组件（未估）** |
 
 ### ⚠️ 早期的「约 230 行」是错的，实测低估了 3–4 倍
 
@@ -565,7 +567,7 @@ expect(wrapper.find("p").element).toBe(firstParagraph); // 同一个 DOM 节点�
 | `preprocess.ts`    | 389 | 原样搬               | ✅ 原样搬                                                                                                                                                                                                          |
 | `plugins.ts`       | 98  | **「原样搬，0 行」** | ❌ 它 `import { code } from "@streamdown/code"`、`import { mermaid } from "@streamdown/mermaid"`、`import type { StreamdownProps } from "streamdown"` —— 全是 React-only。**只有 `rehypeStreamingListItems` 可搬** |
 | `components.tsx`   | 90  | 未提及               | React 组件覆盖 map，重写                                                                                                                                                                                           |
-| `mermaid.ts`       | 98  | 未提及               | 重写                                                                                                                                                                                                               |
+| `mermaid.ts`       | 98  | 未提及               | ✅ **零 import 的纯函数**，M1 已按 `COPIED` 逐字节落地。早期与 `safe-children.ts` 合并写成「132 行 React」是错的——React 的只有后者那 34 行                                                                          |
 | `safe-children.ts` | 34  | 未提及               | 重写                                                                                                                                                                                                               |
 | `index.ts`         | 5   | 未提及               | —                                                                                                                                                                                                                  |
 
@@ -576,6 +578,11 @@ expect(wrapper.find("p").element).toBe(firstParagraph); // 同一个 DOM 节点�
 实测 `@streamdown/code` 的 dist 只有 **1,568 字节**——它是个纯 **shiki tokenizer 插件**（语言别名归一化、highlighter 缓存、返回 tokens），不含任何 DOM。真正的代码块 UI（渲染 tokens、复制按钮、语言标签、明暗主题切换）在 `streamdown` 的 `chunk-*.js` 里，那个文件 **67,773 字节**。
 
 所以「保留 shiki」只解决了高亮，代码块组件本身要重写。
+
+**`@streamdown/mermaid` 是同一个形状，更极端：dist 只有 489 字节**，mermaid 的渲染 UI
+也在同一个 67,773 字节的 chunk 里。这一条是 M2 收尾核对台账时才发现的，它同时纠正了
+两个方向的错：`core/streamdown/mermaid.ts` 那 98 行是**纯函数、0 行工作量**（不是要重写的
+React），而**真正要新写的 mermaid 组件此前根本没被列进来**。
 
 **③ `globals.css` 直接搬会静默丢样式。**
 
@@ -787,7 +794,7 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 | **依赖版本漂移**                                    | DOM/Markdown/CSS 行为与 React 基线不同                           | 首轮精确对齐现有 lockfile resolved version，parity 后逐包升级                                                                                                        |
 | **`frontend/` 在重写期间持续演进**                  | `core/` 副本与上游偏离（近 3 个月 **239** 次提交，约 2.6 次/天） | **基线冻结在 `27a425b0`**，里程碑内部完全不跟上游；`COPIED` hash 守护在换基线时自动指出要跟进的文件（[1e](#1e-provenance-台账与-copied-hash-守护)）。不再靠人工 diff |
 | **孤儿 CI workflow**                                | 第一次 push 直接红，失败信息指不到真实原因                       | [G0-0](#g0-0--ci-workflow-对齐)，M0 第一件事                                                                                                                         |
-| **Markdown 层被低估 3–4 倍**                        | M3 从「小」变「中偏大」，排期失真                                | 已重估为 ~900 行；代码块组件、`plugins.ts` 重写部分、`globals.css` 的 `@source` 陷阱都已列明（[M3](#m3--markdown-渲染层)）                                           |
+| **Markdown 层被低估 3–4 倍**                        | M3 从「小」变「中偏大」，排期失真                                | 已重估为 ~790 行 + 未估的 mermaid 组件；代码块组件、`plugins.ts` 重写部分、`globals.css` 的 `@source` 陷阱都已列明（[M3](#m3--markdown-渲染层)）                                           |
 | **`src/app/` 目标文件曾未进工作量表**               | 19 个 / 3,215 行的 layout / page / providers 无人认领            | 已并入 [M4b](#m4b--通用-agent-uil2-第一批-模板价值兑现点)                                                                                                            |
 | **WebSocket 直连被 Origin 拒绝或生产 Upgrade 丢失** | browser-view 不可用                                              | M-1 已冻结开发直连+精确 allowlist、生产同源 ingress；[G0-6](#m0-的十道-gate) 用真实浏览器 Origin/cookie 验证                                                         |
 | **结构 diff 门禁无界**                              | 与「视觉 98%」同一种失败形状：门禁工作量超过功能本身             | 已降为诊断报告、不做门禁、只覆盖固定少数容器（[04 §7](04-architecture-decisions.md#页面结构一致靠诊断报告不做门禁)）                                                 |
