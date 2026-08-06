@@ -133,8 +133,12 @@ cd frontend && pnpm test      # Unit tests
 cd frontend-vue && make dev       # Nuxt dev server (port 3100)
 cd frontend-vue && make verify    # lint + format + types + unit + build
 cd frontend-vue && make e2e-m0    # repository-runnable M0 gate suite
+cd frontend-vue && make e2e-m4a   # M4a data-flow gate (send/stream/stop/reload ordering)
 cd frontend-vue && make e2e-list  # collect shared contracts; does not claim pass
 ```
+
+`make verify`, `make e2e-m0` and `make e2e-m4a` each start their own `nuxt build`
+and must not run concurrently.
 
 `make e2e-external` holds the browser-WebSocket (G0-6) and OIDC round-trip (G0-7)
 gates. Both are hermetic — the IdP is a fixture in `frontend-vue/tests/support/` —

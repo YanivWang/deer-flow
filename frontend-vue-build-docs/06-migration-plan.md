@@ -664,9 +664,34 @@ export default defineNuxtRouteMiddleware(async (to) => {
 C 组落在这里而不是 M4b：它的实现主体 `threads/hooks.ts` 就在这个里程碑重写，
 而下面 gate 里的两个 spec（`chat-thread-init-ordering` / `thread-history`）验的正是 C 组。
 A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑引入——它们是本里程碑
-**唯一**从 M2 顺延过来的项，M2 已把接口留好（gap 恢复合成的那帧 `values`）。
+**唯一**从 M2 顺延过来的项。
 
-**Gate**：这个文件改完后，先只接一个最小可用的聊天页（发消息 → 流式 → 停止 → 刷新恢复顺序），跑通 `chat` / `chat-thread-init-ordering` / `thread-history` 三个 spec，再往下做组件。**不要在 126 个组件都堆上来之后才发现流式顺序是错的**——那时候归因成本会高一个数量级。
+> ⚠️ **订正（M4a 接线实测）：「M2 已把接口留好（gap 恢复合成的那帧 `values`）」不成立。**
+> 合成的那帧 `values` 与正常的 `values` **逐字段同形**，消费方分不出来，A7 的清空
+> 无处可挂。上游 `api-client.ts:282` 在同一位置**先发一帧 `custom`**
+> （`{type:"stream_replay_gap", …}`），React 侧靠 `onCustomEvent` 的那个分支做清空。
+> M4a 把这一帧补进了 `gap-recovery.ts`（`custom` 必须在 `values` **之前**，
+> 反了会把刚落地的 durable state 一起抹掉），并加了对应用例。
+
+**Gate**：这个文件改完后，先只接一个最小可用的聊天页（发消息 → 流式 → 停止 → 刷新恢复顺序），把这四件事在真浏览器里跑通，再往下做组件。**不要在 126 个组件都堆上来之后才发现流式顺序是错的**——那时候归因成本会高一个数量级。
+
+> ⚠️ **订正（M4a 接线实测）：这个 gate 原本点名的三个共享 spec 在 M4a 跑不了，
+> 两条硬阻断都不是「再努力一下」能过的。**
+>
+> 1. **共享 mock 不发 `Content-Location`。** `frontend/tests/e2e/utils/mock-api.ts`
+>    的 `/runs/stream` 只回 SSE body——上游 SDK 从 `metadata` 事件里取 run/thread id，
+>    根本不读那个头。而 05 L12 + 08 硬规则 2 要求本仓的 protocol **只认
+>    `Content-Location` 且读不到就 fail closed**（真实 Gateway 确实发，G0-8 已验）。
+>    为迁就测试替身去放宽那条裁决，等于让 mock 推翻一条有运行证据的协议结论。
+> 2. **那三个 spec 的 45 个用例几乎全是组件契约**：composer 占位符、本地化免责声明、
+>    草稿持久化、斜杠技能补全、侧栏列表、千轮虚拟化……全部属于 M4b。
+>    「最小可用聊天页」与这三个 spec 之间本来就不自洽。
+>
+> M4a 落地的是**同一条不变式的等价用例**：`make e2e-m4a`
+> （`tests/m4a/chat-dataflow.spec.ts`，4 条，mock 在本仓自己这边并带上
+> `Content-Location`），覆盖 C8 顺序、issue #2746 的请求时序、C1/C6 的刷新恢复、
+> 停止按钮的生命周期。**共享合同仍然是最终判据，时间点移到 M4b**——
+> 届时要先给共享 mock 补 `Content-Location`（改 `frontend/` 是跨仓动作，需单独决定）。
 
 **⚠️ 全程对照 [05-invariants.md](05-invariants.md) 的 M 组**（Vue 移植专有陷阱）。M1（`provide` 必须传 ref）和 M5（`watch` 默认惰性）在这个阶段最容易翻车，而 A7 / D4 那类"初始状态不得被覆盖"的约束正好踩在 M5 上。
 

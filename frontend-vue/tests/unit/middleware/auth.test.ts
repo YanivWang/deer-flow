@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  buildLoginLocation,
   decideAuthNavigation,
   isEnabledRuntimeFlag,
 } from "../../../app/core/auth/decision";
@@ -58,5 +59,39 @@ describe("decideAuthNavigation", () => {
         authenticated: false,
       }),
     ).toBe("login");
+  });
+});
+
+describe("buildLoginLocation（回跳目标的安全校验）", () => {
+  it("合法的站内路径原样带上", () => {
+    expect(buildLoginLocation("/workspace/chats/abc")).toBe(
+      "/login?redirect=%2Fworkspace%2Fchats%2Fabc",
+    );
+  });
+
+  // 三类 open-redirect 构造。校验不过时**不带 query**——原样透传就是漏洞本身。
+  it.each([
+    "//evil.example.com",
+    "/\\evil.example.com",
+    "https://evil.example.com",
+    "http:/evil",
+    "",
+    null,
+    undefined,
+  ])("拒绝不可信的回跳目标 %s", (candidate) => {
+    expect(buildLoginLocation(candidate)).toBe("/login");
+  });
+
+  it("与 COPIED 档的 validateAuthNextPath 共用一套规则，不另写一份", async () => {
+    const { validateAuthNextPath } =
+      await import("../../../app/core/auth/next-path");
+    for (const candidate of ["/a", "//b", "/c\\d", "/e:f", "/ok/path"]) {
+      const safe = validateAuthNextPath(candidate);
+      expect(buildLoginLocation(candidate)).toBe(
+        safe === null
+          ? "/login"
+          : `/login?redirect=${encodeURIComponent(safe)}`,
+      );
+    }
   });
 });

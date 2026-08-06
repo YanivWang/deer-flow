@@ -42,6 +42,16 @@
 | `markdown/render.ts`              | `ADDED`   | —                             | M3：hast → Vue vnode，含逐词动画的稳定 key 注入。上游那一步是 `toJsxRuntime(react/jsx-runtime)`，没有独立文件。                                                                        |
 | `markdown/animate.ts`             | `ADDED`   | —                             | M3：切词的纯计算。上游把动画交给 Streamdown 的 `animated` prop，没有对应源码。                                                                                                         |
 | `markdown/safe-markdown.ts`       | `ADAPTED` | `streamdown/safe-children.ts` | M3 REWRITE。上游 34 行里 30 行是 React（children 联合类型 + 两个 `useMemo`），真正的逻辑是一行组合；记忆化归组件的 `computed`，不进 core。                                             |
+| `threads/message-identity.ts`     | `ADAPTED` | `threads/hooks.ts`            | M4a：从 3,169 行 REWRITE 里拆出的消息身份与去重。函数体逐字，只改 import。拆分理由见文件头（上游它是 hook 里的模块私有函数，测不到）。                                                 |
+| `threads/history.ts`              | `ADAPTED` | `threads/hooks.ts`            | M4a：历史分页协议（05 C1/C6）。相对上游多一个显式的 `origin` 参数，理由见文件头。                                                                                                      |
+| `threads/message-merge.ts`        | `ADAPTED` | `threads/hooks.ts`            | M4a：三路归并与压缩瞬态桥（05 C1–C4）。**函数体有意逐字**，05 C 组原话「不要重新设计」。                                                                                               |
+| `threads/local-turn-order.ts`     | `ADAPTED` | `threads/hooks.ts`            | M4a：C8 的排序规则。基线的生命周期（C9）留在 `useThreadStream`，分家理由见文件头。                                                                                                     |
+| `threads/coalesce.ts`             | `ADAPTED` | `threads/hooks.ts`            | M4a：渲染合帧判定。**不是 05 A1**（那条在 L1 的 external store），是它之上的第二层。                                                                                                   |
+| `threads/infinite.ts`             | `ADAPTED` | `threads/hooks.ts`            | M4a：侧栏无限列表的取数与缓存镜像。本仓第一处 import `@tanstack/vue-query`。                                                                                                           |
+| `threads/cache-invalidation.ts`   | `ADAPTED` | `threads/hooks.ts`            | M4a：05 A7/A8。相对上游删掉 `isMock` 形参（M4a 删 mock 分支），metadata key 少一段；A8 的 6 个 key 提成 `THREAD_CACHE_KEYS` 一张表。                                                   |
+| `threads/submit.ts`               | `ADAPTED` | `threads/hooks.ts`            | M4a：提交请求体。唯一结构改动是把上游两处逐字重复的 run context 字面量合并成 `buildRunContext`，理由见文件头。                                                                         |
+| `agent-deerflow/thread-runner.ts` | `ADDED`   | —                             | M4a：L1 内核 + L3 协议的装配层，M2 内核的第一个真实调用方。上游对应物在 SDK 内部（StreamManager），没有源文件。                                                                        |
+| `i18n/cookies.ts`                 | `ADAPTED` | `i18n/cookies.ts`             | M4a REWRITE（05 N4）。持久化格式逐字保留（改名 = 老用户丢语言偏好）；上游第三个函数 `getLocaleFromCookieServer` import `next/headers`，不迁。                                          |
 | `markdown/index.ts`               | `ADAPTED` | `streamdown/index.ts`         | M3：公共导出面。不导出 `./components`（Vue 组件不进 core），并从 `../streamdown/` 转出 COPIED 的 preprocess / mermaid，让调用方只认一个入口。                                          |
 
 <!-- COPIED:BEGIN 由 `make land-copied` 生成，勿手改 -->

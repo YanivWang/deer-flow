@@ -9,6 +9,7 @@ make install
 make dev       # http://localhost:3100
 make verify
 make e2e-m0
+make e2e-m4a
 make e2e-list  # collects the shared M1+ business contract; does not claim it passes
 ```
 
@@ -86,7 +87,9 @@ file downgraded out of `COPIED` is re-checked automatically.
 `NUXT_PUBLIC_AUTH_DISABLED=1` is limited to M0/mock tests. `NUXT_PUBLIC_M0_TEST_PAGES=1` exposes the isolated `/__m0/*` visual and splitpanes fixtures; they return 404 in normal production configuration.
 
 All ten M0 gates pass and every one is reproducible from this repository:
-`make e2e-m0` covers the infrastructure suite, `make e2e-external` covers the
+`make e2e-m0` covers the infrastructure suite, `make e2e-m4a` covers the M4a
+data-flow gate (send / stream / stop / reload ordering against a minimal chat page),
+`make e2e-external` covers the
 browser WebSocket (G0-6) and the OIDC round trip (G0-7) against the in-repo
 fixture IdP. Dual-frontend production readiness — two hostnames, DNS/TLS,
 trusted-proxy scrubbing — remains M7. See the

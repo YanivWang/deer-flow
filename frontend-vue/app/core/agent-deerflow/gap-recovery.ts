@@ -189,6 +189,24 @@ export function createGapAwareRun(options: GapRecoveryOptions): GapAwareRun {
       if (stopped || aborted) return;
 
       rejoins += 1;
+      // A7 的触发信号。**M4a 补的，M2 漏了。**
+      //
+      // 06 §M4a 写的是「M2 已把接口留好：gap 恢复合成的那帧 `values`，
+      // UI 侧的清空与警告挂在这一帧上」——接线时发现这句话不成立：
+      // 合成的 `values` 在消费方眼里与正常的 `values` **完全同形**，
+      // 没有任何字段能区分，挂不上去。上游 `api-client.ts:282` 正是在
+      // 同一个位置先发一帧 `custom`，React 侧靠 `onCustomEvent` 里的
+      // `type === "stream_replay_gap"` 分支做那一整套清空。
+      //
+      // 顺序不能反：`custom` 必须在 `values` **之前**。反过来的话，
+      // 清空动作会把刚落地的 durable state 一起抹掉。
+      yield {
+        kind: "event",
+        event: {
+          event: "custom",
+          data: JSON.stringify({ type: "stream_replay_gap", ...gap }),
+        },
+      };
       const values = await loadDurableState(handle).catch(() => undefined);
       if (values !== undefined) {
         // 合成一帧 `values` 交给 reducer：全量替换正是 gap 之后要的语义

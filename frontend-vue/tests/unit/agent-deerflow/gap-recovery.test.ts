@@ -177,6 +177,40 @@ describe("gap 恢复（05 A4/A5/A6）", () => {
     expect(states(outputs).at(-1)?.status).toBe("completed");
   });
 
+  // ⚠️ 本条是 **M4a 接线时补的**，不是 M2 就有的。
+  //
+  // 06 §M4a 写着「M2 已为 A7 留好接口：gap 恢复合成的那帧 `values`，
+  // UI 侧的清空与警告挂在这一帧上」。接线时这句话当场不成立：合成的
+  // `values` 与正常的 `values` **逐字段同形**，消费方分辨不出来，
+  // A7 的清空挂不上去。上游 `api-client.ts:282` 在同一位置先发一帧
+  // `custom`，React 侧靠 `onCustomEvent` 的 `stream_replay_gap` 分支做清空。
+  //
+  // 顺序是这条用例的重点：`custom` **必须在** `values` 之前。反了的话
+  // 清空动作会把刚落地的 durable state 一起抹掉。
+  it("A7 的触发信号：合成的 values 之前先发一帧 custom/stream_replay_gap", async () => {
+    const recorder = scriptedProtocol([GAP_SEGMENT, DONE_SEGMENT]);
+    const run = runner(recorder, {
+      loadDurableState: vi.fn(async () => ({ title: "reloaded" })),
+    });
+    const emitted = events(await drain(run));
+
+    const customIndex = emitted.findIndex(
+      (event) =>
+        event.event === "custom" && event.data.includes("stream_replay_gap"),
+    );
+    const reloadedIndex = emitted.findIndex(
+      (event) => event.event === "values" && event.data.includes("reloaded"),
+    );
+
+    expect(customIndex).toBeGreaterThanOrEqual(0);
+    expect(reloadedIndex).toBeGreaterThan(customIndex);
+    expect(JSON.parse(emitted[customIndex]!.data)).toMatchObject({
+      type: "stream_replay_gap",
+      run_id: HANDLE.runId,
+      recovery: "reload_durable_state",
+    });
+  });
+
   it("A6：gap 期间不外发 gap 态，也不把 gap 当正常结束", async () => {
     const recorder = scriptedProtocol([GAP_SEGMENT, DONE_SEGMENT]);
     const outputs = await drain(runner(recorder));

@@ -12,7 +12,7 @@ import { csrRoutes, prerenderRoutes } from "./config/routes";
 
 export default defineNuxtConfig({
   compatibilityDate: "2026-08-03",
-  modules: ["shadcn-nuxt", "@nuxtjs/color-mode", "@nuxt/eslint"],
+  modules: ["shadcn-nuxt", "@nuxtjs/color-mode", "@nuxt/eslint", "@pinia/nuxt"],
   css: ["~/assets/css/main.css", "splitpanes/dist/splitpanes.css"],
   vite: { plugins: [tailwindcss()] },
   components: { dirs: [] },

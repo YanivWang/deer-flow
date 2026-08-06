@@ -8,6 +8,7 @@
 */
 
 import {
+  buildLoginLocation,
   decideAuthNavigation,
   isEnabledRuntimeFlag,
 } from "@/core/auth/decision";
@@ -20,6 +21,8 @@ export default defineNuxtRouteMiddleware((to) => {
     authenticated: false,
   });
   if (decision === "login") {
-    return navigateTo(`/login?redirect=${encodeURIComponent(to.fullPath)}`);
+    // 回跳目标的安全校验在纯函数里（06 §鉴权中间件切成纯函数）：
+    // 这一行只负责执行副作用。
+    return navigateTo(buildLoginLocation(to.fullPath));
   }
 });
