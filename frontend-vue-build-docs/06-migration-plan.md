@@ -739,7 +739,15 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 
 **E2E**：`chat` `streaming-reasoning-order` `user-message-plain-text` `thread-history` `thread-history-mermaid` `chat-thread-init-ordering` `agent-chat` `branch-thread` `subtask-card` `thread-list-infinite-scroll` `thread-list-pin`
 
-（其中 `chat` / `chat-thread-init-ordering` / `thread-history` 三个在 [M4a](#m4a--数据流) 的 gate 上已经跑过一轮。）
+> ⚠️ **这 11 个 spec 在 M4b 之前一个都没跑过。** 早期版本这里写着「其中 `chat` /
+> `chat-thread-init-ordering` / `thread-history` 三个在 M4a 的 gate 上已经跑过一轮」，
+> 那句话随 [M4a gate 的订正](#m4a--数据流)一起作废：M4a 跑的是本仓自己的等价用例
+> （`make e2e-m4a` / `make e2e-m4a-stream`），共享合同一条都没通过。
+>
+> **动 M4b 的第一件事是解掉那个前置**：`frontend/tests/e2e/utils/mock-api.ts` 的
+> `handleRunStream` 不发 `Content-Location`，而本仓的 protocol 读不到就 fail closed
+> （05 L12 / 08 硬规则 2）。给共享 mock 补这个 header 是**改 `frontend/` 的跨仓动作**，
+> 要单独决定；在它解掉之前，这 11 个 spec 全部会停在「流建不起来」。
 
 **产出**：**一个能跑的通用 agent 聊天应用。** 停在这里，模板已经可用——L1 内核 + L2 通用 UI + 一个证明它们能工作的壳。
 
