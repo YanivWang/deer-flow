@@ -51,6 +51,7 @@
 | `threads/cache-invalidation.ts`   | `ADAPTED` | `threads/hooks.ts`            | M4a：05 A7/A8。相对上游删掉 `isMock` 形参（M4a 删 mock 分支），metadata key 少一段；A8 的 6 个 key 提成 `THREAD_CACHE_KEYS` 一张表。                                                   |
 | `threads/submit.ts`               | `ADAPTED` | `threads/hooks.ts`            | M4a：提交请求体。唯一结构改动是把上游两处逐字重复的 run context 字面量合并成 `buildRunContext`，理由见文件头。                                                                         |
 | `agent-deerflow/thread-runner.ts` | `ADDED`   | —                             | M4a：L1 内核 + L3 协议的装配层，M2 内核的第一个真实调用方。上游对应物在 SDK 内部（StreamManager），没有源文件。                                                                        |
+| `i18n/resolve.ts`                 | `ADDED`   | —                             | M4a：按点分路径取文案。上游没有对应物——它的 core 与 React 同处一层，直接写属性访问；这里 core 只发字典 key（A7），取文案在 UI 边界。                                                   |
 | `i18n/cookies.ts`                 | `ADAPTED` | `i18n/cookies.ts`             | M4a REWRITE（05 N4）。持久化格式逐字保留（改名 = 老用户丢语言偏好）；上游第三个函数 `getLocaleFromCookieServer` import `next/headers`，不迁。                                          |
 | `markdown/index.ts`               | `ADAPTED` | `streamdown/index.ts`         | M3：公共导出面。不导出 `./components`（Vue 组件不进 core），并从 `../streamdown/` 转出 COPIED 的 preprocess / mermaid，让调用方只认一个入口。                                          |
 

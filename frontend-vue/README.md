@@ -10,6 +10,7 @@ make dev       # http://localhost:3100
 make verify
 make e2e-m0
 make e2e-m4a
+make e2e-m4a-stream
 make e2e-list  # collects the shared M1+ business contract; does not claim it passes
 ```
 
@@ -89,6 +90,8 @@ file downgraded out of `COPIED` is re-checked automatically.
 All ten M0 gates pass and every one is reproducible from this repository:
 `make e2e-m0` covers the infrastructure suite, `make e2e-m4a` covers the M4a
 data-flow gate (send / stream / stop / reload ordering against a minimal chat page),
+`make e2e-m4a-stream` covers the same page against a genuinely chunked SSE stream
+(frame boundaries, heartbeat comments, `Last-Event-ID` resume cursor, gap -> A7),
 `make e2e-external` covers the
 browser WebSocket (G0-6) and the OIDC round trip (G0-7) against the in-repo
 fixture IdP. Dual-frontend production readiness — two hostnames, DNS/TLS,

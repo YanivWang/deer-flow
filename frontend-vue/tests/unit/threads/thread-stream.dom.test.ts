@@ -32,6 +32,9 @@ import type {
 } from "@/core/agent-deerflow/thread-runner";
 import type { Message } from "@/core/types/message";
 
+import { enUS } from "@/core/i18n/locales/en-US";
+import { zhCN } from "@/core/i18n/locales/zh-CN";
+
 import { useThreadStream } from "@/composables/useThreadStream";
 
 // `useThreadHistory` 真的会发请求。这里给一个空历史，让被测对象只剩实时那一路。
@@ -47,6 +50,7 @@ vi.mock("@/composables/useThreadHistory", () => ({
 
 interface FakeRunner extends ThreadRunner {
   emitCustom(data: unknown): void;
+  emitUpdate(data: unknown): void;
   setMessages(messages: Message[]): void;
   settle(status: "completed" | "cancelled"): void;
 }
@@ -80,6 +84,7 @@ function createFakeRunner(options: ThreadRunnerOptions): FakeRunner {
     reset() {},
     flushNotifications() {},
     emitCustom: (data) => options.onCustomEvent?.(data),
+    emitUpdate: (data) => options.onUpdateEvent?.(data),
     setMessages(next) {
       messages = next;
       options.onSnapshot?.();
@@ -91,7 +96,7 @@ function createFakeRunner(options: ThreadRunnerOptions): FakeRunner {
   };
 }
 
-function mountStream() {
+function mountStream(threadId = ref<string | null>("thread-1")) {
   let fake: FakeRunner | undefined;
   let api: ReturnType<typeof useThreadStream> | undefined;
   const queryClient = new QueryClient({
@@ -107,7 +112,7 @@ function mountStream() {
   const Component = defineComponent({
     setup() {
       api = useThreadStream({
-        threadId: ref("thread-1"),
+        threadId,
         context: ref({ mode: "flash" }),
         notify: { warn: (key) => warnings.push(key), error: () => {} },
         runnerFactory: (options) => {
@@ -125,6 +130,7 @@ function mountStream() {
   });
   return {
     wrapper,
+    threadId,
     get fake() {
       return fake!;
     },
@@ -221,10 +227,17 @@ describe("useThreadStream · A7 gap 恢复", () => {
     ctx.fake.emitCustom({ type: "stream_replay_gap", run_id: "run-1" });
     await flushPromises();
 
-    // 三条正面特征，缺一条都说明 A7 只做了一半。
+    // 四条正面特征，缺一条都说明 A7 只做了一半。
     expect(ctx.api.messages.value).toEqual([]);
     expect(ctx.warnings).toEqual(["conversation.streamReplayGap"]);
     expect(ctx.invalidated).toContainEqual(["thread-messages", "thread-1"]);
+    // 第四条：这个 key 在**两份词典里都查得到**。
+    // 只断言「发出了 key」的话，词典改名后 A7 会静默退化成给用户看一行
+    // 原始 key，而用例照绿——M3 那条假绿教训在本层的形态。
+    for (const dictionary of [enUS, zhCN]) {
+      expect(dictionary.conversation.streamReplayGap).toBeTypeOf("string");
+      expect(dictionary.conversation.streamReplayGap.length).toBeGreaterThan(0);
+    }
     ctx.wrapper.unmount();
   });
 
@@ -269,6 +282,113 @@ describe("useThreadStream · A8 停止后的两轮失效", () => {
     // 延迟那一次是 A8 的后半句：后端可能在 stop 之后才把标题定稿。
     await vi.advanceTimersByTimeAsync(1500);
     expect(ctx.invalidated.length).toBe(firstRound.length * 2);
+    ctx.wrapper.unmount();
+    vi.useRealTimers();
+  });
+});
+
+describe("useThreadStream · 标题定稿写回侧栏缓存", () => {
+  // 第一版这里错用了 `upsertThreadIn*`（那两个上游只在 onCreated 用），
+  // 于是要造一个假的完整 AgentThread 去喂类型。这条用例钉住正确语义：
+  // **只补丁 title，其余字段一个都不动**，并且不认识的 thread 不受影响。
+  it("只改匹配 thread 的 values.title，不碰 metadata/status", async () => {
+    const ctx = mountStream();
+    ctx.queryClient.setQueryData(
+      ["threads", "search"],
+      [
+        {
+          thread_id: "thread-1",
+          status: "idle",
+          metadata: { agent_name: "lead" },
+          values: { title: "New chat", messages: [] },
+        },
+        {
+          thread_id: "thread-2",
+          status: "idle",
+          metadata: {},
+          values: { title: "Other", messages: [] },
+        },
+      ],
+    );
+
+    ctx.fake.emitUpdate({ some_node: { title: "Generated Title" } });
+    await flushPromises();
+
+    const rows = ctx.queryClient.getQueryData<
+      {
+        thread_id: string;
+        status: string;
+        metadata: Record<string, unknown>;
+        values: { title: string };
+      }[]
+    >(["threads", "search"]);
+    expect(rows?.[0]?.values.title).toBe("Generated Title");
+    // 正面特征：**其余字段原样**。用 upsert 的那一版会把 metadata 冲掉。
+    expect(rows?.[0]?.metadata).toEqual({ agent_name: "lead" });
+    expect(rows?.[0]?.status).toBe("idle");
+    expect(rows?.[1]?.values.title).toBe("Other");
+    ctx.wrapper.unmount();
+  });
+
+  it("缓存里没有这条 thread 时不凭空插入", async () => {
+    const ctx = mountStream();
+    ctx.queryClient.setQueryData(["threads", "search"], []);
+
+    ctx.fake.emitUpdate({ some_node: { title: "Generated Title" } });
+    await flushPromises();
+
+    expect(ctx.queryClient.getQueryData(["threads", "search"])).toEqual([]);
+    ctx.wrapper.unmount();
+  });
+});
+
+describe("useThreadStream · new → 真 id 不是「切换 thread」（C9 的边界）", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  // `/chats/new` 提交后 URL 会 replace 成后端建出的 id，threadId 从 null 变成
+  // 具体值。照 C9 字面意思清场，第一个回合的 C8 重排就没了——先到的 AI 步骤
+  // 会永远排在 human 前面。这条 bug 是 make e2e-m4a-stream 撞出来的：
+  // route.fulfill 那份用例里整条流在导航之前就到齐了，照绿。
+  it("URL 从 new 换成真 id 之后，C8 的顺序锚点仍然有效", async () => {
+    const threadId = ref<string | null>(null);
+    const ctx = mountStream(threadId);
+
+    await ctx.api.sendMessage("thread-1", { text: "Build a deck" });
+    await flushPromises();
+    // runner 通过 onStart 宣告真实 id，随后路由把它写进 URL。
+    threadId.value = "thread-1";
+    await flushPromises();
+
+    ctx.fake.setMessages([earlyAssistantStep, injectedHuman]);
+    await settleCoalescing();
+
+    expect(ctx.api.messages.value.map((m) => m.id)).toEqual([
+      injectedHuman.id,
+      earlyAssistantStep.id,
+    ]);
+    ctx.wrapper.unmount();
+  });
+
+  it("换到另一个 thread 仍然清场（这条不能被上面那条放宽掉）", async () => {
+    const threadId = ref<string | null>("thread-1");
+    const ctx = mountStream(threadId);
+
+    await ctx.api.sendMessage("thread-1", { text: "Build a deck" });
+    await flushPromises();
+
+    threadId.value = "thread-2";
+    await flushPromises();
+
+    ctx.fake.setMessages([earlyAssistantStep, injectedHuman]);
+    await settleCoalescing();
+
+    // 基线被清掉了 → 不重排，按协议顺序显示。
+    expect(ctx.api.messages.value.map((m) => m.id)).toEqual([
+      earlyAssistantStep.id,
+      injectedHuman.id,
+    ]);
     ctx.wrapper.unmount();
     vi.useRealTimers();
   });

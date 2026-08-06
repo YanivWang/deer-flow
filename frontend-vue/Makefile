@@ -1,7 +1,7 @@
 # frontend-vue M0 developer entrypoint. package.json intentionally contains only postinstall.
 
 .PHONY: help install dev build preview lint format format-check typecheck typecheck-core test verify \
-	e2e-install e2e-list e2e-m0 e2e-m4a e2e-external e2e e2e-auth e2e-real-backend e2e-visual \
+	e2e-install e2e-list e2e-m0 e2e-m4a e2e-m4a-stream e2e-external e2e e2e-auth e2e-real-backend e2e-visual \
 	proxy-smoke auth-disabled-smoke auth-cookie-smoke visual-baseline-smoke splitpanes-smoke \
 	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke \
 	baseline-refresh baseline-check land-copied land-retyped land-retyped-check \
@@ -22,6 +22,7 @@ help:
 	@echo "  make verify                    lint + format-check + typecheck + unit + build"
 	@echo "  make e2e-m0                    runnable M0 proxy/auth/visual/replay suite"
 	@echo "  make e2e-m4a                   M4a data-flow gate (send/stream/stop/reload ordering)"
+	@echo "  make e2e-m4a-stream            M4a real chunked-SSE gate (heartbeat/resume cursor/gap)"
 	@echo "  make e2e-external              G0-6/G0-7 gates needing a browser runtime and an IdP"
 	@echo "  make e2e-list                  list shared React business contract inventory"
 	@echo "  make e2e                       run full shared business contracts (M1+ delivery)"
@@ -134,6 +135,12 @@ e2e-m0: proxy-smoke auth-disabled-smoke visual-baseline-smoke splitpanes-smoke a
 e2e-m4a:
 	test -f ../frontend/node_modules/@playwright/test/package.json
 	PLAYWRIGHT_BASE_URL=http://localhost:3103 $(EXEC) playwright test -c playwright.m4a.config.ts
+
+# 真流 gate：浏览器从 socket 上一片一片读，覆盖 route.fulfill 到不了的四件事
+# （分帧边界、心跳、Last-Event-ID 续传、gap→A7）。同样不能与其他 build 并发。
+e2e-m4a-stream:
+	test -f ../frontend/node_modules/@playwright/test/package.json
+	PLAYWRIGHT_BASE_URL=http://localhost:3104 $(EXEC) playwright test -c playwright.m4a-stream.config.ts
 
 # G0-6 and G0-7. Separate from e2e-m0 only because they need the backend browser
 # extra (uv sync --extra browser && playwright install chromium) and a Gateway

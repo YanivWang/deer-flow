@@ -13,12 +13,13 @@
 
 | 命令                   | 结果   | 规模                                                |
 | ---------------------- | ------ | --------------------------------------------------- |
-| `make verify`          | exit 0 | 100 个文件 / 1,049 个用例（M3 基线 91 / 900）       |
+| `make verify`          | exit 0 | 100 个文件 / 1,055 个用例（M3 基线 91 / 900）       |
 | `make migration-check` | exit 0 | 台账 4 条全绿                                       |
 | `make collected-check` | exit 0 | 期望 59 个搬运测试（node 49 · dom 10），实收 560 用例 |
 | `make typecheck-core`  | exit 0 | `packages/agent-core` 独立 tsconfig                 |
 | `make e2e-m0`          | exit 0 | 7 个子套件 / 14 个用例                              |
-| **`make e2e-m4a`**     | exit 0 | **4 个用例（本里程碑新增的 gate）**                 |
+| **`make e2e-m4a`**     | exit 0 | **4 个用例（归并与顺序，`route.fulfill` 一次性 body）** |
+| **`make e2e-m4a-stream`** | exit 0 | **3 个用例（真分块流：分帧 / 心跳 / 续传游标 / gap）** |
 | `make consumer-check`  | exit 0 | 干净消费者安装 + typecheck + 最小 session（需联网） |
 | `make baseline-refresh` | exit 0 | **无 diff**（装了 3 个包但 needsDeps 没变）        |
 
@@ -26,20 +27,24 @@ M4a 新增的部分：
 
 ```bash
 cd frontend-vue
-pnpm exec vitest run tests/unit/threads/           # 125 个用例 / 7 个文件
+pnpm exec vitest run tests/unit/threads/           # 131 个用例 / 7 个文件
 pnpm exec vitest run tests/unit/agent-deerflow/thread-runner.test.ts
 pnpm exec vitest run tests/unit/i18n/cookies.test.ts
-make e2e-m4a                                       # 4 个浏览器用例
+make e2e-m4a                                       # 4 个浏览器用例（合成流）
+make e2e-m4a-stream                                # 3 个浏览器用例（真分块流）
 ```
 
-> ⚠️ `make verify` / `make e2e-m0` / `make e2e-m4a` **两两都不能并发**（三者都起
-> nuxt build，抢同一把锁）。后台任务返回的 0 是复合命令的退出码，不是 make 的。
+> ⚠️ `make verify` / `make e2e-m0` / `make e2e-m4a` / `make e2e-m4a-stream`
+> **两两都不能并发**（四者都起 nuxt build，抢同一把锁）。后台任务返回的 0 是复合
+> 命令的退出码，不是 make 的。
 
 typecheck 预算仍是 **0**（`baseline/typecheck-known.json` 为空）。
 
 ---
 
-## 2. 三处订正 06 的实锤（本里程碑最值钱的部分）
+## 2. 五处实锤（本里程碑最值钱的部分）
+
+前三处订正 06，后两处是补上真流 gate 之后才暴露的生产 bug。
 
 ### 2.1 「M2 已为 A7 留好接口」不成立 —— gap 恢复缺一帧 `custom`
 
@@ -91,6 +96,38 @@ C8 顺序恢复、issue #2746 的请求时序、C1/C6 的刷新恢复、停止�
 
 处置：`ThreadRunner` 增加 `onSessionState` 钩子，**每一次**状态变化都通知；
 `tests/unit/agent-deerflow/thread-runner.test.ts` 断言 `seen[0] === "creating"`。
+
+### 2.4 真流 gate 撞出两条只在分块到达时才存在的 bug
+
+`tests/m4a/chat-dataflow.spec.ts` 用 `route.fulfill`，整条流**一次性到齐**。
+补了 `make e2e-m4a-stream`（假 Gateway 真的一片一片写，见
+`tests/support/stream-gateway.mjs`）之后，立刻红了两条，两条都是生产 bug：
+
+1. **`/chats/new` → `/chats/<id>` 的 URL replace 会重挂载整个页面组件**，
+   `onScopeDispose` 触发 `runner.abort()`，刚建出来的流当场被掐断
+   （现象：`POST /runs/stream` 拿到 200 之后紧跟一个 `net::ERR_ABORTED`）。
+   起因是 Nuxt `<NuxtPage>` 的默认 key 是 `route.fullPath`。修法是给页面钉一个
+   固定 key——这与上游的结论一致，`useCoalescedStreamMessages` 的注释里就写着
+   「the chat page deliberately avoids re-mounting」。
+2. **同一次 URL 变化会把 C9 的顺序锚点清掉。** `threadId` 从 `null` 变成真 id
+   在代码里长得像「切换 thread」，于是走了 C9 的清场分支，第一个回合的 C8 重排
+   当场失效（先到的 AI 步骤永远排在 human 前面）。它不是切换，是同一个 thread
+   拿到了自己的身份；已加 `adoptedThreadId` 区分，并补了两条单测——
+   一条证明 new→id 不清场，一条证明**真的换 thread 时仍然清场**（防止前一条
+   被写成一个把 C9 整体放宽掉的判断）。
+
+上游没踩到第 2 条，只是因为它那份 `local-turn-order.dom.test.tsx` 用的是固定
+`threadId: "thread-1"`，从来没走过 new → id 这一步。
+
+**这一节是 `make e2e-m4a-stream` 存在的全部理由**：这两条在合成流下 100% 绿。
+
+### 2.5 A7 的警告现在验的是用户看得见的文案
+
+原来 `notify.warn` 收到的是字典 key，聊天页直接把 key 显示出来——取不到文案时
+静默降级成显示 `conversation.streamReplayGap`，而用例只断言「发出了 key」，
+两边都绿。现在：key 解析抽成 `core/i18n/resolve.ts`（纯函数，单测断言**取到真
+文案**且不等于 key），聊天页用它，`e2e-m4a-stream` 的 gap 用例断言**整句英文**。
+词典改名时三处一起红。
 
 ---
 
@@ -158,26 +195,32 @@ issue 逼出来的形状，**读代码看不出哪一步在防什么**，唯一�
 
 ## 5. 红项与未证实（做 M4b 时必须知道）
 
-1. **真实 SSE 流没有跑过一次。** `make e2e-m4a` 的 4 条用例走的是 Playwright
-   `route.fulfill` 的**一次性完整 body**，不是分块到达的真流。分帧层、心跳、
-   重连退避、cancel 的 200/202/204 三分支在本窗口**一次都没有在浏览器里被走到**。
-   要证实得让 `make e2e-real-backend` 覆盖聊天页——目前它只覆盖 M0 的基础设施。
-2. **gap 恢复的完整路径没有 E2E。** A7 只有单测（假 runner 发一帧 custom）与
-   L3 单测（假响应里带 `gap` 事件）。「真的断流 → 真的 rejoin → UI 真的清空并
-   显示警告」这条链路端到端没走过。
+1. **仍然没有对着真 Gateway 跑过。** `make e2e-m4a-stream` 的假 Gateway 是真的
+   分块写、真的经 Nitro 代理、真的接 `Last-Event-ID`，但它**不是** Gateway：
+   `run_m0_gateway.py`（真 backend replay，G0-8 用的那个）没有被接到聊天页上。
+   仍未走到的具体分支：**重连退避**（假 Gateway 不会中途断连）、
+   **cancel 的 202/200-drain 两支**（它只回 204）、**watchdog 静默判定**。
+2. **gap 的「后端 run 还在跑」那一半没验。** `e2e-m4a-stream` 证明了
+   gap → 带游标续传 → A7 清空与本地化警告这条链路端到端成立；但 05 A6 的
+   「不得取消仍在运行的后端 run」在浏览器里没有断言（假 Gateway 收不到 cancel
+   就等于没发，缺的是**主动断言它一次 cancel 都没收到**）。
 3. **`useThreadHistory` 的分页与对账没有多页用例。** e2e 的历史 mock 是单页
    （`has_more: false`）。C6「历史失效时保留已加载的页」的实现来自
    `reconcileThreadHistoryRows`（有搬过来的单测），但**「翻到第 3 页时后台刷新」
    这个真实时序没有测过**——它涉及 vue-query 的 `isFetching` / `isSuccess` 在
    Vue 下的时序，而那正是我改写最多的地方。
-4. **A7/A8 的「本地化警告」没有真实文案。** `notify` 是一个端口，M4a 传进去的是
-   一个把 key 塞进数组的假实现；生产实现（vue-sonner）在 M4b。也就是说
-   **A7 现在验的是「有没有发出警告信号」，不是「用户看不看得见」**。
-5. **`upsertThreadInSearchCache` / `upsertThreadInInfiniteCache` 的调用点是半截的。**
-   `handleUpdateEvent` 里标题写回两份缓存时构造的是一个占位 `AgentThread`
-   （`as never` 绕过类型），因为完整的 thread 元数据要等 `useThreads` /
-   `useInfiniteThreads` 落地（M4b 侧栏）。**这一处是本次交付里最弱的一段代码**，
-   M4b 接侧栏时应当重写而不是扩写。
+4. **A7 的警告还不是 toast。** 文案已经是真的（见 §2.5），但呈现方式是聊天页里
+   一行 `role="status"` 的文字；生产实现（vue-sonner + 统一的 toast 位置）
+   属于 M4b 的 UI 层。**「有没有本地化」已验，「长成什么样」没验。**
+5. **标题写回缓存曾经搬错了，已修。** 第一版在 `handleUpdateEvent` 里用了
+   `upsertThreadIn*`——而上游那两个函数**只在 `onCreated` 用**，标题更新走的是
+   `setQueriesData` + 只改 `values.title` 的 mapper（`hooks.ts:1617/1638`）。
+   用 upsert 的后果不只是「代码弱」：`mergeExistingThread` 的合并方向是
+   「已有的赢」，所以**侧栏里已存在的 thread 标题根本不会更新**——一个只会在
+   接上侧栏之后才被发现的静默失效。已改成上游写法，`as never` 随之消失，
+   并补了两条用例（只改 title 不碰 metadata/status；缓存里没有这条 thread 时
+   不凭空插入）。仍然没有的是**侧栏本身**（`useThreads` / `useInfiniteThreads`
+   在 M4b），所以这条路径在真实 UI 上没被看见过。
 6. **Pinia 只注册了模块，一个 store 都没有。** 02 的新增清单要求装它，04 §3 给它
    的位置是「每 thread 一个 composable/Pinia adapter」的实现工具。M4a 的 thread
    作用域状态由 `useThreadStream` 按组件生命周期承载，还用不到跨组件共享的 store；
@@ -227,12 +270,13 @@ needsDeps 映射里（它们是 Vue 侧的替代物，不是被搬运文件的�
 
 ```bash
 cd frontend-vue
-make verify                 # 100 文件 / 1,049 用例
+make verify                 # 100 文件 / 1,055 用例
 make migration-check        # 台账 4 条
 make collected-check        # 收集口径与台账一致
 make typecheck-core         # agent-core 独立 tsconfig
 make e2e-m0                 # 与 verify / e2e-m4a 串行，不要并发
-make e2e-m4a                # M4a gate：4 个浏览器用例
+make e2e-m4a                # M4a gate：4 个浏览器用例（合成流）
+make e2e-m4a-stream         # M4a 真流 gate：3 个用例（分块 / 心跳 / 续传 / gap）
 make consumer-check         # 需要联网
 make baseline-refresh       # 应当无 diff
 ```

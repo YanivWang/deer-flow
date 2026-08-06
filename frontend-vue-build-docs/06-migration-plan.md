@@ -687,11 +687,23 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 >    草稿持久化、斜杠技能补全、侧栏列表、千轮虚拟化……全部属于 M4b。
 >    「最小可用聊天页」与这三个 spec 之间本来就不自洽。
 >
-> M4a 落地的是**同一条不变式的等价用例**：`make e2e-m4a`
-> （`tests/m4a/chat-dataflow.spec.ts`，4 条，mock 在本仓自己这边并带上
-> `Content-Location`），覆盖 C8 顺序、issue #2746 的请求时序、C1/C6 的刷新恢复、
-> 停止按钮的生命周期。**共享合同仍然是最终判据，时间点移到 M4b**——
-> 届时要先给共享 mock 补 `Content-Location`（改 `frontend/` 是跨仓动作，需单独决定）。
+> M4a 落地的是**同一条不变式的等价用例**，分两个 gate：
+>
+> - `make e2e-m4a`（`tests/m4a/chat-dataflow.spec.ts`，4 条）——mock 在本仓自己
+>   这边并带上 `Content-Location`，覆盖 C8 顺序、issue #2746 的请求时序、
+>   C1/C6 的刷新恢复、停止按钮的生命周期。它用 `route.fulfill`，**整条流一次到齐**。
+> - `make e2e-m4a-stream`（`tests/m4a-stream/real-stream.spec.ts`，3 条）——
+>   一个**真的一片一片写**的假 Gateway（`tests/support/stream-gateway.mjs`），
+>   经 Nitro 代理，覆盖分帧边界、心跳注释帧、`Last-Event-ID` 续传游标、
+>   gap → A7（断言的是**用户看得见的本地化整句**，不是字典 key）。
+>
+> **第二个 gate 不是锦上添花**：它一加上就红了两条，两条都是只在分块到达时才存在
+> 的生产 bug——`/chats/new → /chats/<id>` 的 URL replace 重挂载页面把流掐断，
+> 以及同一次 URL 变化把 C9 的顺序锚点清掉。详见
+> [evidence/m4a-dataflow.md §2.4](evidence/m4a-dataflow.md)。
+>
+> **共享合同仍然是最终判据，时间点移到 M4b**——届时要先给共享 mock 补
+> `Content-Location`（改 `frontend/` 是跨仓动作，需单独决定）。
 
 **⚠️ 全程对照 [05-invariants.md](05-invariants.md) 的 M 组**（Vue 移植专有陷阱）。M1（`provide` 必须传 ref）和 M5（`watch` 默认惰性）在这个阶段最容易翻车，而 A7 / D4 那类"初始状态不得被覆盖"的约束正好踩在 M5 上。
 

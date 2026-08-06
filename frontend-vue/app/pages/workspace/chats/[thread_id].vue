@@ -25,10 +25,29 @@
 import { computed, ref, watch } from "vue";
 
 import { useThreadStream } from "@/composables/useThreadStream";
+import { resolveTranslation } from "@/core/i18n/resolve";
 import { isHiddenFromUIMessage } from "@/core/messages/utils";
 import type { Message } from "@/core/types/message";
 
-definePageMeta({ layout: "workspace" });
+definePageMeta({
+  layout: "workspace",
+  /**
+   * ⚠️ **固定 key，不要删。**
+   *
+   * Nuxt `<NuxtPage>` 的默认 key 是 `route.fullPath`，于是 `/chats/new` →
+   * `/chats/<id>` 这一次 `router.replace` 会**重挂载整个页面组件**：
+   * `onScopeDispose` 触发 `runner.abort()`，刚建出来的那条流当场被掐断。
+   *
+   * 这条 bug 只有在**分块到达**时才看得见——`route.fulfill` 那份用例里整条流
+   * 在导航之前就到齐了，照绿。是 `make e2e-m4a-stream` 把它撞出来的
+   * （现象：POST /runs/stream 拿到 200 之后立刻 net::ERR_ABORTED）。
+   *
+   * 上游是同一个结论：`useCoalescedStreamMessages` 的注释里写着
+   * 「the chat page deliberately avoids re-mounting」。切 thread 时该清的
+   * 本地状态由 `useThreadStream` 里 `watch(threadId)` 负责，不靠重挂载。
+   */
+  key: () => "workspace-chat",
+});
 
 const route = useRoute();
 const router = useRouter();
@@ -48,11 +67,20 @@ watch(routeThreadId, (id) => {
 const context = ref({ mode: "flash" });
 const warnings = ref<string[]>([]);
 
+/**
+ * A7 的「本地化」那半就在这一行：core 只发字典 key，文案由这里取。
+ * 直接把 key 显示出来是**静默降级**——用户看到一行 `conversation.streamReplayGap`
+ * 而不是报错，所以 tests/m4a-stream 断言的是最终文案而不是 key。
+ */
+const { $i18n } = useNuxtApp();
+const translate = (key: string) =>
+  resolveTranslation($i18n.t.value, key) ?? key;
+
 const stream = useThreadStream({
   threadId: routeThreadId,
   context,
   notify: {
-    warn: (key) => warnings.value.push(key),
+    warn: (key) => warnings.value.push(translate(key)),
     error: (message) => warnings.value.push(message),
   },
   onStart(startedThreadId) {

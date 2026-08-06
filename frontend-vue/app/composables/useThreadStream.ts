@@ -29,6 +29,7 @@
                    而分叉的那一侧没有测试。
 */
 
+import type { InfiniteData } from "@tanstack/vue-query";
 import { useQueryClient } from "@tanstack/vue-query";
 import {
   computed,
@@ -57,9 +58,9 @@ import {
 } from "@/core/threads/cache-invalidation";
 import {
   INFINITE_THREADS_QUERY_KEY_PREFIX,
-  upsertThreadInInfiniteCache,
-  upsertThreadInSearchCache,
+  mapInfiniteThreadsCache,
 } from "@/core/threads/infinite";
+import type { AgentThread } from "@/core/threads/types";
 import { restoreLocalTurnMessageOrder } from "@/core/threads/local-turn-order";
 import {
   isNonEmptyString,
@@ -160,6 +161,18 @@ export function useThreadStream(options: UseThreadStreamOptions) {
   let summarizedMessageIds = new Set<string>();
   let sendInFlight = false;
   let startedAnnounced = false;
+  /**
+   * 本次 run 真正建出来的 thread id（05 C9 的边界条件）。
+   *
+   * 新会话是 `/chats/new` 提交 → 后端建出 thread → URL replace 成真 id，
+   * 于是 `threadId` 会从 `null` 变成一个具体值。**那不是「切换 thread」**，
+   * 是同一个 thread 拿到了自己的身份；照 C9 的字面意思在这里清掉顺序锚点，
+   * 第一个回合的 C8 重排当场失效（表现：先到的 AI 步骤永远排在 human 前面）。
+   *
+   * 上游没踩到这条，只是因为它那份 `local-turn-order` 用例用的是固定
+   * `threadId: "thread-1"`，从来没走过 new → id 这一步。
+   */
+  let adoptedThreadId: string | null = null;
   let pendingFinalizationTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ---- runner ------------------------------------------------------------
@@ -270,6 +283,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     ) {
       liveMessagesThreadId.value = startedThreadId;
     }
+    adoptedThreadId = startedThreadId;
     if (!startedAnnounced) {
       onStart?.(startedThreadId, runId);
       startedAnnounced = true;
@@ -304,28 +318,38 @@ export function useThreadStream(options: UseThreadStreamOptions) {
       transientHistoryThreadId = threadId.value;
     }
 
-    // 标题定稿写回两份侧栏缓存。
+    // 标题定稿：**只补丁已有条目的 title，不 upsert 整条 thread。**
+    //
+    // 上游把这两件事分得很清楚：`upsertThreadIn*` 只在 `onCreated` 用
+    // （那时确实要凭空插一条新 thread 进侧栏），标题更新走的是
+    // `setQueriesData` + 只改 `values.title` 的 mapper（hooks.ts:1617/1638）。
+    // 第一版这里错用了 upsert，于是不得不造一个假的完整 `AgentThread`
+    // 去喂类型——那个占位对象的 `metadata: {}` / `status: "busy"` 会把
+    // 侧栏里这条 thread 的真实元数据**覆盖掉**（upsert 的浅并方向是
+    // 「已有的赢」，但凭空造出来的字段在缓存为空时会原样落进去）。
     if (typeof data !== "object" || data === null) return;
+    const id = threadId.value;
+    if (!id) return;
     for (const update of Object.values(data)) {
       const title =
         typeof update === "object" && update !== null
           ? Reflect.get(update, "title")
           : undefined;
       if (typeof title !== "string" || !title) continue;
-      const id = threadId.value;
-      if (!id) continue;
-      const now = new Date().toISOString();
-      const patch = {
-        thread_id: id,
-        created_at: now,
-        updated_at: now,
-        metadata: {},
-        status: "busy",
-        values: { title, messages: [], artifacts: [] },
-        interrupts: {},
-      } as never;
-      upsertThreadInSearchCache(queryClient, patch);
-      upsertThreadInInfiniteCache(queryClient, patch);
+      const withTitle = (thread: AgentThread): AgentThread =>
+        thread.thread_id === id
+          ? { ...thread, values: { ...thread.values, title } }
+          : thread;
+
+      queryClient.setQueriesData(
+        { queryKey: ["threads", "search"], exact: false },
+        (oldData: AgentThread[] | undefined) => oldData?.map(withTitle),
+      );
+      queryClient.setQueriesData(
+        { queryKey: [...INFINITE_THREADS_QUERY_KEY_PREFIX], exact: false },
+        (oldData: InfiniteData<AgentThread[]> | undefined) =>
+          mapInfiniteThreadsCache(oldData, withTitle),
+      );
     }
   }
 
@@ -374,7 +398,9 @@ export function useThreadStream(options: UseThreadStreamOptions) {
   }
 
   // ---- 切 thread 时的清场（C9 的「切换 thread 时清除」） ------------------
-  watch(threadId, () => {
+  watch(threadId, (next, previous) => {
+    // `new` 提交后 URL 换成真 id：同一个 thread，不清场。见 adoptedThreadId。
+    if (previous === null && next !== null && next === adoptedThreadId) return;
     startedAnnounced = false;
     sendInFlight = false;
     transientHistoryBridge = [];
