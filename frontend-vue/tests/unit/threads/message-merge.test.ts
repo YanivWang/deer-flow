@@ -10,7 +10,10 @@ import {
   reconcileThreadHistoryRows,
   type ThreadMessagesPageResponse,
 } from "@/core/threads/history";
-import { restoreLocalTurnMessageOrder } from "@/core/threads/local-turn-order";
+import {
+  restoreLocalTurnMessageOrder,
+  restoreReconnectedTurnMessageOrder,
+} from "@/core/threads/local-turn-order";
 import {
   buildVisibleHistoryMessages,
   removeSetItems,
@@ -40,6 +43,73 @@ function runMessage(seq: number): RunMessage {
     created_at: "2026-05-22T00:00:00Z",
   };
 }
+
+test("restoreReconnectedTurnMessageOrder heals a same-run sandwich", () => {
+  const oldHuman = {
+    id: "human-old",
+    type: "human",
+    content: "old",
+  } as Message;
+  const oldAnswer = { id: "ai-old", type: "ai", content: "done" } as Message;
+  const earlyTool = {
+    id: "tool-early",
+    type: "tool",
+    content: "working",
+    run_id: "run-new",
+  } as Message;
+  const currentHuman = {
+    id: "human-new",
+    type: "human",
+    content: "continue",
+    run_id: "run-new",
+  } as Message;
+  const laterAi = {
+    id: "ai-new",
+    type: "ai",
+    content: "continuing",
+    run_id: "run-new",
+  } as Message;
+
+  expect(
+    restoreReconnectedTurnMessageOrder([
+      oldHuman,
+      oldAnswer,
+      earlyTool,
+      currentHuman,
+      laterAi,
+    ]),
+  ).toEqual([oldHuman, oldAnswer, currentHuman, earlyTool, laterAi]);
+});
+
+test("restoreReconnectedTurnMessageOrder preserves completed and unrelated history", () => {
+  const completed = {
+    id: "completed",
+    type: "ai",
+    content: "terminal answer",
+    run_id: "shared-run",
+  } as Message;
+  const orphan = {
+    id: "orphan",
+    type: "tool",
+    content: "older page",
+    run_id: "run-old",
+  } as Message;
+  const human = {
+    id: "human",
+    type: "human",
+    content: "next",
+    run_id: "shared-run",
+  } as Message;
+  const after = {
+    id: "after",
+    type: "ai",
+    content: "new",
+    run_id: "shared-run",
+  } as Message;
+  const messages = [completed, orphan, human, after];
+
+  expect(restoreReconnectedTurnMessageOrder(messages)).toEqual(messages);
+});
 
 test("mergeMessages removes duplicate messages already present in history", () => {
   const human = {

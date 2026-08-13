@@ -1,10 +1,10 @@
 /*
-  【文件职责】     Vue channel settings contracts；冻结 Vue M7 范围，不随 React 新功能扩张。
+  【文件职责】     Vue channel settings contracts；验证与 React 产品行为对齐的 Vue 实现。
   【对应 frontend/】 frontend/tests/e2e/channels.spec.ts
   【架构位置】     测试
   【主要导出】     Playwright Vue M7 scenarios
   【依赖关系】     frontend shared mock API；Vue product routes and DOM
-  【边界与注意】   只验证 Vue 已交付合同；React 新功能进入 Vue 前必须独立迁移和验收。
+  【边界与注意】   Vue 使用自身 DOM 与门禁，不依赖 React 组件结构。
 */
 
 import { expect, test, type Page } from "@playwright/test";
@@ -12,6 +12,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { mockLangGraphAPI } from "../../../frontend/tests/e2e/utils/mock-api";
 
 const channelProviders = [
+  ["buzz", "Buzz", "binding_code"],
   ["telegram", "Telegram", "deep_link"],
   ["slack", "Slack", "binding_code"],
   ["discord", "Discord", "binding_code"],
@@ -111,6 +112,7 @@ test.describe("IM channels", () => {
     await expect(sidebar.getByText("Channels")).toBeVisible({
       timeout: 15_000,
     });
+    await expect(sidebar.getByText("Buzz")).toBeVisible();
     await expect(sidebar.getByText("Telegram")).toBeVisible();
     await expect(sidebar.getByText("Slack")).toBeVisible();
     await expect(sidebar.getByText("Discord")).toBeVisible();
@@ -120,12 +122,15 @@ test.describe("IM channels", () => {
     await expect(sidebar.getByText("WeCom")).toBeVisible();
     await expect(
       sidebar.getByRole("button", { name: "Connected" }),
-    ).toHaveCount(7);
+    ).toHaveCount(8);
 
     await sidebar.getByRole("button", { name: /Settings and more/ }).click();
     await page.getByRole("menuitem", { name: "Settings" }).click();
     await page.getByRole("button", { name: "Channels" }).click();
 
+    await expect(
+      page.getByText("Buzz channels and direct messages"),
+    ).toBeVisible();
     await expect(page.getByText("Telegram direct messages")).toBeVisible();
     await expect(page.getByText("Slack workspace messages")).toBeVisible();
     await expect(page.getByText("Discord server messages")).toBeVisible();
@@ -135,7 +140,7 @@ test.describe("IM channels", () => {
     await expect(page.getByText("WeCom messages")).toBeVisible();
 
     const dialog = page.getByRole("dialog", { name: "Settings" });
-    await expect(dialog.getByRole("button", { name: "Modify" })).toHaveCount(7);
+    await expect(dialog.getByRole("button", { name: "Modify" })).toHaveCount(8);
   });
 
   test("only enabled providers are shown and runtime setup stays editable", async ({

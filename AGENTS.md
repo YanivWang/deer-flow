@@ -15,12 +15,13 @@ guide rather than expecting full detail here:
   current truth lives in `frontend-vue-build-docs/10-current-status-and-next.md`.
 
 For Vue work, run `make handoff-check` and read document 10 first. M7 is repository GO
-(Vue-owned 25 files / 120 tests, 120/120 x3); M8 is complete. Vue owns framework-specific
-stream/artifact-panel gates and freezes Vue-specific agent-chat, channels, integrations and
-thread-history contracts instead of inheriting unrelated React-only feature growth. Shared
-specs are limited to framework-neutral behavior. React stays the default frontend and Vue
-stays secondary. Public activation is explicitly outside the current delivery scope; no npm
-publish or production cutover occurred.
+(Vue-owned 25 files / 130 tests, 130/130 x3); M8 is complete. Vue owns framework-specific
+stream/artifact-panel, agent-chat, channels, integrations and thread-history contracts; React
+changes enter them only after an explicit Vue implementation. The current same-run reconnect,
+Showcase, Browser Live, Buzz and Lark-app-switch increment is aligned. Shared specs are limited
+to framework-neutral behavior. React stays the default frontend and Vue stays secondary. Public
+activation is explicitly outside the current delivery scope; no npm publish or production
+cutover occurred.
 
 ## What is DeerFlow
 

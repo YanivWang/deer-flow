@@ -8,6 +8,7 @@
 */
 
 import tailwindcss from "@tailwindcss/vite";
+import { fileURLToPath } from "node:url";
 import { csrRoutes, prerenderRoutes } from "./config/routes";
 
 type ClientChunk = { moduleIds: string[]; name: string };
@@ -83,6 +84,20 @@ export default defineNuxtConfig({
       m0TestPages: "",
     },
   },
-  nitro: { compressPublicAssets: true },
+  nitro: {
+    compressPublicAssets: true,
+    publicAssets: [
+      {
+        dir: fileURLToPath(new URL("../frontend/public/demo", import.meta.url)),
+        baseURL: "/demo",
+      },
+      {
+        dir: fileURLToPath(
+          new URL("../frontend/public/images", import.meta.url),
+        ),
+        baseURL: "/images",
+      },
+    ],
+  },
   typescript: { typeCheck: false },
 });

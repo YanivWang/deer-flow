@@ -5,7 +5,7 @@
   【主要导出】     无
   【依赖关系】     app/core/artifacts/utils.ts
   【边界与注意】   **手工维护，不再由 codemod 生成**（登记在 rstest-to-vitest.mjs 的
-                   HAND_MAINTAINED）。相对上游只删不加，两处：
+                   HAND_MAINTAINED）。相对上游有两处删减与一处 Vue-owned 增补：
 
                    1. 删掉 2 个 static demo 用例
                       （"maps static demo artifact paths…" / "encodes reserved characters
@@ -19,6 +19,8 @@
                       这套夹具在 Nuxt 侧一个字节都读不到，留着会让人以为测试隔离了配置。
                       `loadFreshArtifactUtils()` 的 `vi.resetModules()` 已经保证
                       每个用例拿到全新的 config 模块，隔离由它负责。
+
+                   3. 增补显式 isMock 图片解析，证明 showcase 不会落到生产 artifact API。
 
                    其余用例逐字保留——它们才是「语义没走形」的证据。
 */
@@ -197,6 +199,29 @@ describe("artifact URL helpers", () => {
         fallbackToOutputs: true,
       }),
     ).toBe("https://example.com/image.png");
+  });
+
+  test("routes showcase markdown images through the explicit mock transport", async () => {
+    const { resolveMessageImageURL } = await loadFreshArtifactUtils();
+
+    expect(
+      resolveMessageImageURL(
+        "chart.png#preview",
+        "demo-thread",
+        ["/mnt/user-data/outputs/chart.png"],
+        { fallbackToOutputs: true, isMock: true },
+      ),
+    ).toBe(
+      "/mock/api/threads/demo-thread/artifacts/mnt/user-data/outputs/chart.png#preview",
+    );
+    expect(
+      resolveMessageImageURL("missing.png", "demo-thread", [], {
+        fallbackToOutputs: true,
+        isMock: true,
+      }),
+    ).toBe(
+      "/mock/api/threads/demo-thread/artifacts/mnt/user-data/outputs/missing.png",
+    );
   });
 
   test("builds encoded write-file URLs without undefined query parameters", async () => {

@@ -10,6 +10,8 @@
 import {
   computed,
   defineAsyncComponent,
+  defineComponent,
+  h,
   nextTick,
   onMounted,
   onUnmounted,
@@ -30,7 +32,10 @@ import ShineBorder from "@/components/ui/effects/ShineBorder.vue";
 import WorkspaceChangesBadge from "@/components/workspace/changes/WorkspaceChangesBadge.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import { richContentComponents } from "@/components/markdown/components";
-import { buildWriteFileArtifactURL } from "@/core/artifacts/utils";
+import {
+  buildWriteFileArtifactURL,
+  resolveMessageImageURL,
+} from "@/core/artifacts/utils";
 import { extractCitationSources } from "@/core/citations/sources";
 import {
   deriveHumanInputThreadState,
@@ -71,6 +76,9 @@ const props = defineProps<{
   testId?: string;
   active?: boolean;
   tailRequest?: number;
+  interactive?: boolean;
+  artifactPaths?: readonly string[];
+  isMock?: boolean;
 }>();
 const emit = defineEmits<{
   branch: [messageId: string, messageIds: string[]];
@@ -87,6 +95,45 @@ type SelectionPayload = {
   displayIndex: number;
 };
 const pendingHumanInputs = ref(new Set<string>());
+
+const MarkdownMessageImage = defineComponent({
+  name: "MarkdownMessageImage",
+  inheritAttrs: false,
+  props: {
+    src: { type: String, default: "" },
+    alt: { type: String, default: "" },
+    node: { type: Object, default: undefined },
+  },
+  setup(imageProps, { attrs }) {
+    return () => {
+      if (!imageProps.src) return null;
+      const src = props.threadId
+        ? resolveMessageImageURL(
+            imageProps.src,
+            props.threadId,
+            props.artifactPaths ?? [],
+            { fallbackToOutputs: true, isMock: props.isMock },
+          )
+        : imageProps.src;
+      return h(
+        "a",
+        { href: src, target: "_blank", rel: "noopener noreferrer" },
+        h("img", {
+          ...attrs,
+          src,
+          alt: imageProps.alt,
+          loading: "lazy",
+          decoding: "async",
+          class: ["max-w-[90%] overflow-hidden rounded-lg", attrs.class],
+        }),
+      );
+    };
+  },
+});
+const messageMarkdownComponents = {
+  ...richContentComponents,
+  img: MarkdownMessageImage,
+};
 
 const groups = computed(() =>
   getMessageGroups(props.messages, {
@@ -480,8 +527,9 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
                 )
               "
               :active="
+                interactive !== false &&
                 humanInputState.latestOpenRequestId ===
-                extractHumanInputRequest(message)!.request_id
+                  extractHumanInputRequest(message)!.request_id
               "
               :pending="
                 pendingHumanInputs.has(
@@ -500,7 +548,10 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
                 class="mt-2"
               />
               <button
-                v-if="editable?.humanMessage.id === message.id"
+                v-if="
+                  interactive !== false &&
+                  editable?.humanMessage.id === message.id
+                "
                 type="button"
                 class="text-muted-foreground absolute right-0 -bottom-7 text-xs opacity-0 transition-opacity group-hover:opacity-100 hover:underline"
                 aria-label="Edit and rerun"
@@ -535,7 +586,7 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
               <StreamMarkdown
                 v-if="text(message)"
                 :content="getSafeMarkdown(text(message))"
-                :components="richContentComponents"
+                :components="messageMarkdownComponents"
                 :parse-incomplete-markdown="streaming"
               />
               <div
@@ -672,7 +723,9 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
             class="text-muted-foreground mt-2 flex gap-1 text-xs opacity-0 transition-opacity group-hover:opacity-100"
           >
             <button
-              v-if="branchable.has(entry.group.id ?? '')"
+              v-if="
+                interactive !== false && branchable.has(entry.group.id ?? '')
+              "
               type="button"
               aria-label="Branch conversation"
               @click="
@@ -683,7 +736,9 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
             </button>
             <button
               v-if="
-                entry.index === groups.length - 1 && lastAI(entry.index)?.id
+                interactive !== false &&
+                entry.index === groups.length - 1 &&
+                lastAI(entry.index)?.id
               "
               type="button"
               aria-label="Regenerate"

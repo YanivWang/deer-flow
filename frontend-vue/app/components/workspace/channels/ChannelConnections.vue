@@ -22,6 +22,7 @@ import type {
   ChannelRuntimeConfigValues,
 } from "@/core/channels/types";
 import { useChannels } from "@/composables/useChannels";
+import ChannelProviderIcon from "./ChannelProviderIcon.vue";
 
 withDefaults(defineProps<{ variant?: "sidebar" | "settings" }>(), {
   variant: "sidebar",
@@ -34,6 +35,7 @@ const actionError = ref<string | null>(null);
 const connectInstruction = ref<string | null>(null);
 
 const descriptions: Record<string, string> = {
+  buzz: "Buzz channels and direct messages through your DeerFlow agent.",
   telegram: "Telegram direct messages",
   slack: "Slack workspace messages",
   discord: "Discord server messages",
@@ -132,7 +134,8 @@ const dialogTitle = computed(() => {
           : 'hover:bg-sidebar-accent rounded-md px-2 py-1'
       "
     >
-      <div class="min-w-0">
+      <ChannelProviderIcon :provider="provider.provider" class="shrink-0" />
+      <div class="min-w-0 flex-1">
         <div class="truncate text-sm font-medium">
           {{ provider.display_name }}
         </div>

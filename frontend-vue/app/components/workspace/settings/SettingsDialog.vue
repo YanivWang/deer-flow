@@ -7,13 +7,12 @@
   【依赖关系】     useSettingsDialog · settings panels
   【边界与注意】   产品设置容器，不属于 L2。
 */
-import { onMounted, onUnmounted, watch } from "vue";
+import { defineAsyncComponent, onMounted, onUnmounted, watch } from "vue";
 
 import ChannelConnections from "@/components/workspace/channels/ChannelConnections.vue";
 import AboutSettings from "@/components/workspace/settings/AboutSettings.vue";
 import AccountSettings from "@/components/workspace/settings/AccountSettings.vue";
 import AppearanceSettings from "@/components/workspace/settings/AppearanceSettings.vue";
-import IntegrationsSettings from "@/components/workspace/settings/IntegrationsSettings.vue";
 import MemorySettings from "@/components/workspace/settings/MemorySettings.vue";
 import NotificationSettings from "@/components/workspace/settings/NotificationSettings.vue";
 import SkillSettings from "@/components/workspace/settings/SkillSettings.vue";
@@ -22,6 +21,10 @@ import {
   useSettingsDialog,
   type SettingsSection,
 } from "@/composables/useSettingsDialog";
+
+const IntegrationsSettings = defineAsyncComponent(
+  () => import("@/components/workspace/settings/IntegrationsSettings.vue"),
+);
 
 const route = useRoute();
 const settings = useSettingsDialog();

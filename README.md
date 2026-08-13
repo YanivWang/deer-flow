@@ -362,11 +362,12 @@ channels, scheduled tasks, goal/mode, and mobile surfaces are runnable and align
 the React frontend. M8 freezes the private `@deerflow/agent-core` root API, the minimal
 Markdown/Button L2 source boundary, an isolated custom-backend consumer and the complete
 L3 replacement guide; it does not publish npm or change production routing. M7 has an
-exact Vue-owned 25-file/120-test inventory and passed 120/120 in three consecutive full
+exact Vue-owned 25-file/130-test inventory and passed 130/130 in three consecutive full
 runs. Framework-specific artifact streaming and splitpanes behavior use Vue specs. Agent
-chat, channels, integrations and thread-history are also frozen as Vue-owned suites so new
-React-only Browser Live, Lark and showcase behavior cannot silently redefine the Vue release
-gate; shared specs are limited to framework-neutral product contracts. It also retains independent
+chat, channels, integrations and thread-history are Vue-owned suites; the current React
+same-run reconnect, Browser Live, Lark app switch, Buzz and public Showcase behaviors were
+explicitly implemented and added to the Vue gate without importing React DOM contracts. Shared
+specs are limited to framework-neutral product contracts. It also retains independent
 interaction, auth-security and real-protocol gates and adds a
 React-default/Vue-secondary production hostname, fixture-IdP concurrent OIDC, four
 effects, a seven-state visual gate and a client asset budget. Public

@@ -120,11 +120,17 @@ describe("local Playwright command contracts", () => {
 });
 
 describe("M6 inventory and browser contract", () => {
-  it("is exactly the frozen 8-file / 27-test gate", () => {
+  it("is exactly the frozen 8-file / 30-test gate", () => {
     expect(m6Inventory.specFiles).toHaveLength(8);
     expect(new Set(m6Inventory.specFiles)).toHaveLength(8);
     expect(m6Inventory.expectedFileCount).toBe(8);
-    expect(m6Inventory.expectedTestCount).toBe(27);
+    expect(m6Inventory.expectedTestCount).toBe(30);
+    expect(m6Inventory.specFiles).toContain(
+      "frontend-vue/tests/m7/integrations.spec.ts",
+    );
+    expect(m6Inventory.specFiles).not.toContain(
+      "frontend/tests/e2e/integrations.spec.ts",
+    );
     expect(makefile).toContain("playwright test -c playwright.m6.config.ts");
   });
 
@@ -156,9 +162,9 @@ describe("M6 inventory and browser contract", () => {
 });
 
 describe("Vue M7 gate ownership", () => {
-  it("keeps the exact 25-file / 120-test gate and owns framework-specific specs", () => {
+  it("keeps the exact 25-file / 130-test gate and owns framework-specific specs", () => {
     expect(m7Inventory.expectedFileCount).toBe(25);
-    expect(m7Inventory.expectedTestCount).toBe(120);
+    expect(m7Inventory.expectedTestCount).toBe(130);
     expect(m7Inventory.specFiles).toHaveLength(25);
     expect(m7Inventory.specFiles).toContain(
       "frontend-vue/tests/m5/artifact-batched-stream.spec.ts",
@@ -198,11 +204,11 @@ describe("Vue M7 gate ownership", () => {
 });
 
 describe("M4b inventory contract", () => {
-  it("is exactly the frozen 11-file / 66-test gate", () => {
+  it("is exactly the Vue-owned 11-file / 73-test gate", () => {
     expect(inventory.specFiles).toHaveLength(11);
     expect(new Set(inventory.specFiles)).toHaveLength(11);
     expect(inventory.expectedFileCount).toBe(11);
-    expect(inventory.expectedTestCount).toBe(66);
+    expect(inventory.expectedTestCount).toBe(73);
     expect(m4bConfig).toContain("tests/m4b-inventory.json");
   });
 });

@@ -2,10 +2,11 @@
 
 This Nuxt 4 workspace is the Vue frontend that coexists with `../frontend` and
 shares the Gateway. **Current migration cursor: M8 reusable contracts are complete;
-M7 is fully closed with a Vue-owned 120/120 gate.** The chat workspace, artifacts, workspace
+M7 is fully closed with a Vue-owned 130/130 gate.** The chat workspace, artifacts, workspace
 changes, sidecar, settings, browser, agents, channels, scheduled tasks, goal/mode,
 and mobile surfaces are connected to the existing Gateway/data flow and aligned
-to the current React frontend. Production Compose now has a React-default and
+to the current React frontend, including same-run reconnect ordering, public Showcase,
+custom-Agent Browser Live visibility, Buzz channels and Lark app switching. Production Compose has a React-default and
 Vue-secondary hostname. The two historical shared-test exceptions are closed without weakening
 Vue product behavior. Public deployment activation is explicitly outside the current delivery
 scope and remains unrun.
@@ -36,7 +37,7 @@ make e2e-m6-list
 make e2e-m6
 make e2e-m6-real-backend
 make e2e-m7-list
-make e2e-m7      # exact Vue-owned 25-file/120-test gate
+make e2e-m7      # exact Vue-owned 25-file/130-test gate
 make e2e-m7-local-list
 make e2e-m7-local  # exact 1-spec/8-test sidebar/IME/a11y/H7-H8 gate
 make e2e-m7-auth-list
@@ -69,8 +70,9 @@ The React test host must be installed before this workspace because framework-ne
 specs and the Vue runner intentionally use the same physical `@playwright/test` instance.
 Framework-specific Vue behavior is selected by full path from the Vue inventory; it is not
 forced through React DOM or transition contracts. Agent chat, channels, integrations and
-thread history also have Vue-owned frozen specs, so later React-only Browser Live, Lark and
-showcase additions do not expand Vue's gate implicitly:
+thread history have Vue-owned specs. React changes enter this gate only after their product
+semantics are explicitly implemented for Vue; the current Browser Live, Lark, Buzz and Showcase
+increment is therefore covered without importing React DOM structure:
 
 ```bash
 python3 scripts/pnpm.py install --frozen-lockfile
@@ -141,11 +143,12 @@ splitpanes fixtures; they return 404 in normal production configuration.
 
 ## Current verification boundary
 
-The current checkout passes `make verify` with 108 Vitest files / 1095 tests,
-`make migration-check`, M4a 4/4, chunked SSE 3/3, M4b 66/66, M5 27/27,
-real-Gateway artifact 1/1, replay-Gateway resume/heartbeat/cancel/gap 1/1,
-real-backend 3/3 and the asset hard budgets. The exact Vue M7 inventory is
-25 files / 120 tests and passed **120/120 in three consecutive full runs**.
+The current checkout passes `make verify` with 110 Vitest files / 1101 tests,
+`make migration-check`, M4a 4/4, chunked SSE 3/3, M4b 73/73, M5 27/27,
+M6 30/30, real-Gateway artifact 1/1, browser binary-frame 1/1,
+replay-Gateway resume/heartbeat/cancel/gap 1/1, real-backend 3/3 and the asset hard budgets.
+The exact Vue M7 inventory is 25 files / 130 tests and passed **130/130 in three consecutive
+full runs** with zero retries.
 
 The historical 118/120 exceptions are closed structurally. Vue owns the protocol-complete
 batched-stream and native splitpanes panel specs; framework-neutral React specs remain shared.
@@ -163,6 +166,8 @@ task plan, use
 [the final M7 evidence](../frontend-vue-build-docs/evidence/m7-vue-gate-final-closure.md).
 The subsequent `origin/main` merge and independent-gate evidence is recorded in
 [main-merge-2026-08-14.md](../frontend-vue-build-docs/evidence/main-merge-2026-08-14.md).
+The explicit React-to-Vue feature-parity closure is recorded in
+[react-parity-closure-2026-08-14.md](../frontend-vue-build-docs/evidence/react-parity-closure-2026-08-14.md).
 Dual-frontend operations and rollback are documented in
 [dual-frontend-production.md](../docs/dual-frontend-production.md); DNS/TLS and
 target-environment validation remains mandatory before publicly activating Vue. The

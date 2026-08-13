@@ -56,16 +56,22 @@ import {
 } from "@/core/sidecar";
 import { buildWriteFileArtifactURL } from "@/core/artifacts/utils";
 import { useThreadsStore } from "@/stores/threads";
+import { getAgent } from "@/core/agents/api";
+import type { Agent } from "@/core/agents/types";
 
 const props = defineProps<{
   agentName?: string | null;
   bootstrap?: boolean;
+  demo?: boolean;
 }>();
 const { $i18n } = useNuxtApp();
 const route = useRoute();
 const router = useRouter();
 const threads = useThreadsStore();
-const features = useWorkspaceFeatures();
+const isDemo = computed(
+  () => props.demo === true || route.query.mock === "true",
+);
+const features = useWorkspaceFeatures({ enabled: !isDemo.value });
 const notifications = useNotifications();
 
 const routeThreadId = computed(() => {
@@ -74,6 +80,9 @@ const routeThreadId = computed(() => {
   return value === "new" || !value ? null : value;
 });
 const initialRouteThreadId = routeThreadId.value;
+const streamThreadId = computed(() =>
+  isDemo.value ? null : routeThreadId.value,
+);
 const draftThreadId = ref(globalThis.crypto.randomUUID());
 watch(routeThreadId, (id) => {
   if (id === null) draftThreadId.value = globalThis.crypto.randomUUID();
@@ -93,6 +102,9 @@ const welcomeColors = computed(() =>
 const warnings = ref<string[]>([]);
 const localUploading = ref(false);
 const demoMessages = ref<Message[] | null>(null);
+const demoArtifacts = ref<string[]>([]);
+const demoTitle = ref<string>();
+const agent = ref<Agent | null>(null);
 const followups = ref<string[]>([]);
 const followupsLoading = ref(false);
 const suggestionsEnabled = ref(false);
@@ -112,7 +124,7 @@ const editState = ref<{
 } | null>(null);
 
 const stream = useThreadStream({
-  threadId: routeThreadId,
+  threadId: streamThreadId,
   context,
   notify: {
     warn: (message) =>
@@ -180,6 +192,7 @@ const stream = useThreadStream({
   },
 });
 const authoritativeArtifacts = computed(() => {
+  if (isDemo.value) return demoArtifacts.value;
   const state = stream.state.value;
   const value = Object.prototype.hasOwnProperty.call(state, "artifacts")
     ? Reflect.get(state, "artifacts")
@@ -215,9 +228,23 @@ const artifactPanel = useArtifactsPanel({
   authoritativeArtifacts,
   historyLoading: stream.isHistoryLoading,
 });
-const sidecar = useSidecar({ parentThreadId: routeThreadId, context });
+const sidecar = useSidecar({ parentThreadId: streamThreadId, context });
 const sidecarReady = ref(false);
 const browserOpen = ref(false);
+const agentBrowserEnabled = computed(
+  () =>
+    !props.agentName ||
+    (agent.value !== null &&
+      (agent.value.tool_groups == null ||
+        agent.value.tool_groups.includes("browser"))),
+);
+const browserEnabled = computed(
+  () =>
+    Boolean(routeThreadId.value) &&
+    !isDemo.value &&
+    features.browserControlEnabled.value &&
+    agentBrowserEnabled.value,
+);
 watch(
   () => sidecar.sidecarThreadId.value,
   () => {
@@ -382,6 +409,7 @@ const promptHistory = computed(() =>
     .filter(Boolean),
 );
 const currentTitle = computed(() => {
+  if (isDemo.value && demoTitle.value) return demoTitle.value;
   if (!routeThreadId.value) return "New Chat";
   return (
     threads.threads.find((thread) => thread.thread_id === routeThreadId.value)
@@ -498,7 +526,7 @@ async function refreshThreadTokenUsage(targetThreadId: string | null) {
 }
 
 watch(
-  routeThreadId,
+  streamThreadId,
   (threadId) => {
     void refreshThreadTokenUsage(threadId);
   },
@@ -506,6 +534,7 @@ watch(
 );
 
 async function ensureThread() {
+  if (isDemo.value) throw new Error("Demo conversations are read-only.");
   if (routeThreadId.value) return routeThreadId.value;
   if (preparedThreadId.value) return preparedThreadId.value;
   const created = await getAPIClient().threads.create({
@@ -519,6 +548,7 @@ async function ensureThread() {
 }
 
 async function send(text: string, files: FileInMessage[]) {
+  if (isDemo.value) return;
   followups.value = [];
   mainTailRequest.value += 1;
   try {
@@ -553,6 +583,7 @@ async function respondHumanInput(
   request: HumanInputRequest,
   response: HumanInputResponse,
 ) {
+  if (isDemo.value) return;
   const targetThreadId = routeThreadId.value;
   if (!targetThreadId) return;
   await stream.sendMessage(
@@ -568,6 +599,7 @@ async function respondHumanInput(
   );
 }
 async function branch(messageId: string, messageIds: string[]) {
+  if (isDemo.value) return;
   if (!routeThreadId.value) return;
   const original = threads.threads.find(
     (thread) => thread.thread_id === routeThreadId.value,
@@ -596,14 +628,17 @@ async function branch(messageId: string, messageIds: string[]) {
   await router.push(path);
 }
 async function regenerate(messageId: string, messageIds: string[]) {
+  if (isDemo.value) return;
   if (routeThreadId.value) {
     await stream.regenerateMessage(routeThreadId.value, messageId, messageIds);
   }
 }
 function beginEdit(messageId: string, text: string, messageIds: string[]) {
+  if (isDemo.value) return;
   editState.value = { messageId, text, messageIds };
 }
 async function updateAndRerun() {
+  if (isDemo.value) return;
   if (!routeThreadId.value || !editState.value) return;
   const pending = editState.value;
   editState.value = null;
@@ -634,6 +669,7 @@ onMounted(() => {
   );
 });
 onMounted(async () => {
+  if (isDemo.value) return;
   try {
     const config = await loadSuggestionsConfig();
     suggestionsEnabled.value = config.enabled;
@@ -643,22 +679,24 @@ onMounted(async () => {
   }
 });
 onMounted(async () => {
-  if (route.query.mock !== "true" || !routeThreadId.value) return;
+  if (!isDemo.value || !routeThreadId.value) return;
   try {
     const response = await globalThis.fetch(
       `/demo/threads/${encodeURIComponent(routeThreadId.value)}/thread.json`,
     );
     if (!response.ok) return;
     const fixture = (await response.json()) as {
-      values?: { messages?: Message[] };
+      values?: { messages?: Message[]; artifacts?: string[]; title?: string };
     };
     demoMessages.value = fixture.values?.messages ?? [];
+    demoArtifacts.value = fixture.values?.artifacts ?? [];
+    demoTitle.value = fixture.values?.title;
   } catch {
     demoMessages.value = null;
   }
 });
 onMounted(async () => {
-  if (!initialRouteThreadId) return;
+  if (!initialRouteThreadId || isDemo.value) return;
   try {
     const [thread, state] = await Promise.all([
       getAPIClient().threads.get(initialRouteThreadId),
@@ -670,6 +708,14 @@ onMounted(async () => {
     });
   } catch {
     await router.replace("/workspace/chats/new");
+  }
+});
+onMounted(async () => {
+  if (!props.agentName || isDemo.value) return;
+  try {
+    agent.value = await getAgent(props.agentName);
+  } catch {
+    agent.value = null;
   }
 });
 onUnmounted(() =>
@@ -714,6 +760,7 @@ onUnmounted(() => {
           "
         >
           <button
+            v-if="!isDemo"
             type="button"
             data-sidebar="trigger"
             aria-label="Toggle sidebar"
@@ -727,7 +774,7 @@ onUnmounted(() => {
           <div class="min-w-0 flex-1 truncate text-sm font-medium">
             {{ currentTitle }}
           </div>
-          <ContextUsageBadge :context-usage="contextUsage" />
+          <ContextUsageBadge v-if="!isDemo" :context-usage="contextUsage" />
           <span
             v-if="agentName"
             class="bg-secondary text-secondary-foreground rounded-full px-2.5 py-1 text-xs"
@@ -757,12 +804,9 @@ onUnmounted(() => {
               }
             "
           />
-          <BrowserTrigger
-            v-if="routeThreadId && features.browserControlEnabled.value"
-            @open="openBrowser"
-          />
+          <BrowserTrigger v-if="browserEnabled" @open="openBrowser" />
           <NuxtLink
-            v-if="routeThreadId"
+            v-if="routeThreadId && !isDemo"
             :to="`/workspace/scheduled-tasks?thread_id=${encodeURIComponent(routeThreadId)}`"
             aria-label="Scheduled tasks"
             class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
@@ -770,7 +814,7 @@ onUnmounted(() => {
             <CalendarClock :size="16" />
           </NuxtLink>
           <button
-            v-if="sidecar.sidecarThreadId.value && sidecarReady"
+            v-if="!isDemo && sidecar.sidecarThreadId.value && sidecarReady"
             type="button"
             data-testid="sidecar-header-trigger"
             :aria-label="
@@ -782,7 +826,7 @@ onUnmounted(() => {
             ◫
           </button>
           <button
-            v-if="!isWelcomeMode"
+            v-if="!isWelcomeMode && !isDemo"
             type="button"
             aria-label="Share conversation"
             class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
@@ -798,7 +842,10 @@ onUnmounted(() => {
           :streaming="stream.isStreaming.value"
           :loading="stream.isHistoryLoading.value"
           :thread-id="routeThreadId"
+          :artifact-paths="artifactPanel.artifacts.value"
+          :is-mock="isDemo"
           :tail-request="mainTailRequest"
+          :interactive="!isDemo"
           selection-mode="main"
           test-id="main-message-list"
           @artifact="openArtifact"
@@ -942,6 +989,7 @@ onUnmounted(() => {
               :references="sidecar.conversationQuotes.value"
               :context="context"
               :goal="activeGoal"
+              :disabled="isDemo"
               @send="send"
               @stop="stream.stop()"
               @uploading-change="
@@ -969,8 +1017,9 @@ onUnmounted(() => {
         :opened-presented-artifacts="
           artifactPanel.openedPresentedArtifacts.value
         "
-        :messages="stream.messages.value"
+        :messages="demoMessages ?? stream.messages.value"
         :streaming="stream.isStreaming.value"
+        :is-mock="isDemo"
         @close="artifactPanel.close()"
         @select="artifactPanel.select($event)"
       />

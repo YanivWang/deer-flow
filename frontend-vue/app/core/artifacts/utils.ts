@@ -106,23 +106,34 @@ export function extractArtifactsFromThread(thread: {
   return thread.values.artifacts ?? EMPTY_ARTIFACT_PATHS;
 }
 
-export function resolveArtifactURL(absolutePath: string, threadId: string) {
+export function resolveArtifactURL(
+  absolutePath: string,
+  threadId: string,
+  options: { isMock?: boolean } = {},
+) {
+  if (options.isMock) {
+    return urlOfArtifact({ filepath: absolutePath, threadId, isMock: true });
+  }
   return `${getBackendBaseURL()}/api/threads/${encodeURIComponent(threadId)}/artifacts${encodeArtifactPath(absolutePath)}`;
 }
 
-export function resolveMarkdownArtifactURL(src: string, threadId: string) {
+export function resolveMarkdownArtifactURL(
+  src: string,
+  threadId: string,
+  options: { isMock?: boolean } = {},
+) {
   const { path, suffix } = splitPathSuffix(src);
-  return `${resolveArtifactURL(path, threadId)}${suffix}`;
+  return `${resolveArtifactURL(path, threadId, options)}${suffix}`;
 }
 
 export function resolveMessageImageURL(
   src: string,
   threadId: string,
   artifactPaths: readonly string[],
-  options: { fallbackToOutputs?: boolean } = {},
+  options: { fallbackToOutputs?: boolean; isMock?: boolean } = {},
 ) {
   if (src.startsWith("/mnt/")) {
-    return resolveMarkdownArtifactURL(src, threadId);
+    return resolveMarkdownArtifactURL(src, threadId, options);
   }
 
   const imagePath = normalizeMessageImagePath(src);
@@ -134,7 +145,7 @@ export function resolveMessageImageURL(
     path.endsWith(`/${imagePath.decodedNormalizedPath}`),
   );
   if (matches.length === 1) {
-    return `${resolveArtifactURL(matches[0]!, threadId)}${imagePath.suffix}`;
+    return `${resolveArtifactURL(matches[0]!, threadId, options)}${imagePath.suffix}`;
   }
 
   if (!options.fallbackToOutputs) {
@@ -144,5 +155,6 @@ export function resolveMessageImageURL(
   return `${resolveArtifactURL(
     `/mnt/user-data/outputs/${imagePath.decodedNormalizedPath}`,
     threadId,
+    options,
   )}${imagePath.suffix}`;
 }

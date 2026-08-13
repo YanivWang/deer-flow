@@ -88,6 +88,7 @@ const props = defineProps<{
   references?: SidecarReference[];
   context?: ThreadRunContextInput;
   goal?: GoalState | null;
+  disabled?: boolean;
 }>();
 const { $i18n } = useNuxtApp();
 const emit = defineEmits<{
@@ -231,6 +232,7 @@ watch(suggestions, () => {
 
 onMounted(async () => {
   restore();
+  if (props.disabled) return;
   try {
     skills.value = await loadSkills();
   } catch {
@@ -357,6 +359,7 @@ function selectSuggestion() {
 }
 
 async function submit() {
+  if (props.disabled) return;
   if (suggestions.value.length > 0 && selectSuggestion()) return;
   const plain = input.value.trim();
   const text = selectedSkill.value
@@ -577,7 +580,12 @@ defineExpose({ replaceDraft });
 <template>
   <div class="relative flex min-w-0 flex-col gap-2">
     <GoalStatus v-if="goal" :goal="goal" />
-    <form class="mx-auto w-full" @submit.prevent="submit">
+    <form
+      class="mx-auto w-full"
+      :class="disabled ? 'pointer-events-none opacity-60' : ''"
+      :aria-disabled="disabled"
+      @submit.prevent="submit"
+    >
       <ReferenceAttachment
         :references="references ?? []"
         test-id="conversation-quote-attachment"
@@ -618,7 +626,7 @@ defineExpose({ replaceDraft });
             ref="chipInput"
             role="textbox"
             aria-label="How can I assist you today?"
-            contenteditable="true"
+            :contenteditable="disabled ? 'false' : 'true'"
             class="min-h-10 flex-1 px-1 py-2 text-sm outline-none"
             @input="onChipInput"
             @keydown="onKeydown"
@@ -635,7 +643,7 @@ defineExpose({ replaceDraft });
           placeholder="How can I assist you today?"
           rows="2"
           class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none"
-          :disabled="polishing"
+          :disabled="disabled || polishing"
           @keydown="onKeydown"
           @compositionstart="compositionActive = true"
           @compositionend="compositionActive = false"
@@ -818,7 +826,9 @@ defineExpose({ replaceDraft });
             type="submit"
             class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full disabled:opacity-50"
             aria-label="Send"
-            :disabled="!input.trim() && selectedFiles.length === 0"
+            :disabled="
+              disabled || (!input.trim() && selectedFiles.length === 0)
+            "
           >
             <ArrowUp :size="16" />
             <span aria-hidden="true" class="sr-only">Submit</span>

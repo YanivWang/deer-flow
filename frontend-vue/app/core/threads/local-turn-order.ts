@@ -15,7 +15,12 @@
                    那边没分。
 */
 
-import { isHiddenFromUIMessage } from "../messages/utils";
+import { getMessageRunId } from "../messages/run-duration";
+import {
+  hasContent,
+  hasToolCalls,
+  isHiddenFromUIMessage,
+} from "../messages/utils";
 import type { Message } from "../types/message";
 
 import { messageIdentity } from "./message-identity";
@@ -70,5 +75,91 @@ export function restoreLocalTurnMessageOrder(
     messages[pendingHumanIndex]!,
     ...earlyPendingSteps,
     ...messages.slice(pendingHumanIndex + 1),
+  ];
+}
+
+/**
+ * Heal the same-run sandwich produced when a client reconnects in the middle
+ * of a run: a live AI/tool step can arrive before the persisted human input,
+ * while a later step from the same run is already below it.
+ *
+ * This intentionally requires same-run evidence on both sides of the human
+ * message. It never timestamp-sorts history, moves completed answers, or
+ * guesses that an older pagination orphan belongs to the active run.
+ */
+export function restoreReconnectedTurnMessageOrder(
+  messages: Message[],
+): Message[] {
+  let humanIndex = -1;
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index];
+    if (message?.type === "human" && !isHiddenFromUIMessage(message)) {
+      humanIndex = index;
+      break;
+    }
+  }
+  if (humanIndex <= 0) return messages;
+
+  let segmentStart = 0;
+  for (let index = humanIndex - 1; index >= 0; index--) {
+    const message = messages[index];
+    if (message?.type === "human" && !isHiddenFromUIMessage(message)) {
+      segmentStart = index + 1;
+      break;
+    }
+  }
+  if (segmentStart >= humanIndex) return messages;
+
+  let candidateStart = segmentStart;
+  for (let index = segmentStart; index < humanIndex; index++) {
+    const message = messages[index]!;
+    if (
+      message.type === "ai" &&
+      !isHiddenFromUIMessage(message) &&
+      hasContent(message) &&
+      !hasToolCalls(message)
+    ) {
+      candidateStart = index + 1;
+    }
+  }
+
+  const runIdsAfter = new Set<string>();
+  let hasLiveOnlyStepAfter = false;
+  for (const message of messages.slice(humanIndex + 1)) {
+    const runId = getMessageRunId(message);
+    if (runId) {
+      runIdsAfter.add(runId);
+    } else if (
+      (message.type === "ai" || message.type === "tool") &&
+      !isHiddenFromUIMessage(message)
+    ) {
+      hasLiveOnlyStepAfter = true;
+    }
+  }
+
+  const misplacedSteps: Message[] = [];
+  const stablePrefix = messages.slice(0, candidateStart);
+  for (const message of messages.slice(candidateStart, humanIndex)) {
+    const isVisibleStep =
+      (message.type === "ai" || message.type === "tool") &&
+      !isHiddenFromUIMessage(message);
+    const runId = getMessageRunId(message);
+    if (
+      isVisibleStep &&
+      ((runId !== undefined && runIdsAfter.has(runId)) ||
+        (runId === undefined && hasLiveOnlyStepAfter))
+    ) {
+      misplacedSteps.push(message);
+    } else {
+      stablePrefix.push(message);
+    }
+  }
+  if (misplacedSteps.length === 0) return messages;
+
+  return [
+    ...stablePrefix,
+    messages[humanIndex]!,
+    ...misplacedSteps,
+    ...messages.slice(humanIndex + 1),
   ];
 }

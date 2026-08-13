@@ -11,6 +11,8 @@ RUN cd frontend-vue && pnpm install --frozen-lockfile --strict-peer-dependencies
 
 FROM dependencies AS build
 COPY frontend-vue ./frontend-vue
+COPY frontend/public/demo ./frontend/public/demo
+COPY frontend/public/images ./frontend/public/images
 RUN cd frontend-vue && pnpm exec nuxt build
 
 FROM node:22.22.3-bookworm-slim AS runtime

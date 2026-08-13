@@ -45,6 +45,7 @@ const props = defineProps<{
   openedPresentedArtifacts: string[];
   messages: Message[];
   streaming: boolean;
+  isMock?: boolean;
 }>();
 const emit = defineEmits<{
   close: [];
@@ -124,7 +125,11 @@ const previewState = computed(() =>
   }),
 );
 const src = computed(() =>
-  urlOfArtifact({ filepath: filepath.value, threadId: props.threadId }),
+  urlOfArtifact({
+    filepath: filepath.value,
+    threadId: props.threadId,
+    isMock: props.isMock,
+  }),
 );
 const options = computed(() => {
   const opened = props.openedPresentedArtifacts.filter(
@@ -144,7 +149,7 @@ const canEdit = computed(() =>
     isCodeFile: codeFile.value,
     isWriteFile: isWrite.value,
     isSkillFile: filepath.value.endsWith(".skill"),
-    isMock: false,
+    isMock: props.isMock ?? false,
     hasRevision: Boolean(sha256.value),
     isStaticWebsite: false,
   }),
@@ -170,6 +175,7 @@ async function load(full = false) {
       const result = await loadArtifactContent({
         filepath: props.selected,
         threadId: props.threadId,
+        isMock: props.isMock,
         full,
       });
       content.value = result.content;
@@ -341,7 +347,7 @@ async function save() {
         <Save :size="15" />
       </button>
       <a
-        :href="urlOfArtifact({ filepath, threadId, download: true })"
+        :href="urlOfArtifact({ filepath, threadId, download: true, isMock })"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Download artifact"

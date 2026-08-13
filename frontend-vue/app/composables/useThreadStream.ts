@@ -62,7 +62,10 @@ import {
   mapInfiniteThreadsCache,
 } from "@/core/threads/infinite";
 import type { AgentThread } from "@/core/threads/types";
-import { restoreLocalTurnMessageOrder } from "@/core/threads/local-turn-order";
+import {
+  restoreLocalTurnMessageOrder,
+  restoreReconnectedTurnMessageOrder,
+} from "@/core/threads/local-turn-order";
 import {
   isNonEmptyString,
   messageIdentity,
@@ -503,7 +506,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
       visibleOptimisticMessages.value,
     );
     return localTurnOrderBaseline === null
-      ? merged
+      ? restoreReconnectedTurnMessageOrder(merged)
       : restoreLocalTurnMessageOrder(merged, localTurnOrderBaseline);
   });
 

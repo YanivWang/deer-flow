@@ -104,6 +104,67 @@ function staticDemoArtifactURL({
 `,
       replace: "",
     },
+    {
+      why: [
+        "Vue exposes public showcase threads through an explicit read-only route instead of React's process-wide static mode.",
+        "Thread the existing isMock artifact transport through markdown image resolution so demo images use the allowlisted mock endpoint without changing production URLs.",
+      ].join(" "),
+      find: `export function resolveArtifactURL(absolutePath: string, threadId: string) {
+  return \`\${getBackendBaseURL()}/api/threads/\${encodeURIComponent(threadId)}/artifacts\${encodeArtifactPath(absolutePath)}\`;
+}
+
+export function resolveMarkdownArtifactURL(src: string, threadId: string) {
+  const { path, suffix } = splitPathSuffix(src);
+  return \`\${resolveArtifactURL(path, threadId)}\${suffix}\`;
+}`,
+      replace: `export function resolveArtifactURL(
+  absolutePath: string,
+  threadId: string,
+  options: { isMock?: boolean } = {},
+) {
+  if (options.isMock) {
+    return urlOfArtifact({ filepath: absolutePath, threadId, isMock: true });
+  }
+  return \`\${getBackendBaseURL()}/api/threads/\${encodeURIComponent(threadId)}/artifacts\${encodeArtifactPath(absolutePath)}\`;
+}
+
+export function resolveMarkdownArtifactURL(
+  src: string,
+  threadId: string,
+  options: { isMock?: boolean } = {},
+) {
+  const { path, suffix } = splitPathSuffix(src);
+  return \`\${resolveArtifactURL(path, threadId, options)}\${suffix}\`;
+}`,
+    },
+    {
+      why: "Carry the explicit showcase transport flag through absolute, matched-relative, and fallback output image resolution.",
+      find: `  options: { fallbackToOutputs?: boolean } = {},
+) {
+  if (src.startsWith("/mnt/")) {
+    return resolveMarkdownArtifactURL(src, threadId);
+  }`,
+      replace: `  options: { fallbackToOutputs?: boolean; isMock?: boolean } = {},
+) {
+  if (src.startsWith("/mnt/")) {
+    return resolveMarkdownArtifactURL(src, threadId, options);
+  }`,
+    },
+    {
+      why: "Matched relative image paths must use the same explicit transport as the enclosing thread.",
+      find: `    return \`\${resolveArtifactURL(matches[0]!, threadId)}\${imagePath.suffix}\`;`,
+      replace: `    return \`\${resolveArtifactURL(matches[0]!, threadId, options)}\${imagePath.suffix}\`;`,
+    },
+    {
+      why: "Fallback /mnt/user-data/outputs paths must use the same explicit transport as the enclosing thread.",
+      find: `    \`/mnt/user-data/outputs/\${imagePath.decodedNormalizedPath}\`,
+    threadId,
+  )}\${imagePath.suffix}\`;`,
+      replace: `    \`/mnt/user-data/outputs/\${imagePath.decodedNormalizedPath}\`,
+    threadId,
+    options,
+  )}\${imagePath.suffix}\`;`,
+    },
   ],
   "models/api.ts": [
     {
@@ -249,6 +310,85 @@ export function isAuthDisabledMode() {
       replace: `import { getDeerFlowRuntimeOptions } from "../config";
 
 import type { User } from "./types";`,
+    },
+  ],
+  "threads/utils.ts": [
+    {
+      why: "Buzz 是当前 Gateway 渠道来源；Vue 必须显示与 React 相同的产品标签。",
+      find: `const CHANNEL_PROVIDER_LABELS: Record<string, string> = {
+  dingtalk: "DingTalk",`,
+      replace: `const CHANNEL_PROVIDER_LABELS: Record<string, string> = {
+  buzz: "Buzz",
+  dingtalk: "DingTalk",`,
+    },
+  ],
+  "i18n/locales/en-US.ts": [
+    {
+      why: "The current Gateway supports per-user Lark app credential switching; keep the Vue-owned settings UI on the same localized product contract as React.",
+      find: `        alreadyConnected:
+          "Lark is already connected. If authorization expires, refresh the status and reconnect.",
+        connectionStarted: "Connection link opened",`,
+      replace: `        alreadyConnected:
+          "Lark is already connected. If authorization expires, refresh the status and reconnect.",
+        changeAppButton: "Change Lark app",
+        changeAppTitle: "Switch to a different Lark app",
+        changeAppDescription:
+          "Point your DeerFlow account at a different Lark/Feishu app. This only affects your account; other users are not changed.",
+        changeAppIdLabel: "App ID",
+        changeAppSecretLabel: "App Secret",
+        changeAppAuthResetNote:
+          "Switching revokes the previous app's authorization. You will authorize the new app next.",
+        changeAppSubmit: "Switch app",
+        changeAppReRegister: "Re-register in browser",
+        changeAppSwitched:
+          "Lark app switched. Reconnect to authorize the new app.",
+        brandFeishu: "Feishu",
+        brandLark: "Lark",
+        connectionStarted: "Connection link opened",`,
+    },
+  ],
+  "i18n/locales/zh-CN.ts": [
+    {
+      why: "Keep the Chinese Lark credential-switching copy in the generated locale contract instead of hard-coding English in the Vue component.",
+      find: `        alreadyConnected:
+          "飞书已连接，无需重复授权。如果授权已过期，刷新状态后可重新连接。",
+        connectionStarted: "连接链接已打开",`,
+      replace: `        alreadyConnected:
+          "飞书已连接，无需重复授权。如果授权已过期，刷新状态后可重新连接。",
+        changeAppButton: "切换飞书 Bot",
+        changeAppTitle: "切换到其他飞书 App",
+        changeAppDescription:
+          "把你的 DeerFlow 账号指向另一个 Lark/飞书 App。只影响你自己的账号，不影响其他用户。",
+        changeAppIdLabel: "App ID",
+        changeAppSecretLabel: "App Secret",
+        changeAppAuthResetNote:
+          "切换时会撤销旧 App 的授权，随后需要授权新 App。",
+        changeAppSubmit: "切换 App",
+        changeAppReRegister: "在浏览器重新注册",
+        changeAppSwitched: "已切换飞书 App。请重新连接以授权新 App。",
+        brandFeishu: "飞书",
+        brandLark: "Lark",
+        connectionStarted: "连接链接已打开",`,
+    },
+  ],
+  "i18n/locales/types.ts": [
+    {
+      why: "Declare the localized Lark credential-switching contract added to both generated dictionaries.",
+      find: `        alreadyConnected: string;
+        connectionStarted: string;`,
+      replace: `        alreadyConnected: string;
+        changeAppButton: string;
+        changeAppTitle: string;
+        changeAppDescription: string;
+        changeAppIdLabel: string;
+        changeAppSecretLabel: string;
+        changeAppAuthResetNote: string;
+        changeAppSubmit: string;
+        changeAppReRegister: string;
+        changeAppSwitched: string;
+        brandFeishu: string;
+        brandLark: string;
+        connectionStarted: string;`,
     },
   ],
 };

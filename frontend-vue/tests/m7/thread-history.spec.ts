@@ -1,10 +1,10 @@
 /*
-  【文件职责】     Vue thread history contracts；冻结 Vue M7 范围，不随 React 新功能扩张。
+  【文件职责】     Vue thread history contracts；验证与 React 产品行为对齐的 Vue 实现。
   【对应 frontend/】 frontend/tests/e2e/thread-history.spec.ts
   【架构位置】     测试
   【主要导出】     Playwright Vue M7 scenarios
   【依赖关系】     frontend shared mock API；Vue product routes and DOM
-  【边界与注意】   只验证 Vue 已交付合同；React 新功能进入 Vue 前必须独立迁移和验收。
+  【边界与注意】   Vue 使用自身 DOM 与门禁，不依赖 React 组件结构。
 */
 
 import { expect, test, type Route } from "@playwright/test";
@@ -749,6 +749,35 @@ test.describe("Thread history", () => {
       page.getByText("I've created a modern, minimalist website"),
     ).toBeVisible();
     expect(backendRunHistoryUrls).toEqual([]);
+  });
+
+  test("public showcase renders a read-only demo without workspace chrome", async ({
+    page,
+  }) => {
+    const response = await page.goto(`/showcase/${DEMO_THREAD_ID}`);
+    expect(response?.status()).toBe(200);
+    await expect(
+      page.getByText("What might be the trends and opportunities in 2026?"),
+    ).toBeVisible();
+    await expect(page.locator("[data-sidebar='sidebar']")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
+    await expect(page.getByTestId("browser-trigger")).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: "Scheduled tasks" }),
+    ).toHaveCount(0);
+
+    const artifact = await page.request.get(
+      `/mock/api/threads/${DEMO_THREAD_ID}/artifacts/mnt/user-data/outputs/index.html`,
+    );
+    expect(artifact.status()).toBe(200);
+    expect(await artifact.text()).toContain("<!doctype html>");
+    const unlistedArtifact = await page.request.get(
+      `/mock/api/threads/${DEMO_THREAD_ID}/artifacts/mnt/user-data/outputs/not-allowlisted.html`,
+    );
+    expect(unlistedArtifact.status()).toBe(404);
+
+    const missing = await page.request.get("/showcase/not-a-public-demo");
+    expect(missing.status()).toBe(404);
   });
 
   test("chats list page shows all threads", async ({ page }) => {

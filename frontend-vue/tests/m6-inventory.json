@@ -1,10 +1,10 @@
 {
   "expectedFileCount": 8,
-  "expectedTestCount": 27,
+  "expectedTestCount": 30,
   "specFiles": [
     "frontend/tests/e2e/sidebar.spec.ts",
     "frontend/tests/e2e/settings-notification.spec.ts",
-    "frontend/tests/e2e/integrations.spec.ts",
+    "frontend-vue/tests/m7/integrations.spec.ts",
     "frontend/tests/e2e/channels.spec.ts",
     "frontend/tests/e2e/scheduled-tasks.spec.ts",
     "frontend/tests/e2e/browser-feature.spec.ts",

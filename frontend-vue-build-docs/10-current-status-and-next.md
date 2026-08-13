@@ -6,13 +6,14 @@
 ## 1. 当前结论
 
 - **M-1 至 M8 的仓库内非可选实现均已关闭；M7 现为无仓库例外的 GO。**
-- Vue 自有 M7 inventory 精确为 **25 files / 120 tests**，已在同一 checkout 连续三次
-  **120/120**。框架无关的产品合同可复用 React spec；框架特定的 batched-stream 和
+- Vue 自有 M7 inventory 精确为 **25 files / 130 tests**，已在同一 checkout 连续三次
+  **130/130**。框架无关的产品合同可复用 React spec；框架特定的 batched-stream 和
   splitpanes/artifact panel 行为由 Vue spec 拥有，不再用 React DOM、动画事件或 basename
   碰撞约束 Vue 实现。
-- `origin/main@e4a7a047` 新增 React Browser Live、Lark、showcase 等行为后，旧共享收集会
-  漂到 130。Vue 没有把期望值强改成 130，也没有叠产品兼容层；agent-chat、channels、
-  integrations、thread-history 已冻结为 Vue 自有 spec，React 后续功能按显式迁移决定是否进入。
+- 合并提交 `44832a5e` 带入的 React Browser Live、Lark app 切换、Buzz、public Showcase
+  和同 run 重连排序已逐项显式迁入 Vue，并增加 10 个 Vue-owned 浏览器合同；不是把 React
+  DOM spec 强塞给 Vue。Chat page/provider 拆分、`nanoid` 补丁与 OpenViking 英文文档没有可迁移
+  的 Vue 产品语义，已审计但未制造对应兼容层。
 - 历史 118/120 的两项治理例外已经真正关闭：协议不完整的 batched fixture 不再进入 Vue
   门禁；artifact transition 观察在产品动作前安装，或直接验证稳定最终产品状态。Vue 的
   production fail-closed 和正确自动打开均未削弱。
@@ -22,7 +23,8 @@
   外层 LB/CDN、真实 IdP 和目标 runtime 验证按用户明确要求不在本轮执行，状态为 **UNRUN**，
   不是 GO，也不阻塞本次仓库合并。
 
-完整根因、命令、三连时间、warnings 和目标环境矩阵见
+本轮逐项映射、命令、三连时间、warnings 和目标环境边界见
+[React parity 收口 evidence](evidence/react-parity-closure-2026-08-14.md)。历史 118/120 根因见
 [M7 Vue 最终收口 evidence](evidence/m7-vue-gate-final-closure.md)。
 
 ## 2. 代码与测试所有权
@@ -34,7 +36,7 @@
 | Workspace panel | splitpanes 原生 size/keyboard/ARIA；release 后持久化/折叠 | 注入 React `data-slot`/`data-separator`、复制 keyboard、固定动画 timer、`flexGrow` 钉宽 |
 | Batched stream | Vue protocol-complete fixture/spec | 在产品代码伪造 `Content-Location`/`end`，或接受不完整成功流 |
 | Framework-neutral behavior | 可复用 `frontend/tests/e2e/**` | 要求 Vue 复刻 React DOM/transition event 次数 |
-| Vue release behavior | `frontend-vue/tests/m7/**` 冻结 Vue 当前范围 | React 新功能自动扩大 Vue 门禁、为对齐而堆兼容层 |
+| Vue release behavior | `frontend-vue/tests/m7/**` 显式承接已迁移功能 | React 新功能自动扩大 Vue 门禁、为对齐而堆兼容层 |
 | M7 inventory | 完整路径清单 + `playwright.m7.config.ts` | 仅用 basename 让 React/Vue 同名 spec 碰撞 |
 
 `tests/guards/e2e-command-contract.test.ts` 固定上述边界；CI 的
@@ -60,26 +62,28 @@ L1/L2/L3 边界保持：
 
 | 命令/范围 | 当前结果 | 边界 |
 | --- | --- | --- |
-| `make verify` | **通过**；108 files / 1095 tests；lint 0 errors/35 warnings | unit/type/build/i18n/OpenAPI/header/provenance |
+| `make verify` | **通过**；110 files / 1101 tests；lint 0 errors/38 warnings | unit/type/build/i18n/OpenAPI/header/provenance |
 | `make migration-check` | **通过**；58 generated tests、24 `RETYPED` | 迁移账本，不是 E2E |
 | `make e2e-m4a` | **4/4** | send/stream/stop/reload |
 | `make e2e-m4a-stream` | **3/3** | chunked SSE、heartbeat、resume cursor/gap |
-| `make e2e-m4b` | **11 files / 66 tests，66/66** | 通用 Agent UI |
+| `make e2e-m4b` | **11 files / 73 tests，73/73** | 当前共享通用 Agent UI |
 | `make e2e-m5` | **6 files / 27 tests，27/27** | Vue 自有 batched/panel spec + framework-neutral artifact/sidecar |
 | `make e2e-m5-real-backend` | **1/1** | replay Gateway write-file artifact |
-| `make e2e-m7-list` | **25 files / 120 tests** | 精确完整路径 inventory |
-| `make e2e-m7` | **120/120 × 3 连续** | 合并 `origin/main@e4a7a047` 后 36.5s、36.9s、36.7s；0 retries |
+| `make e2e-m6` | **8 files / 30 tests，30/30** | Integrations 使用 Vue-owned spec；其余框架无关合同共享 |
+| `make e2e-m6-real-backend` | **1/1** | Gateway browser REST/WS → binary frame |
+| `make e2e-m7-list` | **25 files / 130 tests** | 精确完整路径 inventory |
+| `make e2e-m7` | **130/130 × 3 连续** | 移除新增显式 timeout 后 33.7s、33.8s、33.7s；0 retries |
 | `make e2e-m7-real-protocol` | **1/1** | create/resume/heartbeat/cancel/gap/recovery |
 | `make e2e-real-backend` | **3/3** | auth-disabled、multi-run order、real render |
-| `make asset-budget` | **通过**；CodeMirror 0 | build graph raw/gzip hard budgets |
+| `make asset-budget` | **通过**；CodeMirror 0；vendor-ui max 46.7 KiB | Integrations 按需加载后通过原预算 |
 
-本次 main 合并的 React 侧回归：`pnpm check` 通过；Vitest **128 files / 1001 tests**；
+本次 main 合并的 React 来源侧回归：`pnpm check` 通过；相关 Rstest **6 files / 115 tests**；
 agent-chat/channels/integrations/thread-history Playwright **40/40**。更早的 artifact preview +
 sidecar **17/17**、React 自有 batched + resize/transition **7/7** 和 real-backend multi-run
 **1/1** 仍保留为历史修复证据。
 
-未在本轮重跑：M6 专项、fixture IdP/browser `e2e-external`、container smoke、七状态 visual。
-它们未被当前代码范围修改，也没有被拿来冒充公网目标环境结果。
+未在本轮重跑：fixture IdP/browser `e2e-external`、container smoke、七状态 visual。它们未被
+当前代码范围修改，也没有被拿来冒充公网目标环境结果。
 
 ## 5. 真实运行环境结论
 
@@ -101,11 +105,15 @@ sidecar **17/17**、React 自有 batched + resize/transition **7/7** 和 real-ba
 
 ## 6. 已知 warnings 与非通过项
 
-- verify 35 lint warnings，0 errors；Nuxt/Vite 仍有大 chunk、plugin timing、Tailwind sourcemap、
+- verify 38 lint warnings，0 errors；Nuxt/Vite 仍有大 chunk、plugin timing、Tailwind sourcemap、
   H3 unused import warning；asset hard budgets 通过。
-- 受限沙箱曾在测试启动前报 `listen EPERM`；不计入三连，允许 loopback 后从 0 重跑三次。
-- real-backend 首轮 multi-run 2/3；加入 seed 后同一 thread-global page 的 200/4-row 前置断言后
-  最终 3/3。没有 sleep、retry 或扩大 timeout。
+- 受限沙箱曾在 verify/M6 启动前报 `listen EPERM`；不计入产品失败，允许 loopback 后从 0
+  重跑。M6 初次仍引用 React Integrations 文本定位，两个合法同文案节点导致 strict-mode
+  失败；切换到等价 Vue-owned 6-test spec 后 30/30。没有删产品状态、sleep、retry 或扩大 timeout。
+- 最终 verify 首轮发现 M6 guard 仍写死 27；同步守卫到 30 并明确排除 React Integrations
+  spec 后完整 1101/1101 通过。
+- 资产首次为 `vendor-ui.maxRaw 62388 > 60000`；没有调预算，改为按需加载 Integrations，最终
+  max 46.7 KiB。
 - 本机 `make doctor` 非绿：native nginx 未安装，`config.yaml` v31 < v32，web_capture 未配置；
   provider 本身配置并可用。没有修改用户 config 或 `.env`。
 

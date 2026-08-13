@@ -39,8 +39,10 @@ async function refreshFeatures() {
   }
 }
 
-export function useWorkspaceFeatures() {
-  onMounted(() => void refreshFeatures());
+export function useWorkspaceFeatures(options: { enabled?: boolean } = {}) {
+  onMounted(() => {
+    if (options.enabled !== false) void refreshFeatures();
+  });
   return {
     loaded: readonly(loaded),
     agentsApiEnabled: readonly(agentsApiEnabled),

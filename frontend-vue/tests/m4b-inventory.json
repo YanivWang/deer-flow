@@ -1,6 +1,6 @@
 {
   "expectedFileCount": 11,
-  "expectedTestCount": 66,
+  "expectedTestCount": 73,
   "specFiles": [
     "agent-chat.spec.ts",
     "branch-thread.spec.ts",

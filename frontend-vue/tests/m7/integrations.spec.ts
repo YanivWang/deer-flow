@@ -1,15 +1,48 @@
 /*
-  【文件职责】     Vue integration settings contracts；冻结 Vue M7 范围，不随 React 新功能扩张。
+  【文件职责】     Vue integration settings contracts；验证与 React 产品行为对齐的 Vue 实现。
   【对应 frontend/】 frontend/tests/e2e/integrations.spec.ts
   【架构位置】     测试
   【主要导出】     Playwright Vue M7 scenarios
   【依赖关系】     frontend shared mock API；Vue product routes and DOM
-  【边界与注意】   只验证 Vue 已交付合同；React 新功能进入 Vue 前必须独立迁移和验收。
+  【边界与注意】   Vue 使用自身 DOM 与门禁，不依赖 React 组件结构。
 */
 
 import { expect, test } from "@playwright/test";
 
 import { mockLangGraphAPI } from "../../../frontend/tests/e2e/utils/mock-api";
+
+function configuredLarkStatus() {
+  return {
+    installed: true,
+    version: "v1.0.65",
+    manifest_version: "v1.0.65",
+    latest_available_version: "v1.0.65",
+    runtime_version_mismatch: false,
+    app_configured: true,
+    app_id: "cli_existing_mock",
+    app_brand: "feishu",
+    skills_expected: 27,
+    skills_installed: 4,
+    installed_skills: ["lark-doc", "lark-im", "lark-shared", "lark-sheets"],
+    enabled_skills: ["lark-doc", "lark-im", "lark-shared", "lark-sheets"],
+    install_path: "/mock/integrations/skills/lark-cli",
+    cli: {
+      available: true,
+      path: "/usr/bin/lark-cli",
+      version: "lark-cli version v1.0.65",
+      error: null,
+    },
+    auth: {
+      status: "authenticated",
+      message: "Lark authorization is live-verified.",
+      user: "existing-user",
+      verified: true,
+    },
+    sandbox_runtime_mode: "none",
+    sandbox_runtime_ready: false,
+    sandbox_runtime_detail: null,
+  };
+}
 
 test.describe("Integrations settings", () => {
   test("opens integrations settings from a query-string deep link", async ({
@@ -22,6 +55,90 @@ test.describe("Integrations settings", () => {
     const dialog = page.getByRole("dialog", { name: "Settings" });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText("Lark / Feishu CLI")).toBeVisible();
+  });
+
+  test("falls back when copying a Lark authorization link without the Clipboard API", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(document, "execCommand", {
+        configurable: true,
+        value: (command: string) => {
+          if (command !== "copy") return false;
+          const copiedText =
+            document.querySelector<HTMLTextAreaElement>(
+              "textarea[readonly]",
+            )?.value;
+          (window as typeof window & { __copiedText?: string }).__copiedText =
+            copiedText;
+          return true;
+        },
+      });
+    });
+    mockLangGraphAPI(page);
+    const configuredStatus = configuredLarkStatus();
+    await page.route("**/api/integrations/lark/status", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...configuredStatus,
+          auth: {
+            status: "not_authorized",
+            message: "Lark user authorization is not configured",
+            user: "existing-user",
+            verified: false,
+          },
+        }),
+      }),
+    );
+    await page.route("**/api/integrations/lark/auth/start", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          verification_url: "about:blank#lark-auth-copy-fallback",
+          device_code: "copy-fallback-device-code",
+          generation: "copy-fallback-generation",
+          expires_in: 600,
+          user_code: null,
+          hint: null,
+        }),
+      }),
+    );
+    await page.route("**/api/integrations/lark/auth/complete", (route) =>
+      route.fulfill({
+        status: 504,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Authorization still pending." }),
+      }),
+    );
+
+    await page.goto("/workspace/chats/new?settings=integrations");
+    const dialog = page.getByRole("dialog", { name: "Settings" });
+    const popupPromise = page.waitForEvent("popup");
+    await dialog.getByRole("button", { name: "Connect Lark" }).click();
+    const popup = await popupPromise;
+    await expect(
+      dialog.getByText("about:blank#lark-auth-copy-fallback"),
+    ).toBeVisible();
+    await popup.close();
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: undefined,
+      });
+    });
+    await dialog.getByRole("button", { name: "Copy link" }).click();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (window as typeof window & { __copiedText?: string }).__copiedText,
+        ),
+      )
+      .toBe("about:blank#lark-auth-copy-fallback");
+    await expect(page.getByText("Copied to clipboard")).toBeVisible();
   });
 
   test("keeps a single settings dialog across deep link and nav menu openings", async ({
@@ -82,6 +199,7 @@ test.describe("Integrations settings", () => {
         body: JSON.stringify({
           verification_url: "about:blank",
           device_code: "mock-config-device-code",
+          generation: "config-generation",
           expires_in: 600,
           interval: 5,
           user_code: "config",
@@ -91,12 +209,14 @@ test.describe("Integrations settings", () => {
     });
     await page.route("**/api/integrations/lark/auth/start", async (route) => {
       authStartRequest = route.request().postDataJSON();
+      const request = authStartRequest as { generation?: string };
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
           verification_url: "https://open.feishu.cn/auth/mock-device",
           device_code: "mock-device-code",
+          generation: request.generation ?? "auth-generation",
           expires_in: 600,
           user_code: null,
           hint: null,
@@ -150,16 +270,20 @@ test.describe("Integrations settings", () => {
         recommend: false,
         domains: ["calendar"],
         scope: "calendar:calendar.event:read",
+        generation: "config-generation",
       });
 
     await expect
       .poll(() => authCompleteRequests)
       .toContainEqual({
         device_code: "mock-device-code",
+        generation: "config-generation",
         wait_timeout_seconds: 8,
       });
     await expect(
-      dialog.getByText("Lark authorization is live-verified"),
+      dialog
+        .getByRole("status")
+        .getByText("Lark authorization is live-verified"),
     ).toBeVisible();
     await expect(
       page.getByText("Authorization page opened. Waiting for completion..."),
@@ -171,5 +295,152 @@ test.describe("Integrations settings", () => {
     await expect(
       dialog.getByText("https://open.feishu.cn/auth/mock-device"),
     ).toBeVisible();
+  });
+
+  test("can switch the Lark app by entering new credentials", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page);
+    const configuredStatus = configuredLarkStatus();
+    await page.route("**/api/integrations/lark/status", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(configuredStatus),
+      }),
+    );
+
+    let credentialsRequest: unknown;
+    let releaseCredentials!: () => void;
+    const credentialsGate = new Promise<void>((resolve) => {
+      releaseCredentials = resolve;
+    });
+    await page.route(
+      "**/api/integrations/lark/config/credentials",
+      async (route) => {
+        credentialsRequest = route.request().postDataJSON();
+        await credentialsGate;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            message: "Lark app switched.",
+            generation: "switch-generation",
+            status: {
+              ...configuredStatus,
+              app_id: "cli_new_mock",
+              auth: {
+                status: "not_authorized",
+                message: "not authorized",
+                user: null,
+                verified: false,
+              },
+            },
+          }),
+        });
+      },
+    );
+    let authStartRequest: unknown;
+    await page.route("**/api/integrations/lark/auth/start", async (route) => {
+      authStartRequest = route.request().postDataJSON();
+      const request = authStartRequest as { generation?: string };
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          verification_url: "https://open.feishu.cn/auth/switched-app",
+          device_code: "switched-device-code",
+          generation: request.generation ?? "auth-generation",
+          expires_in: 600,
+          user_code: null,
+          hint: null,
+        }),
+      });
+    });
+
+    await page.goto("/workspace/chats/new?settings=integrations");
+    const dialog = page.getByRole("dialog", { name: "Settings" });
+    await dialog.getByRole("button", { name: "Change Lark app" }).click();
+    await expect(
+      dialog.getByText("Switch to a different Lark app"),
+    ).toBeVisible();
+    await dialog.getByLabel("App ID").fill("cli_new_mock");
+    await dialog.getByLabel("App Secret").fill("super-secret");
+    const popupPromise = page.waitForEvent("popup");
+    await dialog.getByRole("button", { name: "Switch app" }).click();
+    const popup = await popupPromise;
+    await expect(
+      dialog.getByRole("button", { name: "Opening connection link..." }),
+    ).toBeDisabled();
+    await expect(
+      dialog.getByRole("button", { name: "Re-register in browser" }),
+    ).toBeDisabled();
+    releaseCredentials();
+    await expect
+      .poll(() => credentialsRequest)
+      .toMatchObject({
+        app_id: "cli_new_mock",
+        app_secret: "super-secret",
+        brand: "feishu",
+      });
+    await expect
+      .poll(() => authStartRequest)
+      .toEqual({
+        recommend: false,
+        domains: [],
+        scope: null,
+        generation: "switch-generation",
+      });
+    await expect
+      .poll(() => popup.url())
+      .toBe("https://open.feishu.cn/auth/switched-app");
+    await popup.close();
+  });
+
+  test("keeps selected permissions when re-registering the Lark app", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page);
+    const configuredStatus = configuredLarkStatus();
+    await page.route("**/api/integrations/lark/status", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(configuredStatus),
+      }),
+    );
+    let authStartRequest: unknown;
+    await page.route("**/api/integrations/lark/auth/start", async (route) => {
+      authStartRequest = route.request().postDataJSON();
+      await route.fallback();
+    });
+
+    await page.goto("/workspace/chats/new?settings=integrations");
+    const dialog = page.getByRole("dialog", { name: "Settings" });
+    await dialog.getByRole("button", { name: "calendar" }).click();
+    await dialog
+      .getByLabel("Exact OAuth scope")
+      .fill("calendar:calendar.event:read");
+    await dialog.getByRole("button", { name: "Change Lark app" }).click();
+    const popupPromise = page.waitForEvent("popup");
+    await dialog
+      .getByRole("button", { name: "Re-register in browser" })
+      .click();
+    const popup = await popupPromise;
+    await dialog
+      .getByRole("button", {
+        name: "I completed browser confirmation, continue",
+      })
+      .click();
+    await expect
+      .poll(() => authStartRequest)
+      .toEqual({
+        recommend: false,
+        domains: ["calendar"],
+        scope: "calendar:calendar.event:read",
+        generation: "config-generation",
+      });
+    await popup.close();
   });
 });
