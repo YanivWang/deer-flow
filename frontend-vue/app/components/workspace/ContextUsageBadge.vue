@@ -22,7 +22,6 @@ const formatted = computed(() => {
 <template>
   <div
     v-if="formatted === null"
-    role="status"
     data-context-usage-placeholder="true"
     :aria-label="$i18n.t.value.contextUsage.title"
     :title="$i18n.t.value.contextUsage.title"

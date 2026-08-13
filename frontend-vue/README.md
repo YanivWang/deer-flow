@@ -2,11 +2,12 @@
 
 This Nuxt 4 workspace is the Vue frontend that coexists with `../frontend` and
 shares the Gateway. **Current migration cursor: M-1 through M6 are complete;
-M7 phase 2 is in progress; M8 has not started.** The chat workspace, artifacts, workspace
+M7 phase 3 is in progress; M8 has not started.** The chat workspace, artifacts, workspace
 changes, sidecar, settings, browser, agents, channels, scheduled tasks, goal/mode,
 and mobile surfaces are connected to the existing Gateway/data flow and aligned
-to the current React frontend. M7/M8 full-contract, production-cutover, and reuse
-work remains milestone-gated. Read
+to the current React frontend. Production Compose now has a React-default and
+Vue-secondary hostname, but public deployment validation, the final M7 shared red
+item and all M8 reuse work remain milestone-gated. Read
 [the current status and next-step record](../frontend-vue-build-docs/10-current-status-and-next.md)
 before continuing migration work; milestone evidence is historical, not the
 current status source.
@@ -36,6 +37,8 @@ make e2e-m7-local  # exact 1-spec/8-test sidebar/IME/a11y/H7-H8 gate
 make e2e-m7-auth-list
 make e2e-m7-auth   # exact 1-spec/7-test auth request/security gate
 make e2e-m7-real-protocol  # replay-Gateway resume/gap/cancel browser gate
+make e2e-m7-visual  # seven deterministic product-state screenshots
+make asset-budget  # build + raw/gzip client asset budgets
 make e2e-list  # collects the shared M1+ business contract; does not claim it passes
 ```
 
@@ -124,24 +127,28 @@ splitpanes fixtures; they return 404 in normal production configuration.
 
 ## Current verification boundary
 
-The M7 phase-2 checkout passes its current 107-file / 1083-test unit suite,
+The M7 phase-3 checkout passes its current 108-file / 1088-test unit suite,
 `make migration-check`, `make consumer-check`, `make e2e-m0` (14/14),
 `make e2e-m4a` (4/4), and `make e2e-m4a-stream` (3/3). Current-checkout
-external evidence is WebSocket 1/1 and OIDC 1/1. The exact M4b suite passed 66/66,
-the exact M5 suite passed 27/27, the M5 replay-Gateway artifact gate passed 1/1,
-the exact M6 suite passed 27/27, the M6 real-Gateway browser gate passed 1/1,
+external evidence is WebSocket 1/1 and concurrent dual-host OIDC 2/2. The exact M4b
+suite passed 66/66. The latest M5 full run is 26/27 because a parallel UI animation/
+scroll timing assertion remained red; the business artifact replay gate passed 1/1.
+The exact M6 suite passed 27/27, the M6 real-Gateway browser gate passed 1/1,
 and the corrected real-backend suite passed 3/3. The exact M7 inventory is
 25 files / 120 tests; its current execution is **119/120**, not complete. The
 single red shared batched-stream fixture omits the protocol data described below.
 The independent Vue-owned M7 inventories are sidebar/IME/a11y/H7-H8 **8/8**
 and auth request/security **7/7**; the reused replay-Gateway resume/gap/cancel
-browser contract passed **1/1**. Container smoke also passes, while the default
-client build still emits the open >500 kB chunk warning.
+browser contract passed **1/1**. Dual-host structural ingress passed 29/29, the
+seven-state visual gate passed 7/7, and container smoke passes. `make asset-budget`
+enforces named raw/gzip groups even though lazy Shiki language/WASM chunks still
+emit the default >500 kB Vite warning.
 
 Those results do **not** mean every later-milestone shared business contract passes.
 `make e2e-list` only collects; `make e2e-m7` executes the frozen collection.
-M7's dual-host production ingress, four effects, visual/performance gates and M8 remain outside
-the completed evidence. M5's
+M7's four effects and React-default/Vue-secondary ingress are implemented; public
+DNS/TLS/outer-proxy/real-IdP behavior remains unverified, so neither M7 nor a Vue
+default production cutover is complete. M8 has not started. M5's
 `artifact-batched-stream` gate uses a local protocol-correct equivalent because
 the shared React fixture omits the real Gateway's required `Content-Location`
 and terminal `end`; production remains fail closed.
@@ -149,7 +156,8 @@ and terminal `end`; production remains fail closed.
 For exact commands, failure causes, the M4b/M5/M6 exit gates, and the ordered
 task plan, use
 [10-current-status-and-next.md](../frontend-vue-build-docs/10-current-status-and-next.md).
-Dual-frontend production readiness — two hostnames, DNS/TLS, trusted-proxy
-scrubbing — remains M7. The
+Dual-frontend operations and rollback are documented in
+[dual-frontend-production.md](../docs/dual-frontend-production.md); DNS/TLS and
+target-environment validation remain M7. The
 [M0 verification record](../frontend-vue-build-docs/evidence/m0-verification.md)
 is retained as historical milestone evidence only.

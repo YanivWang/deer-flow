@@ -19,6 +19,7 @@ import {
 } from "lucide-vue-next";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import GoalStatus from "@/components/workspace/GoalStatus.vue";
+import ConfettiButton from "@/components/ui/effects/ConfettiButton.vue";
 import type { SidecarReference } from "@/composables/useSidecar";
 
 import {
@@ -821,8 +822,9 @@ defineExpose({ replaceDraft });
       v-if="isWelcome"
       class="flex min-h-12 flex-wrap items-center justify-center gap-2 pt-2"
     >
-      <button
-        type="button"
+      <ConfettiButton
+        variant="outline"
+        size="sm"
         class="text-muted-foreground hover:bg-accent flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs"
         @click="
           replaceDraft(
@@ -831,7 +833,7 @@ defineExpose({ replaceDraft });
         "
       >
         <Sparkles :size="14" /> Surprise me
-      </button>
+      </ConfettiButton>
       <button
         type="button"
         class="text-muted-foreground hover:bg-accent rounded-full border px-4 py-1.5 text-xs"

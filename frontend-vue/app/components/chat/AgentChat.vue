@@ -4,6 +4,7 @@ import { CalendarClock, Menu, Share2 } from "lucide-vue-next";
 
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
+import AuroraText from "@/components/ui/effects/AuroraText.vue";
 import ContextUsageBadge from "@/components/workspace/ContextUsageBadge.vue";
 import WorkspacePanels from "@/components/workspace/WorkspacePanels.vue";
 import ArtifactPanel from "@/components/workspace/artifacts/ArtifactPanel.vue";
@@ -76,6 +77,11 @@ const context = computed(() => ({
   ...(props.agentName ? { agent_name: props.agentName } : {}),
   ...(props.bootstrap ? { is_bootstrap: true } : {}),
 }));
+const welcomeColors = computed(() =>
+  context.value.mode === "ultra"
+    ? ["#efefbb", "#e9c665", "#e3a812"]
+    : ["var(--color-foreground)"],
+);
 const warnings = ref<string[]>([]);
 const localUploading = ref(false);
 const demoMessages = ref<Message[] | null>(null);
@@ -863,7 +869,7 @@ onUnmounted(() => {
             class="relative w-full"
             :class="[
               isWelcomeMode
-                ? 'max-w-[var(--container-width-sm)] -translate-y-[calc(50vh-48px)] sm:-translate-y-[calc(50vh-96px)]'
+                ? 'max-w-[var(--container-width-sm)] -translate-y-[calc(50vh-96px)]'
                 : 'max-w-[var(--container-width-md)]',
             ]"
           >
@@ -875,7 +881,9 @@ onUnmounted(() => {
                 class="flex flex-wrap items-center justify-center gap-2 text-2xl font-bold"
               >
                 <span aria-hidden="true">👋</span>
-                <span>{{ $i18n.t.value.welcome.greeting }}</span>
+                <AuroraText :colors="welcomeColors">
+                  {{ $i18n.t.value.welcome.greeting }}
+                </AuroraText>
               </div>
               <p
                 class="text-muted-foreground max-w-full text-sm whitespace-pre-line"

@@ -20,14 +20,15 @@
 ## 2. 直接结论
 
 - **已完成并有当前 checkout 门禁证据：M-1、M0、M1、M2、M3、M4a、M4b、M5、M6。**
-- **当前执行游标：M7 进行中（phase 2）；M8 未进入。** M-1 至 M6 仍已关闭。
+- **当前执行游标：M7 进行中（phase 3）；M8 未进入。** M-1 至 M6 仍已关闭。
 - Vue 已具备可运行的通用 Agent 聊天 UI、artifacts/workspace changes/sidecar，以及
   settings、browser、agents、channels、scheduled tasks、goal/mode/mobile 等剩余 L3 surface；
   数据流继续对齐当前 React `frontend` 并接现有 Gateway。
-- M7、M8 未完成。M7 phase 2 已落地 splitpanes H1-H8、sidebar/mobile/IME/a11y、
-  auth 请求安全合同与真实 Gateway resume/gap/cancel 增量门禁，并冻结共享 25/120、
-  本地交互 1/8、auth 1/7 三份独立 inventory；Vue 前端仍不在默认 Docker/Nginx
-  生产入口中，双前端 production readiness 仍归 M7。
+- M7、M8 未完成。M7 phase 3 已落地 splitpanes H1-H8、sidebar/mobile/IME/a11y、
+  auth 请求安全合同、真实 Gateway resume/gap/cancel、React-default/Vue-secondary
+  hostname ingress、并发 fixture OIDC、四个特效、七状态视觉门禁与资产预算。Vue 已进入
+  production Compose 的 secondary hostname，但仍不是默认前端；公网 DNS/TLS/外层代理、
+  真实 IdP/runtime 与共享红项仍归 M7。
 - **不采用百分比进度。** M4b 是组件和页面工作量的主体，剩余里程碑的复杂度不均匀；
   用“完成了 6/10 个编号”推导 60% 会明显高估实际产品完成度。
 
@@ -73,17 +74,17 @@
 
 | 命令/范围                  | 当前结果                                                                                                                              | 解释与边界                                                         |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `make verify`              | **通过**：107 files / 1083 tests；59 migrated files / 560 tests；lint、format、typecheck、unit、build、provenance、i18n、OpenAPI 通过 | M7 phase 2 当前实跑；有非阻塞 lint/build warning，无 error         |
+| `make verify`              | **通过**：108 files / 1088 tests；59 migrated files / 560 tests；lint、format、typecheck、unit、build、provenance、i18n、OpenAPI 通过 | M7 phase 3 实跑；沙箱 loopback 首跑 EPERM，允许 loopback 后通过    |
 | `make migration-check`     | **通过**：provenance/test manifest 对账；58 个 codemod tests；24 个 `RETYPED`                                                         | 证明迁移账本一致，不证明业务 UI 完成                               |
 | `make consumer-check`      | **通过**：pack、clean install、typecheck、最小 session                                                                                | 只验证 `@deerflow/agent-core` 的独立消费者边界                     |
 | `make e2e-m0`              | **14/14 通过**                                                                                                                        | M0 基础设施合同；不是共享业务合同                                  |
 | `make e2e-m4a`             | **4/4 通过**                                                                                                                          | 合成数据流的 send/stream/stop/reload 顺序                          |
 | `make e2e-m4a-stream`      | **3/3 通过**                                                                                                                          | 真分块 SSE、heartbeat、resume cursor、gap                          |
-| `make e2e-external`        | **通过**：WebSocket 1/1，OIDC 1/1                                                                                                     | 本轮当前 checkout 实跑，不是沿用旧 evidence                        |
+| `make e2e-external`        | **通过**：WebSocket 1/1，双 hostname 并发 OIDC 2/2                                                                                    | fixture IdP；不证明真实 provider/第三方 Cookie                      |
 | `make e2e-list`            | **仅收集**：25 files / 120 tests                                                                                                      | 本轮重跑 collection；`--list` 不能写成 120 tests passed            |
 | `make e2e-m4b`             | **66/66 通过**                                                                                                                        | 精确列出的 11 个共享 spec                                          |
 | `make e2e-m5-list`         | **收集成功**：6 files / 27 tests                                                                                                      | 精确 M5 inventory；其中 batched-stream 是协议修正后的本地等价 spec |
-| `make e2e-m5`              | **27/27 通过**                                                                                                                        | artifacts、workspace changes、sidecar 专项退出门禁                 |
+| `make e2e-m5`              | **最近完整运行 26/27**                                                                                                                | 并行 UI animation/scroll 时序红；不为门禁继续拆业务组件             |
 | `make e2e-m5-real-backend` | **1/1 通过**                                                                                                                          | 真实回放 Gateway 的 write_file → artifact 自动打开与内容渲染       |
 | `make e2e-real-backend`    | **3/3 通过**                                                                                                                          | 固定 Vue 3101；auth-disabled、multi-run history、render            |
 | `make e2e-m6-list`         | **收集成功**：8 files / 27 tests                                                                                                      | 精确 M6 inventory，不等于全量共享套件                              |
@@ -96,6 +97,9 @@
 | `make e2e-m7-real-protocol`| **1/1 通过**                                                                                                                          | 复用 replay Gateway 的 resume/gap/cancel 浏览器合同                |
 | `make e2e-auth`            | **2/2 通过**                                                                                                                          | 共享 setup-status recovery；不是全部认证语义                        |
 | `make container-smoke`     | **通过**                                                                                                                              | non-root、health、SIGTERM；性能大 chunk warning 仍存在              |
+| `make dual-frontend-production-check` | **29/29 通过**                                                                                                               | hostname/default、单一 API/SSE/WS、headers、compose 与 cleanup      |
+| `make e2e-m7-visual`       | **7/7 通过**                                                                                                                          | 七个确定性 Chromium/Darwin 产品状态                                 |
+| `make asset-budget`        | **通过**                                                                                                                              | `.output/public/_nuxt` named raw/gzip hard budgets；Vite warning 保留 |
 
 ## 6. M6 退出结论
 
@@ -104,7 +108,7 @@ N2，精确 8-spec/27-test 门禁和真实 Gateway browser 1/1 均满足；M0、
 verify、migration/consumer、real-backend 与 external 同时保持通过。inventory、首轮失败、
 根因、修复和未扩大边界见 [M6 evidence](evidence/m6-remaining-l3.md)。
 
-## 7. M7 当前 phase 2（未关闭）
+## 7. M7 当前 phase 3（未关闭）
 
 - `make e2e-m7-list` 精确固定 25 files / 120 tests；实际全量运行是 **119/120**，唯一红项是
   共享 `artifact-batched-stream` 缺 `Content-Location` 和终止 `end`，生产 fail-closed 未削弱。
@@ -113,19 +117,24 @@ verify、migration/consumer、real-backend 与 external 同时保持通过。inv
 - sidebar/mobile/keyboard/IME/a11y 精确 **8/8**；auth request/storage/SSO/CSRF 精确 **7/7**；
   共享 auth recovery **2/2**。真实 Gateway resume/gap/cancel **1/1**，真实后端 **3/3**，
   WS **1/1**、OIDC **1/1**，容器 smoke 通过。
-- A-N 已做本轮 group-level 复核；D/J/L/N 的发布结论仍受共享 fixture、双 hostname、
-  部署与真实浏览器/第三方边界限制，不能把复核表当作全部退出门槛全绿。
-- Rolldown 稳定分包实验因完整浏览器套件出现循环 chunk 的 `n is not a function` HTTP 500
-  而整体回退；默认 build 可用但仍有约 508/622/626/780 kB raw 大 chunk。
-- M7 仍被 dual-host production ingress/concurrent OIDC、视觉七状态、四个具名特效、
-  稳定分包/资产基线和唯一共享红项阻断。详见
-  [phase 2 evidence](evidence/m7-phase-2-input-auth-protocol.md)。不得写成 M7 complete。
+- production Compose 已同时构建两前端；Nginx default/unknown Host 仍到 React，仅指定
+  `DEER_FLOW_VUE_HOSTNAME` 到 Vue。API/SSE/WS/auth 共用 Gateway，结构门禁 29/29；并发
+  fixture OIDC 2/2。公网 DNS/TLS/外层 LB/CDN 与真实 IdP 仍未验证。
+- AuroraText、FlickeringGrid、ShineBorder、ConfettiButton 已接真实页面并支持 reduced motion；
+  七状态视觉门禁 7/7。
+- MessageList 的 Markdown 是产品边界上的异步加载；ArtifactPanel 未为门禁拆分。构建只命名
+  已生成 chunk，不手工重排图；raw/gzip hard budget 通过，Shiki language/WASM 的默认大块
+  warning 保留。
+- A-N 已做本轮 group-level 复核；D8 CodeMirror 仍未安装/消费，J/L/N 仍受真实 provider、
+  公网部署与真实浏览器边界限制。共享 fixture 仍 119/120；最近 M5 完整并行运行 26/27。
+  详见 [phase 3 evidence](evidence/m7-phase-3-production-visual-performance.md)。不得写成
+  M7 complete，也不得写成 Vue 已默认生产切换。
 
 ## 8. M7 后续顺序
 
-下一步只处理剩余 M7：合法治理共享 fixture → 双 hostname production readiness 与并发
-OIDC → 四个特效和七状态视觉门禁 → runtime-safe 分包与资产预算。全部退出项满足后才允许
-进入 M8 L2 契约/复用收口。下一次开工仍须先运行 `make handoff-check` 并重跑精确 inventories。
+下一步只处理剩余 M7：合法治理共享 fixture、确认 M5 并行时序、目标环境 DNS/TLS/外层代理/
+真实 IdP 与浏览器验收，以及 A-N 未证实边界。全部退出项满足后才允许进入 M8 L2 契约/
+复用收口。下一次开工仍须先运行 `make handoff-check` 并重跑精确 inventories。
 
 ## 9. 每次交接前必须做什么
 

@@ -16,14 +16,16 @@ guide rather than expecting full detail here:
   **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**.
 
 For Vue migration work, always run `make handoff-check` and read document 10 before
-historical evidence. The current cursor is **M7 phase 2 in progress**: M-1 through M6 have
+historical evidence. The current cursor is **M7 phase 3 in progress**: M-1 through M6 have
 milestone evidence; M6's exact 8-file/27-test contract and its 1-test real-Gateway
 browser gate passed, while M5's 6-file/27-test and M4b's 11-file/66-test contracts remain green.
 The exact M7 inventory is 25 files/120 tests and the current full run is 119/120;
 the protocol-incomplete shared batched-stream fixture is the sole red item. The
 independent Vue-owned M7 gates are interaction/H7-H8 8/8, auth security 7/7 and
-real replay-Gateway resume/gap/cancel 1/1. Dual-host production, visual/effects and
-runtime-safe performance budgeting remain open. Do not
+real replay-Gateway resume/gap/cancel 1/1. Phase 3 has landed React-default/Vue-secondary
+hostname routing, fixture-IdP concurrent OIDC 2/2, four effects, seven visual states and
+runtime-safe asset budgeting. Public DNS/TLS/outer-proxy/real-provider validation and the
+shared protocol-incomplete fixture remain open. Do not
 describe the Vue UI as fully product-ready or part of the default
 production stack until the current gate document says so.
 
@@ -44,7 +46,7 @@ A single `make dev` / Docker stack runs four cooperating services:
 | **Nginx**          | `2026` | Unified reverse-proxy entry point — open this in the browser        |
 | **Gateway API**    | `8001` | FastAPI REST API + embedded LangGraph-compatible agent runtime      |
 | **React frontend** | `3000` | Existing Next.js web interface                                      |
-| **Vue frontend**   | `3100` | Explicit migration dev mode; not part of the default Docker stack   |
+| **Vue frontend**   | `3100` | Explicit migration dev port; production Compose exposes it only through a secondary hostname |
 | **Provisioner**    | `8002` | Optional — only when sandbox is configured for provisioner/K8s mode |
 
 Nginx is the single public entry: it serves the frontend and proxies `/api/langgraph/*`
@@ -121,10 +123,11 @@ make check       # Check that required tools are installed
 make install     # Install all dependencies (frontend + backend + pre-commit hooks)
 make dev         # Start all services with hot-reload (Gateway + Frontend + Nginx)
 make dev-vue     # Start Gateway + Vue/Nuxt on 3100
-make dev-dual    # Start Gateway + React 3000 + Vue 3100; no M7 dual ingress
+make dev-dual    # Start Gateway + React 3000 + Vue 3100 directly; production ingress is separate
 make start       # Start all services in production mode (local, optimized)
 make stop        # Stop all running services
 make up / down   # Build/stop the production Docker stack (browser at localhost:2026)
+make dual-frontend-production-check  # React-default/Vue-hostname nginx/compose contracts
 make docker-start / docker-stop / docker-logs   # Docker development environment
 ```
 
@@ -162,6 +165,8 @@ cd frontend-vue && make e2e-m7       # full shared suite; currently 119/120, not
 cd frontend-vue && make e2e-m7-local # exact 1-file/8-test interaction, IME, a11y and H7/H8 gate
 cd frontend-vue && make e2e-m7-auth  # exact 1-file/7-test auth request/security gate
 cd frontend-vue && make e2e-m7-real-protocol  # replay-Gateway resume/gap/cancel browser gate
+cd frontend-vue && make e2e-m7-visual  # seven deterministic product-state screenshots
+cd frontend-vue && make asset-budget   # build + raw/gzip client asset budgets
 cd frontend-vue && make e2e-list  # collect shared contracts; does not claim pass
 ```
 

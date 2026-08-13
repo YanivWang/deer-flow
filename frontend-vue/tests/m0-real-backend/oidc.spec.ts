@@ -15,6 +15,8 @@ import { expect, test } from "@playwright/test";
 const IDP_ORIGIN = process.env.M0_IDP_ORIGIN ?? "http://127.0.0.1:8013";
 const PROVIDER = "m0idp";
 const VUE_ORIGIN = "http://localhost:3101";
+const REACT_HOST_ORIGIN = "http://react.localhost:3101";
+const VUE_HOST_ORIGIN = "http://vue.localhost:3101";
 
 test("@oidc returns to the entry that started the flow", async ({
   context,
@@ -67,4 +69,59 @@ test("@oidc returns to the entry that started the flow", async ({
     stateCookie,
     "the state cookie must be cleared once the callback consumed it",
   ).toBeUndefined();
+});
+
+test("@oidc isolates concurrent same-provider state by frontend hostname", async ({
+  context,
+}) => {
+  const reactPage = await context.newPage();
+  const vuePage = await context.newPage();
+
+  // Start both authorization-code flows together in one browser context. The
+  // cookie name is intentionally identical, so this can succeed only when the
+  // two public entries have independent host cookie jars (J6).
+  await Promise.all([
+    reactPage.goto(
+      `${REACT_HOST_ORIGIN}/api/v1/auth/oauth/${PROVIDER}?next=/workspace`,
+    ),
+    vuePage.goto(
+      `${VUE_HOST_ORIGIN}/api/v1/auth/oauth/${PROVIDER}?next=/workspace`,
+    ),
+  ]);
+
+  await Promise.all([
+    reactPage.waitForURL(`${REACT_HOST_ORIGIN}/auth/callback**`),
+    vuePage.waitForURL(`${VUE_HOST_ORIGIN}/auth/callback**`),
+  ]);
+
+  const [reactCookies, vueCookies] = await Promise.all([
+    context.cookies([REACT_HOST_ORIGIN]),
+    context.cookies([VUE_HOST_ORIGIN]),
+  ]);
+  expect(reactCookies.find(({ name }) => name === "access_token")?.domain).toBe(
+    "react.localhost",
+  );
+  expect(vueCookies.find(({ name }) => name === "access_token")?.domain).toBe(
+    "vue.localhost",
+  );
+  expect(
+    [...reactCookies, ...vueCookies].filter(({ name }) =>
+      name.startsWith("df_oidc_state_"),
+    ),
+    "both independently scoped state cookies must be consumed",
+  ).toHaveLength(0);
+
+  const log = await context.request.get(`${IDP_ORIGIN}/probe/authorize-log`);
+  expect(log.status(), await log.text()).toBe(200);
+  const entries = (await log.json()) as { entries: { redirect_uri: string }[] };
+  const recentRedirects = entries.entries
+    .slice(-2)
+    .map(({ redirect_uri }) => redirect_uri)
+    .sort();
+  expect(recentRedirects).toEqual(
+    [
+      `${REACT_HOST_ORIGIN}/api/v1/auth/callback/${PROVIDER}`,
+      `${VUE_HOST_ORIGIN}/api/v1/auth/callback/${PROVIDER}`,
+    ].sort(),
+  );
 });

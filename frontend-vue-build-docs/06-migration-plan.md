@@ -1,6 +1,6 @@
 # 06 · 执行计划
 
-> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a / M4b / M5 / M6 已关闭；M7 phase 2 进行中；M8 未开始。**
+> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a / M4b / M5 / M6 已关闭；M7 phase 3 进行中；M8 未开始。**
 > 实跑红绿、VPN/端口问题与有序任务清单以
 > [10-current-status-and-next.md](10-current-status-and-next.md) 为准。本文负责冻结里程碑范围与
 > 退出条件，不以旧段落中的将来时替代当前状态。
@@ -81,7 +81,7 @@ git tag frontend-vue-baseline-v2 27a425b0
 | **M4b** | **已关闭** | **通用 agent UI（L2 第一批）** ★                                             | **一个能跑的通用 agent 聊天应用——模板到此可用**                     |
 | **M5**  | **已关闭** | L3 第一批：artifacts + sidecar                                               | L2 扩展点已被真实 L3 功能验证                                       |
 | **M6**  | **已关闭** | L3 其余：设置 / 侧栏 / browser / channels                                    | 功能面完整                                                          |
-| **M7**  | **进行中** | 交互收尾 + 完整验收（phase 2 已落地 H1-H8、专项交互/auth/真实协议门禁；退出门禁未满足） | **功能/交互合同与关键视觉状态达成**                                 |
+| **M7**  | **进行中** | 交互收尾 + 完整验收（phase 3 已落地双入口、特效、视觉与预算；公网/共享红项未满足） | **功能/交互合同与关键视觉状态达成**                                 |
 | **M8**  | 未开始     | L2 契约收口                                                                  | 其他项目可上手复用                                                  |
 
 ## 相对工作量与中止判定
@@ -811,13 +811,12 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 
 ## M7 · 交互收尾 + 完整验收
 
-> **2026-08-13 phase 2 快照（仍未关闭）：**共享 inventory 仍是 25/120，实跑
-> 119/120；新增独立的 sidebar/IME/a11y/H7-H8 1-spec/8-test、auth
-> 1-spec/7-test 与 replay-Gateway resume/gap/cancel 1-test 门禁并全部通过。
-> A-N 已按当前 checkout 做 group-level 复核，但 dual-host production、并发
-> OIDC、四个特效、七状态视觉、runtime-safe 稳定分包/预算和共享 fixture 红项
-> 仍是退出阻断。详细实测见
-> [phase 2 evidence](evidence/m7-phase-2-input-auth-protocol.md)。
+> **2026-08-13 phase 3 快照（仍未关闭）：**共享 inventory 仍是 25/120，实跑
+> 119/120；React-default/Vue-secondary ingress 结构门禁 29/29、并发 fixture OIDC
+> 2/2、四个具名特效、七状态视觉 7/7 和 raw/gzip 资产预算已落地。公网 DNS/TLS/
+> 外层代理/真实 IdP、A-N 未证实边界、共享 fixture 红项与最近 M5 并行时序红项仍是
+> 退出阻断。详细实测见
+> [phase 3 evidence](evidence/m7-phase-3-production-visual-performance.md)。
 
 - 三面板 resizable 编排（`splitpanes`），逐条对照 **H 组 8 条** —— 这是重写而非替换。**可行性已在 [M0/M1 的 spike](#m0m1-期间插入splitpanes-spike) 里验过**，这里做的是完整实现，不是探路
 - `sidebar` 与 shadcn-vue 版本逐条比对（折叠、移动端 Sheet 降级、快捷键、cookie 持久化）
@@ -845,20 +844,26 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 
 ### 性能基线：先分包，再统计
 
-直接去数 `.output/public/_nuxt/` 里的 hash 文件名意义不大——Rollup 默认的自动分包会把 chunk 切得又碎又不稳定，同一份代码改一行就可能重排，统计出来的"路由资产"没有可比性。
+直接按 `.output/public/_nuxt/` 的 hash 文件名建预算没有可比性，但也不能用
+`manualChunks`/Rolldown `codeSplitting` 强制重排依赖图：phase 2 的实验证明它可能制造循环
+chunk 和运行时 `n is not a function`。phase 3 采用更保守的边界：只在 MessageList 对重型
+Markdown 做真实异步加载，并通过 client-only `vite:extendConfig` 的 `chunkFileNames`
+函数，按构建器**已经产生**的 chunk 的 moduleIds 命名；不改变执行图。ArtifactPanel 保持
+同步组件，不为门禁拆分。
 
-参照 `nuxt-modern-starter` 的做法：先用 `vite.build.rollupOptions.output.manualChunks` 把大依赖显式切开，再统计。本项目该切的几块是明确的：
+预算脚本按这些稳定前缀聚合：
 
 | chunk               | 内容                                                                | 为什么单切                                                                                |
 | ------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `vendor-vue`        | `vue` / `@vue/*` / `vue-router` / `pinia`                           | 框架底座，所有路由共用                                                                    |
 | `vendor-markdown`   | `shiki` / `katex` / `mermaid` / `unified` / `remark-*` / `rehype-*` | **最大的一块**，且只有聊天路由需要                                                        |
-| `vendor-codemirror` | `codemirror` / `@codemirror/*` / `@uiw/codemirror-theme-*`          | 只有 artifacts 编辑用得上（对应 [D8](05-invariants.md)：拿到完整内容前不挂载 CodeMirror） |
+| `vendor-codemirror` | `codemirror` / `@codemirror/*` / `@uiw/codemirror-theme-*`          | 当前未安装/消费，所以预算必须为 0；不能把未来 D8 写成已完成                              |
 | `vendor-ui`         | `reka-ui` / `lucide-vue-next` / `motion-v`                          | 控件层                                                                                    |
 
-切完之后再定基线，并且 `chunkSizeWarningLimit` 要显式放宽——默认 500 KB 对一个内置 Markdown 渲染 + 代码编辑器的应用没有意义，真正的预算靠上面这张表管。
-
-这一步顺带回答了「要不要写等价脚本」：**要写，但先分包**。分包稳定之后，脚本只需按 chunk 名统计，比逐路由追 hash 文件简单得多。
+`chunkSizeWarningLimit` 不再放宽；Vite 的默认 warning 继续可见，真正的硬失败由 raw/gzip、
+vendor 聚合和单块上限共同决定。脚本已经读取 `.output/public/_nuxt/*.js` 并以 gzip level 9
+复算；如果未来引入 CodeMirror 或改变 Markdown 边界，必须先更新代码事实，再审预算，
+不能通过改大数字掩盖结构变化。
 
 ---
 

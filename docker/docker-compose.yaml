@@ -3,7 +3,8 @@
 #
 # Services:
 #   - nginx:       Reverse proxy (port 2026, configurable via PORT env var)
-#   - frontend:    Next.js production server
+#   - frontend:    Next.js production server (default hostname)
+#   - frontend-vue: Nuxt production server (secondary hostname)
 #   - gateway:     FastAPI Gateway API + agent runtime
 #   - redis:       Redis Streams backend for cross-worker SSE stream bridge
 #   - provisioner: (optional) Sandbox provisioner for Kubernetes mode
@@ -54,11 +55,18 @@ services:
       - "${BIND_HOST:-127.0.0.1}:${PORT:-2026}:2026"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf.template:ro
-    command: >
-      sh -c "cp /etc/nginx/nginx.conf.template /etc/nginx/nginx.conf
-      && nginx -g 'daemon off;'"
+    environment:
+      - DEER_FLOW_VUE_HOSTNAME=${DEER_FLOW_VUE_HOSTNAME:-vue.localhost}
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        envsubst '$$DEER_FLOW_VUE_HOSTNAME' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+        exec nginx -g 'daemon off;'
     depends_on:
       - frontend
+      - frontend-vue
       - gateway
     networks:
       - deer-flow
@@ -79,6 +87,19 @@ services:
       - DEER_FLOW_INTERNAL_GATEWAY_BASE_URL=http://gateway:8001
     env_file:
       - ../frontend/.env
+    networks:
+      - deer-flow
+    restart: unless-stopped
+
+  # ── Frontend: Nuxt Production (secondary hostname) ────────────────────────
+  # nginx keeps unknown/default hosts on React and selects this service only
+  # when Host matches DEER_FLOW_VUE_HOSTNAME. No frontend or Gateway port is
+  # published; both browser entries remain same-origin through nginx.
+  frontend-vue:
+    build:
+      context: ../
+      dockerfile: frontend-vue/Dockerfile
+    container_name: deer-flow-frontend-vue
     networks:
       - deer-flow
     restart: unless-stopped

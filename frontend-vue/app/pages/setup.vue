@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
 
+import FlickeringGrid from "@/components/ui/effects/FlickeringGrid.vue";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import { loadRememberLoginPreference } from "@/core/auth/remember-login";
 import {
@@ -128,13 +129,23 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex min-h-screen w-full items-center justify-center p-4">
+  <div
+    class="relative flex min-h-screen w-full items-center justify-center overflow-hidden p-4"
+  >
+    <FlickeringGrid
+      class="absolute inset-0 z-0 text-black opacity-35 [mask:url('/images/deer.svg')_center/100vw_no-repeat] md:[mask-size:72vh] dark:text-white"
+      :square-size="4"
+      :grid-gap="4"
+      color="currentColor"
+      :max-opacity="0.3"
+      :flicker-chance="0.25"
+    />
     <p v-if="mode === 'loading'" class="text-muted-foreground text-sm">
       Loading…
     </p>
     <section
       v-else-if="mode === 'unavailable'"
-      class="w-full max-w-md space-y-4 text-center"
+      class="relative z-10 w-full max-w-md space-y-4 text-center"
     >
       <h1 class="text-xl font-semibold">Service temporarily unavailable</h1>
       <p class="text-muted-foreground text-sm">
@@ -156,7 +167,7 @@ onMounted(() => {
     </section>
     <section
       v-else
-      class="bg-background/90 border-border/50 w-full max-w-md space-y-6 rounded-3xl border p-8 shadow-xl backdrop-blur-sm"
+      class="bg-background/90 border-border/50 relative z-10 w-full max-w-md space-y-6 rounded-3xl border p-8 shadow-xl backdrop-blur-sm"
     >
       <header class="text-center">
         <h1 class="font-serif text-3xl">DeerFlow</h1>

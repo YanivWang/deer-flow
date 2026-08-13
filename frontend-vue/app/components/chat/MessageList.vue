@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from "vue";
 import {
   CheckCircle2,
   CircleDashed,
@@ -9,8 +17,8 @@ import {
   Wrench,
 } from "lucide-vue-next";
 
-import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue";
 import HumanInputCard from "@/components/chat/HumanInputCard.vue";
+import ShineBorder from "@/components/ui/effects/ShineBorder.vue";
 import WorkspaceChangesBadge from "@/components/workspace/changes/WorkspaceChangesBadge.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import { richContentComponents } from "@/components/markdown/components";
@@ -40,6 +48,10 @@ import {
 } from "@/core/tasks/subtask-result";
 import type { Message } from "@/core/types/message";
 import { readReferenceMessageContexts } from "@/core/sidecar";
+
+const StreamMarkdown = defineAsyncComponent(
+  () => import("@/components/markdown/StreamMarkdown.vue"),
+);
 
 const props = defineProps<{
   messages: Message[];
@@ -564,54 +576,63 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
                 class="my-2 text-sm"
               >
                 <template v-if="call.name === 'task'">
-                  <div class="flex items-center gap-2 py-1.5">
-                    <CheckCircle2
-                      v-if="subtaskResult(call.id).status === 'completed'"
-                      :size="16"
-                      class="text-emerald-600"
+                  <div
+                    class="relative overflow-hidden rounded-lg border px-3 py-2"
+                  >
+                    <ShineBorder
+                      v-if="subtaskResult(call.id).status === 'in_progress'"
+                      :border-width="1.5"
+                      :shine-color="['#A07CFE', '#FE8FB5', '#FFBE7B']"
                     />
-                    <CircleX
-                      v-else-if="subtaskResult(call.id).status === 'failed'"
-                      :size="16"
-                      class="text-destructive"
-                    />
-                    <CircleDashed
-                      v-else
-                      :size="16"
-                      class="text-muted-foreground animate-spin"
-                    />
-                    <span class="font-medium">{{
-                      String(call.args?.description ?? "Subtask")
-                    }}</span>
+                    <div class="flex items-center gap-2 py-1.5">
+                      <CheckCircle2
+                        v-if="subtaskResult(call.id).status === 'completed'"
+                        :size="16"
+                        class="text-emerald-600"
+                      />
+                      <CircleX
+                        v-else-if="subtaskResult(call.id).status === 'failed'"
+                        :size="16"
+                        class="text-destructive"
+                      />
+                      <CircleDashed
+                        v-else
+                        :size="16"
+                        class="text-muted-foreground animate-spin"
+                      />
+                      <span class="font-medium">{{
+                        String(call.args?.description ?? "Subtask")
+                      }}</span>
+                    </div>
+                    <p
+                      :class="
+                        subtaskResult(call.id).status === 'failed'
+                          ? 'text-destructive'
+                          : 'text-muted-foreground'
+                      "
+                      class="pl-6 text-xs"
+                    >
+                      {{
+                        subtaskResult(call.id).status === "completed"
+                          ? "Subtask completed"
+                          : subtaskResult(call.id).status === "failed"
+                            ? "Subtask failed"
+                            : "Running subtask"
+                      }}
+                    </p>
+                    <p
+                      v-if="subtaskResult(call.id).result"
+                      class="mt-1 pl-6 text-sm"
+                    >
+                      {{ subtaskResult(call.id).result }}
+                    </p>
+                    <p
+                      v-if="subtaskResult(call.id).error"
+                      class="text-destructive mt-1 pl-6 text-sm"
+                    >
+                      {{ subtaskResult(call.id).error }}
+                    </p>
                   </div>
-                  <p
-                    :class="
-                      subtaskResult(call.id).status === 'failed'
-                        ? 'text-destructive'
-                        : 'text-muted-foreground'
-                    "
-                    class="pl-6 text-xs"
-                  >
-                    {{
-                      subtaskResult(call.id).status === "completed"
-                        ? "Subtask completed"
-                        : subtaskResult(call.id).status === "failed"
-                          ? "Subtask failed"
-                          : "Running subtask"
-                    }}
-                  </p>
-                  <p
-                    v-if="subtaskResult(call.id).result"
-                    class="mt-1 pl-6 text-sm"
-                  >
-                    {{ subtaskResult(call.id).result }}
-                  </p>
-                  <p
-                    v-if="subtaskResult(call.id).error"
-                    class="text-destructive mt-1 pl-6 text-sm"
-                  >
-                    {{ subtaskResult(call.id).error }}
-                  </p>
                 </template>
                 <template v-else>
                   <details class="group/tool">

@@ -8,6 +8,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 
+import FlickeringGrid from "@/components/ui/effects/FlickeringGrid.vue";
 import { resolveAuthNextPath } from "@/core/auth/next-path";
 import {
   loadRememberLoginPreference,
@@ -147,7 +148,14 @@ onMounted(() => {
   <div
     class="relative flex min-h-screen w-full items-center justify-center overflow-hidden p-4"
   >
-    <div aria-hidden="true" class="auth-grid absolute inset-0 opacity-35" />
+    <FlickeringGrid
+      class="absolute inset-0 z-0 text-black opacity-35 [mask:url('/images/deer.svg')_center/100vw_no-repeat] md:[mask-size:72vh] dark:text-white"
+      :square-size="4"
+      :grid-gap="4"
+      color="currentColor"
+      :max-opacity="0.3"
+      :flicker-chance="0.25"
+    />
     <section
       class="bg-background/85 border-border/50 relative z-10 w-full max-w-md space-y-6 rounded-3xl border p-8 shadow-xl backdrop-blur-sm"
     >

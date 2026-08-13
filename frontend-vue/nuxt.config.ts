@@ -10,11 +10,58 @@
 import tailwindcss from "@tailwindcss/vite";
 import { csrRoutes, prerenderRoutes } from "./config/routes";
 
+type ClientChunk = { moduleIds: string[]; name: string };
+
+function clientChunkFileName(chunk: ClientChunk) {
+  const ids = chunk.moduleIds.join("\n");
+  if (
+    /(?:StreamMarkdown|\/markdown\/|node_modules\/.+\/(?:hast|mdast|unified|unist-util|remark-|rehype-|marked|remend|katex))/.test(
+      ids,
+    )
+  ) {
+    return "_nuxt/vendor-markdown-[hash].js";
+  }
+  if (/(?:codemirror|@codemirror)/.test(ids)) {
+    return "_nuxt/vendor-codemirror-[hash].js";
+  }
+  if (
+    /node_modules\/.+\/(?:@vue|vue|vue-router|pinia|@pinia|@tanstack\/vue-query)/.test(
+      ids,
+    )
+  ) {
+    return "_nuxt/vendor-vue-[hash].js";
+  }
+  if (
+    /node_modules\/.+\/(?:reka-ui|lucide-vue-next|class-variance-authority|clsx|tailwind-merge|splitpanes)/.test(
+      ids,
+    )
+  ) {
+    return "_nuxt/vendor-ui-[hash].js";
+  }
+  return `_nuxt/${chunk.name}-[hash].js`;
+}
+
 export default defineNuxtConfig({
   compatibilityDate: "2026-08-03",
   modules: ["shadcn-nuxt", "@nuxtjs/color-mode", "@nuxt/eslint", "@pinia/nuxt"],
   css: ["~/assets/css/main.css", "splitpanes/dist/splitpanes.css"],
   vite: { plugins: [tailwindcss()] },
+  hooks: {
+    "vite:extendConfig"(config, { isClient }) {
+      if (!isClient) return;
+      if (!config.build) return;
+      config.build.rolldownOptions ??= {};
+      const output = config.build.rolldownOptions.output;
+      if (Array.isArray(output)) {
+        for (const item of output) item.chunkFileNames = clientChunkFileName;
+      } else {
+        config.build.rolldownOptions.output = {
+          ...output,
+          chunkFileNames: clientChunkFileName,
+        };
+      }
+    },
+  },
   components: { dirs: [] },
   colorMode: { classSuffix: "" },
   shadcn: { prefix: "", componentDir: "./app/components/ui" },

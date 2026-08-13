@@ -1,7 +1,7 @@
 # frontend-vue M0 developer entrypoint. package.json intentionally contains only postinstall.
 
-.PHONY: help install dev build preview lint format format-check typecheck typecheck-core test verify \
-	e2e-install e2e-list e2e-m0 e2e-m4a e2e-m4a-stream e2e-m4b-list e2e-m4b e2e-m5-list e2e-m5 e2e-m5-real-backend e2e-m6-list e2e-m6 e2e-m6-real-backend e2e-m7-list e2e-m7 e2e-m7-local-list e2e-m7-local e2e-m7-auth-list e2e-m7-auth e2e-m7-real-protocol e2e-external e2e e2e-auth e2e-real-backend e2e-visual \
+.PHONY: help install dev build preview lint format format-check typecheck typecheck-core test verify asset-budget \
+	e2e-install e2e-list e2e-m0 e2e-m4a e2e-m4a-stream e2e-m4b-list e2e-m4b e2e-m5-list e2e-m5 e2e-m5-real-backend e2e-m6-list e2e-m6 e2e-m6-real-backend e2e-m7-list e2e-m7 e2e-m7-local-list e2e-m7-local e2e-m7-auth-list e2e-m7-auth e2e-m7-real-protocol e2e-m7-visual e2e-external e2e e2e-auth e2e-real-backend e2e-visual \
 	proxy-smoke auth-disabled-smoke auth-cookie-smoke visual-baseline-smoke splitpanes-smoke \
 	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke \
 	baseline-refresh baseline-check land-copied land-retyped land-retyped-check \
@@ -20,6 +20,7 @@ E2E_M5_PORT ?= 3105
 E2E_M6_PORT ?= 3106
 E2E_M7_LOCAL_PORT ?= 3107
 E2E_M7_AUTH_PORT ?= 3108
+E2E_M7_VISUAL_PORT ?= 3109
 IMAGE ?= deer-flow-frontend-vue:ci
 
 help:
@@ -40,6 +41,8 @@ help:
 	@echo "  make e2e-m7-local              run exact M7 sidebar/IME/keyboard/a11y contracts"
 	@echo "  make e2e-m7-auth               run exact M7 auth request/security contracts"
 	@echo "  make e2e-m7-real-protocol      run real Gateway resume/gap/browser-cancel contract"
+	@echo "  make e2e-m7-visual             compare seven deterministic product-state screenshots"
+	@echo "  make asset-budget              build and enforce raw/gzip client asset budgets"
 	@echo "  make e2e-external              G0-6/G0-7 gates needing a browser runtime and an IdP"
 	@echo "  make e2e-list                  list shared React business contract inventory"
 	@echo "  make e2e                       run full shared business contracts (M1+ delivery)"
@@ -139,6 +142,10 @@ i18n-refresh:
 # 它防的是「少收集几个测试换全绿」——vitest run 本身报告不了没被收集的东西。
 verify: lint format-check typecheck typecheck-core test collected-check i18n-check gen-api-types-check build
 
+# The build dependency makes the gate inspect the current checkout rather than stale .output.
+asset-budget: build
+	node scripts/asset-budget.mjs
+
 e2e-install:
 	$(EXEC) playwright install --with-deps chromium
 
@@ -224,6 +231,10 @@ e2e-m7-auth:
 # M7 owns the browser evidence, while the stronger replay-Gateway state machine
 # remains single-sourced in tests/m0-real-backend/run-protocol.spec.ts.
 e2e-m7-real-protocol: run-protocol-smoke
+
+e2e-m7-visual:
+	test -f ../frontend/node_modules/@playwright/test/package.json
+	E2E_M7_VISUAL_PORT=$(E2E_M7_VISUAL_PORT) PLAYWRIGHT_BASE_URL=http://localhost:$(E2E_M7_VISUAL_PORT) $(E2E_EXEC) playwright test -c playwright.m7-visual.config.ts
 
 # G0-6 and G0-7. Separate from e2e-m0 only because they need the backend browser
 # extra (uv sync --extra browser && playwright install chromium) and a Gateway
