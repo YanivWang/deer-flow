@@ -22,6 +22,35 @@ const inventory = JSON.parse(
 const m6Inventory = JSON.parse(
   readFileSync(new URL("../m6-inventory.json", import.meta.url), "utf8"),
 ) as typeof inventory;
+const m7Inventory = JSON.parse(
+  readFileSync(new URL("../m7-inventory.json", import.meta.url), "utf8"),
+) as typeof inventory;
+const workspacePanels = readFileSync(
+  new URL(
+    "../../app/components/workspace/WorkspacePanels.vue",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const agentChat = readFileSync(
+  new URL("../../app/components/chat/AgentChat.vue", import.meta.url),
+  "utf8",
+);
+const messageList = readFileSync(
+  new URL("../../app/components/chat/MessageList.vue", import.meta.url),
+  "utf8",
+);
+const vueWorkflow = readFileSync(
+  new URL(
+    "../../../.github/workflows/frontend-vue-verify.yml",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const m7Config = readFileSync(
+  new URL("../../playwright.m7.config.ts", import.meta.url),
+  "utf8",
+);
 const browserStream = readFileSync(
   new URL(
     "../../app/components/workspace/browser-view/useBrowserStream.ts",
@@ -123,6 +152,39 @@ describe("M6 inventory and browser contract", () => {
       /await updateMCPServerState\(name, enabled\);[\s\S]*config\.value = await loadMCPConfig\(\)/,
     );
     expect(toolSettings).toContain('role="alert"');
+  });
+});
+
+describe("Vue M7 gate ownership", () => {
+  it("keeps the exact 25-file / 120-test gate but owns framework-specific artifact specs", () => {
+    expect(m7Inventory.expectedFileCount).toBe(25);
+    expect(m7Inventory.expectedTestCount).toBe(120);
+    expect(m7Inventory.specFiles).toHaveLength(25);
+    expect(m7Inventory.specFiles).toContain(
+      "frontend-vue/tests/m5/artifact-batched-stream.spec.ts",
+    );
+    expect(m7Inventory.specFiles).toContain(
+      "frontend-vue/tests/m5/artifact-panel-resize.spec.ts",
+    );
+    expect(m7Inventory.specFiles).not.toContain(
+      "frontend/tests/e2e/artifact-batched-stream.spec.ts",
+    );
+    expect(m7Inventory.specFiles).not.toContain(
+      "frontend/tests/e2e/artifact-panel-resize.spec.ts",
+    );
+    expect(makefile).toContain("playwright test -c playwright.m7.config.ts");
+    expect(vueWorkflow).toContain("run: make e2e-m7");
+    expect(m7Config).toContain("retries: 0");
+    expect(m7Config).toContain("workers: process.env.CI ? 2 : undefined");
+  });
+
+  it("does not reintroduce React DOM or fixed-timer shims in Vue panel behavior", () => {
+    expect(workspacePanels).not.toContain('data-slot="resizable-');
+    expect(workspacePanels).not.toContain("data-separator");
+    expect(workspacePanels).not.toContain("flexGrow");
+    expect(workspacePanels).not.toContain("animationTimer");
+    expect(agentChat).not.toContain("artifactOpenTimer");
+    expect(messageList).not.toContain("AIMessageChunk");
   });
 });
 

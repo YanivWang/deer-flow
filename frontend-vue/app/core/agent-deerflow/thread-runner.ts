@@ -40,7 +40,7 @@ import type { Message } from "../types/message";
 import type { DeerFlowRunHandle } from "./endpoints";
 import { classifyDeerFlowEvent, parseWireEventName } from "./event-map";
 import { createGapAwareRun, MAX_STREAM_GAP_RECOVERIES } from "./gap-recovery";
-import { toWireMessages } from "./message-adapt";
+import { toRenderableMessage, toWireMessages } from "./message-adapt";
 import type { DeerFlowThreadState } from "./reducer";
 import {
   createDeerFlowEventReducer,
@@ -232,7 +232,7 @@ export function createThreadRunner(options: ThreadRunnerOptions): ThreadRunner {
           const message = snapshot.messages[id];
           return message ? [message] : [];
         }),
-      );
+      ).map(toRenderableMessage);
     },
     getSessionState: () => sessionState,
     isStreaming: () => STREAMING_STATUSES.has(sessionState.status),

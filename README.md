@@ -353,20 +353,22 @@ On Windows, run the local development flow from Git Bash. Native `cmd.exe` and P
 6. **Access**: http://localhost:2026
 
 The experimental Vue/Nuxt frontend lives in `frontend-vue/` and remains
-milestone-gated. M7 is conditionally closed and M8 reusable-contract closure is complete;
+milestone-gated. Repository M7 and the M8 reusable-contract closure are complete;
 the general Agent
 chat workspace, artifacts, workspace changes, sidecar, settings, browser, agents,
 channels, scheduled tasks, goal/mode, and mobile surfaces are runnable and aligned to
 the React frontend. M8 freezes the private `@deerflow/agent-core` root API, the minimal
 Markdown/Button L2 source boundary, an isolated custom-backend consumer and the complete
 L3 replacement guide; it does not publish npm or change production routing. M7 has an
-exact 25-file/120-test shared inventory and a most recent
-118/120 run with two documented shared-test governance exceptions, plus independent
-8/8 interaction/H7-H8, 7/7 auth-security and 1/1 real-protocol gates. It also adds a
+exact Vue-owned 25-file/120-test inventory and passed 120/120 in three consecutive full
+runs. Framework-specific artifact streaming and splitpanes behavior use Vue specs; shared
+specs are limited to framework-neutral product contracts. It also retains independent
+interaction, auth-security and real-protocol gates and adds a
 React-default/Vue-secondary production hostname, fixture-IdP concurrent OIDC, four
 effects, a seven-state visual gate and a client asset budget. Public
-DNS/TLS/outer-proxy/real-IdP validation remains a target-environment activation gate;
-it is not inferred from local fixtures.
+DNS/TLS/outer-proxy/real-IdP validation remains **BLOCKED** until an actual Vue public
+hostname and deployment endpoint are provided; it is not inferred from local fixtures or
+the successful local real-provider probe.
 The existing command above is unchanged and still starts the React frontend. For
 Vue migration development, use one of the explicit alternatives:
 

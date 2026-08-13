@@ -58,7 +58,9 @@ compose/nginx 仍没有交付冻结的双前端生产拓扑；当前边界见 [1
 | deploy/health 脚本、container workflow                                             | 构建、健康、SIGTERM、回滚和最小镜像                                                                 | M7                      | G0-9 的长期版 + container CI                                      |
 | 锁文件/`frontend-vue/pnpm-workspace.yaml`                                          | 两前端独立依赖；Vue 内 agent-core 使用 workspace                                                    | M0                      | frozen install、重复 Playwright 检查                              |
 
-**当前不改**：React 业务源码和共享 E2E spec（只读合同）、Gateway 业务实现、根现有 compose/nginx/serve 脚本。本窗口只冻结合同；上述根级实现从 M0/M7 按表进入。
+**M-1 当时不改**：React 业务源码、Gateway 业务实现、根现有 compose/nginx/serve 脚本。
+后续里程碑按正确所有权修改测试：框架无关 spec 可共享，框架特定 spec 分属 React/Vue；
+共享观察时序缺陷必须同时跑两侧回归，不能用 Vue 产品兼容层回避。
 
 ## 2. Gateway HTTP/SSE 运行协议
 
@@ -215,13 +217,16 @@ Cookie 不按端口隔离。同一 hostname 的 `2026/3100` 会共享 access/CSR
 | ------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------- |
 | React unit          | **126 files**            | `frontend/tests/unit/**/*.{test,spec}.{ts,tsx}`；其中 core 83、其余 43                                   |
 | mock Playwright     | **27 files / 130 tests** | 本轮真实执行 `playwright test --list`                                                                    |
-| Vue 硬合同          | **25 files / 120 tests** | 同一 mock testDir 排除仅 React 范围的 `landing.spec.ts`、`docs-localized-links.spec.ts`（合计 10 tests） |
+| Vue 硬合同          | **25 files / 120 tests** | 完整路径 inventory；框架无关 spec 复用，框架特定 artifact specs 由 Vue 拥有 |
 | auth                | 1 spec                   | Vue 专属 config/server，spec 原则上复用                                                                  |
 | real-backend        | 3 spec                   | Vue 专属 config/server，场景复用并补 Vue proxy assertions                                                |
 | record              | 1 spec                   | 证据采集工具，不等于产品 gate                                                                            |
 | 最终 thread fixture | 13 files / 516 messages  | `values.messages` 口径，不是顶层 `messages`                                                              |
 
-“收集到”只证明配置和依赖有效，不等于 130/120 tests 通过。Vue 必须复用 25 个共享 mock spec；不得为适配 Vue 修改共享 spec。React unit 不能直接在 Vue 上运行：纯 TS/协议语义迁到 agent-core Vitest，组件/hook 测试写 Vue 专属版本，React 自身 126 files 继续由既有 CI守护。
+“收集到”只证明配置和依赖有效，不等于 130/120 tests 通过。Vue 必须执行精确 25-file
+inventory，但不要求 25 个都共享：框架无关行为复用，框架特定行为写 Vue spec。React unit
+不能直接在 Vue 上运行：纯 TS/协议语义迁到 agent-core Vitest，组件/hook 测试写 Vue 专属
+版本，React 自身继续由既有 CI 守护。
 
 四类证据职责：最终 thread fixture 验最终 adapter/state；raw SSE trace 验时序/cursor/分帧；fake upstream 验断流、chunk、LF/CRLF 和 method 切换；真实 Gateway 验路由/header/auth/proxy/cancel。任何一类都不能替代其余三类。
 
@@ -246,11 +251,14 @@ G0-6 与 G0-7 依赖仓库无法自带的外部前提，因此聚合在 `make e2
 `make e2e-m0` 里，由 workflow 的手动 `external-gates` job 驱动；前提缺失时该 job
 显式失败并列出缺什么，不做 skip。其余八道由 `make e2e-m0` 一次性覆盖。
 
-M0 不得以 `e2e-list` 代替 `make e2e`。M1–M7 每个里程碑运行当时已实现范围的 Vue unit + 共享 25 spec；M7 production readiness 还必须跑 auth、real-backend、visual、container、SSE/WS ingress smoke。
+M0 不得以 `e2e-list` 代替执行。M1–M7 每个里程碑运行当时已实现范围的 Vue unit +
+Vue-owned inventory；M7 production readiness 还必须跑 auth、real-backend、visual、container、
+SSE/WS ingress smoke。
 
 ## 7. 视觉基线合同
 
-结构/协议正确性由 unit、共享 Playwright、raw trace 和 Gateway smoke 验收；视觉一致性是另一条门禁，不能用 DOM 结构报告或“功能可点”代替。
+结构/协议正确性由 unit、正确所有者的 Playwright、raw trace 和 Gateway smoke 验收；
+视觉一致性是另一条门禁，不能用 DOM 结构报告或“功能可点”代替。
 
 固定 viewport：桌面 `1440x900`，移动端 `390x844`，`deviceScaleFactor=1`；固定 Chromium、locale `en-US`、时区、light/dark theme、字体和 reduced motion。每个截图使用确定性 mock/thread fixture，关闭网络波动和动画，等待 fonts/stream state marker 后再截。
 
@@ -278,7 +286,7 @@ M0 不得以 `e2e-list` 代替 `make e2e`。M1–M7 每个里程碑运行当时�
 | Vue lock/workspace               | 必须，agent-core 真包且隔离 React install                 | M0/frozen install                                  | 否                |
 | Dockerfile/compose/nginx/deploy  | production dual profile 必须                              | M0 Dockerfile；M7 ingress/compose/production gates | 否                |
 | 根/Backend 测试                  | 仅为被改的 runner/compose/nginx/OIDC 补回归               | M0/M7 对应测试                                     | 否                |
-| React 业务代码与共享 E2E spec    | 不应为 Vue 迁移修改                                       | 全程 React CI + spec只读校验                       | 否                |
+| React 业务代码与 E2E spec        | 业务代码不为 Vue 迁移改；测试只在共享观察缺陷属于正确所有者时改 | React CI + Vue/React 对应回归                    | 否                |
 | Gateway 路由实现                 | 当前合同已足够；只有单 callback外部限制迫使安全扩展时才改 | 独立安全设计，不得夹带                             | 否                |
 
 ## 9. 可追踪矩阵

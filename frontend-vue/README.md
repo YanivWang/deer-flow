@@ -2,12 +2,13 @@
 
 This Nuxt 4 workspace is the Vue frontend that coexists with `../frontend` and
 shares the Gateway. **Current migration cursor: M8 reusable contracts are complete;
-M7 remains conditionally closed.** The chat workspace, artifacts, workspace
+M7 is fully closed with a Vue-owned 120/120 gate.** The chat workspace, artifacts, workspace
 changes, sidecar, settings, browser, agents, channels, scheduled tasks, goal/mode,
 and mobile surfaces are connected to the existing Gateway/data flow and aligned
 to the current React frontend. Production Compose now has a React-default and
-Vue-secondary hostname. Two governed shared-test exceptions remain visible, and public
-deployment activation still requires target-environment validation. M8 freezes the private
+Vue-secondary hostname. The two historical shared-test exceptions are closed without weakening
+Vue product behavior; public deployment activation still requires target-environment resources.
+M8 freezes the private
 `@deerflow/agent-core` root API, the minimal L2 source boundary and an isolated custom-backend
 consumer; it does not publish npm or change production routing. Read
 [the current status and next-step record](../frontend-vue-build-docs/10-current-status-and-next.md)
@@ -34,7 +35,7 @@ make e2e-m6-list
 make e2e-m6
 make e2e-m6-real-backend
 make e2e-m7-list
-make e2e-m7      # currently 118/120; see document 10 for the two governed exceptions
+make e2e-m7      # exact Vue-owned 25-file/120-test gate
 make e2e-m7-local-list
 make e2e-m7-local  # exact 1-spec/8-test sidebar/IME/a11y/H7-H8 gate
 make e2e-m7-auth-list
@@ -63,7 +64,10 @@ NO_PROXY=127.0.0.1,localhost make e2e-external
 This is a current environment requirement, not yet a guarantee enforced by the
 Makefile.
 
-The React test host must be installed before this workspace because the shared specs and this runner intentionally use the same physical `@playwright/test` instance:
+The React test host must be installed before this workspace because framework-neutral shared
+specs and the Vue runner intentionally use the same physical `@playwright/test` instance.
+Framework-specific Vue behavior is selected by full path from the Vue inventory; it is not
+forced through React DOM or transition contracts:
 
 ```bash
 python3 scripts/pnpm.py install --frozen-lockfile
@@ -134,36 +138,27 @@ splitpanes fixtures; they return 404 in normal production configuration.
 
 ## Current verification boundary
 
-The M8 closing checkout passes its current 108-file / 1092-test unit suite,
-`make migration-check` and the isolated custom-backend consumer. The M8 risk-gate window has
-M4a 4/4, chunked SSE 3/3, M4b 66/66, M5 27/27, real-Gateway artifact 1/1,
-resume/gap/cancel 1/1 and real-backend 3/3. Historical M7-era M5 full runs were 26/27 because
-the shared transition listener could be installed after the product
-has already auto-opened the artifact; the local protocol-correct artifact test and business
-artifact replay gate passed.
-The exact M6 suite passed 27/27, the M6 real-Gateway browser gate passed 1/1,
-and the corrected real-backend suite passed 3/3. The exact M7 inventory is
-25 files / 120 tests; its most recent full execution is **118/120**, not green. The two reds are
-the protocol-incomplete batched-stream fixture and the artifact transition-listener race.
-The independent Vue-owned M7 inventories are sidebar/IME/a11y/H7-H8 **8/8**
-and auth request/security **7/7**; the reused replay-Gateway resume/gap/cancel
-browser contract passed **1/1**. Dual-host structural ingress passed 29/29, the
-seven-state visual gate passed 7/7, and container smoke passes. `make asset-budget`
-enforces named raw/gzip groups even though lazy Shiki language/WASM chunks still
-emit the default >500 kB Vite warning.
+The current checkout passes `make verify` with 108 Vitest files / 1095 tests,
+`make migration-check`, M4a 4/4, chunked SSE 3/3, M4b 66/66, M5 27/27,
+real-Gateway artifact 1/1, replay-Gateway resume/heartbeat/cancel/gap 1/1,
+real-backend 3/3 and the asset hard budgets. The exact Vue M7 inventory is
+25 files / 120 tests and passed **120/120 in three consecutive full runs**.
 
-Those results do **not** mean every later-milestone shared business contract passes.
-`make e2e-list` only collects; `make e2e-m7` executes the frozen collection.
-M7 is conditionally closed because its repository-owned hard exits are directly evidenced.
-Public DNS/TLS/outer-proxy/real-IdP behavior remains unverified and is still a release
-activation gate; Vue is not the default production frontend. M8 reusable contracts are complete. M5's
-`artifact-batched-stream` gate uses a local protocol-correct equivalent because
-the shared React fixture omits the real Gateway's required `Content-Location`
-and terminal `end`; production remains fail closed.
+The historical 118/120 exceptions are closed structurally. Vue owns the protocol-complete
+batched-stream and native splitpanes panel specs; framework-neutral React specs remain shared.
+The product no longer delays artifact auto-open for a listener, injects React separator DOM,
+duplicates splitpanes keyboard/ARIA, or maps wire chunks again inside UI components. Production
+still requires `Content-Location` plus terminal `end` and therefore remains fail closed.
+
+Public DNS/TLS/outer-proxy/real-IdP behavior is **BLOCKED/UNRUN** because this checkout and
+machine contain no real Vue public hostname or target endpoint. A local real MiniMax Gateway
+create/stream completed successfully, but it does not prove a public target. React remains the
+default production frontend; Vue remains secondary-hostname only.
 
 For exact commands, failure causes, the M4b/M5/M6 exit gates, and the ordered
 task plan, use
-[10-current-status-and-next.md](../frontend-vue-build-docs/10-current-status-and-next.md).
+[10-current-status-and-next.md](../frontend-vue-build-docs/10-current-status-and-next.md) and
+[the final M7 evidence](../frontend-vue-build-docs/evidence/m7-vue-gate-final-closure.md).
 Dual-frontend operations and rollback are documented in
 [dual-frontend-production.md](../docs/dual-frontend-production.md); DNS/TLS and
 target-environment validation remains mandatory before publicly activating Vue. The

@@ -490,11 +490,6 @@ test.describe("Artifact preview stability", () => {
         }),
     );
 
-    await page.goto(`/workspace/chats/${VIDEO_THREAD_ID}`);
-
-    await expect(page.getByText(VIDEO_ARTIFACT_PATH)).toBeVisible({
-      timeout: 15_000,
-    });
     const videoRequestPromise = page.waitForRequest((request) =>
       request
         .url()
@@ -502,6 +497,12 @@ test.describe("Artifact preview stability", () => {
           `/api/threads/${VIDEO_THREAD_ID}/artifacts${VIDEO_ARTIFACT_PATH}`,
         ),
     );
+
+    await page.goto(`/workspace/chats/${VIDEO_THREAD_ID}`);
+
+    await expect(page.getByText(VIDEO_ARTIFACT_PATH)).toBeVisible({
+      timeout: 15_000,
+    });
     await page.getByText(VIDEO_ARTIFACT_PATH).click();
 
     const artifactsPanel = page.locator("#artifacts");

@@ -318,9 +318,10 @@ M-1 已由源码、测试和 replay Gateway 固化下表；M0 必须再验证 Nu
 
 Gateway 的 create 响应与运行探针明确提供 `Content-Location`，没有观察到
 `Location`；SDK 用前者提取 run metadata，而旧重连 helper 查找后者。这不是可忽略的
-命名差异。M0 raw-response 测试后来已经记录 Nuxt proxy 后的两个 header；当前共享
-Playwright mock 仍缺 `Content-Location`，必须修 mock，禁止凭 SDK 假设或放宽 fail-closed
-协议。见 [10](10-current-status-and-next.md)。
+命名差异。M0 raw-response 测试记录了 Nuxt proxy 后的两个 header。Vue 自有
+batched-stream fixture 现在显式提供 `Content-Location` 和 terminal `end`；React fixture
+仍由 React spec 自己拥有。禁止凭 SDK 假设、在产品代码伪造字段或放宽 fail-closed 协议。
+见 [10](10-current-status-and-next.md)。
 
 ## 事件与完整状态归约
 
@@ -543,4 +544,5 @@ L2 按实现反馈逐步抽取，不预先冻结所有 UI：
 | M5   | 用 artifacts/sidecar 反向验证扩展点                                        |
 | M8   | 已冻结公共导出、consumer 示例、L2 依赖方向和迁移指南                       |
 
-每次抽取只移动已经被 React 基线、Vue 实现和共享 E2E 同时证明过的行为，禁止为了“通用”提前发明业务接口。
+每次抽取只移动已经被 React 基线、Vue 实现以及正确所有者的 E2E 同时证明过的行为；
+共享不是前提，行为证据才是。禁止为了“通用”提前发明业务接口。

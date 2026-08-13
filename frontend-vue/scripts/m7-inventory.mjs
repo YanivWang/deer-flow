@@ -13,6 +13,8 @@ const listed = spawnSync(
   [
     require.resolve("@playwright/test/cli"),
     "test",
+    "-c",
+    "playwright.m7.config.ts",
     "--list",
     "--reporter=json",
   ],
@@ -66,7 +68,7 @@ if (errors.length) {
   process.exit(1);
 }
 console.log(
-  `M7 shared inventory verified: ${actual.length} files / ${testCount} tests`,
+  `M7 Vue inventory verified: ${actual.length} files / ${testCount} tests`,
 );
 if (process.argv.includes("--list")) {
   for (const file of expected)

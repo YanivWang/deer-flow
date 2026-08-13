@@ -5,7 +5,7 @@
     "frontend/tests/e2e/artifact-preview.spec.ts",
     "frontend/tests/e2e/artifact-stream-state.spec.ts",
     "frontend-vue/tests/m5/artifact-batched-stream.spec.ts",
-    "frontend/tests/e2e/artifact-panel-resize.spec.ts",
+    "frontend-vue/tests/m5/artifact-panel-resize.spec.ts",
     "frontend/tests/e2e/workspace-changes.spec.ts",
     "frontend/tests/e2e/sidecar-chat.spec.ts"
   ]

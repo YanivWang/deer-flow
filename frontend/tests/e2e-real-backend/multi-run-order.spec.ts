@@ -78,6 +78,16 @@ test.describe("multi-run thread renders chronologically (replay, no API key)", (
     });
     expect(seed.status(), await seed.text()).toBe(200);
 
+    // Prove the test precondition through the same thread-global endpoint the
+    // Vue client consumes. A green seeder response alone does not prove that
+    // auth ownership and message visibility agree for the browser session.
+    const seededHistory = await context.request.get(
+      `${APP}/api/threads/${encodeURIComponent(threadId)}/messages/page`,
+    );
+    expect(seededHistory.status(), await seededHistory.text()).toBe(200);
+    const seededRows = (await seededHistory.json()) as { data?: unknown[] };
+    expect(seededRows.data).toHaveLength(4);
+
     // Load the thread fresh — triggers useThreadHistory's per-run reload path.
     await page.goto(`/workspace/chats/${threadId}`);
 

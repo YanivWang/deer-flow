@@ -44,7 +44,7 @@ import {
   DEFAULT_MAX_SUGGESTIONS,
   loadSuggestionsConfig,
 } from "@/core/suggestions/api";
-import type { Message, ToolCall } from "@/core/types/message";
+import type { Message } from "@/core/types/message";
 import {
   retainThreadTokenUsagePlaceholder,
   selectContextUsage,
@@ -317,67 +317,50 @@ function quotePrompt(contexts: SidecarContext[]): Message {
   } as Message;
 }
 
-let artifactOpenTimer: ReturnType<typeof setTimeout> | undefined;
 let completionNotificationTimer: ReturnType<typeof setTimeout> | undefined;
-const scheduledArtifact = ref<string | null>(null);
-function normalizeRenderableMessage(message: Message): Message {
-  const wireType = (message as unknown as { type: string }).type;
-  if (wireType === "AIMessageChunk")
-    return { ...message, type: "ai" } as Message;
-  if (wireType === "HumanMessageChunk")
-    return { ...message, type: "human" } as Message;
-  if (wireType === "ToolMessageChunk")
-    return { ...message, type: "tool" } as Message;
-  return message;
-}
-const renderableStreamMessages = computed(() =>
-  stream.messages.value.map(normalizeRenderableMessage),
-);
-watch(
-  renderableStreamMessages,
-  (messages) => {
-    let target: string | null = null;
-    for (const message of messages) {
-      const wireMessage = message as unknown as {
-        type: string;
-        tool_calls?: ToolCall[];
-      };
-      const wireType = wireMessage.type;
-      if (wireType !== "ai" && wireType !== "AIMessageChunk") continue;
-      for (const call of wireMessage.tool_calls ?? []) {
-        const path = call.args?.path;
-        if (
-          (call.name === "write_file" || call.name === "str_replace") &&
-          typeof path === "string"
-        ) {
-          target = buildWriteFileArtifactURL({
-            filepath: path,
-            messageId: message.id,
-            toolCallId: call.id,
-          });
-        }
-        if (
-          call.name === "finalize_artifact_write" &&
-          typeof path === "string"
-        ) {
-          const result = messages.find(
-            (candidate) =>
-              candidate.type === "tool" && candidate.tool_call_id === call.id,
-          );
-          if (result && messageText(result).trim() === "OK") target = path;
-        }
+const lastAutoOpenedArtifact = ref<string | null>(null);
+const autoOpenArtifact = computed(() => {
+  const messages = stream.messages.value;
+  let target: string | null = null;
+  for (const message of messages) {
+    if (message.type !== "ai") continue;
+    for (const call of message.tool_calls ?? []) {
+      const path = call.args?.path;
+      if (
+        (call.name === "write_file" || call.name === "str_replace") &&
+        typeof path === "string"
+      ) {
+        target = buildWriteFileArtifactURL({
+          filepath: path,
+          messageId: message.id,
+          toolCallId: call.id,
+        });
+      }
+      if (call.name === "finalize_artifact_write" && typeof path === "string") {
+        const result = messages.find(
+          (candidate) =>
+            candidate.type === "tool" && candidate.tool_call_id === call.id,
+        );
+        if (result && messageText(result).trim() === "OK") target = path;
       }
     }
-    if (!target || target === scheduledArtifact.value) return;
-    scheduledArtifact.value = target;
-    clearTimeout(artifactOpenTimer);
-    artifactOpenTimer = setTimeout(() => openArtifact(target!), 120);
+  }
+  return target;
+});
+watch(
+  autoOpenArtifact,
+  (target) => {
+    if (!target) return;
+    const key = `${routeThreadId.value ?? "new"}\u0000${target}`;
+    if (key === lastAutoOpenedArtifact.value) return;
+    lastAutoOpenedArtifact.value = key;
+    openArtifact(target);
   },
-  { deep: true, immediate: true },
+  { immediate: true },
 );
 
 const visibleMessages = computed(() =>
-  (demoMessages.value ?? renderableStreamMessages.value).filter(
+  (demoMessages.value ?? stream.messages.value).filter(
     (message: Message) => !isHiddenFromUIMessage(message),
   ),
 );
@@ -696,7 +679,6 @@ onUnmounted(() =>
   globalThis.removeEventListener("deerflow:sidebar-state", updateSidebarState),
 );
 onUnmounted(() => {
-  clearTimeout(artifactOpenTimer);
   clearTimeout(completionNotificationTimer);
 });
 </script>
@@ -704,7 +686,6 @@ onUnmounted(() => {
 <template>
   <WorkspacePanels
     :open="panelOpen"
-    :animate="true"
     :panel-size="artifactPanel.panelSize.value"
     :panel-label="
       activePanel === 'artifacts'
@@ -988,7 +969,7 @@ onUnmounted(() => {
         :opened-presented-artifacts="
           artifactPanel.openedPresentedArtifacts.value
         "
-        :messages="renderableStreamMessages"
+        :messages="stream.messages.value"
         :streaming="stream.isStreaming.value"
         @close="artifactPanel.close()"
         @select="artifactPanel.select($event)"
@@ -1001,7 +982,7 @@ onUnmounted(() => {
         "
         v-show="activePanel === 'sidecar'"
         :parent-thread-id="routeThreadId"
-        :parent-messages="renderableStreamMessages"
+        :parent-messages="stream.messages.value"
         :sidecar-thread-id="sidecar.sidecarThreadId.value"
         :references="sidecar.activeReferences.value"
         :context="sidecar.context"

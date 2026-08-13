@@ -212,7 +212,7 @@ e2e-m7-list:
 e2e-m7:
 	test -f ../frontend/node_modules/@playwright/test/package.json
 	node scripts/m7-inventory.mjs
-	$(E2E_EXEC) playwright test
+	$(E2E_EXEC) playwright test -c playwright.m7.config.ts
 
 e2e-m7-local-list:
 	test -f ../frontend/node_modules/@playwright/test/package.json

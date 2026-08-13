@@ -3,7 +3,8 @@
   【对应 frontend/】 无；上游直接把 SDK 的 wire 类型当内存模型，不存在这一层
   【架构位置】     L3
   【主要导出】     WireMessageLike · toAgentMessage · toAgentMessages
-                   toWireMessage · toWireMessages · mergeToolCallFragments
+                   toWireMessage · toWireMessages · toRenderableMessage
+                   mergeToolCallFragments
   【依赖关系】     @deerflow/agent-core · @/core/types/message
   【边界与注意】   08 §111 逐字要求「适配器必须有 round-trip 测试，证明
                    text/image/tool-call 内容不会丢失」。这里的实现策略是
@@ -80,6 +81,13 @@ const ROLE_TO_WIRE_TYPE: Record<AgentMessageRole, string> = {
   assistant: "ai",
   tool: "tool",
   system: "system",
+};
+
+const CHUNK_TYPE_TO_MESSAGE_TYPE: Record<string, Message["type"]> = {
+  HumanMessageChunk: "human",
+  AIMessageChunk: "ai",
+  ToolMessageChunk: "tool",
+  SystemMessageChunk: "system",
 };
 
 /**
@@ -298,6 +306,18 @@ export function toWireMessage(message: AgentMessage): Message {
 
 export function toWireMessages(messages: readonly AgentMessage[]): Message[] {
   return messages.map(toWireMessage);
+}
+
+/**
+ * 把已经由 reducer 累积完成的流式类名收敛成 UI 的消息联合类型。
+ *
+ * 原始 chunk 类名只属于 wire 输入。让它继续穿过 runner，会迫使每个 Vue 组件
+ * 各自维护一份兼容映射；组件也无法再相信 `Message["type"]`。保留其余 metadata，
+ * 只在协议 adapter 的唯一出口规范化 `type`。
+ */
+export function toRenderableMessage(message: Message): Message {
+  const type = CHUNK_TYPE_TO_MESSAGE_TYPE[String(message.type)];
+  return type === undefined ? message : ({ ...message, type } as Message);
 }
 
 // ---------------------------------------------------------------------------

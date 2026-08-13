@@ -16,20 +16,19 @@ guide rather than expecting full detail here:
   **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**.
 
 For Vue migration work, always run `make handoff-check` and read document 10 before
-historical evidence. The current cursor is **M8 complete; M7 remains conditionally closed**:
-M-1 through M6 have milestone evidence, and all repository-owned M7 hard exits have direct
-evidence. The current full shared run is 118/120, not green: the protocol-incomplete
-batched-stream fixture and an artifact opening-transition listener installed after the
-product auto-open are governed shared-test exceptions. M5 is likewise 26/27 in three full
-parallel M7-era runs; the current M8-focused M5 run is 27/27 and its real-Gateway artifact gate passes.
-The Vue-owned interaction/H7-H8 8/8, auth security 7/7 and replay-Gateway
-resume/gap/cancel 1/1 gates pass. React-default/Vue-secondary hostname routing, fixture-IdP
-concurrent OIDC 2/2, four effects, seven visual states, container smoke and asset budgets
-also pass. Public DNS/TLS/outer-proxy/real-provider validation remains an unrun target-
-environment activation gate; do not describe it as passed or Vue as the default production
-frontend. M8 freezes the private `@deerflow/agent-core` root API, the minimal L2 Markdown/Button
-source boundary, an isolated custom-backend consumer and the L3 replacement guide; no npm publish
-or default production cutover occurred.
+historical evidence. The current cursor is **M8 complete; repository M7 GO**. The exact
+Vue-owned M7 inventory is 25 files / 120 tests and passed 120/120 in three consecutive full
+runs. Framework-specific batched-stream and splitpanes/artifact-panel behavior is owned by
+Vue specs; only framework-neutral product contracts are reused from React. Do not reintroduce
+React DOM selectors, fixed animation timers, duplicate chunk adapters or basename collisions
+to satisfy another framework's test shape. Production still requires Gateway
+`Content-Location` plus terminal `end`, and artifact auto-open remains immediate.
+React-default/Vue-secondary hostname routing is unchanged. Public DNS/TLS/outer-proxy/
+real-IdP/target-runtime validation is BLOCKED because no public Vue hostname or deployment
+endpoint is configured; do not describe it as passed or Vue as the default production frontend.
+M8 freezes the private `@deerflow/agent-core` root API, the minimal L2 Markdown/Button source
+boundary, an isolated custom-backend consumer and the L3 replacement guide; no npm publish or
+default production cutover occurred.
 
 ## What is DeerFlow
 
@@ -80,7 +79,7 @@ deer-flow/
 │   ├── packages/harness/           # deerflow-harness package (import: deerflow.*) — agent framework
 │   └── app/                        # FastAPI Gateway + IM channels (import: app.*)
 ├── frontend/                       # Next.js frontend (pnpm) — see frontend/AGENTS.md
-├── frontend-vue/                   # Nuxt/Vue migration workspace; M8 complete, M7 conditionally closed
+├── frontend-vue/                   # Nuxt/Vue migration workspace; repository M7 and M8 complete
 ├── frontend-vue-build-docs/        # Current status, frozen contracts, plans, historical evidence
 ├── docker/                         # docker-compose files, nginx config, provisioner
 ├── skills/                         # Agent skills: public/ (committed), custom/ (gitignored)
@@ -163,8 +162,8 @@ cd frontend-vue && make e2e-m5    # exact M5 artifacts/changes/sidecar gate (6 s
 cd frontend-vue && make e2e-m5-real-backend  # replay Gateway write_file → artifact gate
 cd frontend-vue && make e2e-m6    # exact M6 remaining-L3 gate (8 specs / 27 tests)
 cd frontend-vue && make e2e-m6-real-backend  # real Gateway browser REST/WS → binary frame gate
-cd frontend-vue && make e2e-m7-list  # exact 25-file/120-test M7 inventory
-cd frontend-vue && make e2e-m7       # full shared suite; currently 118/120 with two governed shared-test exceptions
+cd frontend-vue && make e2e-m7-list  # exact Vue-owned 25-file/120-test M7 inventory
+cd frontend-vue && make e2e-m7       # exact Vue product gate; current checkout 120/120 x3
 cd frontend-vue && make e2e-m7-local # exact 1-file/8-test interaction, IME, a11y and H7/H8 gate
 cd frontend-vue && make e2e-m7-auth  # exact 1-file/7-test auth request/security gate
 cd frontend-vue && make e2e-m7-real-protocol  # replay-Gateway resume/gap/cancel browser gate

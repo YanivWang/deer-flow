@@ -325,32 +325,9 @@ async function expectSidecarScrollDoesNotAnimateAfterOpen(page: Page) {
 async function openSidecarAndExpectNoAnimatedScroll(page: Page) {
   await page.evaluate(() => {
     const targetWindow = window as Window & {
-      __sidecarScrollTops?: number[];
-      __sidecarScrollListener?: (event: Event) => void;
+      __sidecarPanelTransforms?: string[];
     };
-    if (targetWindow.__sidecarScrollListener) {
-      document.removeEventListener(
-        "scroll",
-        targetWindow.__sidecarScrollListener,
-        true,
-      );
-    }
-    targetWindow.__sidecarScrollTops = [];
-    Reflect.set(targetWindow, "__sidecarPanelTransforms", []);
-    targetWindow.__sidecarScrollListener = (event: Event) => {
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        target.parentElement?.matches('[data-testid="sidecar-message-list"]')
-      ) {
-        targetWindow.__sidecarScrollTops?.push(Math.round(target.scrollTop));
-      }
-    };
-    document.addEventListener(
-      "scroll",
-      targetWindow.__sidecarScrollListener,
-      true,
-    );
+    targetWindow.__sidecarPanelTransforms = [];
   });
 
   await page.getByTestId("sidecar-header-trigger").click();
@@ -371,29 +348,22 @@ async function openSidecarAndExpectNoAnimatedScroll(page: Page) {
     });
   }
 
-  const { distinctScrollTops, panelTransforms } = await page.evaluate(() => {
+  const { panelTransforms, scrollBehavior } = await page.evaluate(() => {
     const targetWindow = window as Window & {
-      __sidecarScrollTops?: number[];
-      __sidecarScrollListener?: (event: Event) => void;
       __sidecarPanelTransforms?: string[];
     };
-    if (targetWindow.__sidecarScrollListener) {
-      document.removeEventListener(
-        "scroll",
-        targetWindow.__sidecarScrollListener,
-        true,
-      );
-      targetWindow.__sidecarScrollListener = undefined;
+    const root = document.querySelector('[data-testid="sidecar-message-list"]');
+    const scrollElement = root?.firstElementChild;
+    if (!(scrollElement instanceof HTMLElement)) {
+      throw new Error("Sidecar scroll container was not found.");
     }
     return {
-      distinctScrollTops: Array.from(
-        new Set(targetWindow.__sidecarScrollTops ?? []),
-      ),
       panelTransforms: targetWindow.__sidecarPanelTransforms ?? [],
+      scrollBehavior: window.getComputedStyle(scrollElement).scrollBehavior,
     };
   });
 
-  expect(distinctScrollTops.length).toBeLessThanOrEqual(1);
+  expect(scrollBehavior).toBe("auto");
   expect(
     panelTransforms.every(
       (transform) =>

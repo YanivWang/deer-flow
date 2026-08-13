@@ -402,14 +402,14 @@ Composable 的自动导入（`app/composables/`）保留。
 
 ## 7. 验收分层：功能合同与关键视觉门禁
 
-**决策：共享 Playwright 是功能/交互硬门禁；有限的关键状态截图是视觉硬门禁；全页面 DOM diff 仍然只是诊断。**
+**决策：产品行为 Playwright 是功能/交互硬门禁；框架无关行为可共享 spec，框架特定行为由各自 spec 拥有；有限关键状态截图是视觉硬门禁；全页面 DOM diff 只是诊断。**
 
 采用 shadcn-vue 后，之前因引入有主见组件库而拆分的"分区验收"口径整个撤销。
 
 | 维度                    | 要求           | 验收方式                                                                       | 是否门禁 |
 | ----------------------- | -------------- | ------------------------------------------------------------------------------ | -------- |
-| 功能                    | **一致**       | Playwright E2E，同一份 spec 跑两个 app                                         | ✅       |
-| 交互逻辑与体验          | **一致**       | Playwright E2E + [05-invariants.md](05-invariants.md) 逐条勾选（A–N 共 14 组） | ✅       |
+| 功能                    | **行为一致**   | Playwright E2E；按完整路径选择共享或框架自有 spec                              | ✅       |
+| 交互逻辑与体验          | **结果一致**   | 框架自有交互 E2E + [05-invariants.md](05-invariants.md)（A–N 共 14 组）        | ✅       |
 | 页面结构（DOM）         | 选择器契约一致 | E2E 选择器；`structural-diff` 只产出报告                                       | ❌       |
 | 关键视觉状态            | 基线阈值内一致 | 固定 6–10 个截图状态，确定性数据 + 有限 mask                                   | ✅       |
 | 非关键装饰/框架内部 DOM | 允许受控差异   | 人工回归 + structural report                                                   | ❌       |
@@ -437,7 +437,7 @@ Composable 的自动导入（`app/composables/`）保留。
 
 | 需要什么            | 由谁保证                                                                                                                                                                      |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| E2E 选择器能复用    | **25 个合同 spec 本身**——选择器对不上就是红的，客观、有界、失败信息精确                                                                                                       |
+| E2E 选择器能复用    | 框架无关 spec 自己证明；框架特定 DOM/组件库行为由 React/Vue 各自 spec 证明，不能以复用选择器为目的改变产品                                                                      |
 | 主题能直接搬        | shadcn-vue 逐字复制 cva + 复刻 `data-slot` / `data-variant` 属性约定                                                                                                          |
 | Markdown CSS 能对上 | [M3 的归一化 DOM 等价 gate](06-migration-plan.md#m3--markdown-渲染层)——**范围限定在 Markdown 输出这一个子树**，那里确实是有界的（unified 管线两边共用，差异只可能来自渲染器） |
 
@@ -459,34 +459,45 @@ Reka UI 与 Radix 的内部结构在个别组件上本来就有出入，为了�
 
 ### E2E 是功能/交互合同
 
-这套 E2E 用 `page.route()` 拦截后端、断言真实 DOM 与文本，**与框架无关**。它验证功能与交互；视觉由上面的有限截图门禁补齐。
+这套 E2E 用 `page.route()` 拦截后端、断言真实产品状态。业务结果、API URL 和可访问语义通常
+与框架无关；DOM selector、transition event、组件库 keyboard/ARIA 实现和 fixture 生命周期
+可能属于框架。inventory 必须逐项分类，不能预设 25 个文件都与框架无关。视觉由有限截图门禁补齐。
 
 当前规模：mock 目录 27 个 spec / 130 个 test，排除 landing/docs 两个 spec 的 10 个 test 后，硬合同是 25 个 spec / 120 个 test；另有 1 个 auth spec 与 3 个 real-backend spec。CI 用 `--list` 输出实时数量，本文只记录 2026-08-04 基线。
 
-⚠️ **spec 是合同，config 也是合同的一部分。** Vue 侧的 `playwright.config.ts` 必须逐字镜像 `frontend/playwright.config.ts` 的 `use` 段（尤其 `locale: "en-US"`）——config 不同等于合同条件不同，见 [03](03-project-shape.md#e2e共用-frontendtestse2e不复制)。
+⚠️ **spec inventory 和 config 都是合同的一部分。** Vue config 必须冻结 locale、viewport、
+auth mode、server reuse、artifact 目录等外部条件；它不需要逐字镜像 React config 的 runner
+实现。Vue M7 使用 `playwright.m7.config.ts` 与完整路径 inventory。
 
 具体做法：
 
-1. **不复制 spec**——`frontend-vue/playwright.config.ts` 的 `testDir` 直接指向 `../frontend/tests/e2e`。复制会漂移，漂移后合同失效。⚠️ M0 先跑 `playwright test --list` 验证用例能被收集到，见 [03](03-project-shape.md#️-m0-必须先验证-spec-能被收集到)
-2. 保留 `frontend/tests/e2e/utils/mock-api.ts`（与被删除的产品内 static demo 模式无关，见 [01-scope.md](01-scope.md)）
+1. **按所有权复用**——框架无关 spec 直接指向 `frontend/tests/e2e`；框架特定行为写在
+   `frontend-vue/tests`。`tests/m7-inventory.json` 记录完整路径，禁止 basename 碰撞。
+2. 可复用 `frontend/tests/e2e/utils/mock-api.ts` 的框架无关路由；若单个 fixture 缺真实
+   Gateway protocol 字段，Vue spec 自有 protocol-complete fixture，产品代码不得伪造。
 3. **应用发出的 API URL 必须逐字一致**——`mock-api.ts` 实测有 **39 个 route pattern**，7 个在 `/api/langgraph/*`，32 个在裸 `/api/*`。不是保住一个前缀就够，见 [07](07-parallel-run.md#为什么必须保住这些-url)
 4. `webServer` 改为 `nuxt build && PORT=3101 nuxt preview`（独立端口 + `reuseExistingServer: false`），并传 `NUXT_PUBLIC_AUTH_DISABLED=1`（对应 Next 版的 `DEER_FLOW_AUTH_DISABLED`，**25 个 spec 全部依赖它**）
-5. **spec 视为只读合同。** 选择器基本可保持原样——shadcn-vue 复刻同样的 DOM 结构与 `data-slot` 属性约定。差异由 **Vue 侧消化**，不改 `frontend/`；实在对不上的进豁免登记表。口径与登记表见 [03](03-project-shape.md#选择器失效时的口径spec-只读--豁免登记)
+5. **修改正确所有者。** 共享业务观察时序有 bug 时修共享 spec，并跑 React/Vue；仅 React
+   的 DOM/transition/组件库行为留在 React spec；Vue 用自己的 spec 验同一产品结果。禁止
+   在 Vue 产品里注入 React `data-slot`、固定 timer、wrapper 或兼容分支来“消化差异”。
 
-> ⚠️ 第 5 条早期写的是「两边同步改，保持一份 spec」。**这条与 [06](06-migration-plan.md) 的「不提交对 `frontend/` 的任何修改」直接冲突**——改 spec 或给 React 组件加 `data-testid` 都落在 `frontend/` 里。已改为「spec 只读 + 豁免登记」，冲突消除。
+> 早期“全部共享只读 spec、差异由 Vue 消化”的规则已作废。它曾直接诱发 React selector、
+> transition listener 和固定时序补丁进入 Vue。当前规则以行为所有权和双侧回归为准，详见
+> [最终 M7 evidence](evidence/m7-vue-gate-final-closure.md)。
 
 已知需要复核的 spec：
 
 - `tests/e2e/chat.spec.ts` —— 固定了"斜杠只在输入起始位置打开技能列表"
-- `tests/e2e/sidecar-chat.spec.ts` —— 固定了"面板动画期间不得触发消息列表滚动"
+- `tests/e2e/sidecar-chat.spec.ts` —— 验证恢复后的稳定滚动状态与无动画，不以框架事件次数做代理
 
 ### 页面结构一致靠诊断报告，不做门禁
 
-126 个组件人工比对不可能可靠，所以还是要有机器手段——但它**不能靠改共用的 spec 实现**（那是只读合同），也**不该当门禁**（上一节的理由）。
+126 个组件人工比对不可能可靠，所以仍要有机器诊断——但不能把诊断差异变成要求 Vue
+复刻 React DOM 的产品门禁，也不能用共享 spec 的名义掩盖框架所有权。
 
 做法：在 `frontend-vue/tests/structural-diff.spec.ts` 写一个**自有的** Playwright spec，同一份脚本对两个 `baseURL` 各跑一遍：
 
-1. 复用 `mock-api.ts` 喂同一份确定性数据（只读引用，不修改）
+1. 复用 protocol-correct 的 `mock-api.ts` 路由或各框架等价 fixture 喂确定性数据
 2. 在若干稳定检查点，对**上一节列出的那 ≤8 个容器**提取选择器契约（`data-slot` / `data-variant` / `role` / `aria-*` / 可见文本），**不是 `outerHTML`**
 3. 归一化：剥掉随机 id、`data-*` 里的 uuid、时间戳
 4. 两份提取结果做 diff，**输出一份报告并归档**

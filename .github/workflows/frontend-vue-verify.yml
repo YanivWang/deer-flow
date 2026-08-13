@@ -130,8 +130,9 @@ jobs:
         working-directory: frontend-vue
         run: make e2e-install
 
-      # M0 owns infrastructure only. The full shared business contract remains
-      # collected above and is executed incrementally as M1-M7 implement it.
+      # Keep the infrastructure seeds explicit, then run the exact Vue-owned
+      # M7 inventory. Framework-specific behavior lives in frontend-vue specs;
+      # only framework-neutral product contracts are reused from frontend.
       - name: Run M0 preview proxy and auth-disabled smoke
         if: steps.project.outputs.exists == 'true'
         working-directory: frontend-vue
@@ -141,6 +142,11 @@ jobs:
         if: steps.project.outputs.exists == 'true'
         working-directory: frontend-vue
         run: make visual-baseline-smoke splitpanes-smoke
+
+      - name: Run the exact Vue M7 product gate
+        if: steps.project.outputs.exists == 'true'
+        working-directory: frontend-vue
+        run: make e2e-m7
 
   real-backend:
     runs-on: ubuntu-latest

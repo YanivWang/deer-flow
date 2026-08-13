@@ -1,6 +1,6 @@
 # 06 · 执行计划
 
-> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a / M4b / M5 / M6 / M8 已关闭；M7 保持带条件关闭。**
+> 当前执行游标：**M-1 至 M8 的仓库内里程碑均已关闭；M7 为 Vue 独立门禁 GO。**
 > 实跑红绿、VPN/端口问题与有序任务清单以
 > [10-current-status-and-next.md](10-current-status-and-next.md) 为准。本文负责冻结里程碑范围与
 > 退出条件，不以旧段落中的将来时替代当前状态。
@@ -66,7 +66,10 @@ git tag frontend-vue-baseline-v2 27a425b0
 
 `app/core/` 最终归入 `COPIED` 的文件增量**不需要人工 diff**——hash 守护会在换基线时直接指出哪几个文件对不上。组件层的增量按里程碑范围人工判断，超出当前范围的记进待办，不即时跟。
 
-> ⚠️ **E2E spec 是个例外，注意这个不对称。** [03 的共享 `testDir`](03-project-shape.md#e2e共用-frontendtestse2e不复制) 指向的是工作区**当前**的 `frontend/tests/e2e/`，不是基线那一份。上游改了 spec，Vue 侧会立刻感知——这是好事（合同保鲜），但意味着「代码对标 `27a425b0`、合同对标 `HEAD`」。换基线时把两者对齐一次。
+> ⚠️ **E2E 合同按行为所有权分层。** 框架无关的产品行为可指向工作区当前
+> `frontend/tests/e2e/` 以保持合同保鲜；React DOM、transition event、组件库语义或
+> fixture protocol 不适合 Vue 时，必须由 `frontend-vue/tests/` 的 Vue spec 拥有，并在
+> inventory 里写完整路径。禁止靠 basename 碰撞、产品兼容层或固定 timer 强行对齐框架实现。
 
 ## 里程碑总览
 
@@ -81,7 +84,7 @@ git tag frontend-vue-baseline-v2 27a425b0
 | **M4b** | **已关闭**     | **通用 agent UI（L2 第一批）** ★                                                          | **一个能跑的通用 agent 聊天应用——模板到此可用**                     |
 | **M5**  | **已关闭**     | L3 第一批：artifacts + sidecar                                                            | L2 扩展点已被真实 L3 功能验证                                       |
 | **M6**  | **已关闭**     | L3 其余：设置 / 侧栏 / browser / channels                                                 | 功能面完整                                                          |
-| **M7**  | **带条件关闭** | 交互收尾 + 完整验收；仓库内硬退出项有直接证据，共享测试治理例外与目标环境激活门禁显式保留 | **功能/交互合同与关键视觉状态达成**                                 |
+| **M7**  | **已关闭**     | 交互收尾 + Vue 独立完整验收；25 files / 120 tests 连续三次 120/120，公网激活另列外部阻塞 | **功能/交互合同与关键视觉状态达成**                                 |
 | **M8**  | 已关闭         | L1 根导出、最小 L2 源码边界、隔离 consumer、复用指南与 L3 替换清单已冻结                 | 其他项目可按可运行示例上手；包仍 private、未发布 npm                |
 
 ## 相对工作量与中止判定
@@ -821,6 +824,12 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 > [M7 收尾 evidence](evidence/m7-readiness-closure.md)。M8 已在不改写本历史快照的前提下关闭，
 > 当前结论见 [document 10](10-current-status-and-next.md) 与
 > [M8 evidence](evidence/m8-reusable-contracts.md)。
+>
+> **2026-08-13 最终收口：**上述 118/120 是保留的历史快照，不再是当前状态。Vue M7
+> 改用完整路径 inventory，框架特定的 batched stream 与 splitpanes/artifact panel 由 Vue
+> spec 拥有；删除 React DOM、固定动画 timer、延迟自动打开和 UI chunk 双映射。当前 checkout
+> 连续三次精确 25 files / 120 tests、120/120。详见
+> [最终收口 evidence](evidence/m7-vue-gate-final-closure.md) 与 [document 10](10-current-status-and-next.md)。
 
 - 三面板 resizable 编排（`splitpanes`），逐条对照 **H 组 8 条** —— 这是重写而非替换。**可行性已在 [M0/M1 的 spike](#m0m1-期间插入splitpanes-spike) 里验过**，这里做的是完整实现，不是探路
 - `sidebar` 与 shadcn-vue 版本逐条比对（折叠、移动端 Sheet 降级、快捷键、cookie 持久化）
@@ -911,7 +920,7 @@ vendor 聚合和单块上限共同决定。脚本已经读取 `.output/public/_n
 | **WebSocket 直连被 Origin 拒绝或生产 Upgrade 丢失** | browser-view 不可用                                              | M-1 已冻结开发直连+精确 allowlist、生产同源 ingress；[G0-6](#m0-的十道-gate) 用真实浏览器 Origin/cookie 验证                                                         |
 | **结构 diff 门禁无界**                              | 与「视觉 98%」同一种失败形状：门禁工作量超过功能本身             | 已降为诊断报告、不做门禁、只覆盖固定少数容器（[04 §7](04-architecture-decisions.md#页面结构一致靠诊断报告不做门禁)）                                                 |
 | shadcn-vue 组件与 React 版有偏差                    | 视觉不一致                                                       | 逐个对照 cva 定义；M0 先做 Button 并排截图 gate                                                                                                                      |
-| E2E 选择器强依赖 React DOM                          | 验收合同失效                                                     | shadcn-vue 复刻同样的 `data-slot` 约定；**spec 只读**，差异由 Vue 侧消化，实在不行进豁免登记表并复核该表长度                                                         |
+| E2E 选择器强依赖 React DOM                          | 验收合同失效                                                     | 框架无关行为继续共享；DOM/transition/组件库行为改由 Vue spec 拥有。禁止在 Vue 产品注入 React selector、固定 timer 或兼容层                                         |
 | **代理只在 dev 生效**                               | auth/real-backend E2E 请求 404                                   | 用编译进 Nitro 的 server catch-all，并由 [M0 G0-1](#m0-的十道-gate) 在 preview 实测；不要改回会绕过 guard 的 `routeRules.proxy`                                      |
 | **鉴权关不掉或真实 Cookie/CSRF 失败**               | mock E2E 全红或生产登录不可用                                    | [G0-3/G0-5](#m0-的十道-gate) 分别验证测试开关和真实认证                                                                                                              |
 | **`@playwright/test` 双实例或 link target 不存在**  | 共用 testDir 无法收集                                            | clean CI 先安装 `frontend`，再安装 Vue；[G0-0/G0-2](#m0-的十道-gate)                                                                                                 |

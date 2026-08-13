@@ -88,23 +88,8 @@ type SelectionPayload = {
 };
 const pendingHumanInputs = ref(new Set<string>());
 
-const normalizedMessages = computed(() =>
-  props.messages.map((message) => {
-    const wireType = (message as unknown as { type: string }).type;
-    if (wireType === "AIMessageChunk") {
-      return { ...message, type: "ai" } as Message;
-    }
-    if (wireType === "HumanMessageChunk") {
-      return { ...message, type: "human" } as Message;
-    }
-    if (wireType === "ToolMessageChunk") {
-      return { ...message, type: "tool" } as Message;
-    }
-    return message;
-  }),
-);
 const groups = computed(() =>
-  getMessageGroups(normalizedMessages.value, {
+  getMessageGroups(props.messages, {
     isCurrentTurnLoading: props.streaming,
   }),
 );
@@ -118,7 +103,7 @@ const durations = computed(() =>
   getRunDurationDisplaysByGroupIndex(groups.value),
 );
 const humanInputState = computed(() =>
-  deriveHumanInputThreadState(props.rawMessages ?? normalizedMessages.value),
+  deriveHumanInputThreadState(props.rawMessages ?? props.messages),
 );
 const scroller = ref<HTMLElement | null>(null);
 const windowStart = ref<number | null>(null);
@@ -160,14 +145,14 @@ function citations(message: Message) {
   return extractCitationSources(text(message));
 }
 function subtaskResult(toolCallId: string | undefined) {
-  const result = normalizedMessages.value.find(
+  const result = props.messages.find(
     (message) => message.type === "tool" && message.tool_call_id === toolCallId,
   );
   if (!result) {
     return {
       status: derivePendingSubtaskStatus(
         toolCallId,
-        normalizedMessages.value,
+        props.messages,
         props.streaming,
       ),
     };
@@ -319,7 +304,7 @@ function artifactTargets(message: Message) {
       call.name === "finalize_artifact_write" &&
       typeof call.args?.path === "string"
     ) {
-      const result = normalizedMessages.value.find(
+      const result = props.messages.find(
         (candidate) =>
           candidate.type === "tool" && candidate.tool_call_id === call.id,
       );

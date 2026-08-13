@@ -34,6 +34,7 @@ import {
   accumulateStreamedMessage,
   mergeToolCallFragments,
   toAgentMessage,
+  toRenderableMessage,
   toWireMessage,
 } from "@/core/agent-deerflow/message-adapt";
 import type { WireMessageLike } from "@/core/agent-deerflow/message-adapt";
@@ -223,6 +224,23 @@ describe("messages-tuple 流式分片（golden trace，第 2 类证据）", () =
         (chunk) => (chunk.tool_call_chunks as unknown[] | undefined)?.length,
       ),
     ).toHaveLength(2);
+  });
+
+  it("累积后的 chunk 类名只在 adapter 出口收敛一次", () => {
+    const chunk = {
+      id: "chunk-1",
+      type: "AIMessageChunk",
+      content: "streamed",
+      response_metadata: { provider: "fixture" },
+    } as unknown as Message;
+    expect(toRenderableMessage(chunk)).toEqual({
+      ...chunk,
+      type: "ai",
+    });
+    expect(chunk.type).toBe("AIMessageChunk");
+    expect(
+      toRenderableMessage({ type: "human", content: "done" } as Message),
+    ).toEqual({ type: "human", content: "done" });
   });
 
   it("分片的 args 原文进 argsChunks，成品 args 不被覆盖", () => {
