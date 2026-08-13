@@ -1,6 +1,6 @@
 # 06 · 执行计划
 
-> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a / M4b / M5 已关闭；M6 是下一步但尚未开始。**
+> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a / M4b / M5 / M6 已关闭；M7 是下一步但尚未开始。**
 > 实跑红绿、VPN/端口问题与有序任务清单以
 > [10-current-status-and-next.md](10-current-status-and-next.md) 为准。本文负责冻结里程碑范围与
 > 退出条件，不以旧段落中的将来时替代当前状态。
@@ -80,7 +80,7 @@ git tag frontend-vue-baseline-v2 27a425b0
 | **M4a** | 已关闭     | 数据流：`threads/hooks.ts` 与 7 个 Context          | 流式状态在 Vue 下跑通，带 gate                                      |
 | **M4b** | **已关闭** | **通用 agent UI（L2 第一批）** ★                    | **一个能跑的通用 agent 聊天应用——模板到此可用**                     |
 | **M5**  | **已关闭** | L3 第一批：artifacts + sidecar                      | L2 扩展点已被真实 L3 功能验证                                       |
-| **M6**  | 未开始     | L3 其余：设置 / 侧栏 / browser / channels           | 功能面完整                                                          |
+| **M6**  | **已关闭** | L3 其余：设置 / 侧栏 / browser / channels           | 功能面完整                                                          |
 | **M7**  | 未开始     | 交互收尾 + 完整验收                                 | **功能/交互合同与关键视觉状态达成**                                 |
 | **M8**  | 未开始     | L2 契约收口                                         | 其他项目可上手复用                                                  |
 
@@ -778,7 +778,8 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 > 共享 batched-stream fixture 的协议适配、命令和未验证边界见
 > [evidence/m5-artifacts-sidecar.md](evidence/m5-artifacts-sidecar.md)。
 >
-> 全量 25-file/120-test 共享套件仍只是收集结果，不是通过结果；M6 未开始。
+> 截至该 M5 退出快照，全量 25-file/120-test 共享套件仍只是收集结果，不是通过结果，
+> 当时 M6 尚未开始；当前游标以文档顶部和文档 10 为准。
 
 ---
 
@@ -794,6 +795,17 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 把它放进任何前端清单都只能勾一个假的钩。
 
 **E2E**：`sidebar` `settings-notification` `integrations` `channels` `scheduled-tasks` `browser-feature` `agents-feature-disabled` `ui-polish-mobile`
+
+> **2026-08-13 退出结论：M6 已关闭。** 以上 8 个共享 spec 已冻结为精确
+> 8-file/27-test inventory 并 27/27 通过；I1-I5、K4、K5、N2 已落到真实
+> Settings/Browser/Channels/Scheduled Tasks/Agents/Goal/Mode/Mobile 路径。Browser 另有
+> 真实 Gateway navigate + WebSocket binary frame 1/1；M0、M4a、M4b、M5、verify、
+> migration/consumer、real-backend 与 external 回归保持通过。完整 inventory、失败修复
+> 与未知远端运行时边界见 [evidence/m6-remaining-l3.md](evidence/m6-remaining-l3.md)。
+>
+> 全量共享合同仍只是 `make e2e-list` 收集到 25 files / 120 tests，没有执行或声称
+> 120 passed。H1-H6、全量认证/视觉/性能/生产 readiness 属于 M7；L2 复用契约收口
+> 属于 M8，本轮均未进入。
 
 ---
 

@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { Menu, Share2 } from "lucide-vue-next";
+import { CalendarClock, Menu, Share2 } from "lucide-vue-next";
 
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
 import WorkspacePanels from "@/components/workspace/WorkspacePanels.vue";
 import ArtifactPanel from "@/components/workspace/artifacts/ArtifactPanel.vue";
 import ArtifactTrigger from "@/components/workspace/artifacts/ArtifactTrigger.vue";
+import BrowserPanel from "@/components/workspace/browser-view/BrowserPanel.vue";
+import BrowserTrigger from "@/components/workspace/browser-view/BrowserTrigger.vue";
 import SidecarPanel from "@/components/workspace/sidecar/SidecarPanel.vue";
 import { useArtifactsPanel } from "@/composables/useArtifactsPanel";
 import { useSidecar } from "@/composables/useSidecar";
 import { useThreadStream } from "@/composables/useThreadStream";
+import { useNotifications } from "@/composables/useNotifications";
+import { useWorkspaceFeatures } from "@/composables/useWorkspaceFeatures";
 import { branchThreadFromTurn } from "@/core/threads/api";
 import { getAPIClient } from "@/core/api/api-client";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
@@ -28,6 +32,7 @@ import {
   loadSuggestionsConfig,
 } from "@/core/suggestions/api";
 import type { Message, ToolCall } from "@/core/types/message";
+import type { GoalState } from "@/core/threads/types";
 import {
   buildReferenceMessageMetadata,
   type SidecarContext,
@@ -37,11 +42,14 @@ import { useThreadsStore } from "@/stores/threads";
 
 const props = defineProps<{
   agentName?: string | null;
+  bootstrap?: boolean;
 }>();
 const { $i18n } = useNuxtApp();
 const route = useRoute();
 const router = useRouter();
 const threads = useThreadsStore();
+const features = useWorkspaceFeatures();
+const notifications = useNotifications();
 
 const routeThreadId = computed(() => {
   const raw = route.params.thread_id;
@@ -58,6 +66,7 @@ const context = computed(() => ({
   ...getBaseSettingsSnapshot().context,
   ...contextOverrides.value,
   ...(props.agentName ? { agent_name: props.agentName } : {}),
+  ...(props.bootstrap ? { is_bootstrap: true } : {}),
 }));
 const warnings = ref<string[]>([]);
 const localUploading = ref(false);
@@ -90,7 +99,7 @@ const stream = useThreadStream({
   },
   onStart(startedThreadId) {
     threads.upsertCreated(startedThreadId, props.agentName);
-    if (routeThreadId.value === null) {
+    if (routeThreadId.value === null && !props.bootstrap) {
       const path = props.agentName
         ? `/workspace/agents/${encodeURIComponent(props.agentName)}/chats/${startedThreadId}`
         : `/workspace/chats/${startedThreadId}`;
@@ -110,6 +119,38 @@ const stream = useThreadStream({
       }
     }
     queueMicrotask(() => void refreshPostRun(id));
+    // A new chat adopts its real route id asynchronously in onStart. The final
+    // wire message can therefore become visible shortly after `onFinish`.
+    // Bound the wait instead of emitting an irreversibly body-less notification.
+    const notifyWhenFinalMessageIsVisible = (remainingAttempts: number) => {
+      if (document.hasFocus()) return;
+      const completedMessages = Reflect.get(state, "messages");
+      const stateMessages = Array.isArray(completedMessages)
+        ? completedMessages.filter(
+            (message): message is Message =>
+              typeof message === "object" &&
+              message !== null &&
+              Reflect.get(message, "type") === "ai",
+          )
+        : [];
+      const lastAssistant = [...stateMessages, ...visibleMessages.value]
+        .reverse()
+        .find((message) => message.type === "ai");
+      if (!lastAssistant && remainingAttempts > 0) {
+        completionNotificationTimer = setTimeout(
+          () => notifyWhenFinalMessageIsVisible(remainingAttempts - 1),
+          25,
+        );
+        return;
+      }
+      notifications.showNotification(currentTitle.value, {
+        body: lastAssistant ? messageText(lastAssistant) : undefined,
+      });
+    };
+    completionNotificationTimer = setTimeout(
+      () => notifyWhenFinalMessageIsVisible(8),
+      0,
+    );
   },
 });
 const authoritativeArtifacts = computed(() => {
@@ -123,6 +164,26 @@ const authoritativeArtifacts = computed(() => {
     ? value.filter((item): item is string => typeof item === "string")
     : [];
 });
+const authoritativeGoal = computed<GoalState | null>(() => {
+  const state = stream.state.value;
+  if (Object.prototype.hasOwnProperty.call(state, "goal")) {
+    return (Reflect.get(state, "goal") as GoalState | null | undefined) ?? null;
+  }
+  return (
+    threads.threads.find((thread) => thread.thread_id === routeThreadId.value)
+      ?.values.goal ?? null
+  );
+});
+const localGoal = ref<GoalState | null | undefined>(undefined);
+const activeGoal = computed(() =>
+  localGoal.value !== undefined ? localGoal.value : authoritativeGoal.value,
+);
+watch(authoritativeGoal, () => {
+  localGoal.value = undefined;
+});
+watch(routeThreadId, () => {
+  localGoal.value = undefined;
+});
 const artifactPanel = useArtifactsPanel({
   threadId: routeThreadId,
   authoritativeArtifacts,
@@ -130,13 +191,15 @@ const artifactPanel = useArtifactsPanel({
 });
 const sidecar = useSidecar({ parentThreadId: routeThreadId, context });
 const sidecarReady = ref(false);
+const browserOpen = ref(false);
 watch(
   () => sidecar.sidecarThreadId.value,
   () => {
     sidecarReady.value = false;
   },
 );
-const activePanel = computed<"artifacts" | "sidecar" | null>(() => {
+const activePanel = computed<"artifacts" | "sidecar" | "browser" | null>(() => {
+  if (browserOpen.value) return "browser";
   if (sidecar.open.value) return "sidecar";
   if (artifactPanel.open.value && artifactPanel.selectedArtifact.value)
     return "artifacts";
@@ -145,6 +208,7 @@ const activePanel = computed<"artifacts" | "sidecar" | null>(() => {
 const panelOpen = computed(() => activePanel.value !== null);
 
 function openArtifact(path: string) {
+  browserOpen.value = false;
   sidecar.close();
   artifactPanel.select(path);
 }
@@ -155,9 +219,15 @@ async function toggleSidecar() {
   }
   const restored = await sidecar.restoreSidecarThread({ force: true });
   if (restored) {
+    browserOpen.value = false;
     artifactPanel.close();
     sidecar.open.value = true;
   }
+}
+function openBrowser() {
+  artifactPanel.close();
+  sidecar.close();
+  browserOpen.value = true;
 }
 function askInSidecar(payload: {
   message: Message;
@@ -222,6 +292,7 @@ function quotePrompt(contexts: SidecarContext[]): Message {
 }
 
 let artifactOpenTimer: ReturnType<typeof setTimeout> | undefined;
+let completionNotificationTimer: ReturnType<typeof setTimeout> | undefined;
 const scheduledArtifact = ref<string | null>(null);
 function normalizeRenderableMessage(message: Message): Message {
   const wireType = (message as unknown as { type: string }).type;
@@ -501,6 +572,16 @@ function resetNewChat() {
   draftThreadId.value = globalThis.crypto.randomUUID();
 }
 onMounted(() => globalThis.addEventListener("deerflow:new-chat", resetNewChat));
+onMounted(() => {
+  if (!props.bootstrap || !props.agentName) return;
+  void send(
+    $i18n.t.value.agents.nameStepBootstrapMessage.replace(
+      "{name}",
+      props.agentName,
+    ),
+    [],
+  );
+});
 onMounted(async () => {
   try {
     const config = await loadSuggestionsConfig();
@@ -543,7 +624,10 @@ onMounted(async () => {
 onUnmounted(() =>
   globalThis.removeEventListener("deerflow:new-chat", resetNewChat),
 );
-onUnmounted(() => clearTimeout(artifactOpenTimer));
+onUnmounted(() => {
+  clearTimeout(artifactOpenTimer);
+  clearTimeout(completionNotificationTimer);
+});
 </script>
 
 <template>
@@ -551,15 +635,26 @@ onUnmounted(() => clearTimeout(artifactOpenTimer));
     :open="panelOpen"
     :animate="activePanel === 'artifacts'"
     :panel-size="artifactPanel.panelSize.value"
+    :panel-label="
+      activePanel === 'artifacts'
+        ? 'Artifacts'
+        : activePanel === 'sidecar'
+          ? 'Side chat'
+          : 'Browser'
+    "
     @update:panel-size="artifactPanel.panelSize.value = $event"
     @collapse="
-      activePanel === 'sidecar' ? sidecar.close() : artifactPanel.close()
+      activePanel === 'sidecar'
+        ? sidecar.close()
+        : activePanel === 'browser'
+          ? (browserOpen = false)
+          : artifactPanel.close()
     "
   >
     <template #main>
       <section id="chat" class="relative flex h-full min-h-0 flex-col">
         <header
-          class="bg-background/80 absolute top-0 right-0 left-0 z-30 flex h-12 items-center gap-2 px-2 shadow-xs backdrop-blur sm:px-4"
+          class="bg-background/80 absolute top-0 right-0 left-0 z-40 flex h-12 items-center gap-2 px-2 shadow-xs backdrop-blur sm:px-4"
           :class="
             isWelcomeMode
               ? 'bg-background/0 shadow-none backdrop-blur-none'
@@ -568,6 +663,7 @@ onUnmounted(() => clearTimeout(artifactOpenTimer));
         >
           <button
             type="button"
+            data-sidebar="trigger"
             aria-label="Toggle sidebar"
             class="hover:bg-accent flex size-8 items-center justify-center rounded-md md:hidden"
             @click="toggleSidebar"
@@ -582,9 +678,23 @@ onUnmounted(() => clearTimeout(artifactOpenTimer));
             class="bg-secondary text-secondary-foreground rounded-full px-2.5 py-1 text-xs"
             >{{ agentName }}</span
           >
+          <button
+            v-if="bootstrap"
+            type="button"
+            class="rounded-md border px-3 py-1.5 text-xs"
+            :disabled="stream.isStreaming.value"
+            @click="send($i18n.t.value.agents.saveCommandMessage, [])"
+          >
+            {{
+              stream.isStreaming.value
+                ? $i18n.t.value.agents.saving
+                : $i18n.t.value.agents.save
+            }}
+          </button>
           <ArtifactTrigger
             :count="artifactPanel.artifacts.value.length"
             @open="
+              browserOpen = false;
               sidecar.close();
               artifactPanel.setOpen(true);
               if (!artifactPanel.selectedArtifact.value) {
@@ -592,6 +702,18 @@ onUnmounted(() => clearTimeout(artifactOpenTimer));
               }
             "
           />
+          <BrowserTrigger
+            v-if="routeThreadId && features.browserControlEnabled.value"
+            @open="openBrowser"
+          />
+          <NuxtLink
+            v-if="routeThreadId"
+            :to="`/workspace/scheduled-tasks?thread_id=${encodeURIComponent(routeThreadId)}`"
+            aria-label="Scheduled tasks"
+            class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
+          >
+            <CalendarClock :size="16" />
+          </NuxtLink>
           <button
             v-if="sidecar.sidecarThreadId.value && sidecarReady"
             type="button"
@@ -702,7 +824,7 @@ onUnmounted(() => clearTimeout(artifactOpenTimer));
               </p>
             </div>
             <div
-              v-if="followupsLoading || followups.length"
+              v-if="isWelcomeMode || followupsLoading || followups.length"
               data-slot="suggestions-list"
               class="mb-2 flex w-full flex-wrap justify-center gap-2"
             >
@@ -721,6 +843,25 @@ onUnmounted(() => clearTimeout(artifactOpenTimer));
               >
                 {{ suggestion }}
               </button>
+              <template
+                v-if="
+                  isWelcomeMode && !followupsLoading && followups.length === 0
+                "
+              >
+                <button
+                  v-for="suggestion in [
+                    'Explore a topic',
+                    'Create a presentation',
+                    'Analyze data',
+                  ]"
+                  :key="suggestion"
+                  type="button"
+                  class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-3 py-1.5 text-xs"
+                  @click="composer?.replaceDraft(suggestion)"
+                >
+                  {{ suggestion }}
+                </button>
+              </template>
               <button
                 v-if="followups.length"
                 type="button"
@@ -743,6 +884,7 @@ onUnmounted(() => clearTimeout(artifactOpenTimer));
               :ensure-thread="ensureThread"
               :references="sidecar.conversationQuotes.value"
               :context="context"
+              :goal="activeGoal"
               @send="send"
               @stop="stream.stop()"
               @uploading-change="
@@ -751,6 +893,7 @@ onUnmounted(() => clearTimeout(artifactOpenTimer));
               "
               @clear-references="sidecar.clearConversationQuotes()"
               @context-change="contextOverrides = $event"
+              @goal-change="localGoal = $event"
             />
           </div>
         </div>
@@ -794,6 +937,12 @@ onUnmounted(() => clearTimeout(artifactOpenTimer));
         @close="sidecar.close()"
         @deleted="sidecar.clearThreadAndClose()"
         @ready="sidecarReady = true"
+      />
+      <BrowserPanel
+        v-else-if="routeThreadId && activePanel === 'browser'"
+        :thread-id="routeThreadId"
+        :active="activePanel === 'browser'"
+        @close="browserOpen = false"
       />
     </template>
   </WorkspacePanels>

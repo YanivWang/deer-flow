@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-vue-next";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
+import GoalStatus from "@/components/workspace/GoalStatus.vue";
 import type { SidecarReference } from "@/composables/useSidecar";
 
 import {
@@ -49,6 +50,12 @@ import { loadModels } from "@/core/models/api";
 import type { Model } from "@/core/models/types";
 import type { ThreadRunContextInput } from "@/core/threads/submit";
 import {
+  MAX_GOAL_OBJECTIVE_CHARS,
+  parseGoalCommand,
+  readGoalResponseError,
+} from "@/core/threads/goal";
+import type { GoalState } from "@/core/threads/types";
+import {
   appendSpeechTranscript,
   getSpeechRecognitionConstructor,
   getSpeechRecognitionLanguage,
@@ -70,6 +77,7 @@ const props = defineProps<{
   isWelcome?: boolean;
   references?: SidecarReference[];
   context?: ThreadRunContextInput;
+  goal?: GoalState | null;
 }>();
 const { $i18n } = useNuxtApp();
 const emit = defineEmits<{
@@ -78,6 +86,7 @@ const emit = defineEmits<{
   uploadingChange: [value: boolean];
   clearReferences: [];
   contextChange: [value: ThreadRunContextInput];
+  goalChange: [value: GoalState | null];
 }>();
 
 const input = ref("");
@@ -90,9 +99,9 @@ const polishOriginal = ref<string | null>(null);
 const polishing = ref(false);
 const polishController = ref<AbortController | null>(null);
 const toast = ref("");
-const goal = ref("");
 const models = ref<Model[]>([]);
 const modelMenu = ref(false);
+const modeMenu = ref(false);
 const voiceListening = ref(false);
 const voiceRecognition = ref<BrowserSpeechRecognition | null>(null);
 let voiceBaseText = "";
@@ -112,6 +121,33 @@ const selectedModel = computed(
     models.value.find((model) => model.name === props.context?.model_name) ??
     models.value[0],
 );
+const selectedMode = computed(() => String(props.context?.mode ?? "flash"));
+const modes = computed(() => [
+  {
+    id: "flash",
+    label: $i18n.t.value.inputBox.flashMode,
+    description: $i18n.t.value.inputBox.flashModeDescription,
+    effort: "minimal" as const,
+  },
+  {
+    id: "thinking",
+    label: $i18n.t.value.inputBox.reasoningMode,
+    description: $i18n.t.value.inputBox.reasoningModeDescription,
+    effort: "low" as const,
+  },
+  {
+    id: "pro",
+    label: $i18n.t.value.inputBox.proMode,
+    description: $i18n.t.value.inputBox.proModeDescription,
+    effort: "medium" as const,
+  },
+  {
+    id: "ultra",
+    label: $i18n.t.value.inputBox.ultraMode,
+    description: $i18n.t.value.inputBox.ultraModeDescription,
+    effort: "high" as const,
+  },
+]);
 const textarea = ref<HTMLTextAreaElement | null>(null);
 const chipInput = ref<HTMLElement | null>(null);
 let historyIndex = -1;
@@ -211,6 +247,14 @@ onMounted(async () => {
 function selectModel(model: Model) {
   emit("contextChange", { ...props.context, model_name: model.name });
   modelMenu.value = false;
+}
+function selectMode(mode: (typeof modes.value)[number]) {
+  emit("contextChange", {
+    ...props.context,
+    mode: mode.id,
+    reasoning_effort: mode.effort,
+  });
+  modeMenu.value = false;
 }
 onBeforeUnmount(() => {
   voiceStopRequested = true;
@@ -318,16 +362,59 @@ async function submit() {
     return;
   }
 
-  if (text.startsWith("/goal ")) {
-    goal.value = text.slice(6).trim();
-    await fetchWithAuth(
-      `${getBackendBaseURL()}/api/threads/${encodeURIComponent(props.targetThreadId)}/goal`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ objective: goal.value }),
-      },
-    ).catch(() => undefined);
+  const goalCommand =
+    selectedFiles.value.length === 0 ? parseGoalCommand(text) : null;
+  if (goalCommand) {
+    if (
+      goalCommand.kind === "set" &&
+      goalCommand.objective.length > MAX_GOAL_OBJECTIVE_CHARS
+    ) {
+      toast.value = `Goal is too long. Keep it under ${MAX_GOAL_OBJECTIVE_CHARS} characters.`;
+      return;
+    }
+    try {
+      const threadId = props.ensureThread
+        ? await props.ensureThread()
+        : props.targetThreadId;
+      const endpoint = `${getBackendBaseURL()}/api/threads/${encodeURIComponent(threadId)}/goal`;
+      const response = await fetchWithAuth(endpoint, {
+        method:
+          goalCommand.kind === "status"
+            ? "GET"
+            : goalCommand.kind === "clear"
+              ? "DELETE"
+              : "PUT",
+        ...(goalCommand.kind === "set"
+          ? {
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ objective: goalCommand.objective }),
+            }
+          : {}),
+      });
+      if (!response.ok) throw new Error(await readGoalResponseError(response));
+      const body = (await response.json()) as { goal?: GoalState | null };
+      const nextGoal = body.goal ?? null;
+      emit("goalChange", nextGoal);
+      toast.value =
+        goalCommand.kind === "status"
+          ? nextGoal
+            ? `Active goal: ${nextGoal.objective}`
+            : "No active goal."
+          : goalCommand.kind === "clear"
+            ? "Goal cleared."
+            : "Goal set.";
+      clearComposerDraft(getSessionComposerDraftStorage(), draftKey.value);
+      input.value = "";
+      selectedSkill.value = null;
+      if (goalCommand.kind === "set") {
+        emit("send", goalCommand.objective, []);
+      }
+      return;
+    } catch (cause) {
+      toast.value =
+        cause instanceof Error ? cause.message : "Goal command failed.";
+      return;
+    }
   }
 
   clearComposerDraft(getSessionComposerDraftStorage(), draftKey.value);
@@ -476,9 +563,7 @@ defineExpose({ replaceDraft });
 
 <template>
   <div class="relative flex min-w-0 flex-col gap-2">
-    <div v-if="goal" class="mx-auto mb-1 w-full text-sm">
-      Goal: <span class="font-medium">{{ goal }}</span>
-    </div>
+    <GoalStatus v-if="goal" :goal="goal" />
     <form class="mx-auto w-full" @submit.prevent="submit">
       <ReferenceAttachment
         :references="references ?? []"
@@ -650,6 +735,33 @@ defineExpose({ replaceDraft });
             }}</span>
           </button>
           <span class="flex-1" />
+          <div class="relative">
+            <button
+              type="button"
+              class="hover:bg-accent h-8 rounded-md px-2 text-xs"
+              :title="`${modes.find((mode) => mode.id === selectedMode)?.label}: ${modes.find((mode) => mode.id === selectedMode)?.description}`"
+              @click="modeMenu = !modeMenu"
+            >
+              {{ modes.find((mode) => mode.id === selectedMode)?.label }}
+            </button>
+            <div
+              v-if="modeMenu"
+              class="bg-background border-border absolute right-0 bottom-full z-30 mb-1 w-72 rounded-md border p-1 shadow"
+            >
+              <button
+                v-for="mode in modes"
+                :key="mode.id"
+                type="button"
+                class="hover:bg-accent block w-full rounded px-2 py-2 text-left"
+                @click="selectMode(mode)"
+              >
+                <span class="block text-sm font-medium">{{ mode.label }}</span>
+                <span class="text-muted-foreground block text-xs">{{
+                  mode.description
+                }}</span>
+              </button>
+            </div>
+          </div>
           <div class="relative">
             <button
               v-if="selectedModel"

@@ -12,6 +12,19 @@ import {
 
 const PAGE_SIZE = 50;
 
+export function mergeThreadSnapshot(
+  existing: AgentThread | undefined,
+  incoming: AgentThread,
+): AgentThread {
+  if (!existing) return incoming;
+  return {
+    ...existing,
+    ...incoming,
+    metadata: { ...existing.metadata, ...incoming.metadata },
+    values: { ...existing.values, ...incoming.values },
+  };
+}
+
 export const useThreadsStore = defineStore("threads", () => {
   const threads = ref<AgentThread[]>([]);
   const offset = ref(0);
@@ -25,7 +38,12 @@ export const useThreadsStore = defineStore("threads", () => {
     const byId = new Map(
       threads.value.map((thread) => [thread.thread_id, thread]),
     );
-    for (const thread of items) byId.set(thread.thread_id, thread);
+    for (const thread of items) {
+      byId.set(
+        thread.thread_id,
+        mergeThreadSnapshot(byId.get(thread.thread_id), thread),
+      );
+    }
     threads.value = [...byId.values()];
   }
 
@@ -110,6 +128,15 @@ export const useThreadsStore = defineStore("threads", () => {
     );
   }
 
+  async function rename(threadId: string, title: string) {
+    await getAPIClient().threads.updateState(threadId, { values: { title } });
+    threads.value = threads.value.map((thread) =>
+      thread.thread_id === threadId
+        ? { ...thread, values: { ...thread.values, title } }
+        : thread,
+    );
+  }
+
   return {
     threads,
     displayedThreads,
@@ -121,6 +148,7 @@ export const useThreadsStore = defineStore("threads", () => {
     upsertCreated,
     setPinned,
     remove,
+    rename,
     isPinned: isThreadPinned,
   };
 });

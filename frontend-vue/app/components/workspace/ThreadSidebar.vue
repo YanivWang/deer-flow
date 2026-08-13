@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import {
   Bot,
+  CalendarClock,
   ChevronsLeft,
   ChevronsRight,
   Languages,
@@ -9,12 +10,16 @@ import {
   MessagesSquare,
   Moon,
   MoreHorizontal,
+  Pencil,
   Pin,
   Settings,
   Sun,
   Trash2,
 } from "lucide-vue-next";
 
+import ChannelConnections from "@/components/workspace/channels/ChannelConnections.vue";
+import { useSettingsDialog } from "@/composables/useSettingsDialog";
+import { useWorkspaceFeatures } from "@/composables/useWorkspaceFeatures";
 import { useThreadsStore } from "@/stores/threads";
 import {
   channelSourceOfThread,
@@ -25,11 +30,16 @@ import {
 const route = useRoute();
 const router = useRouter();
 const threads = useThreadsStore();
+const features = useWorkspaceFeatures();
+const settingsDialog = useSettingsDialog();
 const menuThreadId = ref<string | null>(null);
 const sentinel = ref<HTMLElement | null>(null);
 const collapsed = ref(false);
 const mobileOpen = ref(false);
 const settingsOpen = ref(false);
+const renameThreadId = ref<string | null>(null);
+const renameTitle = ref("");
+const renameError = ref<string | null>(null);
 let observer: IntersectionObserver | null = null;
 
 function toggleSidebar() {
@@ -76,6 +86,26 @@ async function removeThread(threadId: string) {
   }
 }
 
+function beginRename(threadId: string) {
+  const thread = threads.threads.find((item) => item.thread_id === threadId);
+  renameThreadId.value = threadId;
+  renameTitle.value = thread ? titleOfThread(thread) : "";
+  renameError.value = null;
+  menuThreadId.value = null;
+}
+
+async function submitRename() {
+  if (!renameThreadId.value || !renameTitle.value.trim()) return;
+  renameError.value = null;
+  try {
+    await threads.rename(renameThreadId.value, renameTitle.value.trim());
+    renameThreadId.value = null;
+  } catch (cause) {
+    renameError.value =
+      cause instanceof Error ? cause.message : "Failed to rename thread.";
+  }
+}
+
 function setTheme(theme: "light" | "dark") {
   document.documentElement.classList.toggle("dark", theme === "dark");
   localStorage.setItem("deerflow-theme", theme);
@@ -85,6 +115,7 @@ function setTheme(theme: "light" | "dark") {
 <template>
   <aside
     data-sidebar="sidebar"
+    :data-mobile="mobileOpen ? 'true' : undefined"
     class="border-sidebar-border bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-50 flex h-screen shrink-0 flex-col border-r transition-[width,transform] duration-200 md:static md:translate-x-0"
     :class="[
       collapsed ? 'w-12' : 'w-64',
@@ -135,6 +166,7 @@ function setTheme(theme: "light" | "dark") {
         <span v-if="!collapsed">{{ $i18n.t.value.sidebar.chats }}</span>
       </NuxtLink>
       <NuxtLink
+        v-if="features.agentsApiEnabled.value"
         data-sidebar="menu-button"
         class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground flex h-8 items-center gap-2 rounded-md px-2"
         :data-active="route.path.startsWith('/workspace/agents')"
@@ -144,7 +176,39 @@ function setTheme(theme: "light" | "dark") {
         <Bot :size="16" class="shrink-0" />
         <span v-if="!collapsed">{{ $i18n.t.value.sidebar.agents }}</span>
       </NuxtLink>
+      <div v-else class="group relative">
+        <button
+          type="button"
+          aria-label="Agents"
+          aria-disabled="true"
+          aria-describedby="agents-disabled-description"
+          class="text-muted-foreground hover:bg-sidebar-accent flex h-8 w-full items-center gap-2 rounded-md px-2"
+        >
+          <Bot :size="16" class="shrink-0" />
+          <span v-if="!collapsed">{{ $i18n.t.value.sidebar.agents }}</span>
+        </button>
+        <span id="agents-disabled-description" class="sr-only"
+          >Feature not enabled</span
+        >
+        <span
+          role="tooltip"
+          class="bg-popover text-popover-foreground absolute top-full left-2 z-50 hidden rounded-md border px-2 py-1 text-xs whitespace-nowrap shadow group-focus-within:block group-hover:block"
+          >Feature not enabled</span
+        >
+      </div>
+      <NuxtLink
+        data-sidebar="menu-button"
+        to="/workspace/scheduled-tasks"
+        class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent flex h-8 items-center gap-2 rounded-md px-2"
+        :data-active="route.path.startsWith('/workspace/scheduled-tasks')"
+        :title="collapsed ? 'Scheduled tasks' : undefined"
+      >
+        <CalendarClock :size="16" class="shrink-0" />
+        <span v-if="!collapsed">Scheduled tasks</span>
+      </NuxtLink>
     </nav>
+
+    <ChannelConnections v-if="!collapsed" />
 
     <div
       v-if="!collapsed"
@@ -201,6 +265,13 @@ function setTheme(theme: "light" | "dark") {
           <button
             role="menuitem"
             class="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left"
+            @click="beginRename(thread.thread_id)"
+          >
+            <Pencil :size="14" /> Rename
+          </button>
+          <button
+            role="menuitem"
+            class="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left"
             @click="
               threads.setPinned(thread.thread_id, !threads.isPinned(thread));
               menuThreadId = null;
@@ -228,8 +299,20 @@ function setTheme(theme: "light" | "dark") {
     <div class="relative mt-auto p-2">
       <div
         v-if="settingsOpen"
+        role="menu"
         class="bg-popover text-popover-foreground border-border absolute right-2 bottom-12 left-2 z-30 space-y-1 rounded-lg border p-2 text-sm shadow-lg"
       >
+        <button
+          role="menuitem"
+          type="button"
+          class="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5"
+          @click="
+            settingsOpen = false;
+            settingsDialog.show();
+          "
+        >
+          <Settings :size="14" /> Settings
+        </button>
         <div class="text-muted-foreground px-2 py-1 text-xs">Appearance</div>
         <div class="grid grid-cols-2 gap-1">
           <button
@@ -269,11 +352,12 @@ function setTheme(theme: "light" | "dark") {
         type="button"
         class="text-muted-foreground hover:bg-sidebar-accent flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm"
         :title="collapsed ? 'Settings & more' : undefined"
+        aria-label="Settings and more"
         :aria-expanded="settingsOpen"
         @click="settingsOpen = !settingsOpen"
       >
         <Settings :size="16" class="shrink-0" />
-        <span v-if="!collapsed">Settings &amp; more</span>
+        <span v-if="!collapsed">Settings and more</span>
       </button>
     </div>
   </aside>
@@ -284,4 +368,39 @@ function setTheme(theme: "light" | "dark") {
     class="fixed inset-0 z-40 bg-black/30 md:hidden"
     @click="mobileOpen = false"
   />
+  <div
+    v-if="renameThreadId"
+    class="fixed inset-0 z-[70] grid place-items-center bg-black/40 p-4"
+  >
+    <form
+      role="dialog"
+      aria-label="Rename chat"
+      class="bg-background border-border w-full max-w-sm rounded-xl border p-5 shadow-xl"
+      @submit.prevent="submitRename"
+    >
+      <h2 class="text-lg font-semibold">Rename chat</h2>
+      <input
+        v-model="renameTitle"
+        aria-label="Chat title"
+        class="border-input mt-4 w-full rounded-md border px-3 py-2"
+      />
+      <p v-if="renameError" role="alert" class="mt-2 text-sm text-red-600">
+        {{ renameError }}
+      </p>
+      <div class="mt-4 flex justify-end gap-2">
+        <button
+          type="button"
+          class="rounded-md border px-3 py-2"
+          @click="renameThreadId = null"
+        >
+          Cancel</button
+        ><button
+          type="submit"
+          class="bg-primary text-primary-foreground rounded-md px-3 py-2"
+        >
+          Save
+        </button>
+      </div>
+    </form>
+  </div>
 </template>

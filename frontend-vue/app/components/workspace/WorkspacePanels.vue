@@ -5,6 +5,7 @@ const props = defineProps<{
   open: boolean;
   panelSize: number;
   animate?: boolean;
+  panelLabel?: string;
 }>();
 const emit = defineEmits<{
   "update:panelSize": [value: number];
@@ -122,15 +123,23 @@ onBeforeUnmount(() => {
     />
     <div
       data-panel
+      :role="open ? 'dialog' : undefined"
+      :aria-label="open ? panelLabel : undefined"
       class="min-h-0 min-w-0 basis-0 overflow-hidden"
-      :class="
+      :class="[
+        open
+          ? 'max-md:bg-background max-md:fixed max-md:inset-0 max-md:z-50'
+          : '',
         props.animate && animating && !dragging
           ? 'transition-[flex-grow] duration-200'
-          : ''
-      "
+          : '',
+      ]"
       :style="{ flexGrow: panelGrow }"
     >
-      <div v-show="open" class="size-full min-w-[20rem] overflow-hidden">
+      <div
+        v-show="open"
+        class="size-full min-w-0 overflow-hidden md:min-w-[20rem]"
+      >
         <slot name="panel" />
       </div>
     </div>

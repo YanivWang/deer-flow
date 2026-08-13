@@ -1,11 +1,12 @@
 # DeerFlow Vue frontend
 
 This Nuxt 4 workspace is the Vue frontend that coexists with `../frontend` and
-shares the Gateway. **Current migration cursor: M-1 through M5 are complete;
-M6 is next but has not started.** The chat workspace, artifacts, workspace
-changes, and sidecar child conversations are connected to the Gateway and aligned
-to the current React frontend. Remaining M6+ product surfaces and production
-cutover remain milestone-gated. Read
+shares the Gateway. **Current migration cursor: M-1 through M6 are complete;
+M7 is next but has not started.** The chat workspace, artifacts, workspace
+changes, sidecar, settings, browser, agents, channels, scheduled tasks, goal/mode,
+and mobile surfaces are connected to the existing Gateway/data flow and aligned
+to the current React frontend. M7/M8 full-contract, production-cutover, and reuse
+work remains milestone-gated. Read
 [the current status and next-step record](../frontend-vue-build-docs/10-current-status-and-next.md)
 before continuing migration work; milestone evidence is historical, not the
 current status source.
@@ -25,6 +26,9 @@ make e2e-m4b
 make e2e-m5-list
 make e2e-m5
 make e2e-m5-real-backend
+make e2e-m6-list
+make e2e-m6
+make e2e-m6-real-backend
 make e2e-list  # collects the shared M1+ business contract; does not claim it passes
 ```
 
@@ -113,21 +117,22 @@ splitpanes fixtures; they return 404 in normal production configuration.
 
 ## Current verification boundary
 
-The 2026-08-13 checkout passed `make verify` (102 files / 1064 tests),
+The 2026-08-13 checkout passed `make verify` (104 files / 1071 tests),
 `make migration-check`, `make consumer-check`, `make e2e-m0` (14/14),
-`make e2e-m4a` (4/4), and `make e2e-m4a-stream` (3/3). The latest M4b-checkout
-external evidence is WebSocket 1/1 and OIDC 1/1; it was not rerun after M5. The exact M4b suite passed 66/66,
+`make e2e-m4a` (4/4), and `make e2e-m4a-stream` (3/3). Current-checkout
+external evidence is WebSocket 1/1 and OIDC 1/1. The exact M4b suite passed 66/66,
 the exact M5 suite passed 27/27, the M5 replay-Gateway artifact gate passed 1/1,
+the exact M6 suite passed 27/27, the M6 real-Gateway browser gate passed 1/1,
 and the corrected real-backend suite passed 3/3.
 
 Those results do **not** mean every later-milestone shared business contract passes.
-`make e2e-list` collects 25 files / 120 tests but does not execute them; M6 through
-M8 and default production ingress remain outside this evidence. M5's
+`make e2e-list` collects 25 files / 120 tests but does not execute them; M7/M8 and
+default production ingress remain outside this evidence. M5's
 `artifact-batched-stream` gate uses a local protocol-correct equivalent because
 the shared React fixture omits the real Gateway's required `Content-Location`
 and terminal `end`; production remains fail closed.
 
-For exact commands, failure causes, the M4b/M5 exit gates, and the ordered
+For exact commands, failure causes, the M4b/M5/M6 exit gates, and the ordered
 task plan, use
 [10-current-status-and-next.md](../frontend-vue-build-docs/10-current-status-and-next.md).
 Dual-frontend production readiness — two hostnames, DNS/TLS, trusted-proxy

@@ -19,11 +19,12 @@
 
 ## 2. 直接结论
 
-- **已完成并有当前 checkout 门禁证据：M-1、M0、M1、M2、M3、M4a、M4b、M5。**
-- **当前执行游标：M5 已关闭；下一里程碑是 M6，但本轮没有进入 M6。**
-- Vue 已具备可运行的通用 Agent 聊天 UI，以及真实接通的 artifacts、workspace changes
-  与 sidecar 子会话；界面和交互对齐当前 React `frontend`。
-- M6、M7、M8 均未完成。Vue 前端仍不在默认 Docker/Nginx 生产入口中；双前端生产
+- **已完成并有当前 checkout 门禁证据：M-1、M0、M1、M2、M3、M4a、M4b、M5、M6。**
+- **当前执行游标：M6 已关闭；下一里程碑是 M7，但本轮没有进入 M7/M8。**
+- Vue 已具备可运行的通用 Agent 聊天 UI、artifacts/workspace changes/sidecar，以及
+  settings、browser、agents、channels、scheduled tasks、goal/mode/mobile 等剩余 L3 surface；
+  数据流继续对齐当前 React `frontend` 并接现有 Gateway。
+- M7、M8 未完成。Vue 前端仍不在默认 Docker/Nginx 生产入口中；双前端生产
   readiness 仍归 M7。
 - **不采用百分比进度。** M4b 是组件和页面工作量的主体，剩余里程碑的复杂度不均匀；
   用“完成了 6/10 个编号”推导 60% 会明显高估实际产品完成度。
@@ -39,13 +40,14 @@
 | M4a 数据流   | `useThreadStream`、run/session/恢复/顺序语义和 M4a 浏览器门禁已落地                                                   | M6/M7 的全部业务入口已完成                        |
 | M4b Agent UI | 线程侧栏、history/pin/分页/虚拟列表、composer、Markdown、reasoning/tool/subtask、分支/编辑/重生成、human input 已落地 | 完整 DeerFlow sidecar/artifact 与生产切换已完成   |
 | M5 L3 第一批 | artifacts 预览/编辑/流式草稿、workspace changes、sidecar 引用/独立子会话已接真实 Gateway；6-spec/27-test 专项门禁通过 | settings/browser/agents/channels 或生产切换已完成 |
+| M6 L3 其余   | settings/browser/agents/channels/scheduled tasks/goal/mode/mobile 已接现有 API；8-spec/27-test 和 browser 真实 Gateway 门禁通过 | M7 全合同、三面板、生产 readiness 或 M8 复用收口已完成 |
 | API 类型     | OpenAPI snapshot 与 `types.gen.ts` 生成一致性有门禁                                                                   | 生成类型已经接入所有 API 调用；当前没有业务消费者 |
-| Vue 状态设施 | Pinia 与 vue-query 已配置，`stores/threads.ts` 承载 thread adapter                                                    | M5/M6 的项目专用状态已迁移                        |
+| Vue 状态设施 | Pinia 与 vue-query 已配置，`stores/threads.ts` 承载 thread adapter；M5/M6 继续复用唯一 run/thread/stream 状态机       | M7/M8 或默认生产切换已完成                        |
 
-补充规模口径：当前 `frontend-vue/app/core/` 有 140 个 TypeScript 文件，这个总数包含
+补充规模口径：当前 `frontend-vue/app/core/` 有 141 个 TypeScript 文件，这个总数包含
 `COPIED`、`RETYPED`、`ADAPTED`、`ADDED` 等分类，不能写成“140 个原样搬运文件”。
 
-## 4. M5 完成边界
+## 4. M5/M6 完成边界
 
 - artifacts 从真实 tool-call/stream/history 派生，文件读写走 Gateway GET/PUT；
   workspace changes 走 thread/run API，不是静态按钮。
@@ -55,6 +57,12 @@
   `end`；M5 使用只补这两项协议事实的本地等价 spec，不削弱生产 fail-closed 路径。
 - UI 对齐限于 M5 artifacts/tools/sidecar/changes；M6 settings/browser/agents/channels、
   M7 认证与生产入口不在本结论内。
+- M6 精确范围由 8 个共享 spec、I1-I5/K4/K5/N2 与实际调用链共同确定；Settings 九个
+  section、Browser REST/WS、Channels、Scheduled Tasks、Agents、Goal/Mode 与 mobile surface
+  均真实接线，没有第二套 run/stream 状态机。
+- M6 不包含 H1-H6 完整三面板、25-file/120-test 全量合同、生产双 hostname/认证 readiness
+  或 M8 L2 契约收口。真实第三方 channel/OAuth、scheduler daemon、真实模型 bootstrap 与
+  公网 browser 长运行仍是未由本轮 hermetic/replay 门禁证明的运行时边界。
 
 ## 5. 2026-08-13 实跑门禁矩阵
 
@@ -63,32 +71,35 @@
 
 | 命令/范围                  | 当前结果                                                                                                 | 解释与边界                                                         |
 | -------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `make verify`              | **通过**：102 files / 1064 tests；lint、format、typecheck、unit、build、provenance、i18n、OpenAPI 等通过 | 有非阻塞 lint/build warning，无 error                              |
+| `make verify`              | **通过**：104 files / 1071 tests；59 migrated files / 560 tests；lint、format、typecheck、unit、build、provenance、i18n、OpenAPI 通过 | 有非阻塞 lint/build warning，无 error                              |
 | `make migration-check`     | **通过**：provenance/test manifest 对账；58 个 codemod tests；24 个 `RETYPED`                            | 证明迁移账本一致，不证明业务 UI 完成                               |
 | `make consumer-check`      | **通过**：pack、clean install、typecheck、最小 session                                                   | 只验证 `@deerflow/agent-core` 的独立消费者边界                     |
 | `make e2e-m0`              | **14/14 通过**                                                                                           | M0 基础设施合同；不是共享业务合同                                  |
 | `make e2e-m4a`             | **4/4 通过**                                                                                             | 合成数据流的 send/stream/stop/reload 顺序                          |
 | `make e2e-m4a-stream`      | **3/3 通过**                                                                                             | 真分块 SSE、heartbeat、resume cursor、gap                          |
-| `make e2e-external`        | **最近证据通过**：WebSocket 1/1，OIDC 1/1                                                                | 沿用 M4b 当前 checkout 证据；M5 收口后未重跑                       |
-| `make e2e-list`            | **最近证据仅收集**：25 files / 120 tests                                                                 | 本轮未重跑；`--list` 不能写成 120 tests passed                     |
+| `make e2e-external`        | **通过**：WebSocket 1/1，OIDC 1/1                                                                        | 本轮当前 checkout 实跑，不是沿用旧 evidence                        |
+| `make e2e-list`            | **仅收集**：25 files / 120 tests                                                                         | 本轮重跑 collection；`--list` 不能写成 120 tests passed            |
 | `make e2e-m4b`             | **66/66 通过**                                                                                           | 精确列出的 11 个共享 spec                                          |
 | `make e2e-m5-list`         | **收集成功**：6 files / 27 tests                                                                         | 精确 M5 inventory；其中 batched-stream 是协议修正后的本地等价 spec |
 | `make e2e-m5`              | **27/27 通过**                                                                                           | artifacts、workspace changes、sidecar 专项退出门禁                 |
 | `make e2e-m5-real-backend` | **1/1 通过**                                                                                             | 真实回放 Gateway 的 write_file → artifact 自动打开与内容渲染       |
 | `make e2e-real-backend`    | **3/3 通过**                                                                                             | 固定 Vue 3101；auth-disabled、multi-run history、render            |
+| `make e2e-m6-list`         | **收集成功**：8 files / 27 tests                                                                         | 精确 M6 inventory，不等于全量共享套件                              |
+| `make e2e-m6`              | **27/27 通过**                                                                                           | settings/browser/agents/channels/scheduled/mobile 专项门禁          |
+| `make e2e-m6-real-backend` | **1/1 通过**                                                                                             | 真实 Gateway browser navigate + WS binary frame → Vue panel        |
 
-## 6. M5 退出结论
+## 6. M6 退出结论
 
-React 14-file/3,395-line 源范围、Vue 落点、共享合同和真实 Gateway 调用链均已逐项清点。
-精确 6-spec/27-test 门禁、M5 真实后端 1/1、M4b 66/66、M4a、M0、verify、
-migration/consumer 与真实后端 3/3 均保持通过。退出命令、修复过程和未扩大边界见
-[M5 evidence](evidence/m5-artifacts-sidecar.md)。
+React/Vue 页面、共享合同与 Gateway 调用链已逐项清点。M6 计划退出项 I1-I5、K4、K5、
+N2，精确 8-spec/27-test 门禁和真实 Gateway browser 1/1 均满足；M0、M4a、M4b、M5、
+verify、migration/consumer、real-backend 与 external 同时保持通过。inventory、首轮失败、
+根因、修复和未扩大边界见 [M6 evidence](evidence/m6-remaining-l3.md)。
 
-## 7. M5 之后
+## 7. M6 之后
 
-顺序仍按冻结计划执行：M6 settings/browser/agents/channels 等剩余 L3 → M7 完整工作区、
-认证与双前端生产验收 → M8 资产、性能、复用文档与最终收口。本轮到 M5 为止，
-没有实现、试接或提前声明任何 M6 功能。
+顺序仍按冻结计划执行：M7 完整工作区、全共享合同、认证与双前端生产验收 → M8 L2
+契约、资产与复用文档最终收口。本轮到 M6 为止，没有实现、试接或提前声明任何 M7/M8
+功能。下一次开工仍须先运行 `make handoff-check` 并按 M7 的独立退出条件重建 inventory。
 
 ## 8. 每次交接前必须做什么
 

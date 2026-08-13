@@ -16,9 +16,9 @@ guide rather than expecting full detail here:
   **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**.
 
 For Vue migration work, always run `make handoff-check` and read document 10 before
-historical evidence. The current cursor is **M6 not started**: M-1 through M5 have
-milestone evidence; M5's exact 6-file/27-test contract and its 1-test replay-Gateway
-artifact gate passed, while M4b's 11-file/66-test contract remains green.
+historical evidence. The current cursor is **M7 not started**: M-1 through M6 have
+milestone evidence; M6's exact 8-file/27-test contract and its 1-test real-Gateway
+browser gate passed, while M5's 6-file/27-test and M4b's 11-file/66-test contracts remain green.
 The 25-file/120-test full shared suite has only been collected, not passed. Do not
 describe the Vue UI as fully product-ready or part of the default
 production stack until the current gate document says so.
@@ -72,7 +72,7 @@ deer-flow/
 │   ├── packages/harness/           # deerflow-harness package (import: deerflow.*) — agent framework
 │   └── app/                        # FastAPI Gateway + IM channels (import: app.*)
 ├── frontend/                       # Next.js frontend (pnpm) — see frontend/AGENTS.md
-├── frontend-vue/                   # Nuxt/Vue migration workspace; M5 landed, M6 not started
+├── frontend-vue/                   # Nuxt/Vue migration workspace; M6 complete, M7 not started
 ├── frontend-vue-build-docs/        # Current status, frozen contracts, plans, historical evidence
 ├── docker/                         # docker-compose files, nginx config, provisioner
 ├── skills/                         # Agent skills: public/ (committed), custom/ (gitignored)
@@ -151,6 +151,8 @@ cd frontend-vue && make e2e-m4a-stream  # M4a real chunked-SSE gate (heartbeat/r
 cd frontend-vue && make e2e-m4b   # exact M4b general-Agent UI gate (11 specs / 66 tests)
 cd frontend-vue && make e2e-m5    # exact M5 artifacts/changes/sidecar gate (6 specs / 27 tests)
 cd frontend-vue && make e2e-m5-real-backend  # replay Gateway write_file → artifact gate
+cd frontend-vue && make e2e-m6    # exact M6 remaining-L3 gate (8 specs / 27 tests)
+cd frontend-vue && make e2e-m6-real-backend  # real Gateway browser REST/WS → binary frame gate
 cd frontend-vue && make e2e-list  # collect shared contracts; does not claim pass
 ```
 
