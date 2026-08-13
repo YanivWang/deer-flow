@@ -34,6 +34,7 @@ import { RESERVED_SLASH_SKILL_NAMES } from "@/core/skills/slash";
 import type { Skill } from "@/core/skills/type";
 import { findSuggestionTemplatePlaceholder } from "@/core/suggestions/placeholders";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
+import { isImeComposing } from "@/core/input/ime";
 import { getBackendBaseURL } from "@/core/config";
 import {
   getUploadLimits,
@@ -447,7 +448,10 @@ async function submit() {
   emit("send", text, uploaded);
 }
 
+const compositionActive = ref(false);
+
 function onKeydown(event: KeyboardEvent) {
+  if (isImeComposing(event, compositionActive.value)) return;
   if (event.key === "Enter" && event.shiftKey) return;
   if (suggestions.value.length > 0 && event.key === "ArrowDown") {
     event.preventDefault();
@@ -609,6 +613,8 @@ defineExpose({ replaceDraft });
             class="min-h-10 flex-1 px-1 py-2 text-sm outline-none"
             @input="onChipInput"
             @keydown="onKeydown"
+            @compositionstart="compositionActive = true"
+            @compositionend="compositionActive = false"
           />
         </div>
         <textarea
@@ -622,6 +628,8 @@ defineExpose({ replaceDraft });
           class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none"
           :disabled="polishing"
           @keydown="onKeydown"
+          @compositionstart="compositionActive = true"
+          @compositionend="compositionActive = false"
         />
         <div
           v-if="suggestions.length"

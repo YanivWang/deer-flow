@@ -633,7 +633,7 @@ onUnmounted(() => {
 <template>
   <WorkspacePanels
     :open="panelOpen"
-    :animate="activePanel === 'artifacts'"
+    :animate="true"
     :panel-size="artifactPanel.panelSize.value"
     :panel-label="
       activePanel === 'artifacts'

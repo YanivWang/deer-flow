@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   Bot,
   CalendarClock,
@@ -34,24 +34,76 @@ const features = useWorkspaceFeatures();
 const settingsDialog = useSettingsDialog();
 const menuThreadId = ref<string | null>(null);
 const sentinel = ref<HTMLElement | null>(null);
+const sidebarElement = ref<HTMLElement | null>(null);
 const collapsed = ref(false);
 const mobileOpen = ref(false);
+const sidebarExpanded = computed(() => !collapsed.value || mobileOpen.value);
 const settingsOpen = ref(false);
 const renameThreadId = ref<string | null>(null);
 const renameTitle = ref("");
 const renameError = ref<string | null>(null);
 let observer: IntersectionObserver | null = null;
+let focusBeforeMobileOpen: HTMLElement | null = null;
+
+const SIDEBAR_COOKIE = "sidebar_state";
+const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+
+function setCollapsed(value: boolean) {
+  collapsed.value = value;
+  document.cookie = `${SIDEBAR_COOKIE}=${String(!value)}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; samesite=lax`;
+}
+
+function closeMobileSidebar() {
+  mobileOpen.value = false;
+}
 
 function toggleSidebar() {
   if (globalThis.matchMedia?.("(max-width: 767px)").matches) {
     mobileOpen.value = !mobileOpen.value;
   } else {
-    collapsed.value = !collapsed.value;
+    setCollapsed(!collapsed.value);
+  }
+}
+
+function onWindowKeydown(event: KeyboardEvent) {
+  if (event.key.toLowerCase() === "b" && (event.metaKey || event.ctrlKey)) {
+    event.preventDefault();
+    toggleSidebar();
+    return;
+  }
+  if (event.key === "Escape" && mobileOpen.value) {
+    event.preventDefault();
+    closeMobileSidebar();
+  }
+}
+
+function keepMobileFocus(event: KeyboardEvent) {
+  if (event.key !== "Tab" || !mobileOpen.value) return;
+  const focusable = [
+    ...(sidebarElement.value?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ) ?? []),
+  ].filter((element) => !element.hidden);
+  if (!focusable.length) return;
+  const first = focusable[0]!;
+  const last = focusable.at(-1)!;
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
   }
 }
 
 onMounted(() => {
+  const persisted = document.cookie
+    .split("; ")
+    .find((part) => part.startsWith(`${SIDEBAR_COOKIE}=`))
+    ?.slice(SIDEBAR_COOKIE.length + 1);
+  if (persisted === "false") collapsed.value = true;
   globalThis.addEventListener("deerflow:toggle-sidebar", toggleSidebar);
+  globalThis.addEventListener("keydown", onWindowKeydown);
   void threads.loadInitial();
   observer = new IntersectionObserver(
     (entries) => {
@@ -65,7 +117,26 @@ onMounted(() => {
 onUnmounted(() => {
   observer?.disconnect();
   globalThis.removeEventListener("deerflow:toggle-sidebar", toggleSidebar);
+  globalThis.removeEventListener("keydown", onWindowKeydown);
 });
+
+watch(mobileOpen, async (open) => {
+  if (open) {
+    focusBeforeMobileOpen =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    await nextTick();
+    sidebarElement.value
+      ?.querySelector<HTMLElement>("a[href], button:not([disabled])")
+      ?.focus();
+  } else {
+    focusBeforeMobileOpen?.focus({ preventScroll: true });
+    focusBeforeMobileOpen = null;
+  }
+});
+
+watch(() => route.fullPath, closeMobileSidebar);
 
 function isActive(path: string) {
   return route.path === path;
@@ -114,17 +185,23 @@ function setTheme(theme: "light" | "dark") {
 
 <template>
   <aside
+    id="workspace-sidebar"
+    ref="sidebarElement"
     data-sidebar="sidebar"
     :data-mobile="mobileOpen ? 'true' : undefined"
+    :role="mobileOpen ? 'dialog' : undefined"
+    :aria-modal="mobileOpen ? 'true' : undefined"
+    :aria-label="mobileOpen ? 'Workspace navigation' : undefined"
     class="border-sidebar-border bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-50 flex h-screen shrink-0 flex-col border-r transition-[width,transform] duration-200 md:static md:translate-x-0"
     :class="[
-      collapsed ? 'w-12' : 'w-64',
+      mobileOpen ? 'w-72' : collapsed ? 'w-12' : 'w-64',
       mobileOpen ? 'translate-x-0' : '-translate-x-full',
     ]"
+    @keydown="keepMobileFocus"
   >
     <div class="flex h-12 shrink-0 items-center justify-between px-2">
       <NuxtLink
-        v-if="!collapsed"
+        v-if="sidebarExpanded"
         class="text-primary px-2 font-serif text-base"
         to="/workspace"
         >DeerFlow</NuxtLink
@@ -134,7 +211,7 @@ function setTheme(theme: "light" | "dark") {
         type="button"
         class="hover:bg-sidebar-accent hidden size-8 items-center justify-center rounded-md md:flex"
         :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
-        @click="collapsed = !collapsed"
+        @click="setCollapsed(!collapsed)"
       >
         <ChevronsRight v-if="collapsed" :size="16" />
         <ChevronsLeft v-else :size="16" />
@@ -150,7 +227,7 @@ function setTheme(theme: "light" | "dark") {
         @click="startNewChat"
       >
         <MessageSquarePlus :size="16" class="shrink-0" />
-        <span v-if="!collapsed">{{ $i18n.t.value.sidebar.newChat }}</span>
+        <span v-if="sidebarExpanded">{{ $i18n.t.value.sidebar.newChat }}</span>
       </NuxtLink>
       <NuxtLink
         data-sidebar="menu-button"
@@ -163,7 +240,7 @@ function setTheme(theme: "light" | "dark") {
         :title="collapsed ? $i18n.t.value.sidebar.chats : undefined"
       >
         <MessagesSquare :size="16" class="shrink-0" />
-        <span v-if="!collapsed">{{ $i18n.t.value.sidebar.chats }}</span>
+        <span v-if="sidebarExpanded">{{ $i18n.t.value.sidebar.chats }}</span>
       </NuxtLink>
       <NuxtLink
         v-if="features.agentsApiEnabled.value"
@@ -174,7 +251,7 @@ function setTheme(theme: "light" | "dark") {
         :title="collapsed ? $i18n.t.value.sidebar.agents : undefined"
       >
         <Bot :size="16" class="shrink-0" />
-        <span v-if="!collapsed">{{ $i18n.t.value.sidebar.agents }}</span>
+        <span v-if="sidebarExpanded">{{ $i18n.t.value.sidebar.agents }}</span>
       </NuxtLink>
       <div v-else class="group relative">
         <button
@@ -185,7 +262,7 @@ function setTheme(theme: "light" | "dark") {
           class="text-muted-foreground hover:bg-sidebar-accent flex h-8 w-full items-center gap-2 rounded-md px-2"
         >
           <Bot :size="16" class="shrink-0" />
-          <span v-if="!collapsed">{{ $i18n.t.value.sidebar.agents }}</span>
+          <span v-if="sidebarExpanded">{{ $i18n.t.value.sidebar.agents }}</span>
         </button>
         <span id="agents-disabled-description" class="sr-only"
           >Feature not enabled</span
@@ -204,20 +281,20 @@ function setTheme(theme: "light" | "dark") {
         :title="collapsed ? 'Scheduled tasks' : undefined"
       >
         <CalendarClock :size="16" class="shrink-0" />
-        <span v-if="!collapsed">Scheduled tasks</span>
+        <span v-if="sidebarExpanded">Scheduled tasks</span>
       </NuxtLink>
     </nav>
 
-    <ChannelConnections v-if="!collapsed" />
+    <ChannelConnections v-if="sidebarExpanded" />
 
     <div
-      v-if="!collapsed"
+      v-if="sidebarExpanded"
       class="text-muted-foreground px-4 py-2 text-xs font-medium"
     >
       {{ $i18n.t.value.sidebar.recentChats }}
     </div>
     <ul
-      v-if="!collapsed"
+      v-if="sidebarExpanded"
       class="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-4"
     >
       <li
@@ -357,7 +434,7 @@ function setTheme(theme: "light" | "dark") {
         @click="settingsOpen = !settingsOpen"
       >
         <Settings :size="16" class="shrink-0" />
-        <span v-if="!collapsed">Settings and more</span>
+        <span v-if="sidebarExpanded">Settings and more</span>
       </button>
     </div>
   </aside>
@@ -365,8 +442,9 @@ function setTheme(theme: "light" | "dark") {
     v-if="mobileOpen"
     type="button"
     aria-label="Close sidebar"
+    aria-controls="workspace-sidebar"
     class="fixed inset-0 z-40 bg-black/30 md:hidden"
-    @click="mobileOpen = false"
+    @click="closeMobileSidebar"
   />
   <div
     v-if="renameThreadId"
