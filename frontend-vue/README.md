@@ -2,7 +2,7 @@
 
 This Nuxt 4 workspace is the Vue frontend that coexists with `../frontend` and
 shares the Gateway. **Current migration cursor: M-1 through M6 are complete;
-M7 phase 1 is in progress; M8 has not started.** The chat workspace, artifacts, workspace
+M7 phase 2 is in progress; M8 has not started.** The chat workspace, artifacts, workspace
 changes, sidecar, settings, browser, agents, channels, scheduled tasks, goal/mode,
 and mobile surfaces are connected to the existing Gateway/data flow and aligned
 to the current React frontend. M7/M8 full-contract, production-cutover, and reuse
@@ -31,6 +31,11 @@ make e2e-m6
 make e2e-m6-real-backend
 make e2e-m7-list
 make e2e-m7      # currently 119/120; see document 10, do not claim M7 complete
+make e2e-m7-local-list
+make e2e-m7-local  # exact 1-spec/8-test sidebar/IME/a11y/H7-H8 gate
+make e2e-m7-auth-list
+make e2e-m7-auth   # exact 1-spec/7-test auth request/security gate
+make e2e-m7-real-protocol  # replay-Gateway resume/gap/cancel browser gate
 make e2e-list  # collects the shared M1+ business contract; does not claim it passes
 ```
 
@@ -119,7 +124,7 @@ splitpanes fixtures; they return 404 in normal production configuration.
 
 ## Current verification boundary
 
-The M7 phase-1 checkout passes its current 106-file / 1077-test unit suite,
+The M7 phase-2 checkout passes its current 107-file / 1083-test unit suite,
 `make migration-check`, `make consumer-check`, `make e2e-m0` (14/14),
 `make e2e-m4a` (4/4), and `make e2e-m4a-stream` (3/3). Current-checkout
 external evidence is WebSocket 1/1 and OIDC 1/1. The exact M4b suite passed 66/66,
@@ -128,10 +133,14 @@ the exact M6 suite passed 27/27, the M6 real-Gateway browser gate passed 1/1,
 and the corrected real-backend suite passed 3/3. The exact M7 inventory is
 25 files / 120 tests; its current execution is **119/120**, not complete. The
 single red shared batched-stream fixture omits the protocol data described below.
+The independent Vue-owned M7 inventories are sidebar/IME/a11y/H7-H8 **8/8**
+and auth request/security **7/7**; the reused replay-Gateway resume/gap/cancel
+browser contract passed **1/1**. Container smoke also passes, while the default
+client build still emits the open >500 kB chunk warning.
 
 Those results do **not** mean every later-milestone shared business contract passes.
 `make e2e-list` only collects; `make e2e-m7` executes the frozen collection.
-M7's dual-host production ingress, visual/performance gates and M8 remain outside
+M7's dual-host production ingress, four effects, visual/performance gates and M8 remain outside
 the completed evidence. M5's
 `artifact-batched-stream` gate uses a local protocol-correct equivalent because
 the shared React fixture omits the real Gateway's required `Content-Location`

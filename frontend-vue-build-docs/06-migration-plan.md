@@ -1,6 +1,6 @@
 # 06 · 执行计划
 
-> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a / M4b / M5 / M6 已关闭；M7 是下一步但尚未开始。**
+> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a / M4b / M5 / M6 已关闭；M7 phase 2 进行中；M8 未开始。**
 > 实跑红绿、VPN/端口问题与有序任务清单以
 > [10-current-status-and-next.md](10-current-status-and-next.md) 为准。本文负责冻结里程碑范围与
 > 退出条件，不以旧段落中的将来时替代当前状态。
@@ -81,7 +81,7 @@ git tag frontend-vue-baseline-v2 27a425b0
 | **M4b** | **已关闭** | **通用 agent UI（L2 第一批）** ★                                             | **一个能跑的通用 agent 聊天应用——模板到此可用**                     |
 | **M5**  | **已关闭** | L3 第一批：artifacts + sidecar                                               | L2 扩展点已被真实 L3 功能验证                                       |
 | **M6**  | **已关闭** | L3 其余：设置 / 侧栏 / browser / channels                                    | 功能面完整                                                          |
-| **M7**  | **进行中** | 交互收尾 + 完整验收（phase 1 已落地 H1-H6/sidebar/IME/auth；退出门禁未满足） | **功能/交互合同与关键视觉状态达成**                                 |
+| **M7**  | **进行中** | 交互收尾 + 完整验收（phase 2 已落地 H1-H8、专项交互/auth/真实协议门禁；退出门禁未满足） | **功能/交互合同与关键视觉状态达成**                                 |
 | **M8**  | 未开始     | L2 契约收口                                                                  | 其他项目可上手复用                                                  |
 
 ## 相对工作量与中止判定
@@ -810,6 +810,14 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 ---
 
 ## M7 · 交互收尾 + 完整验收
+
+> **2026-08-13 phase 2 快照（仍未关闭）：**共享 inventory 仍是 25/120，实跑
+> 119/120；新增独立的 sidebar/IME/a11y/H7-H8 1-spec/8-test、auth
+> 1-spec/7-test 与 replay-Gateway resume/gap/cancel 1-test 门禁并全部通过。
+> A-N 已按当前 checkout 做 group-level 复核，但 dual-host production、并发
+> OIDC、四个特效、七状态视觉、runtime-safe 稳定分包/预算和共享 fixture 红项
+> 仍是退出阻断。详细实测见
+> [phase 2 evidence](evidence/m7-phase-2-input-auth-protocol.md)。
 
 - 三面板 resizable 编排（`splitpanes`），逐条对照 **H 组 8 条** —— 这是重写而非替换。**可行性已在 [M0/M1 的 spike](#m0m1-期间插入splitpanes-spike) 里验过**，这里做的是完整实现，不是探路
 - `sidebar` 与 shadcn-vue 版本逐条比对（折叠、移动端 Sheet 降级、快捷键、cookie 持久化）

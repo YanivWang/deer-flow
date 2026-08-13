@@ -21,6 +21,7 @@ import { useThreadStream } from "@/composables/useThreadStream";
 import type { SidecarReference } from "@/composables/useSidecar";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import { getBackendBaseURL } from "@/core/config";
+import { isImeComposing } from "@/core/input/ime";
 import { loadModels } from "@/core/models/api";
 import type { Model } from "@/core/models/types";
 import {
@@ -54,6 +55,7 @@ const emit = defineEmits<{
 
 const threadId = ref(props.sidecarThreadId);
 const input = ref("");
+const compositionActive = ref(false);
 const models = ref<Model[]>([]);
 const modeMenu = ref(false);
 const modelMenu = ref(false);
@@ -209,6 +211,7 @@ async function submit() {
   }
 }
 function onKeydown(event: KeyboardEvent) {
+  if (isImeComposing(event, compositionActive.value)) return;
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     void submit();
@@ -324,6 +327,8 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
             rows="2"
             class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none"
             @keydown="onKeydown"
+            @compositionstart="compositionActive = true"
+            @compositionend="compositionActive = false"
           />
           <div class="flex min-w-0 items-center gap-1 pt-1">
             <label

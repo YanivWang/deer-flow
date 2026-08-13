@@ -1,4 +1,5 @@
 import { mount } from "@vue/test-utils";
+import { nextTick } from "vue";
 import { describe, expect, it } from "vitest";
 
 import HumanInputCard from "@/components/chat/HumanInputCard.vue";
@@ -28,6 +29,43 @@ describe("HumanInputCard", () => {
       request_id: "clarification-1",
       response_kind: "text",
       value: "Executive leadership",
+    });
+  });
+
+  it("does not submit free text while an IME composition or keyCode 229 is active", async () => {
+    const request: HumanInputRequest = {
+      version: 1,
+      kind: "human_input_request",
+      source: "ask_clarification",
+      request_id: "clarification-ime",
+      question: "请补充说明",
+      input_mode: "free_text",
+    };
+    const wrapper = mount(HumanInputCard, {
+      props: { request, active: true, pending: false },
+    });
+    const textarea = wrapper.get("textarea");
+    await textarea.setValue("中文回答");
+
+    await textarea.trigger("compositionstart");
+    await textarea.trigger("keydown", { key: "Enter" });
+    expect(wrapper.emitted("submit")).toBeUndefined();
+
+    await textarea.trigger("compositionend");
+    await textarea.trigger("keydown", { key: "Enter", keyCode: 229 });
+    expect(wrapper.emitted("submit")).toBeUndefined();
+
+    textarea.element.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    await nextTick();
+    expect(wrapper.emitted("submit")?.[0]?.[0]).toMatchObject({
+      request_id: "clarification-ime",
+      value: "中文回答",
     });
   });
 

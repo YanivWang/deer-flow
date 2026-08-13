@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+import { isImeComposing } from "@/core/input/ime";
+
 import {
   buildHumanInputFormSubmissionValue,
   buildInitialHumanInputFormValues,
@@ -28,6 +30,7 @@ const form = ref<Record<string, HumanInputFormValue>>(
   buildInitialHumanInputFormValues(props.request.fields ?? []),
 );
 const error = ref("");
+const compositionActive = ref(false);
 const disabled = computed(
   () => !props.active || props.pending || !!props.answered,
 );
@@ -50,6 +53,17 @@ function submitText(value = text.value) {
   }
   error.value = "";
   emit("submit", createHumanInputTextResponse(props.request, value.trim()));
+}
+function onTextKeydown(event: KeyboardEvent, value?: string) {
+  if (
+    event.key !== "Enter" ||
+    event.shiftKey ||
+    isImeComposing(event, compositionActive.value)
+  ) {
+    return;
+  }
+  event.preventDefault();
+  submitText(value);
 }
 function submitForm() {
   const invalid = (props.request.fields ?? []).some((field) => {
@@ -215,7 +229,9 @@ function submitForm() {
           class="border-input min-w-0 flex-1 rounded border p-2 text-sm"
           placeholder="Other answer"
           :disabled="disabled"
-          @keydown.enter.prevent="submitText(other)"
+          @keydown="onTextKeydown($event, other)"
+          @compositionstart="compositionActive = true"
+          @compositionend="compositionActive = false"
         />
         <button
           type="button"
@@ -233,7 +249,9 @@ function submitForm() {
         v-model="text"
         class="border-input min-w-0 flex-1 rounded border p-2 text-sm"
         :disabled="disabled"
-        @keydown.enter.exact.prevent="submitText()"
+        @keydown="onTextKeydown"
+        @compositionstart="compositionActive = true"
+        @compositionend="compositionActive = false"
       />
       <button
         type="button"

@@ -353,12 +353,13 @@ On Windows, run the local development flow from Git Bash. Native `cmd.exe` and P
 6. **Access**: http://localhost:2026
 
 The experimental Vue/Nuxt frontend lives in `frontend-vue/` and remains
-milestone-gated. M-1 through M6 have landed and M7 phase 1 is in progress; the general Agent chat workspace,
+milestone-gated. M-1 through M6 have landed and M7 phase 2 is in progress; the general Agent chat workspace,
 artifacts, workspace changes, sidecar, settings, browser, agents, channels,
 scheduled tasks, goal/mode, and mobile surfaces are runnable and aligned to the
-React frontend. M7 now has an exact 25-file/120-test inventory and a 119/120 current
-run, but production-cutover, visual/performance gates, the final shared red item,
-and all M8 reuse work remain gated.
+React frontend. M7 now has an exact 25-file/120-test shared inventory and a 119/120
+current run, plus independent 8/8 interaction/H7-H8, 7/7 auth-security and 1/1
+real-protocol gates. Production dual-host cutover, four effects, visual/performance
+gates, the final shared red item, and all M8 reuse work remain gated.
 The existing command above is unchanged and still starts the React frontend. For
 Vue migration development, use one of the explicit alternatives:
 

@@ -4,6 +4,7 @@ import { CalendarClock, Menu, Share2 } from "lucide-vue-next";
 
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
+import ContextUsageBadge from "@/components/workspace/ContextUsageBadge.vue";
 import WorkspacePanels from "@/components/workspace/WorkspacePanels.vue";
 import ArtifactPanel from "@/components/workspace/artifacts/ArtifactPanel.vue";
 import ArtifactTrigger from "@/components/workspace/artifacts/ArtifactTrigger.vue";
@@ -15,7 +16,10 @@ import { useSidecar } from "@/composables/useSidecar";
 import { useThreadStream } from "@/composables/useThreadStream";
 import { useNotifications } from "@/composables/useNotifications";
 import { useWorkspaceFeatures } from "@/composables/useWorkspaceFeatures";
-import { branchThreadFromTurn } from "@/core/threads/api";
+import {
+  branchThreadFromTurn,
+  fetchThreadTokenUsage,
+} from "@/core/threads/api";
 import { getAPIClient } from "@/core/api/api-client";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import { getBackendBaseURL } from "@/core/config";
@@ -32,7 +36,11 @@ import {
   loadSuggestionsConfig,
 } from "@/core/suggestions/api";
 import type { Message, ToolCall } from "@/core/types/message";
-import type { GoalState } from "@/core/threads/types";
+import {
+  retainThreadTokenUsagePlaceholder,
+  selectContextUsage,
+} from "@/core/threads/token-usage";
+import type { GoalState, ThreadTokenUsageResponse } from "@/core/threads/types";
 import {
   buildReferenceMessageMetadata,
   type SidecarContext,
@@ -78,6 +86,10 @@ const maxSuggestions = ref(DEFAULT_MAX_SUGGESTIONS);
 const composer = ref<InstanceType<typeof ChatComposer> | null>(null);
 const failedSend = ref<{ text: string; files: FileInMessage[] } | null>(null);
 const mainTailRequest = ref(0);
+const mobileSidebarOpen = ref(false);
+const threadTokenUsage = ref<ThreadTokenUsageResponse | null>();
+const contextUsage = computed(() => selectContextUsage(threadTokenUsage.value));
+let tokenUsageRequest = 0;
 const preparedThreadId = ref<string | null>(null);
 const editState = ref<{
   messageId: string;
@@ -386,6 +398,11 @@ const isWelcomeMode = computed(
 function toggleSidebar() {
   globalThis.dispatchEvent(new CustomEvent("deerflow:toggle-sidebar"));
 }
+function updateSidebarState(event: Event) {
+  mobileSidebarOpen.value = Boolean(
+    (event as CustomEvent<{ open?: boolean }>).detail?.open,
+  );
+}
 async function shareConversation() {
   try {
     await globalThis.navigator.clipboard.writeText(globalThis.location.href);
@@ -425,6 +442,7 @@ async function refreshPostRun(targetThreadId: string | null) {
   } catch {
     // The stream state remains authoritative while metadata persistence catches up.
   }
+  await refreshThreadTokenUsage(targetThreadId);
   if (!suggestionsEnabled.value) return;
   const messages = recentConversation();
   if (messages.length === 0) return;
@@ -456,6 +474,39 @@ async function refreshPostRun(targetThreadId: string | null) {
     followupsLoading.value = false;
   }
 }
+
+async function refreshThreadTokenUsage(targetThreadId: string | null) {
+  const request = ++tokenUsageRequest;
+  if (!targetThreadId) {
+    threadTokenUsage.value = undefined;
+    return;
+  }
+
+  const retained = retainThreadTokenUsagePlaceholder(
+    threadTokenUsage.value,
+    targetThreadId,
+  );
+  threadTokenUsage.value = retained;
+  try {
+    const next = await fetchThreadTokenUsage(targetThreadId);
+    if (request !== tokenUsageRequest || routeThreadId.value !== targetThreadId)
+      return;
+    threadTokenUsage.value = retainThreadTokenUsagePlaceholder(
+      next,
+      targetThreadId,
+    );
+  } catch {
+    // A same-thread refresh may retain its last value; another route never can.
+  }
+}
+
+watch(
+  routeThreadId,
+  (threadId) => {
+    void refreshThreadTokenUsage(threadId);
+  },
+  { immediate: true },
+);
 
 async function ensureThread() {
   if (routeThreadId.value) return routeThreadId.value;
@@ -572,6 +623,9 @@ function resetNewChat() {
   draftThreadId.value = globalThis.crypto.randomUUID();
 }
 onMounted(() => globalThis.addEventListener("deerflow:new-chat", resetNewChat));
+onMounted(() =>
+  globalThis.addEventListener("deerflow:sidebar-state", updateSidebarState),
+);
 onMounted(() => {
   if (!props.bootstrap || !props.agentName) return;
   void send(
@@ -624,6 +678,9 @@ onMounted(async () => {
 onUnmounted(() =>
   globalThis.removeEventListener("deerflow:new-chat", resetNewChat),
 );
+onUnmounted(() =>
+  globalThis.removeEventListener("deerflow:sidebar-state", updateSidebarState),
+);
 onUnmounted(() => {
   clearTimeout(artifactOpenTimer);
   clearTimeout(completionNotificationTimer);
@@ -665,6 +722,8 @@ onUnmounted(() => {
             type="button"
             data-sidebar="trigger"
             aria-label="Toggle sidebar"
+            aria-controls="workspace-sidebar"
+            :aria-expanded="mobileSidebarOpen"
             class="hover:bg-accent flex size-8 items-center justify-center rounded-md md:hidden"
             @click="toggleSidebar"
           >
@@ -673,6 +732,7 @@ onUnmounted(() => {
           <div class="min-w-0 flex-1 truncate text-sm font-medium">
             {{ currentTitle }}
           </div>
+          <ContextUsageBadge :context-usage="contextUsage" />
           <span
             v-if="agentName"
             class="bg-secondary text-secondary-foreground rounded-full px-2.5 py-1 text-xs"

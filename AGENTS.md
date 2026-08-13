@@ -16,11 +16,14 @@ guide rather than expecting full detail here:
   **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**.
 
 For Vue migration work, always run `make handoff-check` and read document 10 before
-historical evidence. The current cursor is **M7 phase 1 in progress**: M-1 through M6 have
+historical evidence. The current cursor is **M7 phase 2 in progress**: M-1 through M6 have
 milestone evidence; M6's exact 8-file/27-test contract and its 1-test real-Gateway
 browser gate passed, while M5's 6-file/27-test and M4b's 11-file/66-test contracts remain green.
 The exact M7 inventory is 25 files/120 tests and the current full run is 119/120;
-the protocol-incomplete shared batched-stream fixture is the sole red item. Do not
+the protocol-incomplete shared batched-stream fixture is the sole red item. The
+independent Vue-owned M7 gates are interaction/H7-H8 8/8, auth security 7/7 and
+real replay-Gateway resume/gap/cancel 1/1. Dual-host production, visual/effects and
+runtime-safe performance budgeting remain open. Do not
 describe the Vue UI as fully product-ready or part of the default
 production stack until the current gate document says so.
 
@@ -156,6 +159,9 @@ cd frontend-vue && make e2e-m6    # exact M6 remaining-L3 gate (8 specs / 27 tes
 cd frontend-vue && make e2e-m6-real-backend  # real Gateway browser REST/WS → binary frame gate
 cd frontend-vue && make e2e-m7-list  # exact 25-file/120-test M7 inventory
 cd frontend-vue && make e2e-m7       # full shared suite; currently 119/120, not an M7 completion
+cd frontend-vue && make e2e-m7-local # exact 1-file/8-test interaction, IME, a11y and H7/H8 gate
+cd frontend-vue && make e2e-m7-auth  # exact 1-file/7-test auth request/security gate
+cd frontend-vue && make e2e-m7-real-protocol  # replay-Gateway resume/gap/cancel browser gate
 cd frontend-vue && make e2e-list  # collect shared contracts; does not claim pass
 ```
 

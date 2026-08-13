@@ -26,6 +26,7 @@ import {
   pathOfThread,
   titleOfThread,
 } from "@/core/threads/utils";
+import { isEditableKeyboardTarget } from "@/core/input/keyboard";
 
 const route = useRoute();
 const router = useRouter();
@@ -67,6 +68,8 @@ function toggleSidebar() {
 
 function onWindowKeydown(event: KeyboardEvent) {
   if (event.key.toLowerCase() === "b" && (event.metaKey || event.ctrlKey)) {
+    if (event.defaultPrevented || isEditableKeyboardTarget(event.target))
+      return;
     event.preventDefault();
     toggleSidebar();
     return;
@@ -83,7 +86,12 @@ function keepMobileFocus(event: KeyboardEvent) {
     ...(sidebarElement.value?.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
     ) ?? []),
-  ].filter((element) => !element.hidden);
+  ].filter(
+    (element) =>
+      !element.hidden &&
+      globalThis.getComputedStyle(element).visibility !== "hidden" &&
+      element.getClientRects().length > 0,
+  );
   if (!focusable.length) return;
   const first = focusable[0]!;
   const last = focusable.at(-1)!;
@@ -121,6 +129,9 @@ onUnmounted(() => {
 });
 
 watch(mobileOpen, async (open) => {
+  globalThis.dispatchEvent(
+    new CustomEvent("deerflow:sidebar-state", { detail: { open } }),
+  );
   if (open) {
     focusBeforeMobileOpen =
       document.activeElement instanceof HTMLElement
@@ -211,6 +222,8 @@ function setTheme(theme: "light" | "dark") {
         type="button"
         class="hover:bg-sidebar-accent hidden size-8 items-center justify-center rounded-md md:flex"
         :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+        aria-controls="workspace-sidebar"
+        :aria-expanded="!collapsed"
         @click="setCollapsed(!collapsed)"
       >
         <ChevronsRight v-if="collapsed" :size="16" />
