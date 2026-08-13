@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { Menu, Share2 } from "lucide-vue-next";
 
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
+import WorkspacePanels from "@/components/workspace/WorkspacePanels.vue";
+import ArtifactPanel from "@/components/workspace/artifacts/ArtifactPanel.vue";
+import ArtifactTrigger from "@/components/workspace/artifacts/ArtifactTrigger.vue";
+import SidecarPanel from "@/components/workspace/sidecar/SidecarPanel.vue";
+import { useArtifactsPanel } from "@/composables/useArtifactsPanel";
+import { useSidecar } from "@/composables/useSidecar";
 import { useThreadStream } from "@/composables/useThreadStream";
 import { branchThreadFromTurn } from "@/core/threads/api";
 import { getAPIClient } from "@/core/api/api-client";
@@ -20,12 +27,18 @@ import {
   DEFAULT_MAX_SUGGESTIONS,
   loadSuggestionsConfig,
 } from "@/core/suggestions/api";
-import type { Message } from "@/core/types/message";
+import type { Message, ToolCall } from "@/core/types/message";
+import {
+  buildReferenceMessageMetadata,
+  type SidecarContext,
+} from "@/core/sidecar";
+import { buildWriteFileArtifactURL } from "@/core/artifacts/utils";
 import { useThreadsStore } from "@/stores/threads";
 
 const props = defineProps<{
   agentName?: string | null;
 }>();
+const { $i18n } = useNuxtApp();
 const route = useRoute();
 const router = useRouter();
 const threads = useThreadsStore();
@@ -40,8 +53,10 @@ const draftThreadId = ref(globalThis.crypto.randomUUID());
 watch(routeThreadId, (id) => {
   if (id === null) draftThreadId.value = globalThis.crypto.randomUUID();
 });
+const contextOverrides = ref<Record<string, unknown>>({});
 const context = computed(() => ({
   ...getBaseSettingsSnapshot().context,
+  ...contextOverrides.value,
   ...(props.agentName ? { agent_name: props.agentName } : {}),
 }));
 const warnings = ref<string[]>([]);
@@ -53,6 +68,7 @@ const suggestionsEnabled = ref(false);
 const maxSuggestions = ref(DEFAULT_MAX_SUGGESTIONS);
 const composer = ref<InstanceType<typeof ChatComposer> | null>(null);
 const failedSend = ref<{ text: string; files: FileInMessage[] } | null>(null);
+const mainTailRequest = ref(0);
 const preparedThreadId = ref<string | null>(null);
 const editState = ref<{
   messageId: string;
@@ -64,7 +80,12 @@ const stream = useThreadStream({
   threadId: routeThreadId,
   context,
   notify: {
-    warn: (message) => warnings.value.push(message),
+    warn: (message) =>
+      warnings.value.push(
+        message === "conversation.streamReplayGap"
+          ? $i18n.t.value.conversation.streamReplayGap
+          : message,
+      ),
     error: (message) => warnings.value.push(message),
   },
   onStart(startedThreadId) {
@@ -91,9 +112,175 @@ const stream = useThreadStream({
     queueMicrotask(() => void refreshPostRun(id));
   },
 });
+const authoritativeArtifacts = computed(() => {
+  const state = stream.state.value;
+  const value = Object.prototype.hasOwnProperty.call(state, "artifacts")
+    ? Reflect.get(state, "artifacts")
+    : threads.threads.find((thread) => thread.thread_id === routeThreadId.value)
+        ?.values.artifacts;
+  if (value === undefined) return undefined;
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+});
+const artifactPanel = useArtifactsPanel({
+  threadId: routeThreadId,
+  authoritativeArtifacts,
+  historyLoading: stream.isHistoryLoading,
+});
+const sidecar = useSidecar({ parentThreadId: routeThreadId, context });
+const sidecarReady = ref(false);
+watch(
+  () => sidecar.sidecarThreadId.value,
+  () => {
+    sidecarReady.value = false;
+  },
+);
+const activePanel = computed<"artifacts" | "sidecar" | null>(() => {
+  if (sidecar.open.value) return "sidecar";
+  if (artifactPanel.open.value && artifactPanel.selectedArtifact.value)
+    return "artifacts";
+  return null;
+});
+const panelOpen = computed(() => activePanel.value !== null);
+
+function openArtifact(path: string) {
+  sidecar.close();
+  artifactPanel.select(path);
+}
+async function toggleSidecar() {
+  if (sidecar.open.value) {
+    sidecar.close();
+    return;
+  }
+  const restored = await sidecar.restoreSidecarThread({ force: true });
+  if (restored) {
+    artifactPanel.close();
+    sidecar.open.value = true;
+  }
+}
+function askInSidecar(payload: {
+  message: Message;
+  selectedText: string;
+  displayIndex: number;
+}) {
+  const next = sidecar.fromSelection(
+    payload.message,
+    payload.selectedText,
+    payload.displayIndex,
+  );
+  if (!next) return;
+  artifactPanel.close();
+  sidecar.openContext(next);
+}
+function addToConversation(payload: {
+  message: Message;
+  selectedText: string;
+  displayIndex: number;
+}) {
+  const next = sidecar.fromSelection(
+    payload.message,
+    payload.selectedText,
+    payload.displayIndex,
+  );
+  if (next) sidecar.addContextToConversation(next);
+}
+
+function quotePrompt(contexts: SidecarContext[]): Message {
+  const blocks = contexts.flatMap((item, index) => [
+    `<referenced_message index="${index + 1}" label="${item.label.replaceAll('"', "&quot;")}">`,
+    `Role: ${item.role === "user" ? "User" : "Assistant"}`,
+    item.messageId ? `Message ID: ${item.messageId}` : "",
+    "",
+    item.content,
+    "</referenced_message>",
+    "",
+  ]);
+  return {
+    type: "human",
+    content: [
+      {
+        type: "text",
+        text: [
+          contexts.length === 1
+            ? "The user added the following quoted context to this conversation."
+            : `The user added the following ${contexts.length} quoted contexts to this conversation.`,
+          "Use the referenced_message blocks as reference material for the user's next message.",
+          "",
+          ...blocks,
+        ].join("\n"),
+      },
+    ],
+    additional_kwargs: {
+      hide_from_ui: true,
+      conversation_quote_context: true,
+      referenced_message_ids: contexts.map((item) => item.messageId ?? ""),
+      referenced_message_roles: contexts.map((item) => item.role),
+      quote_context_count: contexts.length,
+    },
+  } as Message;
+}
+
+let artifactOpenTimer: ReturnType<typeof setTimeout> | undefined;
+const scheduledArtifact = ref<string | null>(null);
+function normalizeRenderableMessage(message: Message): Message {
+  const wireType = (message as unknown as { type: string }).type;
+  if (wireType === "AIMessageChunk")
+    return { ...message, type: "ai" } as Message;
+  if (wireType === "HumanMessageChunk")
+    return { ...message, type: "human" } as Message;
+  if (wireType === "ToolMessageChunk")
+    return { ...message, type: "tool" } as Message;
+  return message;
+}
+const renderableStreamMessages = computed(() =>
+  stream.messages.value.map(normalizeRenderableMessage),
+);
+watch(
+  renderableStreamMessages,
+  (messages) => {
+    let target: string | null = null;
+    for (const message of messages) {
+      const wireMessage = message as unknown as {
+        type: string;
+        tool_calls?: ToolCall[];
+      };
+      const wireType = wireMessage.type;
+      if (wireType !== "ai" && wireType !== "AIMessageChunk") continue;
+      for (const call of wireMessage.tool_calls ?? []) {
+        const path = call.args?.path;
+        if (
+          (call.name === "write_file" || call.name === "str_replace") &&
+          typeof path === "string"
+        ) {
+          target = buildWriteFileArtifactURL({
+            filepath: path,
+            messageId: message.id,
+            toolCallId: call.id,
+          });
+        }
+        if (
+          call.name === "finalize_artifact_write" &&
+          typeof path === "string"
+        ) {
+          const result = messages.find(
+            (candidate) =>
+              candidate.type === "tool" && candidate.tool_call_id === call.id,
+          );
+          if (result && messageText(result).trim() === "OK") target = path;
+        }
+      }
+    }
+    if (!target || target === scheduledArtifact.value) return;
+    scheduledArtifact.value = target;
+    clearTimeout(artifactOpenTimer);
+    artifactOpenTimer = setTimeout(() => openArtifact(target!), 120);
+  },
+  { deep: true, immediate: true },
+);
 
 const visibleMessages = computed(() =>
-  (demoMessages.value ?? stream.messages.value).filter(
+  (demoMessages.value ?? renderableStreamMessages.value).filter(
     (message: Message) => !isHiddenFromUIMessage(message),
   ),
 );
@@ -121,6 +308,21 @@ const currentTitle = computed(() => {
       ?.values.title ?? "New Chat"
   );
 });
+const isWelcomeMode = computed(
+  () => visibleMessages.value.length === 0 && !stream.isHistoryLoading.value,
+);
+
+function toggleSidebar() {
+  globalThis.dispatchEvent(new CustomEvent("deerflow:toggle-sidebar"));
+}
+async function shareConversation() {
+  try {
+    await globalThis.navigator.clipboard.writeText(globalThis.location.href);
+    warnings.value.push("Conversation link copied.");
+  } catch {
+    warnings.value.push("Unable to copy the conversation link.");
+  }
+}
 
 function messageText(message: Message) {
   if (typeof message.content === "string") return message.content;
@@ -199,9 +401,22 @@ async function ensureThread() {
 
 async function send(text: string, files: FileInMessage[]) {
   followups.value = [];
+  mainTailRequest.value += 1;
   try {
     const targetThreadId = await ensureThread();
-    await stream.sendMessage(targetThreadId, { text, files });
+    const quotes = [...sidecar.conversationQuotes.value];
+    const contexts = quotes.map((quote) => quote.context);
+    await stream.sendMessage(targetThreadId, { text, files }, undefined, {
+      ...(contexts.length
+        ? {
+            additionalInputMessages: [quotePrompt(contexts)],
+            additionalKwargs: buildReferenceMessageMetadata(contexts),
+          }
+        : {}),
+      onSent: () => {
+        if (quotes.length) sidecar.clearConversationQuotes();
+      },
+    });
     failedSend.value = null;
   } catch (error) {
     failedSend.value = { text, files };
@@ -313,7 +528,14 @@ onMounted(async () => {
 onMounted(async () => {
   if (!initialRouteThreadId) return;
   try {
-    await getAPIClient().threads.get(initialRouteThreadId);
+    const [thread, state] = await Promise.all([
+      getAPIClient().threads.get(initialRouteThreadId),
+      getAPIClient().threads.getState(initialRouteThreadId),
+    ]);
+    threads.upsert({
+      ...thread,
+      values: { ...thread.values, ...state.values },
+    });
   } catch {
     await router.replace("/workspace/chats/new");
   }
@@ -321,106 +543,258 @@ onMounted(async () => {
 onUnmounted(() =>
   globalThis.removeEventListener("deerflow:new-chat", resetNewChat),
 );
+onUnmounted(() => clearTimeout(artifactOpenTimer));
 </script>
 
 <template>
-  <section id="chat" class="flex h-full min-h-0 flex-col">
-    <header class="border-border flex items-center border-b px-6 py-3">
-      <h1 class="truncate text-sm font-semibold">{{ currentTitle }}</h1>
-    </header>
-    <MessageList
-      :messages="visibleMessages"
-      :raw-messages="demoMessages ?? stream.messages.value"
-      :streaming="stream.isStreaming.value"
-      :loading="stream.isHistoryLoading.value"
-      @branch="branch"
-      @regenerate="regenerate"
-      @edit="beginEdit"
-      @human-input="respondHumanInput"
-    />
-    <div
-      v-if="editState"
-      class="border-border mx-auto w-full max-w-3xl border-t p-3"
-    >
-      <textarea
-        v-model="editState.text"
-        rows="3"
-        class="border-input w-full rounded-md border p-2"
+  <WorkspacePanels
+    :open="panelOpen"
+    :animate="activePanel === 'artifacts'"
+    :panel-size="artifactPanel.panelSize.value"
+    @update:panel-size="artifactPanel.panelSize.value = $event"
+    @collapse="
+      activePanel === 'sidecar' ? sidecar.close() : artifactPanel.close()
+    "
+  >
+    <template #main>
+      <section id="chat" class="relative flex h-full min-h-0 flex-col">
+        <header
+          class="bg-background/80 absolute top-0 right-0 left-0 z-30 flex h-12 items-center gap-2 px-2 shadow-xs backdrop-blur sm:px-4"
+          :class="
+            isWelcomeMode
+              ? 'bg-background/0 shadow-none backdrop-blur-none'
+              : ''
+          "
+        >
+          <button
+            type="button"
+            aria-label="Toggle sidebar"
+            class="hover:bg-accent flex size-8 items-center justify-center rounded-md md:hidden"
+            @click="toggleSidebar"
+          >
+            <Menu :size="18" />
+          </button>
+          <div class="min-w-0 flex-1 truncate text-sm font-medium">
+            {{ currentTitle }}
+          </div>
+          <span
+            v-if="agentName"
+            class="bg-secondary text-secondary-foreground rounded-full px-2.5 py-1 text-xs"
+            >{{ agentName }}</span
+          >
+          <ArtifactTrigger
+            :count="artifactPanel.artifacts.value.length"
+            @open="
+              sidecar.close();
+              artifactPanel.setOpen(true);
+              if (!artifactPanel.selectedArtifact.value) {
+                artifactPanel.select(artifactPanel.artifacts.value[0]!);
+              }
+            "
+          />
+          <button
+            v-if="sidecar.sidecarThreadId.value && sidecarReady"
+            type="button"
+            data-testid="sidecar-header-trigger"
+            :aria-label="
+              sidecar.open.value ? 'Close side chat' : 'Open side chat'
+            "
+            class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
+            @click="toggleSidecar"
+          >
+            ◫
+          </button>
+          <button
+            v-if="!isWelcomeMode"
+            type="button"
+            aria-label="Share conversation"
+            class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
+            @click="shareConversation"
+          >
+            <Share2 :size="16" />
+          </button>
+        </header>
+        <MessageList
+          :class="isWelcomeMode ? '' : 'pt-10'"
+          :messages="visibleMessages"
+          :raw-messages="demoMessages ?? stream.messages.value"
+          :streaming="stream.isStreaming.value"
+          :loading="stream.isHistoryLoading.value"
+          :thread-id="routeThreadId"
+          :tail-request="mainTailRequest"
+          selection-mode="main"
+          test-id="main-message-list"
+          @artifact="openArtifact"
+          @selection-ask="askInSidecar"
+          @selection-add="addToConversation"
+          @branch="branch"
+          @regenerate="regenerate"
+          @edit="beginEdit"
+          @human-input="respondHumanInput"
+        />
+        <div
+          v-if="editState"
+          class="border-border bg-background absolute right-0 bottom-36 left-0 z-40 mx-auto w-full max-w-xl rounded-xl border p-3 shadow-lg"
+        >
+          <textarea
+            v-model="editState.text"
+            rows="3"
+            class="border-input w-full rounded-md border p-2"
+          />
+          <div class="mt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              class="rounded border px-3 py-1"
+              @click="editState = null"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="bg-primary text-primary-foreground rounded px-3 py-1"
+              @click="updateAndRerun"
+            >
+              Update and rerun
+            </button>
+          </div>
+        </div>
+        <p
+          v-if="warnings.length"
+          role="status"
+          class="absolute right-4 bottom-36 z-40 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-700 shadow"
+        >
+          {{ warnings.at(-1) }}
+          <button
+            v-if="failedSend"
+            type="button"
+            class="ml-2 underline"
+            @click="retrySend"
+          >
+            Try again
+          </button>
+        </p>
+        <div
+          class="right-0 bottom-0 left-0 z-30 flex justify-center px-3 sm:px-4"
+          :class="isWelcomeMode ? 'absolute' : 'relative shrink-0 pb-4'"
+        >
+          <div
+            class="relative w-full"
+            :class="[
+              isWelcomeMode
+                ? 'max-w-[var(--container-width-sm)] -translate-y-[calc(50vh-48px)] sm:-translate-y-[calc(50vh-96px)]'
+                : 'max-w-[var(--container-width-md)]',
+            ]"
+          >
+            <div
+              v-if="isWelcomeMode"
+              class="mx-auto flex w-full flex-col items-center justify-center gap-2 px-4 py-4 text-center sm:px-8"
+            >
+              <div
+                class="flex flex-wrap items-center justify-center gap-2 text-2xl font-bold"
+              >
+                <span aria-hidden="true">👋</span>
+                <span>{{ $i18n.t.value.welcome.greeting }}</span>
+              </div>
+              <p
+                class="text-muted-foreground max-w-full text-sm whitespace-pre-line"
+              >
+                {{ $i18n.t.value.welcome.description }}
+              </p>
+            </div>
+            <div
+              v-if="followupsLoading || followups.length"
+              data-slot="suggestions-list"
+              class="mb-2 flex w-full flex-wrap justify-center gap-2"
+            >
+              <span
+                v-if="followupsLoading"
+                class="text-muted-foreground bg-background/80 rounded-full border px-4 py-1.5 text-xs backdrop-blur-sm"
+              >
+                Generating follow-up questions...
+              </span>
+              <button
+                v-for="suggestion in followups"
+                :key="suggestion"
+                type="button"
+                class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-3 py-1.5 text-xs"
+                @click="composer?.replaceDraft(suggestion)"
+              >
+                {{ suggestion }}
+              </button>
+              <button
+                v-if="followups.length"
+                type="button"
+                aria-label="Close"
+                class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-2.5 py-1.5 text-xs"
+                @click="followups = []"
+              >
+                ×
+              </button>
+            </div>
+            <ChatComposer
+              ref="composer"
+              :thread-key="routeThreadId ?? 'new'"
+              :target-thread-id="routeThreadId ?? draftThreadId"
+              :agent-name="agentName"
+              :streaming="stream.isStreaming.value"
+              :uploading="localUploading"
+              :is-welcome="isWelcomeMode"
+              :prompt-history="promptHistory"
+              :ensure-thread="ensureThread"
+              :references="sidecar.conversationQuotes.value"
+              :context="context"
+              @send="send"
+              @stop="stream.stop()"
+              @uploading-change="
+                localUploading = $event;
+                stream.isUploading.value = $event;
+              "
+              @clear-references="sidecar.clearConversationQuotes()"
+              @context-change="contextOverrides = $event"
+            />
+          </div>
+        </div>
+      </section>
+    </template>
+    <template #panel>
+      <ArtifactPanel
+        v-if="
+          activePanel === 'artifacts' &&
+          routeThreadId &&
+          artifactPanel.selectedArtifact.value
+        "
+        :thread-id="routeThreadId"
+        :selected="artifactPanel.selectedArtifact.value"
+        :artifacts="artifactPanel.artifacts.value"
+        :opened-presented-artifacts="
+          artifactPanel.openedPresentedArtifacts.value
+        "
+        :messages="renderableStreamMessages"
+        :streaming="stream.isStreaming.value"
+        @close="artifactPanel.close()"
+        @select="artifactPanel.select($event)"
       />
-      <div class="mt-2 flex justify-end gap-2">
-        <button
-          type="button"
-          class="rounded border px-3 py-1"
-          @click="editState = null"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          class="bg-primary text-primary-foreground rounded px-3 py-1"
-          @click="updateAndRerun"
-        >
-          Update and rerun
-        </button>
-      </div>
-    </div>
-    <p
-      v-if="warnings.length"
-      role="status"
-      class="px-6 py-1 text-sm text-amber-600"
-    >
-      {{ warnings.at(-1) }}
-      <button
-        v-if="failedSend"
-        type="button"
-        class="ml-2 underline"
-        @click="retrySend"
-      >
-        Try again
-      </button>
-    </p>
-    <div
-      v-if="followupsLoading || followups.length"
-      data-slot="suggestions-list"
-      class="mx-auto flex w-full max-w-3xl flex-wrap justify-center gap-2 px-5 pb-2"
-    >
-      <span v-if="followupsLoading" class="text-xs text-gray-500">
-        Generating follow-up questions...
-      </span>
-      <button
-        v-for="suggestion in followups"
-        :key="suggestion"
-        type="button"
-        class="rounded-full border px-3 py-1.5 text-xs"
-        @click="composer?.replaceDraft(suggestion)"
-      >
-        {{ suggestion }}
-      </button>
-      <button
-        v-if="followups.length"
-        type="button"
-        aria-label="Close"
-        class="rounded-full border px-2 py-1.5 text-xs"
-        @click="followups = []"
-      >
-        ×
-      </button>
-    </div>
-    <ChatComposer
-      ref="composer"
-      :thread-key="routeThreadId ?? 'new'"
-      :target-thread-id="routeThreadId ?? draftThreadId"
-      :agent-name="agentName"
-      :streaming="stream.isStreaming.value"
-      :uploading="localUploading"
-      :prompt-history="promptHistory"
-      :ensure-thread="ensureThread"
-      @send="send"
-      @stop="stream.stop()"
-      @uploading-change="
-        localUploading = $event;
-        stream.isUploading.value = $event;
-      "
-    />
-  </section>
+      <SidecarPanel
+        v-else-if="
+          routeThreadId &&
+          (activePanel === 'sidecar' ||
+            (activePanel === null && sidecar.sidecarThreadId.value))
+        "
+        v-show="activePanel === 'sidecar'"
+        :parent-thread-id="routeThreadId"
+        :parent-messages="renderableStreamMessages"
+        :sidecar-thread-id="sidecar.sidecarThreadId.value"
+        :references="sidecar.activeReferences.value"
+        :context="sidecar.context"
+        :active="activePanel === 'sidecar'"
+        @update:sidecar-thread-id="sidecar.sidecarThreadId.value = $event"
+        @update:context="sidecar.setContext($event)"
+        @clear-references="sidecar.clearActiveReferences()"
+        @add-reference="sidecar.openContext($event)"
+        @close="sidecar.close()"
+        @deleted="sidecar.clearThreadAndClose()"
+        @ready="sidecarReady = true"
+      />
+    </template>
+  </WorkspacePanels>
 </template>

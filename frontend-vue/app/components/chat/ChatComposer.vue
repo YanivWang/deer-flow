@@ -7,6 +7,18 @@ import {
   ref,
   watch,
 } from "vue";
+import {
+  ArrowUp,
+  FlaskConical,
+  Mic,
+  Paperclip,
+  Sparkles,
+  Square,
+  WandSparkles,
+  X,
+} from "lucide-vue-next";
+import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
+import type { SidecarReference } from "@/composables/useSidecar";
 
 import {
   buildComposerDraftKey,
@@ -33,6 +45,9 @@ import {
   validateUploadLimits,
 } from "@/core/uploads/file-validation";
 import type { FileInMessage } from "@/core/messages/utils";
+import { loadModels } from "@/core/models/api";
+import type { Model } from "@/core/models/types";
+import type { ThreadRunContextInput } from "@/core/threads/submit";
 import {
   appendSpeechTranscript,
   getSpeechRecognitionConstructor,
@@ -52,12 +67,17 @@ const props = defineProps<{
   uploading: boolean;
   promptHistory: string[];
   ensureThread?: () => Promise<string>;
+  isWelcome?: boolean;
+  references?: SidecarReference[];
+  context?: ThreadRunContextInput;
 }>();
 const { $i18n } = useNuxtApp();
 const emit = defineEmits<{
   send: [text: string, files: FileInMessage[]];
   stop: [];
   uploadingChange: [value: boolean];
+  clearReferences: [];
+  contextChange: [value: ThreadRunContextInput];
 }>();
 
 const input = ref("");
@@ -71,6 +91,8 @@ const polishing = ref(false);
 const polishController = ref<AbortController | null>(null);
 const toast = ref("");
 const goal = ref("");
+const models = ref<Model[]>([]);
+const modelMenu = ref(false);
 const voiceListening = ref(false);
 const voiceRecognition = ref<BrowserSpeechRecognition | null>(null);
 let voiceBaseText = "";
@@ -84,6 +106,11 @@ const disclaimer = computed(() =>
   $i18n.locale.value === "zh-CN"
     ? "内容由AI生成，重要信息请务必核查"
     : "Deerflow is AI and can make mistakes",
+);
+const selectedModel = computed(
+  () =>
+    models.value.find((model) => model.name === props.context?.model_name) ??
+    models.value[0],
 );
 const textarea = ref<HTMLTextAreaElement | null>(null);
 const chipInput = ref<HTMLElement | null>(null);
@@ -168,7 +195,23 @@ onMounted(async () => {
   } catch {
     limits.value = undefined;
   }
+  try {
+    models.value = (await loadModels()).models;
+    if (selectedModel.value && !props.context?.model_name) {
+      emit("contextChange", {
+        ...props.context,
+        model_name: selectedModel.value.name,
+      });
+    }
+  } catch {
+    models.value = [];
+  }
 });
+
+function selectModel(model: Model) {
+  emit("contextChange", { ...props.context, model_name: model.name });
+  modelMenu.value = false;
+}
 onBeforeUnmount(() => {
   voiceStopRequested = true;
   if (voiceRestartTimer) clearTimeout(voiceRestartTimer);
@@ -432,11 +475,18 @@ defineExpose({ replaceDraft });
 </script>
 
 <template>
-  <div class="border-border border-t px-5 py-3">
-    <div v-if="goal" class="mx-auto mb-2 max-w-3xl text-sm">
+  <div class="relative flex min-w-0 flex-col gap-2">
+    <div v-if="goal" class="mx-auto mb-1 w-full text-sm">
       Goal: <span class="font-medium">{{ goal }}</span>
     </div>
-    <form class="mx-auto max-w-3xl" @submit.prevent="submit">
+    <form class="mx-auto w-full" @submit.prevent="submit">
+      <ReferenceAttachment
+        :references="references ?? []"
+        test-id="conversation-quote-attachment"
+        clearable
+        class="mb-2"
+        @clear="emit('clearReferences')"
+      />
       <div
         v-if="selectedFiles.length"
         class="mb-2 flex flex-wrap gap-2 text-xs"
@@ -444,12 +494,23 @@ defineExpose({ replaceDraft });
         <span
           v-for="file in selectedFiles"
           :key="file.name"
-          class="bg-secondary rounded px-2 py-1"
-          >{{ file.name }}</span
+          class="bg-secondary border-border flex items-center gap-1 rounded-lg border px-2 py-1"
         >
+          {{ file.name }}
+          <button
+            type="button"
+            :aria-label="`Remove ${file.name}`"
+            @click="
+              selectedFiles = selectedFiles.filter((item) => item !== file)
+            "
+          >
+            <X :size="12" />
+          </button>
+        </span>
       </div>
       <div
-        class="border-input bg-background relative rounded-xl border p-2 shadow-sm"
+        class="border-input bg-background/85 relative z-10 rounded-2xl border p-2 shadow-sm backdrop-blur-sm transition-all duration-300"
+        :class="polishing ? 'ring-primary/25 shadow-lg ring-1' : ''"
       >
         <div v-if="selectedSkill" class="mb-1 flex items-start gap-2">
           <span class="bg-secondary rounded px-2 py-1 text-xs"
@@ -460,10 +521,10 @@ defineExpose({ replaceDraft });
             role="textbox"
             aria-label="How can I assist you today?"
             contenteditable="true"
-            class="min-h-8 flex-1 px-1 py-1 text-sm outline-none"
+            class="min-h-10 flex-1 px-1 py-2 text-sm outline-none"
             @input="onChipInput"
             @keydown="onKeydown"
-          ></div>
+          />
         </div>
         <textarea
           v-else
@@ -473,7 +534,7 @@ defineExpose({ replaceDraft });
           aria-label="How can I assist you today?"
           placeholder="How can I assist you today?"
           rows="2"
-          class="w-full resize-none bg-transparent px-2 py-1 text-sm outline-none"
+          class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none"
           :disabled="polishing"
           @keydown="onKeydown"
         />
@@ -497,16 +558,20 @@ defineExpose({ replaceDraft });
             {{ suggestion.label }}
           </button>
         </div>
-        <p v-if="polishing" class="px-2 text-xs text-gray-500">
+        <div
+          v-if="polishing"
+          class="text-primary bg-primary/10 border-primary/20 mx-2 mb-1 flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
+        >
+          <span class="size-2 animate-pulse rounded-full bg-current" />
           Polishing input...
-        </p>
-        <div class="flex items-center gap-2 pt-1">
+        </div>
+        <div class="flex min-w-0 items-center gap-1 pt-1">
           <label
             data-testid="add-attachments-button"
-            class="group hover:bg-accent relative cursor-pointer rounded px-2 py-1"
+            class="group hover:bg-accent text-muted-foreground relative flex size-8 cursor-pointer items-center justify-center rounded-md"
           >
-            <span aria-hidden="true">＋</span
-            ><span class="sr-only">Upload files</span>
+            <Paperclip :size="14" aria-hidden="true" />
+            <span class="sr-only">Upload files</span>
             <input
               type="file"
               multiple
@@ -530,7 +595,7 @@ defineExpose({ replaceDraft });
           <button
             data-testid="voice-input-button"
             type="button"
-            class="hover:bg-accent rounded px-2 py-1 text-xs"
+            class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
             :class="voiceListening ? 'bg-primary/10 text-primary' : ''"
             :aria-label="
               voiceListening
@@ -548,58 +613,121 @@ defineExpose({ replaceDraft });
             :disabled="!voiceSupported || polishing || streaming"
             @click="toggleVoiceInput"
           >
-            {{ voiceListening ? "■" : "🎙" }}
+            <Square v-if="voiceListening" :size="12" class="fill-current" />
+            <Mic v-else :size="14" />
           </button>
           <button
             type="button"
-            class="hover:bg-accent rounded px-2 py-1 text-xs"
+            class="text-muted-foreground hover:bg-accent hidden h-8 items-center gap-1 rounded-md px-2 text-xs sm:flex"
             aria-label="Research"
             @click="applyResearchTemplate"
           >
-            Research
+            <FlaskConical :size="14" /> Research
           </button>
           <button
             v-if="polishing"
             data-testid="cancel-polish-input-button"
             type="button"
-            class="hover:bg-accent rounded px-2 py-1 text-xs"
+            class="text-muted-foreground hover:bg-accent flex h-8 items-center gap-1 rounded-md px-2 text-xs"
             aria-label="Cancel polishing"
             @click="cancelPolish"
           >
-            Cancel
+            <X :size="14" /> Cancel
           </button>
           <button
             v-else
             data-testid="polish-input-button"
             type="button"
-            class="hover:bg-accent rounded px-2 py-1 text-xs"
+            class="text-muted-foreground hover:bg-accent flex h-8 items-center gap-1 rounded-md px-2 text-xs"
             :aria-label="
               polishOriginal === null ? 'Polish input' : 'Undo polish'
             "
             @click="polish"
           >
-            {{ polishOriginal === null ? "Polish" : "Undo" }}
+            <WandSparkles :size="14" />
+            <span class="hidden sm:inline">{{
+              polishOriginal === null ? "Polish" : "Undo"
+            }}</span>
           </button>
           <span class="flex-1" />
+          <div class="relative">
+            <button
+              v-if="selectedModel"
+              type="button"
+              class="hover:bg-accent h-8 max-w-40 truncate rounded-md px-2 text-xs"
+              :aria-label="selectedModel.display_name"
+              @click="modelMenu = !modelMenu"
+            >
+              {{ selectedModel.display_name }}
+            </button>
+            <div
+              v-if="modelMenu"
+              class="bg-background border-border absolute right-0 bottom-full z-30 mb-1 w-56 rounded-md border p-1 shadow"
+            >
+              <button
+                v-for="model in models"
+                :key="model.id"
+                type="button"
+                class="hover:bg-accent block w-full rounded px-2 py-2 text-left text-sm"
+                @click="selectModel(model)"
+              >
+                {{ model.display_name }}
+              </button>
+            </div>
+          </div>
           <button
             v-if="streaming"
             type="button"
-            class="rounded-md border px-3 py-1.5 text-sm"
+            class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full"
+            aria-label="Stop"
             @click="emit('stop')"
           >
-            Stop
+            <Square :size="12" class="fill-current" />
           </button>
           <button
             v-else
             type="submit"
-            class="bg-primary text-primary-foreground rounded-md px-3 py-1.5 text-sm"
+            class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full disabled:opacity-50"
+            aria-label="Send"
+            :disabled="!input.trim() && selectedFiles.length === 0"
           >
-            Send
+            <ArrowUp :size="16" />
+            <span aria-hidden="true" class="sr-only">Submit</span>
           </button>
         </div>
       </div>
     </form>
-    <p class="mt-2 text-center text-xs text-gray-500">
+    <div
+      v-if="isWelcome"
+      class="flex min-h-12 flex-wrap items-center justify-center gap-2 pt-2"
+    >
+      <button
+        type="button"
+        class="text-muted-foreground hover:bg-accent flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs"
+        @click="
+          replaceDraft(
+            'Surprise me with something interesting I can learn today.',
+          )
+        "
+      >
+        <Sparkles :size="14" /> Surprise me
+      </button>
+      <button
+        type="button"
+        class="text-muted-foreground hover:bg-accent rounded-full border px-4 py-1.5 text-xs"
+        @click="applyResearchTemplate"
+      >
+        Explore
+      </button>
+      <button
+        type="button"
+        class="text-muted-foreground hover:bg-accent rounded-full border px-4 py-1.5 text-xs"
+        @click="replaceDraft('Create a presentation about [topic].')"
+      >
+        Create
+      </button>
+    </div>
+    <p class="text-muted-foreground/70 px-4 text-center text-xs leading-4">
       {{ disclaimer }}
     </p>
     <div

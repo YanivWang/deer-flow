@@ -31,6 +31,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  accumulateStreamedMessage,
   mergeToolCallFragments,
   toAgentMessage,
   toWireMessage,
@@ -293,6 +294,43 @@ describe("mergeToolCallFragments 的分片归并", () => {
     expect(mergeToolCallFragments(undefined, undefined)).toBeUndefined();
     // 空的 tool_calls 是**有意义的**：ai 消息里 `tool_calls: []` 必须原样回去。
     expect(mergeToolCallFragments([], undefined)).toEqual([]);
+  });
+});
+
+describe("跨帧工具参数归并", () => {
+  it("后续 args chunk 拼完整后替换首帧的 partial 成品 args", () => {
+    const first = accumulateStreamedMessage(undefined, {
+      type: "AIMessageChunk",
+      id: "ai-1",
+      content: "",
+      tool_calls: [
+        {
+          id: "call-1",
+          name: "write_file",
+          args: { path: "/report.md", content: "Hello " },
+        },
+      ],
+      tool_call_chunks: [
+        {
+          id: "call-1",
+          index: 0,
+          name: "write_file",
+          args: '{"path":"/report.md","content":"Hello ',
+        },
+      ],
+    } as WireMessageLike);
+    const settled = accumulateStreamedMessage(first, {
+      type: "AIMessageChunk",
+      id: "ai-1",
+      content: "",
+      tool_calls: [],
+      tool_call_chunks: [{ index: 0, args: 'world"}' }],
+    } as WireMessageLike);
+
+    expect(settled.toolCalls?.[0]?.args).toEqual({
+      path: "/report.md",
+      content: "Hello world",
+    });
   });
 });
 

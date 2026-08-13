@@ -1,6 +1,6 @@
 # 06 · 执行计划
 
-> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a 已关闭，M4b 前置修复是下一步。**
+> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a / M4b / M5 已关闭；M6 是下一步但尚未开始。**
 > 实跑红绿、VPN/端口问题与有序任务清单以
 > [10-current-status-and-next.md](10-current-status-and-next.md) 为准。本文负责冻结里程碑范围与
 > 退出条件，不以旧段落中的将来时替代当前状态。
@@ -70,36 +70,36 @@ git tag frontend-vue-baseline-v2 27a425b0
 
 ## 里程碑总览
 
-| #       | 当前状态       | 内容                                                | 停在这里的价值                                                      |
-| ------- | -------------- | --------------------------------------------------- | ------------------------------------------------------------------- |
-| **M-1** | 已关闭         | **契约冻结**：协议矩阵、测试 manifest、生产入口决策 | 任何实现开始前消除歧义                                              |
-| **M0**  | 已关闭         | 骨架                                                | 能跑的空壳                                                          |
-| **M1**  | 已关闭         | `core/` 纯 TS 落地                                  | 单测全绿 = 业务语义保真                                             |
-| **M2**  | 已关闭         | **L1 `packages/agent-core/`** ★                     | **协议无关内核，已被 raw trace、fake upstream 与真实 Gateway 验证** |
-| **M3**  | 已关闭         | Markdown 渲染层                                     | 与 React 版 DOM 结构一致                                            |
-| **M4a** | 已关闭         | 数据流：`threads/hooks.ts` 与 7 个 Context          | 流式状态在 Vue 下跑通，带 gate                                      |
-| **M4b** | **下一里程碑** | **通用 agent UI（L2 第一批）** ★                    | **一个能跑的通用 agent 聊天应用——模板到此可用**                     |
-| **M5**  | 未开始         | L3 第一批：artifacts + sidecar                      | L2 扩展点被真实 L3 功能验证过                                       |
-| **M6**  | 未开始         | L3 其余：设置 / 侧栏 / browser / channels           | 功能面完整                                                          |
-| **M7**  | 未开始         | 交互收尾 + 完整验收                                 | **功能/交互合同与关键视觉状态达成**                                 |
-| **M8**  | 未开始         | L2 契约收口                                         | 其他项目可上手复用                                                  |
+| #       | 当前状态   | 内容                                                | 停在这里的价值                                                      |
+| ------- | ---------- | --------------------------------------------------- | ------------------------------------------------------------------- |
+| **M-1** | 已关闭     | **契约冻结**：协议矩阵、测试 manifest、生产入口决策 | 任何实现开始前消除歧义                                              |
+| **M0**  | 已关闭     | 骨架                                                | 能跑的空壳                                                          |
+| **M1**  | 已关闭     | `core/` 纯 TS 落地                                  | 单测全绿 = 业务语义保真                                             |
+| **M2**  | 已关闭     | **L1 `packages/agent-core/`** ★                     | **协议无关内核，已被 raw trace、fake upstream 与真实 Gateway 验证** |
+| **M3**  | 已关闭     | Markdown 渲染层                                     | 与 React 版 DOM 结构一致                                            |
+| **M4a** | 已关闭     | 数据流：`threads/hooks.ts` 与 7 个 Context          | 流式状态在 Vue 下跑通，带 gate                                      |
+| **M4b** | **已关闭** | **通用 agent UI（L2 第一批）** ★                    | **一个能跑的通用 agent 聊天应用——模板到此可用**                     |
+| **M5**  | **已关闭** | L3 第一批：artifacts + sidecar                      | L2 扩展点已被真实 L3 功能验证                                       |
+| **M6**  | 未开始     | L3 其余：设置 / 侧栏 / browser / channels           | 功能面完整                                                          |
+| **M7**  | 未开始     | 交互收尾 + 完整验收                                 | **功能/交互合同与关键视觉状态达成**                                 |
+| **M8**  | 未开始     | L2 契约收口                                         | 其他项目可上手复用                                                  |
 
 ## 相对工作量与中止判定
 
 绝对工期取决于投入人力，**这份文档不填死**——但相对量级和"什么情况下该停"必须先写清楚，否则中途只会靠感觉硬扛。
 
-| 里程碑  | 相对量级                             | 主要不确定性                                                                                             |
-| ------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| M-1     | 中                                   | 协议、认证和生产入口需要跨前后端做明确决策并冻结测试位置                                                 |
-| M0      | **中偏大、风险密度高**               | 十道 gate 包含 clean CI、preview 代理、真实认证、WS、OIDC、供应链与生产入口安全，不是普通脚手架工作      |
-| M1      | 中（机械量大）                       | 149 个 core 文件要分类、83 个 core 测试要按 node/DOM/composable 分组；富 Message 类型是否等价            |
-| M2      | **中偏大，方差最大**                 | 自研 SSE 的正确性；探针是否收敛。transport 层有现成起点，但 run session/gap/cancel 不能按普通 fetch 估算 |
-| M3      | **中偏大**（早期估「小」是错的）     | ~790 行而非 230，另加一个未估的 mermaid 组件；代码块组件要从零写；归一化 DOM 等价能否达成                |
+| 里程碑  | 相对量级                             | 主要不确定性                                                                                              |
+| ------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| M-1     | 中                                   | 协议、认证和生产入口需要跨前后端做明确决策并冻结测试位置                                                  |
+| M0      | **中偏大、风险密度高**               | 十道 gate 包含 clean CI、preview 代理、真实认证、WS、OIDC、供应链与生产入口安全，不是普通脚手架工作       |
+| M1      | 中（机械量大）                       | 149 个 core 文件要分类、83 个 core 测试要按 node/DOM/composable 分组；富 Message 类型是否等价             |
+| M2      | **中偏大，方差最大**                 | 自研 SSE 的正确性；探针是否收敛。transport 层有现成起点，但 run session/gap/cancel 不能按普通 fetch 估算  |
+| M3      | **中偏大**（早期估「小」是错的）     | ~790 行而非 230，另加一个未估的 mermaid 组件；代码块组件要从零写；归一化 DOM 等价能否达成                 |
 | M4a     | **中偏大**                           | `threads/hooks.ts` 3,169 行 + C 组 9 条 + 从 M2 顺延来的 A7/A8（缓存失效与恢复警告，随 vue-query 一起做） |
-| M4b     | **最大（约占全部组件工作量的一半）** | 68 个组件 / ~16,100 行 + stick-to-bottom 自写 + 19 个 `src/app/` 文件 / 3,215 行                         |
-| M5 / M6 | 大                                   | 51 个 L3 组件；L2 接口会被反向修正                                                                       |
-| M7      | 中                                   | H 组重写（spike 已降低方差）、完整验收                                                                   |
-| M8      | 小                                   | 文档与契约收口                                                                                           |
+| M4b     | **最大（约占全部组件工作量的一半）** | 68 个组件 / ~16,100 行 + stick-to-bottom 自写 + 19 个 `src/app/` 文件 / 3,215 行                          |
+| M5 / M6 | 大                                   | 51 个 L3 组件；L2 接口会被反向修正                                                                        |
+| M7      | 中                                   | H 组重写（spike 已降低方差）、完整验收                                                                    |
+| M8      | 小                                   | 文档与契约收口                                                                                            |
 
 **中止 / 降级判定点**（触发任一条就停下来重新决策，不要默默继续）：
 
@@ -129,37 +129,37 @@ J 组（认证与存储）被挂在"通用 agent UI"下，而它其实在 M0 就
 
 下表是**唯一的归属来源**，各里程碑的「验收清单」只引用它。
 
-| 条目            | 落在哪一层                                        | 验收里程碑                       | 依据                                                                       |
-| --------------- | ------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------- |
-| **A1**          | L1 store                                          | M2 ✅                            | `packages/agent-core/src/store/external-store.ts`                          |
-| **A2 A3**       | L3 请求构造                                       | M2 ✅                            | `agent-deerflow/run-protocol.ts`                                           |
-| **A4 A5 A6**    | L3 会话 / gap 恢复                                | M2 ✅                            | `agent-deerflow/gap-recovery.ts`                                           |
-| **A7 A8**       | **Pinia + vue-query 缓存层**                      | **M4a**                          | 二者都要求"失效缓存"；vue-query plugin 在 M4a 才引入                       |
-| **B1–B11**      | 组件（消息分组与渲染）                            | M4b                              | `workspace/messages/`                                                      |
-| **C1–C9**       | **数据流（`threads/hooks.ts`，REWRITE 未落地）**  | **M4a**                          | §M4a 原文「hooks.ts 独自承载 A 组与 C 组」；gate 跑两个 ordering/history spec |
-| **D1–D8**       | L3 artifacts                                      | M5                               | —                                                                          |
-| **E1–E11**      | 组件 composer                                     | M4b                              | —                                                                          |
-| **F1–F7**       | core 纯 TS（`messages/human-input.ts`，M1 已落地） | **M1**（单测）                   | RETYPED 已落地，语义由随搬的单测固定                                       |
-| **F8–F11**      | 组件 human-input 卡片                             | M4b                              | —                                                                          |
-| **G1–G6**       | 组件 subtask 卡片 + 事件回填                      | M4b                              | —                                                                          |
-| **H1–H6**       | 面板编排（splitpanes 重写）                       | **M7**                           | 05 H 组自述「M7 仍需实现 H3/H4/H5 与业务状态镜像」                         |
-| **H7 H8**       | **组件 + 查询**（context-usage / token-usage）    | **M4b**                          | §M4b 组件清单里就有这两个散件                                              |
-| **I1–I5**       | L3 browser view                                   | M6                               | —                                                                          |
-| **J1–J4**       | 认证与存储                                        | **M0 ✅**（G0-3 / G0-5）         | 与"通用 agent UI"无关                                                      |
-| **J5 J6**       | 生产 OIDC / 并发 state                            | **M0 ✅**（G0-7）+ **M7** 生产 readiness | 单前端验完，双 hostname 并发留 M7                                    |
-| **K1**          | core 纯 TS（`threads/utils.ts`，M1 已落地）        | **M1**                           | RETYPED 已落地                                                             |
-| **K2 K3**       | 编辑并重跑                                        | **M4b**，⚠️ **无专门 E2E spec**   | 25 个 spec 里没有 edit-regenerate；只能靠单测 + 手验                       |
-| **K4**          | 重命名 409                                        | **M6**                           | `sidebar.spec.ts`                                                          |
-| **K5**          | 设置 > 工具的 MCP 开关                            | **M6**                           | `settings/`                                                                |
-| **K6**          | **后端行为**                                      | **不是前端验收项**               | 05 原文「后端行为，前端不要伪造」                                          |
-| **L1–L16**      | L1 transport + session                            | M2 ✅                            | —                                                                          |
-| **M1 M2**       | `provide` / `inject`                              | **M4a**                          | 7 个业务 Context 在 M4a 转 provide/inject                                  |
-| **M3 M4 M6**    | Markdown 渲染语义                                 | **M3**                           | `elementAttributeNameCase`、动画 key、`onErrorCaptured`                    |
-| **M5**          | `watch` 惰性                                      | **每个写 Vue 代码的里程碑**（M3 起），首查 M4a | 它不对应业务域；A7/D1/D4 都踩在它上面                        |
-| **N1**          | `uploads/hooks.ts`（REWRITE 未落地）              | **M4a**                          | 05 N1：pre-submit 上传状态归 `threads/hooks.ts` 所有                       |
-| **N2**          | `notification/hooks.ts`（REWRITE 未落地）         | **M6**                           | `settings-notification.spec.ts`                                            |
-| **N3**          | `voice-input/`（COPIED 已落地）                   | **M4b**                          | composer 的一部分                                                          |
-| **N4**          | `i18n/cookies.ts`（REWRITE 未落地）               | **M4a**                          | i18n plugin 在 M4a                                                         |
+| 条目         | 落在哪一层                                         | 验收里程碑                                     | 依据                                                                          |
+| ------------ | -------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------- |
+| **A1**       | L1 store                                           | M2 ✅                                          | `packages/agent-core/src/store/external-store.ts`                             |
+| **A2 A3**    | L3 请求构造                                        | M2 ✅                                          | `agent-deerflow/run-protocol.ts`                                              |
+| **A4 A5 A6** | L3 会话 / gap 恢复                                 | M2 ✅                                          | `agent-deerflow/gap-recovery.ts`                                              |
+| **A7 A8**    | **Pinia + vue-query 缓存层**                       | **M4a**                                        | 二者都要求"失效缓存"；vue-query plugin 在 M4a 才引入                          |
+| **B1–B11**   | 组件（消息分组与渲染）                             | M4b                                            | `workspace/messages/`                                                         |
+| **C1–C9**    | **数据流（`threads/hooks.ts`，REWRITE 未落地）**   | **M4a**                                        | §M4a 原文「hooks.ts 独自承载 A 组与 C 组」；gate 跑两个 ordering/history spec |
+| **D1–D8**    | L3 artifacts                                       | M5                                             | —                                                                             |
+| **E1–E11**   | 组件 composer                                      | M4b                                            | —                                                                             |
+| **F1–F7**    | core 纯 TS（`messages/human-input.ts`，M1 已落地） | **M1**（单测）                                 | RETYPED 已落地，语义由随搬的单测固定                                          |
+| **F8–F11**   | 组件 human-input 卡片                              | M4b                                            | —                                                                             |
+| **G1–G6**    | 组件 subtask 卡片 + 事件回填                       | M4b                                            | —                                                                             |
+| **H1–H6**    | 面板编排（splitpanes 重写）                        | **M7**                                         | 05 H 组自述「M7 仍需实现 H3/H4/H5 与业务状态镜像」                            |
+| **H7 H8**    | **组件 + 查询**（context-usage / token-usage）     | **M4b**                                        | §M4b 组件清单里就有这两个散件                                                 |
+| **I1–I5**    | L3 browser view                                    | M6                                             | —                                                                             |
+| **J1–J4**    | 认证与存储                                         | **M0 ✅**（G0-3 / G0-5）                       | 与"通用 agent UI"无关                                                         |
+| **J5 J6**    | 生产 OIDC / 并发 state                             | **M0 ✅**（G0-7）+ **M7** 生产 readiness       | 单前端验完，双 hostname 并发留 M7                                             |
+| **K1**       | core 纯 TS（`threads/utils.ts`，M1 已落地）        | **M1**                                         | RETYPED 已落地                                                                |
+| **K2 K3**    | 编辑并重跑                                         | **M4b**，⚠️ **无专门 E2E spec**                | 25 个 spec 里没有 edit-regenerate；只能靠单测 + 手验                          |
+| **K4**       | 重命名 409                                         | **M6**                                         | `sidebar.spec.ts`                                                             |
+| **K5**       | 设置 > 工具的 MCP 开关                             | **M6**                                         | `settings/`                                                                   |
+| **K6**       | **后端行为**                                       | **不是前端验收项**                             | 05 原文「后端行为，前端不要伪造」                                             |
+| **L1–L16**   | L1 transport + session                             | M2 ✅                                          | —                                                                             |
+| **M1 M2**    | `provide` / `inject`                               | **M4a**                                        | 7 个业务 Context 在 M4a 转 provide/inject                                     |
+| **M3 M4 M6** | Markdown 渲染语义                                  | **M3**                                         | `elementAttributeNameCase`、动画 key、`onErrorCaptured`                       |
+| **M5**       | `watch` 惰性                                       | **每个写 Vue 代码的里程碑**（M3 起），首查 M4a | 它不对应业务域；A7/D1/D4 都踩在它上面                                         |
+| **N1**       | `uploads/hooks.ts`（REWRITE 未落地）               | **M4a**                                        | 05 N1：pre-submit 上传状态归 `threads/hooks.ts` 所有                          |
+| **N2**       | `notification/hooks.ts`（REWRITE 未落地）          | **M6**                                         | `settings-notification.spec.ts`                                               |
+| **N3**       | `voice-input/`（COPIED 已落地）                    | **M4b**                                        | composer 的一部分                                                             |
+| **N4**       | `i18n/cookies.ts`（REWRITE 未落地）                | **M4a**                                        | i18n plugin 在 M4a                                                            |
 
 三点读法：
 
@@ -540,23 +540,23 @@ expect(wrapper.find("p").element).toBe(firstParagraph); // 同一个 DOM 节点�
 `false`）。这三条是本里程碑**首次**有对象可验——在此之前没有 Vue 渲染路径。
 **M5**（`watch` 惰性）从这里开始每个里程碑都查一遍。
 
-| 部分                                                    | 处置                                           | 量               |
-| ------------------------------------------------------- | ---------------------------------------------- | ---------------- |
-| remark / rehype 插件链                                  | **原样复用**                                   | 0                |
-| `preprocess.ts`（嵌套截断、LaTeX 归一化、系统标签剥离） | **原样搬**                                     | 0（389 行）      |
-| 未完成 markdown 自愈                                    | **直接用 `remend`**                            | 0                |
-| URL 安全过滤 + HTML 净化                                | **`rehype-harden` + `rehype-sanitize`**        | 0                |
-| hast → vnode                                            | `hast-util-to-jsx-runtime` + `vue/jsx-runtime` | ~30 行           |
-| `rehypeStreamingListItems`                              | 从 `plugins.ts` 里**摘出来**搬（见下）         | ~50 行           |
-| `plugins.ts` 的其余部分                                 | **重写** —— 它 import 了三个 React-only 包     | ~50 行           |
-| `components.tsx` 的组件覆盖 map                         | **重写**（90 行 React）                        | ~120 行          |
-| `mermaid.ts`（`normalizeMermaidMarkdown`）              | **已按 `COPIED` 落地**（零 import 纯函数）     | 0                |
-| `safe-children.ts`                                      | **重写**（34 行 React）                        | ~40 行           |
-| **mermaid 渲染组件**                                    | **新写** —— 与代码块同源，见下                 | ~50 行（实测 52）|
-| **代码块组件**（shiki 高亮 + 复制 + 语言标签 + 主题）   | **重写** —— 见下，这块在 streamdown 内部       | ~250 行          |
-| 分块 + memo                                             | 自写（用 `marked`）                            | ~100 行          |
-| 逐词动画（**不要用 per-word rehype 插件**）             | 自写                                           | ~120 行          |
-| 错误边界（`onErrorCaptured`）                           | 自写                                           | ~30 行           |
+| 部分                                                    | 处置                                           | 量                |
+| ------------------------------------------------------- | ---------------------------------------------- | ----------------- |
+| remark / rehype 插件链                                  | **原样复用**                                   | 0                 |
+| `preprocess.ts`（嵌套截断、LaTeX 归一化、系统标签剥离） | **原样搬**                                     | 0（389 行）       |
+| 未完成 markdown 自愈                                    | **直接用 `remend`**                            | 0                 |
+| URL 安全过滤 + HTML 净化                                | **`rehype-harden` + `rehype-sanitize`**        | 0                 |
+| hast → vnode                                            | `hast-util-to-jsx-runtime` + `vue/jsx-runtime` | ~30 行            |
+| `rehypeStreamingListItems`                              | 从 `plugins.ts` 里**摘出来**搬（见下）         | ~50 行            |
+| `plugins.ts` 的其余部分                                 | **重写** —— 它 import 了三个 React-only 包     | ~50 行            |
+| `components.tsx` 的组件覆盖 map                         | **重写**（90 行 React）                        | ~120 行           |
+| `mermaid.ts`（`normalizeMermaidMarkdown`）              | **已按 `COPIED` 落地**（零 import 纯函数）     | 0                 |
+| `safe-children.ts`                                      | **重写**（34 行 React）                        | ~40 行            |
+| **mermaid 渲染组件**                                    | **新写** —— 与代码块同源，见下                 | ~50 行（实测 52） |
+| **代码块组件**（shiki 高亮 + 复制 + 语言标签 + 主题）   | **重写** —— 见下，这块在 streamdown 内部       | ~250 行           |
+| 分块 + memo                                             | 自写（用 `marked`）                            | ~100 行           |
+| 逐词动画（**不要用 per-word rehype 插件**）             | 自写                                           | ~120 行           |
+| 错误边界（`onErrorCaptured`）                           | 自写                                           | ~30 行            |
 |                                                         |                                                | **合计 ~840 行**  |
 
 ### 落地实测（2026-08-06，本表的收口修正）
@@ -582,7 +582,7 @@ expect(wrapper.find("p").element).toBe(firstParagraph); // 同一个 DOM 节点�
 | `preprocess.ts`    | 389 | 原样搬               | ✅ 原样搬                                                                                                                                                                                                          |
 | `plugins.ts`       | 98  | **「原样搬，0 行」** | ❌ 它 `import { code } from "@streamdown/code"`、`import { mermaid } from "@streamdown/mermaid"`、`import type { StreamdownProps } from "streamdown"` —— 全是 React-only。**只有 `rehypeStreamingListItems` 可搬** |
 | `components.tsx`   | 90  | 未提及               | React 组件覆盖 map，重写                                                                                                                                                                                           |
-| `mermaid.ts`       | 98  | 未提及               | ✅ **零 import 的纯函数**，M1 已按 `COPIED` 逐字节落地。早期与 `safe-children.ts` 合并写成「132 行 React」是错的——React 的只有后者那 34 行                                                                          |
+| `mermaid.ts`       | 98  | 未提及               | ✅ **零 import 的纯函数**，M1 已按 `COPIED` 逐字节落地。早期与 `safe-children.ts` 合并写成「132 行 React」是错的——React 的只有后者那 34 行                                                                         |
 | `safe-children.ts` | 34  | 未提及               | 重写                                                                                                                                                                                                               |
 | `index.ts`         | 5   | 未提及               | —                                                                                                                                                                                                                  |
 
@@ -705,9 +705,9 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 > 以及同一次 URL 变化把 C9 的顺序锚点清掉。详见
 > [evidence/m4a-dataflow.md §2.4](evidence/m4a-dataflow.md)。
 >
-> **共享合同仍然是最终判据，时间点在 M4b。** 当前代表性实跑已证明共享 mock 缺
-> `Content-Location` 会让发送路径 fail closed；M4b 前置任务必须先补该 header，并保持
-> React 合同通过。完整现状见 [10](10-current-status-and-next.md)。
+> **共享合同仍然是最终判据，时间点在 M4b。** M4b 已给共享 mock 补齐
+> `Content-Location` 且保持 protocol fail closed，精确的 11-spec/66-test 合同已通过。
+> 完整现状见 [10](10-current-status-and-next.md)。
 
 **⚠️ 全程对照 [05-invariants.md](05-invariants.md) 的 M 组**（Vue 移植专有陷阱）。M1（`provide` 必须传 ref）和 M5（`watch` 默认惰性）在这个阶段最容易翻车，而 A7 / D4 那类"初始状态不得被覆盖"的约束正好踩在 M5 上。
 
@@ -746,22 +746,11 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 `thread-history-mermaid` `chat-thread-init-ordering` `agent-chat` `branch-thread`
 `subtask-card` `thread-list-infinite-scroll` `thread-list-pin`。
 
-> **2026-08-13 代表性实跑：1/3。** new-chat 输入可见通过；本地化 disclaimer 失败；
-> 发送消息失败并明确报 `Gateway did not return a Content-Location for the new run.`。
-> 这既证明页面还没到 M4b，也证明共享 mock 与真实 Gateway run-handle 合同不一致。
->
-> M4b 开工前依次完成四个 P0：
->
-> 1. 给 `frontend/tests/e2e/utils/mock-api.ts::handleRunStream` 补真实 Gateway 已提供的
->    `Content-Location`，保持 protocol fail closed；
-> 2. 给 Vue real-backend 命令固定 `E2E_FRONTEND_PORT=3101`，消除共享 spec 默认 3000
->    造成的误命中；
-> 3. 给本地 Gateway/IdP/Playwright fixture 固化 `NO_PROXY=127.0.0.1,localhost`；
-> 4. 建精确列出上述 11 个 spec 的 M4b Playwright project/Make target，不能用 substring
->    选用例，也不能把 `make e2e-list` 的 25/120 收集结果写成通过。
->
-> 修正端口并绕过代理后的 real-backend 当前是 2/3：auth-disabled 与多 run
-> order/history 通过，render 因缺 `#chat`/建议 UI 失败。M4b 退出前必须达到 3/3。
+> **2026-08-13 退出结论：M4b 已关闭。** 四个 P0 已落地；精确列出的
+> 11 个 spec / 66 个 tests 全绿，修正端口后的 real-backend 3/3 全绿。
+> 同轮 `make verify`、migration/consumer、M0、M4a、分块 SSE 和 external 门禁全绿。
+> 详细命令、数量、人工 UI 核验与未扩大边界见
+> [evidence/m4b-agent-ui.md](evidence/m4b-agent-ui.md)。
 
 **M4b 达成后的产出**：**一个能跑的通用 agent 聊天应用。** 只有上述退出条件满足后，
 才能写“模板已经可用”——L1 内核 + L2 通用 UI + 一个证明它们能工作的壳。
@@ -780,6 +769,16 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 （`watch` 惰性）——D1 与 D4 都是"初始状态不得被覆盖"，正好踩在这条上。
 
 **E2E**：`artifact-preview` `artifact-stream-state` `artifact-batched-stream` `artifact-panel-resize` `workspace-changes` `sidecar-chat`
+
+> **2026-08-13 退出结论：M5 已关闭。** 当前 React 源范围复核为
+> `artifacts/` 6 + `sidecar/` 5 + `changes/` 3，共 14 个 / 3,395 行；
+> Vue 侧接通真实 artifact GET/PUT、workspace-changes 与 sidecar hidden-thread
+> 调用链，继续复用唯一 chat/thread/stream 状态机。精确 6-spec/27-test 门禁、
+> M5 真实 Gateway 1/1、M4b 66/66、M4a/M0 与 verify/migration/consumer 均通过。
+> 共享 batched-stream fixture 的协议适配、命令和未验证边界见
+> [evidence/m5-artifacts-sidecar.md](evidence/m5-artifacts-sidecar.md)。
+>
+> 全量 25-file/120-test 共享套件仍只是收集结果，不是通过结果；M6 未开始。
 
 ---
 
@@ -866,7 +865,7 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 | **依赖版本漂移**                                    | DOM/Markdown/CSS 行为与 React 基线不同                           | 首轮精确对齐现有 lockfile resolved version，parity 后逐包升级                                                                                                        |
 | **`frontend/` 在重写期间持续演进**                  | `core/` 副本与上游偏离（近 3 个月 **239** 次提交，约 2.6 次/天） | **基线冻结在 `27a425b0`**，里程碑内部完全不跟上游；`COPIED` hash 守护在换基线时自动指出要跟进的文件（[1e](#1e-provenance-台账与-copied-hash-守护)）。不再靠人工 diff |
 | **孤儿 CI workflow**                                | 第一次 push 直接红，失败信息指不到真实原因                       | [G0-0](#g0-0--ci-workflow-对齐)，M0 第一件事                                                                                                                         |
-| **Markdown 层被低估 3–4 倍**                        | M3 从「小」变「中偏大」，排期失真                                | 已重估为 ~790 行 + 未估的 mermaid 组件；代码块组件、`plugins.ts` 重写部分、`globals.css` 的 `@source` 陷阱都已列明（[M3](#m3--markdown-渲染层)）                                           |
+| **Markdown 层被低估 3–4 倍**                        | M3 从「小」变「中偏大」，排期失真                                | 已重估为 ~790 行 + 未估的 mermaid 组件；代码块组件、`plugins.ts` 重写部分、`globals.css` 的 `@source` 陷阱都已列明（[M3](#m3--markdown-渲染层)）                     |
 | **`src/app/` 目标文件曾未进工作量表**               | 19 个 / 3,215 行的 layout / page / providers 无人认领            | 已并入 [M4b](#m4b--通用-agent-uil2-第一批-模板价值兑现点)                                                                                                            |
 | **WebSocket 直连被 Origin 拒绝或生产 Upgrade 丢失** | browser-view 不可用                                              | M-1 已冻结开发直连+精确 allowlist、生产同源 ingress；[G0-6](#m0-的十道-gate) 用真实浏览器 Origin/cookie 验证                                                         |
 | **结构 diff 门禁无界**                              | 与「视觉 98%」同一种失败形状：门禁工作量超过功能本身             | 已降为诊断报告、不做门禁、只覆盖固定少数容器（[04 §7](04-architecture-decisions.md#页面结构一致靠诊断报告不做门禁)）                                                 |

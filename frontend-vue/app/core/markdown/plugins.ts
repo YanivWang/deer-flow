@@ -77,6 +77,32 @@ export function rehypeStreamingListItems() {
   };
 }
 
+/** GitHub-compatible heading ids for artifact outline links. */
+export function rehypeHeadingSlugs() {
+  return (tree: HastRoot) => {
+    const occurrences = new Map<string, number>();
+    visit(tree, "element", (node) => {
+      if (!/^h[1-6]$/.test(node.tagName) || node.properties.id) return;
+      const text = node.children
+        .flatMap((child) => {
+          if (child.type === "text") return [child.value];
+          if (child.type !== "element") return [];
+          const values: string[] = [];
+          visit(child, "text", (textNode) => values.push(textNode.value));
+          return values;
+        })
+        .join("");
+      const base = text
+        .toLowerCase()
+        .replace(/[^\p{Letter}\p{Number}\p{Mark}_ -]/gu, "")
+        .replaceAll(" ", "-");
+      const count = occurrences.get(base) ?? 0;
+      occurrences.set(base, count + 1);
+      node.properties.id = count === 0 ? base : `${base}-${count}`;
+    });
+  };
+}
+
 /**
  * 没有 rehype-raw 时，把 mdast 的 `html` 节点降级成文本。
  *

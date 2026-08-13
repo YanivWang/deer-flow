@@ -1,9 +1,20 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import {
+  CheckCircle2,
+  CircleDashed,
+  CircleX,
+  GitBranch,
+  RefreshCw,
+  Wrench,
+} from "lucide-vue-next";
 
 import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue";
 import HumanInputCard from "@/components/chat/HumanInputCard.vue";
+import WorkspaceChangesBadge from "@/components/workspace/changes/WorkspaceChangesBadge.vue";
+import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import { richContentComponents } from "@/components/markdown/components";
+import { buildWriteFileArtifactURL } from "@/core/artifacts/utils";
 import { extractCitationSources } from "@/core/citations/sources";
 import {
   deriveHumanInputThreadState,
@@ -28,19 +39,33 @@ import {
   parseSubtaskResult,
 } from "@/core/tasks/subtask-result";
 import type { Message } from "@/core/types/message";
+import { readReferenceMessageContexts } from "@/core/sidecar";
 
 const props = defineProps<{
   messages: Message[];
   rawMessages?: Message[];
   streaming: boolean;
   loading: boolean;
+  threadId?: string | null;
+  selectionMode?: "main" | "sidecar";
+  testId?: string;
+  active?: boolean;
+  tailRequest?: number;
 }>();
 const emit = defineEmits<{
   branch: [messageId: string, messageIds: string[]];
   regenerate: [messageId: string, messageIds: string[]];
   edit: [messageId: string, text: string, messageIds: string[]];
   humanInput: [request: HumanInputRequest, response: HumanInputResponse];
+  artifact: [path: string];
+  selectionAsk: [payload: SelectionPayload];
+  selectionAdd: [payload: SelectionPayload];
 }>();
+type SelectionPayload = {
+  message: Message;
+  selectedText: string;
+  displayIndex: number;
+};
 const pendingHumanInputs = ref(new Set<string>());
 
 const normalizedMessages = computed(() =>
@@ -77,7 +102,9 @@ const humanInputState = computed(() =>
 );
 const scroller = ref<HTMLElement | null>(null);
 const windowStart = ref<number | null>(null);
-const sideChatVisible = ref(false);
+const followingTail = ref(true);
+const selection = ref<SelectionPayload | null>(null);
+let userScrollIntent = false;
 const VIRTUAL_WINDOW_SIZE = 50;
 const ESTIMATED_GROUP_HEIGHT_PX = 80;
 
@@ -151,28 +178,158 @@ function lastAI(index: number) {
     .reverse()
     .find((message) => message.type === "ai");
 }
-function onScroll() {
+function onScroll(event: Event) {
   if (!scroller.value || groups.value.length <= 80) return;
   const maxStart = Math.max(0, groups.value.length - VIRTUAL_WINDOW_SIZE);
   const scrollRange = scroller.value.scrollHeight - scroller.value.clientHeight;
-  if (
+  const atTail =
     scrollRange <= 0 ||
     scroller.value.scrollTop + scroller.value.clientHeight >=
-      scroller.value.scrollHeight - 1
-  ) {
+      scroller.value.scrollHeight - 1;
+  if (atTail) {
+    followingTail.value = true;
+    userScrollIntent = false;
     windowStart.value = maxStart;
     return;
+  }
+  if (!event.isTrusted) {
+    followingTail.value = false;
+    userScrollIntent = false;
+  }
+  if (followingTail.value && !userScrollIntent) {
+    windowStart.value = maxStart;
+    void nextTick(() => {
+      if (scroller.value && followingTail.value) {
+        scroller.value.scrollTop = scroller.value.scrollHeight;
+      }
+    });
+    return;
+  }
+  if (userScrollIntent) {
+    followingTail.value = false;
+    userScrollIntent = false;
   }
   const ratio = scrollRange <= 0 ? 0 : scroller.value.scrollTop / scrollRange;
   windowStart.value = Math.round(maxStart * ratio);
 }
-function onSelection() {
-  sideChatVisible.value = Boolean(
-    globalThis.getSelection?.()?.toString().trim(),
-  );
+function onScrollIntent() {
+  userScrollIntent = true;
+}
+function onScrollKey(event: KeyboardEvent) {
+  if (
+    ["ArrowUp", "PageUp", "Home"].includes(event.key) ||
+    (event.key === " " && event.shiftKey)
+  ) {
+    onScrollIntent();
+  }
+}
+function onSelection(index: number) {
+  if (!props.selectionMode) return;
+  const selectedText = globalThis.getSelection?.()?.toString().trim() ?? "";
+  if (!selectedText) {
+    selection.value = null;
+    return;
+  }
+  const message = [...(groups.value[index]?.messages ?? [])]
+    .reverse()
+    .find(
+      (candidate) =>
+        (candidate.type === "human" || candidate.type === "ai") &&
+        text(candidate).includes(selectedText),
+    );
+  selection.value = message
+    ? { message, selectedText, displayIndex: index + 1 }
+    : null;
 }
 function onKey(event: KeyboardEvent) {
-  if (event.key === "Escape") sideChatVisible.value = false;
+  if (event.key === "Escape") selection.value = null;
+}
+function dispatchSelection(action: "ask" | "add") {
+  if (!selection.value) return;
+  if (action === "ask") emit("selectionAsk", selection.value);
+  else emit("selectionAdd", selection.value);
+  selection.value = null;
+  globalThis.getSelection?.()?.removeAllRanges();
+}
+function messageReferences(message: Message) {
+  return readReferenceMessageContexts(message.additional_kwargs).map(
+    (context, index) => ({ id: index + 1, context }),
+  );
+}
+const ARTIFACT_TOOL_NAMES = new Set([
+  "write_file",
+  "str_replace",
+  "finalize_artifact_write",
+  "present_files",
+]);
+function toolLabel(name: string) {
+  if (name === "write_file") return "Write file";
+  return name
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+function artifactTargets(message: Message) {
+  if (message.type !== "ai") return [];
+  return (message.tool_calls ?? []).flatMap((call) => {
+    if (call.name === "present_files" && Array.isArray(call.args?.filepaths)) {
+      return call.args.filepaths.flatMap((path) =>
+        typeof path === "string"
+          ? [{ path, label: path.split("/").at(-1) ?? path }]
+          : [],
+      );
+    }
+    if (
+      (call.name === "write_file" || call.name === "str_replace") &&
+      typeof call.args?.path === "string"
+    ) {
+      return [
+        {
+          path: buildWriteFileArtifactURL({
+            filepath: call.args.path,
+            messageId: message.id,
+            toolCallId: call.id,
+          }),
+          label: call.args.path,
+        },
+      ];
+    }
+    if (
+      call.name === "finalize_artifact_write" &&
+      typeof call.args?.path === "string"
+    ) {
+      const result = normalizedMessages.value.find(
+        (candidate) =>
+          candidate.type === "tool" && candidate.tool_call_id === call.id,
+      );
+      if (result && text(result).trim() === "OK") {
+        return [{ path: call.args.path, label: call.args.path }];
+      }
+    }
+    return [];
+  });
+}
+function runIdOfGroup(index: number) {
+  const messages = groups.value[index]?.messages ?? [];
+  for (const message of [...messages].reverse()) {
+    const runId = Reflect.get(message, "run_id");
+    if (typeof runId === "string" && runId) return runId;
+  }
+  return undefined;
+}
+function workspaceChangesRun(index: number) {
+  if (groups.value[index]?.type !== "assistant") return undefined;
+  const runId = runIdOfGroup(index);
+  if (!runId) return undefined;
+  for (let cursor = index + 1; cursor < groups.value.length; cursor += 1) {
+    if (
+      groups.value[cursor]?.type === "assistant" &&
+      runIdOfGroup(cursor) === runId
+    )
+      return undefined;
+  }
+  return runId;
 }
 function durationLabel(seconds: number) {
   return `Completed in ${formatRunDuration(seconds, {
@@ -187,9 +344,8 @@ function durationLabel(seconds: number) {
 watch(
   () => groups.value.length,
   async (nextLength, previousLength = 0) => {
-    const previousMaxStart = Math.max(0, previousLength - VIRTUAL_WINDOW_SIZE);
-    const wasFollowingTail =
-      windowStart.value === null || windowStart.value >= previousMaxStart - 1;
+    void previousLength;
+    const wasFollowingTail = followingTail.value;
 
     if (nextLength <= 80) {
       windowStart.value = null;
@@ -197,11 +353,60 @@ watch(
       windowStart.value = Math.max(0, nextLength - VIRTUAL_WINDOW_SIZE);
     }
 
-    if (!wasFollowingTail) return;
+    if (!wasFollowingTail || props.active === false) return;
     await nextTick();
+    // A persisted-page refresh can land between the optimistic message and the
+    // stream response. DOM scroll events from that intermediate layout may
+    // recalculate windowStart before this post-render continuation runs. Pin
+    // the virtual window to the current tail again before scrolling so the
+    // optimistic turn remains mounted throughout the reconciliation.
+    if (groups.value.length > 80) {
+      windowStart.value = Math.max(
+        0,
+        groups.value.length - VIRTUAL_WINDOW_SIZE,
+      );
+      await nextTick();
+    }
     if (scroller.value) scroller.value.scrollTop = scroller.value.scrollHeight;
   },
   { immediate: true },
+);
+watch(
+  () => props.active,
+  async (active) => {
+    if (!active) return;
+    followingTail.value = true;
+    await nextTick();
+    if (scroller.value) scroller.value.scrollTop = scroller.value.scrollHeight;
+  },
+  { flush: "post" },
+);
+watch(
+  () => props.tailRequest,
+  async (request, previousRequest) => {
+    if (
+      request === undefined ||
+      request === previousRequest ||
+      props.active === false
+    )
+      return;
+    followingTail.value = true;
+    if (groups.value.length > 80) {
+      windowStart.value = Math.max(
+        0,
+        groups.value.length - VIRTUAL_WINDOW_SIZE,
+      );
+    }
+    await nextTick();
+    if (groups.value.length > 80) {
+      windowStart.value = Math.max(
+        0,
+        groups.value.length - VIRTUAL_WINDOW_SIZE,
+      );
+      await nextTick();
+    }
+    if (scroller.value) scroller.value.scrollTop = scroller.value.scrollHeight;
+  },
 );
 watch(humanInputState, (state) => {
   if (pendingHumanInputs.value.size === 0) return;
@@ -213,42 +418,52 @@ watch(humanInputState, (state) => {
 });
 onMounted(() => {
   globalThis.addEventListener("keydown", onKey);
-  nextTick(() => {
-    if (scroller.value) scroller.value.scrollTop = scroller.value.scrollHeight;
-  });
 });
 onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
 </script>
 
 <template>
-  <div role="log" aria-label="Conversation" class="min-h-0 flex-1">
+  <div
+    :data-testid="testId"
+    role="log"
+    aria-label="Conversation"
+    class="min-h-0 flex-1 transition-[padding]"
+  >
     <div
       ref="scroller"
-      class="h-full overflow-y-auto px-6 py-5"
+      class="h-full overflow-y-auto px-3 sm:px-4"
       @scroll="onScroll"
+      @wheel="onScrollIntent"
+      @touchstart="onScrollIntent"
+      @pointerdown="onScrollIntent"
+      @keydown="onScrollKey"
     >
       <div v-if="loading" class="py-8 text-center text-sm text-gray-500">
         Loading conversation…
       </div>
-      <div class="mx-auto max-w-3xl space-y-5">
+      <ul
+        data-testid="message-list"
+        class="mx-auto flex w-full max-w-[var(--container-width-md)] list-none flex-col gap-8 pt-8 pb-6"
+      >
         <div
           v-if="virtualTopHeight"
           aria-hidden="true"
           :style="{ height: `${virtualTopHeight}px` }"
         />
-        <article
+        <li
           v-for="entry in renderedGroups"
           :key="entry.group.id ?? entry.index"
           :data-index="entry.index"
           :data-assistant-turn="
             entry.group.type === 'assistant' ? '' : undefined
           "
+          :data-role="entry.group.type === 'human' ? 'human' : 'ai'"
           :class="
             entry.group.type === 'human'
-              ? 'is-user bg-secondary ml-auto max-w-[85%] rounded-2xl px-4 py-3 whitespace-pre-wrap'
-              : 'group relative'
+              ? 'is-user group bg-secondary ml-auto w-fit max-w-full rounded-lg px-4 py-3 whitespace-pre-wrap'
+              : 'group relative w-full'
           "
-          @mouseup="onSelection"
+          @mouseup="onSelection(entry.index)"
         >
           <template v-for="message in entry.group.messages" :key="message.id">
             <HumanInputCard
@@ -274,10 +489,15 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
             />
             <template v-if="message.type === 'human'">
               <p>{{ text(message) }}</p>
+              <ReferenceAttachment
+                :references="messageReferences(message)"
+                test-id="message-reference-attachment"
+                class="mt-2"
+              />
               <button
                 v-if="editable?.humanMessage.id === message.id"
                 type="button"
-                class="mt-2 text-xs opacity-0 group-hover:opacity-100 hover:underline"
+                class="text-muted-foreground absolute right-0 -bottom-7 text-xs opacity-0 transition-opacity group-hover:opacity-100 hover:underline"
                 aria-label="Edit and rerun"
                 @click="
                   emit(
@@ -295,7 +515,7 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
               <details v-if="reasoning(message)" class="mb-3" open>
                 <summary
                   role="button"
-                  class="cursor-pointer text-sm font-medium"
+                  class="text-muted-foreground cursor-pointer text-sm font-medium"
                 >
                   {{
                     streaming && entry.index === groups.length - 1
@@ -303,7 +523,7 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
                       : "Reasoning"
                   }}
                 </summary>
-                <p class="mt-2 text-sm text-gray-500">
+                <p class="text-muted-foreground mt-2 text-sm leading-relaxed">
                   {{ reasoning(message) }}
                 </p>
               </details>
@@ -324,24 +544,53 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
                   :href="source.url"
                   target="_blank"
                   rel="noreferrer"
-                  class="rounded-full border px-2 py-1 text-xs"
+                  class="text-muted-foreground hover:text-foreground rounded-full border px-2 py-1 text-xs transition-colors"
                 >
                   {{ source.title }}
                 </a>
               </div>
+              <button
+                v-for="artifact in artifactTargets(message)"
+                :key="artifact.path"
+                type="button"
+                class="border-border bg-muted/30 hover:bg-muted my-2 block max-w-full rounded-lg border px-3 py-2 text-left text-sm break-all"
+                @click="emit('artifact', artifact.path)"
+              >
+                {{ artifact.label }}
+              </button>
               <div
                 v-for="call in message.tool_calls ?? []"
                 :key="call.id"
-                class="my-2 rounded-lg border p-3 text-sm"
+                class="my-2 text-sm"
               >
                 <template v-if="call.name === 'task'">
-                  <p>{{ String(call.args?.description ?? "Subtask") }}</p>
+                  <div class="flex items-center gap-2 py-1.5">
+                    <CheckCircle2
+                      v-if="subtaskResult(call.id).status === 'completed'"
+                      :size="16"
+                      class="text-emerald-600"
+                    />
+                    <CircleX
+                      v-else-if="subtaskResult(call.id).status === 'failed'"
+                      :size="16"
+                      class="text-destructive"
+                    />
+                    <CircleDashed
+                      v-else
+                      :size="16"
+                      class="text-muted-foreground animate-spin"
+                    />
+                    <span class="font-medium">{{
+                      String(call.args?.description ?? "Subtask")
+                    }}</span>
+                  </div>
                   <p
                     :class="
                       subtaskResult(call.id).status === 'failed'
-                        ? 'text-red-600'
-                        : 'text-gray-500'
+                        ? 'text-destructive'
+                        : 'text-muted-foreground'
                     "
+                    class="pl-6 text-xs"
                   >
                     {{
                       subtaskResult(call.id).status === "completed"
@@ -351,41 +600,62 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
                           : "Running subtask"
                     }}
                   </p>
-                  <p v-if="subtaskResult(call.id).result" class="mt-1 text-sm">
+                  <p
+                    v-if="subtaskResult(call.id).result"
+                    class="mt-1 pl-6 text-sm"
+                  >
                     {{ subtaskResult(call.id).result }}
                   </p>
                   <p
                     v-if="subtaskResult(call.id).error"
-                    class="mt-1 text-sm text-red-600"
+                    class="text-destructive mt-1 pl-6 text-sm"
                   >
                     {{ subtaskResult(call.id).error }}
                   </p>
                 </template>
                 <template v-else>
-                  <p class="font-medium">{{ call.name }}</p>
-                  <pre
-                    v-if="call.args && Object.keys(call.args).length"
-                    class="mt-1 overflow-x-auto text-xs whitespace-pre-wrap text-gray-500"
-                    >{{ JSON.stringify(call.args, null, 2) }}</pre>
+                  <details class="group/tool">
+                    <summary
+                      class="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-2 py-1.5 transition-colors"
+                    >
+                      <Wrench :size="15" />
+                      <span>{{ toolLabel(call.name) }}</span>
+                    </summary>
+                    <pre
+                      v-if="
+                        call.args &&
+                        Object.keys(call.args).length &&
+                        !ARTIFACT_TOOL_NAMES.has(call.name)
+                      "
+                      class="bg-muted text-muted-foreground mt-1 ml-6 max-h-64 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
+                      >{{ JSON.stringify(call.args, null, 2) }}</pre>
+                  </details>
                 </template>
               </div>
             </template>
-            <details
-              v-else-if="message.type === 'tool'"
-              class="my-2 rounded-lg border p-3 text-sm"
-            >
-              <summary class="cursor-pointer font-medium">
-                {{ message.name ?? "Tool result" }}
+            <details v-else-if="message.type === 'tool'" class="my-2 text-sm">
+              <summary
+                class="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-2 py-1.5"
+              >
+                <CheckCircle2 :size="15" />
+                {{ message.name ?? "Tool result" }} result
               </summary>
-              <pre class="mt-2 overflow-x-auto text-xs whitespace-pre-wrap">{{
-                text(message)
-              }}</pre>
+              <pre
+                class="bg-muted text-muted-foreground mt-1 ml-6 max-h-64 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
+                >{{ text(message) }}</pre>
             </details>
           </template>
 
+          <WorkspaceChangesBadge
+            v-if="threadId && workspaceChangesRun(entry.index)"
+            :thread-id="threadId"
+            :run-id="workspaceChangesRun(entry.index)"
+            :disabled="streaming"
+          />
+
           <div
             v-if="entry.group.type === 'assistant'"
-            class="mt-2 flex gap-3 text-xs opacity-0 group-hover:opacity-100"
+            class="text-muted-foreground mt-2 flex gap-1 text-xs opacity-0 transition-opacity group-hover:opacity-100"
           >
             <button
               v-if="branchable.has(entry.group.id ?? '')"
@@ -395,7 +665,7 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
                 emit('branch', entry.group.id ?? '', groupIds(entry.index))
               "
             >
-              Branch conversation
+              <GitBranch :size="14" />
             </button>
             <button
               v-if="
@@ -413,32 +683,45 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
                 )
               "
             >
-              Regenerate
+              <RefreshCw :size="14" />
             </button>
           </div>
           <p
             v-for="duration in durations[entry.index] ?? []"
             :key="duration.runId"
             data-testid="run-duration"
-            class="mt-2 text-xs text-gray-500"
+            class="text-muted-foreground mt-2 text-xs"
           >
             {{ durationLabel(duration.durationSeconds) }}
           </p>
-        </article>
+        </li>
         <div
           v-if="virtualBottomHeight"
           aria-hidden="true"
           :style="{ height: `${virtualBottomHeight}px` }"
         />
-      </div>
+      </ul>
     </div>
-    <button
-      v-if="sideChatVisible"
-      type="button"
-      class="bg-background fixed right-8 bottom-28 z-40 rounded-md border px-3 py-2 shadow"
-      aria-label="Ask in side chat"
+    <div
+      v-if="selection"
+      data-sidecar-selection-toolbar
+      class="bg-background fixed right-8 bottom-28 z-50 flex gap-1 rounded-md border p-1 shadow"
     >
-      Ask in side chat
-    </button>
+      <button
+        type="button"
+        class="hover:bg-accent rounded px-3 py-2 text-sm"
+        @click="dispatchSelection('add')"
+      >
+        Add to conversation
+      </button>
+      <button
+        v-if="selectionMode === 'main'"
+        type="button"
+        class="hover:bg-accent rounded px-3 py-2 text-sm"
+        @click="dispatchSelection('ask')"
+      >
+        Ask in side chat
+      </button>
+    </div>
   </div>
 </template>

@@ -16,10 +16,11 @@ guide rather than expecting full detail here:
   **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**.
 
 For Vue migration work, always run `make handoff-check` and read document 10 before
-historical evidence. The current cursor is **M4b preflight**: M-1 through M4a have
-milestone evidence, but the current shared-contract artifact and full-real-backend
-artifact are red; the 25-file/120-test shared suite has only been collected, not passed.
-Do not describe the Vue UI as M4b-complete, product-ready, or part of the default
+historical evidence. The current cursor is **M6 not started**: M-1 through M5 have
+milestone evidence; M5's exact 6-file/27-test contract and its 1-test replay-Gateway
+artifact gate passed, while M4b's 11-file/66-test contract remains green.
+The 25-file/120-test full shared suite has only been collected, not passed. Do not
+describe the Vue UI as fully product-ready or part of the default
 production stack until the current gate document says so.
 
 ## What is DeerFlow
@@ -34,13 +35,13 @@ DingTalk) bridge into the same agent through the Gateway.
 
 A single `make dev` / Docker stack runs four cooperating services:
 
-| Service         | Port   | Role                                                                 |
-| --------------- | ------ | ------------------------------------------------------------------- |
-| **Nginx**       | `2026` | Unified reverse-proxy entry point — open this in the browser        |
-| **Gateway API** | `8001` | FastAPI REST API + embedded LangGraph-compatible agent runtime      |
-| **React frontend** | `3000` | Existing Next.js web interface                                  |
-| **Vue frontend** | `3100` | Explicit migration dev mode; not part of the default Docker stack  |
-| **Provisioner** | `8002` | Optional — only when sandbox is configured for provisioner/K8s mode |
+| Service            | Port   | Role                                                                |
+| ------------------ | ------ | ------------------------------------------------------------------- |
+| **Nginx**          | `2026` | Unified reverse-proxy entry point — open this in the browser        |
+| **Gateway API**    | `8001` | FastAPI REST API + embedded LangGraph-compatible agent runtime      |
+| **React frontend** | `3000` | Existing Next.js web interface                                      |
+| **Vue frontend**   | `3100` | Explicit migration dev mode; not part of the default Docker stack   |
+| **Provisioner**    | `8002` | Optional — only when sandbox is configured for provisioner/K8s mode |
 
 Nginx is the single public entry: it serves the frontend and proxies `/api/langgraph/*`
 to the Gateway's LangGraph runtime, rewriting it to Gateway's native `/api/*` routes; all
@@ -71,7 +72,7 @@ deer-flow/
 │   ├── packages/harness/           # deerflow-harness package (import: deerflow.*) — agent framework
 │   └── app/                        # FastAPI Gateway + IM channels (import: app.*)
 ├── frontend/                       # Next.js frontend (pnpm) — see frontend/AGENTS.md
-├── frontend-vue/                   # Nuxt/Vue migration workspace; M4a landed, M4b next
+├── frontend-vue/                   # Nuxt/Vue migration workspace; M5 landed, M6 not started
 ├── frontend-vue-build-docs/        # Current status, frozen contracts, plans, historical evidence
 ├── docker/                         # docker-compose files, nginx config, provisioner
 ├── skills/                         # Agent skills: public/ (committed), custom/ (gitignored)
@@ -90,6 +91,7 @@ Gateway API. Config schema and resolution order are documented in
 [backend/AGENTS.md](backend/AGENTS.md).
 
 Skill quality review note:
+
 - `skills/public/skill-reviewer/` is the built-in read-only skill quality reviewer.
   It uses the harness-layer `review_skill_package` tool and contracts in
   `contracts/skill_review/`. Model-visible review data is compact and
@@ -98,6 +100,7 @@ Skill quality review note:
   `skill-creator` ownership boundaries.
 
 Scheduled-task note:
+
 - The scheduled-task MVP adds a workspace page at `/workspace/scheduled-tasks` plus a background scheduler service gated by `config.yaml -> scheduler.enabled`.
 - Scheduled background runs are intentionally non-interactive: they execute through the normal run lifecycle, but the lead-agent toolset excludes `ask_clarification` when `context.non_interactive=true`. The key is honored only for internally-authenticated callers (the scheduler launch path); client-supplied `context.non_interactive` is dropped.
 
@@ -145,6 +148,9 @@ cd frontend-vue && make consumer-check   # pack/install/typecheck minimal agent-
 cd frontend-vue && make e2e-m0    # repository-runnable M0 gate suite
 cd frontend-vue && make e2e-m4a   # M4a data-flow gate (send/stream/stop/reload ordering)
 cd frontend-vue && make e2e-m4a-stream  # M4a real chunked-SSE gate (heartbeat/resume cursor/gap)
+cd frontend-vue && make e2e-m4b   # exact M4b general-Agent UI gate (11 specs / 66 tests)
+cd frontend-vue && make e2e-m5    # exact M5 artifacts/changes/sidecar gate (6 specs / 27 tests)
+cd frontend-vue && make e2e-m5-real-backend  # replay Gateway write_file → artifact gate
 cd frontend-vue && make e2e-list  # collect shared contracts; does not claim pass
 ```
 
@@ -156,10 +162,9 @@ gates. Both are hermetic — the IdP is a fixture in `frontend-vue/tests/support
 but they stay outside `make e2e-m0` because they need the backend browser extra and
 a Gateway whose toolset includes `browser_navigate`, which changes the system prompt
 and would break the run-protocol replay fixture's hash.
-When a VPN/system proxy is enabled, run local external fixtures with
-`NO_PROXY=127.0.0.1,localhost`; the current Makefile does not yet enforce that bypass.
-The current real-backend command also needs its documented 3101 port correction before
-its result is authoritative. See document 10 instead of guessing from a stale artifact.
+Local Gateway, browser, and IdP fixtures run through the shared loopback `NO_PROXY`
+wrapper, and the real-backend command fixes the Vue frontend port at 3101. See
+document 10 for the latest measured results instead of guessing from a stale artifact.
 
 Rule of thumb: **root `make` = application lifecycle**; **`backend/Makefile`,
 `frontend/` (`pnpm`), and `frontend-vue/Makefile` = per-module work.**

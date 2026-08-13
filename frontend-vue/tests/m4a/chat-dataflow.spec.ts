@@ -80,6 +80,43 @@ async function mockGateway(
 ) {
   const { streamDelayMs = 0 } = options;
 
+  await page.route("**/api/langgraph/threads", async (route) => {
+    const body = route.request().postDataJSON() as { thread_id?: string };
+    const now = new Date().toISOString();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        thread_id: body.thread_id ?? THREAD_ID,
+        created_at: now,
+        updated_at: now,
+        metadata: {},
+        status: "idle",
+        values: { title: "", messages: [] },
+        interrupts: {},
+      }),
+    });
+  });
+  await page.route(
+    /\/api\/langgraph\/threads\/[^/?]+(?:\?.*)?$/,
+    async (route) => {
+      const now = new Date().toISOString();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          thread_id: THREAD_ID,
+          created_at: now,
+          updated_at: now,
+          metadata: {},
+          status: "idle",
+          values: { title: "Generated Title", messages: [] },
+          interrupts: {},
+        }),
+      });
+    },
+  );
+
   await page.route("**/api/langgraph/threads/*/runs/stream", async (route) => {
     if (streamDelayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, streamDelayMs));
@@ -112,7 +149,7 @@ async function mockGateway(
     }),
   );
 
-  await page.route("**/api/threads/*/state", (route: Route) =>
+  await page.route("**/api/langgraph/threads/*/state", (route: Route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",

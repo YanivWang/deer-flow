@@ -114,6 +114,45 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  // Thread lifecycle: the production Gateway requires an explicit thread
+  // before a run starts, so this fixture must model the same contract.
+  if (url.pathname === "/api/threads" && request.method === "POST") {
+    let raw = "";
+    for await (const chunk of request) raw += chunk;
+    const body = raw ? JSON.parse(raw) : {};
+    const now = new Date().toISOString();
+    response.setHeader("content-type", "application/json");
+    response.end(
+      JSON.stringify({
+        thread_id: body.thread_id ?? THREAD_ID,
+        created_at: now,
+        updated_at: now,
+        metadata: body.metadata ?? {},
+        status: "idle",
+        values: { title: "", messages: [] },
+        interrupts: {},
+      }),
+    );
+    return;
+  }
+
+  if (/\/api\/threads\/[^/]+$/.test(url.pathname)) {
+    const now = new Date().toISOString();
+    response.setHeader("content-type", "application/json");
+    response.end(
+      JSON.stringify({
+        thread_id: url.pathname.split("/").at(-1),
+        created_at: now,
+        updated_at: now,
+        metadata: {},
+        status: "idle",
+        values: { title: "Generated Title", messages: [] },
+        interrupts: {},
+      }),
+    );
+    return;
+  }
+
   // create：POST /api/threads/:id/runs/stream
   if (
     /\/threads\/[^/]+\/runs\/stream$/.test(url.pathname) &&

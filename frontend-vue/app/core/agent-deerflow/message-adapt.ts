@@ -406,14 +406,16 @@ function mergeAgentToolCalls(
       ...(call.args === undefined ? {} : { args: call.args }),
       ...(argsChunks === undefined ? {} : { argsChunks }),
     };
-    // args 已经拼全就把失败标记摘掉：截断只是分片还没到齐。
+    // 只要本帧带来了新分片，就重新尝试完整原文。LangChain 可能在首帧同时
+    // 给出一个“当前可解析”的 partial tool_calls.args；它不是最终值，后续
+    // tool_call_chunks 拼成合法 JSON 后必须取代它。
     const settled = merged[at] as AgentToolCall;
-    if (settled.args === undefined && settled.argsChunks !== undefined) {
+    if (call.argsChunks !== undefined && settled.argsChunks !== undefined) {
       try {
         settled.args = JSON.parse(settled.argsChunks.join("")) as unknown;
         delete settled.argsParseFailed;
       } catch {
-        settled.argsParseFailed = true;
+        if (settled.args === undefined) settled.argsParseFailed = true;
       }
     }
   }

@@ -540,6 +540,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     message: { text: string; files?: FileInMessage[] },
     extraContext?: Record<string, unknown>,
     sendOptions?: {
+      additionalInputMessages?: Message[];
       additionalKwargs?: Record<string, unknown>;
       onSent?: () => void;
     },
@@ -578,6 +579,8 @@ export function useThreadStream(options: UseThreadStreamOptions) {
           input: {
             messages: buildThreadSubmitMessages({
               text,
+              additionalInputMessages:
+                sendOptions?.additionalInputMessages ?? [],
               additionalKwargs: sendOptions?.additionalKwargs,
               filesForSubmit: message.files ?? [],
             }),
