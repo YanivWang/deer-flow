@@ -1,6 +1,6 @@
 /*
-  【文件职责】     自写 REST client 的 7 个方法：URL、方法、body、错误归一化。
-  【对应 frontend/】 无；上游这 7 个调用由 SDK `Client` 承担
+  【文件职责】     自写 REST client 的 8 个方法：URL、方法、body、错误归一化。
+  【对应 frontend/】 无；上游这些调用由 SDK `Client` 承担
   【架构位置】     L3 测试
   【主要导出】     无
   【依赖关系】     @/core/api/client
@@ -54,6 +54,24 @@ beforeEach(() => {
 });
 
 describe("threads", () => {
+  it("create 是 POST /threads，并保留调用方指定的 thread id", async () => {
+    const client = clientWith(() => jsonResponse({ thread_id: "draft-1" }));
+    await client.threads.create({
+      threadId: "draft-1",
+      assistantId: "lead_agent",
+      metadata: { agent_name: "researcher" },
+    });
+    expect(recorded[0]).toMatchObject({
+      url: `${BASE}/threads`,
+      method: "POST",
+    });
+    expect(JSON.parse(recorded[0]?.body ?? "{}")).toEqual({
+      thread_id: "draft-1",
+      assistant_id: "lead_agent",
+      metadata: { agent_name: "researcher" },
+    });
+  });
+
   it("search 是 POST /threads/search，query 进 body", async () => {
     const client = clientWith(() => jsonResponse([{ thread_id: "t-1" }]));
     const result = await client.threads.search({ limit: 1, offset: 0 });

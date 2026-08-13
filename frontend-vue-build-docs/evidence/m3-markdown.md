@@ -1,5 +1,9 @@
 # M3 · Markdown 渲染层 —— 证据
 
+> **历史证据。** 本文记录 M3 关闭时的 renderer 合同；M4a 后产品页仍未消费
+> `StreamMarkdown`，最终消费链归 M4b。续接任务以
+> [当前状态页](../10-current-status-and-next.md) 和 `make handoff-check` 为准。
+
 日期：2026-08-06 · 分支 `main-wc`
 
 本文只记录 git 与代码留不下的东西：**为什么这么选、试过什么被否决、还有什么没证实**。
@@ -168,8 +172,11 @@ chunk 都把它整块卸载重建，`invariants.dom.test.ts` 的「追加后已�
    远不止这一种，语料里没有覆盖表格、链接、代码围栏的半截状态。
 6. **性能没有测过。** 分块 + Vue props 记忆化的效果、`applyWordAnimation` 每帧重建子树的
    代价，都没有量过。M2 遗留的「分帧层在大帧上是 O(n²)」也仍然没有优化。
-7. **M2 的红项原样有效**：内核仍无调用方、`types.gen.ts` 无消费方、`core/threads/` 的
-   25 个上游单测只落地 6 个、golden trace 仍缺 `custom`/`debug`/subagent namespace/reasoning。
+7. **M3 关闭时继承了 M2 红项**：当时 L1 内核无调用方、`types.gen.ts` 无消费方、
+   `core/threads/` 的 25 个上游单测只落地 6 个，golden trace 仍缺
+   `custom`/`debug`/subagent namespace/reasoning。后续 M4a 已接入 L1 数据流并补对应的
+   C 组门禁；`types.gen.ts` 与产品 Markdown 消费链截至
+   [2026-08-13 状态页](../10-current-status-and-next.md) 仍未接线。
 
 ---
 

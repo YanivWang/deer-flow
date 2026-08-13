@@ -1,5 +1,10 @@
 # 03 · 项目形态
 
+> **文档性质：冻结目标设计，不是当前目录快照。** 本文保留目标结构、命令设计与实施
+> 决策；其中带“将建”“M0 必须”的段落属于当时的设计语境。续接任务必须先读
+> [10-current-status-and-next.md](10-current-status-and-next.md)，再以当前目录和 Makefile
+> 核实哪些条目已经落地。不要照着下面的树补齐空目录，也不要把目标文件清单当作现状。
+
 项目位于仓库内的 `frontend-vue/`，与 `frontend/` 并存。并行运行与端口分配见 [07-parallel-run.md](07-parallel-run.md)。
 
 > M-1 已冻结：开发端口为 3100、E2E preview 为 3101；生产使用两个独立 hostname 的同源 ingress。完整合同见 [09](09-m1-contract-freeze.md)。
@@ -401,7 +406,7 @@ Reka UI 与 Radix 的内部结构在个别组件上有出入，一定会有选�
 | ------------------------- | ------- | ----------------------------------- | -------------------------------------- |
 | `tests/e2e/`              | 27      | `playwright.config.ts`              | ✅ 除下面两条豁免外全部                |
 | `tests/e2e-auth/`         | 1       | `playwright.auth.config.ts`         | ✅ 需要对应的 Nuxt webServer           |
-| `tests/e2e-real-backend/` | 3       | `playwright.real-backend.config.ts` | ✅ M0 先接网络/认证 smoke，M7 跑完整套 |
+| `tests/e2e-real-backend/` | 3       | `playwright.real-backend.config.ts` | 当前修正端口后 2/3；完整绿仍是后续 gate，见 [10](10-current-status-and-next.md) |
 | `tests/e2e-record/`       | 1       | `playwright.record.config.ts`       | ❌ 录制工具，不是验收                  |
 
 **明确豁免的 2 个**（测的是 Vue 版故意不做的东西，见 [01-scope.md](01-scope.md)）：

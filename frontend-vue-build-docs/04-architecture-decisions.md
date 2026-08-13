@@ -1,5 +1,8 @@
 # 04 · 关键架构决策
 
+> **文档性质：冻结架构决策，不是当前实现状态。** 哪些决策已经落地、哪些仍待 M4b+
+> 实现，以 [10-current-status-and-next.md](10-current-status-and-next.md) 和代码为准。
+
 七个决策，每个都直接影响目标能否达成。
 
 跨组件的 M-1 部署/协议/认证/测试结论已经冻结在 [09-m1-contract-freeze.md](09-m1-contract-freeze.md)；本文的库与 UI 决策不得改变那些合同。

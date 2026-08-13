@@ -1,5 +1,9 @@
 # M1 窗口 3：23 个 RETYPED 落地，58 个测试解锁，typecheck 预算归零
 
+> **历史证据。** 标题与正文数量是该窗口快照；后续 provenance 已变化，不能把这里的
+> 23 当作当前总数。续接任务以 [当前状态页](../10-current-status-and-next.md)、当前
+> manifest 和 `make handoff-check` 为准。
+
 > 交接单说「32 个 RETYPED」。复核后落地 **23** 个，另外 9 个不属于 M1——
 > 理由见「9 个 BLOCKED：既不是 RETYPED 也不是 COPIED」。
 >

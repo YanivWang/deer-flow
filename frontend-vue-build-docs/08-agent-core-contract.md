@@ -1,6 +1,9 @@
 # 08 · Agent 内核与 DeerFlow 协议契约
 
-> **状态：M-1 已冻结。** 当前源码、测试和 Gateway replay 运行探针已经确认响应头、续传与终止行为；仍需经 Nuxt proxy 运行验证的 cancel/gap/heartbeat 边界列在 [09](09-m1-contract-freeze.md)。探针若与本文不同，必须先修订合同和测试，不能边写组件边猜协议。
+> **状态：合同已冻结，M2/M4a 已实现对应内核与数据流。** Nuxt proxy 下的
+> create/resume/cancel/gap/heartbeat 已有 M0/M4a gate；M4b 产品消费链仍未完成。
+> 当前红绿与下一步见 [10-current-status-and-next.md](10-current-status-and-next.md)。
+> 新运行证据若与本文不同，必须先修订合同和测试，不能边写组件边猜协议。
 >
 > 本文是 `frontend-vue` 的 L1/L3 边界唯一来源。目录结构、里程碑、测试和运行文档不得另造一套接口。
 
@@ -298,7 +301,11 @@ M-1 已由源码、测试和 replay Gateway 固化下表；M0 必须再验证 Nu
 | cancel            | `POST /api/langgraph/threads/:threadId/runs/:runId/cancel`                  | 明确 `action`/`wait`；202 进入 durable status poll，204 才是已完成     |
 | cancel-then-drain | `POST /api/langgraph/threads/:threadId/runs/:runId/stream?action=interrupt` | 200 SSE 继续读尾帧；跨 worker 可能只回 202，不能假定总有 body          |
 
-当前 Gateway 的 create 响应与本轮运行探针均明确提供 `Content-Location`，没有观察到 `Location`；当前 SDK 用前者提取 run metadata，而重连 helper 查找后者。这不是可忽略的命名差异。M0 的 raw-response 测试必须记录最终经过 Nuxt proxy 后的两个 header，禁止凭 SDK 假设补齐。
+Gateway 的 create 响应与运行探针明确提供 `Content-Location`，没有观察到
+`Location`；SDK 用前者提取 run metadata，而旧重连 helper 查找后者。这不是可忽略的
+命名差异。M0 raw-response 测试后来已经记录 Nuxt proxy 后的两个 header；当前共享
+Playwright mock 仍缺 `Content-Location`，必须修 mock，禁止凭 SDK 假设或放宽 fail-closed
+协议。见 [10](10-current-status-and-next.md)。
 
 ## 事件与完整状态归约
 

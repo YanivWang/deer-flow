@@ -8,9 +8,15 @@
 
 这两条不冲突，靠**顺序**解决：先做通用层（L1 → L2），再做 DeerFlow 专有层（L3），L2 边界逐模块抽取而不是最后再抽。分层定义见 [08-agent-core-contract.md](08-agent-core-contract.md)，里程碑见 [06-migration-plan.md](06-migration-plan.md)。
 
-> **实施状态：M-1 / M0 / M1 / M2 / M3 / M4a 已通过；十道 M0 Gate 全部由仓库自身可复现。** 逐项结果见 evidence/：[M0](evidence/m0-verification.md) · [M1 COPIED](evidence/m1-copied-landing.md)/[RETYPED](evidence/m1-retyped-landing.md) · [M2 内核](evidence/m2-agent-core.md) · [M3 Markdown](evidence/m3-markdown.md) · [M4a 数据流](evidence/m4a-dataflow.md)。**各里程碑的证据文档末尾都有红项清单，「通过」指的是 gate 绿，不等于该层已接线可用。** `make e2e-m0` 覆盖基础设施套件，`make e2e-m4a` / `make e2e-m4a-stream` 覆盖 M4a 的数据流 gate（后者走真分块流），`make e2e-external` 覆盖 G0-6 浏览器 WebSocket 与 G0-7 OIDC 往返（对仓库内的 fixture IdP）。双前端 production readiness（两个独立 hostname、DNS/TLS、可信代理清洗、J6 并发 state-cookie 负测）仍在 M7 验收，不能把“工程可运行”写成“可以直接上线”。
+> **当前状态入口：[10-current-status-and-next.md](10-current-status-and-next.md)。**
+> 截至 2026-08-13，M-1 / M0 / M1 / M2 / M3 / M4a 有通过证据，当前游标是
+> M4b 前置修复；共享业务合同与 full real-backend 仍为红，产品 UI 尚未完成。
+> `evidence/` 只记录各里程碑关闭时的历史事实，不能用旧的“通过”覆盖当前失败结果。
+> 双前端 production readiness 仍在 M7，不能把“工程可运行”写成“可以直接上线”。
 
-> 本目录是实施规格，不是完成记录。第三方包存在性与 peer 关系按 2026-08-04 核实；行为敏感包使用现有 `frontend/pnpm-lock.yaml` 的 resolved version，不能把“当前 latest”当迁移目标。
+> 除文档 10 外，本目录主要是冻结规格与历史证据，不是滚动完成记录。第三方包存在性与
+> peer 关系按 2026-08-04 核实；行为敏感包使用现有 `frontend/pnpm-lock.yaml` 的
+> resolved version，不能把“当前 latest”当迁移目标。
 
 ## ★ 冻结基线
 
@@ -103,10 +109,14 @@ LangChain 依赖在 M2 四类协议门禁通过后移除
 | [07-parallel-run.md](07-parallel-run.md)                     | 与 `frontend/` 并行运行、共用后端的接线方式（端口、代理、WebSocket）                    |
 | [08-agent-core-contract.md](08-agent-core-contract.md)       | **★ 产品定义** —— L1/L2/L3 分层、接口契约、禁入清单、依赖方向。**其他项目复用时读这份** |
 | [09-m1-contract-freeze.md](09-m1-contract-freeze.md)         | **★ M-1 冻结结论** —— 双前端部署、Gateway/SSE/WS、认证、测试、视觉与根级集成追踪矩阵    |
+| [10-current-status-and-next.md](10-current-status-and-next.md) | **★ 当前唯一状态入口** —— 实跑结果、已知红项、M4b 前置与有序任务计划                  |
 
 ## 阅读顺序建议
 
-动手前先读 [09](09-m1-contract-freeze.md)（冻结合同），再读 [08](08-agent-core-contract.md)（产品定义）、[04](04-architecture-decisions.md) 和 [05](05-invariants.md)。
+续接任务先读 [10](10-current-status-and-next.md) 并运行 `make handoff-check`；确定当前红绿后，
+再读 [09](09-m1-contract-freeze.md)（冻结合同）、[08](08-agent-core-contract.md)（产品定义）、
+[04](04-architecture-decisions.md) 和 [05](05-invariants.md)。不要从某份历史 evidence 的末尾
+直接推导当前下一步。
 
 [05-invariants.md](05-invariants.md) 尤其重要：`frontend/AGENTS.md` 里记录的约束大多是线上问题修复后沉淀的（#4465、#4555、#4576 等），不会跟着组件自动迁移，是"看起来做完了但行为不对"的主要来源。其中 **A 组（流式与重连）与 L 组（自研 SSE 补强）** 在改用自研 SSE 后风险最高，必须有单测覆盖。
 

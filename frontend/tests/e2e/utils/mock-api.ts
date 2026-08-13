@@ -71,12 +71,7 @@ export type MockAPIOptions = {
     schedule_spec: Record<string, unknown>;
     timezone: string;
     status:
-      | "enabled"
-      | "paused"
-      | "running"
-      | "completed"
-      | "failed"
-      | "cancelled";
+      "enabled" | "paused" | "running" | "completed" | "failed" | "cancelled";
     next_run_at: string | null;
     last_run_at: string | null;
     last_run_id: string | null;
@@ -288,14 +283,11 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
       verified: false,
     },
     sandbox_runtime_mode: "init-container" as
-      | "none"
-      | "gateway-download"
-      | "init-container",
+      "none" | "gateway-download" | "init-container",
     sandbox_runtime_ready: false,
     sandbox_runtime_detail:
       "The provisioner has no lark-cli init image configured (LARK_CLI_INIT_IMAGE)." as
-        | string
-        | null,
+        string | null,
   };
   const featureFlags = {
     agentsApiEnabled: options?.features?.agentsApiEnabled ?? true,
@@ -1406,6 +1398,9 @@ export function handleRunStream(
   return route.fulfill({
     status: 200,
     contentType: "text/event-stream",
+    headers: {
+      "Content-Location": `/api/threads/${threadId}/runs/${MOCK_RUN_ID}`,
+    },
     body,
   });
 }

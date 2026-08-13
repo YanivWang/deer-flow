@@ -1,5 +1,9 @@
 # M1 窗口 1：分类基础设施与 COPIED 护城河
 
+> **历史证据。** 本文的“未搬”“下一窗口”和红项只描述 M1 窗口 1，不能用于判断当前
+> `app/core/`。续接任务以 [当前状态页](../10-current-status-and-next.md)、当前 manifest
+> 和 `make handoff-check` 为准。
+
 > 范围：**只交付基础设施，未搬任何业务文件**。`app/core/` 仍然只有 M0 的 `auth/decision.ts`。
 > 本文记录分类口径、与 06 计划的出入、以及下一窗口开工前必须先解决的红项。
 

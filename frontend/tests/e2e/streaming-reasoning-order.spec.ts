@@ -80,11 +80,14 @@ function reasoningStreamFrames() {
 /** Holds the SSE connection open so the turn stays in its streaming state. */
 async function startHeldOpenStreamServer() {
   const frames = reasoningStreamFrames();
-  const server = createServer((_request, response) => {
+  const server = createServer((request, response) => {
     response.writeHead(200, {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": request.headers.origin ?? "*",
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Expose-Headers": "Content-Location",
       "Cache-Control": "no-cache",
       "Content-Type": "text/event-stream",
+      "Content-Location": `/api/threads/${STREAMING_THREAD_ID}/runs/${RUN_ID}`,
     });
     response.write(frames.join(""));
   });

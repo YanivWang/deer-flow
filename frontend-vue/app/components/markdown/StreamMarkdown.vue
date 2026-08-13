@@ -95,12 +95,18 @@ export default defineComponent({
       props.parseIncompleteMarkdown ? remend(props.content) : props.content,
     );
 
-    const blocks = computed(() =>
-      toKeyedBlocks(parseMarkdownIntoBlocks(source.value)),
-    );
+    const blocks = computed(() => {
+      try {
+        return toKeyedBlocks(parseMarkdownIntoBlocks(source.value));
+      } catch {
+        // Tokenization happens in this component, before a child exists for
+        // onErrorCaptured to catch. Preserve the same plain-text fallback.
+        return null;
+      }
+    });
 
     return () => {
-      if (failed.value) {
+      if (failed.value || blocks.value === null) {
         return h(
           "div",
           { class: "break-words whitespace-pre-wrap" },

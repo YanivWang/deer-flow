@@ -2,6 +2,10 @@
 
 **这是本方案里最重要的一份文档。**
 
+> 本文是持续有效的验收合同，但段落中的迁移数量和“还没落地”可能是 M1/M2 的历史
+> 语境。当前里程碑状态以 [10-current-status-and-next.md](10-current-status-and-next.md)
+> 为准；行为要求本身不能因状态变化而跳过。
+
 M-1 对这些不变式所依赖的 wire/status/auth 合同已经冻结在 [09-m1-contract-freeze.md](09-m1-contract-freeze.md)。
 
 `frontend/AGENTS.md` 记录的大量约束都是线上问题修复后沉淀下来的（#4465、#4555、#4576 等）。它们不会跟着组件自动迁移，是"看起来做完了但行为不对"的主要来源。
@@ -123,12 +127,11 @@ false，**一声不响地放行**。适配层必须显式桥接两种命名再�
 > ⚠️ **验收在 M4a，不在 M1，也不在 M4b。** 本组的实现主体是 `core/threads/hooks.ts`
 > （3,169 行，`REWRITE` 档），M1 一行都没搬。
 >
-> **而且"搬了单测就保真"对本组今天并不成立**：`core/threads/` 的 25 个上游单测里
-> **只落地了 6 个**（api / composer-draft / export / thread-list-model /
-> thread-search-query / utils），没落地的恰恰是 C 组那几个——`coalesce`、`infinite`
-> （分页）、`local-turn-order`（C8/C9）、`message-merge`（C1/C3）、
-> `thread-history-options`（C6）。它们依赖 `hooks.ts`，随它一起在 M4a 落地。
-> 在那之前，**`make verify` 全绿不代表 C 组保真**。
+> **历史原因**：M1 关闭时 `core/threads/` 的 25 个上游单测只落地了 6 个，缺的正是
+> `coalesce`、`infinite`、`local-turn-order`、`message-merge`、
+> `thread-history-options` 等 C 组实现，所以当时 `make verify` 全绿不覆盖 C 组。
+> M4a 后已经由本仓等价单测和 `make e2e-m4a` / `make e2e-m4a-stream` 验收；不要再把
+> 这段历史缺口列为当前未落地，也不要把 M4a 的通过扩大成 M4b UI 通过。
 
 ---
 
@@ -357,8 +360,8 @@ git show 44309ae7:frontend-vue/app/core/api/stream/transport/parse-sse-event.ts
 
 1. 移植 `app/core/` 时**连同单测一起搬**。**但"测试全绿 = 语义已保真"只对能整体搬走的那部分成立**：
    F1–F7（`messages/human-input.ts`）确实是这样，M1 随单测一起落地即验收完成；
-   而 C 组的实现主体 `threads/hooks.ts` 是 `REWRITE` 档，它的单测**大半还没落地**
-   （25 个里只落了 6 个），所以 M1 的全绿**不覆盖 C 组**。
+   C 组在 M1 时确实不受那轮全绿覆盖，后来已在 M4a 以等价实现和专用 gate 验收；
+   后续改动必须持续跑 M4a 两套 gate。
 2. 组件层的约束（B、D、H 组）没有单测覆盖的部分，靠 Playwright E2E 兜底。
 3. A 组与 L 组是自研 SSE 的正确性基线，必须有对应单测，**不能只靠 E2E**——流式的时序问题在 E2E 里既难复现也难定位。
 4. M 组（Vue 专有陷阱）在**每个**模块都适用，不对应某一个业务域，因此它**不属于任何单一里程碑的验收清单**——

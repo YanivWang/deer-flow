@@ -1,5 +1,5 @@
 /*
-  【文件职责】     替代 LangGraph SDK `Client` 的 7 个 REST 方法（02 §249）。
+  【文件职责】     替代 LangGraph SDK `Client` 的 8 个 REST 方法（02 §249）。
   【对应 frontend/】 frontend/src/core/api/api-client.ts 里被 SDK 承担的那部分
   【架构位置】     L3
   【主要导出】     DeerFlowApiClient · createDeerFlowApiClient
@@ -8,8 +8,8 @@
                    路由约定——前缀是 nginx 侧 SSE 超时与 body 上限的挂载点，
                    也是 E2E `mock-api.ts` 的拦截依据。改前缀不是重构，是改部署契约。
 
-                   只实现 core 里**真正被调用**的 7 个方法（实测调用点见 02 §106：
-                   threads.search/get/getState/delete/updateState、runs.list/get）。
+                   只实现 core 里**真正被调用**的方法（实测调用点见 02 §106：
+                   threads.create/search/get/getState/delete/updateState、runs.list/get）。
                    SDK 还有几十个方法，照着补一遍等于把 4.7 MB 的接口面重新长出来，
                    而多出来的每一个都是没有测试、没有调用方的猜测。
 
@@ -34,6 +34,11 @@ export interface DeerFlowRun {
 
 export interface DeerFlowApiClient {
   threads: {
+    create(input?: {
+      threadId?: string;
+      assistantId?: string;
+      metadata?: Record<string, unknown>;
+    }): Promise<AgentThread>;
     search(query?: ThreadSearchQuery<AgentThreadState>): Promise<AgentThread[]>;
     get(threadId: string): Promise<AgentThread>;
     getState(threadId: string): Promise<{ values: AgentThreadState }>;
@@ -91,6 +96,21 @@ export function createDeerFlowApiClient(
 
   return {
     threads: {
+      create(input = {}) {
+        return request<AgentThread>(
+          `${base}/threads`,
+          {
+            method: "POST",
+            headers: json,
+            body: JSON.stringify({
+              ...(input.threadId ? { thread_id: input.threadId } : {}),
+              ...(input.assistantId ? { assistant_id: input.assistantId } : {}),
+              metadata: input.metadata ?? {},
+            }),
+          },
+          "Failed to create thread.",
+        );
+      },
       search(query) {
         const { signal, body } = splitSearchQuery(query);
         return request<AgentThread[]>(

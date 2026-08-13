@@ -1,0 +1,22 @@
+{
+  "values": {
+    "title": "Forecasting 2026 Trends and Opportunities",
+    "messages": [
+      {
+        "type": "human",
+        "id": "demo-human-2026",
+        "content": [
+          {
+            "type": "text",
+            "text": "What might be the trends and opportunities in 2026?"
+          }
+        ]
+      },
+      {
+        "type": "ai",
+        "id": "demo-ai-2026",
+        "content": "I've created a modern, minimalist website that presents the major trends and opportunities for 2026."
+      }
+    ]
+  }
+}

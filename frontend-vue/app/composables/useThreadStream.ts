@@ -51,6 +51,7 @@ import type {
 import { createThreadRunner } from "@/core/agent-deerflow/thread-runner";
 import { createDeerFlowRunProtocol } from "@/core/agent-deerflow/run-protocol";
 import { getBackendBaseURL, getLangGraphBaseURL } from "@/core/config";
+import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import {
   createGapRecoveryReset,
   invalidateStoppedThreadCaches,
@@ -272,7 +273,8 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     if (
       optimisticThreadId.value &&
       (optimisticThreadId.value === currentViewThreadId.value ||
-        optimisticThreadId.value === startedThreadId)
+        optimisticThreadId.value === startedThreadId ||
+        sendInFlight)
     ) {
       optimisticThreadId.value = startedThreadId;
     }
@@ -401,6 +403,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
   watch(threadId, (next, previous) => {
     // `new` 提交后 URL 换成真 id：同一个 thread，不清场。见 adoptedThreadId。
     if (previous === null && next !== null && next === adoptedThreadId) return;
+    runner.reset();
     startedAnnounced = false;
     sendInFlight = false;
     transientHistoryBridge = [];
@@ -514,7 +517,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
           !isHiddenFromUIMessage(message) && !message.id?.startsWith("opt-"),
       );
       const previousLedger =
-        isStreaming.value && renderedMessageSnapshot.threadId === threadId.value
+        renderedMessageSnapshot.threadId === threadId.value
           ? renderedMessageSnapshot.messages
           : EMPTY_MESSAGES;
       const ledger = mergeRenderedMessageLedger(
@@ -603,6 +606,119 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     }
   }
 
+  type PreparedReplay = {
+    input: { messages?: Message[] } & Record<string, unknown>;
+    checkpoint?: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
+    target_run_id: string;
+    source_message_ids?: string[];
+    replacement_human_message_id?: string;
+  };
+
+  async function submitPreparedReplay(
+    targetThreadId: string,
+    preparePath: string,
+    prepareBody: Record<string, unknown>,
+    fallbackSupersededMessageIds: readonly string[],
+  ): Promise<boolean> {
+    if (sendInFlight || !targetThreadId) return false;
+    sendInFlight = true;
+    previousHumanMessageCount = humanMessageCount.value;
+    localTurnOrderBaseline = identitiesOf(persistedMessages.value);
+    liveMessagesThreadId.value = targetThreadId;
+    onSend?.(targetThreadId);
+
+    let preparedRunId: string | null = null;
+    let supersededMessageIds: readonly string[] = fallbackSupersededMessageIds;
+    try {
+      const response = await fetchWithAuth(
+        `${getBackendBaseURL()}/api/threads/${encodeURIComponent(targetThreadId)}/runs/${preparePath}/prepare`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(prepareBody),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to prepare ${preparePath}.`);
+      }
+      const prepared = (await response.json()) as PreparedReplay;
+      preparedRunId = prepared.target_run_id;
+      supersededMessageIds =
+        prepared.source_message_ids ?? fallbackSupersededMessageIds;
+      pendingSupersededRunIds.value = new Set([
+        ...pendingSupersededRunIds.value,
+        prepared.target_run_id,
+      ]);
+      pendingSupersededMessageIds.value = new Set([
+        ...pendingSupersededMessageIds.value,
+        ...supersededMessageIds,
+      ]);
+
+      const replacementMessages = prepared.input.messages ?? [];
+      if (replacementMessages.length > 0) {
+        optimisticThreadId.value = targetThreadId;
+        optimisticMessages.value = replacementMessages;
+      }
+
+      await runner.submit({
+        threadId: targetThreadId,
+        payload: {
+          assistant_id: "lead_agent",
+          input: prepared.input,
+          checkpoint: prepared.checkpoint,
+          metadata: prepared.metadata,
+          config: { recursion_limit: 1000 },
+          context: buildRunContext(toValue(context), targetThreadId),
+        },
+      });
+      void queryClient.invalidateQueries({ queryKey: ["threads", "search"] });
+      return true;
+    } catch (error) {
+      optimisticMessages.value = [];
+      optimisticThreadId.value = null;
+      liveMessagesThreadId.value = null;
+      localTurnOrderBaseline = null;
+      if (preparedRunId) {
+        clearPreparedReplayMasks(preparedRunId, supersededMessageIds);
+      }
+      notify.error(error instanceof Error ? error.message : String(error));
+      return false;
+    } finally {
+      sendInFlight = false;
+    }
+  }
+
+  function regenerateMessage(
+    targetThreadId: string,
+    messageId: string,
+    supersededMessageIds: readonly string[] = [messageId],
+  ) {
+    return submitPreparedReplay(
+      targetThreadId,
+      "regenerate",
+      { message_id: messageId },
+      supersededMessageIds,
+    );
+  }
+
+  function editAndRegenerateMessage(
+    targetThreadId: string,
+    humanMessageId: string,
+    replacementText: string,
+    supersededMessageIds: readonly string[] = [humanMessageId],
+  ) {
+    return submitPreparedReplay(
+      targetThreadId,
+      "edit-regenerate",
+      {
+        human_message_id: humanMessageId,
+        replacement_text: replacementText,
+      },
+      supersededMessageIds,
+    );
+  }
+
   /** 05 A8。延迟那一次的 handle 留着，卸载时取消。 */
   async function stop(): Promise<void> {
     pendingFinalizationTimer = await stopThreadAndInvalidateCaches(
@@ -626,6 +742,20 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     );
   }
 
+  function resetView() {
+    adoptedThreadId = null;
+    runner.reset();
+    optimisticMessages.value = [];
+    optimisticThreadId.value = null;
+    liveMessagesThreadId.value = null;
+    renderedMessageSnapshot = {
+      threadId: null,
+      messages: EMPTY_MESSAGES,
+      order: EMPTY_MESSAGE_IDENTITIES,
+    };
+    localTurnOrderBaseline = null;
+  }
+
   return {
     messages: mergedMessages,
     state: computed(() => {
@@ -638,8 +768,11 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     hasMoreHistory: history.hasMore,
     loadMoreHistory: history.loadMore,
     sendMessage,
+    regenerateMessage,
+    editAndRegenerateMessage,
     stop,
     clearPreparedReplayMasks,
+    resetView,
     /** 测试与诊断用：不要在组件里读它。 */
     __runner: runner,
   };

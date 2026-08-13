@@ -1,19 +1,22 @@
 # 09 · M-1 合同冻结
 
-> 冻结日期：2026-08-04。本文是 M-1 的结论与追踪入口；01–08 负责展开产品范围和实现设计。若后续源码改变了这里的事实，必须先更新矩阵和对应测试，不能在实现中静默偏离。
+> **历史冻结文档，日期：2026-08-04。** 本文保存 M-1 当时的合同、inventory 和
+> “下一步”语境，不是当前进度页。M0–M4a 已在后续里程碑落地；续接任务先读
+> [10-current-status-and-next.md](10-current-status-and-next.md)。合同若被实现修改，仍须
+> 更新矩阵和测试，但本文中的“当前”“本轮”“允许开始 M0”一律理解为冻结日快照。
 
 ## 0. 结论与证据标签
 
-**M-1：通过。允许开始 M0；不允许跳过 M0 gate，也不代表 production-ready。**
+**冻结日结论：M-1 通过，当时允许开始 M0；不代表 production-ready。**
 
 M0 开始前没有必须购买或申请的外部资源。仓库自带 replay Gateway 足以启动骨架与协议测试。真实 OIDC provider、两个生产 DNS/TLS、可信外层代理和可用的 browser sandbox 是 M0 相应 gate/生产发布前提，不是把仓库内可完成工作推到外部的理由。
 
 本文使用四种标签：
 
-- **[源码确认]**：当前 checkout 的实现或配置直接规定。
+- **[源码确认]**：2026-08-04 冻结 checkout 的实现或配置直接规定。
 - **[测试覆盖]**：仓库测试已有断言；只有本轮实际执行的命令才写“本轮通过”。
 - **[运行探测]**：本轮启动当前 Gateway 得到的去敏 HTTP/SSE 证据。
-- **[后续约束]**：当前尚无 Vue 实现，M0+ 必须实现和验收的合同。
+- **[后续约束]**：冻结日尚无 Vue 实现，M0+ 当时必须实现和验收的合同。
 
 ## 1. 部署与长期并存合同
 
@@ -21,7 +24,7 @@ M0 开始前没有必须购买或申请的外部资源。仓库自带 replay Gat
 
 | 环境 | React/Next                                             | Vue/Nuxt                                  | Gateway                         | 公共入口与边界                                                                                                                |
 | ---- | ------------------------------------------------------ | ----------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 开发 | `localhost:3000`；现有 nginx `localhost:2026` 仍指向它 | `localhost:3100`；E2E preview 固定 `3101` | `localhost:8001`                | Vue 的 HTTP/SSE 由 Nitro `routeRules` 同源转发；WS 开发期直连 `ws://localhost:8001` 并精确允许 `http://localhost:3100`/`3101` |
+| 开发 | `localhost:3000`；现有 nginx `localhost:2026` 仍指向它 | `localhost:3100`；E2E preview 固定 `3101` | `localhost:8001`                | Vue 的 HTTP/SSE 由 Nitro server catch-all 同源转发；WS 开发期直连 `ws://localhost:8001` 并精确允许 `http://localhost:3100`/`3101`。`routeRules.proxy` 草案已被 M0 安全实测否决，见 [03](03-project-shape.md) |
 | 生产 | 独立 hostname，例如 `react.example.com`                | 独立 hostname，例如 `vue.example.com`     | 一个共享、非公开的 Gateway pool | 每个 hostname 都由 nginx/ingress 提供相同的 `/api/**`、`/api/langgraph/**` 和 browser WS location；浏览器不直接访问 Gateway   |
 
 **生产默认是“两个 hostname、相同路径、同一个 Gateway”，不是不同 pathname，也不是把端口当认证隔离边界。** 两个入口分别拥有 `/`，避免 Next/Nuxt 的 asset、base path、SSR、OIDC 和 Cookie 规则互相耦合；API 保持同源，能长期复用已经验证的 SSE buffering/timeout/body-limit、WS Upgrade、CSRF 和 OIDC 回跳规则。
@@ -37,9 +40,12 @@ M0 开始前没有必须购买或申请的外部资源。仓库自带 replay Gat
 | `/api/threads/:threadId/browser/stream` | WebSocket Upgrade，`Connection/Upgrade` 保持，读写 timeout ≥ 600s           | 同路径           |
 | 页面、Nuxt/Next assets                  | 只进入该 hostname 对应的前端                                                | 不进入 Gateway   |
 
-### 1.3 当前仓库能力与后续修改
+### 1.3 冻结日仓库能力与后续修改
 
-**[源码确认]** 根 `Makefile`/`scripts/serve.sh` 只管理 `8001/3000/2026`；两个 compose 只有一个 `frontend` 服务；两个 nginx 配置只有一个 frontend upstream 和一个 catch-all server。因此当前 checkout 可运行现有 React 栈，但**不能直接部署冻结的双前端生产拓扑**。
+**[源码确认，2026-08-04]** 当时根 `Makefile`/`scripts/serve.sh` 只管理
+`8001/3000/2026`；两个 compose 只有一个 `frontend` 服务；两个 nginx 配置只有一个
+frontend upstream 和一个 catch-all server。后续已经增加 `dev-vue`/`dev-dual`，但默认
+compose/nginx 仍没有交付冻结的双前端生产拓扑；当前边界见 [10](10-current-status-and-next.md)。
 
 | 文件/范围                                                                          | 原因                                                                                                | 里程碑                  | 验收                                                              |
 | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------- | ----------------------------------------------------------------- |
@@ -203,7 +209,7 @@ Cookie 不按端口隔离。同一 hostname 的 `2026/3100` 会共享 access/CSR
 
 ## 6. 测试、证据和 M0 验收
 
-### 6.1 当前 checkout 实时 inventory
+### 6.1 冻结 checkout 的 inventory
 
 | 范围                | 数量                     | 口径                                                                                                     |
 | ------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------- |
@@ -314,10 +320,12 @@ M0 不得以 `e2e-list` 代替 `make e2e`。M1–M7 每个里程碑运行当时�
 - 生产：可信 TLS proxy 能清洗 forwarded headers；共享 Gateway persistence/Redis 按目标拓扑可用。
 - 外部 LLM/provider 凭据只用于真实模型 smoke；M0 的协议确定性门禁用 replay Gateway，不因缺凭据停摆。
 
-### 已知未完成的运行验证
+### 冻结日尚未完成的运行验证
 
-Nuxt 尚未创建，所以 preview proxy、Upgrade、Cookie/OIDC 双入口、active cancel `202/204`、heartbeat/gap 和生产双 hostname 还没有运行结果；它们已经有明确 M0/M7 gate，不属于 M-1 文档歧义。
+截至 2026-08-04，Nuxt 尚未创建，所以 preview proxy、Upgrade、Cookie/OIDC 双入口、
+active cancel `202/204`、heartbeat/gap 和生产双 hostname 当时还没有运行结果。前述 M0
+项目后来已有证据；生产双 hostname 仍归 M7。当前结果必须查 [10](10-current-status-and-next.md)。
 
-### M0 第一个准确任务
+### 冻结日定义的 M0 第一个任务（已执行的历史计划）
 
 先写 `backend/tests/test_pnpm_script.py` 的双目录/路径穿越/兼容性失败用例，再给 `scripts/pnpm.py` 增加白名单 `--dir frontend|frontend-vue`；随后只创建能让 `.github/workflows/frontend-vue-verify.yml` 从 skip 进入真实安装的最小 `frontend-vue/package.json`、workspace、Makefile 和 Nuxt 骨架。该任务只建立工程、route config 和测试入口，**不创建聊天、thread、Pinia业务状态或任何 Vue 业务页面**。

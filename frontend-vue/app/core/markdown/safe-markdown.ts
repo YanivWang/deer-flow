@@ -23,8 +23,11 @@
 import {
   capMarkdownNesting,
   normalizeStreamdownMathMarkdown,
+  preprocessStreamdownMarkdown,
 } from "../streamdown/preprocess";
 
 export function getSafeMarkdown(markdown: string): string {
-  return normalizeStreamdownMathMarkdown(capMarkdownNesting(markdown));
+  return preprocessStreamdownMarkdown(
+    normalizeStreamdownMathMarkdown(capMarkdownNesting(markdown)),
+  );
 }

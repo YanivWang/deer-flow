@@ -1,0 +1,17 @@
+{
+  "expectedFileCount": 11,
+  "expectedTestCount": 66,
+  "specFiles": [
+    "agent-chat.spec.ts",
+    "branch-thread.spec.ts",
+    "chat.spec.ts",
+    "chat-thread-init-ordering.spec.ts",
+    "streaming-reasoning-order.spec.ts",
+    "user-message-plain-text.spec.ts",
+    "thread-history.spec.ts",
+    "thread-history-mermaid.spec.ts",
+    "subtask-card.spec.ts",
+    "thread-list-infinite-scroll.spec.ts",
+    "thread-list-pin.spec.ts"
+  ]
+}

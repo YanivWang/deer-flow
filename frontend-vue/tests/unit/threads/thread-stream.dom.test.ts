@@ -49,6 +49,7 @@ vi.mock("@/composables/useThreadHistory", () => ({
 }));
 
 interface FakeRunner extends ThreadRunner {
+  submissions: Parameters<ThreadRunner["submit"]>[0][];
   emitCustom(data: unknown): void;
   emitUpdate(data: unknown): void;
   setMessages(messages: Message[]): void;
@@ -66,13 +67,16 @@ function createFakeRunner(options: ThreadRunnerOptions): FakeRunner {
     lastActivityAt: 0,
   } as unknown as AgentSnapshot<Record<string, unknown>>;
 
+  const submissions: Parameters<ThreadRunner["submit"]>[0][] = [];
   return {
+    submissions,
     getSnapshot: () => snapshot,
     getWireMessages: () => messages,
     getSessionState: () => ({ status }) as never,
     isStreaming: () => status === "streaming",
     subscribe: () => () => {},
     async submit(input) {
+      submissions.push(input);
       status = "streaming";
       options.onStart?.({ threadId: input.threadId, runId: "run-1" });
       options.onSnapshot?.();
@@ -95,6 +99,68 @@ function createFakeRunner(options: ThreadRunnerOptions): FakeRunner {
     },
   };
 }
+
+describe("useThreadStream · K3 编辑并重跑", () => {
+  it("prepare 返回的替换输入、checkpoint 与 metadata 走唯一 runner 提交流", async () => {
+    vi.useRealTimers();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      expect(String(input)).toContain(
+        "/api/threads/thread-1/runs/edit-regenerate/prepare",
+      );
+      return new Response(
+        JSON.stringify({
+          target_run_id: "run-replacement",
+          source_message_ids: ["human-1", "ai-1"],
+          replacement_human_message_id: "human-2",
+          input: {
+            messages: [
+              { id: "human-2", type: "human", content: "Revised prompt" },
+            ],
+          },
+          checkpoint: { checkpoint_id: "checkpoint-1" },
+          metadata: { replay: "edit" },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const ctx = mountStream();
+
+    await expect(
+      ctx.api.editAndRegenerateMessage(
+        "thread-1",
+        "human-1",
+        "Revised prompt",
+        ["human-1", "ai-1"],
+      ),
+    ).resolves.toBe(true);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/edit-regenerate/prepare"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          human_message_id: "human-1",
+          replacement_text: "Revised prompt",
+        }),
+      }),
+    );
+    expect(ctx.fake.submissions.at(-1)).toMatchObject({
+      threadId: "thread-1",
+      payload: {
+        input: {
+          messages: [
+            { id: "human-2", type: "human", content: "Revised prompt" },
+          ],
+        },
+        checkpoint: { checkpoint_id: "checkpoint-1" },
+        metadata: { replay: "edit" },
+      },
+    });
+    ctx.wrapper.unmount();
+    vi.unstubAllGlobals();
+  });
+});
 
 function mountStream(threadId = ref<string | null>("thread-1")) {
   let fake: FakeRunner | undefined;

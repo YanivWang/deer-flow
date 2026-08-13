@@ -11,8 +11,16 @@ guide rather than expecting full detail here:
   config system, test layout.
 - **[frontend/AGENTS.md](frontend/AGENTS.md)** — frontend depth: Next.js App Router layout,
   thread/streaming data flow, code style, commands.
-- **[frontend-vue/README.md](frontend-vue/README.md)** — Nuxt M0 engineering
-  foundation; business migration remains governed by `frontend-vue-build-docs/`.
+- **[frontend-vue/README.md](frontend-vue/README.md)** — Nuxt/Vue module commands and
+  verification boundary. Current migration truth and next tasks live in
+  **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**.
+
+For Vue migration work, always run `make handoff-check` and read document 10 before
+historical evidence. The current cursor is **M4b preflight**: M-1 through M4a have
+milestone evidence, but the current shared-contract artifact and full-real-backend
+artifact are red; the 25-file/120-test shared suite has only been collected, not passed.
+Do not describe the Vue UI as M4b-complete, product-ready, or part of the default
+production stack until the current gate document says so.
 
 ## What is DeerFlow
 
@@ -31,7 +39,7 @@ A single `make dev` / Docker stack runs four cooperating services:
 | **Nginx**       | `2026` | Unified reverse-proxy entry point — open this in the browser        |
 | **Gateway API** | `8001` | FastAPI REST API + embedded LangGraph-compatible agent runtime      |
 | **React frontend** | `3000` | Existing Next.js web interface                                  |
-| **Vue frontend** | `3100` | Explicit M0 dev mode only; not part of the default Docker stack     |
+| **Vue frontend** | `3100` | Explicit migration dev mode; not part of the default Docker stack  |
 | **Provisioner** | `8002` | Optional — only when sandbox is configured for provisioner/K8s mode |
 
 Nginx is the single public entry: it serves the frontend and proxies `/api/langgraph/*`
@@ -63,8 +71,8 @@ deer-flow/
 │   ├── packages/harness/           # deerflow-harness package (import: deerflow.*) — agent framework
 │   └── app/                        # FastAPI Gateway + IM channels (import: app.*)
 ├── frontend/                       # Next.js frontend (pnpm) — see frontend/AGENTS.md
-├── frontend-vue/                   # Nuxt/Vue M0 foundation; independent pnpm workspace
-├── frontend-vue-build-docs/        # Frozen migration contracts and gate evidence
+├── frontend-vue/                   # Nuxt/Vue migration workspace; M4a landed, M4b next
+├── frontend-vue-build-docs/        # Current status, frozen contracts, plans, historical evidence
 ├── docker/                         # docker-compose files, nginx config, provisioner
 ├── skills/                         # Agent skills: public/ (committed), custom/ (gitignored)
 │                                    # Managed integration skill packs are global at .deer-flow/integrations/skills/{provider}/
@@ -129,9 +137,11 @@ cd frontend && pnpm dev       # Dev server with Turbopack (port 3000)
 cd frontend && pnpm check     # Lint + type check (run before committing)
 cd frontend && pnpm test      # Unit tests
 
-# Vue M0 foundation (Makefile is the only developer command surface)
+# Vue migration workspace (Makefile is the only developer command surface)
 cd frontend-vue && make dev       # Nuxt dev server (port 3100)
 cd frontend-vue && make verify    # lint + format + types + unit + build
+cd frontend-vue && make migration-check  # provenance/test migration ledger consistency
+cd frontend-vue && make consumer-check   # pack/install/typecheck minimal agent-core consumer
 cd frontend-vue && make e2e-m0    # repository-runnable M0 gate suite
 cd frontend-vue && make e2e-m4a   # M4a data-flow gate (send/stream/stop/reload ordering)
 cd frontend-vue && make e2e-m4a-stream  # M4a real chunked-SSE gate (heartbeat/resume cursor/gap)
@@ -146,6 +156,10 @@ gates. Both are hermetic — the IdP is a fixture in `frontend-vue/tests/support
 but they stay outside `make e2e-m0` because they need the backend browser extra and
 a Gateway whose toolset includes `browser_navigate`, which changes the system prompt
 and would break the run-protocol replay fixture's hash.
+When a VPN/system proxy is enabled, run local external fixtures with
+`NO_PROXY=127.0.0.1,localhost`; the current Makefile does not yet enforce that bypass.
+The current real-backend command also needs its documented 3101 port correction before
+its result is authoritative. See document 10 instead of guessing from a stale artifact.
 
 Rule of thumb: **root `make` = application lifecycle**; **`backend/Makefile`,
 `frontend/` (`pnpm`), and `frontend-vue/Makefile` = per-module work.**
@@ -160,7 +174,8 @@ the selected workspace so each frontend honors its own pinned package manager.
 
 - Backend work → **[backend/AGENTS.md](backend/AGENTS.md)**
 - Frontend work → **[frontend/AGENTS.md](frontend/AGENTS.md)**
-- Vue migration work → **[frontend-vue-build-docs/README.md](frontend-vue-build-docs/README.md)**
+- Vue migration current status/next task → **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**
+- Vue migration frozen design/index → **[frontend-vue-build-docs/README.md](frontend-vue-build-docs/README.md)**
 - Setup & install → **[Install.md](Install.md)**, **[CONTRIBUTING.md](CONTRIBUTING.md)**
 - Project overview & usage → **[README.md](README.md)** (translations: `README_zh.md`,
   `README_ja.md`, `README_fr.md`, `README_ru.md`)

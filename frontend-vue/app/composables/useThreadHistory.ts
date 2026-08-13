@@ -92,10 +92,42 @@ export function useThreadHistory(
           ),
         );
       }
-      return parseThreadMessagesPageResponse(await response.json());
+      const page = parseThreadMessagesPageResponse(await response.json());
+      if (page.data.length > 0 || pageParam !== null) return page;
+
+      const stateResponse = await fetch(
+        `${getBackendBaseURL()}/api/langgraph/threads/${encodeURIComponent(toValue(threadId))}/state`,
+        { method: "GET", signal },
+      );
+      if (!stateResponse.ok) return page;
+      const state = (await stateResponse.json()) as {
+        values?: { messages?: import("@/core/types/message").Message[] };
+      };
+      const messages = state.values?.messages ?? [];
+      return {
+        data: messages.map((content, index) => ({
+          run_id: `state-${toValue(threadId)}`,
+          seq: index + 1,
+          content,
+          metadata: { caller: "lead_agent" },
+          created_at: new Date(0).toISOString(),
+        })),
+        has_more: false,
+        next_before_seq: null,
+      };
     },
     getNextPageParam: getThreadHistoryNextPageParam,
   });
+
+  watch(
+    () => historyQuery.hasNextPage.value,
+    (canLoadMore) => {
+      if (canLoadMore && !historyQuery.isFetchingNextPage.value) {
+        void historyQuery.fetchNextPage();
+      }
+    },
+    { immediate: true },
+  );
 
   const currentMessageRows = computed(() =>
     flattenThreadHistoryPages(historyQuery.data.value?.pages ?? []),

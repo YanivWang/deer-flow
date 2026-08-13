@@ -1,5 +1,9 @@
 # M-1 Gateway 运行探针（去敏）
 
+> **历史证据。** 本文只证明采集当日的 M-1 探针；其中的数量、红项和“当前”不随实现
+> 更新。续接任务以 [当前状态页](../10-current-status-and-next.md) 和
+> `make handoff-check` 为准。
+
 > 采集日期：2026-08-04。探针启动的是仓库当前 checkout 的真实 FastAPI Gateway，模型上游使用仓库自带 deterministic replay fixture；认证通过 `DEER_FLOW_AUTH_DISABLED=1` 关闭。它证明 HTTP/SSE 路由与运行时行为，不证明外部 LLM、生产 TLS/OIDC、Nuxt/Nitro 代理或多 worker Redis 行为。
 
 ## 启动边界

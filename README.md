@@ -346,8 +346,10 @@ On Windows, run the local development flow from Git Bash. Native `cmd.exe` and P
 6. **Access**: http://localhost:2026
 
 The experimental Vue/Nuxt frontend lives in `frontend-vue/` and remains
-milestone-gated. The existing command above is unchanged and still starts the
-React frontend. For M0 development, use one of the explicit alternatives:
+milestone-gated. M-1 through M4a have landed; M4b product UI is the next milestone,
+so the current chat route must not be presented as a replacement for the React UI.
+The existing command above is unchanged and still starts the React frontend. For
+Vue migration development, use one of the explicit alternatives:
 
 ```bash
 make dev-vue   # Gateway :8001 + Vue :3100
@@ -359,8 +361,10 @@ make stop      # stops either mode, including the Vue process
 dual-host nginx/compose profile is intentionally deferred to M7; the existing
 React nginx entry at `http://localhost:2026` is not presented as dual ingress.
 See [`frontend-vue/README.md`](frontend-vue/README.md) for module commands and
-[`frontend-vue-build-docs/evidence/m0-verification.md`](frontend-vue-build-docs/evidence/m0-verification.md)
-for the current gate status.
+[`frontend-vue-build-docs/10-current-status-and-next.md`](frontend-vue-build-docs/10-current-status-and-next.md)
+for the current gate status, known failures, and ordered next tasks. Files under
+`frontend-vue-build-docs/evidence/` are historical milestone records, not the
+current continuation cursor.
 
 #### Startup Modes
 

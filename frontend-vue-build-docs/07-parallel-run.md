@@ -2,6 +2,10 @@
 
 `frontend-vue/` 与现有 `frontend/` 在同一仓库内并存、同时运行、共用同一套 Gateway 接口。
 
+> **文档性质：接线合同与目标拓扑。** 当前实现进度、门禁红绿和环境问题以
+> [10-current-status-and-next.md](10-current-status-and-next.md) 为准。生产双 hostname
+> 仍是 M7 目标，不是当前 checkout 已经提供的部署能力。
+
 > M-1 已冻结最终接线：开发用 Next `3000`、Vue `3100`、Gateway `8001`；生产用两个独立 hostname 的对称同源 nginx/ingress，共享一个 Gateway。完整矩阵见 [09-m1-contract-freeze.md](09-m1-contract-freeze.md)。
 
 ## 原则：隔离业务代码，但完整接入仓库
@@ -10,9 +14,11 @@
 
 “并存”不能靠一个孤立目录自称完成。开发、干净 CI、认证、WS 和生产入口都必须有明确接线与测试。
 
-### 当前提前存在的 workflow
+### 当前 workflow 状态
 
-`.github/workflows/frontend-vue-verify.yml` 已按 [06 G0-0](06-migration-plan.md#g0-0--ci-workflow-对齐) 修成预备态：目录不存在时安全跳过；目录存在时从 clean checkout 安装两个前端并运行真实命令。M0 仍必须用首个 Vue skeleton 提交证明它真的工作，不能把“YAML 已写”当通过。
+`.github/workflows/frontend-vue-verify.yml` 已不再是“等待首个 Vue skeleton”的预备态；
+M0–M4a 已有实现和仓库内门禁。workflow 的存在仍不等于所有业务合同通过：当前
+`contracts` 与 `full-real-backend` 状态为 failed，准确边界见 [10](10-current-status-and-next.md)。
 
 本地开发直接访问 3100。DeerFlow 双前端生产 profile 已冻结为对称 nginx/ingress：React 与 Vue 使用独立 hostname，但各自暴露相同的 `/api/**`、`/api/langgraph/**` 和 browser WS 路径，共用 Gateway。它复用已验证的 SSE、body limit、WS Upgrade 和同源认证；路径前缀和不同端口都不是生产默认。
 
@@ -27,11 +33,21 @@
 | **`frontend-vue` E2E preview** | **`3101`** | ★ 独立端口。E2E 必须跑在自己的 preview 上，不能复用 3100 上的 dev server——理由见 [03](03-project-shape.md#️-为什么-e2e-不能用-3100以及为什么-reuseexistingserver-false) |
 | Provisioner                    | `8002`     | 可选                                                                                                                                                                   |
 
-### ⚠️ 本机其他项目也会抢端口
+### ⚠️ 端口必须显式固定
 
-`nuxt dev` 默认就是 **3000**，与 DeerFlow 的 `frontend` 直接冲突。本机已有的 `nuxt-modern-starter` 就踩过一次相邻的坑（它的 API 端口原本是 2026，与 DeerFlow 的 nginx 撞，后来改成 2027）。
+`nuxt dev` 默认端口会与 DeerFlow 的 `frontend` 冲突；`frontend-vue` 选择 3100、E2E
+preview 选择 3101 是有意隔离。不要依赖本机已有服务或框架默认端口。
 
-`frontend-vue` 选 3100 是有意避开的——但**任何新起的 Nuxt 项目都要显式指定端口**，别用默认值。
+当前还有一个已验证的接线缺口：Vue real-backend config 启动 3101，但共享 spec 默认读取
+3000，Makefile 尚未传 `E2E_FRONTEND_PORT=3101`。修复前，手工核验必须显式传该变量；
+否则测试可能命中另一个前端。这个临时说明在 Makefile 固化端口并补回归后删除。
+
+### ⚠️ VPN/系统代理与 loopback fixture
+
+本地 OIDC、Gateway 和 Playwright fixture 都必须让 `127.0.0.1,localhost` 绕过代理。
+2026-08-13 已实测：VPN 开启时 Python `httpx` 会把 loopback 请求送进代理；加
+`NO_PROXY=127.0.0.1,localhost` 后 OIDC 往返通过。代码与纯本地单测通常不受影响，
+但网络 fixture 会受影响。Makefile 尚未固化该保护，不能把代理污染误判成认证回归。
 
 ### ⚠️ 不要用 3001
 

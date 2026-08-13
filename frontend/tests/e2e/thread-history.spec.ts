@@ -542,6 +542,9 @@ test.describe("Thread history", () => {
       await route.fulfill({
         status: 200,
         contentType: "text/event-stream",
+        headers: {
+          "Content-Location": `/api/threads/${MOCK_THREAD_ID}/runs/00000000-0000-0000-0000-000000000778`,
+        },
         body,
       });
     };

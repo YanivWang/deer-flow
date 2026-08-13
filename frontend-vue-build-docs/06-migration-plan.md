@@ -1,6 +1,9 @@
 # 06 · 执行计划
 
-> M-1 已完成并通过；冻结结果、运行探针和追踪矩阵见 [09-m1-contract-freeze.md](09-m1-contract-freeze.md)。本计划从 M0 起必须按该合同实施。
+> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a 已关闭，M4b 前置修复是下一步。**
+> 实跑红绿、VPN/端口问题与有序任务清单以
+> [10-current-status-and-next.md](10-current-status-and-next.md) 为准。本文负责冻结里程碑范围与
+> 退出条件，不以旧段落中的将来时替代当前状态。
 
 ## 终态与顺序
 
@@ -67,19 +70,19 @@ git tag frontend-vue-baseline-v2 27a425b0
 
 ## 里程碑总览
 
-| #       | 内容                                                | 停在这里的价值                                                      |
-| ------- | --------------------------------------------------- | ------------------------------------------------------------------- |
-| **M-1** | **契约冻结**：协议矩阵、测试 manifest、生产入口决策 | 任何实现开始前消除歧义                                              |
-| **M0**  | 骨架                                                | 能跑的空壳                                                          |
-| **M1**  | `core/` 纯 TS 落地                                  | 单测全绿 = 业务语义保真                                             |
-| **M2**  | **L1 `packages/agent-core/`** ★                     | **协议无关内核，已被 raw trace、fake upstream 与真实 Gateway 验证** |
-| **M3**  | Markdown 渲染层                                     | 与 React 版 DOM 结构一致                                            |
-| **M4a** | 数据流：`threads/hooks.ts` 与 7 个 Context          | 流式状态在 Vue 下跑通，带 gate                                      |
-| **M4b** | **通用 agent UI（L2 第一批）** ★                    | **一个能跑的通用 agent 聊天应用——模板到此可用**                     |
-| **M5**  | L3 第一批：artifacts + sidecar                      | L2 扩展点被真实 L3 功能验证过                                       |
-| **M6**  | L3 其余：设置 / 侧栏 / browser / channels           | 功能面完整                                                          |
-| **M7**  | 交互收尾 + 完整验收                                 | **功能/交互合同与关键视觉状态达成**                                 |
-| **M8**  | L2 契约收口                                         | 其他项目可上手复用                                                  |
+| #       | 当前状态       | 内容                                                | 停在这里的价值                                                      |
+| ------- | -------------- | --------------------------------------------------- | ------------------------------------------------------------------- |
+| **M-1** | 已关闭         | **契约冻结**：协议矩阵、测试 manifest、生产入口决策 | 任何实现开始前消除歧义                                              |
+| **M0**  | 已关闭         | 骨架                                                | 能跑的空壳                                                          |
+| **M1**  | 已关闭         | `core/` 纯 TS 落地                                  | 单测全绿 = 业务语义保真                                             |
+| **M2**  | 已关闭         | **L1 `packages/agent-core/`** ★                     | **协议无关内核，已被 raw trace、fake upstream 与真实 Gateway 验证** |
+| **M3**  | 已关闭         | Markdown 渲染层                                     | 与 React 版 DOM 结构一致                                            |
+| **M4a** | 已关闭         | 数据流：`threads/hooks.ts` 与 7 个 Context          | 流式状态在 Vue 下跑通，带 gate                                      |
+| **M4b** | **下一里程碑** | **通用 agent UI（L2 第一批）** ★                    | **一个能跑的通用 agent 聊天应用——模板到此可用**                     |
+| **M5**  | 未开始         | L3 第一批：artifacts + sidecar                      | L2 扩展点被真实 L3 功能验证过                                       |
+| **M6**  | 未开始         | L3 其余：设置 / 侧栏 / browser / channels           | 功能面完整                                                          |
+| **M7**  | 未开始         | 交互收尾 + 完整验收                                 | **功能/交互合同与关键视觉状态达成**                                 |
+| **M8**  | 未开始         | L2 契约收口                                         | 其他项目可上手复用                                                  |
 
 ## 相对工作量与中止判定
 
@@ -702,8 +705,9 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 > 以及同一次 URL 变化把 C9 的顺序锚点清掉。详见
 > [evidence/m4a-dataflow.md §2.4](evidence/m4a-dataflow.md)。
 >
-> **共享合同仍然是最终判据，时间点移到 M4b**——届时要先给共享 mock 补
-> `Content-Location`（改 `frontend/` 是跨仓动作，需单独决定）。
+> **共享合同仍然是最终判据，时间点在 M4b。** 当前代表性实跑已证明共享 mock 缺
+> `Content-Location` 会让发送路径 fail closed；M4b 前置任务必须先补该 header，并保持
+> React 合同通过。完整现状见 [10](10-current-status-and-next.md)。
 
 **⚠️ 全程对照 [05-invariants.md](05-invariants.md) 的 M 组**（Vue 移植专有陷阱）。M1（`provide` 必须传 ref）和 M5（`watch` 默认惰性）在这个阶段最容易翻车，而 A7 / D4 那类"初始状态不得被覆盖"的约束正好踩在 M5 上。
 
@@ -737,19 +741,30 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 ⚠️ **K2/K3（编辑并重跑）在 25 个 spec 里没有对应的 E2E**——`branch-thread` 不覆盖它。
 这一条只能靠单测加手验，属于已知覆盖缺口，不要因为"E2E 全绿"就认为它验过了。
 
-**E2E**：`chat` `streaming-reasoning-order` `user-message-plain-text` `thread-history` `thread-history-mermaid` `chat-thread-init-ordering` `agent-chat` `branch-thread` `subtask-card` `thread-list-infinite-scroll` `thread-list-pin`
+**E2E 硬门禁（当前 11 files / 66 tests）**：`chat`
+`streaming-reasoning-order` `user-message-plain-text` `thread-history`
+`thread-history-mermaid` `chat-thread-init-ordering` `agent-chat` `branch-thread`
+`subtask-card` `thread-list-infinite-scroll` `thread-list-pin`。
 
-> ⚠️ **这 11 个 spec 在 M4b 之前一个都没跑过。** 早期版本这里写着「其中 `chat` /
-> `chat-thread-init-ordering` / `thread-history` 三个在 M4a 的 gate 上已经跑过一轮」，
-> 那句话随 [M4a gate 的订正](#m4a--数据流)一起作废：M4a 跑的是本仓自己的等价用例
-> （`make e2e-m4a` / `make e2e-m4a-stream`），共享合同一条都没通过。
+> **2026-08-13 代表性实跑：1/3。** new-chat 输入可见通过；本地化 disclaimer 失败；
+> 发送消息失败并明确报 `Gateway did not return a Content-Location for the new run.`。
+> 这既证明页面还没到 M4b，也证明共享 mock 与真实 Gateway run-handle 合同不一致。
 >
-> **动 M4b 的第一件事是解掉那个前置**：`frontend/tests/e2e/utils/mock-api.ts` 的
-> `handleRunStream` 不发 `Content-Location`，而本仓的 protocol 读不到就 fail closed
-> （05 L12 / 08 硬规则 2）。给共享 mock 补这个 header 是**改 `frontend/` 的跨仓动作**，
-> 要单独决定；在它解掉之前，这 11 个 spec 全部会停在「流建不起来」。
+> M4b 开工前依次完成四个 P0：
+>
+> 1. 给 `frontend/tests/e2e/utils/mock-api.ts::handleRunStream` 补真实 Gateway 已提供的
+>    `Content-Location`，保持 protocol fail closed；
+> 2. 给 Vue real-backend 命令固定 `E2E_FRONTEND_PORT=3101`，消除共享 spec 默认 3000
+>    造成的误命中；
+> 3. 给本地 Gateway/IdP/Playwright fixture 固化 `NO_PROXY=127.0.0.1,localhost`；
+> 4. 建精确列出上述 11 个 spec 的 M4b Playwright project/Make target，不能用 substring
+>    选用例，也不能把 `make e2e-list` 的 25/120 收集结果写成通过。
+>
+> 修正端口并绕过代理后的 real-backend 当前是 2/3：auth-disabled 与多 run
+> order/history 通过，render 因缺 `#chat`/建议 UI 失败。M4b 退出前必须达到 3/3。
 
-**产出**：**一个能跑的通用 agent 聊天应用。** 停在这里，模板已经可用——L1 内核 + L2 通用 UI + 一个证明它们能工作的壳。
+**M4b 达成后的产出**：**一个能跑的通用 agent 聊天应用。** 只有上述退出条件满足后，
+才能写“模板已经可用”——L1 内核 + L2 通用 UI + 一个证明它们能工作的壳。
 
 ---
 

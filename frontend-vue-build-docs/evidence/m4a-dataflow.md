@@ -1,5 +1,9 @@
 # M4a · 数据流接线 —— 证据
 
+> **历史证据。** 本文记录 M4a 关闭时的 gate 与红项；此后已补跑代表性共享合同和
+> real-backend，最新结果不是本文末尾的原始红项清单。续接任务以
+> [当前状态页](../10-current-status-and-next.md) 和 `make handoff-check` 为准。
+
 日期：2026-08-06 · 分支 `main-wc`
 
 本文只记录 git 与代码留不下的东西：**为什么这么选、试过什么被否决、还有什么没证实**。
@@ -195,7 +199,10 @@ issue 逼出来的形状，**读代码看不出哪一步在防什么**，唯一�
 
 ## 5. 红项与未证实（做 M4b 时必须知道）
 
-1. **仍然没有对着真 Gateway 跑过。** `make e2e-m4a-stream` 的假 Gateway 是真的
+1. **M4a 关闭时还没有对着真 Gateway 跑过。** 后续修正
+   `E2E_FRONTEND_PORT=3101` 并绕过本机代理后，real-backend 已达到 2/3：
+   auth-disabled 与多 run order/history 通过，render 因 M4b UI 未实现而失败。
+   `make e2e-m4a-stream` 的假 Gateway 是真的
    分块写、真的经 Nitro 代理、真的接 `Last-Event-ID`，但它**不是** Gateway：
    `run_m0_gateway.py`（真 backend replay，G0-8 用的那个）没有被接到聊天页上。
    仍未走到的具体分支：**重连退避**（假 Gateway 不会中途断连）、

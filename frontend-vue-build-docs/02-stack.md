@@ -1,5 +1,9 @@
 # 02 · 技术栈
 
+> **文档性质：冻结选型与目标依赖，不是当前依赖/完成度快照。** 实施状态以
+> [10-current-status-and-next.md](10-current-status-and-next.md) 和当前 lockfile 为准；
+> 不要依据本文的目标依赖推断某个组件已经接线。
+
 > 所有第三方包的维护状态已于 2026-08-03 通过 `npm view <pkg> time` 核实。**"上游是否活跃"是硬性选型条件**，被否决的候选见文末存档表。
 >
 > M-1 的部署、Gateway、认证、WS 和测试合同已经冻结；实现本技术栈时不得覆盖 [09-m1-contract-freeze.md](09-m1-contract-freeze.md) 的边界。

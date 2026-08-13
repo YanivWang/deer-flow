@@ -81,6 +81,7 @@ watch(
   >
     <!-- eslint-disable vue/no-v-html —— 本层唯一一处，理由见文件头 ③ -->
     <div
+      aria-label="Mermaid chart"
       class="bg-background flex justify-center overflow-x-auto rounded-md p-4"
       data-streamdown="mermaid"
       v-html="svg"

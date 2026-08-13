@@ -1,6 +1,12 @@
-# DeerFlow Vue frontend (M0)
+# DeerFlow Vue frontend
 
-This Nuxt 4 workspace is the Vue frontend that coexists with `../frontend` and shares the Gateway. M0 deliberately contains only the engineering foundation: marketing placeholders, an auth-gated workspace shell, a real `@deerflow/agent-core` workspace package boundary, production proxy/security behavior, and test infrastructure.
+This Nuxt 4 workspace is the Vue frontend that coexists with `../frontend` and
+shares the Gateway. **Current migration cursor: M-1 through M4a are complete;
+M4b is next.** The current chat route is an M4a data-flow validation shell, not a
+feature-complete replacement for the React UI. Read
+[the current status and next-step record](../frontend-vue-build-docs/10-current-status-and-next.md)
+before continuing migration work; milestone evidence is historical, not the
+current status source.
 
 Use the Makefile as the only developer entrypoint:
 
@@ -8,17 +14,27 @@ Use the Makefile as the only developer entrypoint:
 make install
 make dev       # http://localhost:3100
 make verify
+make migration-check
+make consumer-check
 make e2e-m0
 make e2e-m4a
 make e2e-m4a-stream
 make e2e-list  # collects the shared M1+ business contract; does not claim it passes
 ```
 
-`make e2e-external` holds the two gates the repository cannot run on its own — the
-browser-runtime WebSocket (G0-6) and the controlled-IdP OIDC dual callback (G0-7).
-They are kept out of `make e2e-m0` so the runnable suite stays honest, and CI drives
-them through the manual `external-gates` job in
+`make e2e-external` holds the browser-runtime WebSocket (G0-6) and the
+controlled fixture-IdP OIDC dual callback (G0-7). They are kept out of
+`make e2e-m0` because they need the backend browser extra and a different Gateway
+toolset, and CI drives them through the manual `external-gates` job in
 [frontend-vue-verify.yml](../.github/workflows/frontend-vue-verify.yml).
+If a VPN or system proxy is enabled, local fixture traffic must bypass it:
+
+```bash
+NO_PROXY=127.0.0.1,localhost make e2e-external
+```
+
+This is a current environment requirement, not yet a guarantee enforced by the
+Makefile.
 
 The React test host must be installed before this workspace because the shared specs and this runner intentionally use the same physical `@playwright/test` instance:
 
@@ -85,15 +101,28 @@ prettier 3.9.6 wants to reformat 7 of them (upstream runs 3.8.1) and eslint repo
 that class is excluded; files we write under `app/core/` stay fully checked, and a
 file downgraded out of `COPIED` is re-checked automatically.
 
-`NUXT_PUBLIC_AUTH_DISABLED=1` is limited to M0/mock tests. `NUXT_PUBLIC_M0_TEST_PAGES=1` exposes the isolated `/__m0/*` visual and splitpanes fixtures; they return 404 in normal production configuration.
+`NUXT_PUBLIC_AUTH_DISABLED=1` is limited to mock tests.
+`NUXT_PUBLIC_M0_TEST_PAGES=1` exposes the isolated `/__m0/*` visual and
+splitpanes fixtures; they return 404 in normal production configuration.
 
-All ten M0 gates pass and every one is reproducible from this repository:
-`make e2e-m0` covers the infrastructure suite, `make e2e-m4a` covers the M4a
-data-flow gate (send / stream / stop / reload ordering against a minimal chat page),
-`make e2e-m4a-stream` covers the same page against a genuinely chunked SSE stream
-(frame boundaries, heartbeat comments, `Last-Event-ID` resume cursor, gap -> A7),
-`make e2e-external` covers the
-browser WebSocket (G0-6) and the OIDC round trip (G0-7) against the in-repo
-fixture IdP. Dual-frontend production readiness — two hostnames, DNS/TLS,
-trusted-proxy scrubbing — remains M7. See the
-[M0 verification record](../frontend-vue-build-docs/evidence/m0-verification.md).
+## Current verification boundary
+
+The 2026-08-13 checkout passed `make verify` (100 files / 1055 tests),
+`make migration-check`, `make consumer-check`, `make e2e-m0` (14/14),
+`make e2e-m4a` (4/4), and `make e2e-m4a-stream` (3/3). WebSocket passed;
+OIDC passed when loopback bypassed the active VPN/system proxy.
+
+Those results do **not** mean the shared business suite passes. `make e2e-list`
+collects 25 files / 120 tests but does not execute them. The M4b representative
+run is currently 1/3, and the corrected real-backend run is 2/3; both fail on
+missing product UI, while the shared stream mock also lacks the real Gateway's
+required `Content-Location` header. `make handoff-check` therefore correctly
+reports `contracts: failed` and `full-real-backend: failed`.
+
+For exact commands, failure causes, the 11-spec M4b exit gate, and the ordered
+task plan, use
+[10-current-status-and-next.md](../frontend-vue-build-docs/10-current-status-and-next.md).
+Dual-frontend production readiness — two hostnames, DNS/TLS, trusted-proxy
+scrubbing — remains M7. The
+[M0 verification record](../frontend-vue-build-docs/evidence/m0-verification.md)
+is retained as historical milestone evidence only.

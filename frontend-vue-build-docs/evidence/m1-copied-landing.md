@@ -1,5 +1,10 @@
 # M1 窗口 2：85 个 COPIED 落地 + rstest→vitest 工具链
 
+> **历史证据。** 标题与正文数量是该窗口的 landing 快照，不是当前 provenance 总数；
+> 后续窗口已继续调整分类。续接任务以
+> [当前状态页](../10-current-status-and-next.md)、当前 manifest 和
+> `make handoff-check` 为准。
+
 > 范围：搬完全部 85 个 `COPIED`，未碰 `RETYPED`。
 > 测试只搬了 **20 个**，不是交接单说的 43 —— 理由见「43 → 20」一节，这是本窗口最重要的结论。
 
