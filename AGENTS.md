@@ -11,24 +11,16 @@ guide rather than expecting full detail here:
   config system, test layout.
 - **[frontend/AGENTS.md](frontend/AGENTS.md)** — frontend depth: Next.js App Router layout,
   thread/streaming data flow, code style, commands.
-- **[frontend-vue/README.md](frontend-vue/README.md)** — Nuxt/Vue module commands and
-  verification boundary. Current migration truth and next tasks live in
-  **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**.
+- **[frontend-vue/README.md](frontend-vue/README.md)** — Vue commands and verification;
+  current truth lives in `frontend-vue-build-docs/10-current-status-and-next.md`.
 
-For Vue migration work, always run `make handoff-check` and read document 10 before
-historical evidence. The current cursor is **M8 complete; repository M7 GO**. The exact
-Vue-owned M7 inventory is 25 files / 120 tests and passed 120/120 in three consecutive full
-runs. Framework-specific batched-stream and splitpanes/artifact-panel behavior is owned by
-Vue specs; only framework-neutral product contracts are reused from React. Do not reintroduce
-React DOM selectors, fixed animation timers, duplicate chunk adapters or basename collisions
-to satisfy another framework's test shape. Production still requires Gateway
-`Content-Location` plus terminal `end`, and artifact auto-open remains immediate.
-React-default/Vue-secondary hostname routing is unchanged. Public DNS/TLS/outer-proxy/
-real-IdP/target-runtime validation is BLOCKED because no public Vue hostname or deployment
-endpoint is configured; do not describe it as passed or Vue as the default production frontend.
-M8 freezes the private `@deerflow/agent-core` root API, the minimal L2 Markdown/Button source
-boundary, an isolated custom-backend consumer and the L3 replacement guide; no npm publish or
-default production cutover occurred.
+For Vue work, run `make handoff-check` and read document 10 first. M7 is repository GO
+(Vue-owned 25 files / 120 tests, 120/120 x3); M8 is complete. Vue owns framework-specific
+stream/artifact-panel gates and freezes Vue-specific agent-chat, channels, integrations and
+thread-history contracts instead of inheriting unrelated React-only feature growth. Shared
+specs are limited to framework-neutral behavior. React stays the default frontend and Vue
+stays secondary. Public activation is explicitly outside the current delivery scope; no npm
+publish or production cutover occurred.
 
 ## What is DeerFlow
 
@@ -42,13 +34,13 @@ DingTalk) bridge into the same agent through the Gateway.
 
 A single `make dev` / Docker stack runs four cooperating services:
 
-| Service            | Port   | Role                                                                                         |
-| ------------------ | ------ | -------------------------------------------------------------------------------------------- |
-| **Nginx**          | `2026` | Unified reverse-proxy entry point — open this in the browser                                 |
-| **Gateway API**    | `8001` | FastAPI REST API + embedded LangGraph-compatible agent runtime                               |
-| **React frontend** | `3000` | Existing Next.js web interface                                                               |
-| **Vue frontend**   | `3100` | Explicit migration dev port; production Compose exposes it only through a secondary hostname |
-| **Provisioner**    | `8002` | Optional — only when sandbox is configured for provisioner/K8s mode                          |
+| Service         | Port   | Role                                                                 |
+| --------------- | ------ | ------------------------------------------------------------------- |
+| **Nginx**       | `2026` | Unified reverse-proxy entry point — open this in the browser        |
+| **Gateway API** | `8001` | FastAPI REST API + embedded LangGraph-compatible agent runtime      |
+| **React frontend** | `3000` | Default Next.js web interface                                    |
+| **Vue frontend**   | `3100` | Migration dev port; production uses only a secondary hostname      |
+| **Provisioner** | `8002` | Optional — only when sandbox is configured for provisioner/K8s mode |
 
 Nginx is the single public entry: it serves the frontend and proxies `/api/langgraph/*`
 to the Gateway's LangGraph runtime, rewriting it to Gateway's native `/api/*` routes; all
@@ -76,11 +68,12 @@ deer-flow/
 ├── extensions_config.example.json  # Template → copy to extensions_config.json (gitignored): MCP servers + skills
 ├── backend/                        # Python backend — see backend/AGENTS.md
 │   ├── Makefile                    # Per-module backend commands (dev, gateway, test, lint, migrate-rev)
+│   ├── packages/extension-api/     # deerflow-extension-api package (import: deerflow_extension_api.*) — public extension contract
 │   ├── packages/harness/           # deerflow-harness package (import: deerflow.*) — agent framework
 │   └── app/                        # FastAPI Gateway + IM channels (import: app.*)
 ├── frontend/                       # Next.js frontend (pnpm) — see frontend/AGENTS.md
-├── frontend-vue/                   # Nuxt/Vue migration workspace; repository M7 and M8 complete
-├── frontend-vue-build-docs/        # Current status, frozen contracts, plans, historical evidence
+├── frontend-vue/                   # Nuxt/Vue migration — see frontend-vue/README.md
+├── frontend-vue-build-docs/        # Vue status, contracts and evidence
 ├── docker/                         # docker-compose files, nginx config, provisioner
 ├── skills/                         # Agent skills: public/ (committed), custom/ (gitignored)
 │                                    # Managed integration skill packs are global at .deer-flow/integrations/skills/{provider}/
@@ -91,6 +84,11 @@ deer-flow/
 └── docs/                           # Cross-cutting docs, plans, and design notes
 ```
 
+Third-party extensions are loaded from a top-level `plugins:` list in `config.yaml`
+(operator-controlled on purpose — that list causes code to be imported, so it is deliberately
+kept out of the API-writable `extensions_config.json`). See the Extension System section in
+[backend/AGENTS.md](backend/AGENTS.md).
+
 Runtime config lives at the **repo root**: copy `config.example.yaml` → `config.yaml`
 (main app config) and `extensions_config.example.json` → `extensions_config.json` (MCP
 servers + skills). Both real files are gitignored and may be edited at runtime via the
@@ -98,7 +96,6 @@ Gateway API. Config schema and resolution order are documented in
 [backend/AGENTS.md](backend/AGENTS.md).
 
 Skill quality review note:
-
 - `skills/public/skill-reviewer/` is the built-in read-only skill quality reviewer.
   It uses the harness-layer `review_skill_package` tool and contracts in
   `contracts/skill_review/`. Model-visible review data is compact and
@@ -107,7 +104,6 @@ Skill quality review note:
   `skill-creator` ownership boundaries.
 
 Scheduled-task note:
-
 - The scheduled-task MVP adds a workspace page at `/workspace/scheduled-tasks` plus a background scheduler service gated by `config.yaml -> scheduler.enabled`.
 - Scheduled background runs are intentionally non-interactive: they execute through the normal run lifecycle, but the lead-agent toolset excludes `ask_clarification` when `context.non_interactive=true`. The key is honored only for internally-authenticated callers (the scheduler launch path); client-supplied `context.non_interactive` is dropped.
 
@@ -123,14 +119,17 @@ make config      # Generate local config files from the examples
 make check       # Check that required tools are installed
 make install     # Install all dependencies (frontend + backend + pre-commit hooks)
 make dev         # Start all services with hot-reload (Gateway + Frontend + Nginx)
-make dev-vue     # Start Gateway + Vue/Nuxt on 3100
-make dev-dual    # Start Gateway + React 3000 + Vue 3100 directly; production ingress is separate
+make dev-vue     # Start Gateway + Vue on 3100
+make dev-dual    # Start Gateway + both frontends directly
+make dual-frontend-production-check  # Check React-default/Vue-secondary ingress
 make start       # Start all services in production mode (local, optimized)
 make stop        # Stop all running services
 make up / down   # Build/stop the production Docker stack (browser at localhost:2026)
-make dual-frontend-production-check  # React-default/Vue-hostname nginx/compose contracts
 make docker-start / docker-stop / docker-logs   # Docker development environment
 ```
+
+Docker log and restart commands resolve `DEER_FLOW_ROOT` from the current
+checkout before invoking Compose, matching the start and stop commands.
 
 Run `make help` for the full list.
 
@@ -148,57 +147,24 @@ cd frontend && pnpm dev       # Dev server with Turbopack (port 3000)
 cd frontend && pnpm check     # Lint + type check (run before committing)
 cd frontend && pnpm test      # Unit tests
 
-# Vue migration workspace (Makefile is the only developer command surface)
-cd frontend-vue && make dev       # Nuxt dev server (port 3100)
-cd frontend-vue && make verify    # lint + format + types + unit + build
-cd frontend-vue && make migration-check  # provenance/test migration ledger consistency
-cd frontend-vue && make consumer-check   # pack/install/typecheck minimal agent-core consumer
-cd frontend-vue && make header-check     # six-part headers; provenance COPIED files are excluded
-cd frontend-vue && make e2e-m0    # repository-runnable M0 gate suite
-cd frontend-vue && make e2e-m4a   # M4a data-flow gate (send/stream/stop/reload ordering)
-cd frontend-vue && make e2e-m4a-stream  # M4a real chunked-SSE gate (heartbeat/resume cursor/gap)
-cd frontend-vue && make e2e-m4b   # exact M4b general-Agent UI gate (11 specs / 66 tests)
-cd frontend-vue && make e2e-m5    # exact M5 artifacts/changes/sidecar gate (6 specs / 27 tests)
-cd frontend-vue && make e2e-m5-real-backend  # replay Gateway write_file → artifact gate
-cd frontend-vue && make e2e-m6    # exact M6 remaining-L3 gate (8 specs / 27 tests)
-cd frontend-vue && make e2e-m6-real-backend  # real Gateway browser REST/WS → binary frame gate
-cd frontend-vue && make e2e-m7-list  # exact Vue-owned 25-file/120-test M7 inventory
-cd frontend-vue && make e2e-m7       # exact Vue product gate; current checkout 120/120 x3
-cd frontend-vue && make e2e-m7-local # exact 1-file/8-test interaction, IME, a11y and H7/H8 gate
-cd frontend-vue && make e2e-m7-auth  # exact 1-file/7-test auth request/security gate
-cd frontend-vue && make e2e-m7-real-protocol  # replay-Gateway resume/gap/cancel browser gate
-cd frontend-vue && make e2e-m7-visual  # seven deterministic product-state screenshots
-cd frontend-vue && make asset-budget   # build + raw/gzip client asset budgets
-cd frontend-vue && make e2e-list  # collect shared contracts; does not claim pass
+# Vue migration (see frontend-vue/README.md for all gates)
+cd frontend-vue && make verify
+cd frontend-vue && make migration-check
+cd frontend-vue && make e2e-m7
 ```
 
-`make verify`, `make e2e-m0`, `make e2e-m4a` and `make e2e-m4a-stream` each start
-their own `nuxt build` and must not run concurrently.
+Rule of thumb: root `make` owns application lifecycle; module Makefiles/package commands
+own backend, React, or Vue work.
 
-`make e2e-external` holds the browser-WebSocket (G0-6) and OIDC round-trip (G0-7)
-gates. Both are hermetic — the IdP is a fixture in `frontend-vue/tests/support/` —
-but they stay outside `make e2e-m0` because they need the backend browser extra and
-a Gateway whose toolset includes `browser_navigate`, which changes the system prompt
-and would break the run-protocol replay fixture's hash.
-Local Gateway, browser, and IdP fixtures run through the shared loopback `NO_PROXY`
-wrapper, and the real-backend command fixes the Vue frontend port at 3101. See
-document 10 for the latest measured results instead of guessing from a stale artifact.
-
-Rule of thumb: **root `make` = application lifecycle**; **`backend/Makefile`,
-`frontend/` (`pnpm`), and `frontend-vue/Makefile` = per-module work.**
-
-Host-side pnpm consumers, including both frontend workspaces and local diagnostic
-scripts, must run through `scripts/pnpm.py`. It accepts only
-`--dir frontend|frontend-vue`, defaults to `frontend`, preserves direct
-`pnpm`/`pnpm.cmd` priority, and falls back to `corepack pnpm`. Corepack runs from
-the selected workspace so each frontend honors its own pinned package manager.
+Host pnpm consumers use `scripts/pnpm.py`; `--dir frontend|frontend-vue` selects the
+workspace. It resolves absolute paths, prefers direct `pnpm`/`pnpm.cmd`, and otherwise
+runs Corepack from the selected workspace so its pinned package manager is honored.
 
 ## Where to Go Next
 
 - Backend work → **[backend/AGENTS.md](backend/AGENTS.md)**
 - Frontend work → **[frontend/AGENTS.md](frontend/AGENTS.md)**
-- Vue migration current status/next task → **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**
-- Vue migration frozen design/index → **[frontend-vue-build-docs/README.md](frontend-vue-build-docs/README.md)**
+- Vue migration → **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**
 - Setup & install → **[Install.md](Install.md)**, **[CONTRIBUTING.md](CONTRIBUTING.md)**
 - Project overview & usage → **[README.md](README.md)** (translations: `README_zh.md`,
   `README_ja.md`, `README_fr.md`, `README_ru.md`)
@@ -210,20 +176,9 @@ the selected workspace so each frontend honors its own pinned package manager.
 
 These apply repo-wide; module guides own the module-specific detail.
 
-- **Picking up in-flight work** — run `make handoff-check` first. It prints uncommitted
-  changes, recent commits, each Playwright suite's last recorded status with its age, and
-  the evidence documents. **Treat a previous session's written summary as a claim, not a
-  result**: reproduce the gate before building on it. This rule exists because a handoff
-  once recorded two M0 gates as "not executed — browser quota exhausted" while the
-  artifacts on disk read `"status": "failed"`; they had run, and the real causes were a
-  test race and a truncating stream-bridge retention window. `make handoff-check` reports
-  state only and runs no gates, so it stays fast enough to be an unconditional first step.
-- **Handing off** — commit before the session ends; uncommitted work hands over nothing,
-  and the commit message is where a root cause stays attached to the code that carries it.
-  Record milestone conclusions under `frontend-vue-build-docs/evidence/` as commands plus
-  measured numbers, and state what is red or unverified. Do not restate what `git` and the
-  code already record — the handoff's job is what they cannot hold: why an approach was
-  chosen, what was tried and rejected, and what remains unproven.
+- **Handoffs** — run `make handoff-check` before Vue work, reproduce recorded gates, and
+  commit completed work with measured evidence; prior summaries are claims, not results.
+
 - **Documentation update policy** — keep docs in sync with code: update `README.md` for
   user-facing changes and the relevant `AGENTS.md` for development/architecture changes in
   the same change set.
@@ -232,8 +187,3 @@ These apply repo-wide; module guides own the module-specific detail.
   frontend tests live in `frontend/tests/`.
 - **Format before pushing** — run `make format` (backend) / `pnpm check` (frontend). Backend
   CI enforces `ruff format --check`, so formatting must be clean before a push.
-- **Python editor analysis** — root-level `pyrightconfig.json` points pyright/basedpyright
-  at `backend/.venv` and the harness source path so opening the monorepo root in VS Code
-  resolves `deerflow.*`, backend dependencies, and pytest imports consistently. It keeps
-  type checking off by default because backend CI currently relies on ruff and pytest rather
-  than pyright/basedpyright as a strict type gate.

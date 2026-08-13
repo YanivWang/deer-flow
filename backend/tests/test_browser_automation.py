@@ -63,6 +63,7 @@ class TestSnapshotRendering:
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("public_test_dns")
 class TestBrowserTools:
     async def _patch_session(self, session):
         manager = MagicMock()

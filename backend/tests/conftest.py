@@ -7,12 +7,34 @@ issues when unit-testing lightweight config/registry code in isolation.
 from __future__ import annotations
 
 import importlib.util
+import socket
 import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+
+
+@pytest.fixture()
+def public_test_dns(monkeypatch):
+    """Resolve documentation domains to a deterministic public test address.
+
+    URL-safety unit tests must not depend on the host DNS policy. Some managed
+    networks intentionally map public domains into RFC 2544 benchmark space,
+    which production correctly rejects as reserved. Tests that mock the
+    downstream HTTP/browser client opt into this fixture explicitly.
+    """
+    original_getaddrinfo = socket.getaddrinfo
+
+    def resolve(host, port, *args, **kwargs):
+        normalized = str(host).strip().rstrip(".").lower()
+        if normalized in {"example.com", "github.com"}:
+            return [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", port or 0))]
+        return original_getaddrinfo(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", resolve)
+
 
 # Make 'app' and 'deerflow' importable from any working directory
 sys.path.insert(0, str(Path(__file__).parent.parent))

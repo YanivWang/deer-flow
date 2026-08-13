@@ -7,7 +7,8 @@ changes, sidecar, settings, browser, agents, channels, scheduled tasks, goal/mod
 and mobile surfaces are connected to the existing Gateway/data flow and aligned
 to the current React frontend. Production Compose now has a React-default and
 Vue-secondary hostname. The two historical shared-test exceptions are closed without weakening
-Vue product behavior; public deployment activation still requires target-environment resources.
+Vue product behavior. Public deployment activation is explicitly outside the current delivery
+scope and remains unrun.
 M8 freezes the private
 `@deerflow/agent-core` root API, the minimal L2 source boundary and an isolated custom-backend
 consumer; it does not publish npm or change production routing. Read
@@ -67,7 +68,9 @@ Makefile.
 The React test host must be installed before this workspace because framework-neutral shared
 specs and the Vue runner intentionally use the same physical `@playwright/test` instance.
 Framework-specific Vue behavior is selected by full path from the Vue inventory; it is not
-forced through React DOM or transition contracts:
+forced through React DOM or transition contracts. Agent chat, channels, integrations and
+thread history also have Vue-owned frozen specs, so later React-only Browser Live, Lark and
+showcase additions do not expand Vue's gate implicitly:
 
 ```bash
 python3 scripts/pnpm.py install --frozen-lockfile
@@ -150,15 +153,16 @@ The product no longer delays artifact auto-open for a listener, injects React se
 duplicates splitpanes keyboard/ARIA, or maps wire chunks again inside UI components. Production
 still requires `Content-Location` plus terminal `end` and therefore remains fail closed.
 
-Public DNS/TLS/outer-proxy/real-IdP behavior is **BLOCKED/UNRUN** because this checkout and
-machine contain no real Vue public hostname or target endpoint. A local real MiniMax Gateway
-create/stream completed successfully, but it does not prove a public target. React remains the
-default production frontend; Vue remains secondary-hostname only.
+Public DNS/TLS/outer-proxy/real-IdP behavior is **UNRUN by explicit delivery scope**. A local
+real MiniMax Gateway create/stream completed successfully, but it does not prove a public
+target. React remains the default production frontend; Vue remains secondary-hostname only.
 
 For exact commands, failure causes, the M4b/M5/M6 exit gates, and the ordered
 task plan, use
 [10-current-status-and-next.md](../frontend-vue-build-docs/10-current-status-and-next.md) and
 [the final M7 evidence](../frontend-vue-build-docs/evidence/m7-vue-gate-final-closure.md).
+The subsequent `origin/main` merge and independent-gate evidence is recorded in
+[main-merge-2026-08-14.md](../frontend-vue-build-docs/evidence/main-merge-2026-08-14.md).
 Dual-frontend operations and rollback are documented in
 [dual-frontend-production.md](../docs/dual-frontend-production.md); DNS/TLS and
 target-environment validation remains mandatory before publicly activating Vue. The

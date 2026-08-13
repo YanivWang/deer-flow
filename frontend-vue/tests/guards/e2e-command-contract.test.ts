@@ -156,7 +156,7 @@ describe("M6 inventory and browser contract", () => {
 });
 
 describe("Vue M7 gate ownership", () => {
-  it("keeps the exact 25-file / 120-test gate but owns framework-specific artifact specs", () => {
+  it("keeps the exact 25-file / 120-test gate and owns framework-specific specs", () => {
     expect(m7Inventory.expectedFileCount).toBe(25);
     expect(m7Inventory.expectedTestCount).toBe(120);
     expect(m7Inventory.specFiles).toHaveLength(25);
@@ -172,6 +172,15 @@ describe("Vue M7 gate ownership", () => {
     expect(m7Inventory.specFiles).not.toContain(
       "frontend/tests/e2e/artifact-panel-resize.spec.ts",
     );
+    for (const spec of [
+      "agent-chat.spec.ts",
+      "channels.spec.ts",
+      "integrations.spec.ts",
+      "thread-history.spec.ts",
+    ]) {
+      expect(m7Inventory.specFiles).toContain(`frontend-vue/tests/m7/${spec}`);
+      expect(m7Inventory.specFiles).not.toContain(`frontend/tests/e2e/${spec}`);
+    }
     expect(makefile).toContain("playwright test -c playwright.m7.config.ts");
     expect(vueWorkflow).toContain("run: make e2e-m7");
     expect(m7Config).toContain("retries: 0");

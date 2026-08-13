@@ -160,7 +160,11 @@ def main():
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=600) as resp:
+        # The broker is an operator-controlled local/internal endpoint. Never
+        # route credential-bearing broker traffic through environment or system
+        # proxies, which can also break loopback access on proxied hosts.
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(req, timeout=600) as resp:
             body = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = ""

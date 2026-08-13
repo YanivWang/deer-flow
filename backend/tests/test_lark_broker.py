@@ -8,7 +8,6 @@ import os
 import subprocess
 import sys
 import textwrap
-import urllib.request
 from http.client import HTTPConnection
 from pathlib import Path
 
@@ -149,8 +148,11 @@ def test_exec_endpoint_rejects_invalid_body(broker_server) -> None:
 
 def test_health_endpoint(broker_server) -> None:
     host, port = broker_server
-    with urllib.request.urlopen(f"http://{host}:{port}/v1/health", timeout=5) as resp:
-        assert json.loads(resp.read().decode())["ok"] is True
+    conn = HTTPConnection(host, port, timeout=5)
+    conn.request("GET", "/v1/health")
+    resp = conn.getresponse()
+    assert json.loads(resp.read().decode())["ok"] is True
+    conn.close()
 
 
 def test_exec_endpoint_returns_500_json_on_unexpected_error(broker_server, monkeypatch) -> None:
