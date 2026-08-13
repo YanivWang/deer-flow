@@ -21,7 +21,9 @@ changes enter them only after an explicit Vue implementation. The current same-r
 Showcase, Browser Live, Buzz and Lark-app-switch increment is aligned. Shared specs are limited
 to framework-neutral behavior. React stays the default frontend and Vue stays secondary. Public
 activation is explicitly outside the current delivery scope; no npm publish or production
-cutover occurred.
+cutover occurred. Vue's production container smoke owns the packaged Showcase JSON/HTML/image
+and fail-closed unknown/unlisted/traversal checks; its unit gate keeps that manifest synchronized
+with the shared React fixture directory.
 
 ## What is DeerFlow
 

@@ -24,6 +24,7 @@
   不是 GO，也不阻塞本次仓库合并。
 
 本轮逐项映射、命令、三连时间、warnings 和目标环境边界见
+[最终 React/Vue 门禁 evidence](evidence/react-vue-final-gates-2026-08-14.md)。功能迁移过程见
 [React parity 收口 evidence](evidence/react-parity-closure-2026-08-14.md)。历史 118/120 根因见
 [M7 Vue 最终收口 evidence](evidence/m7-vue-gate-final-closure.md)。
 
@@ -62,7 +63,7 @@ L1/L2/L3 边界保持：
 
 | 命令/范围 | 当前结果 | 边界 |
 | --- | --- | --- |
-| `make verify` | **通过**；110 files / 1101 tests；lint 0 errors/38 warnings | unit/type/build/i18n/OpenAPI/header/provenance |
+| `make verify` | **通过**；110 files / 1102 tests；lint 0 errors/38 warnings | unit/type/build/i18n/OpenAPI/header/provenance；Showcase manifest 与共享 fixture 同步 |
 | `make migration-check` | **通过**；58 generated tests、24 `RETYPED` | 迁移账本，不是 E2E |
 | `make e2e-m4a` | **4/4** | send/stream/stop/reload |
 | `make e2e-m4a-stream` | **3/3** | chunked SSE、heartbeat、resume cursor/gap |
@@ -72,18 +73,25 @@ L1/L2/L3 边界保持：
 | `make e2e-m6` | **8 files / 30 tests，30/30** | Integrations 使用 Vue-owned spec；其余框架无关合同共享 |
 | `make e2e-m6-real-backend` | **1/1** | Gateway browser REST/WS → binary frame |
 | `make e2e-m7-list` | **25 files / 130 tests** | 精确完整路径 inventory |
-| `make e2e-m7` | **130/130 × 3 连续** | 移除新增显式 timeout 后 33.7s、33.8s、33.7s；0 retries |
+| `make e2e-m7` | **130/130 × 3 连续** | 2026-08-14 最终 checkout：50.4s、49.9s、53.1s；0 retries |
+| `make e2e-m7-local` | **8/8** | sidebar/IME/a11y/H7-H8 |
+| `make e2e-m7-auth` | **7/7** | auth request/security |
 | `make e2e-m7-real-protocol` | **1/1** | create/resume/heartbeat/cancel/gap/recovery |
 | `make e2e-real-backend` | **3/3** | auth-disabled、multi-run order、real render |
+| `make e2e-m7-visual` | **7/7** | 七个确定性产品状态；baseline 未变化 |
+| `make e2e-external` | **browser WS 1/1、fixture OIDC 2/2** | hermetic，不是公网 IdP/runtime |
 | `make asset-budget` | **通过**；CodeMirror 0；vendor-ui max 46.7 KiB | Integrations 按需加载后通过原预算 |
+| `make container-smoke` | **通过** | non-root/health/SIGTERM + Showcase 生产镜像资源、HTTP 正负路径 |
+| 根 `make dual-frontend-production-check` | **30/30** | React default / Vue secondary 路由合同 |
 
 本次 main 合并的 React 来源侧回归：`pnpm check` 通过；相关 Rstest **6 files / 115 tests**；
 agent-chat/channels/integrations/thread-history Playwright **40/40**。更早的 artifact preview +
 sidecar **17/17**、React 自有 batched + resize/transition **7/7** 和 real-backend multi-run
 **1/1** 仍保留为历史修复证据。
 
-未在本轮重跑：fixture IdP/browser `e2e-external`、container smoke、七状态 visual。它们未被
-当前代码范围修改，也没有被拿来冒充公网目标环境结果。
+本轮额外把 Vue Showcase allowlist/artifact manifest 与 React 共享 fixture 目录逐文件钉住，并
+把生产镜像内 JSON/HTML/image、artifact redirect、unknown/unlisted/traversal 404 加入 container
+smoke。它们只加固发布包证据，不改变产品运行语义。
 
 ## 5. 真实运行环境结论
 
@@ -111,7 +119,9 @@ sidecar **17/17**、React 自有 batched + resize/transition **7/7** 和 real-ba
   重跑。M6 初次仍引用 React Integrations 文本定位，两个合法同文案节点导致 strict-mode
   失败；切换到等价 Vue-owned 6-test spec 后 30/30。没有删产品状态、sleep、retry 或扩大 timeout。
 - 最终 verify 首轮发现 M6 guard 仍写死 27；同步守卫到 30 并明确排除 React Integrations
-  spec 后完整 1101/1101 通过。
+  spec 后通过；本轮新增 Showcase 同步合同后最终为 1102/1102。
+- container smoke 补强后首次因 `curl | grep -q` 在 `pipefail` 下产生 curl broken pipe（exit
+  23）；让 grep 消费完整响应后通过，没有 sleep、retry、timeout 或产品补丁。
 - 资产首次为 `vendor-ui.maxRaw 62388 > 60000`；没有调预算，改为按需加载 Integrations，最终
   max 46.7 KiB。
 - 本机 `make doctor` 非绿：native nginx 未安装，`config.yaml` v31 < v32，web_capture 未配置；

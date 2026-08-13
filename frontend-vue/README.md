@@ -143,12 +143,16 @@ splitpanes fixtures; they return 404 in normal production configuration.
 
 ## Current verification boundary
 
-The current checkout passes `make verify` with 110 Vitest files / 1101 tests,
+The current checkout passes `make verify` with 110 Vitest files / 1102 tests,
 `make migration-check`, M4a 4/4, chunked SSE 3/3, M4b 73/73, M5 27/27,
 M6 30/30, real-Gateway artifact 1/1, browser binary-frame 1/1,
 replay-Gateway resume/heartbeat/cancel/gap 1/1, real-backend 3/3 and the asset hard budgets.
 The exact Vue M7 inventory is 25 files / 130 tests and passed **130/130 in three consecutive
-full runs** with zero retries.
+full runs** with zero retries. The local interaction and auth gates pass 8/8 and 7/7; the
+seven-state visual gate, fixture-IdP/browser external gate, production container smoke and
+React-default/Vue-secondary routing contract also pass. Container smoke now verifies that all
+allowlisted Showcase JSON/HTML/image assets ship and that unknown, unlisted and traversal paths
+fail closed.
 
 The historical 118/120 exceptions are closed structurally. Vue owns the protocol-complete
 batched-stream and native splitpanes panel specs; framework-neutral React specs remain shared.
@@ -168,6 +172,8 @@ The subsequent `origin/main` merge and independent-gate evidence is recorded in
 [main-merge-2026-08-14.md](../frontend-vue-build-docs/evidence/main-merge-2026-08-14.md).
 The explicit React-to-Vue feature-parity closure is recorded in
 [react-parity-closure-2026-08-14.md](../frontend-vue-build-docs/evidence/react-parity-closure-2026-08-14.md).
+The final full-matrix rerun and strengthened production-image evidence is recorded in
+[react-vue-final-gates-2026-08-14.md](../frontend-vue-build-docs/evidence/react-vue-final-gates-2026-08-14.md).
 Dual-frontend operations and rollback are documented in
 [dual-frontend-production.md](../docs/dual-frontend-production.md); DNS/TLS and
 target-environment validation remains mandatory before publicly activating Vue. The

@@ -373,6 +373,8 @@ React-default/Vue-secondary production hostname, fixture-IdP concurrent OIDC, fo
 effects, a seven-state visual gate and a client asset budget. Public
 DNS/TLS/outer-proxy/real-IdP validation is **UNRUN by explicit delivery scope**; it is not
 inferred from local fixtures or the successful local real-provider probe.
+The production container smoke also pins every allowlisted Showcase fixture into the image,
+checks its JSON/HTML/image HTTP paths, and rejects unknown, unlisted and traversal paths.
 The existing command above is unchanged and still starts the React frontend. For
 Vue migration development, use one of the explicit alternatives:
 
