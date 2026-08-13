@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     管理 DeerFlow integration provider 连接。
+  【对应 frontend/】 src/components/workspace/settings/integrations-settings.tsx
+  【架构位置】     L3
+  【主要导出】     默认 IntegrationsSettings 组件
+  【依赖关系】     integrations APIs · settings dialog
+  【边界与注意】   provider 专有配置，不属于 L2。
+*/
 import { onMounted, ref } from "vue";
 
 import {

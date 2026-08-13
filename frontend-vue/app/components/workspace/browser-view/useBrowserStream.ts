@@ -1,3 +1,12 @@
+/*
+  【文件职责】     管理 browser-view WebSocket 生命周期、状态和输入转发。
+  【对应 frontend/】 src/components/workspace/browser-view/hooks.ts
+  【架构位置】     L3
+  【主要导出】     useBrowserStream
+  【依赖关系】     browser-api · frame-buffer · Vue lifecycle
+  【边界与注意】   每个面板独立实例；不得变成模块级连接单例。
+*/
+
 import { onBeforeUnmount, ref, watch, type Ref } from "vue";
 
 import { browserStreamURL } from "./browser-api";

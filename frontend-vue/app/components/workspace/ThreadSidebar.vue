@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     DeerFlow thread 导航、搜索、分页、重命名与移动端侧栏。
+  【对应 frontend/】 src/components/workspace/sidebar.tsx
+  【架构位置】     L3
+  【主要导出】     默认 ThreadSidebar 组件
+  【依赖关系】     threads store/API · workspace routes
+  【边界与注意】   业务导航壳，不属于通用 agent UI 契约。
+*/
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   Bot,

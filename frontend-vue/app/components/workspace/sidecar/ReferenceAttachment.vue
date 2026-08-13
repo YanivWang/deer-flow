@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     显示 sidecar 消息选区引用附件。
+  【对应 frontend/】 src/components/workspace/sidecar/reference-attachment.tsx
+  【架构位置】     L3 extension reference
+  【主要导出】     默认 ReferenceAttachment 组件
+  【依赖关系】     useSidecar SidecarReference
+  【边界与注意】   sidecar 专有引用形状，不进入 L2。
+*/
 import { MessageSquareQuote, X } from "lucide-vue-next";
 
 import type { SidecarReference } from "@/composables/useSidecar";

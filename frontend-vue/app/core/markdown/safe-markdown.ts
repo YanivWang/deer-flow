@@ -1,7 +1,7 @@
 /*
   【文件职责】     渲染前的 markdown 归一化入口：嵌套截断 + LaTeX 定界符归一化。
   【对应 frontend/】 frontend/src/core/streamdown/safe-children.ts（34 行 React）
-  【架构位置】     L2 候选 —— 渲染层
+  【架构位置】     L2 —— 通用渲染层
   【主要导出】     getSafeMarkdown
   【依赖关系】     ../streamdown/preprocess（COPIED，逐字节与上游一致）
   【边界与注意】   上游那 34 行里有 30 行是 React：`ComponentProps<typeof Streamdown>` 的

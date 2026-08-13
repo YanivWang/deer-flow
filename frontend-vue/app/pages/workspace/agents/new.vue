@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     创建 DeerFlow custom agent。
+  【对应 frontend/】 src/app/workspace/agents/new/page.tsx
+  【架构位置】     L3 application page
+  【主要导出】     默认 new agent page
+  【依赖关系】     agents API · workspace routing
+  【边界与注意】   agent 管理业务，不属于 L2。
+*/
 import { ref } from "vue";
 
 import AgentChat from "@/components/chat/AgentChat.vue";

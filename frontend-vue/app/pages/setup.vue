@@ -1,3 +1,12 @@
+<!--
+  【文件职责】     提供 Gateway 首次初始化与管理员密码设置页面。
+  【对应 frontend/】 src/app/setup/page.tsx
+  【架构位置】     L3 application page
+  【主要导出】     默认 setup page
+  【依赖关系】     Gateway auth setup API
+  【边界与注意】   保留 CSRF/auth 安全边界；不属于 L2。
+-->
+
 <!-- M7 auth setup surface; mirrors the Gateway's initialize/change-password contracts. -->
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";

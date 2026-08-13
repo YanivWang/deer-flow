@@ -1,3 +1,12 @@
+/*
+  【文件职责】     为 channel 组件加载、轮询并更新连接状态。
+  【对应 frontend/】 src/core/channels/hooks.ts
+  【架构位置】     L3 Vue adapter
+  【主要导出】     useChannels
+  【依赖关系】     core/channels APIs · Vue refs
+  【边界与注意】   应用级 channel adapter，不进入 L1/L2。
+*/
+
 import { readonly, ref } from "vue";
 
 import {

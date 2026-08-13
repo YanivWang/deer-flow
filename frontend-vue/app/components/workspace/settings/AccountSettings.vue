@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     管理当前用户账号资料与密码。
+  【对应 frontend/】 src/components/workspace/settings/account-settings.tsx
+  【架构位置】     L3
+  【主要导出】     默认 AccountSettings 组件
+  【依赖关系】     Gateway auth/account APIs
+  【边界与注意】   保留 HttpOnly/CSRF 边界，不进入 L2。
+*/
 import { onMounted, ref } from "vue";
 
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";

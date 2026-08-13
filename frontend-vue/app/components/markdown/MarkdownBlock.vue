@@ -2,7 +2,7 @@
 /*
   【文件职责】     渲染一个 markdown 块：管线 → hast →（可选切词）→ vnode。
   【对应 frontend/】 streamdown 内部的 `Block` 组件
-  【架构位置】     L2 候选 —— 渲染层组件
+  【架构位置】     L2 —— 通用渲染层组件
   【主要导出】     默认组件
   【依赖关系】     @/core/markdown/{pipeline,render}
   【边界与注意】   写成「setup 返回渲染函数」而不是 `<template>`：产物是

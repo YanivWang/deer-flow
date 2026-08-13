@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     DeerFlow browser-view 导航、画面和远端输入面板。
+  【对应 frontend/】 src/components/workspace/browser-view/browser-view.tsx
+  【架构位置】     L3
+  【主要导出】     默认 BrowserPanel 组件
+  【依赖关系】     useBrowserStream · browser API · WorkspacePanels
+  【边界与注意】   保留 I1-I5 与二进制帧边界；不进入 L2。
+*/
 import { computed, ref } from "vue";
 import { ArrowLeft, ArrowRight, Monitor, X } from "lucide-vue-next";
 

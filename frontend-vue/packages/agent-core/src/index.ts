@@ -11,7 +11,7 @@
                    新增导出等于扩大对外承诺，改这里要当接口变更看。
 */
 
-export const AGENT_CORE_CONTRACT_VERSION = "m2" as const;
+export const AGENT_CORE_CONTRACT_VERSION = "m8" as const;
 
 export type { AgentErrorKind } from "./errors";
 export {

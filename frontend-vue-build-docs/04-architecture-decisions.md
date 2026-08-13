@@ -358,7 +358,9 @@ Composable 的自动导入（`app/composables/`）保留。
 | **【架构位置】L1/L2/L3**       | [08](08-agent-core-contract.md) 要求 L2 边界在 M4b / M5 逐模块抽。没有标记就得靠回忆挑文件，而"L2 会被磨掉"正是 [06 风险登记](06-migration-plan.md#风险登记)里的一条 |
 | **【边界与注意】写不变式编号** | [05-invariants.md](05-invariants.md) 有 A–N 共 14 组。约束散在文档里、代码里没有痕迹，改动时不会有人回去查。写上 `B4`、`H6` 这类编号，改到该文件的人才看得见         |
 
-不需要像参照项目那样上一整套 `docs-sync` 校验（130 个文件的 manifest + claims 抽取 + 批次报告，对本项目太重）。**先靠 review 保证，等到 M8 收口时若发现漏得多，再补一个"检查每个文件是否有头注释"的最小脚本即可。**
+不需要像参照项目那样上一整套 `docs-sync` 校验（130 个文件的 manifest + claims 抽取 + 批次报告，对本项目太重）。M8 实测 238 个 app/L1 源码里有 52 个非 `COPIED`
+文件缺头，因此新增最小 `scripts/check-file-headers.mjs` 并接入 `make verify`；它只检查
+六个标签是否存在，不建立第二份 claims/manifest。
 
 ### ⚠️ 但 `app/core/` 的 `COPIED` 集必须有机器守护
 
@@ -392,9 +394,9 @@ Composable 的自动导入（`app/composables/`）保留。
 
 - **需要给某个 `COPIED` 文件加头，等于承认它不再是 `COPIED`。** 走降级流程：
   改标 `RETYPED` / `ADAPTED`，在 `PROVENANCE.md` 写明理由。**不要改 baseline 让守护变绿。**
-- **§341 说的那个「M8 补一个检查每个文件是否有头注释」的最小脚本，必须跳过 `class=COPIED`**
-  （分类从 `PROVENANCE.md` 读）。否则它会把这 85 个文件全报成缺头。
-  在那个脚本写出来之前，文件头只靠 review——本裁决因此只能写在文档里，代码里没有痕迹。
+- **M8 的 `scripts/check-file-headers.mjs` 必须跳过 `class=COPIED`**（分类从
+  `PROVENANCE.md` 读）。当前直接证据是 154 个本仓维护源码通过、84 个 `COPIED` 文件
+  被跳过；脚本不写/刷新 baseline，也不修改 `COPIED` 文件。
 
 ---
 

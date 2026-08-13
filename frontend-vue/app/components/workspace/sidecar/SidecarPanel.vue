@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     运行与父 thread 隔离的 DeerFlow sidecar 隐藏会话。
+  【对应 frontend/】 src/components/workspace/sidecar/sidecar-panel.tsx
+  【架构位置】     L3 extension reference
+  【主要导出】     默认 SidecarPanel 组件
+  【依赖关系】     useThreadStream · sidecar API · MessageList
+  【边界与注意】   复用唯一 session 状态机；作为 L2 扩展点的子会话参考实现。
+*/
 import {
   computed,
   onBeforeUnmount,

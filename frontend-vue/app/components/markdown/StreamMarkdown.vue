@@ -2,7 +2,7 @@
 /*
   【文件职责】     流式 markdown 的顶层组件：分块、逐块渲染、错误边界。
   【对应 frontend/】 `streamdown` 的 `<Streamdown>` + `ai-elements/streamdown.tsx` 的错误边界
-  【架构位置】     L2 候选 —— 渲染层组件
+  【架构位置】     L2 —— 通用渲染层组件
   【主要导出】     默认组件
   【依赖关系】     @/core/markdown/{blocks,plugins} · ./MarkdownBlock.vue · remend
   【边界与注意】   ① **错误边界必须在这一层，不能在 MarkdownBlock 自己身上。**

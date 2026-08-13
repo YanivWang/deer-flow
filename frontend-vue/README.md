@@ -1,14 +1,15 @@
 # DeerFlow Vue frontend
 
 This Nuxt 4 workspace is the Vue frontend that coexists with `../frontend` and
-shares the Gateway. **Current migration cursor: M7 is conditionally closed;
-M8 has not started.** The chat workspace, artifacts, workspace
+shares the Gateway. **Current migration cursor: M8 reusable contracts are complete;
+M7 remains conditionally closed.** The chat workspace, artifacts, workspace
 changes, sidecar, settings, browser, agents, channels, scheduled tasks, goal/mode,
 and mobile surfaces are connected to the existing Gateway/data flow and aligned
 to the current React frontend. Production Compose now has a React-default and
 Vue-secondary hostname. Two governed shared-test exceptions remain visible, and public
-deployment activation still requires target-environment validation; all M8 reuse work remains
-separately gated. Read
+deployment activation still requires target-environment validation. M8 freezes the private
+`@deerflow/agent-core` root API, the minimal L2 source boundary and an isolated custom-backend
+consumer; it does not publish npm or change production routing. Read
 [the current status and next-step record](../frontend-vue-build-docs/10-current-status-and-next.md)
 before continuing migration work; milestone evidence is historical, not the
 current status source.
@@ -21,6 +22,7 @@ make dev       # http://localhost:3100
 make verify
 make migration-check
 make consumer-check
+make header-check
 make e2e-m0
 make e2e-m4a
 make e2e-m4a-stream
@@ -42,6 +44,10 @@ make e2e-m7-visual  # seven deterministic product-state screenshots
 make asset-budget  # build + raw/gzip client asset budgets
 make e2e-list  # collects the shared M1+ business contract; does not claim it passes
 ```
+
+For another project's workspace/tarball setup, custom `RunProtocol` + `EventReducer` + message
+adapter example, L2 seams and the complete L3 replacement checklist, read
+[REUSE.md](REUSE.md). The package is private and has not been published to npm.
 
 `make e2e-external` holds the browser-runtime WebSocket (G0-6) and the
 controlled fixture-IdP OIDC dual callback (G0-7). They are kept out of
@@ -128,15 +134,16 @@ splitpanes fixtures; they return 404 in normal production configuration.
 
 ## Current verification boundary
 
-The M7 closing checkout passes its current 108-file / 1088-test unit suite and
-`make migration-check`. Current-window external fixture evidence is WebSocket 1/1 and
-concurrent dual-host OIDC 2/2. The exact M4b suite passed 66/66. Three consecutive M5 full
-runs are 26/27 because the shared transition listener can be installed after the product
+The M8 closing checkout passes its current 108-file / 1092-test unit suite,
+`make migration-check` and the isolated custom-backend consumer. The M8 risk-gate window has
+M4a 4/4, chunked SSE 3/3, M4b 66/66, M5 27/27, real-Gateway artifact 1/1,
+resume/gap/cancel 1/1 and real-backend 3/3. Historical M7-era M5 full runs were 26/27 because
+the shared transition listener could be installed after the product
 has already auto-opened the artifact; the local protocol-correct artifact test and business
 artifact replay gate passed.
 The exact M6 suite passed 27/27, the M6 real-Gateway browser gate passed 1/1,
 and the corrected real-backend suite passed 3/3. The exact M7 inventory is
-25 files / 120 tests; its current execution is **118/120**, not green. The two reds are
+25 files / 120 tests; its most recent full execution is **118/120**, not green. The two reds are
 the protocol-incomplete batched-stream fixture and the artifact transition-listener race.
 The independent Vue-owned M7 inventories are sidebar/IME/a11y/H7-H8 **8/8**
 and auth request/security **7/7**; the reused replay-Gateway resume/gap/cancel
@@ -149,7 +156,7 @@ Those results do **not** mean every later-milestone shared business contract pas
 `make e2e-list` only collects; `make e2e-m7` executes the frozen collection.
 M7 is conditionally closed because its repository-owned hard exits are directly evidenced.
 Public DNS/TLS/outer-proxy/real-IdP behavior remains unverified and is still a release
-activation gate; Vue is not the default production frontend. M8 has not started. M5's
+activation gate; Vue is not the default production frontend. M8 reusable contracts are complete. M5's
 `artifact-batched-stream` gate uses a local protocol-correct equivalent because
 the shared React fixture omits the real Gateway's required `Content-Location`
 and terminal `end`; production remains fail closed.

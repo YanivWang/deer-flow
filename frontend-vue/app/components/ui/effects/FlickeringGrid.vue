@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     渲染按帧更新的闪烁网格背景。
+  【对应 frontend/】 src/components/ui/flickering-grid.tsx
+  【架构位置】     L3 product UI
+  【主要导出】     默认 FlickeringGrid 组件
+  【依赖关系】     Vue lifecycle · ./flickering-grid
+  【边界与注意】   M7 视觉效果，不进入 M8 L2 公共集合。
+*/
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import {

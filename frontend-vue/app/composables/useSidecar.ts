@@ -3,6 +3,7 @@
   【对应 frontend/】 frontend/src/components/workspace/sidecar/context.tsx
   【架构位置】     L3（DeerFlow sidecar）
   【主要导出】     useSidecar
+  【依赖关系】     core/sidecar · thread submit context · AgentChat/SidecarPanel
   【边界与注意】   sidecar thread 与主 thread 隔离；切换主 thread 立即清场并
                    immediate 恢复，强制恢复会清掉后端已删除的缓存 id。
 */

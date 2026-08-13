@@ -2,7 +2,7 @@
 /*
   【文件职责】     `pre` 槽位的覆盖：把围栏代码块分派给代码块 UI 或 mermaid 图。
   【对应 frontend/】 `streamdown` 内部的 code / mermaid 插件分派
-  【架构位置】     L2 候选 —— 渲染层组件
+  【架构位置】     L2 —— 通用渲染层组件
   【主要导出】     默认组件
   【依赖关系】     ./CodeBlock.vue · ./MermaidDiagram.vue
   【边界与注意】   语言与源码从 **hast 节点**读，不从 vnode 子树读。

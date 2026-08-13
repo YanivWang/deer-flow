@@ -2,7 +2,7 @@
   【文件职责】     Markdown 管线的插件与预设：可搬的 rehype 插件、Streamdown 的内建插件等价物、
                    以及三套插件组合（默认 / 应用 / 带 raw HTML）。
   【对应 frontend/】 frontend/src/core/streamdown/plugins.ts（只有 rehypeStreamingListItems 可搬）
-  【架构位置】     L2 候选 —— 渲染层，不认识任何 DeerFlow 业务概念
+  【架构位置】     L2 —— 通用渲染层，不认识任何 DeerFlow 业务概念
   【主要导出】     rehypeStreamingListItems · remarkHtmlToText · remarkCodeMeta ·
                    streamdownSanitizeSchema · hardenOptions · katexOptions ·
                    defaultRemarkPlugins / defaultRehypePlugins / appRemarkPlugins /

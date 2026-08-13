@@ -1,8 +1,9 @@
 # 08 · Agent 内核与 DeerFlow 协议契约
 
-> **状态：合同已冻结，M2/M4a 已实现对应内核与数据流。** Nuxt proxy 下的
-> create/resume/cancel/gap/heartbeat 已有 M0/M4a gate；M4b 产品消费链仍未完成。
-> 当前红绿与下一步见 [10-current-status-and-next.md](10-current-status-and-next.md)。
+> **状态：M8 已冻结 L1 公共入口与最小 L2 源码边界。** Nuxt proxy 下的
+> create/resume/cancel/gap/heartbeat 已有 M0/M4a/真实协议 gate；M4b 通用聊天消费链、
+> M5 artifacts/sidecar 扩展链和 M7 readiness 均已实现。当前红绿与下一步见
+> [10-current-status-and-next.md](10-current-status-and-next.md)。
 > 新运行证据若与本文不同，必须先修订合同和测试，不能边写组件边猜协议。
 >
 > 本文是 `frontend-vue` 的 L1/L3 边界唯一来源。目录结构、里程碑、测试和运行文档不得另造一套接口。
@@ -21,7 +22,7 @@ L1 解决通用问题：SSE 分帧、连接生命周期、消息归并、可观�
 | 层                    | 目录                                                           | 职责                                                         | 何时完成             |
 | --------------------- | -------------------------------------------------------------- | ------------------------------------------------------------ | -------------------- |
 | **L1 · agent-core**   | `frontend-vue/packages/agent-core/`                            | 框架与协议无关的 transport、session、reducer、external store | M2                   |
-| **L2 · agent-ui-kit** | `app/core/markdown/`、`app/components/elements/`、通用消息组件 | 通用 UI 行为和扩展点                                         | M4b/M5 抽取，M8 收口 |
+| **L2 · agent UI contract** | `app/core/markdown/`、`app/components/markdown/`、`app/components/ui/button/`、已证明的聊天行为契约 | 可独立复用的 UI 源码，以及仍需宿主 adapter 的通用行为 | M4b/M5 抽取，M8 收口 |
 | **L3 · deerflow**     | `app/core/agent-deerflow/` 及 DeerFlow 业务目录                | Gateway 协议、Pinia/Nuxt 绑定和业务状态                      | M4a 起               |
 
 依赖方向：
@@ -65,6 +66,20 @@ agent-core ──✗──→ Vue / Nuxt / Pinia / LangGraph / DeerFlow 业务�
 >
 > 它**不进 `make verify`**：要联网装 typescript/esbuild，而 verify 必须能离线跑。
 > 里程碑收口与改动 `packages/agent-core/package.json` 时必须跑一次。
+
+### M8 公共入口冻结
+
+M8 将 `AGENT_CORE_CONTRACT_VERSION` 提升为 `m8`，并冻结以下规则：
+
+- `package.json#exports` 只有 `.`；包外只能从 `@deerflow/agent-core` 根入口消费；
+- tarball 只包含 `src/` 与 manifest，不携带 tests/tsconfig；
+- 包保持 `private: true`，当前没有发布 npm；
+- `packages/agent-core/tests/architecture.test.ts` 解析 `src/index.ts` 并对全部 value/type
+  export 做精确快照。新增、删除或改名必须作为公共契约变更同步测试、consumer 与文档；
+- M8 没有为了文档扩大导出；冻结的是 M2-M7 已有实现和测试持续消费的入口。
+
+公共 API 的分组清单与隔离安装方式见
+[`frontend-vue/REUSE.md`](../frontend-vue/REUSE.md#3-frozen-l1-api-contract-version-m8)。
 
 ## L1 禁入清单
 
@@ -474,6 +489,50 @@ M2 的长期门禁必须同时包含前 3 类；第 4 类进入专门的 real-ba
 >
 > 这条警告是补出来的：M1 有一个窗口正是读了上面那句就把 SDK 装了进去，回退过程见 [evidence/m1-retyped-landing.md](evidence/m1-retyped-landing.md#订正装-sdk-是错的)。
 
+## M8 L2 正式契约
+
+### 独立源码集合
+
+M8 没有新建 `packages/agent-ui-kit`。真实依赖图只证明以下文件能脱离 DeerFlow 产品
+接线复用：
+
+- `app/core/markdown/**`；
+- `app/components/markdown/**`；
+- `app/components/ui/button/**`；
+- `app/lib/utils.ts`（Button variants 的纯工具依赖）。
+
+这些文件的文件头已从 “L2 候选” 改为正式 `L2`。`tests/architecture.test.ts` 冻结精确
+文件集合，并禁止它们 import DeerFlow protocol/API/artifact/auth/channel/config/model/settings/
+sidecar/skill/task/thread/upload、workspace 组件、stores、composables 与 Nuxt runtime。
+
+Markdown 的现有 props 是公共组件接缝：content、remark/rehype plugins 和 options、元素
+components、未完成 Markdown 自愈、逐词动画与 root class。Button 保持当前 variants/sizes。
+这些接缝分别由 Markdown DOM 等价、流式、错误边界、Shiki、Mermaid 与 Button 单测支持。
+
+### 通用行为与宿主 adapter
+
+消息分组、reasoning、tool call、composer 与 human-input 已由 M4b 业务链证明，但当前实现
+不是独立 L2 源码包：
+
+| 行为 | 当前入口 | 公开接缝 | 必须由复用方替换的宿主依赖 |
+| --- | --- | --- | --- |
+| 消息/reasoning/tool | `MessageList.vue` + `core/messages/{utils,run-duration,human-input}.ts` | messages/rawMessages/streaming props；branch/regenerate/edit/humanInput/artifact/selection events | DeerFlow wire `Message`、artifact/change/sidecar/task 卡片 |
+| composer | `ChatComposer.vue` + `threads/composer-draft.ts` | thread/context/streaming props；send/stop/upload/context/goal events | skills/uploads/models/goal/polish/sidecar |
+| human input | `HumanInputCard.vue` + `core/messages/human-input.ts` | request/answered/active/pending props；submit event | DeerFlow ToolMessage 请求提取 |
+
+因此这些组件文件头明确写为 `L3 UI adapter`。复用的是已证明的 B/E/F 行为和接缝，做法是
+给新项目写自己的 wire/message adapter；不能为“看起来通用”创建第二套消息模型或状态机。
+
+### artifacts/sidecar 的反向验证
+
+`ArtifactPanel.vue` 是 L3 extension reference，并直接消费 L2 `StreamMarkdown`；架构测试
+断言这个单向引用。`MessageList` 发出 `artifact(path)`，由 `AgentChat`/panel state 接线，
+artifact 文件 API、选中项、编辑冲突和自动打开均不进入 L2。sidecar 则复用唯一
+`useThreadStream` 与 `MessageList`，证明子会话扩展不需要第二套 session 状态机。
+
+完整 L3 替换清单、最小 consumer 和升级策略见
+[`frontend-vue/REUSE.md`](../frontend-vue/REUSE.md)。
+
 ## L2 抽取时机
 
 L2 按实现反馈逐步抽取，不预先冻结所有 UI：
@@ -482,6 +541,6 @@ L2 按实现反馈逐步抽取，不预先冻结所有 UI：
 | ---- | -------------------------------------------------------------------------- |
 | M4b  | 抽消息分组、reasoning、tool call、composer、human-input、Markdown 流式接口 |
 | M5   | 用 artifacts/sidecar 反向验证扩展点                                        |
-| M8   | 冻结公共导出、consumer 示例和迁移指南                                      |
+| M8   | 已冻结公共导出、consumer 示例、L2 依赖方向和迁移指南                       |
 
 每次抽取只移动已经被 React 基线、Vue 实现和共享 E2E 同时证明过的行为，禁止为了“通用”提前发明业务接口。

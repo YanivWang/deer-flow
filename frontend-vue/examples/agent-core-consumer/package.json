@@ -1,0 +1,13 @@
+{
+  "name": "agent-core-consumer-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@deerflow/agent-core": "file:./deerflow-agent-core.tgz"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "typescript": "^5.8.2"
+  }
+}

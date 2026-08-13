@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     管理 DeerFlow skill 启用状态与详情。
+  【对应 frontend/】 src/components/workspace/settings/skill-settings.tsx
+  【架构位置】     L3
+  【主要导出】     默认 SkillSettings 组件
+  【依赖关系】     skills APIs · settings dialog
+  【边界与注意】   skill 是 L1 禁入业务概念，不属于 L2。
+*/
 import { computed, onMounted, ref } from "vue";
 
 import { enableSkill, loadSkills } from "@/core/skills/api";

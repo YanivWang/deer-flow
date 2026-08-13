@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     编排 DeerFlow settings 的导航与各业务面板。
+  【对应 frontend/】 src/components/workspace/settings/settings-dialog.tsx
+  【架构位置】     L3
+  【主要导出】     默认 SettingsDialog 组件
+  【依赖关系】     useSettingsDialog · settings panels
+  【边界与注意】   产品设置容器，不属于 L2。
+*/
 import { onMounted, onUnmounted, watch } from "vue";
 
 import ChannelConnections from "@/components/workspace/channels/ChannelConnections.vue";

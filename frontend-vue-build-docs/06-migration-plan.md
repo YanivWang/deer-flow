@@ -1,6 +1,6 @@
 # 06 · 执行计划
 
-> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a / M4b / M5 / M6 已关闭；M7 带条件关闭；M8 未开始。**
+> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a / M4b / M5 / M6 / M8 已关闭；M7 保持带条件关闭。**
 > 实跑红绿、VPN/端口问题与有序任务清单以
 > [10-current-status-and-next.md](10-current-status-and-next.md) 为准。本文负责冻结里程碑范围与
 > 退出条件，不以旧段落中的将来时替代当前状态。
@@ -82,7 +82,7 @@ git tag frontend-vue-baseline-v2 27a425b0
 | **M5**  | **已关闭**     | L3 第一批：artifacts + sidecar                                                            | L2 扩展点已被真实 L3 功能验证                                       |
 | **M6**  | **已关闭**     | L3 其余：设置 / 侧栏 / browser / channels                                                 | 功能面完整                                                          |
 | **M7**  | **带条件关闭** | 交互收尾 + 完整验收；仓库内硬退出项有直接证据，共享测试治理例外与目标环境激活门禁显式保留 | **功能/交互合同与关键视觉状态达成**                                 |
-| **M8**  | 未开始         | L2 契约收口                                                                               | 其他项目可上手复用                                                  |
+| **M8**  | 已关闭         | L1 根导出、最小 L2 源码边界、隔离 consumer、复用指南与 L3 替换清单已冻结                 | 其他项目可按可运行示例上手；包仍 private、未发布 npm                |
 
 ## 相对工作量与中止判定
 
@@ -613,7 +613,8 @@ Tailwind 4 靠这三行从 streamdown 的 dist 里扫 class。453 行主题搬�
 
 **⚠️ 分块策略的连带责任**：`capBlockquoteNesting` / `capListNesting` 必须一并搬（marked 的递归 tokenizer 约 2000 层爆栈，会把整个聊天路由变成错误页，见 issue #3393）。
 
-**这一层按 L2 候选写**：不引用任何 DeerFlow 业务概念，M8 收口时直接升为 L2。
+**这一层最初按 L2 候选写，M8 已升为正式 L2**：不引用任何 DeerFlow 业务概念，
+精确文件集合与依赖方向由 architecture test 守护。
 
 ---
 
@@ -817,7 +818,9 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 > 也没有通过削弱 Vue 生产语义换绿。仓库内 A-N 硬退出、React-default/Vue-secondary ingress、
 > fixture OIDC、七状态视觉、容器与预算均有直接证据；公网 DNS/TLS/外层代理/真实 IdP 保留为
 > 目标环境激活门禁。详细实测见
-> [M7 收尾 evidence](evidence/m7-readiness-closure.md)。**M8 未开始。**
+> [M7 收尾 evidence](evidence/m7-readiness-closure.md)。M8 已在不改写本历史快照的前提下关闭，
+> 当前结论见 [document 10](10-current-status-and-next.md) 与
+> [M8 evidence](evidence/m8-reusable-contracts.md)。
 
 - 三面板 resizable 编排（`splitpanes`），逐条对照 **H 组 8 条** —— 这是重写而非替换。**可行性已在 [M0/M1 的 spike](#m0m1-期间插入splitpanes-spike) 里验过**，这里做的是完整实现，不是探路
 - `sidebar` 与 shadcn-vue 版本逐条比对（折叠、移动端 Sheet 降级、快捷键、cookie 持久化）
@@ -875,6 +878,18 @@ vendor 聚合和单块上限共同决定。脚本已经读取 `.output/public/_n
 - `packages/agent-core/` 怎么接自己的后端协议（`RunProtocol` + `EventReducer` + `message-adapt`）
 - L2 通用 UI 的扩展点在哪（M5 的 artifacts 是活的参考实现）
 - 哪些必须替换（L3 清单）
+
+> **2026-08-13 退出结论：M8 已关闭。** `@deerflow/agent-core` 只保留根入口，
+> `AGENT_CORE_CONTRACT_VERSION=m8`，tarball 只包含 manifest + `src/`，全部 type/value
+> exports 有精确快照；应用与 consumer 均禁止深路径 import。可运行
+> `examples/agent-core-consumer/` 展示非 LangGraph 的 `RunProtocol`、message adapter、
+> `EventReducer`、external store 与 session，并由 `make consumer-check` 在系统临时目录
+> pack/clean-install/typecheck/bundle/run。L2 不新建 package：正式集合仅 Markdown、Button
+> 与 `app/lib/utils.ts`，架构测试禁止其反向依赖 DeerFlow，ArtifactPanel 提供单向扩展证据。
+> 消息/reasoning/tool/composer/human-input 的行为与 props/events 已记入 08/REUSE，但当前
+> 组件继续诚实标为 L3 host adapter。文件头守卫覆盖 154 个本仓维护源码并按 PROVENANCE
+> 跳过 84 个 COPIED。完整命令、结果和未扩大边界见
+> [M8 evidence](evidence/m8-reusable-contracts.md)。没有发布 npm、没有改变 React 默认入口。
 
 ---
 

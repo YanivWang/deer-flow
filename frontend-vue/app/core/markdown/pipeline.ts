@@ -1,7 +1,7 @@
 /*
   【文件职责】     unified 管线装配：markdown 字符串 → hast 树，带处理器缓存。
   【对应 frontend/】 无独立文件——上游这段逻辑在 `streamdown` 包内部（它 fork 了 react-markdown）
-  【架构位置】     L2 候选 —— 渲染层
+  【架构位置】     L2 —— 通用渲染层
   【主要导出】     createMarkdownProcessor · markdownToHast · type MarkdownPipelineOptions
   【依赖关系】     unified · remark-parse · remark-rehype · ./plugins
   【边界与注意】   装配顺序是从 `streamdown@2.5.0` 的 dist 里读出来的，不是猜的：

@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     在 run 最终 assistant 气泡显示 workspace changes。
+  【对应 frontend/】 src/components/workspace/changes/workspace-changes-badge.tsx
+  【架构位置】     L3 extension reference
+  【主要导出】     默认 WorkspaceChangesBadge 组件
+  【依赖关系】     workspace changes API · MessageList
+  【边界与注意】   保留 B8/B9 锚点；是宿主扩展卡片而非 L2 内建业务。
+*/
 import { computed, ref, watch } from "vue";
 import { ArrowUpRight, FileDiff, ExternalLink, X } from "lucide-vue-next";
 

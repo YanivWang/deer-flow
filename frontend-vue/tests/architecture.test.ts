@@ -219,3 +219,77 @@ describe("agent-core 的 L1 禁入清单（08）", () => {
     expect(violations).toEqual([]);
   });
 });
+
+const l2Files = [
+  "app/lib/utils.ts",
+  "app/core/markdown/animate.ts",
+  "app/core/markdown/blocks.ts",
+  "app/core/markdown/index.ts",
+  "app/core/markdown/pipeline.ts",
+  "app/core/markdown/plugins.ts",
+  "app/core/markdown/render.ts",
+  "app/core/markdown/safe-markdown.ts",
+  "app/components/markdown/CodeBlock.vue",
+  "app/components/markdown/MarkdownBlock.vue",
+  "app/components/markdown/MarkdownPre.vue",
+  "app/components/markdown/MermaidDiagram.vue",
+  "app/components/markdown/StreamMarkdown.vue",
+  "app/components/markdown/components.ts",
+  "app/components/ui/button/Button.vue",
+  "app/components/ui/button/index.ts",
+  "app/components/ui/button/variants.ts",
+] as const;
+
+const l2ForbiddenImports = [
+  /^@\/core\/(?:agent-deerflow|api|artifacts|auth|channels|config|models|settings|sidecar|skills|tasks|threads|uploads)(?:\/|$)/,
+  /^@\/components\/(?:chat|workspace)(?:\/|$)/,
+  /^@\/composables(?:\/|$)/,
+  /^@\/stores(?:\/|$)/,
+  /^#(?:app|imports)(?:\/|$)/,
+];
+
+describe("M8 L2 reusable UI boundary", () => {
+  it("freezes the exact reusable source set and final L2 headers", () => {
+    const missing: string[] = [];
+    for (const file of l2Files) {
+      const source = readFileSync(
+        new URL(`../${file}`, import.meta.url),
+        "utf8",
+      );
+      if (!/【架构位置】\s+L2(?:\s|$)/.test(source)) missing.push(file);
+      if (source.includes("L2 候选")) missing.push(`${file}: candidate`);
+    }
+    expect(missing).toEqual([]);
+  });
+
+  it("keeps L2 independent from DeerFlow product wiring", () => {
+    const violations: string[] = [];
+    for (const file of l2Files) {
+      const source = stripComments(
+        readFileSync(new URL(`../${file}`, import.meta.url), "utf8"),
+      );
+      for (const match of source.matchAll(
+        /(?:from\s+|import\s*)["']([^"']+)["']/g,
+      )) {
+        const specifier = match[1] ?? "";
+        if (l2ForbiddenImports.some((pattern) => pattern.test(specifier))) {
+          violations.push(`${file}: ${specifier}`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("uses artifacts as a one-way extension consumer", () => {
+    const artifactPanel = readFileSync(
+      new URL(
+        "../app/components/workspace/artifacts/ArtifactPanel.vue",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    expect(artifactPanel).toContain(
+      'import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue"',
+    );
+  });
+});

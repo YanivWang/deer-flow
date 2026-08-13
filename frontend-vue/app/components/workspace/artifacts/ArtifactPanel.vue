@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     DeerFlow artifact 加载、预览、编辑、冲突和下载面板。
+  【对应 frontend/】 src/components/workspace/artifacts/artifact-panel.tsx
+  【架构位置】     L3 extension reference
+  【主要导出】     默认 ArtifactPanel 组件
+  【依赖关系】     artifacts API · StreamMarkdown L2 · useArtifactsPanel
+  【边界与注意】   M8 的单向扩展参考：消费 L2，artifact 业务不得反向进入 L2。
+*/
 import { computed, reactive, ref, watch } from "vue";
 import { Download, Edit3, Eye, Save, X } from "lucide-vue-next";
 

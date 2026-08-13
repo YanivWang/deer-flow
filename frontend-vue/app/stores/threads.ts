@@ -1,3 +1,12 @@
+/*
+  【文件职责】     持有 thread 列表、搜索、pin 与导航所需的 Pinia UI 状态。
+  【对应 frontend/】 src/core/threads/hooks.ts
+  【架构位置】     L3 Vue adapter
+  【主要导出】     useThreadsStore
+  【依赖关系】     Pinia · threads API/cache
+  【边界与注意】   不得复制 L1 protocol reducer；仅承载应用/UI 状态。
+*/
+
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 

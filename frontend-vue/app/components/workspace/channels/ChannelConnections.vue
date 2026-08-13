@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     管理 DeerFlow 外部 channel 的连接与状态。
+  【对应 frontend/】 src/components/workspace/channels/channel-connections.tsx
+  【架构位置】     L3
+  【主要导出】     默认 ChannelConnections 组件
+  【依赖关系】     channels APIs · useChannels
+  【边界与注意】   provider/channel 产品接线，不属于通用 UI。
+*/
 import { computed, onMounted, ref } from "vue";
 
 import {

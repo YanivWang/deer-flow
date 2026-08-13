@@ -1,7 +1,7 @@
 /*
   【文件职责】     把 markdown 切成块，并给每块一个跨 chunk 稳定的 key。
   【对应 frontend/】 无独立文件——上游这段在 `streamdown` 包内部
-  【架构位置】     L2 候选 —— 渲染层
+  【架构位置】     L2 —— 通用渲染层
   【主要导出】     parseMarkdownIntoBlocks · toKeyedBlocks · type KeyedBlock
   【依赖关系】     marked（只用它的 Lexer 做分块，不用它渲染）
   【边界与注意】   分块存在的理由是**流式重渲染的代价**：一条消息在流式期间会被渲染几百次，

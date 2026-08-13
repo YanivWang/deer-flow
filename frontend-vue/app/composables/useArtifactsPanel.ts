@@ -3,6 +3,7 @@
   【对应 frontend/】 frontend/src/components/workspace/artifacts/context.tsx
   【架构位置】     L3（DeerFlow artifacts）
   【主要导出】     useArtifactsPanel
+  【依赖关系】     core/artifacts · sessionStorage · AgentChat/ArtifactPanel
   【边界与注意】   ThreadState.artifacts 是权威业务列表；sessionStorage 只恢复 UI
                    状态。watch 必须 immediate，且历史 loading 时不能用初始空值覆盖恢复。
 */

@@ -2,7 +2,7 @@
   【文件职责】     代码块 UI：语言标签、复制/下载、shiki 高亮、行号。
   【对应 frontend/】 无源文件可搬——它在 `streamdown` 的 dist 里（`@streamdown/code` 只有 1,568 字节，
                     真正的 UI 在同包那个 67,773 字节的 chunk 内）
-  【架构位置】     L2 候选 —— 渲染层组件
+  【架构位置】     L2 —— 通用渲染层组件
   【主要导出】     默认组件
   【依赖关系】     shiki（异步高亮）· @/lib/utils
   【边界与注意】   ① **class 串必须写在本文件里**。上游 `globals.css` 有三行

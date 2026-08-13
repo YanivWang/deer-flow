@@ -16,18 +16,20 @@ guide rather than expecting full detail here:
   **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**.
 
 For Vue migration work, always run `make handoff-check` and read document 10 before
-historical evidence. The current cursor is **M7 conditionally closed; M8 has not started**:
+historical evidence. The current cursor is **M8 complete; M7 remains conditionally closed**:
 M-1 through M6 have milestone evidence, and all repository-owned M7 hard exits have direct
 evidence. The current full shared run is 118/120, not green: the protocol-incomplete
 batched-stream fixture and an artifact opening-transition listener installed after the
 product auto-open are governed shared-test exceptions. M5 is likewise 26/27 in three full
-parallel runs; its local protocol-correct artifact test and real-Gateway artifact gate pass.
+parallel M7-era runs; the current M8-focused M5 run is 27/27 and its real-Gateway artifact gate passes.
 The Vue-owned interaction/H7-H8 8/8, auth security 7/7 and replay-Gateway
 resume/gap/cancel 1/1 gates pass. React-default/Vue-secondary hostname routing, fixture-IdP
 concurrent OIDC 2/2, four effects, seven visual states, container smoke and asset budgets
 also pass. Public DNS/TLS/outer-proxy/real-provider validation remains an unrun target-
 environment activation gate; do not describe it as passed or Vue as the default production
-frontend.
+frontend. M8 freezes the private `@deerflow/agent-core` root API, the minimal L2 Markdown/Button
+source boundary, an isolated custom-backend consumer and the L3 replacement guide; no npm publish
+or default production cutover occurred.
 
 ## What is DeerFlow
 
@@ -78,7 +80,7 @@ deer-flow/
 │   ├── packages/harness/           # deerflow-harness package (import: deerflow.*) — agent framework
 │   └── app/                        # FastAPI Gateway + IM channels (import: app.*)
 ├── frontend/                       # Next.js frontend (pnpm) — see frontend/AGENTS.md
-├── frontend-vue/                   # Nuxt/Vue migration workspace; M7 conditionally closed, M8 not started
+├── frontend-vue/                   # Nuxt/Vue migration workspace; M8 complete, M7 conditionally closed
 ├── frontend-vue-build-docs/        # Current status, frozen contracts, plans, historical evidence
 ├── docker/                         # docker-compose files, nginx config, provisioner
 ├── skills/                         # Agent skills: public/ (committed), custom/ (gitignored)
@@ -152,6 +154,7 @@ cd frontend-vue && make dev       # Nuxt dev server (port 3100)
 cd frontend-vue && make verify    # lint + format + types + unit + build
 cd frontend-vue && make migration-check  # provenance/test migration ledger consistency
 cd frontend-vue && make consumer-check   # pack/install/typecheck minimal agent-core consumer
+cd frontend-vue && make header-check     # six-part headers; provenance COPIED files are excluded
 cd frontend-vue && make e2e-m0    # repository-runnable M0 gate suite
 cd frontend-vue && make e2e-m4a   # M4a data-flow gate (send/stream/stop/reload ordering)
 cd frontend-vue && make e2e-m4a-stream  # M4a real chunked-SSE gate (heartbeat/resume cursor/gap)

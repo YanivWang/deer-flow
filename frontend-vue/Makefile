@@ -1,6 +1,6 @@
 # frontend-vue M0 developer entrypoint. package.json intentionally contains only postinstall.
 
-.PHONY: help install dev build preview lint format format-check typecheck typecheck-core test verify asset-budget \
+.PHONY: help install dev build preview lint format format-check typecheck typecheck-core test verify asset-budget header-check \
 	e2e-install e2e-list e2e-m0 e2e-m4a e2e-m4a-stream e2e-m4b-list e2e-m4b e2e-m5-list e2e-m5 e2e-m5-real-backend e2e-m6-list e2e-m6 e2e-m6-real-backend e2e-m7-list e2e-m7 e2e-m7-local-list e2e-m7-local e2e-m7-auth-list e2e-m7-auth e2e-m7-real-protocol e2e-m7-visual e2e-external e2e e2e-auth e2e-real-backend e2e-visual \
 	proxy-smoke auth-disabled-smoke auth-cookie-smoke visual-baseline-smoke splitpanes-smoke \
 	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke \
@@ -58,6 +58,7 @@ help:
 	@echo "  make typecheck-core            standalone tsc for packages/agent-core"
 	@echo "  make gen-api-types             regenerate app/core/api/types.gen.ts from the snapshot"
 	@echo "  make consumer-check            clean-install packages/agent-core into a temp consumer"
+	@echo "  make header-check              enforce six-part headers, excluding provenance COPIED files"
 	@echo "  make typecheck-refresh         rebuild the known-typecheck-error budget"
 	@echo "  make i18n-check                dictionary health: locales in sync, no key lost"
 	@echo "  make i18n-diff / i18n-unused   key drift against the baseline / unreferenced keys"
@@ -121,6 +122,9 @@ gen-api-types-check:
 consumer-check:
 	node scripts/consumer-check.mjs
 
+header-check:
+	node scripts/check-file-headers.mjs
+
 test:
 	$(EXEC) vitest run
 
@@ -140,7 +144,7 @@ i18n-refresh:
 
 # collected-check 只读签入的台账与 vitest 的收集结果，不碰 git 历史，所以能进 verify。
 # 它防的是「少收集几个测试换全绿」——vitest run 本身报告不了没被收集的东西。
-verify: lint format-check typecheck typecheck-core test collected-check i18n-check gen-api-types-check build
+verify: lint format-check typecheck typecheck-core test collected-check i18n-check gen-api-types-check header-check build
 
 # The build dependency makes the gate inspect the current checkout rather than stale .output.
 asset-budget: build

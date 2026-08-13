@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     管理 DeerFlow MCP 工具开关与错误状态。
+  【对应 frontend/】 src/components/workspace/settings/tool-settings.tsx
+  【架构位置】     L3
+  【主要导出】     默认 ToolSettings 组件
+  【依赖关系】     MCP config API · settings dialog
+  【边界与注意】   保留 K5 fail-closed mutation；不属于 L2。
+*/
 import { onMounted, ref } from "vue";
 
 import { loadMCPConfig, updateMCPServerState } from "@/core/mcp/api";

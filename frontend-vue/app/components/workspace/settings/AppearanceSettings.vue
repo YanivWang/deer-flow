@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     管理 DeerFlow locale、theme 与显示偏好。
+  【对应 frontend/】 src/components/workspace/settings/appearance-settings.tsx
+  【架构位置】     L3
+  【主要导出】     默认 AppearanceSettings 组件
+  【依赖关系】     i18n · color mode · settings store
+  【边界与注意】   应用设置接线，不属于 L2。
+*/
 import { onMounted, ref } from "vue";
 import type { Locale } from "@/core/i18n/locale";
 

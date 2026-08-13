@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     管理 DeerFlow scheduled tasks 与 recipes。
+  【对应 frontend/】 src/app/workspace/scheduled-tasks/page.tsx
+  【架构位置】     L3 application page
+  【主要导出】     默认 scheduled tasks page
+  【依赖关系】     scheduled-tasks APIs · workspace routing
+  【边界与注意】   调度业务，不属于 L2；客户端不得伪造 non_interactive。
+*/
 import { computed, onMounted, ref, watch } from "vue";
 
 import {

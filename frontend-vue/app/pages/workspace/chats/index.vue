@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     提供新会话入口并接入 bootstrap AgentChat。
+  【对应 frontend/】 src/app/workspace/chats/page.tsx
+  【架构位置】     L3 application page
+  【主要导出】     默认 chats index page
+  【依赖关系】     AgentChat · workspace routing
+  【边界与注意】   DeerFlow 路由接线，不属于 L2。
+*/
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import { useThreadsStore } from "@/stores/threads";

@@ -1,7 +1,7 @@
 /*
   【文件职责】     本层自带的元素覆盖表：把 `pre` 交给代码块 / mermaid UI。
   【对应 frontend/】 frontend/src/core/streamdown/components.tsx（那 90 行是 React 包装，不是这张表）
-  【架构位置】     L2 候选 —— 渲染层组件
+  【架构位置】     L2 —— 通用渲染层组件
   【主要导出】     richContentComponents
   【依赖关系】     ./MarkdownPre.vue
   【边界与注意】   这里**只有代码块与 mermaid**。上游 streamdown 的默认组件映射有 37 个槽位

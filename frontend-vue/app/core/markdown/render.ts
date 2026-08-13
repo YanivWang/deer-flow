@@ -1,7 +1,7 @@
 /*
   【文件职责】     hast → Vue vnode，以及逐词动画所需的稳定 key 注入。
   【对应 frontend/】 无独立文件——上游这一步在 `streamdown` 内部调 `hast-util-to-jsx-runtime`
-  【架构位置】     L2 候选 —— 渲染层
+  【架构位置】     L2 —— 通用渲染层
   【主要导出】     renderHast · applyWordAnimation · VUE_JSX_OPTIONS
   【依赖关系】     hast-util-to-jsx-runtime · vue/jsx-runtime · ./animate
   【边界与注意】   两个选项是 Vue 侧的硬性要求，不是口味：

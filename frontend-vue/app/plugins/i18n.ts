@@ -3,6 +3,7 @@
   【对应 frontend/】 core/i18n/context.tsx + core/i18n/hooks.ts
   【架构位置】     L3
   【主要导出】     Nuxt plugin，provide `$i18n`
+  【依赖关系】     core/i18n locale/cookie/translations · Nuxt provide
   【边界与注意】   **provide 的是 ref，不是快照（05 M1）。** 上游 React 版
                    `provide(ctx, { locale, setLocale, t })` 这个写法照搬过来
                    编译能过、运行不报错、切语言时**整个应用一个字都不变**——

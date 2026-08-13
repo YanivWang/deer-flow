@@ -1,3 +1,12 @@
+/*
+  【文件职责】     管理浏览器通知权限和页面可见性下的通知发送。
+  【对应 frontend/】 src/core/notification/hooks.ts
+  【架构位置】     L3 Vue adapter
+  【主要导出】     useNotifications
+  【依赖关系】     browser Notification API · Vue lifecycle
+  【边界与注意】   N2 宿主能力，不属于 L2 公共集合。
+*/
+
 import { onMounted, readonly, ref } from "vue";
 
 import {

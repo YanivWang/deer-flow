@@ -48,6 +48,10 @@ frontend-vue/
 ├── .prettierrc
 ├── .gitignore
 ├── README.md
+├── REUSE.md                     # M8：其他项目接 L1/L2、替换 L3 的上手指南
+│
+├── examples/
+│   └── agent-core-consumer/     # M8：可复制的非 LangGraph consumer，隔离门禁直接运行
 │
 ├── config/                       # ★ 构建期配置的单一来源，被 nuxt.config.ts 消费
 │   └── routes.ts                 #   proxy / ssr:false / prerender 三份路由规则 + 纯函数
@@ -55,6 +59,8 @@ frontend-vue/
 │
 ├── scripts/
 │   ├── i18n-manager.mjs          # ★ 词典体检：check / diff / unused（2,256 行词典，必须有工具）
+│   ├── check-file-headers.mjs     # M8：六段式文件头；从 PROVENANCE 跳过 COPIED
+│   ├── consumer-check.mjs         # pack → isolated install → typecheck → runtime
 │   ├── check-api-types.mjs       # 临时生成 OpenAPI 类型并与签入产物 diff
 │   └── container-smoke.sh        # 动态回环端口起容器、探 /health、发 SIGTERM、trap 清理
 │
@@ -75,7 +81,7 @@ frontend-vue/
 │       │   ├── watchdog/stream-watchdog.ts
 │       │   ├── store/create-external-store.ts # 框架无关 subscribe/getSnapshot
 │       │   └── types/contract.ts        # AgentMessage / SseFrame / 错误分类
-│       └── tests/                       # 内核自己的单测，随包搬走
+│       └── tests/                       # 内核自己的单测；tarball 只打包 src，不带 tests
 │
 ├── app/                          # Nuxt 4 srcDir —— @/* 与 ~/* 均指向此处
 │   ├── app.vue
@@ -170,7 +176,7 @@ frontend-vue/
 ├── public/                       # 仅 favicon + logo（demo 资产 15 MB 全删）
 │
 └── tests/
-    ├── architecture.test.ts      # ★ 依赖方向与内核禁入清单的自动守护（M0 就建）
+    ├── architecture.test.ts      # ★ L1 禁入 + M8 精确 L2 集合/依赖方向守护
     ├── core-provenance.test.ts   # ★ app/core/PROVENANCE.md 台账守护；COPIED 一档
     │                             #   对签入 baseline/core-sha256.json 比对（见 06 M1 1e）
     ├── global-setup.ts           # ★ Playwright 的 Nuxt 冷启动预热（不预热首个 spec 假红）
@@ -221,15 +227,22 @@ packages:
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "files": ["src"],
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     }
   },
-  "types": "./src/index.ts"
+  "types": "./src/index.ts",
+  "sideEffects": false
 }
 ```
+
+M8 再加两道真实消费守卫：包内 architecture test 精确快照 `src/index.ts` 的全部
+value/type exports，应用侧 architecture test 拒绝深路径 import；
+`examples/agent-core-consumer/` 由 `make consumer-check` 放进系统临时目录 clean install，
+不能借仓库上层 `node_modules` 兜底。当前包仍为 private，未发布 npm。
 
 M2 增加临时 consumer workspace 做 clean install/typecheck/test；若将来发布 npm 包，再增加 build 产物与 files 清单，应用侧不得依赖未导出的源码路径。
 

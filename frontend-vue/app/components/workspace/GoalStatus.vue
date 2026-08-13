@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     展示、编辑和清除当前 DeerFlow goal。
+  【对应 frontend/】 src/components/workspace/goal-status.tsx
+  【架构位置】     L3
+  【主要导出】     默认 GoalStatus 组件
+  【依赖关系】     threads/goal · Gateway goal API · ChatComposer
+  【边界与注意】   /goal 是 DeerFlow 产品命令，不进入 L2。
+*/
 import { computed } from "vue";
 import { RefreshCw, Target } from "lucide-vue-next";
 

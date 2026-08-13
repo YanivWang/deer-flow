@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/*
+  【文件职责】     查看和修改 DeerFlow 记忆条目。
+  【对应 frontend/】 src/components/workspace/settings/memory-settings.tsx
+  【架构位置】     L3
+  【主要导出】     默认 MemorySettings 组件
+  【依赖关系】     memory APIs · settings dialog
+  【边界与注意】   DeerFlow memory 业务，不属于 L2。
+*/
 import { computed, onMounted, ref } from "vue";
 
 import {

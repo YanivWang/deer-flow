@@ -34,6 +34,8 @@
 
 import { execFileSync } from "node:child_process";
 import {
+  copyFileSync,
+  cpSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -47,6 +49,7 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
 const packageDir = join(root, "packages/agent-core");
+const exampleDir = join(root, "examples/agent-core-consumer");
 
 /**
  * consumer 自己的工具链。
@@ -56,10 +59,7 @@ const packageDir = join(root, "packages/agent-core");
  * package.json），所以这里写死一个版本；它换了不影响结论。
  */
 const rootPkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-const TOOLING = {
-  typescript: rootPkg.devDependencies.typescript,
-  esbuild: "^0.28.1",
-};
+const typescriptVersion = rootPkg.devDependencies.typescript;
 
 function pnpm(args, { cwd } = {}) {
   execFileSync(
@@ -75,123 +75,6 @@ function pnpm(args, { cwd } = {}) {
   );
 }
 
-const CONSUMER = `// 只从 bare specifier 消费。深路径 import 会绕过 package.json 的 exports，
-// 而 exports 正是这份验收要证明的东西之一。
-import {
-  AGENT_CORE_CONTRACT_VERSION,
-  AgentStreamError,
-  createAgentExternalStore,
-  createRunSession,
-  readSseFrames,
-} from "@deerflow/agent-core";
-import type {
-  AgentMessage,
-  ReduceAction,
-  RunProtocol,
-  SseEvent,
-} from "@deerflow/agent-core";
-
-const assert = (ok: boolean, what: string): void => {
-  if (!ok) throw new Error(\`consumer check failed: \${what}\`);
-};
-
-assert(AGENT_CORE_CONTRACT_VERSION === "m2", "contract version");
-assert(typeof readSseFrames === "function", "transport export");
-
-const BODY =
-  'event: values\\ndata: {"title":"hi"}\\nid: 1\\n\\n' +
-  ": keep-alive\\n\\n" +
-  'event: end\\ndata: {}\\n\\n';
-
-interface Handle {
-  runId: string;
-}
-
-const protocol: RunProtocol<{ prompt: string }, Handle> = {
-  create: async () => ({
-    handle: { runId: "r-1" },
-    response: new Response(BODY),
-  }),
-  resume: async () => new Response(""),
-  cancel: async () => ({ kind: "accepted" }),
-  inspect: async () => ({ terminal: true, outcome: "completed" }),
-};
-
-const classifyEvent = (event: SseEvent) =>
-  event.event === "end"
-    ? ({ kind: "completed" } as const)
-    : event.event === "error"
-      ? ({
-          kind: "failed",
-          error: new AgentStreamError("backend_error", event.data),
-        } as const)
-      : ({ kind: "data" } as const);
-
-interface State {
-  title?: string;
-}
-
-const store = createAgentExternalStore<State, SseEvent>({
-  initialState: {},
-  reducer: (event): ReduceAction<State>[] =>
-    event.event === "values"
-      ? [{ type: "replace-state", state: JSON.parse(event.data) as State }]
-      : [{ type: "ignore" }],
-  createId: () => "id",
-  now: () => 0,
-});
-
-const session = createRunSession<{ prompt: string }, Handle>({
-  protocol,
-  classifyEvent,
-  maxBufferBytes: 65_536,
-  maxReconnects: 0,
-});
-
-let heartbeats = 0;
-let terminal = "";
-for await (const output of session.run({ prompt: "hello" })) {
-  if (output.kind === "heartbeat") heartbeats += 1;
-  if (output.kind === "event") store.dispatch(output.event);
-  if (output.kind === "state") terminal = output.state.status;
-}
-store.flushNotifications();
-
-assert(terminal === "completed", \`terminal state was \${terminal}\`);
-assert(heartbeats === 1, \`heartbeats was \${heartbeats}\`);
-assert(store.getSnapshot().state.title === "hi", "reduced durable state");
-
-const message: AgentMessage = {
-  id: "m1",
-  role: "assistant",
-  content: [{ type: "text", text: "rich content survives" }],
-  contentChunks: [],
-  isStreaming: false,
-};
-assert(Array.isArray(message.content), "rich content type");
-
-console.log("consumer session OK");
-`;
-
-const TSCONFIG = {
-  compilerOptions: {
-    target: "ES2022",
-    lib: ["ES2022", "DOM", "DOM.Iterable"],
-    module: "ESNext",
-    moduleResolution: "bundler",
-    // `types: []` 不是省事：包的 tsconfig 也是这么写的（src 不许认识 Node 全局）。
-    // 消费方这边保持一致，"这个包能跑在浏览器里"才有第二处机器证据。
-    types: [],
-    strict: true,
-    exactOptionalPropertyTypes: true,
-    verbatimModuleSyntax: true,
-    isolatedModules: true,
-    skipLibCheck: true,
-    noEmit: true,
-  },
-  include: ["consumer.ts"],
-};
-
 let tarballDir;
 let consumer;
 try {
@@ -204,25 +87,19 @@ try {
   );
 
   consumer = mkdtempSync(join(tmpdir(), "deerflow-agent-core-consumer-"));
+  cpSync(join(exampleDir, "src"), join(consumer, "src"), { recursive: true });
+  copyFileSync(
+    join(exampleDir, "tsconfig.json"),
+    join(consumer, "tsconfig.json"),
+  );
+  copyFileSync(tarball, join(consumer, "deerflow-agent-core.tgz"));
+  const examplePackage = JSON.parse(
+    readFileSync(join(exampleDir, "package.json"), "utf8"),
+  );
+  examplePackage.devDependencies.typescript = typescriptVersion;
   writeFileSync(
     join(consumer, "package.json"),
-    `${JSON.stringify(
-      {
-        name: "agent-core-consumer",
-        version: "0.0.0",
-        private: true,
-        type: "module",
-        dependencies: { "@deerflow/agent-core": `file:${tarball}` },
-        devDependencies: TOOLING,
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  writeFileSync(join(consumer, "consumer.ts"), CONSUMER);
-  writeFileSync(
-    join(consumer, "tsconfig.json"),
-    `${JSON.stringify(TSCONFIG, null, 2)}\n`,
+    `${JSON.stringify(examplePackage, null, 2)}\n`,
   );
   // 这个临时目录不在任何 workspace 里，也不该被本仓库的设置影响。
   writeFileSync(join(consumer, ".npmrc"), "ignore-workspace-root-check=true\n");
@@ -238,7 +115,7 @@ try {
     [
       "exec",
       "esbuild",
-      "consumer.ts",
+      "src/main.ts",
       "--bundle",
       "--platform=node",
       "--format=esm",

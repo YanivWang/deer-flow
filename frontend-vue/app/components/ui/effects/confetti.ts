@@ -1,3 +1,12 @@
+/*
+  【文件职责】     计算 confetti 是否启用及其发射参数。
+  【对应 frontend/】 src/components/ui/confetti-button.tsx
+  【架构位置】     L3 product UI helper
+  【主要导出】     shouldEmitConfetti · confettiOrigin
+  【依赖关系】     无
+  【边界与注意】   仅服务 M7 产品特效，不进入 M8 L2 公共集合。
+*/
+
 export function shouldEmitConfetti() {
   return !(
     globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false

@@ -1,3 +1,12 @@
+/*
+  【文件职责】     将 browser 二进制帧合并到每动画帧最多一次并回收 URL。
+  【对应 frontend/】 src/components/workspace/browser-view/frame-buffer.ts
+  【架构位置】     L3
+  【主要导出】     createFrameBuffer
+  【依赖关系】     browser requestAnimationFrame · object URL
+  【边界与注意】   保留 I2-I4；服务 browser-view 业务接线。
+*/
+
 /** Coalesces lossy browser frames to the display refresh rate. */
 export class LatestBrowserFrameBuffer {
   private pendingFrame: Blob | null = null;

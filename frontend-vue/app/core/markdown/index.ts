@@ -1,7 +1,7 @@
 /*
   【文件职责】     markdown 渲染层的公共导出面。
   【对应 frontend/】 frontend/src/core/streamdown/index.ts
-  【架构位置】     L2 候选 —— 渲染层
+  【架构位置】     L2 —— 通用渲染层
   【主要导出】     见下
   【依赖关系】     本目录各模块
   【边界与注意】   上游的 `index.ts` 还导出 `./components`（React 包装）与 `./safe-children`
