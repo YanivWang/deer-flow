@@ -16,18 +16,18 @@ guide rather than expecting full detail here:
   **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**.
 
 For Vue migration work, always run `make handoff-check` and read document 10 before
-historical evidence. The current cursor is **M7 phase 3 in progress**: M-1 through M6 have
-milestone evidence; M6's exact 8-file/27-test contract and its 1-test real-Gateway
-browser gate passed, while M5's 6-file/27-test and M4b's 11-file/66-test contracts remain green.
-The exact M7 inventory is 25 files/120 tests and the current full run is 119/120;
-the protocol-incomplete shared batched-stream fixture is the sole red item. The
-independent Vue-owned M7 gates are interaction/H7-H8 8/8, auth security 7/7 and
-real replay-Gateway resume/gap/cancel 1/1. Phase 3 has landed React-default/Vue-secondary
-hostname routing, fixture-IdP concurrent OIDC 2/2, four effects, seven visual states and
-runtime-safe asset budgeting. Public DNS/TLS/outer-proxy/real-provider validation and the
-shared protocol-incomplete fixture remain open. Do not
-describe the Vue UI as fully product-ready or part of the default
-production stack until the current gate document says so.
+historical evidence. The current cursor is **M7 conditionally closed; M8 has not started**:
+M-1 through M6 have milestone evidence, and all repository-owned M7 hard exits have direct
+evidence. The current full shared run is 118/120, not green: the protocol-incomplete
+batched-stream fixture and an artifact opening-transition listener installed after the
+product auto-open are governed shared-test exceptions. M5 is likewise 26/27 in three full
+parallel runs; its local protocol-correct artifact test and real-Gateway artifact gate pass.
+The Vue-owned interaction/H7-H8 8/8, auth security 7/7 and replay-Gateway
+resume/gap/cancel 1/1 gates pass. React-default/Vue-secondary hostname routing, fixture-IdP
+concurrent OIDC 2/2, four effects, seven visual states, container smoke and asset budgets
+also pass. Public DNS/TLS/outer-proxy/real-provider validation remains an unrun target-
+environment activation gate; do not describe it as passed or Vue as the default production
+frontend.
 
 ## What is DeerFlow
 
@@ -41,13 +41,13 @@ DingTalk) bridge into the same agent through the Gateway.
 
 A single `make dev` / Docker stack runs four cooperating services:
 
-| Service            | Port   | Role                                                                |
-| ------------------ | ------ | ------------------------------------------------------------------- |
-| **Nginx**          | `2026` | Unified reverse-proxy entry point — open this in the browser        |
-| **Gateway API**    | `8001` | FastAPI REST API + embedded LangGraph-compatible agent runtime      |
-| **React frontend** | `3000` | Existing Next.js web interface                                      |
+| Service            | Port   | Role                                                                                         |
+| ------------------ | ------ | -------------------------------------------------------------------------------------------- |
+| **Nginx**          | `2026` | Unified reverse-proxy entry point — open this in the browser                                 |
+| **Gateway API**    | `8001` | FastAPI REST API + embedded LangGraph-compatible agent runtime                               |
+| **React frontend** | `3000` | Existing Next.js web interface                                                               |
 | **Vue frontend**   | `3100` | Explicit migration dev port; production Compose exposes it only through a secondary hostname |
-| **Provisioner**    | `8002` | Optional — only when sandbox is configured for provisioner/K8s mode |
+| **Provisioner**    | `8002` | Optional — only when sandbox is configured for provisioner/K8s mode                          |
 
 Nginx is the single public entry: it serves the frontend and proxies `/api/langgraph/*`
 to the Gateway's LangGraph runtime, rewriting it to Gateway's native `/api/*` routes; all
@@ -78,7 +78,7 @@ deer-flow/
 │   ├── packages/harness/           # deerflow-harness package (import: deerflow.*) — agent framework
 │   └── app/                        # FastAPI Gateway + IM channels (import: app.*)
 ├── frontend/                       # Next.js frontend (pnpm) — see frontend/AGENTS.md
-├── frontend-vue/                   # Nuxt/Vue migration workspace; M6 complete, M7 in progress
+├── frontend-vue/                   # Nuxt/Vue migration workspace; M7 conditionally closed, M8 not started
 ├── frontend-vue-build-docs/        # Current status, frozen contracts, plans, historical evidence
 ├── docker/                         # docker-compose files, nginx config, provisioner
 ├── skills/                         # Agent skills: public/ (committed), custom/ (gitignored)
@@ -161,7 +161,7 @@ cd frontend-vue && make e2e-m5-real-backend  # replay Gateway write_file → art
 cd frontend-vue && make e2e-m6    # exact M6 remaining-L3 gate (8 specs / 27 tests)
 cd frontend-vue && make e2e-m6-real-backend  # real Gateway browser REST/WS → binary frame gate
 cd frontend-vue && make e2e-m7-list  # exact 25-file/120-test M7 inventory
-cd frontend-vue && make e2e-m7       # full shared suite; currently 119/120, not an M7 completion
+cd frontend-vue && make e2e-m7       # full shared suite; currently 118/120 with two governed shared-test exceptions
 cd frontend-vue && make e2e-m7-local # exact 1-file/8-test interaction, IME, a11y and H7/H8 gate
 cd frontend-vue && make e2e-m7-auth  # exact 1-file/7-test auth request/security gate
 cd frontend-vue && make e2e-m7-real-protocol  # replay-Gateway resume/gap/cancel browser gate

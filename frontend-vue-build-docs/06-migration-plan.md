@@ -1,6 +1,6 @@
 # 06 · 执行计划
 
-> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a / M4b / M5 / M6 已关闭；M7 phase 3 进行中；M8 未开始。**
+> 当前执行游标：**M-1 / M0 / M1 / M2 / M3 / M4a / M4b / M5 / M6 已关闭；M7 带条件关闭；M8 未开始。**
 > 实跑红绿、VPN/端口问题与有序任务清单以
 > [10-current-status-and-next.md](10-current-status-and-next.md) 为准。本文负责冻结里程碑范围与
 > 退出条件，不以旧段落中的将来时替代当前状态。
@@ -70,19 +70,19 @@ git tag frontend-vue-baseline-v2 27a425b0
 
 ## 里程碑总览
 
-| #       | 当前状态   | 内容                                                                         | 停在这里的价值                                                      |
-| ------- | ---------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| **M-1** | 已关闭     | **契约冻结**：协议矩阵、测试 manifest、生产入口决策                          | 任何实现开始前消除歧义                                              |
-| **M0**  | 已关闭     | 骨架                                                                         | 能跑的空壳                                                          |
-| **M1**  | 已关闭     | `core/` 纯 TS 落地                                                           | 单测全绿 = 业务语义保真                                             |
-| **M2**  | 已关闭     | **L1 `packages/agent-core/`** ★                                              | **协议无关内核，已被 raw trace、fake upstream 与真实 Gateway 验证** |
-| **M3**  | 已关闭     | Markdown 渲染层                                                              | 与 React 版 DOM 结构一致                                            |
-| **M4a** | 已关闭     | 数据流：`threads/hooks.ts` 与 7 个 Context                                   | 流式状态在 Vue 下跑通，带 gate                                      |
-| **M4b** | **已关闭** | **通用 agent UI（L2 第一批）** ★                                             | **一个能跑的通用 agent 聊天应用——模板到此可用**                     |
-| **M5**  | **已关闭** | L3 第一批：artifacts + sidecar                                               | L2 扩展点已被真实 L3 功能验证                                       |
-| **M6**  | **已关闭** | L3 其余：设置 / 侧栏 / browser / channels                                    | 功能面完整                                                          |
-| **M7**  | **进行中** | 交互收尾 + 完整验收（phase 3 已落地双入口、特效、视觉与预算；公网/共享红项未满足） | **功能/交互合同与关键视觉状态达成**                                 |
-| **M8**  | 未开始     | L2 契约收口                                                                  | 其他项目可上手复用                                                  |
+| #       | 当前状态       | 内容                                                                                      | 停在这里的价值                                                      |
+| ------- | -------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **M-1** | 已关闭         | **契约冻结**：协议矩阵、测试 manifest、生产入口决策                                       | 任何实现开始前消除歧义                                              |
+| **M0**  | 已关闭         | 骨架                                                                                      | 能跑的空壳                                                          |
+| **M1**  | 已关闭         | `core/` 纯 TS 落地                                                                        | 单测全绿 = 业务语义保真                                             |
+| **M2**  | 已关闭         | **L1 `packages/agent-core/`** ★                                                           | **协议无关内核，已被 raw trace、fake upstream 与真实 Gateway 验证** |
+| **M3**  | 已关闭         | Markdown 渲染层                                                                           | 与 React 版 DOM 结构一致                                            |
+| **M4a** | 已关闭         | 数据流：`threads/hooks.ts` 与 7 个 Context                                                | 流式状态在 Vue 下跑通，带 gate                                      |
+| **M4b** | **已关闭**     | **通用 agent UI（L2 第一批）** ★                                                          | **一个能跑的通用 agent 聊天应用——模板到此可用**                     |
+| **M5**  | **已关闭**     | L3 第一批：artifacts + sidecar                                                            | L2 扩展点已被真实 L3 功能验证                                       |
+| **M6**  | **已关闭**     | L3 其余：设置 / 侧栏 / browser / channels                                                 | 功能面完整                                                          |
+| **M7**  | **带条件关闭** | 交互收尾 + 完整验收；仓库内硬退出项有直接证据，共享测试治理例外与目标环境激活门禁显式保留 | **功能/交互合同与关键视觉状态达成**                                 |
+| **M8**  | 未开始         | L2 契约收口                                                                               | 其他项目可上手复用                                                  |
 
 ## 相对工作量与中止判定
 
@@ -811,12 +811,13 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 
 ## M7 · 交互收尾 + 完整验收
 
-> **2026-08-13 phase 3 快照（仍未关闭）：**共享 inventory 仍是 25/120，实跑
-> 119/120；React-default/Vue-secondary ingress 结构门禁 29/29、并发 fixture OIDC
-> 2/2、四个具名特效、七状态视觉 7/7 和 raw/gzip 资产预算已落地。公网 DNS/TLS/
-> 外层代理/真实 IdP、A-N 未证实边界、共享 fixture 红项与最近 M5 并行时序红项仍是
-> 退出阻断。详细实测见
-> [phase 3 evidence](evidence/m7-phase-3-production-visual-performance.md)。
+> **2026-08-13 收尾快照（带条件关闭）：**共享 inventory 是 25 files / 120 tests，
+> 本窗口实跑 118/120；两项红色分别是缺 `Content-Location`/终止 `end` 的共享 SSE fixture，
+> 以及在产品自动打开之后才安装 `transitionrun` 监听的共享 UI 门禁。它们未被写成通过，
+> 也没有通过削弱 Vue 生产语义换绿。仓库内 A-N 硬退出、React-default/Vue-secondary ingress、
+> fixture OIDC、七状态视觉、容器与预算均有直接证据；公网 DNS/TLS/外层代理/真实 IdP 保留为
+> 目标环境激活门禁。详细实测见
+> [M7 收尾 evidence](evidence/m7-readiness-closure.md)。**M8 未开始。**
 
 - 三面板 resizable 编排（`splitpanes`），逐条对照 **H 组 8 条** —— 这是重写而非替换。**可行性已在 [M0/M1 的 spike](#m0m1-期间插入splitpanes-spike) 里验过**，这里做的是完整实现，不是探路
 - `sidebar` 与 shadcn-vue 版本逐条比对（折叠、移动端 Sheet 降级、快捷键、cookie 持久化）
@@ -853,12 +854,12 @@ Markdown 做真实异步加载，并通过 client-only `vite:extendConfig` 的 `
 
 预算脚本按这些稳定前缀聚合：
 
-| chunk               | 内容                                                                | 为什么单切                                                                                |
-| ------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `vendor-vue`        | `vue` / `@vue/*` / `vue-router` / `pinia`                           | 框架底座，所有路由共用                                                                    |
-| `vendor-markdown`   | `shiki` / `katex` / `mermaid` / `unified` / `remark-*` / `rehype-*` | **最大的一块**，且只有聊天路由需要                                                        |
-| `vendor-codemirror` | `codemirror` / `@codemirror/*` / `@uiw/codemirror-theme-*`          | 当前未安装/消费，所以预算必须为 0；不能把未来 D8 写成已完成                              |
-| `vendor-ui`         | `reka-ui` / `lucide-vue-next` / `motion-v`                          | 控件层                                                                                    |
+| chunk               | 内容                                                                | 为什么单切                                                  |
+| ------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `vendor-vue`        | `vue` / `@vue/*` / `vue-router` / `pinia`                           | 框架底座，所有路由共用                                      |
+| `vendor-markdown`   | `shiki` / `katex` / `mermaid` / `unified` / `remark-*` / `rehype-*` | **最大的一块**，且只有聊天路由需要                          |
+| `vendor-codemirror` | `codemirror` / `@codemirror/*` / `@uiw/codemirror-theme-*`          | 当前未安装/消费，所以预算必须为 0；不能把未来 D8 写成已完成 |
+| `vendor-ui`         | `reka-ui` / `lucide-vue-next` / `motion-v`                          | 控件层                                                      |
 
 `chunkSizeWarningLimit` 不再放宽；Vite 的默认 warning 继续可见，真正的硬失败由 raw/gzip、
 vendor 聚合和单块上限共同决定。脚本已经读取 `.output/public/_nuxt/*.js` 并以 gzip level 9

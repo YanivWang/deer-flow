@@ -1,6 +1,6 @@
 # React / Vue 双前端生产入口
 
-M7 phase 3 把 React 与 Vue 镜像同时放入生产 Compose，但没有切换默认前端：
+M7 把 React 与 Vue 镜像同时放入生产 Compose，但没有切换默认前端：
 
 - 未匹配或未知 `Host` 继续进入 React `frontend:3000`；
 - 只有与 `DEER_FLOW_VUE_HOSTNAME` 完全匹配的主机名进入
@@ -31,6 +31,13 @@ curl -I -H 'Host: vue.example.com' http://127.0.0.1:2026/api/health
 
 ```bash
 make dual-frontend-production-check
+```
+
+Vue 容器 smoke 属于模块命令，必须在正确目录执行：
+
+```bash
+cd frontend-vue
+make container-smoke
 ```
 
 它检查默认 React、指定 hostname 的 Vue、单一 Gateway API/SSE/WS 路径、可信转发头、
@@ -84,4 +91,6 @@ make down
 未知 Host 始终仍落到 React，因此 React 是现阶段的安全默认入口。
 
 将 Vue 改成默认前端需要单独修改 Nginx map 的 `default`、重新完成生产验收并准备反向回滚；
-它不是本次 M7 phase 3 的行为，当前配置变量也不会隐式完成该切换。
+它不是本次 M7 的行为，当前配置变量也不会隐式完成该切换。M7 的带条件关闭只说明
+仓库内 readiness 硬退出项已有直接证据；上述 DNS/TLS/外层代理/真实 IdP 项在目标环境
+完成前仍是公开激活 Vue hostname 的发布阻断。M8 未开始。
