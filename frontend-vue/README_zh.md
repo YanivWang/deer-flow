@@ -2,8 +2,8 @@
 
 [English](README.md) | 简体中文
 
-这个 Nuxt 4 工作区是与 `../frontend` 并存、共用同一 Gateway 的 Vue 前端。
-**当前迁移进度：M8 可复用契约已经完成；M7 已通过 Vue 自有的 130/130 门禁完全收口。**
+这个 Nuxt 4 工作区是与 `../frontend` 并存、共用同一 Gateway 的已落地 Vue 前端。
+**M-1 至 M8 的仓库内里程碑均已关闭；M7 已通过 Vue 自有的 130/130 门禁完全收口。**
 聊天工作区、产物、工作区变更、侧边面板、设置、浏览器、智能体、渠道、定时任务、
 目标/模式和移动端界面均已接入现有 Gateway/数据流，并与当前 React 前端对齐；其中包括
 同一次 run 的重连顺序、公开 Showcase、自定义智能体的 Browser Live 可见性、Buzz 渠道和
@@ -12,8 +12,8 @@ Lark 应用切换。生产 Compose 保持 React 为默认入口，Vue 通过次�
 当前交付范围之外，仍为未执行（UNRUN）。
 
 M8 冻结了私有 `@deerflow/agent-core` 根 API、最小 L2 源码边界和隔离的自定义后端消费者；
-它不发布 npm 包，也不改变生产路由。继续迁移工作前，请先阅读
-[当前状态与下一步记录](../frontend-vue-build-docs/10-current-status-and-next.md)；各里程碑的
+它不发布 npm 包，也不改变生产路由。修改本工作区前，请先阅读
+[落地状态记录](../frontend-vue-build-docs/10-current-status-and-next.md)；各里程碑的
 evidence 只代表历史结果，不是当前状态的事实来源。
 
 请把 Makefile 作为唯一的开发入口：
@@ -46,6 +46,22 @@ make e2e-m7-visual  # 七个确定性产品状态截图
 make asset-budget  # 构建并检查客户端资源 raw/gzip 预算
 make e2e-list  # 汇总共享的 M1+ 业务契约；不代表这些契约已经通过
 ```
+
+在仓库根目录下，如果需要同时启动 Gateway 和 Vue，使用根 Makefile 的生命周期命令：
+
+```bash
+make dev-vue   # Gateway :8001 + Vue :3100
+```
+
+如果只想启动 Vue，并且不进入 `frontend-vue` 目录，使用 Make 的大写 `-C` 目录参数：
+
+```bash
+make -C frontend-vue dev
+```
+
+`make -C frontend-vue dev` 等价于 `cd frontend-vue && make dev`，但你的终端仍停留在仓库根目录。
+这里的 `-C` 必须大写；小写 `-c` 不是 Make 的目录参数。也可以写成长参数：
+`make --directory=frontend-vue dev`。
 
 如需了解在其他项目中通过 workspace/tarball 接入、自定义 `RunProtocol` + `EventReducer` +
 消息适配器示例、L2 接缝以及完整的 L3 替换清单，请阅读 [REUSE.md](REUSE.md)。该包是

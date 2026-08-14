@@ -4,7 +4,7 @@
 
 > **文档性质：接线合同与目标拓扑。** 当前实现进度、门禁红绿和环境问题以
 > [10-current-status-and-next.md](10-current-status-and-next.md) 为准。生产双 hostname
-> 仍是 M7 目标，不是当前 checkout 已经提供的部署能力。
+> 仓库路由合同已落地；公网 DNS/TLS/真实 IdP/目标 runtime 激活仍为 UNRUN。
 
 > M-1 已冻结最终接线：开发用 Next `3000`、Vue `3100`、Gateway `8001`；生产用两个独立 hostname 的对称同源 nginx/ingress，共享一个 Gateway。完整矩阵见 [09-m1-contract-freeze.md](09-m1-contract-freeze.md)。
 
@@ -17,8 +17,8 @@
 ### 当前 workflow 状态
 
 `.github/workflows/frontend-vue-verify.yml` 已不再是“等待首个 Vue skeleton”的预备态；
-M0–M4a 已有实现和仓库内门禁。workflow 的存在仍不等于所有业务合同通过：当前
-`contracts` 与 `full-real-backend` 状态为 failed，准确边界见 [10](10-current-status-and-next.md)。
+M-1 至 M8 的仓库内门禁已经收口。workflow 的存在不等于公网激活已经完成；准确边界见
+[10](10-current-status-and-next.md)。
 
 本地开发直接访问 3100。DeerFlow 双前端生产 profile 已冻结为对称 nginx/ingress：React 与 Vue 使用独立 hostname，但各自暴露相同的 `/api/**`、`/api/langgraph/**` 和 browser WS 路径，共用 Gateway。它复用已验证的 SSE、body limit、WS Upgrade 和同源认证；路径前缀和不同端口都不是生产默认。
 

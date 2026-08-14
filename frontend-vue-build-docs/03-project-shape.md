@@ -383,7 +383,10 @@ M0 花几分钟先跑这一条：
 cd frontend-vue && make e2e-list
 ```
 
-**期望是 25 个 spec 文件 / 120 个 `test()`。** 2026-08-04 当前 HEAD 实测 `frontend/tests/e2e/` 是 **27 个 spec / 130 个 test**；两个豁免 spec 合计 10 个 test，因此硬合同是 120 个。数量由 `playwright test --list` 在 CI 中实时打印，后续增量不靠手改本文。
+历史 M0 期望是 25 个 spec 文件 / 120 个 `test()`。最终落地后，Vue M7 使用完整路径 inventory，
+框架无关合同复用，框架特定行为由 Vue-owned spec 拥有；当前硬合同为 **25 个 spec 文件 /
+130 个 `test()`**，并已连续三次 130/130。数量由 `playwright test --list` 在 CI 中实时打印，
+后续增量不靠手改本文。
 
 > ⚠️ 早期版本写的是「列不出 **25 个用例**」——`--list` 列的是 test case 不是 spec 文件，按 25 去比对会在第一次跑的时候直接把人带偏。
 
@@ -419,7 +422,7 @@ Reka UI 与 Radix 的内部结构在个别组件上有出入，一定会有选�
 | ------------------------- | ------- | ----------------------------------- | -------------------------------------- |
 | `tests/e2e/`              | 27      | `playwright.config.ts`              | ✅ 除下面两条豁免外全部                |
 | `tests/e2e-auth/`         | 1       | `playwright.auth.config.ts`         | ✅ 需要对应的 Nuxt webServer           |
-| `tests/e2e-real-backend/` | 3       | `playwright.real-backend.config.ts` | 当前修正端口后 2/3；完整绿仍是后续 gate，见 [10](10-current-status-and-next.md) |
+| `tests/e2e-real-backend/` | 3       | `playwright.real-backend.config.ts` | 当前已 3/3；完整边界见 [10](10-current-status-and-next.md) |
 | `tests/e2e-record/`       | 1       | `playwright.record.config.ts`       | ❌ 录制工具，不是验收                  |
 
 **明确豁免的 2 个**（测的是 Vue 版故意不做的东西，见 [01-scope.md](01-scope.md)）：
@@ -427,7 +430,8 @@ Reka UI 与 Radix 的内部结构在个别组件上有出入，一定会有选�
 - `landing.spec.ts` —— 落地页不迁
 - `docs-localized-links.spec.ts` —— 文档站不迁
 
-其余 25 个是硬合同。按模块分批挂到 [M4b / M5 / M6](06-migration-plan.md#里程碑总览) 上，不要攒到 M7 一次性跑。
+最终 25 个完整路径 spec 是硬合同。已按模块分批挂到 [M4b / M5 / M6 / M7](06-migration-plan.md#里程碑总览)
+并收口，不再依赖 basename 碰撞或 React DOM 细节。
 
 ## Makefile —— 唯一开发者入口
 

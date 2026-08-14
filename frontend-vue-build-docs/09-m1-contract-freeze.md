@@ -217,13 +217,13 @@ Cookie 不按端口隔离。同一 hostname 的 `2026/3100` 会共享 access/CSR
 | ------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------- |
 | React unit          | **126 files**            | `frontend/tests/unit/**/*.{test,spec}.{ts,tsx}`；其中 core 83、其余 43                                   |
 | mock Playwright     | **27 files / 130 tests** | 本轮真实执行 `playwright test --list`                                                                    |
-| Vue 硬合同          | **25 files / 120 tests** | 完整路径 inventory；框架无关 spec 复用，框架特定 artifact specs 由 Vue 拥有 |
+| Vue 硬合同          | **25 files / 130 tests** | 最终完整路径 inventory；框架无关 spec 复用，框架特定行为由 Vue spec 拥有 |
 | auth                | 1 spec                   | Vue 专属 config/server，spec 原则上复用                                                                  |
 | real-backend        | 3 spec                   | Vue 专属 config/server，场景复用并补 Vue proxy assertions                                                |
 | record              | 1 spec                   | 证据采集工具，不等于产品 gate                                                                            |
 | 最终 thread fixture | 13 files / 516 messages  | `values.messages` 口径，不是顶层 `messages`                                                              |
 
-“收集到”只证明配置和依赖有效，不等于 130/120 tests 通过。Vue 必须执行精确 25-file
+“收集到”只证明配置和依赖有效，不等于 130 tests 通过。Vue 必须执行精确 25-file
 inventory，但不要求 25 个都共享：框架无关行为复用，框架特定行为写 Vue spec。React unit
 不能直接在 Vue 上运行：纯 TS/协议语义迁到 agent-core Vitest，组件/hook 测试写 Vue 专属
 版本，React 自身继续由既有 CI 守护。
@@ -238,7 +238,7 @@ inventory，但不要求 25 个都共享：框架无关行为复用，框架特�
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | G0-0 clean CI           | 根目录：`python3 scripts/pnpm.py install --frozen-lockfile`；`python3 scripts/pnpm.py --dir frontend-vue install --frozen-lockfile`；`cd frontend-vue && make verify` | 无                                              | clean checkout 安装；lint/type/unit/build 全绿；workflow 不再走 skip                                  |
 | G0-1 HTTP/SSE proxy     | `cd frontend-vue && make proxy-smoke`                                                                                                                                 | replay Gateway `8011`；Nuxt preview `3101`      | `/api/features`、两类 API rewrite、SSE逐帧且 header保留；20 MiB边界明确                               |
-| G0-2 collection         | 当前基线：`cd frontend && python3 ../scripts/pnpm.py exec playwright test --list`；Vue：`cd frontend-vue && make e2e-list`                                            | Vue preview由 Playwright webServer 启动         | React实时 inventory；Vue精确收集 25 files/120 tests，且输出 exclusions                                |
+| G0-2 collection         | 当前基线：`cd frontend && python3 ../scripts/pnpm.py exec playwright test --list`；Vue：`cd frontend-vue && make e2e-list`                                            | Vue preview由 Playwright webServer 启动         | React 实时 inventory；Vue 最终精确收集 25 files/130 tests，且输出 exclusions                                |
 | G0-3 auth disabled      | `cd frontend-vue && make auth-disabled-smoke`                                                                                                                         | preview `3101`，`NUXT_PUBLIC_AUTH_DISABLED=1`   | `/workspace` 不跳 `/login`；纯决策单测通过                                                            |
 | G0-4 visual seed        | `cd frontend-vue && make visual-baseline-smoke`                                                                                                                       | preview                                         | light/dark Button 基准产物与阈值通过                                                                  |
 | G0-5 Cookie/CSRF        | `cd frontend-vue && make e2e-auth`                                                                                                                                    | 可写 test DB/Gateway + preview                  | register/login/me/受保护写/CSRF refresh/logout 实际通过                                               |

@@ -1,6 +1,6 @@
 # 01 · 范围界定
 
-> **文档性质：冻结范围，不是当前完成清单。** 当前已完成/未完成项和下一步以
+> **文档性质：冻结范围，不是当前完成清单。** 当前落地状态和未执行边界以
 > [10-current-status-and-next.md](10-current-status-and-next.md) 为准。
 
 > M-1 已冻结。开发/生产拓扑、协议与根级集成的最终边界以 [09-m1-contract-freeze.md](09-m1-contract-freeze.md) 为准。

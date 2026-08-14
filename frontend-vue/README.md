@@ -2,9 +2,9 @@
 
 English | [简体中文](README_zh.md)
 
-This Nuxt 4 workspace is the Vue frontend that coexists with `../frontend` and
-shares the Gateway. **Current migration cursor: M8 reusable contracts are complete;
-M7 is fully closed with a Vue-owned 130/130 gate.** The chat workspace, artifacts, workspace
+This Nuxt 4 workspace is the completed Vue frontend that coexists with `../frontend` and
+shares the Gateway. **M-1 through M8 are closed in this repository; M7 is fully
+closed with a Vue-owned 130/130 gate.** The chat workspace, artifacts, workspace
 changes, sidecar, settings, browser, agents, channels, scheduled tasks, goal/mode,
 and mobile surfaces are connected to the existing Gateway/data flow and aligned
 to the current React frontend, including same-run reconnect ordering, public Showcase,
@@ -15,8 +15,8 @@ scope and remains unrun.
 M8 freezes the private
 `@deerflow/agent-core` root API, the minimal L2 source boundary and an isolated custom-backend
 consumer; it does not publish npm or change production routing. Read
-[the current status and next-step record](../frontend-vue-build-docs/10-current-status-and-next.md)
-before continuing migration work; milestone evidence is historical, not the
+[the landing status record](../frontend-vue-build-docs/10-current-status-and-next.md)
+before changing this workspace; milestone evidence is historical, not the
 current status source.
 
 Use the Makefile as the only developer entrypoint:
@@ -49,6 +49,24 @@ make e2e-m7-visual  # seven deterministic product-state screenshots
 make asset-budget  # build + raw/gzip client asset budgets
 make e2e-list  # collects the shared M1+ business contract; does not claim it passes
 ```
+
+From the repository root, use the root lifecycle target when you need Gateway +
+Vue together:
+
+```bash
+make dev-vue   # Gateway :8001 + Vue :3100
+```
+
+To run only the Vue workspace without entering `frontend-vue`, use Make's
+uppercase `-C` directory option:
+
+```bash
+make -C frontend-vue dev
+```
+
+`make -C frontend-vue dev` is equivalent to `cd frontend-vue && make dev`, but
+keeps your shell in the repository root. Lowercase `-c` is not Make's directory
+option; the long form is `make --directory=frontend-vue dev`.
 
 For another project's workspace/tarball setup, custom `RunProtocol` + `EventReducer` + message
 adapter example, L2 seams and the complete L3 replacement checklist, read

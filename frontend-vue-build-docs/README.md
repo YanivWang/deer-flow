@@ -1,6 +1,7 @@
-# DeerFlow 前端 Vue 重写方案
+# DeerFlow 前端 Vue 落地归档
 
-在仓库内新建 `frontend-vue/`，以 Vue 技术栈重写 `frontend/`（Next.js 16 + React 19）。两个前端并行运行、共用同一套后端接口。
+`frontend-vue/` 是已经落地的 Nuxt/Vue 前端，与 `frontend/`（Next.js 16 + React 19）
+在同一仓库内并行运行、共用同一套 Gateway 接口。
 
 **产品目标：产出一套可被其他项目复用的 agent 前端架构。** 后续项目做 AI agent 时能最大程度复用其逻辑，而它们的后端未必是 LangChain / LangGraph。
 
@@ -9,10 +10,11 @@
 这两条不冲突，靠**顺序**解决：先做通用层（L1 → L2），再做 DeerFlow 专有层（L3），L2 边界逐模块抽取而不是最后再抽。分层定义见 [08-agent-core-contract.md](08-agent-core-contract.md)，里程碑见 [06-migration-plan.md](06-migration-plan.md)。
 
 > **当前状态入口：[10-current-status-and-next.md](10-current-status-and-next.md)。**
-> 截至 2026-08-13，M-1 / M0 / M1 / M2 / M3 / M4a 有通过证据，当前游标是
-> M4b 前置修复；共享业务合同与 full real-backend 仍为红，产品 UI 尚未完成。
-> `evidence/` 只记录各里程碑关闭时的历史事实，不能用旧的“通过”覆盖当前失败结果。
-> 双前端 production readiness 仍在 M7，不能把“工程可运行”写成“可以直接上线”。
+> 截至 2026-08-14，M-1 至 M8 的仓库内里程碑均已关闭；Vue 自有 M7 inventory 为
+> 25 files / 130 tests，并已连续三次 130/130。`evidence/` 只记录各里程碑关闭时的历史事实；
+> 若旧 evidence 与当前状态页冲突，以当前 checkout、`make handoff-check` 和文档 10 为准。
+> 生产 Compose 保持 React default / Vue secondary hostname；公网 DNS/TLS/真实 IdP/目标 runtime
+> 激活仍为 UNRUN，不属于本次仓库落地证明。
 
 > 除文档 10 外，本目录主要是冻结规格与历史证据，不是滚动完成记录。第三方包存在性与
 > peer 关系按 2026-08-04 核实；行为敏感包使用现有 `frontend/pnpm-lock.yaml` 的
@@ -63,7 +65,7 @@ LangChain 依赖在 M2 四类协议门禁通过后移除
 
 | 维度                    | 要求           | 验收方式                                                                                                | 是否门禁    |
 | ----------------------- | -------------- | ------------------------------------------------------------------------------------------------------- | ----------- |
-| 功能                    | **一致**       | Playwright E2E；当前 mock 总基线 27 files / 130 tests，Vue 硬合同排除两个 React-only spec 后为 25 / 120 | ✅          |
+| 功能                    | **一致**       | Playwright E2E；Vue 自有 M7 inventory 为 25 files / 130 tests，框架无关合同复用，框架特定行为由 Vue spec 拥有 | ✅          |
 | 交互逻辑与体验          | **一致**       | Playwright E2E + [05-invariants.md](05-invariants.md) 逐条勾选（A–N 共 14 组）                          | ✅          |
 | 页面结构（DOM）         | 选择器契约一致 | E2E 选择器；`structural-diff` 只作**诊断报告**                                                          | ❌ 不做门禁 |
 | 关键视觉状态            | 基线阈值内一致 | 6–10 个确定性截图状态                                                                                   | ✅          |
@@ -109,14 +111,14 @@ LangChain 依赖在 M2 四类协议门禁通过后移除
 | [07-parallel-run.md](07-parallel-run.md)                     | 与 `frontend/` 并行运行、共用后端的接线方式（端口、代理、WebSocket）                    |
 | [08-agent-core-contract.md](08-agent-core-contract.md)       | **★ 产品定义** —— L1/L2/L3 分层、接口契约、禁入清单、依赖方向。**其他项目复用时读这份** |
 | [09-m1-contract-freeze.md](09-m1-contract-freeze.md)         | **★ M-1 冻结结论** —— 双前端部署、Gateway/SSE/WS、认证、测试、视觉与根级集成追踪矩阵    |
-| [10-current-status-and-next.md](10-current-status-and-next.md) | **★ 当前唯一状态入口** —— 实跑结果、已知红项、M4b 前置与有序任务计划                  |
+| [10-current-status-and-next.md](10-current-status-and-next.md) | **★ 当前唯一状态入口** —— 落地结论、实跑矩阵、已知 warnings 与边界                  |
 
 ## 阅读顺序建议
 
-续接任务先读 [10](10-current-status-and-next.md) 并运行 `make handoff-check`；确定当前红绿后，
+后续任务先读 [10](10-current-status-and-next.md) 并运行 `make handoff-check`；确定当前红绿后，
 再读 [09](09-m1-contract-freeze.md)（冻结合同）、[08](08-agent-core-contract.md)（产品定义）、
 [04](04-architecture-decisions.md) 和 [05](05-invariants.md)。不要从某份历史 evidence 的末尾
-直接推导当前下一步。
+直接推导当前状态。
 
 [05-invariants.md](05-invariants.md) 尤其重要：`frontend/AGENTS.md` 里记录的约束大多是线上问题修复后沉淀的（#4465、#4555、#4576 等），不会跟着组件自动迁移，是"看起来做完了但行为不对"的主要来源。其中 **A 组（流式与重连）与 L 组（自研 SSE 补强）** 在改用自研 SSE 后风险最高，必须有单测覆盖。
 
@@ -134,7 +136,7 @@ A–N 共 115 条逐条落到里程碑。不要拿组名当验收单位：A、C�
 | ------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **G0-0 clean checkout CI**                        | M0    | 先安装 `frontend` 的共享 Playwright，再安装 Vue；目录未创建时 workflow 安全跳过；provenance 不依赖偶然存在的 git object                                                                                                                                                                                       |
 | **G0-1 `nuxt preview` 下代理生效 + SSE 不被缓冲** | M0    | E2E 的 webServer 跑的就是 preview。**`nitro.devProxy` 只管 dev**；生产使用 Nitro server catch-all，并实测 `sendStream` / `streamRequest` 两个 flag。`routeRules.proxy` 因会绕过 body/path guard 而只保留为纯合同映射测试，见 [03](03-project-shape.md#️-为什么生产代理必须进入-nitro-产物而不是-nitrodevproxy) |
-| **G0-2 共用 testDir 能收集到用例**                | M0    | 先用当前可执行命令确认 React mock 总基线 27 files / 130 tests；Vue config 明确排除两个 React-only spec 后列出 25 / 120。收集成功不等于测试通过                                                                                                                                                                |
+| **G0-2 共用 testDir 能收集到用例**                | M0    | 历史 M0 先确认 React mock 总基线 27 files / 130 tests；最终 Vue 硬合同已收口为 25 files / 130 tests。收集成功不等于测试通过                                                                                                                                                                |
 | **G0-3 鉴权可关**                                 | M0    | Next 版靠 `DEER_FLOW_AUTH_DISABLED=1`，**25 个合同 spec 全依赖它**；Vue 版必须有等价开关                                                                                                                                                                                                                      |
 | **G0-4 shadcn-vue 视觉基准**                      | M0    | Button 并排截图 + 暗色切换。样式基准没对齐就不该往下走                                                                                                                                                                                                                                                        |
 | **G0-5 真实 Cookie/CSRF**                         | M0    | 经 preview 完成 register/login、写请求、refresh、logout                                                                                                                                                                                                                                                       |

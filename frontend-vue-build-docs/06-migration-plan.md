@@ -84,7 +84,7 @@ git tag frontend-vue-baseline-v2 27a425b0
 | **M4b** | **已关闭**     | **通用 agent UI（L2 第一批）** ★                                                          | **一个能跑的通用 agent 聊天应用——模板到此可用**                     |
 | **M5**  | **已关闭**     | L3 第一批：artifacts + sidecar                                                            | L2 扩展点已被真实 L3 功能验证                                       |
 | **M6**  | **已关闭**     | L3 其余：设置 / 侧栏 / browser / channels                                                 | 功能面完整                                                          |
-| **M7**  | **已关闭**     | 交互收尾 + Vue 独立完整验收；25 files / 120 tests 连续三次 120/120，公网激活另列外部阻塞 | **功能/交互合同与关键视觉状态达成**                                 |
+| **M7**  | **已关闭**     | 交互收尾 + Vue 独立完整验收；25 files / 130 tests 连续三次 130/130，公网激活另列外部阻塞 | **功能/交互合同与关键视觉状态达成**                                 |
 | **M8**  | 已关闭         | L1 根导出、最小 L2 源码边界、隔离 consumer、复用指南与 L3 替换清单已冻结                 | 其他项目可按可运行示例上手；包仍 private、未发布 npm                |
 
 ## 相对工作量与中止判定
@@ -222,7 +222,7 @@ J 组（认证与存储）被挂在"通用 agent UI"下，而它其实在 M0 就
 | -------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | **G0-0** | **clean checkout CI**                        | workflow 先用根 runner frozen-install `frontend/`，确认共享 Playwright 存在，再安装 `frontend-vue/`；设置完整基线历史或改用签入 hash manifest；跑 `verify`/E2E                                                                                                                                                                                                                                                                        | 本机 node_modules 掩盖 dangling `link:`，或 provenance 在 shallow checkout 失败                                    |
 | **G0-1** | **`nuxt preview` 下代理生效 + SSE 不被缓冲** | `nuxt build && nuxt preview`，分别请求 `/api/langgraph/**` 与 `/api/**`，确认前者 rewrite 到 Gateway `/api/**`、后者原样透传，且 SSE token 逐条到达。**顺带验 `sendStream` / `streamRequest` 两个 flag 的有无差异**（见 [03](03-project-shape.md#️-为什么生产代理必须进入-nitro-产物而不是-nitrodevproxy)）。`tests/unit/config/routes.test.ts` 穷举两个 `NUXT_PUBLIC_*` 设/不设的 4 种合同组合；preview 测试锁定真正的 catch-all 行为 | E2E webServer 跑的就是 preview。这条不过，`e2e-auth` / `e2e-real-backend` 全不可用，合同 spec 的未 mock 请求会 404 |
-| **G0-2** | **共用 testDir 能收集到用例**                | 先运行 React collection 得到当前总基线 **27 files / 130 tests**；Vue config 排除两个 React-only spec 后，clean install 的 `make e2e-list` 得 **25 / 120**。collection 不是 pass，后续还须 `make e2e`                                                                                                                                                                                                                                  | `@playwright/test` 双实例会让用例收集为 0 或直接报错                                                               |
+| **G0-2** | **共用 testDir 能收集到用例**                | 先运行 React collection 得到当时总基线 **27 files / 130 tests**；最终 Vue 硬合同已收口为 **25 files / 130 tests**。collection 不是 pass，后续还须执行对应 E2E                                                                                                                                                                                                                                  | `@playwright/test` 双实例会让用例收集为 0 或直接报错                                                               |
 | **G0-3** | **鉴权可关**                                 | 带 `NUXT_PUBLIC_AUTH_DISABLED=1` 起 preview，直接访问 `/workspace` 不跳 `/login`。决策逻辑写成纯函数 + 单测（见 [M4a](#m4a--数据流)），别只靠这一次手工验                                                                                                                                                                                                                                                                             | 25 个合同 spec 全红，且失败信息指向"页面没渲染"而不是真实原因                                                      |
 | **G0-4** | **shadcn-vue 视觉基准**                      | `Button` 与原版 React `Button` 并排截图 + 暗色切换                                                                                                                                                                                                                                                                                                                                                                                    | 样式基准没对齐，后面 41 个组件的 cva 复制全部建在流沙上                                                            |
 | **G0-5** | **真实 Cookie + CSRF**                       | 经 3101 preview 同源代理完成 setup/register/login、带 CSRF 的写请求、刷新 `/auth/me`、logout                                                                                                                                                                                                                                                                                                                                          | 只测 auth-disabled 无法证明 Set-Cookie、credentials 和 CSRF 代理正确                                               |
@@ -807,9 +807,9 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 > migration/consumer、real-backend 与 external 回归保持通过。完整 inventory、失败修复
 > 与未知远端运行时边界见 [evidence/m6-remaining-l3.md](evidence/m6-remaining-l3.md)。
 >
-> 全量共享合同仍只是 `make e2e-list` 收集到 25 files / 120 tests，没有执行或声称
-> 120 passed。H1-H6、全量认证/视觉/性能/生产 readiness 属于 M7；L2 复用契约收口
-> 属于 M8，本轮均未进入。
+> 这段是 M6 关闭时的历史边界：当时全量共享合同仍只是 `make e2e-list` 收集到
+> 25 files / 120 tests，没有执行或声称 120 passed。H1-H6、全量认证/视觉/性能/生产
+> readiness 属于 M7；L2 复用契约收口属于 M8。当前最终结果见文档 10。
 
 ---
 
@@ -828,7 +828,7 @@ A7/A8 落在这里，是因为 `@tanstack/vue-query` plugin 在这个里程碑�
 > **2026-08-13 最终收口：**上述 118/120 是保留的历史快照，不再是当前状态。Vue M7
 > 改用完整路径 inventory，框架特定的 batched stream 与 splitpanes/artifact panel 由 Vue
 > spec 拥有；删除 React DOM、固定动画 timer、延迟自动打开和 UI chunk 双映射。当前 checkout
-> 连续三次精确 25 files / 120 tests、120/120。详见
+> 连续三次精确 25 files / 130 tests、130/130。详见
 > [最终收口 evidence](evidence/m7-vue-gate-final-closure.md) 与 [document 10](10-current-status-and-next.md)。
 
 - 三面板 resizable 编排（`splitpanes`），逐条对照 **H 组 8 条** —— 这是重写而非替换。**可行性已在 [M0/M1 的 spike](#m0m1-期间插入splitpanes-spike) 里验过**，这里做的是完整实现，不是探路

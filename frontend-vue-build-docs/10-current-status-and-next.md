@@ -1,4 +1,4 @@
-# frontend-vue 当前状态与下一步
+# frontend-vue 当前落地状态
 
 > 状态快照：2026-08-14。本文是续接 `frontend-vue` 时唯一的当前状态入口。历史 evidence
 > 只说明当时发生过什么；新窗口必须先运行根目录 `make handoff-check`，再相信当前 checkout。
@@ -127,11 +127,11 @@ smoke。它们只加固发布包证据，不改变产品运行语义。
 - 本机 `make doctor` 非绿：native nginx 未安装，`config.yaml` v31 < v32，web_capture 未配置；
   provider 本身配置并可用。没有修改用户 config 或 `.env`。
 
-## 7. 下一步与禁止扩大解释
+## 7. 落地后边界
 
 仓库内没有剩余必做迁移任务。公网目标环境已被用户明确排除本轮，保持 UNRUN，不能用仓库
 fixture“补证明”。
 
 未经独立授权不得：把 Vue 切成默认前端、删除 React、npm publish、push/PR、创建
-`agent-ui-kit`、增加 CodeMirror、追新上游或开发新功能。下一窗口仍从
+`agent-ui-kit`、增加 CodeMirror、追新上游或开发新功能。后续改动仍从
 `make handoff-check`、当前 checkout 和本文件开始。

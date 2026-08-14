@@ -2,7 +2,7 @@
 
 > **状态：M8 已冻结 L1 公共入口与最小 L2 源码边界。** Nuxt proxy 下的
 > create/resume/cancel/gap/heartbeat 已有 M0/M4a/真实协议 gate；M4b 通用聊天消费链、
-> M5 artifacts/sidecar 扩展链和 M7 readiness 均已实现。当前红绿与下一步见
+> M5 artifacts/sidecar 扩展链和 M7 readiness 均已实现。当前落地状态见
 > [10-current-status-and-next.md](10-current-status-and-next.md)。
 > 新运行证据若与本文不同，必须先修订合同和测试，不能边写组件边猜协议。
 >
