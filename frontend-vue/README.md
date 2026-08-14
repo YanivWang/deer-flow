@@ -1,5 +1,7 @@
 # DeerFlow Vue frontend
 
+English | [简体中文](README_zh.md)
+
 This Nuxt 4 workspace is the Vue frontend that coexists with `../frontend` and
 shares the Gateway. **Current migration cursor: M8 reusable contracts are complete;
 M7 is fully closed with a Vue-owned 130/130 gate.** The chat workspace, artifacts, workspace
