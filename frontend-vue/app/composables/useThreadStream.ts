@@ -117,6 +117,20 @@ export interface UseThreadStreamOptions {
 
 const noopNotifier: ThreadStreamNotifier = { warn: () => {}, error: () => {} };
 
+/**
+ * `useStream` 原本会根据消息读取和回调自动推导这四种模式。Vue 的自研
+ * transport 没有那层隐式记账，所以每个创建 run 的入口都必须显式携带同一组：
+ * `messages-tuple` 提供文本/tool-call 分片，`values` 提供完整状态，另外两种
+ * 分别驱动标题更新和自定义任务/gap 事件。漏掉整个字段时 Gateway 会退回
+ * `values`-only，SSE 仍然连接着，但回答只能按完整状态成段刷新。
+ */
+const THREAD_STREAM_MODES = [
+  "values",
+  "messages-tuple",
+  "updates",
+  "custom",
+] as const;
+
 function identitiesOf(messages: Message[]): Set<string> {
   return new Set(messages.map(messageIdentity).filter(isNonEmptyString));
 }
@@ -579,6 +593,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
         threadId: targetThreadId,
         payload: {
           assistant_id: "lead_agent",
+          stream_mode: THREAD_STREAM_MODES,
           input: {
             messages: buildThreadSubmitMessages({
               text,
@@ -671,6 +686,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
         threadId: targetThreadId,
         payload: {
           assistant_id: "lead_agent",
+          stream_mode: THREAD_STREAM_MODES,
           input: prepared.input,
           checkpoint: prepared.checkpoint,
           metadata: prepared.metadata,

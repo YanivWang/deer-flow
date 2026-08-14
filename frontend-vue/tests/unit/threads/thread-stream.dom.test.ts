@@ -1,5 +1,5 @@
 /*
-  【文件职责】     `useThreadStream` 的生命周期：C8/C9 顺序锚点、A7 清空、A8 失效。
+  【文件职责】     `useThreadStream` 的生产流模式与生命周期：C8/C9 顺序锚点、A7 清空、A8 失效。
   【对应 frontend/】 tests/unit/core/threads/local-turn-order.dom.test.tsx（110 行）
   【架构位置】     L3 测试（dom project）
   【主要导出】     无
@@ -148,6 +148,7 @@ describe("useThreadStream · K3 编辑并重跑", () => {
     expect(ctx.fake.submissions.at(-1)).toMatchObject({
       threadId: "thread-1",
       payload: {
+        stream_mode: ["values", "messages-tuple", "updates", "custom"],
         input: {
           messages: [
             { id: "human-2", type: "human", content: "Revised prompt" },
@@ -233,6 +234,23 @@ const injectedHuman = {
   type: "human",
   content: "Build a presentation",
 } as Message;
+
+describe("useThreadStream · production stream modes", () => {
+  it("普通发送显式请求消息分片、全量状态、更新与自定义事件", async () => {
+    const ctx = mountStream();
+
+    await ctx.api.sendMessage("thread-1", { text: "hi" });
+
+    expect(ctx.fake.submissions).toHaveLength(1);
+    expect(ctx.fake.submissions[0]?.payload.stream_mode).toEqual([
+      "values",
+      "messages-tuple",
+      "updates",
+      "custom",
+    ]);
+    ctx.wrapper.unmount();
+  });
+});
 
 describe("useThreadStream · C8/C9 本地回合顺序锚点", () => {
   beforeEach(() => {

@@ -100,3 +100,14 @@ the variable name is retained for compatibility with existing test configs.
 
 Production routing, OIDC callback rules and rollback commands are maintained in
 the [dual-frontend production guide](../docs/dual-frontend-production.md).
+
+## Streaming behavior
+
+Chat run creation explicitly subscribes to `values`, `messages-tuple`, `updates`
+and `custom`. `messages-tuple` carries incremental model text and tool-call
+chunks; omitting it leaves the connection as SSE but makes answers update only
+when complete state snapshots arrive. Vue coalesces dense chunks into render
+updates at most 80 ms apart to keep Markdown and message grouping responsive.
+While the viewport remains at the bottom, message-content resizes keep the
+active answer in view. Scrolling upward releases that follow behavior until the
+user returns to the bottom, matching the React frontend.

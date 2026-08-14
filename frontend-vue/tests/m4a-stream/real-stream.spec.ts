@@ -18,7 +18,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 /** 让这一条用例的 create 走假 Gateway 的哪个脚本。用改写 URL 而不是 fulfill：
  *  `route.continue()` 由浏览器真正发出请求，响应体仍然是流式的。 */
-async function useScript(page: Page, script: "plain" | "gap") {
+async function useScript(page: Page, script: "plain" | "gap" | "scroll") {
   await page.route("**/api/langgraph/threads/*/runs/stream*", (route) => {
     const url = new URL(route.request().url());
     url.searchParams.set("script", script);
@@ -34,6 +34,80 @@ async function openNewChat(page: Page) {
 }
 
 test.describe("M4a 真流 gate", () => {
+  test("回答在同一个 AI 气泡内逐片增高时，视口持续贴住底部", async ({
+    page,
+  }) => {
+    await useScript(page, "scroll");
+    const textarea = await openNewChat(page);
+    await textarea.fill("Write a long answer");
+    await textarea.press("Enter");
+
+    const answer = page.locator(
+      '[data-testid="message-list"] li[data-role="ai"]',
+    );
+    await expect(answer).toContainText("Streaming paragraph 18", {
+      timeout: 20_000,
+    });
+
+    const scroller = page
+      .getByTestId("main-message-list")
+      .locator(":scope > div");
+    const metrics = await scroller.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      scrollTop: element.scrollTop,
+    }));
+    expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+    await expect
+      .poll(() =>
+        scroller.evaluate(
+          (element) =>
+            element.scrollHeight - element.clientHeight - element.scrollTop,
+        ),
+      )
+      .toBeLessThanOrEqual(2);
+  });
+
+  test("用户在回答期间主动上滚后，不再被后续 delta 抢回底部", async ({
+    page,
+  }) => {
+    await useScript(page, "scroll");
+    const textarea = await openNewChat(page);
+    await textarea.fill("Write a long answer");
+    await textarea.press("Enter");
+
+    const answer = page.locator(
+      '[data-testid="message-list"] li[data-role="ai"]',
+    );
+    await expect(answer).toContainText("Streaming paragraph 10", {
+      timeout: 20_000,
+    });
+    const scroller = page
+      .getByTestId("main-message-list")
+      .locator(":scope > div");
+    await expect
+      .poll(() => scroller.evaluate((element) => element.scrollTop))
+      .toBeGreaterThan(0);
+    const scrollTopBeforeWheel = await scroller.evaluate(
+      (element) => element.scrollTop,
+    );
+
+    await scroller.hover();
+    await page.mouse.wheel(0, -1000);
+    await expect
+      .poll(() => scroller.evaluate((element) => element.scrollTop))
+      .toBeLessThan(scrollTopBeforeWheel - 200);
+    await expect(answer).toContainText("Streaming paragraph 18", {
+      timeout: 20_000,
+    });
+
+    const bottomGap = await scroller.evaluate(
+      (element) =>
+        element.scrollHeight - element.clientHeight - element.scrollTop,
+    );
+    expect(bottomGap).toBeGreaterThan(200);
+  });
+
   test("逐片 delta 在浏览器里拼成完整答案，顺序仍然是 human 在前", async ({
     page,
   }) => {

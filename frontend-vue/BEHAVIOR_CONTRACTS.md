@@ -14,16 +14,16 @@
 
 > ⚠️ 本组原本由 LangGraph SDK 的 `useStream` 保证。改为**自研 SSE** 后，这些语义的实现方变成了自己——约束一条不减，另见 L 组的补强项。
 
-| #   | 约束                                                                                                          | 为什么                                                                                                                                                                                                       |
-| --- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A1  | 同宏任务内的流事件要合并成一次通知，**不要用固定延时防抖**                                                    | 这是 SDK `throttle: true`（boolean 档）的语义。数字档是尾部防抖，chunk 持续到达时会一直推迟，饿死 UI 更新                                                                                                    |
-| A2  | stream 请求模式白名单：`values` `messages-tuple` `updates` `debug` `tasks` `checkpoints` `custom`             | 含不支持模式时必须**在 HTTP 之前抛错**，不能部分转发、也不能静默降级为 `values`。`messages` 与 `events` 不被支持。白名单在 `app/core/api/stream-mode.ts`，调用点在 `app/core/agent-deerflow/run-protocol.ts` |
-| A3  | `streamResumable` **不得出现在请求里**                                                                        | Gateway 不接受该选项。它原本是 SDK 侧的重连记账字段、由 `sanitizeRunStreamOptions` 剥离；自研 transport 后不再产生该字段，但剥离逻辑保留作为防御。重放一律走 SSE `Last-Event-ID` 游标                        |
-| A4  | SSE `gap` 帧要包住**初始流和 join 流两者**                                                                    | 上游 SDK 会忽略未知事件名；包装器必须保持惰性 async iterable（SDK 用 `for await` 消费）                                                                                                                      |
-| A5  | gap 恢复最多 5 次 rejoin（全 gap 路径共 6 次流调用）                                                          | —                                                                                                                                                                                                            |
-| A6  | gap **不得当作正常流结束**，也**不得取消仍在运行的后端 run**                                                  | 会丢失正在进行的任务                                                                                                                                                                                         |
-| A7  | gap 发生时要清空乐观 / 瞬态 / subtask 状态、失效持久化历史缓存、显示本地化恢复警告                            | —                                                                                                                                                                                                            |
-| A8  | Stop 后立即失效 4 类缓存（当前 thread、thread history、token usage、侧栏/搜索），并**再安排一次延迟 refetch** | SDK 的 stop 可能在后端标题定稿提交前就以 abort + fire-and-forget cancel 结束                                                                                                                                 |
+| #   | 约束                                                                                                                       | 为什么                                                                                                                                                                                |
+| --- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1  | 同宏任务内的流事件要合并成一次通知，**不要用固定延时防抖**                                                                 | 这是 SDK `throttle: true`（boolean 档）的语义。数字档是尾部防抖，chunk 持续到达时会一直推迟，饿死 UI 更新                                                                             |
+| A2  | 所有生产 run 创建入口必须请求 `values` `messages-tuple` `updates` `custom`；协议白名单还允许 `debug` `tasks` `checkpoints` | 字段缺失时 Gateway 会默认成 `values`-only：连接仍是 SSE，但回答失去文本分片，只能按完整状态成段刷新。含不支持模式时必须**在 HTTP 之前抛错**；`messages` 与 `events` 不被支持          |
+| A3  | `streamResumable` **不得出现在请求里**                                                                                     | Gateway 不接受该选项。它原本是 SDK 侧的重连记账字段、由 `sanitizeRunStreamOptions` 剥离；自研 transport 后不再产生该字段，但剥离逻辑保留作为防御。重放一律走 SSE `Last-Event-ID` 游标 |
+| A4  | SSE `gap` 帧要包住**初始流和 join 流两者**                                                                                 | 上游 SDK 会忽略未知事件名；包装器必须保持惰性 async iterable（SDK 用 `for await` 消费）                                                                                               |
+| A5  | gap 恢复最多 5 次 rejoin（全 gap 路径共 6 次流调用）                                                                       | —                                                                                                                                                                                     |
+| A6  | gap **不得当作正常流结束**，也**不得取消仍在运行的后端 run**                                                               | 会丢失正在进行的任务                                                                                                                                                                  |
+| A7  | gap 发生时要清空乐观 / 瞬态 / subtask 状态、失效持久化历史缓存、显示本地化恢复警告                                         | —                                                                                                                                                                                     |
+| A8  | Stop 后立即失效 4 类缓存（当前 thread、thread history、token usage、侧栏/搜索），并**再安排一次延迟 refetch**              | SDK 的 stop 可能在后端标题定稿提交前就以 abort + fire-and-forget cancel 结束                                                                                                          |
 
 > 当前实现：`packages/agent-core/src/session/`、`packages/agent-core/src/transport/`、
 > `app/core/agent-deerflow/`、`app/core/threads/cache-invalidation.ts` 和
@@ -60,26 +60,36 @@ false，**一声不响地放行**。适配层必须显式桥接两种命名再�
 两种命名各有一个回归用例在
 `tests/unit/agent-deerflow/run-protocol.test.ts`。
 
+生产模式定义在 `app/composables/useThreadStream.ts`，普通发送、重新生成和编辑后重跑
+共享同一个常量，不能让某个入口省略后退回 Gateway 的 `values` 默认值。对应黑盒回归在
+`tests/unit/threads/thread-stream.dom.test.ts`：它从 fake runner 的 submission 断言真实 wire
+payload，而不是只测协议层能否转发一个由测试手工构造的 `stream_mode`。
+
 ---
 
 ## B. 消息渲染与分组
 
-| #   | 约束                                                                                      | 为什么                                                                                                                       |
-| --- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| B1  | 带 `tool_calls` 的 AI 消息里若有可见文本，必须作为 processing step 渲染                   | 保留 provider 的错误解释、"换个思路试试"这类文本                                                                             |
-| B2  | 当前回合仍在 loading 时，最新可见 human 之后的纯内容 AI 消息**留在 processing 分组**      | provider 可能稍后往同一条消息追加 tool-call chunk；过早判定为终态气泡会让文本跳进步骤面板                                    |
-| B3  | 前面已有 tool call 之后出现的纯内容 AI 消息，流式期间仍显示在最后一个 tool-call 步骤之后  | 同上，它自己也可能再获得 tool call                                                                                           |
-| B4  | **reasoning 必须在答案文本上方**，两个渲染组件都要（#4576）                               | 同一条消息在生命周期内由 `MessageGroup` 和 `MessageListItem` 先后渲染；两边不一致会导致回合settle瞬间两者互换位置            |
-| B5  | reasoning 之**前**发出的 assistant 文本保持原位，只有 reasoning 产出的答案移到其下方      | —                                                                                                                            |
-| B6  | run duration 折叠为一份，锚定在该 run 最后一个可见消息组之后                              | 兼容字段 `additional_kwargs.turn_duration` 在历史 AI 消息上重复出现                                                          |
-| B7  | run duration 是**整个 run 的墙钟时间**，不是单条消息的思考时间；与 reasoning 披露分开渲染 | —                                                                                                                            |
-| B8  | workspace-change 卡片只挂在该 run 的**最后一个 assistant 气泡**（#4555）                  | 卡片由 `(threadId, runId)` 解析，否则该 run 的每条 AI 消息都会渲染一份                                                       |
-| B9  | 两个 anchor helper 的候选集合**故意不同**，不要统一                                       | run duration 由 `MessageList` 在每个组周围发出，接受任意类型；workspace-change 由 `MessageListItem` 发出，只接受 `assistant` |
-| B10 | 每个 processing 组的 tool-result / browser-preview 查找表**每组只构建一次**               | 保留首个非空结果与首个带截图的 browser view，避免为每个 tool call 重扫全组                                                   |
-| B11 | citation 链接的 `citation:` 标签要从**完整 children 树**推导                              | 流式期间 children 可能是元素或数组，不是纯字符串                                                                             |
+| #   | 约束                                                                                         | 为什么                                                                                                                       |
+| --- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| B1  | 带 `tool_calls` 的 AI 消息里若有可见文本，必须作为 processing step 渲染                      | 保留 provider 的错误解释、"换个思路试试"这类文本                                                                             |
+| B2  | 当前回合仍在 loading 时，最新可见 human 之后的纯内容 AI 消息**留在 processing 分组**         | provider 可能稍后往同一条消息追加 tool-call chunk；过早判定为终态气泡会让文本跳进步骤面板                                    |
+| B3  | 前面已有 tool call 之后出现的纯内容 AI 消息，流式期间仍显示在最后一个 tool-call 步骤之后     | 同上，它自己也可能再获得 tool call                                                                                           |
+| B4  | **reasoning 必须在答案文本上方**，两个渲染组件都要（#4576）                                  | 同一条消息在生命周期内由 `MessageGroup` 和 `MessageListItem` 先后渲染；两边不一致会导致回合settle瞬间两者互换位置            |
+| B5  | reasoning 之**前**发出的 assistant 文本保持原位，只有 reasoning 产出的答案移到其下方         | —                                                                                                                            |
+| B6  | run duration 折叠为一份，锚定在该 run 最后一个可见消息组之后                                 | 兼容字段 `additional_kwargs.turn_duration` 在历史 AI 消息上重复出现                                                          |
+| B7  | run duration 是**整个 run 的墙钟时间**，不是单条消息的思考时间；与 reasoning 披露分开渲染    | —                                                                                                                            |
+| B8  | workspace-change 卡片只挂在该 run 的**最后一个 assistant 气泡**（#4555）                     | 卡片由 `(threadId, runId)` 解析，否则该 run 的每条 AI 消息都会渲染一份                                                       |
+| B9  | 两个 anchor helper 的候选集合**故意不同**，不要统一                                          | run duration 由 `MessageList` 在每个组周围发出，接受任意类型；workspace-change 由 `MessageListItem` 发出，只接受 `assistant` |
+| B10 | 每个 processing 组的 tool-result / browser-preview 查找表**每组只构建一次**                  | 保留首个非空结果与首个带截图的 browser view，避免为每个 tool call 重扫全组                                                   |
+| B11 | citation 链接的 `citation:` 标签要从**完整 children 树**推导                                 | 流式期间 children 可能是元素或数组，不是纯字符串                                                                             |
+| B12 | 消息视口贴底时，流式内容的每次尺寸增长都继续跟随底部；用户主动上滚后立即释放，回到底部时恢复 | AI token 会持续追加在同一个消息组内，不能只监听组数量；语义与 React `use-stick-to-bottom` 的 resize/follow 行为一致          |
 
 > 当前实现：`app/core/messages/utils.ts`、`app/core/messages/run-duration.ts`、
 > `app/core/messages/workspace-change-anchor.ts`、`app/components/chat/MessageList.vue`。
+
+B12 由 `MessageList.vue` 的内容 `ResizeObserver` 驱动。主会话按 React 默认值平滑跟随，
+sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
+`tests/m4a-stream/real-stream.spec.ts`，同时固定贴底和用户主动上滚两条路径。
 
 ---
 

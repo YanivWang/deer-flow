@@ -312,6 +312,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
       :streaming="stream.isStreaming.value"
       :loading="stream.isHistoryLoading.value"
       :active="active"
+      resize-scroll="instant"
       @selection-add="addSelectedReference"
     />
 

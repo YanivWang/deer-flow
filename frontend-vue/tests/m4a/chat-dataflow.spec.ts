@@ -1,5 +1,5 @@
 /*
-  【文件职责】     M4a gate：发消息 → 流式 → 停止 → 刷新恢复顺序，跑在真浏览器里。
+  【文件职责】     M4a gate：生产流模式、发消息 → 流式 → 停止 → 刷新恢复顺序，跑在真浏览器里。
   【对应 frontend/】 tests/e2e/chat-thread-init-ordering.spec.ts（等价用例，mock 不同）
   【架构位置】     测试
   【主要导出】     无
@@ -167,8 +167,17 @@ test.describe("M4a 数据流 gate", () => {
 
     const textarea = page.getByPlaceholder(/how can i assist you/i);
     await expect(textarea).toBeVisible({ timeout: 20_000 });
+    const streamRequest = page.waitForRequest(
+      (request) =>
+        request.method() === "POST" &&
+        /\/runs\/stream(\?|$)/.test(request.url()),
+    );
     await textarea.fill("Build a deck");
     await textarea.press("Enter");
+
+    expect((await streamRequest).postDataJSON()).toMatchObject({
+      stream_mode: ["values", "messages-tuple", "updates", "custom"],
+    });
 
     const items = page.locator('[data-testid="message-list"] li');
     await expect(items).toHaveCount(2, { timeout: 20_000 });

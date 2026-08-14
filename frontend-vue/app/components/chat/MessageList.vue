@@ -17,6 +17,7 @@ import {
   onUnmounted,
   ref,
   watch,
+  type ComponentPublicInstance,
 } from "vue";
 import {
   CheckCircle2,
@@ -66,20 +67,27 @@ const StreamMarkdown = defineAsyncComponent(
   () => import("@/components/markdown/StreamMarkdown.vue"),
 );
 
-const props = defineProps<{
-  messages: Message[];
-  rawMessages?: Message[];
-  streaming: boolean;
-  loading: boolean;
-  threadId?: string | null;
-  selectionMode?: "main" | "sidecar";
-  testId?: string;
-  active?: boolean;
-  tailRequest?: number;
-  interactive?: boolean;
-  artifactPaths?: readonly string[];
-  isMock?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    messages: Message[];
+    rawMessages?: Message[];
+    streaming: boolean;
+    loading: boolean;
+    threadId?: string | null;
+    selectionMode?: "main" | "sidecar";
+    testId?: string;
+    active?: boolean;
+    tailRequest?: number;
+    resizeScroll?: "smooth" | "instant";
+    interactive?: boolean;
+    artifactPaths?: readonly string[];
+    isMock?: boolean;
+  }>(),
+  {
+    active: true,
+    resizeScroll: "smooth",
+  },
+);
 const emit = defineEmits<{
   branch: [messageId: string, messageIds: string[]];
   regenerate: [messageId: string, messageIds: string[]];
@@ -157,8 +165,12 @@ const windowStart = ref<number | null>(null);
 const followingTail = ref(true);
 const selection = ref<SelectionPayload | null>(null);
 let userScrollIntent = false;
+let contentResizeObserver: ResizeObserver | undefined;
+let followAnimationFrame: number | undefined;
+let retainFollowUntil = 0;
 const VIRTUAL_WINDOW_SIZE = 50;
 const ESTIMATED_GROUP_HEIGHT_PX = 80;
+const RETAIN_FOLLOW_DURATION_MS = 350;
 
 const renderedGroups = computed(() => {
   if (groups.value.length <= 80)
@@ -230,8 +242,68 @@ function lastAI(index: number) {
     .reverse()
     .find((message) => message.type === "ai");
 }
-function onScroll(event: Event) {
-  if (!scroller.value || groups.value.length <= 80) return;
+function scrollToTail(mode: "smooth" | "instant" = "instant") {
+  if (!scroller.value || props.active === false || !followingTail.value) return;
+  if (mode === "instant") {
+    if (followAnimationFrame !== undefined) {
+      cancelAnimationFrame(followAnimationFrame);
+      followAnimationFrame = undefined;
+    }
+    scroller.value.scrollTop = scroller.value.scrollHeight;
+    return;
+  }
+  retainFollowUntil = performance.now() + RETAIN_FOLLOW_DURATION_MS;
+  if (followAnimationFrame !== undefined) return;
+  const animate = () => {
+    followAnimationFrame = undefined;
+    const element = scroller.value;
+    if (!element || props.active === false || !followingTail.value) return;
+    const gap = element.scrollHeight - element.clientHeight - element.scrollTop;
+    if (gap > 1) {
+      const before = element.scrollTop;
+      element.scrollTop += Math.max(1, gap * 0.35);
+      // A browser can reject a fractional step at a layout boundary. Jumping
+      // only in that no-progress case prevents an otherwise endless rAF loop.
+      if (element.scrollTop === before)
+        element.scrollTop = element.scrollHeight;
+    } else if (gap > 0) {
+      element.scrollTop = element.scrollHeight;
+    }
+    if (
+      performance.now() < retainFollowUntil ||
+      element.scrollHeight - element.clientHeight - element.scrollTop > 1
+    ) {
+      followAnimationFrame = requestAnimationFrame(animate);
+    }
+  };
+  followAnimationFrame = requestAnimationFrame(animate);
+}
+function stopFollowingTail() {
+  followingTail.value = false;
+  if (followAnimationFrame !== undefined) {
+    cancelAnimationFrame(followAnimationFrame);
+    followAnimationFrame = undefined;
+  }
+}
+function setContentElement(element: Element | ComponentPublicInstance | null) {
+  contentResizeObserver?.disconnect();
+  contentResizeObserver = undefined;
+  if (!(element instanceof HTMLElement)) return;
+  if ("ResizeObserver" in globalThis) {
+    contentResizeObserver = new ResizeObserver(() => {
+      if (!followingTail.value || props.active === false) return;
+      scrollToTail(props.resizeScroll ?? "smooth");
+    });
+    contentResizeObserver.observe(element);
+  }
+  void nextTick(() => {
+    if (followingTail.value && props.active !== false) {
+      scrollToTail(props.resizeScroll ?? "smooth");
+    }
+  });
+}
+function onScroll() {
+  if (!scroller.value) return;
   const maxStart = Math.max(0, groups.value.length - VIRTUAL_WINDOW_SIZE);
   const scrollRange = scroller.value.scrollHeight - scroller.value.clientHeight;
   const atTail =
@@ -244,28 +316,30 @@ function onScroll(event: Event) {
     windowStart.value = maxStart;
     return;
   }
-  if (!event.isTrusted) {
-    followingTail.value = false;
-    userScrollIntent = false;
-  }
-  if (followingTail.value && !userScrollIntent) {
-    windowStart.value = maxStart;
-    void nextTick(() => {
-      if (scroller.value && followingTail.value) {
-        scroller.value.scrollTop = scroller.value.scrollHeight;
-      }
-    });
-    return;
-  }
   if (userScrollIntent) {
-    followingTail.value = false;
+    stopFollowingTail();
     userScrollIntent = false;
+  }
+  if (groups.value.length <= 80) return;
+  if (followingTail.value) {
+    windowStart.value = maxStart;
+    return;
   }
   const ratio = scrollRange <= 0 ? 0 : scroller.value.scrollTop / scrollRange;
   windowStart.value = Math.round(maxStart * ratio);
 }
 function onScrollIntent() {
   userScrollIntent = true;
+}
+function onWheel(event: WheelEvent) {
+  if (
+    event.deltaY < 0 &&
+    scroller.value &&
+    scroller.value.scrollHeight > scroller.value.clientHeight
+  ) {
+    userScrollIntent = false;
+    stopFollowingTail();
+  }
 }
 function onScrollKey(event: KeyboardEvent) {
   if (
@@ -424,6 +498,15 @@ watch(
   { immediate: true },
 );
 watch(
+  () => props.streaming,
+  async (streaming) => {
+    if (streaming || !followingTail.value || props.active === false) return;
+    await nextTick();
+    scrollToTail(props.resizeScroll ?? "smooth");
+  },
+  { flush: "post" },
+);
+watch(
   () => props.active,
   async (active) => {
     if (!active) return;
@@ -471,7 +554,13 @@ watch(humanInputState, (state) => {
 onMounted(() => {
   globalThis.addEventListener("keydown", onKey);
 });
-onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
+onUnmounted(() => {
+  globalThis.removeEventListener("keydown", onKey);
+  contentResizeObserver?.disconnect();
+  if (followAnimationFrame !== undefined) {
+    cancelAnimationFrame(followAnimationFrame);
+  }
+});
 </script>
 
 <template>
@@ -485,7 +574,7 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
       ref="scroller"
       class="h-full overflow-y-auto px-3 sm:px-4"
       @scroll="onScroll"
-      @wheel="onScrollIntent"
+      @wheel="onWheel"
       @touchstart="onScrollIntent"
       @pointerdown="onScrollIntent"
       @keydown="onScrollKey"
@@ -494,6 +583,7 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onKey));
         Loading conversation…
       </div>
       <ul
+        :ref="setContentElement"
         data-testid="message-list"
         class="mx-auto flex w-full max-w-[var(--container-width-md)] list-none flex-col gap-8 pt-8 pb-6"
       >

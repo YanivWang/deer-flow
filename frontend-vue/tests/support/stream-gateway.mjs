@@ -46,8 +46,21 @@ function frame(event, data, id) {
  */
 const DELTAS = ["Hello", " from", " Deer", "Flow", "!"];
 
+/**
+ * 足够撑满桌面聊天视口的逐片回答。每一片都落在同一个 AI message/group 上，
+ * 专门覆盖「消息数量不变、只有已渲染内容高度持续增长」的 follow-bottom 路径。
+ */
+const SCROLL_DELTAS = Array.from(
+  { length: 18 },
+  (_, index) =>
+    `\n\nStreaming paragraph ${index + 1}: ` +
+    "DeerFlow keeps the active answer visible while new model tokens arrive. ".repeat(
+      3,
+    ),
+);
+
 /** 初始段：metadata → 一个乱序的 AI 步骤 → human（values）→ 逐片 delta。 */
-function* initialScript() {
+function* initialScript(deltas = DELTAS) {
   yield frame("metadata", { run_id: RUN_ID, thread_id: THREAD_ID }, "e1");
   // 05 C8 的形状：AI 步骤先于 human 到达。
   yield frame(
@@ -67,7 +80,7 @@ function* initialScript() {
     "e3",
   );
   let index = 4;
-  for (const delta of DELTAS) {
+  for (const delta of deltas) {
     yield frame(
       "messages",
       [{ id: "ai-early", type: "ai", content: delta }, {}],
@@ -160,7 +173,9 @@ const server = createServer(async (request, response) => {
   ) {
     request.resume();
     openSse(response);
-    const ok = await writeChunked(response, [...initialScript()], {
+    const deltas = script === "scroll" ? SCROLL_DELTAS : DELTAS;
+    const ok = await writeChunked(response, [...initialScript(deltas)], {
+      delayMs: script === "scroll" ? 90 : 40,
       heartbeat: true,
     });
     if (!ok) return;
