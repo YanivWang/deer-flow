@@ -214,7 +214,7 @@ DeerFlow 新近集成了 BytePlus 自研的智能搜索与抓取工具集——[
 | 部署场景 | 起步配置 | 推荐配置 | 说明 |
 |---------|-----------|------------|-------|
 | 本地体验 / `make dev` | 4 vCPU、8 GB 内存、20 GB SSD 可用空间 | 8 vCPU、16 GB 内存 | 适合单个开发者或单个轻量会话，且模型走外部 API。`2 核 / 4 GB` 通常跑不稳。 |
-| Docker 开发 / `make docker-start` | 4 vCPU、8 GB 内存、25 GB SSD 可用空间 | 8 vCPU、16 GB 内存 | 镜像构建、源码挂载和 sandbox 容器都会比纯本地模式更吃资源。 |
+| Docker 开发 / `make docker-start` | 4 vCPU、8 GB 内存、25 GB SSD 可用空间 | 8 vCPU、16 GB 内存 | 镜像构建、Compose Watch 源码同步和 sandbox 容器都会比纯本地模式更吃资源。 |
 | 长期运行服务 / `make up` | 8 vCPU、16 GB 内存、40 GB SSD 可用空间 | 16 vCPU、32 GB 内存 | 更适合共享环境、多 agent 任务、报告生成或更重的 sandbox 负载。 |
 
 - 上面的配置只覆盖 DeerFlow 本身；如果你还要本机部署本地大模型，请单独为模型服务预留资源。
@@ -223,14 +223,21 @@ DeerFlow 新近集成了 BytePlus 自研的智能搜索与抓取工具集——[
 
 #### 方式一：Docker（推荐）
 
-**开发模式**（支持热更新，挂载源码）：
+**开发模式**（React、Vue 与 Gateway 均通过 Compose Watch 热更新）：
 
 ```bash
 make docker-init    # 拉取 sandbox 镜像（首次运行或镜像更新时执行）
-make docker-start   # 启动服务（会根据 config.yaml 自动判断 sandbox 模式）
+make docker-start   # 启动 Gateway + React/Vue 开发服务
 ```
 
 如果 `config.yaml` 使用的是 provisioner 模式（`sandbox.use: deerflow.community.aio_sandbox:AioSandboxProvider` 且配置了 `provisioner_url`），`make docker-start` 才会启动 `provisioner`。
+
+- React：http://localhost:2026
+- Vue：http://vue.localhost:2026
+
+Compose Watch 会把两个前端的源码改动同步到各自开发容器；依赖清单或 lockfile 改动会触发
+对应镜像重建，不保留另一套 bind mount/polling 开发路径。`make docker-start` 在前台持续
+持有 Watch 和实时日志；使用 `Ctrl+C` 停止，或在另一个终端执行 `make docker-stop`。
 
 **生产模式**（本地构建镜像，并挂载运行期配置与数据）：
 

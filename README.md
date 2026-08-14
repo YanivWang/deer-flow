@@ -235,7 +235,7 @@ Use the table below as a practical starting point when choosing how to run DeerF
 | Deployment target                        | Starting point                    | Recommended        | Notes                                                                                                      |
 | ---------------------------------------- | --------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------- |
 | Local evaluation / `make dev`            | 4 vCPU, 8 GB RAM, 20 GB free SSD  | 8 vCPU, 16 GB RAM  | Good for one developer or one light session with hosted model APIs. `2 vCPU / 4 GB` is usually not enough. |
-| Docker development / `make docker-start` | 4 vCPU, 8 GB RAM, 25 GB free SSD  | 8 vCPU, 16 GB RAM  | Image builds, bind mounts, and sandbox containers need more headroom than pure local dev.                  |
+| Docker development / `make docker-start` | 4 vCPU, 8 GB RAM, 25 GB free SSD  | 8 vCPU, 16 GB RAM  | Image builds, Compose Watch source sync, and sandbox containers need more headroom than pure local dev.    |
 | Long-running server / `make up`          | 8 vCPU, 16 GB RAM, 40 GB free SSD | 16 vCPU, 32 GB RAM | Preferred for shared use, multi-agent runs, report generation, or heavier sandbox workloads.               |
 
 - These numbers cover DeerFlow itself. If you also host a local LLM, size that service separately.
@@ -244,15 +244,21 @@ Use the table below as a practical starting point when choosing how to run DeerF
 
 #### Option 1: Docker (Recommended)
 
-**Development** (hot-reload, source mounts):
+**Development** (React, Vue, and Gateway hot-reload through Compose Watch):
 
 ```bash
 make docker-init    # Pull sandbox image (only once or when image updates)
-make docker-start   # Start services (auto-detects sandbox mode from config.yaml)
+make docker-start   # Start Gateway + React/Vue development services
 make docker-logs    # View logs
 ```
 
 `make docker-start` starts `provisioner` only when `config.yaml` uses provisioner mode (`sandbox.use: deerflow.community.aio_sandbox:AioSandboxProvider` with `provisioner_url`).
+React is available at `http://localhost:2026`; Vue is available at
+`http://vue.localhost:2026`. Compose Watch syncs frontend source changes into
+their development containers and rebuilds the affected image when a package
+manifest or lockfile changes. `make docker-start` stays in the foreground so
+Compose owns Watch and live logs directly; stop it with `Ctrl+C`, or run
+`make docker-stop` from another terminal.
 
 Docker builds use the upstream `uv` registry by default. If you need faster mirrors in restricted networks, export `UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple` and `NPM_REGISTRY=https://registry.npmmirror.com` before running `make docker-init` or `make docker-start`.
 

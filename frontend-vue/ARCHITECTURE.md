@@ -14,9 +14,11 @@
 - SSE 请求与响应流式转发；
 - 手动处理重定向，避免 Gateway 的认证跳转被代理吞掉。
 
-开发时 `make dev-vue` 启动 Gateway `:8001` 和 Vue `:3100`。生产 Compose 同时构建
-React 与 Vue，由 Nginx 按 hostname 选择：未知/default host 仍进入 React，只有
-`DEER_FLOW_VUE_HOSTNAME` 进入 Vue。部署细节见
+Docker 开发统一使用 `make docker-start`：React 与 Vue 都在容器内运行开发服务器，
+Compose Watch 同步源码并在依赖清单变化时重建对应镜像；Nginx 以默认 host 选择 React，
+以 `vue.localhost` 选择 Vue。本地非 Docker 开发时，`make dev-vue` 启动 Gateway `:8001`
+和 Vue `:3100`。生产 Compose 同时构建 React 与 Vue，由 Nginx 按 hostname 选择：
+未知/default host 仍进入 React，只有 `DEER_FLOW_VUE_HOSTNAME` 进入 Vue。部署细节见
 [`../docs/dual-frontend-production.md`](../docs/dual-frontend-production.md)。
 
 ## 三层边界

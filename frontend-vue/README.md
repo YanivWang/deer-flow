@@ -25,6 +25,20 @@ be configured in the target environment.
 - [app/core/PROVENANCE.md](app/core/PROVENANCE.md): maintained source-origin
   ledger for files under `app/core/`.
 
+## Run with Docker
+
+From the repository root, start the single Docker development stack:
+
+```bash
+make docker-start
+```
+
+Vue is available at `http://vue.localhost:2026`; React remains at
+`http://localhost:2026`. Both frontends run their framework development servers
+inside containers. Compose Watch syncs source changes for HMR and rebuilds the
+affected image when dependency manifests change. The command remains in the
+foreground; use `Ctrl+C` to stop it.
+
 ## Run locally
 
 From the repository root:

@@ -13,7 +13,6 @@ Docker provides a consistent, isolated environment with all dependencies pre-con
 #### Prerequisites
 
 - Docker Desktop or Docker Engine
-- pnpm (for caching optimization)
 
 #### Setup Steps
 
@@ -32,24 +31,27 @@ Docker provides a consistent, isolated environment with all dependencies pre-con
    make docker-init
    ```
    This will:
-   - Build Docker images
-   - Install frontend dependencies (pnpm)
-   - Install backend dependencies (uv)
-   - Share pnpm cache with host for faster builds
+   - Pull the sandbox image used by container-based agent execution
+   - Leave application image builds to `make docker-start`
 
 3. **Start development services**:
    ```bash
    make docker-start
    ```
    `make docker-start` reads `config.yaml` and starts `provisioner` only for provisioner/Kubernetes sandbox mode.
+   It remains in the foreground so Compose owns Watch and live logs without a
+   second background supervisor. Stop it with `Ctrl+C`, or run
+   `make docker-stop` from another terminal.
 
    All services will start with hot-reload enabled:
-   - Frontend changes are automatically reloaded
+   - React and Vue source changes are synchronized by Compose Watch and trigger framework HMR
+   - Frontend dependency manifest changes rebuild the affected development image
    - Backend changes trigger automatic restart
    - Gateway-hosted LangGraph-compatible runtime supports hot-reload
 
 4. **Access the application**:
-   - Web Interface: http://localhost:2026
+   - React: http://localhost:2026
+   - Vue: http://vue.localhost:2026
    - API Gateway: http://localhost:2026/api/*
    - LangGraph-compatible API: http://localhost:2026/api/langgraph/*
 
@@ -64,8 +66,9 @@ make docker-start
 make docker-stop
 # View Docker development logs
 make docker-logs
-# View Docker frontend logs
-make docker-logs-frontend
+# View Docker React/Vue frontend logs
+make docker-logs-react
+make docker-logs-vue
 # View Docker gateway logs
 make docker-logs-gateway
 ```
@@ -130,7 +133,8 @@ Host Machine
   ↓
 Docker Compose (deer-flow-dev)
   ├→ nginx (port 2026) ← Reverse proxy
-  ├→ web (port 3000) ← Frontend with hot-reload
+  ├→ frontend (port 3000) ← React with Compose Watch + HMR
+  ├→ frontend-vue (port 3000) ← Vue with Compose Watch + HMR
   ├→ gateway (port 8001) ← Gateway API + LangGraph-compatible runtime with hot-reload
   └→ provisioner (optional, port 8002) ← Started only in provisioner/K8s sandbox mode
 ```

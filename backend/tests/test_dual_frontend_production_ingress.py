@@ -16,6 +16,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPOSE_PATH = REPO_ROOT / "docker/docker-compose.yaml"
 DEV_COMPOSE_PATH = REPO_ROOT / "docker/docker-compose-dev.yaml"
 NGINX_PATH = REPO_ROOT / "docker/nginx/nginx.conf"
+VUE_DOCKERFILE_PATH = REPO_ROOT / "frontend-vue/Dockerfile"
+DOCKER_SCRIPT_PATH = REPO_ROOT / "scripts/docker.sh"
 
 
 def _compose() -> dict:
@@ -69,6 +71,89 @@ def test_development_compose_renders_the_shared_nginx_template_too() -> None:
 
     assert "DEER_FLOW_VUE_HOSTNAME=${DEER_FLOW_VUE_HOSTNAME:-vue.localhost}" in dev_nginx["environment"]
     assert "envsubst '$$DEER_FLOW_VUE_HOSTNAME'" in command
+
+
+def test_development_compose_runs_vue_dev_server_with_compose_watch_hmr() -> None:
+    services = yaml.safe_load(DEV_COMPOSE_PATH.read_text(encoding="utf-8"))["services"]
+    vue = services["frontend-vue"]
+
+    assert vue["build"]["dockerfile"] == "frontend-vue/Dockerfile"
+    assert vue["build"]["target"] == "dev"
+    assert "pnpm exec nuxt dev --host 0.0.0.0 --port 3000" in vue["command"]
+    assert "DEER_FLOW_INTERNAL_GATEWAY_BASE_URL=http://gateway:8001" in vue["environment"]
+    assert vue["networks"] == ["deer-flow-dev"]
+    assert vue["restart"] == "unless-stopped"
+    assert "frontend-vue" in services["nginx"]["depends_on"]
+
+    watch = vue["develop"]["watch"]
+    assert {
+        "action": "sync",
+        "path": "../frontend-vue",
+        "target": "/workspace/frontend-vue",
+        "ignore": [
+            "node_modules/",
+            ".nuxt/",
+            ".output/",
+            "package.json",
+            "pnpm-lock.yaml",
+            "pnpm-workspace.yaml",
+            "packages/agent-core/package.json",
+            "tests/",
+            "test-results/",
+            "playwright-report/",
+            "coverage/",
+        ],
+    } in watch
+    assert {"action": "rebuild", "path": "../frontend-vue/package.json"} in watch
+    assert {"action": "rebuild", "path": "../frontend-vue/pnpm-lock.yaml"} in watch
+
+
+def test_development_compose_uses_one_watch_path_for_both_frontends() -> None:
+    services = yaml.safe_load(DEV_COMPOSE_PATH.read_text(encoding="utf-8"))["services"]
+    react = services["frontend"]
+    vue = services["frontend-vue"]
+
+    assert "volumes" not in react
+    assert "volumes" not in vue
+    assert "WATCHPACK_POLLING=true" not in react["environment"]
+    assert all("CHOKIDAR" not in item for item in vue["environment"])
+    assert react["develop"]["watch"]
+    assert vue["develop"]["watch"]
+
+
+def test_production_compose_has_no_development_watch_configuration() -> None:
+    services = _compose()["services"]
+
+    assert all("develop" not in service for service in services.values())
+
+
+def test_vue_dockerfile_and_dev_launcher_expose_the_vue_hmr_service() -> None:
+    dockerfile = VUE_DOCKERFILE_PATH.read_text(encoding="utf-8")
+    docker_script = DOCKER_SCRIPT_PATH.read_text(encoding="utf-8")
+    dockerignore = (REPO_ROOT / ".dockerignore").read_text(encoding="utf-8")
+
+    assert "FROM dependencies AS dev" in dockerfile
+    assert 'services="redis frontend frontend-vue gateway nginx"' in docker_script
+    assert 'service="frontend-vue"' in docker_script
+    assert "exec $COMPOSE_CMD up --build --watch --remove-orphans $services" in docker_script
+    assert "stop_compose_watch" not in docker_script
+    assert "WATCH_PID_FILE" not in docker_script
+    assert "--frontend)" not in docker_script
+
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    assert "docker-logs-react" in makefile
+    assert "docker-logs-vue" in makefile
+    assert "docker-logs-frontend" not in makefile
+
+    for ignored_path in (
+        "frontend-vue/node_modules",
+        "frontend-vue/.nuxt",
+        "frontend-vue/.output",
+        "frontend-vue/test-results",
+        "frontend-vue/playwright-report",
+        "frontend-vue/coverage",
+    ):
+        assert ignored_path in dockerignore
 
 
 def test_all_gateway_proxy_locations_overwrite_forwarded_host_and_proto() -> None:

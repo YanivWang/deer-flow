@@ -19,6 +19,18 @@ callback 注册仍需在目标环境配置。
 - [双前端生产说明](../docs/dual-frontend-production.md)：hostname、OIDC、验证和回滚。
 - [app/core/PROVENANCE.md](app/core/PROVENANCE.md)：`app/core/` 当前源码溯源台账。
 
+## Docker 运行
+
+在仓库根目录启动统一的 Docker 开发栈：
+
+```bash
+make docker-start
+```
+
+Vue 访问 `http://vue.localhost:2026`，React 仍访问 `http://localhost:2026`。两个前端都在
+容器内运行框架开发服务器；Compose Watch 同步源码以触发 HMR，依赖清单变化则重建对应镜像。
+命令会保持前台运行，使用 `Ctrl+C` 停止。
+
 ## 本地运行
 
 在仓库根目录执行：

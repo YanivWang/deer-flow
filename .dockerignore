@@ -62,6 +62,12 @@ docker/
 skills/
 frontend/.next
 frontend/node_modules
+frontend-vue/node_modules
+frontend-vue/.nuxt
+frontend-vue/.output
+frontend-vue/test-results
+frontend-vue/playwright-report
+frontend-vue/coverage
 backend/.venv
 backend/htmlcov
 backend/.coverage

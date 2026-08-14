@@ -1,9 +1,10 @@
 # DeerFlow Development Environment
-# Usage: docker-compose -f docker-compose-dev.yaml up --build
+# Usage: docker compose -f docker-compose-dev.yaml up --build --watch
 #
 # Services:
 #   - nginx: Reverse proxy (port 2026)
-#   - frontend: Frontend Next.js dev server (port 3000)
+#   - frontend: Next.js dev server (default hostname, port 3000)
+#   - frontend-vue: Nuxt dev server (vue.localhost, port 3000)
 #   - gateway: Backend Gateway API + agent runtime (port 8001)
 #   - redis: Redis Streams backend for cross-worker SSE stream bridge
 #   - provisioner (optional): Sandbox provisioner (creates Pods in host Kubernetes)
@@ -11,7 +12,9 @@
 # Prerequisites:
 #   - Kubernetes cluster + kubeconfig are only required when using provisioner mode.
 #
-# Access: http://localhost:2026
+# Access:
+#   - React: http://localhost:2026
+#   - Vue:   http://vue.localhost:2026
 
 services:
   # ── Redis Stream Bridge ────────────────────────────────────────────────
@@ -117,6 +120,7 @@ services:
         exec nginx -g 'daemon off;'
     depends_on:
       - frontend
+      - frontend-vue
       - gateway
     networks:
       - deer-flow-dev
@@ -132,18 +136,10 @@ services:
         PNPM_STORE_PATH: ${PNPM_STORE_PATH:-/root/.local/share/pnpm/store}
         NPM_REGISTRY: ${NPM_REGISTRY:-}
     container_name: deer-flow-frontend
-    command: sh -c "cd frontend && pnpm run dev > /app/logs/frontend.log 2>&1"
-    volumes:
-      - ../frontend/src:/app/frontend/src
-      - ../frontend/public:/app/frontend/public
-      - ../frontend/next.config.js:/app/frontend/next.config.js:ro
-      - ../logs:/app/logs
-      # Mount pnpm store for caching
-      - ${PNPM_STORE_PATH:-~/.local/share/pnpm/store}:/root/.local/share/pnpm/store
-    working_dir: /app
+    command: pnpm run dev
+    working_dir: /app/frontend
     environment:
       - NODE_ENV=development
-      - WATCHPACK_POLLING=true
       - CI=true
       - DEER_FLOW_INTERNAL_GATEWAY_BASE_URL=http://gateway:8001
     env_file:
@@ -151,6 +147,71 @@ services:
     networks:
       - deer-flow-dev
     restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ../frontend
+          target: /app/frontend
+          ignore:
+            - node_modules/
+            - .next/
+            - package.json
+            - pnpm-lock.yaml
+            - .env
+            - .env.*
+        - action: rebuild
+          path: ../frontend/package.json
+        - action: rebuild
+          path: ../frontend/pnpm-lock.yaml
+
+  # Vue Frontend - Nuxt Development Server
+  frontend-vue:
+    build:
+      context: ../
+      dockerfile: frontend-vue/Dockerfile
+      target: dev
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-}
+    container_name: deer-flow-frontend-vue
+    command: pnpm exec nuxt dev --host 0.0.0.0 --port 3000
+    working_dir: /workspace/frontend-vue
+    environment:
+      - NODE_ENV=development
+      - DEER_FLOW_INTERNAL_GATEWAY_BASE_URL=http://gateway:8001
+    networks:
+      - deer-flow-dev
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ../frontend-vue
+          target: /workspace/frontend-vue
+          ignore:
+            - node_modules/
+            - .nuxt/
+            - .output/
+            - package.json
+            - pnpm-lock.yaml
+            - pnpm-workspace.yaml
+            - packages/agent-core/package.json
+            - tests/
+            - test-results/
+            - playwright-report/
+            - coverage/
+        - action: sync
+          path: ../frontend/public/demo
+          target: /workspace/frontend/public/demo
+        - action: sync
+          path: ../frontend/public/images
+          target: /workspace/frontend/public/images
+        - action: rebuild
+          path: ../frontend-vue/package.json
+        - action: rebuild
+          path: ../frontend-vue/pnpm-lock.yaml
+        - action: rebuild
+          path: ../frontend-vue/pnpm-workspace.yaml
+        - action: rebuild
+          path: ../frontend-vue/packages/agent-core/package.json
 
   # Backend - Gateway API
   gateway:

@@ -1,6 +1,6 @@
 # DeerFlow - Unified Development Environment
 
-.PHONY: help config config-upgrade check check-agent-guidance install setup doctor support-bundle detect-thread-boundaries detect-blocking-io dual-frontend-production-check dev dev-vue dev-dual dev-daemon start start-daemon nginx stop up down clean docker-init docker-start docker-stop docker-logs docker-logs-frontend docker-logs-gateway docker-logs-redis
+.PHONY: help config config-upgrade check check-agent-guidance install setup doctor support-bundle detect-thread-boundaries detect-blocking-io dual-frontend-production-check dev dev-vue dev-dual dev-daemon start start-daemon nginx stop up down clean docker-init docker-start docker-stop docker-logs docker-logs-react docker-logs-vue docker-logs-gateway docker-logs-redis
 
 BASH ?= bash
 BACKEND_UV_RUN = cd backend && uv run
@@ -48,10 +48,11 @@ help:
 	@echo ""
 	@echo "Docker Development Commands:"
 	@echo "  make docker-init     - Pull the sandbox image"
-	@echo "  make docker-start    - Start Docker services (mode-aware from config.yaml, localhost:2026)"
+	@echo "  make docker-start    - Run Gateway + React/Vue with Compose Watch in foreground"
 	@echo "  make docker-stop     - Stop Docker development services"
 	@echo "  make docker-logs     - View Docker development logs"
-	@echo "  make docker-logs-frontend - View Docker frontend logs"
+	@echo "  make docker-logs-react - View Docker React frontend logs"
+	@echo "  make docker-logs-vue - View Docker Vue frontend logs"
 	@echo "  make docker-logs-gateway - View Docker gateway logs"
 	@echo "  make docker-logs-redis - View Docker Redis logs"
 
@@ -174,8 +175,10 @@ docker-logs:
 	@$(RUN_WITH_GIT_BASH) ./scripts/docker.sh logs
 
 # View Docker development logs
-docker-logs-frontend:
-	@$(RUN_WITH_GIT_BASH) ./scripts/docker.sh logs --frontend
+docker-logs-react:
+	@$(RUN_WITH_GIT_BASH) ./scripts/docker.sh logs --react
+docker-logs-vue:
+	@$(RUN_WITH_GIT_BASH) ./scripts/docker.sh logs --vue
 docker-logs-gateway:
 	@$(RUN_WITH_GIT_BASH) ./scripts/docker.sh logs --gateway
 docker-logs-redis:

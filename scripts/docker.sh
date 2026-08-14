@@ -191,9 +191,9 @@ start() {
 
     sandbox_mode="$(detect_sandbox_mode)"
 
-    services="redis frontend gateway nginx"
+    services="redis frontend frontend-vue gateway nginx"
     if [ "$sandbox_mode" = "provisioner" ]; then
-        services="redis frontend gateway provisioner nginx"
+        services="redis frontend frontend-vue gateway provisioner nginx"
     fi
 
     # Only aio mode (AioSandboxProvider without provisioner_url) needs the host
@@ -262,21 +262,23 @@ start() {
 
     load_proxy_env_from_dotenv
 
-    echo "Building and starting containers..."
-    cd "$DOCKER_DIR" && $COMPOSE_CMD up --build -d --remove-orphans $services
-    echo ""
+    echo "Building and starting containers with Compose Watch..."
     echo "=========================================="
-    echo "  DeerFlow Docker is starting!"
+    echo "  DeerFlow Docker Development"
     echo "=========================================="
     echo ""
-    echo "  🌐 Application: http://localhost:2026"
+    echo "  🌐 React:      http://localhost:${PORT:-2026}"
+    echo "  🌐 Vue:        http://${DEER_FLOW_VUE_HOSTNAME:-vue.localhost}:${PORT:-2026}"
     echo "  📡 API Gateway: http://localhost:2026/api/*"
     echo "  🤖 Runtime:     Gateway embedded"
     echo "  API:            /api/langgraph/* → Gateway"
     echo ""
-    echo "  📋 View logs: make docker-logs"
-    echo "  🛑 Stop:      make docker-stop"
+    echo "  👀 React/Vue source sync and HMR are active"
+    echo "  🛑 Stop: Ctrl+C (or run make docker-stop in another terminal)"
     echo ""
+
+    cd "$DOCKER_DIR"
+    exec $COMPOSE_CMD up --build --watch --remove-orphans $services
 }
 
 # View Docker development logs
@@ -290,9 +292,13 @@ logs() {
     fi
     
     case "$1" in
-        --frontend)
+        --react)
             service="frontend"
-            echo -e "${BLUE}Viewing frontend logs...${NC}"
+            echo -e "${BLUE}Viewing React frontend logs...${NC}"
+            ;;
+        --vue)
+            service="frontend-vue"
+            echo -e "${BLUE}Viewing Vue frontend logs...${NC}"
             ;;
         --gateway)
             service="gateway"
@@ -315,7 +321,7 @@ logs() {
             ;;
         *)
             echo -e "${YELLOW}Unknown option: $1${NC}"
-            echo "Usage: $0 logs [--frontend|--gateway|--nginx|--redis|--provisioner]"
+            echo "Usage: $0 logs [--react|--vue|--gateway|--nginx|--redis|--provisioner]"
             exit 1
             ;;
     esac
@@ -369,7 +375,8 @@ help() {
     echo "  start             - Start Docker services (auto-detects sandbox mode from config.yaml)"
     echo "  restart           - Restart all running Docker services"
     echo "  logs [option] - View Docker development logs"
-    echo "                  --frontend   View frontend logs only"
+    echo "                  --react      View React frontend logs only"
+    echo "                  --vue        View Vue frontend logs only"
     echo "                  --gateway    View gateway logs only"
     echo "                  --nginx      View nginx logs only"
     echo "                  --redis      View redis logs only"

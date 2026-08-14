@@ -127,7 +127,7 @@ make dual-frontend-production-check  # Check React-default/Vue-secondary ingress
 make start       # Start all services in production mode (local, optimized)
 make stop        # Stop all running services
 make up / down   # Build/stop the production Docker stack (browser at localhost:2026)
-make docker-start / docker-stop / docker-logs   # Docker development environment
+make docker-start / docker-stop / docker-logs   # Gateway + React/Vue Docker dev; both frontends use Compose Watch/HMR
 ```
 
 Docker log and restart commands resolve `DEER_FLOW_ROOT` from the current
