@@ -2,7 +2,7 @@
 
 `app/core/` 里**每个文件**都必须在下表有一行。新增文件不登记，`tests/guards/core-provenance.test.ts` 就红。
 
-分类含义（[06 §1e](../../../frontend-vue-build-docs/06-migration-plan.md)）：
+分类含义如下；分层与依赖方向见 [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md)：
 
 | 分类      | 含义                                                        | 是否校验 hash |
 | --------- | ----------------------------------------------------------- | ------------- |
@@ -15,7 +15,7 @@
 这正是要点：真需要改，就把它降级成 `RETYPED`/`ADAPTED` 并在「说明」里写清理由，
 而不是去改 baseline。降级要在 review 里被看见。
 
-迁移全景（149 个源文件如何分类）见 `baseline/core-manifest.json`，由
+完整来源清单见 `baseline/core-manifest.json`，由
 `make baseline-refresh` 生成。本表只记录**已经落到 `app/core/` 的文件**。
 
 ## 台账

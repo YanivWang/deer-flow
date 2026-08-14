@@ -1,6 +1,6 @@
 # React / Vue 双前端生产入口
 
-M7 把 React 与 Vue 镜像同时放入生产 Compose，但没有切换默认前端：
+生产 Compose 同时构建 React 与 Vue 镜像，但不切换默认前端：
 
 - 未匹配或未知 `Host` 继续进入 React `frontend:3000`；
 - 只有与 `DEER_FLOW_VUE_HOSTNAME` 完全匹配的主机名进入
@@ -9,7 +9,7 @@ M7 把 React 与 Vue 镜像同时放入生产 Compose，但没有切换默认前
   WebSocket、认证与 OIDC callback 不分叉；
 - 生产 Compose 仍只发布 Nginx 的 loopback 端口，Gateway 和两个前端都不直接发布。
 
-这是一条可回滚的并行入口，不是 Vue 默认切换，也不是 M8。
+这是一条可回滚的并行入口，不是 Vue 默认切换。
 
 ## 启动与本机验证
 
@@ -91,6 +91,6 @@ make down
 未知 Host 始终仍落到 React，因此 React 是现阶段的安全默认入口。
 
 将 Vue 改成默认前端需要单独修改 Nginx map 的 `default`、重新完成生产验收并准备反向回滚；
-它不是本次 M7 的行为，当前配置变量也不会隐式完成该切换。仓库内 M7 的 Vue 独立门禁
-已连续三次 130/130；这不改变上述 DNS/TLS/外层代理/真实 IdP 项在目标环境完成前仍是
-公开激活 Vue hostname 的发布阻断。M8 已完成，但没有发布 npm 或改变生产路由。
+当前配置变量不会隐式完成默认切换。Vue 的仓库内测试和容器 smoke 不替代目标环境的
+DNS/TLS、外层代理和真实 IdP 验证；这些配置完成前，不应公开激活 Vue hostname。
+`@deerflow/agent-core` 仍是仓库内私有包，没有发布到 npm，也不会改变生产路由。

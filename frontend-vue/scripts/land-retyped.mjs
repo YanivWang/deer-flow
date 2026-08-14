@@ -68,7 +68,7 @@ const IMPORT_REWRITES = [
  * 只有 7 个文件需要，其余 17 个纯靠 IMPORT_REWRITES。
  */
 const PATCHES = {
-  // --- 删 static-mode 分支（01-scope 已排除静态模式，06 §M1 1b「删分支」） ---
+  // --- 删 static-mode 分支（当前 Vue 产品不支持 React-only 静态/mock 运行模式） ---
   "artifacts/utils.ts": [
     {
       why: "isStaticWebsiteOnly 早返回随 static-mode 一起删；下同。",

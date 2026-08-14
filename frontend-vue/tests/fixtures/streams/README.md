@@ -65,4 +65,5 @@ reasoning。前两者是场景不产生（`custom` 已在请求里、这个场�
 而 replay 模型不产出 reasoning。**tool-call 碎片与临时 id 重写不在缺口里**：
 上一份 README 说它们没覆盖，那是错的，录制里本来就有（9 个 `messages` 帧里
 2 个带 `tool_call_chunks`，human 消息的 id 从 `X` 变成 `X__user`）。
-详见 `frontend-vue-build-docs/evidence/m2-agent-core.md`。
+合同与当前测试入口见 `frontend-vue/BEHAVIOR_CONTRACTS.md` 的 L 组，以及
+`tests/m0-real-backend/run-protocol.spec.ts`。

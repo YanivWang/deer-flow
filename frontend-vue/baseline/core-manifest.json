@@ -442,7 +442,7 @@
       "reasons": [
         {
           "code": "drop-policy",
-          "detail": "纯服务端文件；ssr:false + 删掉 server auth 后无消费方（06 §M1 1a）。"
+          "detail": "纯 React 服务端文件；Vue 使用 Gateway session 与 Nuxt middleware，无消费方。"
         }
       ],
       "needsDeps": [],
@@ -1850,7 +1850,7 @@
       "reasons": [
         {
           "code": "drop-policy",
-          "detail": "静态/mock 模式分支，01-scope 已排除出迁移范围。"
+          "detail": "Vue 产品不支持 React-only 静态/mock 运行模式。"
         }
       ],
       "needsDeps": [],

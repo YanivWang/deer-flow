@@ -4,7 +4,7 @@
   【架构位置】     门禁测试
   【主要导出】     无
   【依赖关系】     app/core/types/message.ts；tests/fixtures/message-content-shapes.json
-  【边界与注意】   06 §M1 1b 与 08「消息契约」点名的失效方式是**把 content 塌成 string**。
+  【边界与注意】   关键失效方式是**把 content 塌成 string**。
                    实测这个失效**只有一半会被编译器拦住**：
 
                      - `message.content.map(…)`（extractTextFromMessage 那类）会红，
@@ -18,8 +18,8 @@
                    516 条消息里 22 条是数组内容，而且**全部 22 条都是 human 消息**——
                    塌成 string 会 100% 破坏用户自己发的消息，不是边角情况。
 
-                   夹具重建（数据源在 frontend/ 工作区，不进运行时依赖）：
-                     node -e "…" 见 evidence/m1-retyped-landing.md「夹具重建」一节
+                   夹具数据源在 `frontend/` 工作区，不进入 Vue 运行时依赖；更新时必须
+                   重新验证 string 与数组内容两侧都存在且能无损往返。
 */
 
 import { readFileSync } from "node:fs";

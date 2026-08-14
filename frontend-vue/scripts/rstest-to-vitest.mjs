@@ -67,8 +67,8 @@ const VERIFIED_APIS = new Set([
  */
 const HAND_MAINTAINED = {
   "artifacts/utils.test.ts": [
-    "上游有 2 个用例测 isStaticWebsiteOnly() 早返回，而 01-scope 已把静态模式排除出迁移范围，",
-    "artifacts/utils.ts 落地时按 06 §M1 1b 删掉了那两个分支——留着就是在测一段故意不存在的行为。",
+    "上游有 2 个用例测试 React-only static mode，而当前 Vue 产品不支持该运行模式，",
+    "artifacts/utils.ts 删除了那两个分支——保留用例会测试一段故意不存在的行为。",
     "顺带删掉整套 NEXT_PUBLIC_* 环境变量夹具：配置改成注入 runtime options 之后它一个字节都读不到。",
     "另增 Vue showcase 显式 isMock transport 用例；其余用例逐字保留。理由与边界写在该文件的六段式文件头里。",
   ].join(" "),

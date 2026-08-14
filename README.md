@@ -354,29 +354,15 @@ On Windows, run the local development flow from Git Bash. Native `cmd.exe` and P
 
 6. **Access**: http://localhost:2026
 
-The experimental Vue/Nuxt frontend lives in `frontend-vue/` and remains
-milestone-gated. Repository M7 and the M8 reusable-contract closure are complete;
-the general Agent
-chat workspace, artifacts, workspace changes, sidecar, settings, browser, agents,
-channels, scheduled tasks, goal/mode, and mobile surfaces are runnable and aligned to
-the React frontend. M8 freezes the private `@deerflow/agent-core` root API, the minimal
-Markdown/Button L2 source boundary, an isolated custom-backend consumer and the complete
-L3 replacement guide; it does not publish npm or change production routing. M7 has an
-exact Vue-owned 25-file/130-test inventory and passed 130/130 in three consecutive full
-runs. Framework-specific artifact streaming and splitpanes behavior use Vue specs. Agent
-chat, channels, integrations and thread-history are Vue-owned suites; the current React
-same-run reconnect, Browser Live, Lark app switch, Buzz and public Showcase behaviors were
-explicitly implemented and added to the Vue gate without importing React DOM contracts. Shared
-specs are limited to framework-neutral product contracts. It also retains independent
-interaction, auth-security and real-protocol gates and adds a
-React-default/Vue-secondary production hostname, fixture-IdP concurrent OIDC, four
-effects, a seven-state visual gate and a client asset budget. Public
-DNS/TLS/outer-proxy/real-IdP validation is **UNRUN by explicit delivery scope**; it is not
-inferred from local fixtures or the successful local real-provider probe.
-The production container smoke also pins every allowlisted Showcase fixture into the image,
-checks its JSON/HTML/image HTTP paths, and rejects unknown, unlisted and traversal paths.
-The existing command above is unchanged and still starts the React frontend. For
-Vue migration development, use one of the explicit alternatives:
+The complete Vue/Nuxt frontend lives in `frontend-vue/`. It implements the same Gateway-backed
+product surfaces as the React frontend and owns framework-specific tests for streaming,
+artifacts, agent chat, channels, integrations, thread history, authentication, visual states,
+asset budgets and the production container. The private `@deerflow/agent-core` package and the
+small reusable Markdown/Button boundary are maintained inside that workspace; the package is
+not published to npm.
+
+The existing `make dev` command still starts the React-default stack. Use an explicit Vue mode
+when developing or comparing the Nuxt application:
 
 ```bash
 make dev-vue   # Gateway :8001 + Vue :3100
@@ -384,17 +370,16 @@ make dev-dual  # Gateway :8001 + React :3000 + Vue :3100
 make stop      # stops either mode, including the Vue process
 ```
 
-`dev-dual` exposes both framework development ports directly. Production Compose
-now builds both frontends behind one Nginx: unknown/default hosts stay on React,
-and only `DEER_FLOW_VUE_HOSTNAME` selects Vue. This does not make Vue the default
-or prove public DNS/TLS. See
+`dev-dual` exposes both framework development ports directly. Production Compose builds both
+frontends behind one Nginx: unknown/default hosts stay on React and only
+`DEER_FLOW_VUE_HOSTNAME` selects Vue. Public DNS/TLS, outer-proxy trust and real IdP callback
+registration remain target-environment configuration. See
 [`docs/dual-frontend-production.md`](docs/dual-frontend-production.md) for startup,
 OIDC callback registration, validation and rollback.
-See [`frontend-vue/README.md`](frontend-vue/README.md) for module commands and
-[`frontend-vue-build-docs/10-current-status-and-next.md`](frontend-vue-build-docs/10-current-status-and-next.md)
-for the current gate status, remaining boundaries, and ordered next tasks. Files under
-`frontend-vue-build-docs/evidence/` are historical milestone records, not the
-current continuation cursor.
+See [`frontend-vue/README.md`](frontend-vue/README.md) for commands,
+[`frontend-vue/ARCHITECTURE.md`](frontend-vue/ARCHITECTURE.md) for current implementation
+boundaries and [`frontend-vue/BEHAVIOR_CONTRACTS.md`](frontend-vue/BEHAVIOR_CONTRACTS.md)
+for behavior that changes must preserve.
 
 #### Startup Modes
 
@@ -855,7 +840,7 @@ set `DEER_FLOW_LARK_CLI_SANDBOX_RUNTIME_DIR` to that directory.
 > `appSecret`) is mounted **read-only**, its otherwise empty `config/locks`
 > subdirectory is over-mounted writable for `lark-cli` coordination files, and
 > `data` (refreshable OAuth tokens) is writable. The credential-bearing config
-> and data mounts remain *readable* by any process the agent runs there, so code
+> and data mounts remain _readable_ by any process the agent runs there, so code
 > reached via prompt injection in a tool result could read them. Treat the
 > sandbox as inside the Lark credential trust boundary until the sidecar
 > credential-broker follow-up removes these mounts from sandbox execution.

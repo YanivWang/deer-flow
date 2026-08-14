@@ -148,7 +148,7 @@ export function collectFacts(path, buffer) {
     path,
     sha256: sha256(buffer),
     bytes: buffer.length,
-    // wc -l 语义（数换行符），这样总行数能与 06-migration-plan 的基线值直接对账。
+    // 保持 wc -l 语义（数换行符），与签入的 provenance baseline 口径一致。
     lines: (text.match(/\n/g) ?? []).length,
     isTsx: path.endsWith(".tsx"),
     readsProcessEnv: /\bprocess\s*\.\s*env\b/.test(text),

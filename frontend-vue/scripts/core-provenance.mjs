@@ -27,14 +27,13 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SOURCE_PREFIX = "frontend/src/core";
 
 // ---------------------------------------------------------------------------
-// 人工输入 1/1：计划明确点名不迁的文件。其余文件的分类全部由下面的规则推出。
-// 出处：06-migration-plan.md §M1 1a/1b/1e、01-scope.md。
+// 人工输入 1/1：当前 Vue 产品明确不采用的 React-only 文件。其余分类由规则推出。
 // ---------------------------------------------------------------------------
 const DROP_POLICY = {
-  "static-mode.ts": "静态/mock 模式分支，01-scope 已排除出迁移范围。",
+  "static-mode.ts": "Vue 产品不支持 React-only 静态/mock 运行模式。",
   "threads/static-demo.ts": "静态 demo 数据源，随 static-mode 一起排除。",
   "auth/gateway-config.ts":
-    "纯服务端文件；ssr:false + 删掉 server auth 后无消费方（06 §M1 1a）。",
+    "纯 React 服务端文件；Vue 使用 Gateway session 与 Nuxt middleware，无消费方。",
   "blog/index.ts": "nextra 博客装配，不属于 workspace 应用范围。",
 };
 
@@ -43,8 +42,7 @@ const DROP_POLICY = {
 //
 // 为什么必须显式声明而不是让脚本猜：DROPPED 档永远不落地，而闭包判据是按上游
 // import 图算的，所以「依赖 static-mode」的文件与测试会被判定为**永远搬不了**——
-// 靠推进里程碑解不开。实际情况是 06 §M1 1b 早就写了处置方式（「删分支」），
-// 删掉之后那条边就不存在了。
+// 这类依赖必须显式声明删除；删掉之后那条边才不属于 Vue 落地后的依赖图。
 //
 // 把删除声明进台账，闭包才是**我们落地后的图**而不是上游的图。代价是这份声明
 // 必须与 scripts/land-retyped.mjs 的实际改写一致——由 land-retyped 的

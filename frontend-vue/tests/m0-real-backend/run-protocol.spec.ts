@@ -290,7 +290,7 @@ test("@run-protocol covers create, resume, cancel, gap and heartbeat", async ({
   // The raw bodies are the only artifact that carries chunk boundaries, so they
   // are written verbatim apart from the id/date redaction. Promoting one into
   // tests/fixtures/streams/ is a deliberate, reviewed copy — see
-  // frontend-vue-build-docs/evidence/m2-agent-core.md for the command.
+  // tests/fixtures/streams/README.md for the fixture ownership and refresh rules.
   for (const [name, body] of [
     ["create", createBody],
     ["resume-gap", resumeBody],

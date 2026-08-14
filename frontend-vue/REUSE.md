@@ -50,7 +50,10 @@ import type { EventReducer, RunProtocol } from "@deerflow/agent-core";
 Imports such as `@deerflow/agent-core/src/session/run-session` are unsupported
 and are blocked by both `package.json#exports` and the architecture tests.
 
-## 3. Frozen L1 API (contract version `m8`)
+## 3. Current L1 API (contract version `m8`)
+
+`m8` is the checked-in contract identifier exported by the package. It is retained for
+consumer compatibility and does not represent the repository's current delivery phase.
 
 The exact symbol list is guarded by
 `packages/agent-core/tests/architecture.test.ts`. It is grouped here by purpose:
@@ -108,7 +111,7 @@ isolated system temporary directory, performs a clean install, typechecks it,
 bundles it and runs the session. It cannot resolve dependencies through this
 repository's parent `node_modules`.
 
-## 5. Frozen L2 boundary
+## 5. Current L2 boundary
 
 The independently reusable source set is intentionally small:
 
@@ -206,12 +209,15 @@ Before adopting a new core revision:
 
 1. Compare `AGENT_CORE_CONTRACT_VERSION` and the exact export test.
 2. Run the consumer's adapter/reducer/session tests with raw protocol traces.
-3. Run `make consumer-check`, `make verify` and `make migration-check` here.
-4. If the change touches chat UI or Markdown seams, run M4b and the artifact
-   gates; if it touches protocol/session/reducer, run M4a, chunked SSE and real
-   protocol/backend gates.
+3. Run `make consumer-check` and `make verify` here. Run `make migration-check`
+   when provenance manifests or generated/codemodded core files change; the command
+   name is retained as a maintenance API.
+4. If the change touches chat UI or Markdown seams, run `make e2e-m4b` and the
+   artifact gates. If it touches protocol/session/reducer, run `make e2e-m4a`,
+   `make e2e-m4a-stream`, `make e2e-m7-real-protocol` and the relevant real-backend gate.
 5. Keep end-to-end product tests in the consuming project. L1 success does not
    prove its authentication, reverse proxy, business panels or visual states.
 
 No command in this guide publishes npm, changes DeerFlow's default React entry,
-or activates a public Vue deployment.
+or activates a public Vue deployment. Architecture and ownership boundaries are maintained in
+[ARCHITECTURE.md](ARCHITECTURE.md) and [BEHAVIOR_CONTRACTS.md](BEHAVIOR_CONTRACTS.md).

@@ -10,12 +10,12 @@
                    1. 删掉 2 个 static demo 用例
                       （"maps static demo artifact paths…" / "encodes reserved characters
                       in static demo artifact URLs"）。它们测的是 `isStaticWebsiteOnly()`
-                      早返回，而 01-scope 已把静态模式排除出迁移范围，
-                      `app/core/artifacts/utils.ts` 落地时按 06 §M1 1b 删掉了该分支。
+                      早返回，而当前 Vue 产品不支持 React-only 静态/mock 运行模式，
+                      `app/core/artifacts/utils.ts` 因此删除了该分支。
                       留着就是在测一段**故意不存在**的行为。
 
                    2. 删掉整套 NEXT_PUBLIC_* 环境变量夹具。上游靠 `process.env` 读配置，
-                      我们改成了注入 runtime options（08 §Runtime config），
+                      我们改成了注入 runtime options，
                       这套夹具在 Nuxt 侧一个字节都读不到，留着会让人以为测试隔离了配置。
                       `loadFreshArtifactUtils()` 的 `vi.resetModules()` 已经保证
                       每个用例拿到全新的 config 模块，隔离由它负责。

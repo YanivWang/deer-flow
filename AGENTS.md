@@ -12,38 +12,36 @@ guide rather than expecting full detail here:
 - **[frontend/AGENTS.md](frontend/AGENTS.md)** — frontend depth: Next.js App Router layout,
   thread/streaming data flow, code style, commands.
 - **[frontend-vue/README.md](frontend-vue/README.md)** — Vue commands and verification;
-  current truth lives in `frontend-vue-build-docs/10-current-status-and-next.md`.
+  architecture lives in `frontend-vue/ARCHITECTURE.md` and hard behavior contracts in
+  `frontend-vue/BEHAVIOR_CONTRACTS.md`.
 
-For Vue work, run `make handoff-check` and read document 10 first. M7 is repository GO
-(Vue-owned 25 files / 130 tests, 130/130 x3); M8 is complete. Vue owns framework-specific
-stream/artifact-panel, agent-chat, channels, integrations and thread-history contracts; React
-changes enter them only after an explicit Vue implementation. The current same-run reconnect,
-Showcase, Browser Live, Buzz and Lark-app-switch increment is aligned. Shared specs are limited
-to framework-neutral behavior. React stays the default frontend and Vue stays secondary. Public
-activation is explicitly outside the current delivery scope; no npm publish or production
-cutover occurred. Vue's production container smoke owns the packaged Showcase JSON/HTML/image
-and fail-closed unknown/unlisted/traversal checks; its unit gate keeps that manifest synchronized
-with the shared React fixture directory.
+The Vue application is fully implemented. React remains the default production hostname and Vue
+is selected by a secondary hostname; treat that as the current deployment topology, not a
+migration-status signal. Vue owns its framework-specific stream/artifact-panel, agent-chat,
+channels, integrations and thread-history tests. Shared specs are limited to framework-neutral
+behavior, so a React change enters Vue-owned surfaces only through an explicit Vue implementation
+and test update. Public DNS/TLS/outer-proxy/real-IdP activation remains environment-owned.
 
 ## What is DeerFlow
 
 DeerFlow is a LangGraph-based AI super-agent system with a full-stack architecture. The
 backend runs a "super agent" with sandboxed execution, persistent memory, subagent
 delegation, and extensible tools (built-in, MCP, community), all per-thread isolated. The
-frontend is a Next.js chat UI. External IM platforms (Feishu, Slack, Telegram, Discord,
+default frontend is a Next.js chat UI, with a complete Nuxt/Vue implementation available on
+the configured secondary hostname. External IM platforms (Feishu, Slack, Telegram, Discord,
 DingTalk) bridge into the same agent through the Gateway.
 
 ## Service Topology
 
 A single `make dev` / Docker stack runs four cooperating services:
 
-| Service         | Port   | Role                                                                 |
-| --------------- | ------ | ------------------------------------------------------------------- |
-| **Nginx**       | `2026` | Unified reverse-proxy entry point — open this in the browser        |
-| **Gateway API** | `8001` | FastAPI REST API + embedded LangGraph-compatible agent runtime      |
-| **React frontend** | `3000` | Default Next.js web interface                                    |
-| **Vue frontend**   | `3100` | Migration dev port; production uses only a secondary hostname      |
-| **Provisioner** | `8002` | Optional — only when sandbox is configured for provisioner/K8s mode |
+| Service            | Port   | Role                                                                |
+| ------------------ | ------ | ------------------------------------------------------------------- |
+| **Nginx**          | `2026` | Unified reverse-proxy entry point — open this in the browser        |
+| **Gateway API**    | `8001` | FastAPI REST API + embedded LangGraph-compatible agent runtime      |
+| **React frontend** | `3000` | Default Next.js web interface                                       |
+| **Vue frontend**   | `3100` | Nuxt development port; production uses a secondary hostname         |
+| **Provisioner**    | `8002` | Optional — only when sandbox is configured for provisioner/K8s mode |
 
 Nginx is the single public entry: it serves the frontend and proxies `/api/langgraph/*`
 to the Gateway's LangGraph runtime, rewriting it to Gateway's native `/api/*` routes; all
@@ -75,8 +73,7 @@ deer-flow/
 │   ├── packages/harness/           # deerflow-harness package (import: deerflow.*) — agent framework
 │   └── app/                        # FastAPI Gateway + IM channels (import: app.*)
 ├── frontend/                       # Next.js frontend (pnpm) — see frontend/AGENTS.md
-├── frontend-vue/                   # Nuxt/Vue migration — see frontend-vue/README.md
-├── frontend-vue-build-docs/        # Vue status, contracts and evidence
+├── frontend-vue/                   # Complete Nuxt/Vue frontend — see frontend-vue/README.md
 ├── docker/                         # docker-compose files, nginx config, provisioner
 ├── skills/                         # Agent skills: public/ (committed), custom/ (gitignored)
 │                                    # Managed integration skill packs are global at .deer-flow/integrations/skills/{provider}/
@@ -99,6 +96,7 @@ Gateway API. Config schema and resolution order are documented in
 [backend/AGENTS.md](backend/AGENTS.md).
 
 Skill quality review note:
+
 - `skills/public/skill-reviewer/` is the built-in read-only skill quality reviewer.
   It uses the harness-layer `review_skill_package` tool and contracts in
   `contracts/skill_review/`. Model-visible review data is compact and
@@ -107,6 +105,7 @@ Skill quality review note:
   `skill-creator` ownership boundaries.
 
 Scheduled-task note:
+
 - The scheduled-task MVP adds a workspace page at `/workspace/scheduled-tasks` plus a background scheduler service gated by `config.yaml -> scheduler.enabled`.
 - Scheduled background runs are intentionally non-interactive: they execute through the normal run lifecycle, but the lead-agent toolset excludes `ask_clarification` when `context.non_interactive=true`. The key is honored only for internally-authenticated callers (the scheduler launch path); client-supplied `context.non_interactive` is dropped.
 
@@ -150,7 +149,7 @@ cd frontend && pnpm dev       # Dev server with Turbopack (port 3000)
 cd frontend && pnpm check     # Lint + type check (run before committing)
 cd frontend && pnpm test      # Unit tests
 
-# Vue migration (see frontend-vue/README.md for all gates)
+# Vue frontend (see frontend-vue/README.md for all gates)
 cd frontend-vue && make verify
 cd frontend-vue && make migration-check
 cd frontend-vue && make e2e-m7
@@ -167,7 +166,8 @@ runs Corepack from the selected workspace so its pinned package manager is honor
 
 - Backend work → **[backend/AGENTS.md](backend/AGENTS.md)**
 - Frontend work → **[frontend/AGENTS.md](frontend/AGENTS.md)**
-- Vue migration → **[frontend-vue-build-docs/10-current-status-and-next.md](frontend-vue-build-docs/10-current-status-and-next.md)**
+- Vue frontend → **[frontend-vue/README.md](frontend-vue/README.md)**,
+  **[frontend-vue/ARCHITECTURE.md](frontend-vue/ARCHITECTURE.md)**
 - Setup & install → **[Install.md](Install.md)**, **[CONTRIBUTING.md](CONTRIBUTING.md)**
 - Project overview & usage → **[README.md](README.md)** (translations: `README_zh.md`,
   `README_ja.md`, `README_fr.md`, `README_ru.md`)
@@ -178,9 +178,6 @@ runs Corepack from the selected workspace so its pinned package manager is honor
 ## Cross-Cutting Conventions
 
 These apply repo-wide; module guides own the module-specific detail.
-
-- **Handoffs** — run `make handoff-check` before Vue work, reproduce recorded gates, and
-  commit completed work with measured evidence; prior summaries are claims, not results.
 
 - **Documentation update policy** — keep docs in sync with code: update `README.md` for
   user-facing changes and the relevant `AGENTS.md` for development/architecture changes in
