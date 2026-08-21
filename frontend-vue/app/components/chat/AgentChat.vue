@@ -68,6 +68,11 @@ import { getAgent } from "@/core/agents/api";
 import type { Agent } from "@/core/agents/types";
 import { resolveComposerModel } from "@/core/models/capabilities";
 import { createAsyncGeneration } from "@/core/async/generation";
+import {
+  latestBrowserViewFrame,
+  reconcileBrowserMessageFrame,
+  type BrowserViewFrame,
+} from "@/core/browser/frame";
 
 const props = defineProps<{
   agentName?: string | null;
@@ -302,6 +307,9 @@ const sidecarSession = useSidecarSession({
   onReferencesAccepted: sidecar.clearActiveReferences,
 });
 const browserOpen = ref(false);
+const browserFrame = ref<BrowserViewFrame | null>(null);
+const observedBrowserMessageFrame = ref<BrowserViewFrame | null>(null);
+const lastAutoOpenedBrowserScreenshot = ref<string | null>(null);
 const agentBrowserEnabled = computed(
   () =>
     !props.agentName ||
@@ -316,6 +324,41 @@ const browserEnabled = computed(
     features.browserControlEnabled.value &&
     agentBrowserEnabled.value,
 );
+const latestBrowserFrame = computed(() =>
+  latestBrowserViewFrame(demoMessages.value ?? stream.messages.value),
+);
+watch(routeThreadId, () => {
+  browserOpen.value = false;
+  browserFrame.value = null;
+  observedBrowserMessageFrame.value = null;
+  lastAutoOpenedBrowserScreenshot.value = null;
+});
+watch(
+  [latestBrowserFrame, browserEnabled],
+  ([nextFrame, enabled]) => {
+    if (!nextFrame) return;
+    const reconciliation = reconcileBrowserMessageFrame(
+      browserFrame.value,
+      observedBrowserMessageFrame.value,
+      nextFrame,
+    );
+    observedBrowserMessageFrame.value = reconciliation.observed;
+    if (reconciliation.changed) {
+      browserFrame.value = reconciliation.display;
+    }
+    if (
+      enabled &&
+      nextFrame.screenshot !== lastAutoOpenedBrowserScreenshot.value
+    ) {
+      lastAutoOpenedBrowserScreenshot.value = nextFrame.screenshot;
+      browserOpen.value = true;
+    }
+  },
+  { immediate: true },
+);
+watch(browserEnabled, (enabled) => {
+  if (!enabled) browserOpen.value = false;
+});
 watch(
   sidecarSession.ready,
   (ready) => {
@@ -324,7 +367,7 @@ watch(
   { immediate: true },
 );
 const activePanel = computed<"artifacts" | "sidecar" | "browser" | null>(() => {
-  if (browserOpen.value) return "browser";
+  if (browserOpen.value && browserEnabled.value) return "browser";
   if (sidecar.open.value) return "sidecar";
   if (artifactPanel.open.value && artifactPanel.selectedArtifact.value)
     return "artifacts";
@@ -353,6 +396,9 @@ function openBrowser() {
   artifactPanel.close();
   sidecar.close();
   browserOpen.value = true;
+}
+function acceptBrowserFrame(frame: BrowserViewFrame) {
+  browserFrame.value = frame;
 }
 function askInSidecar(payload: {
   message: Message;
@@ -1244,8 +1290,11 @@ onUnmounted(() => {
       />
       <BrowserPanel
         v-if="routeThreadId && activePanel === 'browser'"
+        :key="routeThreadId"
         :thread-id="routeThreadId"
         :active="activePanel === 'browser'"
+        :frame="browserFrame"
+        @frame="acceptBrowserFrame"
         @close="browserOpen = false"
       />
     </template>

@@ -120,23 +120,26 @@ describe("local Playwright command contracts", () => {
 });
 
 describe("M6 inventory and browser contract", () => {
-  it("is exactly the frozen 8-file / 30-test gate", () => {
-    expect(m6Inventory.specFiles).toHaveLength(8);
-    expect(new Set(m6Inventory.specFiles)).toHaveLength(8);
-    expect(m6Inventory.expectedFileCount).toBe(8);
-    expect(m6Inventory.expectedTestCount).toBe(30);
+  it("is exactly the WP-05 9-file / 33-test gate", () => {
+    expect(m6Inventory.specFiles).toHaveLength(9);
+    expect(new Set(m6Inventory.specFiles)).toHaveLength(9);
+    expect(m6Inventory.expectedFileCount).toBe(9);
+    expect(m6Inventory.expectedTestCount).toBe(33);
     expect(m6Inventory.specFiles).toContain(
       "frontend-vue/tests/m7/integrations.spec.ts",
     );
     expect(m6Inventory.specFiles).not.toContain(
       "frontend/tests/e2e/integrations.spec.ts",
     );
+    expect(m6Inventory.specFiles).toContain(
+      "frontend-vue/tests/m6/browser-control.spec.ts",
+    );
     expect(makefile).toContain("playwright test -c playwright.m6.config.ts");
   });
 
   it("keeps browser frames binary/legacy compatible and emits one click per physical click", () => {
     expect(browserApi).toContain('frame_format: "binary"');
-    expect(browserStream).toContain('payload.type === "frame"');
+    expect(browserStream).toContain("BrowserConnectionController");
     expect(browserStream).toContain("LatestBrowserFrameBuffer");
     expect(browserPanel).toContain('@click="clickFrame"');
     expect(browserPanel).toContain('type: "click"');
@@ -169,10 +172,10 @@ describe("M6 inventory and browser contract", () => {
 });
 
 describe("Vue M7 gate ownership", () => {
-  it("keeps the exact 25-file / 130-test gate and owns framework-specific specs", () => {
-    expect(m7Inventory.expectedFileCount).toBe(25);
-    expect(m7Inventory.expectedTestCount).toBe(130);
-    expect(m7Inventory.specFiles).toHaveLength(25);
+  it("keeps the exact WP-05 26-file / 133-test gate and owns framework-specific specs", () => {
+    expect(m7Inventory.expectedFileCount).toBe(26);
+    expect(m7Inventory.expectedTestCount).toBe(133);
+    expect(m7Inventory.specFiles).toHaveLength(26);
     expect(m7Inventory.specFiles).toContain(
       "frontend-vue/tests/m5/artifact-batched-stream.spec.ts",
     );
@@ -184,6 +187,9 @@ describe("Vue M7 gate ownership", () => {
     );
     expect(m7Inventory.specFiles).not.toContain(
       "frontend/tests/e2e/artifact-panel-resize.spec.ts",
+    );
+    expect(m7Inventory.specFiles).toContain(
+      "frontend-vue/tests/m6/browser-control.spec.ts",
     );
     for (const spec of [
       "agent-chat.spec.ts",

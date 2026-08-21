@@ -1,4 +1,4 @@
-/* Exact M6 remaining-L3 shared React contract. M7/M8 specs are excluded. */
+/* Exact M6 remaining-L3 contract plus Vue-owned browser control. M7/M8 specs are excluded. */
 import { readFileSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 

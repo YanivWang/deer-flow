@@ -63,6 +63,8 @@ make dev       # http://localhost:3100
 make verify
 make consumer-check     # 修改 packages/agent-core 时运行
 make e2e-list           # 查看共享浏览器合同清单
+make e2e-m6             # 包含 Vue 自有 browser DOM/wire 合同
+make e2e-m6-real-backend # 真实本地 Gateway + Chromium browser runtime
 make e2e-m7             # 完整 Vue 浏览器合同
 make e2e-m7-auth        # 认证请求与安全
 make proxy-security     # Nitro body 限制、无 body/chunked DELETE、SSE 与 traversal
@@ -91,6 +93,13 @@ Nuxt/Gateway 链路验证。`NUXT_PUBLIC_M0_TEST_PAGES=1` 只为测试开放内�
 
 生产路由、OIDC callback 规则和回滚命令统一维护在
 [双前端生产说明](../docs/dual-frontend-production.md) 中。
+
+## 浏览器控制
+
+面板默认进入 Live；切到 Static 时保留最后可见帧，Live transport 不可用时使用 Gateway
+REST 导航。URL/title 只接受 Gateway WebSocket 事件或 REST 响应。关闭面板、切换线程或
+feature 禁用都会停止重连 timer、socket 和未完成 REST。详细所有权与输入/清理硬合同见
+[ARCHITECTURE.md](ARCHITECTURE.md) 和 [BEHAVIOR_CONTRACTS.md](BEHAVIOR_CONTRACTS.md)。
 
 ## 流式与历史行为
 

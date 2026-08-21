@@ -68,6 +68,37 @@ citation 和 per-turn usage 都不依赖提交前 UI 状态。`thread.values.tod
 流式重连、消息顺序、缓存失效和面板行为的硬合同见
 [`BEHAVIOR_CONTRACTS.md`](BEHAVIOR_CONTRACTS.md)。
 
+## Browser control 所有权
+
+Browser control 是 L3 DeerFlow 能力，不进入通用 agent 内核或 L2 UI。状态链只有一条：
+
+1. `AgentChat.vue` 从**当前主线程**消息中提取最新 ToolMessage
+   `additional_kwargs.browser_view`，持有静态 `BrowserViewFrame` 与面板开关。截图变化可自动
+   打开；它另外记录已经观察过的消息帧，避免消息列表刷新时用旧截图覆盖新 REST 结果。
+   route 变化清空，feature 禁用关闭，`BrowserPanel :key="threadId"` 保证旧实例销毁。
+2. `BrowserPanel.vue` 持有本实例的 `requestedLive`、URL 编辑态、最后 live/REST
+   URL/title 和 REST mutation。Live/Connecting/Reconnecting/Static 都是这些客户端事实的
+   推导值；Gateway 没有也不接收 mode/state 字段。
+3. `useBrowserStream.ts` 是 Vue scope 适配层：把纯 `BrowserConnectionController` snapshot
+   映射成 refs，并独占 `LatestBrowserFrameBuffer`。关闭 Live 保留末帧；换 thread 或
+   scope dispose 才回收 blob URL。
+4. `app/core/browser/connection.ts` 是 socket、最后一次 pending navigate、重连 timer/
+   budget、generation stale guard 和 terminal REST 交接的唯一 owner。组件不得另建 retry
+   timer 或第二个 socket 状态机。
+5. `browser-api.ts` 只调用 Gateway 已有的
+   `POST /api/threads/{thread_id}/browser/navigate`，请求 `{ url }`，并以生成的
+   `BrowserNavigateResponse` 收敛 screenshot/url/title。4xx/5xx 经统一 Gateway error parser
+   保留 `detail`；切 thread、关闭/隐藏面板或销毁会 abort 并拒绝过期响应回写。
+6. `app/core/browser/geometry.ts`、`keyboard.ts` 与 `protocol.ts` 是框架无关业务规则：只声明
+   Gateway 已接受的 wire；object-contain letterbox、move/wheel rAF 合并、keydown/IME 和
+   宿主快捷键边界不散落在模板中。
+
+测试证据分层：`tests/unit/wp05/` 使用 fake socket/HTTP 证明纯状态机和 DOM 生命周期；
+`tests/m6/browser-control.spec.ts` 使用 Mock Gateway/Mock WS 证明 Vue 自有 DOM 到 wire；
+`tests/m6-real-backend/browser-panel.spec.ts` 使用本地真实 FastAPI Gateway 与真实 Playwright
+Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的模型 harness 仍是 replay，
+不等于生产模型、DNS/TLS、外层代理或真实 IdP 证明。
+
 ## 路由、渲染与认证
 
 - `config/routes.ts` 是 CSR/prerender 分区、代理常量和转发头策略的单一来源。
@@ -93,11 +124,14 @@ citation 和 per-turn usage 都不依赖提交前 UI 状态。`thread.values.tod
 - 当前流、乐观消息、prepared replay 掩码、task/retry 状态：thread composable 的
   thread-scoped ref；切换 thread、stop、error、finish 或 scope dispose 时按合同收敛。
 - Pinia 只允许保存跨页面的客户端/UI 状态，不得复制 thread/session 等服务端真相。
-- artifacts、sidecar、browser：各自 composable 持有面板状态，但最终业务数据仍来自同一
+- artifacts、sidecar、browser：各自 composable/集成根持有面板状态，但最终业务数据仍来自同一
   thread snapshot/API。sidecar 进一步拆成 `useSidecar` 的开关/引用状态与
   `useSidecarSession` 的唯一会话状态；后者独占 restore-before-create、run、附件上传缓存、
   HIL 与真实删除，`SidecarPanel` 只做 UI 适配。隐藏或切换右侧面板不销毁 session，切换主
   thread 或 scope dispose 才使旧异步结果失效。
+- browser 的静态 frame/open 归 `AgentChat`，transport 归 per-panel controller，REST 归
+  `BrowserPanel` 的 Vue Query mutation；三者不得互相复制。Gateway `url`/`tabs` 事件与 REST
+  响应是 URL/title 真相，live/static 只是客户端展示状态。
 - composer draft 是 `sessionStorage` 的 tab 状态，只持久化文本/skill；user、agent 与逻辑会话
   三维隔离，并在确认 logout/thread delete 后清理。上传文件、语音、follow-up dialog、polish
   和 generation guard 是组件/composable 瞬态状态，不得错误跨 thread 复用。

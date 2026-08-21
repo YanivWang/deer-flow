@@ -1,6 +1,6 @@
 {
-  "expectedFileCount": 25,
-  "expectedTestCount": 130,
+  "expectedFileCount": 26,
+  "expectedTestCount": 133,
   "specFiles": [
     "frontend-vue/tests/m7/agent-chat.spec.ts",
     "frontend/tests/e2e/agents-feature-disabled.spec.ts",
@@ -10,6 +10,7 @@
     "frontend/tests/e2e/artifact-stream-state.spec.ts",
     "frontend/tests/e2e/branch-thread.spec.ts",
     "frontend/tests/e2e/browser-feature.spec.ts",
+    "frontend-vue/tests/m6/browser-control.spec.ts",
     "frontend-vue/tests/m7/channels.spec.ts",
     "frontend/tests/e2e/chat-thread-init-ordering.spec.ts",
     "frontend/tests/e2e/chat.spec.ts",

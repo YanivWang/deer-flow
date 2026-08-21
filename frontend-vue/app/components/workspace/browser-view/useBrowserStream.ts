@@ -1,125 +1,126 @@
 /*
-  【文件职责】     管理 browser-view WebSocket 生命周期、状态和输入转发。
-  【对应 frontend/】 src/components/workspace/browser-view/hooks.ts
+  【文件职责】     把 browser 连接状态机适配为 Vue refs，并唯一管理帧缓冲与 scope 生命周期。
+  【对应 frontend/】 src/components/workspace/browser-view/use-browser-stream.ts
   【架构位置】     L3
   【主要导出】     useBrowserStream
-  【依赖关系】     browser-api · frame-buffer · Vue lifecycle
-  【边界与注意】   每个面板独立实例；不得变成模块级连接单例。
+  【依赖关系】     browser connection core · browser-api · frame-buffer · Vue scope
+  【边界与注意】   controller 是 transport 唯一 owner；关闭 Live 保留末帧，换线程/销毁才回收。
 */
 
-import { onBeforeUnmount, ref, watch, type Ref } from "vue";
+import { onScopeDispose, ref, watch, type Ref } from "vue";
+
+import {
+  BrowserConnectionController,
+  type BrowserConnectionSnapshot,
+} from "@/core/browser/connection";
+import type {
+  BrowserInputEvent,
+  BrowserNavigateIntent,
+} from "@/core/browser/protocol";
 
 import { browserStreamURL } from "./browser-api";
 import { LatestBrowserFrameBuffer } from "./frame-buffer";
 
-export type BrowserInputEvent =
-  | { type: "click"; nx: number; ny: number }
-  | { type: "move"; nx: number; ny: number }
-  | { type: "wheel"; dx: number; dy: number; nx?: number; ny?: number }
-  | { type: "key"; key: string }
-  | { type: "text"; text: string }
-  | { type: "navigate"; url: string }
-  | { type: "back" | "forward" }
-  | { type: "activate_tab"; index: number };
+export type { BrowserInputEvent } from "@/core/browser/protocol";
+
+export interface BrowserFallbackNavigate extends BrowserNavigateIntent {
+  requestId: number;
+}
 
 export function useBrowserStream(
   threadId: Ref<string>,
   enabled: Ref<boolean>,
   seedUrl?: Ref<string | undefined>,
 ) {
-  const status = ref<"idle" | "connecting" | "open" | "closed">("idle");
+  const status = ref<BrowserConnectionSnapshot["status"]>("idle");
   const frameUrl = ref<string | null>(null);
   const liveUrl = ref<string | null>(null);
-  const tabs = ref<
-    Array<{ index: number; title: string; url: string; active: boolean }>
-  >([]);
+  const title = ref("");
+  const tabs = ref<BrowserConnectionSnapshot["tabs"]>([]);
   const error = ref<string | null>(null);
+  const rejectedUrl = ref<string | null>(null);
+  const reconnectAttempt = ref(0);
+  const canRetry = ref(false);
+  const fallbackNavigate = ref<BrowserFallbackNavigate | null>(null);
   const buffer = new LatestBrowserFrameBuffer((url) => (frameUrl.value = url));
-  let socket: WebSocket | null = null;
-  let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
-  let attempts = 0;
+  let fallbackRequestId = 0;
+  let currentThreadId: string | undefined;
 
-  function sendInput(event: BrowserInputEvent) {
-    if (socket?.readyState !== WebSocket.OPEN) return false;
-    socket.send(JSON.stringify(event));
-    return true;
+  function publish(snapshot: BrowserConnectionSnapshot) {
+    status.value = snapshot.status;
+    liveUrl.value = snapshot.liveUrl;
+    title.value = snapshot.title;
+    tabs.value = snapshot.tabs;
+    error.value = snapshot.error;
+    rejectedUrl.value = snapshot.rejectedUrl;
+    reconnectAttempt.value = snapshot.reconnectAttempt;
+    canRetry.value = snapshot.canRetry;
   }
 
-  function close() {
-    clearTimeout(reconnectTimer);
-    socket?.close();
-    socket = null;
-    buffer.dispose();
-    status.value = "idle";
-  }
-
-  function connect() {
-    close();
-    if (!enabled.value || !threadId.value) return;
-    status.value = "connecting";
-    const current = new WebSocket(
-      browserStreamURL(threadId.value, seedUrl?.value),
-    );
-    socket = current;
-    current.binaryType = "blob";
-    current.onopen = () => {
-      attempts = 0;
-      status.value = "open";
-    };
-    current.onmessage = (message) => {
-      if (message.data instanceof Blob) {
+  const controller = new BrowserConnectionController({
+    buildUrl: browserStreamURL,
+    onState: publish,
+    onFrame(frame) {
+      if (frame instanceof Blob) {
         buffer.push(
-          message.data.type === "image/jpeg"
-            ? message.data
-            : new Blob([message.data], { type: "image/jpeg" }),
+          frame.type === "image/jpeg"
+            ? frame
+            : new Blob([frame], { type: "image/jpeg" }),
         );
-        return;
+      } else if (frame instanceof ArrayBuffer) {
+        buffer.push(new Blob([frame], { type: "image/jpeg" }));
+      } else {
+        buffer.replaceWithUrl(`data:image/jpeg;base64,${frame}`);
       }
-      if (message.data instanceof ArrayBuffer) {
-        buffer.push(new Blob([message.data], { type: "image/jpeg" }));
-        return;
-      }
-      if (typeof message.data !== "string") return;
-      try {
-        const payload = JSON.parse(message.data) as {
-          type?: string;
-          data?: string;
-          url?: string;
-          message?: string;
-          tabs?: typeof tabs.value;
-        };
-        if (payload.type === "frame" && payload.data)
-          buffer.replaceWithUrl(`data:image/jpeg;base64,${payload.data}`);
-        else if (payload.type === "url" && payload.url)
-          liveUrl.value = payload.url;
-        else if (payload.type === "tabs" && payload.tabs)
-          tabs.value = payload.tabs;
-        else if (payload.type === "nav_rejected")
-          error.value = payload.message ?? "Navigation rejected";
-      } catch {
-        // Malformed control frames are ignored; binary frames remain independent.
-      }
-    };
-    current.onclose = () => {
-      if (socket !== current || !enabled.value) return;
-      status.value = "closed";
-      if (attempts >= 6) return;
-      const delay = Math.min(800 * 2 ** attempts++, 10_000);
-      reconnectTimer = setTimeout(connect, delay);
-    };
-    current.onerror = () => {
-      if (socket === current) status.value = "closed";
-    };
-  }
+    },
+    onFallbackNavigate(intent) {
+      fallbackRequestId += 1;
+      fallbackNavigate.value = { ...intent, requestId: fallbackRequestId };
+    },
+  });
 
-  watch([threadId, enabled], connect, { immediate: true });
+  watch(
+    [threadId, enabled],
+    ([nextThreadId, nextEnabled]) => {
+      if (nextThreadId !== currentThreadId) {
+        currentThreadId = nextThreadId;
+        buffer.dispose();
+        fallbackNavigate.value = null;
+      }
+      if (nextEnabled && nextThreadId) {
+        controller.start(nextThreadId, seedUrl?.value);
+      } else {
+        controller.stop();
+      }
+    },
+    { immediate: true },
+  );
+
   watch(
     () => seedUrl?.value,
-    (next) => {
-      if (next && status.value === "open" && next !== liveUrl.value)
-        sendInput({ type: "navigate", url: next });
+    (nextSeed) => {
+      if (enabled.value) controller.updateSeed(nextSeed);
     },
   );
-  onBeforeUnmount(close);
-  return { status, frameUrl, liveUrl, tabs, error, sendInput };
+
+  onScopeDispose(() => {
+    controller.dispose();
+    buffer.dispose();
+  });
+
+  return {
+    status,
+    frameUrl,
+    liveUrl,
+    title,
+    tabs,
+    error,
+    rejectedUrl,
+    reconnectAttempt,
+    canRetry,
+    fallbackNavigate,
+    sendInput: (event: BrowserInputEvent) => controller.sendInput(event),
+    retry: () => controller.retry(),
+    clearError: () => controller.clearError(),
+  };
 }

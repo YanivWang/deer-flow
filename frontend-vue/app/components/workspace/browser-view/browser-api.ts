@@ -8,6 +8,35 @@
 */
 
 import { getBackendBaseURL } from "@/core/config";
+import { throwGatewayApiError } from "@/core/api/errors";
+import { fetch } from "@/core/api/fetcher";
+import type { components } from "@/core/api/types.gen";
+
+export type BrowserNavigateResult =
+  components["schemas"]["BrowserNavigateResponse"];
+
+export async function navigateBrowser(
+  threadId: string,
+  url: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<BrowserNavigateResult> {
+  const response = await fetch(
+    `${getBackendBaseURL()}/api/threads/${encodeURIComponent(threadId)}/browser/navigate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+      signal: options.signal,
+    },
+  );
+  if (!response.ok) {
+    await throwGatewayApiError(
+      response,
+      `Failed to navigate browser: ${response.statusText}`,
+    );
+  }
+  return (await response.json()) as BrowserNavigateResult;
+}
 
 export function browserStreamURL(threadId: string, seedUrl?: string): string {
   const base =

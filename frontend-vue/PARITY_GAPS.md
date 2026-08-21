@@ -108,9 +108,9 @@
 | SIDECAR-01  | P0     | DONE | WP-04  | 单一 session owner 串行 restore/create，拒绝过期结果回写         |
 | SIDECAR-02  | P0     | DONE | WP-04  | sidecar 附件按最终 thread 上传并进入结构化发送请求               |
 | SIDECAR-03  | P0     | DONE | WP-04  | sidecar MessageList 已接入真实 thread/error/HIL 提交             |
-| BROWSER-01  | P0     | TODO | WP-05  | connecting 阶段丢导航，断线没有有界重连                          |
-| BROWSER-02  | P0     | TODO | WP-05  | 缺 REST fallback、live/static 模式和 URL 同步                    |
-| BROWSER-03  | P0     | TODO | WP-05  | 点击坐标、滚轮、键盘和 IME 行为未对齐                            |
+| BROWSER-01  | P0     | DONE | WP-05  | connecting 阶段丢导航，断线没有有界重连                          |
+| BROWSER-02  | P0     | DONE | WP-05  | 缺 REST fallback、live/static 模式和 URL 同步                    |
+| BROWSER-03  | P0     | DONE | WP-05  | 点击坐标、滚轮、键盘和 IME 行为未对齐                            |
 | ARTIFACT-01 | P0     | TODO | WP-06  | 未知二进制文件会被当作文本加载和保存                             |
 | ARTIFACT-02 | P1     | TODO | WP-06  | 切换/关闭/离开页面没有未保存内容保护                             |
 | ARTIFACT-03 | P1     | TODO | WP-06  | 缺 discard/exit/copy/open/install-skill 等操作                   |
@@ -301,12 +301,14 @@
 
 #### 当前代码事实
 
-- [`app/components/workspace/browser-view/useBrowserStream.ts`](app/components/workspace/browser-view/useBrowserStream.ts) 在 connecting 时直接丢弃 navigate；error/close 没有完整的有界重连和 pending intent flush。
-- seed 变化使用原始值比较，没有 React 的归一化策略。
-- [`app/components/workspace/browser-view/BrowserPanel.vue`](app/components/workspace/browser-view/BrowserPanel.vue) 只有 WS navigate。
-- 没有 REST navigate fallback、live/static mode、后端 URL 同步、pointer move、wheel。
-- 点击坐标按整个 object-contain 元素计算，没有扣除 letterbox；键盘输入缺少完整 preventDefault/IME 守卫。
-- React 基线位于 [`use-browser-stream.ts`](../frontend/src/components/workspace/browser-view/use-browser-stream.ts) 和 [`browser-view-panel.tsx`](../frontend/src/components/workspace/browser-view/browser-view-panel.tsx)。
+- Gateway 的真实 HTTP 合同是 `POST /api/threads/{thread_id}/browser/navigate`，请求只含 `{ url }`，响应是 `{ screenshot, url, title }`；WS 合同是同线程 `/browser/stream?frame_format=binary&seed=...`。后端没有 `live` / `static` mode 字段，前端不得伪造。
+- [`app/core/browser/connection.ts`](app/core/browser/connection.ts) 是 WS、最后一次 pending navigate、6 次指数退避、stale generation 和 terminal fallback 交接的唯一 owner；[`useBrowserStream.ts`](app/components/workspace/browser-view/useBrowserStream.ts) 只把它适配成 Vue refs 和末帧 buffer。
+- 切换 thread 会回收 frame/object URL 并使旧 socket 事件失效；关闭 Live 只停 transport，保留末帧供 Static 展示；关闭面板、feature 禁用或 scope dispose 会停止 timer/socket/REST。
+- [`BrowserPanel.vue`](app/components/workspace/browser-view/BrowserPanel.vue) 以本地 `requestedLive` + 实际连接状态推导 Live/Connecting/Reconnecting/Static，REST 使用 Vue Query mutation。WS 不可用且有 pending navigate 时只交接一次 REST，不重复发送已接受导航。
+- 当前 URL/title 只从 Gateway `url`/`tabs` 事件或 REST 响应收敛；REST 4xx/5xx 保留同一目标并提供可见重试，不使用任意时长 spinner 假装完成。
+- [`AgentChat.vue`](app/components/chat/AgentChat.vue) 只从当前线程 ToolMessage 的 `additional_kwargs.browser_view` 恢复最新静态帧；新截图自动打开，已观察的旧消息帧不会覆盖新的 REST 权威截图，route `:key`、feature watch 和 panel close 保证旧 owner 销毁。
+- pointer 几何由 [`geometry.ts`](app/core/browser/geometry.ts) 按 object-contain 内容盒计算；letterbox 外 click/move 不发送，move/wheel 逐动画帧合并。键盘只在 keydown 发送，URL 输入、IME 组合阶段和宿主快捷键留在本地，compositionend 以 `text` 发送一次。
+- React 基线仍位于 [`use-browser-stream.ts`](../frontend/src/components/workspace/browser-view/use-browser-stream.ts) 和 [`browser-view-panel.tsx`](../frontend/src/components/workspace/browser-view/browser-view-panel.tsx)；WP-05 对齐其有效产品语义，但没有复制任意 spinner、失效 blob fallback 或会吞宿主快捷键的实现细节。
 
 #### 必须实现
 
@@ -319,15 +321,18 @@
 
 #### Vue 实现建议
 
-- `useBrowserStream` 做纯连接状态机，`BrowserPanel` 只处理展示和输入事件。
-- REST fallback 使用 Vue Query mutation。
-- 单独提取 viewport geometry 和 keyboard policy 纯函数，覆盖不同宽高比。
+- 已按该边界实现：纯连接状态机、geometry、keyboard、frame/protocol 位于 `app/core/browser/`；composable 和组件只负责 Vue 生命周期与展示接线。
+- Browser REST 保持 L3 DeerFlow endpoint，使用生成的 `BrowserNavigateResponse` 类型和统一 Gateway error 解析，不进入 L1/L2。
+- Vue 运行时没有引入 React 组件、hook/context、DOM shim 或双 API 兼容分支。
 
 #### 验收与测试
 
-- connecting navigate、断线重连上限、切线程取消、seed 更新测试。
-- WS 失败后 REST fallback 的集成测试。
-- 16:9、竖屏和 letterbox 坐标测试；wheel/keyboard/IME DOM 测试。
+- Vue unit/DOM：`tests/unit/wp05/` 共 7 个文件 / 24 个用例，覆盖 connecting pending、退避上限、seed 归一化、stale thread、二进制/legacy frame、消息帧/REST 所有权、REST 错误、live/static、竖屏 letterbox、move/wheel、keyboard/IME 与 cleanup。
+- Vue-owned Playwright：`tests/m6/browser-control.spec.ts` 3 个用例，覆盖 ToolMessage 静态帧自动打开、Gateway URL/title 收敛、输入 wire、Static REST 失败和同目标重试；该层使用 Mock Gateway/Mock WS，不冒充真实后端。
+- Real-Gateway：`tests/m6-real-backend/browser-panel.spec.ts` 使用本地真实 FastAPI Gateway 与真实 Playwright Chromium browser runtime 验证 REST 响应、二进制 WS 帧和 Vue UI 收敛；Gateway harness 的模型侧是 replay，不冒充生产模型/环境。
+- 聚焦 TDD：7 个 Vue unit/DOM 文件、23/23 用例通过；新增 Vue-owned Playwright 3/3 通过。
+- 最终顺序门禁（2026-08-22）全部通过：`make e2e-m6-list` 9 files / 33 tests；`make e2e-m6` 33/33；`make e2e-m6-real-backend` 1/1；`make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 26 files / 133/133；`make e2e-m7-local` 8/8；`make e2e-m7-auth` 10/10；`make e2e-m7-real-protocol` 1/1；`make e2e-m7-visual` 7/7（baseline 未更新）；`make migration-check` 通过；`make verify` 143 test files / 1244 tests、类型/格式/collection/i18n/OpenAPI/header/production build 全部通过。
+- 首次聚焦 Playwright 和首次完整 Vitest 在受限 sandbox 分别命中 `listen EPERM`；均未改代码/命令语义，在允许 `127.0.0.1` 回环监听后原样通过。`make verify` 仍报告仓库既有 lint warnings，但 0 errors。
 
 ### WP-06：Artifacts 文件策略与编辑生命周期
 

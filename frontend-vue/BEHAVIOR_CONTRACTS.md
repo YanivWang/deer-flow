@@ -11,14 +11,13 @@
 
 当前已确认仍违反或未完整覆盖的合同包括：
 
-| 合同                             | 对应差异 ID                  |
-| -------------------------------- | ---------------------------- |
-| D3、D6～D8                       | `ARTIFACT-01`～`ARTIFACT-04` |
-| E6、E12 的 compact 后续边界      | `THREAD-01`                  |
-| G1～G6                           | `STREAM-01`、`STREAM-02`     |
-| I 组尚未覆盖的连接/导航/输入要求 | `BROWSER-01`～`BROWSER-03`   |
-| K3、K5 的错误/状态消费           | `THREAD-02`、`SETTINGS-01`   |
-| N4 的其他产品接入                | `I18N-01`                    |
+| 合同                        | 对应差异 ID                  |
+| --------------------------- | ---------------------------- |
+| D3、D6～D8                  | `ARTIFACT-01`～`ARTIFACT-04` |
+| E6、E12 的 compact 后续边界 | `THREAD-01`                  |
+| G1～G6                      | `STREAM-01`、`STREAM-02`     |
+| K3、K5 的错误/状态消费      | `THREAD-02`、`SETTINGS-01`   |
+| N4 的其他产品接入           | `I18N-01`                    |
 
 该映射不是差异清单的替代品；新的未满足合同先加入 `PARITY_GAPS.md`，再补合同和测试。
 
@@ -233,13 +232,24 @@ Vue 前端使用 `splitpanes`。它通过响应式 `:size` 和 `@resize` / `@res
 
 ## I. Browser view
 
-| #   | 约束                                                                                                                      |
-| --- | ------------------------------------------------------------------------------------------------------------------------- |
-| I1  | 每次物理指针点击只转发**一个** `click` 输入；不要为同一手势同时发 `down`/`up`（远端 Playwright 点击会执行两次）           |
-| I2  | 请求二进制 JPEG 帧（`frame_format=binary`）；状态、URL、标签页、导航拒绝消息保持 JSON                                     |
-| I3  | 帧缓冲只保留**最新的一个**待处理帧，每个动画帧最多发布一次，并负责 object-URL 回收                                        |
-| I4  | 保留 Gateway 的旧版 JSON/base64 帧路径以兼容老客户端                                                                      |
-| I5  | Workspace Browser 触发器与右侧面板由 `/api/features -> browser_control.enabled` 控制；默认/失败的特性发现要**隐藏**该控件 |
+| #   | 约束                                                                                                                                                                                                                     |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| I1  | 每次物理指针点击只转发**一个** `click` 输入；不要为同一手势同时发 `down`/`up`（远端 Playwright 点击会执行两次）                                                                                                          |
+| I2  | 请求二进制 JPEG 帧（`frame_format=binary`）；状态、URL、标签页、导航拒绝消息保持 JSON                                                                                                                                    |
+| I3  | 帧缓冲只保留**最新的一个**待处理帧，每个动画帧最多发布一次，并负责 object-URL 回收                                                                                                                                       |
+| I4  | 保留 Gateway 的旧版 JSON/base64 帧路径以兼容老客户端                                                                                                                                                                     |
+| I5  | Workspace Browser 触发器与右侧面板由 `/api/features -> browser_control.enabled` 控制；默认/失败的特性发现要**隐藏**该控件                                                                                                |
+| I6  | 静态 browser frame 只来自当前主线程 ToolMessage 的 `additional_kwargs.browser_view`；不得从可见文本、artifact 名或 sidecar 消息猜测，截图变化才自动打开面板；已观察过的旧消息帧不得覆盖新的 REST 权威截图                |
+| I7  | WS 是 per-panel 唯一 owner：初连或重连期间只保留最后一次 navigate；open 后至多发送一次。close/error 使用 800ms 起、10s 封顶、最多 6 次的指数退避；耗尽后显式 error + 手动重试                                            |
+| I8  | thread/route 变化必须 generation 失效旧 socket/REST 结果并回收旧 object URL；feature 禁用、面板关闭、`active=false` 和 scope dispose 必须停止 socket、timer 与 REST 请求                                                 |
+| I9  | Live/Connecting/Reconnecting/Static 是客户端根据 `requestedLive` 与实际连接状态推导的展示状态；Gateway 没有对应 mode/state 字段，HTTP/WS 都不得新增该字段                                                                |
+| I10 | WS 最终不可用且仍有 pending navigate 时，只把该意图交接一次到 REST；已由 WS 接受的 navigate 不得再发 REST，禁止“双保险”双写                                                                                              |
+| I11 | REST 导航只发 `POST /api/threads/{thread_id}/browser/navigate` + `{ url }`；`screenshot`/`url`/`title` 响应是权威结果。4xx/5xx 必须显示 Gateway 错误、保留原目标并提供重试                                               |
+| I12 | live URL/title 只按 Gateway `url` 与 active `tabs` 事件收敛；Static 持有最后 live 或 REST 结果。`nav_rejected` 立即结束导航状态并显示服务端原因，不用固定 timer 假装完成                                                 |
+| I13 | click/move 按 `object-contain` 的真实内容盒归一化；letterbox 外不发送。move 每动画帧只发最新点；wheel 使用 native non-passive listener，归一化 deltaMode 并逐帧合并                                                      |
+| I14 | 键盘只在 live + 非 editable + 非 composition 的 `keydown` 转发；printable 用 `text`、命名键/远端编辑 chord 用 `key`，keyup 不重复。宿主浏览器/系统快捷键不 `preventDefault`；IME 只在 `compositionend` 发一次完整 `text` |
+| I15 | 关闭 Live 只停 transport 并保留最后可见帧；切 thread/销毁才清帧和回收 blob URL。重新进入 Live 使用最后权威 URL seed，归一化 hash/尾斜杠后避免重复 navigate                                                               |
+| I16 | Vue browser 的 framework-specific DOM/wire 测试归 `frontend-vue/tests/m6/browser-control.spec.ts`；共享 `browser-feature.spec.ts` 只保留 feature flag 这一框架无关合同。Mock、real Gateway/replay、生产证据必须分开表述  |
 
 ---
 

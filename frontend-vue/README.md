@@ -76,6 +76,8 @@ module changes:
 make verify
 make consumer-check     # changes to packages/agent-core
 make e2e-list           # inspect the shared browser-contract inventory
+make e2e-m6             # includes Vue-owned browser DOM/wire contracts
+make e2e-m6-real-backend # real local Gateway + Chromium browser runtime
 make e2e-m7             # full Vue browser contract
 make e2e-m7-auth        # authentication requests and security
 make proxy-security     # Nitro body limits, bodyless/chunked DELETE, SSE and traversal
@@ -108,6 +110,16 @@ the variable name is retained for compatibility with existing test configs.
 
 Production routing, OIDC callback rules and rollback commands are maintained in
 the [dual-frontend production guide](../docs/dual-frontend-production.md).
+
+## Browser control
+
+The panel starts in Live mode, keeps the last visible frame when switched to
+Static, and uses the Gateway REST navigation endpoint when Live transport is
+unavailable. URL and title are accepted only from Gateway WebSocket events or
+REST responses. Closing the panel, changing threads, or disabling the feature
+stops reconnect timers, sockets, and pending REST work. Detailed ownership and
+hard input/cleanup rules live in [ARCHITECTURE.md](ARCHITECTURE.md) and
+[BEHAVIOR_CONTRACTS.md](BEHAVIOR_CONTRACTS.md).
 
 ## Streaming behavior
 
