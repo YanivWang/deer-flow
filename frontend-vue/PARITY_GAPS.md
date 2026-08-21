@@ -83,11 +83,11 @@
 
 | ID          | 优先级 | 状态 | 工作包 | 未对齐点                                                       |
 | ----------- | ------ | ---- | ------ | -------------------------------------------------------------- |
-| API-01      | P0     | TODO | WP-01  | Nuxt 代理会拒绝没有请求体和 `Content-Length` 的 DELETE         |
-| AUTH-01     | P0     | TODO | WP-01  | OIDC callback 没有验证 session 和执行安全跳转                  |
-| AUTH-02     | P0     | TODO | WP-01  | `/workspace` 仍是占位页，没有进入默认聊天页                    |
-| AUTH-03     | P1     | TODO | WP-01  | Gateway 不可用被当成未登录，缺少离线/恢复状态                  |
-| SEC-01      | P0     | TODO | WP-01  | 实际消息 Markdown 链接没有协议 allowlist                       |
+| API-01      | P0     | DONE | WP-01  | Nuxt 代理会拒绝没有请求体和 `Content-Length` 的 DELETE         |
+| AUTH-01     | P0     | DONE | WP-01  | OIDC callback 没有验证 session 和执行安全跳转                  |
+| AUTH-02     | P0     | DONE | WP-01  | `/workspace` 仍是占位页，没有进入默认聊天页                    |
+| AUTH-03     | P1     | DONE | WP-01  | Gateway 不可用被当成未登录，缺少离线/恢复状态                  |
+| SEC-01      | P0     | DONE | WP-01  | 实际消息 Markdown 链接没有协议 allowlist                       |
 | STREAM-01   | P0     | TODO | WP-02  | Vue 丢弃 task 与 `llm_retry` custom SSE 事件                   |
 | STREAM-02   | P0     | TODO | WP-02  | Subtask 没有实时/历史 steps、模型与 token 展示                 |
 | THREAD-01   | P1     | TODO | WP-02  | `/compact` 只显示建议，没有调用 compact API                    |
@@ -143,14 +143,14 @@
 
 #### 当前代码事实
 
-- Vue [`server/utils/gateway-proxy.ts`](server/utils/gateway-proxy.ts) 的 `METHODS_WITH_BODY` 包含 DELETE；没有 `Transfer-Encoding` 且没有 `Content-Length` 时直接返回 411。
-- Vue 的 channels、feedback、memory、scheduled tasks、uploads、agents、sidecar DELETE 调用都没有请求体。例如 [`app/core/channels/api.ts`](app/core/channels/api.ts) 的两个 disconnect 请求。
-- [`app/pages/auth/callback.vue`](app/pages/auth/callback.vue) 只有静态“正在完成登录”界面。
+- Vue [`server/utils/gateway-proxy.ts`](server/utils/gateway-proxy.ts) 现在只在正 `Content-Length` 或 `Transfer-Encoding: chunked` 明确声明 body 时读取请求；无 body DELETE 原样通过，带 body 请求仍受 20 MiB 限制。
+- Vue 当前 channels、feedback、memory、scheduled tasks、uploads、agents、sidecar/thread/goal DELETE 调用已由真实 Nitro route 回归测试逐项覆盖，URL/method/body 没有另造语义。
+- [`app/pages/auth/callback.vue`](app/pages/auth/callback.vue) 通过共享 Vue Query session 查询验证 cookie session，复用 safe-next 规则，并区分成功、401 和 Gateway unavailable。
 - React [`src/app/(auth)/auth/callback/page.tsx`](<../frontend/src/app/(auth)/auth/callback/page.tsx>) 请求 `/api/v1/auth/me`，验证安全 next path，并分别处理成功和失败跳转。
-- [`app/pages/workspace/index.vue`](app/pages/workspace/index.vue) 是占位内容；React [`src/app/workspace/page.tsx`](../frontend/src/app/workspace/page.tsx) 在真实模式进入 `/workspace/chats/new`。
-- [`app/middleware/auth.global.ts`](app/middleware/auth.global.ts) 在 Gateway 不可用时进入 login error，工作区没有持续可见的恢复提示。
-- 实际聊天的 [`app/components/chat/MessageList.vue`](app/components/chat/MessageList.vue) 只覆盖 Markdown 的 `pre` 和 `img`，没有覆盖 `a`。
-- [`app/core/markdown/render.ts`](app/core/markdown/render.ts) 会把 HAST 属性传给真实 DOM；实际 MessageList 路径没有接入安全 link renderer。
+- [`app/pages/workspace/index.vue`](app/pages/workspace/index.vue) 在真实模式直接替换到 `/workspace/chats/new`，不恢复 static demo/mock 分支，与 React 默认入口一致。
+- [`app/middleware/auth.global.ts`](app/middleware/auth.global.ts)、callback 和 [`app/components/workspace/GatewayStatusBanner.vue`](app/components/workspace/GatewayStatusBanner.vue) 共用一个 Vue Query key；只有明确 401 才去登录，Gateway 临时不可用时工作区保留可见重试和自动恢复路径。
+- 实际聊天的 [`app/components/chat/MessageList.vue`](app/components/chat/MessageList.vue) 将所有 Markdown `<a>`、图片链接和 citation source 链接统一交给 Vue [`MarkdownLink.vue`](app/components/chat/MarkdownLink.vue)，并通过 provide/inject 取得 thread 上下文。
+- [`app/core/markdown/links.ts`](app/core/markdown/links.ts) 在 artifact/citation 解析前执行协议 allowlist；相对链接、HTTPS、artifact、citation 和危险协议均由 MessageList 实际 components 路径回归测试覆盖。
 - React [`src/components/workspace/messages/markdown-link.tsx`](../frontend/src/components/workspace/messages/markdown-link.tsx) 在普通链接和 citation 之前执行协议 allowlist，并解析 artifact 链接。
 
 #### 必须实现
@@ -646,12 +646,13 @@ API 对齐：method/path/query/headers/body/response/error/cache
 - API 定义层已有较高复用度；主要缺口集中在 Vue 页面/composable 对响应和 helper 的实际消费，而不是缺少 TypeScript 函数声明。
 - 已确认的孤儿能力包括 compact、subtask steps/task presentation、scheduled update/delete、channel disconnect/deep-link、thread export、skill install 等；完成工作包时应优先接通现有正确实现，避免再造一套。
 - 本文档只记录当前源码能够证明的前端差异。真实 IdP、外部 channel provider、真实浏览器控制后端等仍需用对应环境做最终验收；没有运行的真实环境门禁不得写成“已验证”。
-- 审计没有修改业务代码；创建本文档前后工作树中的用户改动必须继续保留。
+- 初始基线审计没有修改业务代码；后续工作包的实现、测试和完成证据以本表状态及 git diff 为准，工作树中的用户改动必须继续保留。
 
 ## 12. 完成证据
 
 在此追加，不删除历史记录：
 
-| 日期       | 工作包/ID | 证据                                                                  | 备注                    |
-| ---------- | --------- | --------------------------------------------------------------------- | ----------------------- |
-| 2026-08-21 | 基线审计  | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过 | 所有 ID 初始状态为 TODO |
+| 日期       | 工作包/ID                                       | 证据                                                                                                                                                                              | 备注                                        |
+| ---------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| 2026-08-21 | 基线审计                                        | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                             | 所有 ID 初始状态为 TODO                     |
+| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01` | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过 | 本机回环监听环境重跑通过；本地提交、未 push |

@@ -12,16 +12,21 @@ import {
   decideAuthNavigation,
   isEnabledRuntimeFlag,
 } from "@/core/auth/decision";
-import { probeSession } from "@/core/auth/session";
+import { authSessionQueryOptions } from "@/core/auth/session-query";
+import { useQueryClient } from "@tanstack/vue-query";
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const config = useRuntimeConfig();
   const authDisabled = isEnabledRuntimeFlag(config.public.authDisabled);
   let authenticated = false;
   if (to.path.startsWith("/workspace") && !authDisabled) {
-    const session = await probeSession();
+    const session = await useQueryClient().fetchQuery(
+      authSessionQueryOptions(),
+    );
     if (session.tag === "unavailable") {
-      return navigateTo("/login?error=gateway_unavailable");
+      // Preserve the protected route. The workspace consumes the same query
+      // state and exposes a visible retry path until the Gateway recovers.
+      return;
     }
     if (session.tag === "authenticated" && session.user.needs_setup) {
       return navigateTo("/setup");

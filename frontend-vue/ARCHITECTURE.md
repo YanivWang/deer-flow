@@ -58,8 +58,14 @@ Compose Watch 同步源码并在依赖清单变化时重建对应镜像；Nginx 
 
 - `config/routes.ts` 是 CSR/prerender 分区、代理常量和转发头策略的单一来源。
 - `/workspace/**`、登录/设置/认证回调使用 CSR；首页、价格和关于页可预渲染。
-- `app/middleware/auth.global.ts` 通过同源 Gateway session 决定访问；密码和 access token
-  不进入前端存储，CSRF/HttpOnly cookie 由 Gateway 管理。
+- `app/core/auth/session-query.ts` 与 `app/composables/useAuthSession.ts` 是 Gateway session
+  的唯一服务端状态来源。全局 middleware 通过同一个 Vue Query key 做路由判定，workspace
+  banner 复用该缓存做后台/手动恢复；401 才进入登录，Gateway unavailable 保留当前工作区
+  并显示可见恢复路径，不清 session/cookie。
+- `/auth/callback` 复用同一 session query，按 `next-path.ts` 的规则拒绝开放重定向，并把
+  authenticated、401、Gateway unavailable 收敛为不同状态和 replace 跳转。`/workspace`
+  在真实模式固定 replace 到 `/workspace/chats/new`，不恢复 static demo/mock 分支。
+- 密码和 access token 不进入前端存储，CSRF/HttpOnly cookie 由 Gateway 管理。
 - 双 hostname OIDC 依赖请求 Host/Proto 重建回调地址。目标环境仍需配置真实 DNS、TLS、
   外层可信代理和 IdP callback allowlist；本地 fixture 不能替代这些部署配置。
 

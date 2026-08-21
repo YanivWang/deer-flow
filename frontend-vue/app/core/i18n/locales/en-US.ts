@@ -540,6 +540,8 @@ export const enUS: Translations = {
     logout: "Log out",
     gatewayUnavailable: "Gateway is temporarily unavailable.",
     gatewayUnavailableRetrying: "Retrying in the background…",
+    retryNow: "Try again",
+    retrying: "Retrying...",
   },
 
   // Conversation

@@ -287,8 +287,8 @@ oidc-smoke:
 run-protocol-smoke:
 	$(E2E_EXEC) playwright test -c playwright.m0-real-backend.config.ts --grep @run-protocol
 
-proxy-security:
-	$(EXEC) vitest run tests/unit/config/routes.test.ts
+proxy-security: proxy-smoke
+	$(EXEC) vitest run tests/unit/config/routes.test.ts tests/unit/server/gateway-proxy.test.ts
 
 # 迁移台账维护命令。读 git 对象重建 baseline，因此必须在完整 clone 中运行，
 # 且 diff 要交 review（06 §1e）。普通 CI 跑 make test 即可，不碰 git 历史。

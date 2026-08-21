@@ -1,5 +1,5 @@
 {
   "expectedFileCount": 1,
-  "expectedTestCount": 7,
+  "expectedTestCount": 10,
   "specFiles": ["frontend-vue/tests/m7/auth-contract.spec.ts"]
 }

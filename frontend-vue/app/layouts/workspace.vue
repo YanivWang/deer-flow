@@ -8,14 +8,18 @@
   【边界与注意】   DeerFlow 路由壳，不属于 L2。
 */
 import ThreadSidebar from "@/components/workspace/ThreadSidebar.vue";
+import GatewayStatusBanner from "@/components/workspace/GatewayStatusBanner.vue";
 import SettingsDialog from "@/components/workspace/settings/SettingsDialog.vue";
 </script>
 
 <template>
   <div class="bg-background text-foreground flex h-screen overflow-hidden">
     <ThreadSidebar />
-    <main class="relative min-h-0 min-w-0 flex-1 overflow-hidden">
-      <slot />
+    <main class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <GatewayStatusBanner />
+      <div class="relative min-h-0 flex-1 overflow-hidden">
+        <slot />
+      </div>
     </main>
     <SettingsDialog />
   </div>

@@ -515,6 +515,8 @@ export const zhCN: Translations = {
     logout: "退出登录",
     gatewayUnavailable: "网关暂时不可用。",
     gatewayUnavailableRetrying: "正在后台重试…",
+    retryNow: "立即重试",
+    retrying: "正在重试...",
   },
 
   // Conversation

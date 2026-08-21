@@ -1,5 +1,7 @@
 import { expect, test, type Page, type Request } from "@playwright/test";
 
+import { mockLangGraphAPI } from "../../../frontend/tests/e2e/utils/mock-api";
+
 const USER = {
   id: "user-1",
   email: "admin@example.com",
@@ -28,6 +30,7 @@ async function submitCredentials(page: Page) {
 test("local login uses the Gateway form contract and stores no secret", async ({
   page,
 }) => {
+  mockLangGraphAPI(page);
   await mockLoginShell(page);
   let loginRequest: Request | undefined;
   await page.route("**/api/v1/auth/login/local", (route) => {
@@ -40,7 +43,7 @@ test("local login uses the Gateway form contract and stores no secret", async ({
 
   await page.goto("/login?next=https://evil.example/phish");
   await submitCredentials(page);
-  await expect(page).toHaveURL(/\/workspace$/);
+  await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
 
   expect(loginRequest).toBeDefined();
   expect(loginRequest?.headers()["content-type"]).toContain(
@@ -104,6 +107,7 @@ test("SSO providers expose the failure hint and preserve safe next/remember para
 });
 
 test("registration uses the exact JSON contract", async ({ page }) => {
+  mockLangGraphAPI(page);
   await mockLoginShell(page);
   let body: unknown;
   let contentType = "";
@@ -123,7 +127,7 @@ test("registration uses the exact JSON contract", async ({ page }) => {
     .getByLabel("Password", { exact: true })
     .fill("correct-horse-battery-staple");
   await page.getByRole("button", { name: "Create Account" }).click();
-  await expect(page).toHaveURL(/\/workspace$/);
+  await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
 
   expect(contentType).toContain("application/json");
   expect(body).toEqual({
@@ -134,8 +138,12 @@ test("registration uses the exact JSON contract", async ({ page }) => {
 });
 
 test("setup initialization uses the exact JSON contract", async ({ page }) => {
+  mockLangGraphAPI(page);
+  let initialized = false;
   await page.route("**/api/v1/auth/me", (route) =>
-    route.fulfill({ status: 401, json: { detail: "Unauthorized" } }),
+    initialized
+      ? route.fulfill({ json: USER })
+      : route.fulfill({ status: 401, json: { detail: "Unauthorized" } }),
   );
   await page.route("**/api/v1/auth/setup-status", (route) =>
     route.fulfill({ json: { needs_setup: true } }),
@@ -143,6 +151,7 @@ test("setup initialization uses the exact JSON contract", async ({ page }) => {
   let body: unknown;
   await page.route("**/api/v1/auth/initialize", (route) => {
     body = route.request().postDataJSON();
+    initialized = true;
     return route.fulfill({ json: USER });
   });
 
@@ -151,7 +160,7 @@ test("setup initialization uses the exact JSON contract", async ({ page }) => {
   await page.getByLabel("Password", { exact: true }).fill("new-password-123");
   await page.getByLabel("Confirm Password").fill("new-password-123");
   await page.getByRole("button", { name: "Create Admin Account" }).click();
-  await expect(page).toHaveURL(/\/workspace$/);
+  await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
   expect(body).toEqual({
     email: "admin@example.com",
     password: "new-password-123",
@@ -163,6 +172,7 @@ test("password setup echoes the CSRF cookie and preserves field names", async ({
   context,
   page,
 }) => {
+  mockLangGraphAPI(page);
   await context.addCookies([
     {
       name: "csrf_token",
@@ -188,7 +198,7 @@ test("password setup echoes the CSRF cookie and preserves field names", async ({
   await page.getByLabel("Password", { exact: true }).fill("new-password-123");
   await page.getByLabel("Confirm Password").fill("new-password-123");
   await page.getByRole("button", { name: "Complete Setup" }).click();
-  await expect(page).toHaveURL(/\/workspace$/);
+  await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
   expect(request?.headers()["x-csrf-token"]).toBe("m7-csrf-token");
   expect(request?.postDataJSON()).toEqual({
     current_password: "temporary-password",
@@ -198,9 +208,7 @@ test("password setup echoes the CSRF cookie and preserves field names", async ({
   });
 });
 
-test("workspace distinguishes 401 from Gateway unavailability", async ({
-  page,
-}) => {
+test("workspace sends only an explicit 401 to login", async ({ page }) => {
   await page.route("**/api/v1/auth/me", (route) =>
     route.fulfill({ status: 401, json: { detail: "Unauthorized" } }),
   );
@@ -209,18 +217,40 @@ test("workspace distinguishes 401 from Gateway unavailability", async ({
   await expect(page).toHaveURL(
     /\/login\?redirect=\/workspace\/scheduled-tasks$/,
   );
+});
 
-  await page.unroute("**/api/v1/auth/me");
+test("workspace keeps Gateway unavailability visible and recovers in place", async ({
+  page,
+}) => {
+  mockLangGraphAPI(page);
+  let unavailable = true;
   await page.route("**/api/v1/auth/me", (route) =>
-    route.fulfill({ status: 503, json: { detail: "Unavailable" } }),
+    unavailable
+      ? route.fulfill({ status: 503, json: { detail: "Unavailable" } })
+      : route.fulfill({ json: USER }),
   );
   await page.goto("/workspace");
-  await expect(page).toHaveURL(/\/login\?error=gateway_unavailable$/);
+  await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: /Gateway is temporarily unavailable/i }),
+  ).toBeVisible();
+
+  unavailable = false;
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: /Gateway is temporarily unavailable/i }),
+  ).toBeHidden();
+  await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
 });
 
 test("workspace sends an authenticated setup user to setup and admits a ready user", async ({
   page,
 }) => {
+  mockLangGraphAPI(page);
   await page.route("**/api/v1/auth/me", (route) =>
     route.fulfill({ json: { ...USER, needs_setup: true } }),
   );
@@ -232,5 +262,50 @@ test("workspace sends an authenticated setup user to setup and admits a ready us
     route.fulfill({ json: USER }),
   );
   await page.goto("/workspace");
-  await expect(page).toHaveURL(/\/workspace$/);
+  await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
+});
+
+test("OIDC callback validates the session and safe next path", async ({
+  page,
+}) => {
+  mockLangGraphAPI(page);
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({ json: USER }),
+  );
+
+  await page.goto(
+    "/auth/callback?next=%2Fworkspace%2Fchats%2Fnew%3Fview%3Dcompact",
+  );
+  await expect(page.getByText("Redirecting...", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/workspace\/chats\/new\?view=compact$/);
+
+  await page.goto("/auth/callback?next=https%3A%2F%2Fevil.example%2Fphish");
+  await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
+});
+
+test("OIDC callback keeps 401 and Gateway failure distinct", async ({
+  page,
+}) => {
+  await mockLoginShell(page);
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({ status: 401, json: { detail: "Unauthorized" } }),
+  );
+  await page.goto("/auth/callback?next=%2Fworkspace%2Fchats%2Fnew");
+  await expect(
+    page.getByText(/Authentication failed\. Redirecting to login/i),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/login\?error=sso_failed$/);
+
+  await page.unroute("**/api/v1/auth/me");
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({ status: 503, json: { detail: "Unavailable" } }),
+  );
+  await page.goto("/auth/callback?next=%2Fworkspace%2Fchats%2Fnew");
+  await expect(
+    page.getByText(/Gateway is temporarily unavailable/i),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/login\?error=gateway_unavailable/);
+  const recoveryUrl = new URL(page.url());
+  expect(recoveryUrl.searchParams.get("error")).toBe("gateway_unavailable");
+  expect(recoveryUrl.searchParams.get("next")).toBe("/workspace/chats/new");
 });

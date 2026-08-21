@@ -78,6 +78,7 @@ make consumer-check     # changes to packages/agent-core
 make e2e-list           # inspect the shared browser-contract inventory
 make e2e-m7             # full Vue browser contract
 make e2e-m7-auth        # authentication requests and security
+make proxy-security     # Nitro body limits, bodyless/chunked DELETE, SSE and traversal
 make e2e-m7-real-protocol
 make e2e-m7-visual
 make asset-budget

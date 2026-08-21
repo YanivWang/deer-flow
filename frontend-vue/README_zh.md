@@ -65,6 +65,7 @@ make consumer-check     # 修改 packages/agent-core 时运行
 make e2e-list           # 查看共享浏览器合同清单
 make e2e-m7             # 完整 Vue 浏览器合同
 make e2e-m7-auth        # 认证请求与安全
+make proxy-security     # Nitro body 限制、无 body/chunked DELETE、SSE 与 traversal
 make e2e-m7-real-protocol
 make e2e-m7-visual
 make asset-budget

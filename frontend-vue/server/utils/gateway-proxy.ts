@@ -10,10 +10,12 @@
 import {
   createError,
   getHeader,
+  getProxyRequestHeaders,
+  getRequestWebStream,
   getRequestHost,
   getRequestProtocol,
   getRequestURL,
-  proxyRequest,
+  sendProxy,
   type H3Event,
 } from "h3";
 import {
@@ -23,9 +25,59 @@ import {
   isSafeForwardedHost,
 } from "../../config/routes";
 
-const METHODS_WITH_BODY = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+const METHODS_WITH_OPTIONAL_BODY = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-export function assertSafeGatewayRequest(event: H3Event) {
+export type ProxyRequestBodyPlan =
+  { kind: "none" } | { kind: "fixed"; bytes: number } | { kind: "chunked" };
+
+function bodyLimitError() {
+  return createError({
+    statusCode: 413,
+    statusMessage: "Request body exceeds 20 MiB",
+  });
+}
+
+/**
+ * Classify only a body the request actually declares.
+ *
+ * DELETE is allowed to be bodyless by HTTP semantics. A missing
+ * Content-Length is therefore not an error; a positive length or chunked
+ * transfer is the signal that there is a body to read and limit.
+ */
+export function inspectProxyRequestBody(
+  method: string | undefined,
+  contentLength: string | undefined,
+  transferEncoding: string | undefined,
+): ProxyRequestBodyPlan {
+  if (!METHODS_WITH_OPTIONAL_BODY.has(method?.toUpperCase() ?? "")) {
+    return { kind: "none" };
+  }
+
+  if (contentLength !== undefined) {
+    if (!/^\d+$/.test(contentLength)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Invalid Content-Length",
+      });
+    }
+    const bytes = Number(contentLength);
+    if (!Number.isSafeInteger(bytes)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Invalid Content-Length",
+      });
+    }
+    if (bytes > MAX_PROXY_BODY_BYTES) throw bodyLimitError();
+    if (bytes > 0) return { kind: "fixed", bytes };
+  }
+
+  if (transferEncoding?.toLowerCase().includes("chunked")) {
+    return { kind: "chunked" };
+  }
+  return { kind: "none" };
+}
+
+export function assertSafeGatewayRequest(event: H3Event): ProxyRequestBodyPlan {
   const rawUrl = event.node.req.url ?? "";
   if (hasUnsafeProxyPath(rawUrl)) {
     throw createError({ statusCode: 400, statusMessage: "Unsafe proxy path" });
@@ -33,36 +85,65 @@ export function assertSafeGatewayRequest(event: H3Event) {
   if (!isSafeForwardedHost(getRequestHost(event))) {
     throw createError({ statusCode: 400, statusMessage: "Unsafe Host header" });
   }
-  if (!METHODS_WITH_BODY.has(event.node.req.method ?? "")) return;
-
-  const transferEncoding = getHeader(event, "transfer-encoding");
-  const contentLength = getHeader(event, "content-length");
-  if (
-    transferEncoding?.toLowerCase().includes("chunked") ||
-    contentLength === undefined
-  ) {
-    throw createError({
-      statusCode: 411,
-      statusMessage: "Content-Length required",
-    });
-  }
-  const bodyBytes = Number(contentLength);
-  if (!Number.isSafeInteger(bodyBytes) || bodyBytes < 0) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "Invalid Content-Length",
-    });
-  }
-  if (bodyBytes > MAX_PROXY_BODY_BYTES) {
-    throw createError({
-      statusCode: 413,
-      statusMessage: "Request body exceeds 20 MiB",
-    });
-  }
+  return inspectProxyRequestBody(
+    event.node.req.method,
+    getHeader(event, "content-length"),
+    getHeader(event, "transfer-encoding"),
+  );
 }
 
-export function proxyGatewayRequest(event: H3Event) {
-  assertSafeGatewayRequest(event);
+/**
+ * Buffer an unknown-length request with an actual byte cap. Once the cap is
+ * crossed, detach the collector and drain subsequent bytes without retaining
+ * them so the 20 MiB limit remains a memory limit as well as a status check.
+ */
+function readLimitedRequestBody(
+  event: H3Event,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const request = event.node.req;
+  if (request.readableEnded) {
+    return Promise.resolve(new Uint8Array(new ArrayBuffer(0)));
+  }
+
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let bytes = 0;
+
+    const cleanup = () => {
+      request.off("data", onData);
+      request.off("end", onEnd);
+      request.off("error", onError);
+    };
+    const onData = (chunk: Buffer | string) => {
+      const value = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      bytes += value.length;
+      if (bytes > MAX_PROXY_BODY_BYTES) {
+        cleanup();
+        request.resume();
+        reject(bodyLimitError());
+        return;
+      }
+      chunks.push(value);
+    };
+    const onEnd = () => {
+      cleanup();
+      const body = new Uint8Array(new ArrayBuffer(bytes));
+      body.set(Buffer.concat(chunks, bytes));
+      resolve(body);
+    };
+    const onError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+
+    request.on("data", onData);
+    request.on("end", onEnd);
+    request.on("error", onError);
+  });
+}
+
+export async function proxyGatewayRequest(event: H3Event) {
+  const bodyPlan = assertSafeGatewayRequest(event);
   const config = useRuntimeConfig(event);
   const requestUrl = getRequestURL(event);
   const pathname = requestUrl.pathname.startsWith("/api/langgraph/")
@@ -83,10 +164,31 @@ export function proxyGatewayRequest(event: H3Event) {
     getRequestProtocol(event, { xForwardedProto: false }),
   );
 
-  return proxyRequest(event, target, {
-    headers: forwarding,
-    fetchOptions: { redirect: "manual" },
+  const requestHeaders = new Headers(
+    getProxyRequestHeaders(event, { host: false }),
+  );
+  for (const [name, value] of Object.entries(forwarding)) {
+    requestHeaders.set(name, value);
+  }
+
+  const mustBuffer =
+    bodyPlan.kind === "chunked" ||
+    (bodyPlan.kind === "fixed" && !streamingEnabled);
+  const body =
+    bodyPlan.kind === "none"
+      ? undefined
+      : mustBuffer
+        ? await readLimitedRequestBody(event)
+        : getRequestWebStream(event);
+
+  return sendProxy(event, target, {
     sendStream: streamingEnabled,
-    streamRequest: streamingEnabled,
+    fetchOptions: {
+      method: event.method,
+      headers: requestHeaders,
+      redirect: "manual",
+      ...(body === undefined ? {} : { body }),
+      ...(body instanceof ReadableStream ? { duplex: "half" as const } : {}),
+    },
   });
 }

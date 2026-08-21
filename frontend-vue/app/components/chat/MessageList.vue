@@ -15,6 +15,7 @@ import {
   nextTick,
   onMounted,
   onUnmounted,
+  provide,
   ref,
   watch,
   type ComponentPublicInstance,
@@ -29,6 +30,8 @@ import {
 } from "lucide-vue-next";
 
 import HumanInputCard from "@/components/chat/HumanInputCard.vue";
+import MarkdownLink from "@/components/chat/MarkdownLink.vue";
+import { MARKDOWN_LINK_CONTEXT } from "@/components/chat/markdown-link-context";
 import ShineBorder from "@/components/ui/effects/ShineBorder.vue";
 import WorkspaceChangesBadge from "@/components/workspace/changes/WorkspaceChangesBadge.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
@@ -103,6 +106,10 @@ type SelectionPayload = {
   displayIndex: number;
 };
 const pendingHumanInputs = ref(new Set<string>());
+provide(MARKDOWN_LINK_CONTEXT, {
+  threadId: computed(() => props.threadId),
+  isMock: computed(() => props.isMock),
+});
 
 const MarkdownMessageImage = defineComponent({
   name: "MarkdownMessageImage",
@@ -124,22 +131,32 @@ const MarkdownMessageImage = defineComponent({
           )
         : imageProps.src;
       return h(
-        "a",
-        { href: src, target: "_blank", rel: "noopener noreferrer" },
-        h("img", {
-          ...attrs,
-          src,
-          alt: imageProps.alt,
-          loading: "lazy",
-          decoding: "async",
-          class: ["max-w-[90%] overflow-hidden rounded-lg", attrs.class],
-        }),
+        MarkdownLink,
+        {
+          href: src,
+          threadId: props.threadId,
+          isMock: props.isMock,
+          target: "_blank",
+          rel: "noopener noreferrer",
+        },
+        {
+          default: () =>
+            h("img", {
+              ...attrs,
+              src,
+              alt: imageProps.alt,
+              loading: "lazy",
+              decoding: "async",
+              class: ["max-w-[90%] overflow-hidden rounded-lg", attrs.class],
+            }),
+        },
       );
     };
   },
 });
 const messageMarkdownComponents = {
   ...richContentComponents,
+  a: MarkdownLink,
   img: MarkdownMessageImage,
 };
 
@@ -684,7 +701,7 @@ onUnmounted(() => {
                 class="mt-3 flex flex-wrap gap-2"
                 aria-label="Sources"
               >
-                <a
+                <MarkdownLink
                   v-for="source in citations(message)"
                   :key="source.id"
                   :href="source.url"
@@ -693,7 +710,7 @@ onUnmounted(() => {
                   class="text-muted-foreground hover:text-foreground rounded-full border px-2 py-1 text-xs transition-colors"
                 >
                   {{ source.title }}
-                </a>
+                </MarkdownLink>
               </div>
               <button
                 v-for="artifact in artifactTargets(message)"

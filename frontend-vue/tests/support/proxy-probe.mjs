@@ -38,6 +38,20 @@ const server = createServer((request, response) => {
     );
     return;
   }
+  if (url.pathname === "/api/probe/cookies") {
+    response.setHeader("content-type", "application/json");
+    response.setHeader("set-cookie", [
+      "access_token=rotated; Path=/; HttpOnly; SameSite=Lax",
+      "csrf_token=rotated-csrf; Path=/; SameSite=Strict",
+    ]);
+    response.end(
+      JSON.stringify({
+        cookie: request.headers.cookie ?? null,
+        probeHeader: request.headers["x-proxy-probe"] ?? null,
+      }),
+    );
+    return;
+  }
   if (url.pathname === "/api/probe/headers") {
     response.statusCode = 307;
     response.setHeader(
@@ -46,6 +60,26 @@ const server = createServer((request, response) => {
     );
     response.setHeader("location", "/api/redirect-target");
     response.end();
+    return;
+  }
+  if (
+    url.pathname === "/api/probe/request-body" ||
+    request.method === "DELETE"
+  ) {
+    const chunks = [];
+    request.on("data", (chunk) => chunks.push(chunk));
+    request.on("end", () => {
+      const body = Buffer.concat(chunks);
+      response.setHeader("content-type", "application/json");
+      response.end(
+        JSON.stringify({
+          path: url.pathname,
+          method: request.method,
+          bytes: body.length,
+          body: body.toString("utf8"),
+        }),
+      );
+    });
     return;
   }
   if (url.pathname === "/api/probe/sse") {

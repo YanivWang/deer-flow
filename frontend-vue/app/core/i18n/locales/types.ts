@@ -433,6 +433,8 @@ export interface Translations {
     logout: string;
     gatewayUnavailable: string;
     gatewayUnavailableRetrying: string;
+    retryNow: string;
+    retrying: string;
   };
 
   // Conversation

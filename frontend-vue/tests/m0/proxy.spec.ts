@@ -104,6 +104,25 @@ test("@proxy forwards the client-facing origin and overwrites spoofed values", a
   expect(body).toEqual(expected);
 });
 
+test("@proxy preserves request cookies, custom headers and separate Set-Cookie responses", async () => {
+  const response = await rawRequest("/api/probe/cookies", {
+    headers: {
+      cookie: "access_token=session; csrf_token=csrf",
+      "x-proxy-probe": "preserved",
+    },
+  });
+
+  expect(response.status).toBe(200);
+  expect(JSON.parse(response.body)).toEqual({
+    cookie: "access_token=session; csrf_token=csrf",
+    probeHeader: "preserved",
+  });
+  expect(response.headers["set-cookie"]).toEqual([
+    "access_token=rotated; Path=/; HttpOnly; SameSite=Lax",
+    "csrf_token=rotated-csrf; Path=/; SameSite=Strict",
+  ]);
+});
+
 for (const ending of ["lf", "crlf"] as const) {
   test(`@proxy streams ${ending.toUpperCase()} SSE frames without buffering`, async () => {
     const response = await rawRequest(
@@ -154,10 +173,110 @@ test("@proxy streamRequest forwards request chunks before the body completes", a
   expect(frames.at(-1)?.bytes).toBe(8);
 });
 
+test("@proxy forwards every current bodyless DELETE call through the real Nitro route", async () => {
+  const paths = [
+    "/api/langgraph/threads/thread-1",
+    "/api/channels/connections/connection-1",
+    "/api/channels/slack/runtime-config",
+    "/api/threads/thread-1/runs/run-1/feedback",
+    "/api/memory",
+    "/api/memory/facts/fact-1",
+    "/api/scheduled-tasks/task-1",
+    "/api/agents/agent-1",
+    "/api/threads/thread-1/uploads/report.txt",
+    "/api/threads/thread-1/goal",
+  ];
+
+  for (const path of paths) {
+    const response = await rawRequest(path, { method: "DELETE" });
+    expect(response.status, path).toBe(200);
+    expect(JSON.parse(response.body)).toMatchObject({
+      method: "DELETE",
+      bytes: 0,
+      body: "",
+    });
+  }
+});
+
+test("@proxy preserves declared DELETE and PATCH request bodies", async () => {
+  const body = JSON.stringify({ reason: "parity-test" });
+  for (const method of ["DELETE", "PATCH"]) {
+    const response = await rawRequest("/api/probe/request-body", {
+      method,
+      headers: {
+        "content-length": String(Buffer.byteLength(body)),
+        "content-type": "application/json",
+      },
+      body,
+    });
+
+    expect(response.status, response.body).toBe(200);
+    expect(JSON.parse(response.body)).toEqual({
+      path: "/api/probe/request-body",
+      method,
+      bytes: Buffer.byteLength(body),
+      body,
+    });
+  }
+});
+
+test("@proxy accepts a chunked request body and forwards its exact bytes", async () => {
+  const response = await new Promise<RawResponse>((resolve, reject) => {
+    const started = Date.now();
+    const request = httpRequest(
+      "http://127.0.0.1:3101/api/probe/request-body",
+      {
+        method: "DELETE",
+        headers: {
+          "content-type": "text/plain",
+          "transfer-encoding": "chunked",
+        },
+      },
+      (incoming) => {
+        incoming.setEncoding("utf8");
+        let body = "";
+        let firstChunkMs = -1;
+        incoming.on("data", (chunk) => {
+          if (firstChunkMs < 0) firstChunkMs = Date.now() - started;
+          body += chunk;
+        });
+        incoming.on("end", () =>
+          resolve({
+            status: incoming.statusCode ?? 0,
+            body,
+            headers: incoming.headers,
+            firstChunkMs,
+            endMs: Date.now() - started,
+          }),
+        );
+      },
+    );
+    request.on("error", reject);
+    request.write("chunk-one|");
+    request.end("chunk-two");
+  });
+
+  expect(response.status, response.body).toBe(200);
+  expect(JSON.parse(response.body)).toMatchObject({
+    method: "DELETE",
+    bytes: 19,
+    body: "chunk-one|chunk-two",
+  });
+});
+
 test("@proxy enforces the production 20 MiB request limit", async () => {
   const response = await rawRequest("/api/langgraph/probe/request-stream", {
-    method: "POST",
+    method: "DELETE",
     headers: { "content-length": String(20 * 1024 * 1024 + 1) },
+    body: Buffer.alloc(20 * 1024 * 1024 + 1, "x"),
+  });
+  expect(response.status).toBe(413);
+});
+
+test("@proxy enforces the production limit while reading a chunked body", async () => {
+  const response = await rawRequest("/api/probe/request-body", {
+    method: "DELETE",
+    headers: { "transfer-encoding": "chunked" },
     body: Buffer.alloc(20 * 1024 * 1024 + 1, "x"),
   });
   expect(response.status).toBe(413);

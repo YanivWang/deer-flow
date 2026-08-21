@@ -17,9 +17,8 @@
 | E1、E4～E8                       | `COMPOSER-01`～`COMPOSER-04`、`THREAD-01` |
 | F6、F9～F10                      | `HIL-01`、`SIDECAR-03`                    |
 | G1～G6                           | `STREAM-01`、`STREAM-02`                  |
-| H8                               | `MESSAGE-04`                              |
+| H8（未完整覆盖）                 | `MESSAGE-04`                              |
 | I 组尚未覆盖的连接/导航/输入要求 | `BROWSER-01`～`BROWSER-03`                |
-| J 组尚未覆盖的 callback/恢复要求 | `AUTH-01`～`AUTH-03`                      |
 | K3、K5 的错误/状态消费           | `THREAD-02`、`SETTINGS-01`                |
 | N1、N4 的产品接入                | `SIDECAR-02`、`MESSAGE-01`、`I18N-01`     |
 
@@ -86,20 +85,21 @@ payload，而不是只测协议层能否转发一个由测试手工构造的 `st
 
 ## B. 消息渲染与分组
 
-| #   | 约束                                                                                         | 为什么                                                                                                                       |
-| --- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| B1  | 带 `tool_calls` 的 AI 消息里若有可见文本，必须作为 processing step 渲染                      | 保留 provider 的错误解释、"换个思路试试"这类文本                                                                             |
-| B2  | 当前回合仍在 loading 时，最新可见 human 之后的纯内容 AI 消息**留在 processing 分组**         | provider 可能稍后往同一条消息追加 tool-call chunk；过早判定为终态气泡会让文本跳进步骤面板                                    |
-| B3  | 前面已有 tool call 之后出现的纯内容 AI 消息，流式期间仍显示在最后一个 tool-call 步骤之后     | 同上，它自己也可能再获得 tool call                                                                                           |
-| B4  | **reasoning 必须在答案文本上方**，两个渲染组件都要（#4576）                                  | 同一条消息在生命周期内由 `MessageGroup` 和 `MessageListItem` 先后渲染；两边不一致会导致回合settle瞬间两者互换位置            |
-| B5  | reasoning 之**前**发出的 assistant 文本保持原位，只有 reasoning 产出的答案移到其下方         | —                                                                                                                            |
-| B6  | run duration 折叠为一份，锚定在该 run 最后一个可见消息组之后                                 | 兼容字段 `additional_kwargs.turn_duration` 在历史 AI 消息上重复出现                                                          |
-| B7  | run duration 是**整个 run 的墙钟时间**，不是单条消息的思考时间；与 reasoning 披露分开渲染    | —                                                                                                                            |
-| B8  | workspace-change 卡片只挂在该 run 的**最后一个 assistant 气泡**（#4555）                     | 卡片由 `(threadId, runId)` 解析，否则该 run 的每条 AI 消息都会渲染一份                                                       |
-| B9  | 两个 anchor helper 的候选集合**故意不同**，不要统一                                          | run duration 由 `MessageList` 在每个组周围发出，接受任意类型；workspace-change 由 `MessageListItem` 发出，只接受 `assistant` |
-| B10 | 每个 processing 组的 tool-result / browser-preview 查找表**每组只构建一次**                  | 保留首个非空结果与首个带截图的 browser view，避免为每个 tool call 重扫全组                                                   |
-| B11 | citation 链接的 `citation:` 标签要从**完整 children 树**推导                                 | 流式期间 children 可能是元素或数组，不是纯字符串                                                                             |
-| B12 | 消息视口贴底时，流式内容的每次尺寸增长都继续跟随底部；用户主动上滚后立即释放，回到底部时恢复 | AI token 会持续追加在同一个消息组内，不能只监听组数量；语义与 React `use-stick-to-bottom` 的 resize/follow 行为一致          |
+| #   | 约束                                                                                                                                                                                                                    | 为什么                                                                                                                       |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| B1  | 带 `tool_calls` 的 AI 消息里若有可见文本，必须作为 processing step 渲染                                                                                                                                                 | 保留 provider 的错误解释、"换个思路试试"这类文本                                                                             |
+| B2  | 当前回合仍在 loading 时，最新可见 human 之后的纯内容 AI 消息**留在 processing 分组**                                                                                                                                    | provider 可能稍后往同一条消息追加 tool-call chunk；过早判定为终态气泡会让文本跳进步骤面板                                    |
+| B3  | 前面已有 tool call 之后出现的纯内容 AI 消息，流式期间仍显示在最后一个 tool-call 步骤之后                                                                                                                                | 同上，它自己也可能再获得 tool call                                                                                           |
+| B4  | **reasoning 必须在答案文本上方**，两个渲染组件都要（#4576）                                                                                                                                                             | 同一条消息在生命周期内由 `MessageGroup` 和 `MessageListItem` 先后渲染；两边不一致会导致回合settle瞬间两者互换位置            |
+| B5  | reasoning 之**前**发出的 assistant 文本保持原位，只有 reasoning 产出的答案移到其下方                                                                                                                                    | —                                                                                                                            |
+| B6  | run duration 折叠为一份，锚定在该 run 最后一个可见消息组之后                                                                                                                                                            | 兼容字段 `additional_kwargs.turn_duration` 在历史 AI 消息上重复出现                                                          |
+| B7  | run duration 是**整个 run 的墙钟时间**，不是单条消息的思考时间；与 reasoning 披露分开渲染                                                                                                                               | —                                                                                                                            |
+| B8  | workspace-change 卡片只挂在该 run 的**最后一个 assistant 气泡**（#4555）                                                                                                                                                | 卡片由 `(threadId, runId)` 解析，否则该 run 的每条 AI 消息都会渲染一份                                                       |
+| B9  | 两个 anchor helper 的候选集合**故意不同**，不要统一                                                                                                                                                                     | run duration 由 `MessageList` 在每个组周围发出，接受任意类型；workspace-change 由 `MessageListItem` 发出，只接受 `assistant` |
+| B10 | 每个 processing 组的 tool-result / browser-preview 查找表**每组只构建一次**                                                                                                                                             | 保留首个非空结果与首个带截图的 browser view，避免为每个 tool call 重扫全组                                                   |
+| B11 | citation 链接的 `citation:` 标签要从**完整 children 树**推导                                                                                                                                                            | 流式期间 children 可能是元素或数组，不是纯字符串                                                                             |
+| B12 | 消息视口贴底时，流式内容的每次尺寸增长都继续跟随底部；用户主动上滚后立即释放，回到底部时恢复                                                                                                                            | AI token 会持续追加在同一个消息组内，不能只监听组数量；语义与 React `use-stick-to-bottom` 的 resize/follow 行为一致          |
+| B13 | 实际 `MessageList → StreamMarkdown` 的全部链接必须经过统一 MarkdownLink；协议 allowlist 先于 citation/artifact 分支，危险 href 降级为不可点击文本；HTTP(S) 外链与 artifact/citation 使用 `target="_blank"` 和安全 `rel` | 只在默认 Markdown pipeline 加 sanitizer 不能保护消息实际覆盖的 `components.a` 路径                                           |
 
 > 主要代码位置：`app/core/messages/utils.ts`、`app/core/messages/run-duration.ts`、
 > `app/core/messages/workspace-change-anchor.ts`、`app/components/chat/MessageList.vue`。
@@ -238,6 +238,9 @@ Vue 前端使用 `splitpanes`。它通过响应式 `:size` 和 `@resize` / `@res
 | J4  | `localhost` cookie 不按端口隔离：React 与 Vue 会共享登录/退出状态，不能用两个端口模拟两个不同用户                                                                                                                                                                             |
 | J5  | 生产 OIDC 必须保证“从哪个前端发起就回哪个合法前端”；相对回跳方案要求 `frontend_base_url` 与 provider `redirect_uri` 同时留空、IdP 注册两个 callback URI、可信代理正确传 Host/Proto。若必须用任一单值绝对 URL，就要以后端签名 state + allowlist 扩展解决，未解决前属于发布阻断 |
 | J6  | OIDC state cookie 不按端口隔离，cookie 名又只按 provider 区分；同一 hostname 的 React/Vue 两个端口不能并发发起同一 provider 登录。生产认证隔离使用独立 hostname，G0-7 必须覆盖并发/覆盖风险                                                                                   |
+| J7  | OIDC callback 必须通过同源 `/api/v1/auth/me` 验证 session，复用 `next-path.ts` 拒绝开放重定向，并分别收敛 authenticated、401、Gateway unavailable 的状态与 replace 跳转                                                                                                       |
+| J8  | Gateway session 只由统一 Vue Query key/composable 持有；middleware 与 workspace 不能各存一套用户真相。401 才跳登录，unavailable 保留当前工作区、显示状态并提供后台/手动重试，恢复 authenticated 后原地继续                                                                    |
+| J9  | 真实模式的 `/workspace` 固定进入 `/workspace/chats/new`；不得恢复已排除的 static demo/mock 分支                                                                                                                                                                               |
 
 ---
 
