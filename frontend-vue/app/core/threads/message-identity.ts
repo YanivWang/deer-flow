@@ -156,6 +156,9 @@ export function buildVisibleHistoryMessages(
     ...visibleRows.map((message) => ({
       ...message.content,
       run_id: message.run_id,
+      ...(Reflect.get(message, "feedback") === undefined
+        ? {}
+        : { feedback: Reflect.get(message, "feedback") }),
     })),
   ]);
 }

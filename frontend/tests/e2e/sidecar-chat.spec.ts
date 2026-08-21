@@ -403,11 +403,21 @@ test.describe("Side chat", () => {
           context?: Record<string, unknown>;
         }
       | undefined;
+    const streamBodies: NonNullable<typeof streamBody>[] = [];
+    const streamThreadURLs: string[] = [];
+    const uploadThreadIDs: string[] = [];
+    let hiddenRunStarted = false;
+    let releaseHiddenRun!: () => void;
+    const hiddenRunGate = new Promise<void>((resolve) => {
+      releaseHiddenRun = resolve;
+    });
     let sidecarThreadMessages: Array<{
       type?: string;
       id?: string;
+      name?: string;
       content?: unknown;
       additional_kwargs?: Record<string, unknown>;
+      artifact?: Record<string, unknown>;
     }> = [];
 
     mockLangGraphAPI(page, {
@@ -470,6 +480,47 @@ test.describe("Side chat", () => {
         metadata?: Record<string, unknown>;
       };
       return route.fallback();
+    });
+    await page.route("**/api/threads/*/uploads/limits", (route) => {
+      if (route.request().method() !== "GET") {
+        return route.fallback();
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          max_files: 10,
+          max_file_size: 10 * 1024 * 1024,
+          max_total_size: 20 * 1024 * 1024,
+        }),
+      });
+    });
+    await page.route("**/api/threads/*/uploads", (route) => {
+      if (route.request().method() !== "POST") {
+        return route.fallback();
+      }
+      const pathname = new URL(route.request().url()).pathname;
+      uploadThreadIDs.push(
+        pathname.split("/threads/")[1]?.split("/uploads")[0] ?? "",
+      );
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          files: [
+            {
+              filename: "sidecar-notes.txt",
+              size: 5,
+              path: "/tmp/sidecar-notes.txt",
+              virtual_path: "/mnt/user-data/uploads/sidecar-notes.txt",
+              artifact_url: "/artifact/sidecar-notes.txt",
+            },
+          ],
+          message: "ok",
+          skipped_files: [],
+        }),
+      });
     });
     await page.route(
       `**/api/langgraph/threads/${MOCK_THREAD_ID}/state`,
@@ -665,18 +716,60 @@ test.describe("Side chat", () => {
         });
       },
     );
-    const fulfillSidecarRunStream = (route: Route) => {
+    const fulfillSidecarRunStream = async (route: Route) => {
       const body = route.request().postDataJSON() as typeof streamBody;
       if (body?.input?.messages) {
         streamBody = body;
+        streamBodies.push(body);
+        streamThreadURLs.push(route.request().url());
+        const submittedText = textFromContent(
+          body.input.messages.at(-1)?.content,
+        );
+        if (submittedText === "Keep running while hidden") {
+          hiddenRunStarted = true;
+          await hiddenRunGate;
+        }
+        const responseMessage =
+          submittedText === "Request sidecar approval"
+            ? {
+                type: "tool",
+                id: "sidecar-human-input-request",
+                name: "ask_clarification",
+                content: "Waiting for clarification",
+                artifact: {
+                  human_input: {
+                    version: 2,
+                    kind: "human_input_request",
+                    source: "ask_clarification",
+                    request_id: "sidecar-request-1",
+                    question: "Confirm sidecar delivery",
+                    input_mode: "form",
+                    fields: [
+                      {
+                        name: "owner",
+                        label: "Owner",
+                        type: "text",
+                        required: true,
+                      },
+                      {
+                        name: "approved",
+                        label: "Approved",
+                        type: "checkbox",
+                        required: false,
+                      },
+                    ],
+                  },
+                },
+              }
+            : {
+                type: "ai",
+                id: `msg-ai-sidecar-${sidecarThreadMessages.length}`,
+                content: "Hello from DeerFlow!",
+              };
         sidecarThreadMessages = [
           ...sidecarThreadMessages,
           ...body.input.messages,
-          {
-            type: "ai",
-            id: `msg-ai-sidecar-${sidecarThreadMessages.length}`,
-            content: "Hello from DeerFlow!",
-          },
+          responseMessage,
         ];
       }
       const events = [
@@ -698,6 +791,10 @@ test.describe("Side chat", () => {
       return route.fulfill({
         status: 200,
         contentType: "text/event-stream",
+        headers: {
+          "Content-Location": `/api/threads/${MOCK_SIDECAR_THREAD_ID}/runs/run-${MOCK_SIDECAR_THREAD_ID}`,
+          "Access-Control-Expose-Headers": "Content-Location",
+        },
         body: events
           .map((event) => {
             return `event: ${event.event}\ndata: ${JSON.stringify(
@@ -1039,6 +1136,83 @@ test.describe("Side chat", () => {
     await expect
       .poll(() => sidecarThreadCreateCount, { timeout: 10_000 })
       .toBe(1);
+
+    await sidecarInput.fill("Keep running while hidden");
+    await sidecarInput.press("Enter");
+    await expect.poll(() => hiddenRunStarted).toBe(true);
+    await page.getByTestId("sidecar-header-trigger").click();
+    await expect(page.getByTestId("sidecar-panel")).toBeHidden();
+    await page.getByTestId("sidecar-header-trigger").click();
+    await expect(page.getByTestId("sidecar-panel")).toBeVisible();
+    releaseHiddenRun();
+    await expect(sidecarInput).toBeEnabled();
+
+    const sidecarFileInput = sidecarInputForm.locator("input[type='file']");
+    await sidecarFileInput.setInputFiles({
+      name: "sidecar-notes.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("hello"),
+    });
+    await expect(sidecarInputForm.getByText("sidecar-notes.txt")).toBeVisible();
+    await sidecarInput.fill("Review the attached sidecar notes");
+    await sidecarInput.press("Enter");
+    await expect.poll(() => uploadThreadIDs).toEqual([
+      MOCK_SIDECAR_THREAD_ID,
+    ]);
+    await expect
+      .poll(
+        () =>
+          streamBodies
+            .at(-1)
+            ?.input?.messages?.at(-1)?.additional_kwargs?.files,
+      )
+      .toEqual([
+        {
+          filename: "sidecar-notes.txt",
+          size: 5,
+          path: "/mnt/user-data/uploads/sidecar-notes.txt",
+          status: "uploaded",
+        },
+      ]);
+    expect(streamThreadURLs.at(-1)).toContain(
+      `/threads/${MOCK_SIDECAR_THREAD_ID}/runs/stream`,
+    );
+    await expect(sidecarInputForm.getByText("sidecar-notes.txt")).toBeHidden();
+
+    await sidecarInput.fill("Request sidecar approval");
+    await sidecarInput.press("Enter");
+    const humanInputCard = page
+      .getByTestId("sidecar-message-list")
+      .locator("section")
+      .filter({ hasText: "Confirm sidecar delivery" });
+    await expect(humanInputCard).toBeVisible();
+    await humanInputCard.getByRole("button", { name: "Submit" }).click();
+    await expect(humanInputCard.getByRole("alert")).toBeVisible();
+    await humanInputCard.locator("input[type='text']").fill("Dana");
+    await humanInputCard.getByRole("button", { name: "Submit" }).click();
+    await expect
+      .poll(
+        () =>
+          streamBodies
+            .at(-1)
+            ?.input?.messages?.at(-1)?.additional_kwargs
+            ?.human_input_response,
+      )
+      .toMatchObject({
+        request_id: "sidecar-request-1",
+        value:
+          'Owner: Dana; Approved: no [values: {"owner":"Dana","approved":false}]',
+      });
+    expect(
+      streamBodies.at(-1)?.input?.messages?.at(-1)?.additional_kwargs,
+    ).toMatchObject({
+      hide_from_ui: true,
+      human_input_response: expect.any(Object),
+    });
+    expect(streamThreadURLs.at(-1)).toContain(
+      `/threads/${MOCK_SIDECAR_THREAD_ID}/runs/stream`,
+    );
+    await expect(humanInputCard.getByText(/Answered:/)).toBeVisible();
   });
 
   test("shows reference summary on visible messages with reference metadata", async ({

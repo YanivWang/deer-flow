@@ -36,6 +36,8 @@ import {
   sortPinnedThreads,
   THREAD_PINNED_METADATA_KEY,
 } from "@/core/threads/utils";
+import { getSessionComposerDraftStorage } from "@/core/threads/composer-draft";
+import { clearComposerDrafts } from "@/core/threads/composer-draft-lifecycle";
 
 const THREAD_LIST_PARAMS: InfiniteThreadsParams = {
   sortBy: "updated_at",
@@ -187,9 +189,23 @@ export function useThreads() {
     try {
       const deletedIds = await deleteThreadCascade(apiClient, threadId);
       removeDeletedThreadCaches(queryClient, deletedIds);
+      for (const deletedId of deletedIds) {
+        clearComposerDrafts(
+          getSessionComposerDraftStorage() as Storage | null,
+          {
+            threadId: deletedId,
+          },
+        );
+      }
     } catch (error) {
       if (error instanceof ThreadCascadeDeleteError) {
         removeDeletedThreadCaches(queryClient, error.deletedThreadIds);
+        for (const deletedId of error.deletedThreadIds) {
+          clearComposerDrafts(
+            getSessionComposerDraftStorage() as Storage | null,
+            { threadId: deletedId },
+          );
+        }
       }
       throw error;
     }

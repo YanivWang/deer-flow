@@ -4,16 +4,18 @@
   【架构位置】     L3（纯 TS）
   【主要导出】     hasToolResult · buildThreadSubmitMessages · buildRunContext
   【依赖关系】     ../types/message · ../settings（LocalSettings 的 context 形状）
-  【边界与注意】   `buildRunContext` 在上游是**两处逐字重复**的对象字面量
-                   （`sendMessage` 与 `submitPreparedReplay` 各一份，含同一串
-                   三元嵌套的 reasoning_effort）。合并成一个函数是本文件唯一的
-                   结构改动，理由是它决定后端跑哪种模式——两份拷贝迟早会分叉，
-                   而分叉的表现是「重跑与首次发送用了不同的推理档位」，
-                   在 UI 上看不出来。
+  【边界与注意】   上游两处 run-context 字面量在此收敛为唯一构造器；有模型元数据时
+                   再执行 capability 归一化，无元数据时保留旧提交语义。
 */
 
 import type { Message } from "../types/message";
 import type { FileInMessage } from "../messages/utils";
+import {
+  normalizeComposerContext,
+  type ComposerMode,
+  type ComposerReasoningEffort,
+} from "../models/capabilities";
+import type { Model } from "../models/types";
 
 export function hasToolResult(messages: Message[], toolName: string): boolean {
   const matchingToolCallIds = new Set<string>();
@@ -66,8 +68,8 @@ export function buildThreadSubmitMessages({
 }
 
 export interface ThreadRunContextInput extends Record<string, unknown> {
-  mode?: string;
-  reasoning_effort?: "minimal" | "low" | "medium" | "high";
+  mode?: ComposerMode | string;
+  reasoning_effort?: ComposerReasoningEffort;
 }
 
 const REASONING_EFFORT_BY_MODE: Record<string, "low" | "medium" | "high"> = {
@@ -80,17 +82,25 @@ export function buildRunContext(
   context: ThreadRunContextInput,
   threadId: string,
   extraContext?: Record<string, unknown>,
+  model?: Model | null,
 ): Record<string, unknown> {
-  const mode = context.mode;
-  return {
+  const normalized = model
+    ? normalizeComposerContext(context, model)
+    : { ...context };
+  const mode = normalized.mode;
+  const result: Record<string, unknown> = {
     ...extraContext,
-    ...context,
+    ...normalized,
     thinking_enabled: mode !== "flash",
     is_plan_mode: mode === "pro" || mode === "ultra",
     subagent_enabled: mode === "ultra",
     reasoning_effort:
-      context.reasoning_effort ??
+      normalized.reasoning_effort ??
       (mode === undefined ? undefined : REASONING_EFFORT_BY_MODE[mode]),
     thread_id: threadId,
   };
+  if (model && model.supports_reasoning_effort !== true) {
+    delete result.reasoning_effort;
+  }
+  return result;
 }

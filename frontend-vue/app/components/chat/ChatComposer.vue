@@ -30,35 +30,36 @@ import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachm
 import GoalStatus from "@/components/workspace/GoalStatus.vue";
 import ConfettiButton from "@/components/ui/effects/ConfettiButton.vue";
 import type { SidecarReference } from "@/composables/useSidecar";
+import { useComposerDraft } from "@/composables/useComposerDraft";
+import { useModels } from "@/composables/useModels";
+import { useSkillsCatalog } from "@/composables/useSkillsCatalog";
 
 import {
-  buildComposerDraftKey,
   clearComposerDraft,
   getSessionComposerDraftStorage,
-  readComposerDraft,
-  writeComposerDraft,
 } from "@/core/threads/composer-draft";
 import { polishInputDraft } from "@/core/input-polish/api";
-import { loadSkills } from "@/core/skills/api";
 import { RESERVED_SLASH_SKILL_NAMES } from "@/core/skills/slash";
-import type { Skill } from "@/core/skills/type";
 import { findSuggestionTemplatePlaceholder } from "@/core/suggestions/placeholders";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import { isImeComposing } from "@/core/input/ime";
 import { getBackendBaseURL } from "@/core/config";
-import {
-  getUploadLimits,
-  uploadFiles,
-  type UploadLimits,
-} from "@/core/uploads/api";
+import { getUploadLimits, type UploadLimits } from "@/core/uploads/api";
 import {
   formatUploadSize,
   splitUnsupportedUploadFiles,
   validateUploadLimits,
 } from "@/core/uploads/file-validation";
+import {
+  createSubmissionFileCache,
+  prepareSubmissionFiles,
+} from "@/core/uploads/submission-files";
 import type { FileInMessage } from "@/core/messages/utils";
-import { loadModels } from "@/core/models/api";
 import type { Model } from "@/core/models/types";
+import {
+  normalizeComposerContext,
+  resolveComposerModel,
+} from "@/core/models/capabilities";
 import type { ThreadRunContextInput } from "@/core/threads/submit";
 import {
   MAX_GOAL_OBJECTIVE_CHARS,
@@ -69,6 +70,7 @@ import { invalidateThreadCaches } from "@/core/threads/cache-invalidation";
 import { isCompactCommand } from "@/core/threads/compact-command";
 import { compactThreadContext } from "@/core/threads/api";
 import type { GoalState } from "@/core/threads/types";
+import { createAsyncGeneration } from "@/core/async/generation";
 import {
   appendSpeechTranscript,
   getSpeechRecognitionConstructor,
@@ -83,11 +85,19 @@ import {
 const props = defineProps<{
   threadKey: string;
   targetThreadId: string;
+  userId?: string | null;
   agentName?: string | null;
+  defaultModelName?: string | null;
+  modelSelectionReady?: boolean;
   streaming: boolean;
   uploading: boolean;
   promptHistory: string[];
   ensureThread?: () => Promise<string>;
+  submitMessage?: (
+    text: string,
+    files: FileInMessage[],
+    options: { onAccepted: () => void },
+  ) => Promise<boolean | undefined>;
   isWelcome?: boolean;
   references?: SidecarReference[];
   context?: ThreadRunContextInput;
@@ -107,18 +117,27 @@ const emit = defineEmits<{
 
 const input = ref("");
 const selectedSkill = ref<string | null>(null);
-const skills = ref<Skill[]>([]);
 const selectedFiles = ref<File[]>([]);
 const limits = ref<UploadLimits | undefined>();
 const suggestionIndex = ref(0);
 const polishOriginal = ref<string | null>(null);
 const polishing = ref(false);
 const compactPending = ref(false);
+const submissionPending = ref(false);
 let compactController: AbortController | null = null;
 let compactGeneration = 0;
 const polishController = ref<AbortController | null>(null);
+let goalController: AbortController | null = null;
+const goalGeneration = createAsyncGeneration();
+const polishGeneration = createAsyncGeneration();
+let submissionGeneration = 0;
 const toast = ref("");
-const models = ref<Model[]>([]);
+const skillCatalog = useSkillsCatalog({
+  enabled: computed(() => !props.disabled),
+});
+const modelCatalog = useModels({ enabled: computed(() => !props.disabled) });
+const skills = skillCatalog.skills;
+const models = modelCatalog.models;
 const modelMenu = ref(false);
 const modeMenu = ref(false);
 const voiceListening = ref(false);
@@ -135,11 +154,16 @@ const disclaimer = computed(() =>
     ? "内容由AI生成，重要信息请务必核查"
     : "Deerflow is AI and can make mistakes",
 );
-const selectedModel = computed(
-  () =>
-    models.value.find((model) => model.name === props.context?.model_name) ??
-    models.value[0],
-);
+const selectedModel = computed(() => {
+  if (props.modelSelectionReady === false) return undefined;
+  return resolveComposerModel(
+    models.value,
+    typeof props.context?.model_name === "string"
+      ? props.context.model_name
+      : undefined,
+    props.defaultModelName,
+  );
+});
 const selectedMode = computed(() => String(props.context?.mode ?? "flash"));
 const modes = computed(() => [
   {
@@ -167,18 +191,39 @@ const modes = computed(() => [
     effort: "high" as const,
   },
 ]);
+const availableModes = computed(() =>
+  selectedModel.value?.supports_thinking === true
+    ? modes.value
+    : modes.value.filter((mode) => mode.id === "flash"),
+);
 const textarea = ref<HTMLTextAreaElement | null>(null);
 const chipInput = ref<HTMLElement | null>(null);
 let historyIndex = -1;
 const skillCommandNames = new Set([...RESERVED_SLASH_SKILL_NAMES, "compact"]);
-
-const draftKey = computed(() =>
-  buildComposerDraftKey({
-    userId: "anonymous",
-    agentName: props.agentName,
-    threadId: props.threadKey,
-  }),
+const enabledSkillNames = computed(
+  () =>
+    new Set(
+      skills.value.filter((skill) => skill.enabled).map((skill) => skill.name),
+    ),
 );
+const draft = useComposerDraft({
+  userId: computed(() => props.userId),
+  agentName: computed(() => props.agentName),
+  threadId: computed(() => props.threadKey),
+  ready: skillCatalog.ready,
+  enabledSkillNames,
+  text: input,
+  skillName: selectedSkill,
+});
+const draftKey = draft.key;
+const filesByDraftKey = new Map<string, File[]>();
+const uploadedByThread = createSubmissionFileCache();
+const pendingFollowup = ref<string | null>(null);
+let activeSubmissionDraft: {
+  key: string;
+  text: string;
+  skillName: string | null;
+} | null = null;
 const slashQuery = computed(() => {
   if (!input.value.startsWith("/") || input.value.includes("\n")) return null;
   if (selectedSkill.value && !input.value.startsWith("/")) return null;
@@ -212,31 +257,34 @@ const suggestions = computed(() => {
   return [...skillOptions, ...commands];
 });
 
-function persist() {
-  writeComposerDraft(getSessionComposerDraftStorage(), draftKey.value, {
-    text: input.value,
-    skillName: selectedSkill.value,
-  });
-}
-function restore() {
-  const draft = readComposerDraft(
-    getSessionComposerDraftStorage(),
-    draftKey.value,
-  );
-  input.value = draft?.text ?? "";
-  selectedSkill.value = draft?.skillName ?? null;
-}
-watch(draftKey, restore);
+watch(draftKey, (next, previous) => {
+  filesByDraftKey.set(previous, [...selectedFiles.value]);
+  selectedFiles.value = [...(filesByDraftKey.get(next) ?? [])];
+});
 watch(
-  () => props.targetThreadId,
+  [() => props.targetThreadId, () => props.threadKey, () => props.agentName],
   () => {
     compactGeneration += 1;
     compactController?.abort();
     compactController = null;
     compactPending.value = false;
+    goalController?.abort();
+    goalController = null;
+    goalGeneration.invalidate();
+    polishController.value?.abort();
+    polishController.value = null;
+    polishGeneration.invalidate();
+    polishing.value = false;
+    submissionGeneration += 1;
+    submissionPending.value = false;
+    if (activeSubmissionDraft) {
+      draft.cancelSubmission(activeSubmissionDraft);
+      activeSubmissionDraft = null;
+    }
+    emit("uploadingChange", false);
+    pendingFollowup.value = null;
   },
 );
-watch([input, selectedSkill], persist);
 watch(selectedSkill, async () => {
   await nextTick();
   if (chipInput.value && chipInput.value.innerText !== input.value) {
@@ -248,46 +296,69 @@ watch(suggestions, () => {
 });
 
 onMounted(async () => {
-  restore();
   if (props.disabled) return;
-  try {
-    skills.value = await loadSkills();
-  } catch {
-    skills.value = [];
-  }
   try {
     limits.value = await getUploadLimits(props.targetThreadId);
   } catch {
     limits.value = undefined;
   }
-  try {
-    models.value = (await loadModels()).models;
-    if (selectedModel.value && !props.context?.model_name) {
-      emit("contextChange", {
-        ...props.context,
-        model_name: selectedModel.value.name,
-      });
-    }
-  } catch {
-    models.value = [];
-  }
 });
 
+watch(
+  [
+    models,
+    () => props.context,
+    () => props.defaultModelName,
+    () => props.modelSelectionReady,
+  ],
+  () => {
+    const model = selectedModel.value;
+    if (!model) return;
+    const normalized = normalizeComposerContext(
+      { ...(props.context ?? {}) },
+      model,
+    );
+    if (
+      normalized.model_name !== props.context?.model_name ||
+      normalized.mode !== props.context?.mode ||
+      normalized.reasoning_effort !== props.context?.reasoning_effort
+    ) {
+      emit("contextChange", normalized);
+    }
+  },
+  { immediate: true },
+);
+
 function selectModel(model: Model) {
-  emit("contextChange", { ...props.context, model_name: model.name });
+  emit(
+    "contextChange",
+    normalizeComposerContext(
+      { ...props.context, model_name: model.name },
+      model,
+    ),
+  );
   modelMenu.value = false;
 }
 function selectMode(mode: (typeof modes.value)[number]) {
-  emit("contextChange", {
-    ...props.context,
-    mode: mode.id,
-    reasoning_effort: mode.effort,
-  });
+  const next = normalizeComposerContext(
+    {
+      ...props.context,
+      mode: mode.id,
+      reasoning_effort: mode.effort,
+    },
+    selectedModel.value,
+  );
+  emit("contextChange", next);
   modeMenu.value = false;
 }
 onBeforeUnmount(() => {
   compactGeneration += 1;
   compactController?.abort();
+  goalController?.abort();
+  goalGeneration.invalidate();
+  polishController.value?.abort();
+  polishGeneration.invalidate();
+  submissionGeneration += 1;
   voiceStopRequested = true;
   if (voiceRestartTimer) clearTimeout(voiceRestartTimer);
   voiceRecognition.value?.abort();
@@ -467,10 +538,27 @@ async function submit() {
       toast.value = `Goal is too long. Keep it under ${MAX_GOAL_OBJECTIVE_CHARS} characters.`;
       return;
     }
+    const scope = `${props.threadKey}\u0000${props.targetThreadId}\u0000${props.agentName ?? "lead-agent"}`;
+    const token = goalGeneration.begin(scope);
+    const controller = new AbortController();
+    goalController?.abort();
+    goalController = controller;
+    const draftSnapshot = {
+      key: draftKey.value,
+      text: input.value,
+      skillName: selectedSkill.value,
+    };
     try {
       const threadId = props.ensureThread
         ? await props.ensureThread()
         : props.targetThreadId;
+      if (
+        controller.signal.aborted ||
+        !goalGeneration.isCurrent(token, scope) ||
+        draftKey.value !== draftSnapshot.key
+      ) {
+        return;
+      }
       const endpoint = `${getBackendBaseURL()}/api/threads/${encodeURIComponent(threadId)}/goal`;
       const response = await fetchWithAuth(endpoint, {
         method:
@@ -485,9 +573,17 @@ async function submit() {
               body: JSON.stringify({ objective: goalCommand.objective }),
             }
           : {}),
+        signal: controller.signal,
       });
       if (!response.ok) throw new Error(await readGoalResponseError(response));
       const body = (await response.json()) as { goal?: GoalState | null };
+      if (
+        controller.signal.aborted ||
+        !goalGeneration.isCurrent(token, scope) ||
+        draftKey.value !== draftSnapshot.key
+      ) {
+        return;
+      }
       const nextGoal = body.goal ?? null;
       emit("goalChange", nextGoal);
       toast.value =
@@ -498,48 +594,118 @@ async function submit() {
           : goalCommand.kind === "clear"
             ? "Goal cleared."
             : "Goal set.";
-      clearComposerDraft(getSessionComposerDraftStorage(), draftKey.value);
-      input.value = "";
-      selectedSkill.value = null;
       if (goalCommand.kind === "set") {
-        emit("send", goalCommand.objective, []);
+        const onAccepted = () => {
+          draft.clearIfUnchanged(draftSnapshot);
+        };
+        if (props.submitMessage) {
+          await props.submitMessage(goalCommand.objective, [], { onAccepted });
+        } else {
+          emit("send", goalCommand.objective, []);
+          onAccepted();
+        }
+      } else {
+        draft.clearIfUnchanged(draftSnapshot);
       }
       return;
     } catch (cause) {
-      toast.value =
-        cause instanceof Error ? cause.message : "Goal command failed.";
+      if (
+        !controller.signal.aborted &&
+        goalGeneration.isCurrent(token, scope)
+      ) {
+        toast.value =
+          cause instanceof Error ? cause.message : "Goal command failed.";
+      }
       return;
+    } finally {
+      if (goalController === controller) goalController = null;
     }
   }
 
-  clearComposerDraft(getSessionComposerDraftStorage(), draftKey.value);
-  input.value = "";
-  selectedSkill.value = null;
-  historyIndex = -1;
+  if (submissionPending.value) return;
+  submissionPending.value = true;
+  const generation = ++submissionGeneration;
+  const scopeKey = draftKey.value;
+  const targetAtStart = props.targetThreadId;
+  const draftSnapshot = {
+    key: scopeKey,
+    text: input.value,
+    skillName: selectedSkill.value,
+  };
+  activeSubmissionDraft = draftSnapshot;
+  draft.beginSubmission(draftSnapshot);
   const pending = [...selectedFiles.value];
-  let uploaded: FileInMessage[] = [];
-  if (pending.length > 0) {
-    emit("uploadingChange", true);
-    try {
-      const uploadThreadId = props.ensureThread
-        ? await props.ensureThread()
-        : props.targetThreadId;
-      const response = await uploadFiles(uploadThreadId, pending);
-      uploaded = response.files.map((file) => ({
-        filename: file.filename,
-        size: file.size,
-        path: file.virtual_path,
-        status: "uploaded",
-      }));
-    } catch (error) {
-      toast.value = error instanceof Error ? error.message : "Upload failed";
+  try {
+    const uploadThreadId = props.ensureThread
+      ? await props.ensureThread()
+      : props.targetThreadId;
+    if (
+      generation !== submissionGeneration ||
+      scopeKey !== draftKey.value ||
+      targetAtStart !== props.targetThreadId
+    ) {
       return;
-    } finally {
+    }
+    const hasMissingUploads = pending.some(
+      (file) => !uploadedByThread.get(uploadThreadId)?.has(file),
+    );
+    if (hasMissingUploads) {
+      emit("uploadingChange", true);
+    }
+    const uploaded = await prepareSubmissionFiles({
+      threadId: uploadThreadId,
+      files: pending,
+      cache: uploadedByThread,
+    });
+    if (
+      generation !== submissionGeneration ||
+      scopeKey !== draftKey.value ||
+      targetAtStart !== props.targetThreadId
+    ) {
+      return;
+    }
+    const onAccepted = () => {
+      if (generation !== submissionGeneration || scopeKey !== draftKey.value) {
+        return;
+      }
+      draft.clearIfUnchanged(draftSnapshot);
+      if (activeSubmissionDraft === draftSnapshot) {
+        activeSubmissionDraft = null;
+      }
+      selectedFiles.value = selectedFiles.value.filter(
+        (file) => !pending.includes(file),
+      );
+      filesByDraftKey.set(scopeKey, [...selectedFiles.value]);
+      historyIndex = -1;
+    };
+    if (props.submitMessage) {
+      const dispatched = await props.submitMessage(text, uploaded, {
+        onAccepted,
+      });
+      if (dispatched === false) {
+        draft.cancelSubmission(draftSnapshot);
+        if (activeSubmissionDraft === draftSnapshot) {
+          activeSubmissionDraft = null;
+        }
+      }
+    } else {
+      emit("send", text, uploaded);
+      onAccepted();
+    }
+  } catch (error) {
+    draft.cancelSubmission(draftSnapshot);
+    if (activeSubmissionDraft === draftSnapshot) {
+      activeSubmissionDraft = null;
+    }
+    if (generation === submissionGeneration && scopeKey === draftKey.value) {
+      toast.value = error instanceof Error ? error.message : "Request failed";
+    }
+  } finally {
+    if (generation === submissionGeneration) {
       emit("uploadingChange", false);
+      submissionPending.value = false;
     }
   }
-  selectedFiles.value = [];
-  emit("send", text, uploaded);
 }
 
 const compositionActive = ref(false);
@@ -617,18 +783,35 @@ async function polish() {
     return;
   }
   if (!input.value.trim()) return;
-  polishOriginal.value = input.value;
+  const original = input.value;
+  polishOriginal.value = original;
   polishing.value = true;
+  const scope = `${props.threadKey}\u0000${props.targetThreadId}\u0000${props.agentName ?? "lead-agent"}`;
+  const token = polishGeneration.begin(scope);
   const controller = new AbortController();
+  polishController.value?.abort();
   polishController.value = controller;
   try {
     const result = await polishInputDraft(
-      { text: input.value },
+      {
+        text: original,
+        locale: $i18n.locale.value,
+        thread_id: props.targetThreadId,
+      },
       { signal: controller.signal },
     );
-    if (!controller.signal.aborted) input.value = result.rewritten_text;
+    if (
+      !controller.signal.aborted &&
+      polishGeneration.isCurrent(token, scope) &&
+      input.value === original
+    ) {
+      input.value = result.rewritten_text;
+    }
   } catch (error) {
-    if (!controller.signal.aborted) {
+    if (
+      !controller.signal.aborted &&
+      polishGeneration.isCurrent(token, scope)
+    ) {
       toast.value =
         error instanceof Error ? error.message : "Failed to polish input";
       polishOriginal.value = null;
@@ -642,6 +825,7 @@ async function polish() {
 }
 function cancelPolish() {
   polishController.value?.abort();
+  polishGeneration.invalidate();
   polishController.value = null;
   polishing.value = false;
   polishOriginal.value = null;
@@ -656,17 +840,103 @@ function replaceDraft(value: string) {
   selectedSkill.value = null;
   void nextTick(() => textarea.value?.focus());
 }
-defineExpose({ replaceDraft });
+function offerFollowup(value: string) {
+  if (
+    !input.value.trim() &&
+    !selectedSkill.value &&
+    selectedFiles.value.length === 0
+  ) {
+    replaceDraft(value);
+    void nextTick(() => submit());
+    return;
+  }
+  pendingFollowup.value = value;
+}
+function resolveFollowup(action: "append" | "replace" | "cancel") {
+  const value = pendingFollowup.value;
+  pendingFollowup.value = null;
+  if (!value || action === "cancel") return;
+  if (action === "replace") {
+    replaceDraft(value);
+    void nextTick(() => submit());
+    return;
+  }
+  input.value = input.value.trimEnd()
+    ? `${input.value.trimEnd()}\n${value}`
+    : value;
+  void nextTick(() => submit());
+}
+function stopRun() {
+  compactGeneration += 1;
+  compactController?.abort();
+  compactController = null;
+  compactPending.value = false;
+  goalController?.abort();
+  goalController = null;
+  goalGeneration.invalidate();
+  polishController.value?.abort();
+  polishController.value = null;
+  polishGeneration.invalidate();
+  polishing.value = false;
+  polishOriginal.value = null;
+  submissionGeneration += 1;
+  submissionPending.value = false;
+  if (activeSubmissionDraft) {
+    draft.cancelSubmission(activeSubmissionDraft);
+    activeSubmissionDraft = null;
+  }
+  emit("uploadingChange", false);
+  emit("stop");
+}
+defineExpose({ replaceDraft, offerFollowup });
 </script>
 
 <template>
   <div class="relative flex min-w-0 flex-col gap-2">
     <GoalStatus v-if="goal" :goal="goal" />
+    <div
+      v-if="pendingFollowup"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="$i18n.t.value.inputBox.followupConfirmTitle"
+      class="border-border bg-background absolute right-0 bottom-full left-0 z-50 mb-2 rounded-xl border p-4 shadow-lg"
+    >
+      <h3 class="text-sm font-semibold">
+        {{ $i18n.t.value.inputBox.followupConfirmTitle }}
+      </h3>
+      <p class="text-muted-foreground mt-1 text-xs">
+        {{ $i18n.t.value.inputBox.followupConfirmDescription }}
+      </p>
+      <p class="bg-muted mt-3 rounded-md p-2 text-sm">{{ pendingFollowup }}</p>
+      <div class="mt-3 flex justify-end gap-2">
+        <button
+          type="button"
+          class="rounded-md border px-3 py-1.5 text-xs"
+          @click="resolveFollowup('cancel')"
+        >
+          {{ $i18n.t.value.common.cancel }}
+        </button>
+        <button
+          type="button"
+          class="rounded-md border px-3 py-1.5 text-xs"
+          @click="resolveFollowup('append')"
+        >
+          {{ $i18n.t.value.inputBox.followupConfirmAppend }}
+        </button>
+        <button
+          type="button"
+          class="bg-primary text-primary-foreground rounded-md px-3 py-1.5 text-xs"
+          @click="resolveFollowup('replace')"
+        >
+          {{ $i18n.t.value.inputBox.followupConfirmReplace }}
+        </button>
+      </div>
+    </div>
     <form
       class="mx-auto w-full"
       :class="disabled ? 'pointer-events-none opacity-60' : ''"
       :aria-disabled="disabled"
-      :aria-busy="compactPending"
+      :aria-busy="compactPending || submissionPending"
       @submit.prevent="submit"
     >
       <ReferenceAttachment
@@ -847,17 +1117,19 @@ defineExpose({ replaceDraft });
             <button
               type="button"
               class="hover:bg-accent h-8 rounded-md px-2 text-xs"
-              :title="`${modes.find((mode) => mode.id === selectedMode)?.label}: ${modes.find((mode) => mode.id === selectedMode)?.description}`"
+              :title="`${availableModes.find((mode) => mode.id === selectedMode)?.label}: ${availableModes.find((mode) => mode.id === selectedMode)?.description}`"
               @click="modeMenu = !modeMenu"
             >
-              {{ modes.find((mode) => mode.id === selectedMode)?.label }}
+              {{
+                availableModes.find((mode) => mode.id === selectedMode)?.label
+              }}
             </button>
             <div
               v-if="modeMenu"
               class="bg-background border-border absolute right-0 bottom-full z-30 mb-1 w-72 rounded-md border p-1 shadow"
             >
               <button
-                v-for="mode in modes"
+                v-for="mode in availableModes"
                 :key="mode.id"
                 type="button"
                 class="hover:bg-accent block w-full rounded px-2 py-2 text-left"
@@ -900,7 +1172,7 @@ defineExpose({ replaceDraft });
             type="button"
             class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full"
             aria-label="Stop"
-            @click="emit('stop')"
+            @click="stopRun"
           >
             <Square :size="12" class="fill-current" />
           </button>
@@ -912,6 +1184,7 @@ defineExpose({ replaceDraft });
             :disabled="
               disabled ||
               compactPending ||
+              submissionPending ||
               (!input.trim() && selectedFiles.length === 0)
             "
           >

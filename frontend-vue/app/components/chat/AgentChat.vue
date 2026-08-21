@@ -14,6 +14,8 @@ import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
 import AuroraText from "@/components/ui/effects/AuroraText.vue";
 import ContextUsageBadge from "@/components/workspace/ContextUsageBadge.vue";
+import TodoList from "@/components/workspace/TodoList.vue";
+import TokenUsageIndicator from "@/components/chat/TokenUsageIndicator.vue";
 import WorkspacePanels from "@/components/workspace/WorkspacePanels.vue";
 import ArtifactPanel from "@/components/workspace/artifacts/ArtifactPanel.vue";
 import ArtifactTrigger from "@/components/workspace/artifacts/ArtifactTrigger.vue";
@@ -22,14 +24,16 @@ import BrowserTrigger from "@/components/workspace/browser-view/BrowserTrigger.v
 import SidecarPanel from "@/components/workspace/sidecar/SidecarPanel.vue";
 import { useArtifactsPanel } from "@/composables/useArtifactsPanel";
 import { useSidecar } from "@/composables/useSidecar";
+import { useSidecarSession } from "@/composables/useSidecarSession";
 import { useThreadStream } from "@/composables/useThreadStream";
 import { useThreads } from "@/composables/useThreads";
 import { useNotifications } from "@/composables/useNotifications";
 import { useWorkspaceFeatures } from "@/composables/useWorkspaceFeatures";
-import {
-  branchThreadFromTurn,
-  fetchThreadTokenUsage,
-} from "@/core/threads/api";
+import { useAuthSession } from "@/composables/useAuthSession";
+import { useModels } from "@/composables/useModels";
+import { useThreadSettings } from "@/composables/useThreadSettings";
+import { useThreadTokenUsage } from "@/composables/useThreadTokenUsage";
+import { branchThreadFromTurn } from "@/core/threads/api";
 import { getAPIClient } from "@/core/api/api-client";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import { getBackendBaseURL } from "@/core/config";
@@ -40,17 +44,21 @@ import {
   type HumanInputRequest,
   type HumanInputResponse,
 } from "@/core/messages/human-input";
-import { getBaseSettingsSnapshot } from "@/core/settings/store";
+import {
+  AUTH_DISABLED_USER,
+  isAuthDisabledMode,
+} from "@/core/auth/auth-disabled-user";
 import {
   DEFAULT_MAX_SUGGESTIONS,
   loadSuggestionsConfig,
 } from "@/core/suggestions/api";
 import type { Message } from "@/core/types/message";
 import {
-  retainThreadTokenUsagePlaceholder,
   selectContextUsage,
+  threadTokenUsageToTokenUsage,
 } from "@/core/threads/token-usage";
-import type { GoalState, ThreadTokenUsageResponse } from "@/core/threads/types";
+import type { GoalState } from "@/core/threads/types";
+import type { Todo } from "@/core/todos";
 import {
   buildReferenceMessageMetadata,
   type SidecarContext,
@@ -58,6 +66,8 @@ import {
 import { buildWriteFileArtifactURL } from "@/core/artifacts/utils";
 import { getAgent } from "@/core/agents/api";
 import type { Agent } from "@/core/agents/types";
+import { resolveComposerModel } from "@/core/models/capabilities";
+import { createAsyncGeneration } from "@/core/async/generation";
 
 const props = defineProps<{
   agentName?: string | null;
@@ -73,6 +83,15 @@ const isDemo = computed(
 );
 const features = useWorkspaceFeatures({ enabled: !isDemo.value });
 const notifications = useNotifications();
+const authDisabled = isAuthDisabledMode();
+const auth = useAuthSession({
+  enabled: computed(() => !authDisabled && !isDemo.value),
+});
+const currentUserId = computed(() => {
+  if (authDisabled) return AUTH_DISABLED_USER.id;
+  const session = auth.session.value;
+  return session?.tag === "authenticated" ? session.user.id : null;
+});
 
 const routeThreadId = computed(() => {
   const raw = route.params.thread_id;
@@ -87,10 +106,16 @@ const draftThreadId = ref(globalThis.crypto.randomUUID());
 watch(routeThreadId, (id) => {
   if (id === null) draftThreadId.value = globalThis.crypto.randomUUID();
 });
-const contextOverrides = ref<Record<string, unknown>>({});
+const settingsScope = computed(() =>
+  [
+    props.agentName ? `agent:${props.agentName}` : "lead-agent",
+    routeThreadId.value ?? draftThreadId.value,
+  ].join(":"),
+);
+const { settings, update: updateThreadSettings } =
+  useThreadSettings(settingsScope);
 const context = computed(() => ({
-  ...getBaseSettingsSnapshot().context,
-  ...contextOverrides.value,
+  ...settings.value.context,
   ...(props.agentName ? { agent_name: props.agentName } : {}),
   ...(props.bootstrap ? { is_bootstrap: true } : {}),
 }));
@@ -105,6 +130,8 @@ const demoMessages = ref<Message[] | null>(null);
 const demoArtifacts = ref<string[]>([]);
 const demoTitle = ref<string>();
 const agent = ref<Agent | null>(null);
+const agentResolved = ref(!props.agentName || isDemo.value);
+let agentRequest = 0;
 const followups = ref<string[]>([]);
 const followupsLoading = ref(false);
 const suggestionsEnabled = ref(false);
@@ -113,9 +140,27 @@ const composer = ref<InstanceType<typeof ChatComposer> | null>(null);
 const failedSend = ref<{ text: string; files: FileInMessage[] } | null>(null);
 const mainTailRequest = ref(0);
 const mobileSidebarOpen = ref(false);
-const threadTokenUsage = ref<ThreadTokenUsageResponse | null>();
+const threadTokenUsageQuery = useThreadTokenUsage(routeThreadId, {
+  enabled: computed(() => !isDemo.value),
+});
+const threadTokenUsage = threadTokenUsageQuery.usage;
 const contextUsage = computed(() => selectContextUsage(threadTokenUsage.value));
-let tokenUsageRequest = 0;
+const modelCatalog = useModels({ enabled: computed(() => !isDemo.value) });
+const selectedModel = computed(() => {
+  if (!agentResolved.value) return undefined;
+  return resolveComposerModel(
+    modelCatalog.models.value,
+    typeof context.value.model_name === "string"
+      ? context.value.model_name
+      : undefined,
+    agent.value?.model,
+  );
+});
+const persistedTokenUsage = computed(() =>
+  threadTokenUsageToTokenUsage(threadTokenUsage.value),
+);
+const suggestionGeneration = createAsyncGeneration();
+let suggestionController: AbortController | null = null;
 const preparedThreadId = ref<string | null>(null);
 const editState = ref<{
   messageId: string;
@@ -126,6 +171,7 @@ const editState = ref<{
 const stream = useThreadStream({
   threadId: streamThreadId,
   context,
+  model: selectedModel,
   notify: {
     warn: (message) =>
       warnings.value.push(
@@ -217,6 +263,23 @@ const localGoal = ref<GoalState | null | undefined>(undefined);
 const activeGoal = computed(() =>
   localGoal.value !== undefined ? localGoal.value : authoritativeGoal.value,
 );
+const authoritativeTodos = computed<Todo[]>(() => {
+  const state = stream.state.value;
+  const value = Object.prototype.hasOwnProperty.call(state, "todos")
+    ? Reflect.get(state, "todos")
+    : threads.threads.find((thread) => thread.thread_id === routeThreadId.value)
+        ?.values.todos;
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (item): item is Todo =>
+      typeof item === "object" &&
+      item !== null &&
+      typeof Reflect.get(item, "content") === "string" &&
+      ["pending", "in_progress", "completed"].includes(
+        String(Reflect.get(item, "status")),
+      ),
+  );
+});
 watch(authoritativeGoal, () => {
   localGoal.value = undefined;
 });
@@ -230,6 +293,14 @@ const artifactPanel = useArtifactsPanel({
 });
 const sidecar = useSidecar({ parentThreadId: streamThreadId, context });
 const sidecarReady = ref(false);
+const sidecarSession = useSidecarSession({
+  parentThreadId: streamThreadId,
+  parentMessages: () => demoMessages.value ?? stream.messages.value,
+  sidecarThreadId: sidecar.sidecarThreadId,
+  references: sidecar.activeReferences,
+  context: sidecar.context,
+  onReferencesAccepted: sidecar.clearActiveReferences,
+});
 const browserOpen = ref(false);
 const agentBrowserEnabled = computed(
   () =>
@@ -246,10 +317,11 @@ const browserEnabled = computed(
     agentBrowserEnabled.value,
 );
 watch(
-  () => sidecar.sidecarThreadId.value,
-  () => {
-    sidecarReady.value = false;
+  sidecarSession.ready,
+  (ready) => {
+    sidecarReady.value = ready;
   },
+  { immediate: true },
 );
 const activePanel = computed<"artifacts" | "sidecar" | "browser" | null>(() => {
   if (browserOpen.value) return "browser";
@@ -270,7 +342,7 @@ async function toggleSidecar() {
     sidecar.close();
     return;
   }
-  const restored = await sidecar.restoreSidecarThread({ force: true });
+  const restored = await sidecarSession.restore({ force: true });
   if (restored) {
     browserOpen.value = false;
     artifactPanel.close();
@@ -391,6 +463,13 @@ const visibleMessages = computed(() =>
     (message: Message) => !isHiddenFromUIMessage(message),
   ),
 );
+const pendingUsageMessages = computed(() => {
+  if (!stream.isStreaming.value || !stream.activeRunId.value) return [];
+  const runId = stream.activeRunId.value;
+  return visibleMessages.value.filter(
+    (message) => Reflect.get(message, "run_id") === runId,
+  );
+});
 const promptHistory = computed(() =>
   visibleMessages.value
     .filter((message) => message.type === "human")
@@ -462,12 +541,32 @@ function recentConversation() {
 
 async function refreshPostRun(targetThreadId: string | null) {
   if (!targetThreadId) return;
+  const scope = `${targetThreadId}\u0000${props.agentName ?? "lead-agent"}`;
+  const token = suggestionGeneration.begin(scope);
+  suggestionController?.abort();
+  const controller = new AbortController();
+  suggestionController = controller;
   try {
-    threads.upsert(await getAPIClient().threads.get(targetThreadId));
+    const refreshed = await getAPIClient().threads.get(targetThreadId);
+    if (
+      controller.signal.aborted ||
+      routeThreadId.value !== targetThreadId ||
+      !suggestionGeneration.isCurrent(token, scope)
+    ) {
+      return;
+    }
+    threads.upsert(refreshed);
   } catch {
     // The stream state remains authoritative while metadata persistence catches up.
   }
-  await refreshThreadTokenUsage(targetThreadId);
+  if (
+    controller.signal.aborted ||
+    routeThreadId.value !== targetThreadId ||
+    !suggestionGeneration.isCurrent(token, scope)
+  ) {
+    return;
+  }
+  await threadTokenUsageQuery.refetch();
   if (!suggestionsEnabled.value) return;
   const messages = recentConversation();
   if (messages.length === 0) return;
@@ -484,54 +583,45 @@ async function refreshPostRun(targetThreadId: string | null) {
           n: maxSuggestions.value,
           model_name: context.value.model_name,
         }),
+        signal: controller.signal,
       },
     );
     if (!response.ok) return;
     const body = (await response.json()) as { suggestions?: unknown[] };
+    if (
+      controller.signal.aborted ||
+      routeThreadId.value !== targetThreadId ||
+      !suggestionGeneration.isCurrent(token, scope)
+    ) {
+      return;
+    }
     followups.value = (body.suggestions ?? [])
       .flatMap((value) =>
         typeof value === "string" && value.trim() ? [value.trim()] : [],
       )
       .slice(0, maxSuggestions.value);
   } catch {
-    followups.value = [];
+    if (
+      !controller.signal.aborted &&
+      suggestionGeneration.isCurrent(token, scope)
+    ) {
+      followups.value = [];
+    }
   } finally {
-    followupsLoading.value = false;
+    if (suggestionGeneration.isCurrent(token, scope)) {
+      followupsLoading.value = false;
+    }
+    if (suggestionController === controller) suggestionController = null;
   }
 }
 
-async function refreshThreadTokenUsage(targetThreadId: string | null) {
-  const request = ++tokenUsageRequest;
-  if (!targetThreadId) {
-    threadTokenUsage.value = undefined;
-    return;
-  }
-
-  const retained = retainThreadTokenUsagePlaceholder(
-    threadTokenUsage.value,
-    targetThreadId,
-  );
-  threadTokenUsage.value = retained;
-  try {
-    const next = await fetchThreadTokenUsage(targetThreadId);
-    if (request !== tokenUsageRequest || routeThreadId.value !== targetThreadId)
-      return;
-    threadTokenUsage.value = retainThreadTokenUsagePlaceholder(
-      next,
-      targetThreadId,
-    );
-  } catch {
-    // A same-thread refresh may retain its last value; another route never can.
-  }
-}
-
-watch(
-  streamThreadId,
-  (threadId) => {
-    void refreshThreadTokenUsage(threadId);
-  },
-  { immediate: true },
-);
+watch([routeThreadId, () => props.agentName], () => {
+  suggestionGeneration.invalidate();
+  suggestionController?.abort();
+  suggestionController = null;
+  followupsLoading.value = false;
+  followups.value = [];
+});
 
 async function ensureThread() {
   if (isDemo.value) throw new Error("Demo conversations are read-only.");
@@ -547,32 +637,45 @@ async function ensureThread() {
   return created.thread_id;
 }
 
-async function send(text: string, files: FileInMessage[]) {
-  if (isDemo.value) return;
+async function send(
+  text: string,
+  files: FileInMessage[],
+  options?: { onAccepted?: () => void },
+) {
+  if (isDemo.value) return false;
   followups.value = [];
   mainTailRequest.value += 1;
   try {
     const targetThreadId = await ensureThread();
     const quotes = [...sidecar.conversationQuotes.value];
     const contexts = quotes.map((quote) => quote.context);
-    await stream.sendMessage(targetThreadId, { text, files }, undefined, {
-      ...(contexts.length
-        ? {
-            additionalInputMessages: [quotePrompt(contexts)],
-            additionalKwargs: buildReferenceMessageMetadata(contexts),
-          }
-        : {}),
-      onSent: () => {
-        if (quotes.length) sidecar.clearConversationQuotes();
+    const accepted = await stream.sendMessage(
+      targetThreadId,
+      { text, files },
+      undefined,
+      {
+        ...(contexts.length
+          ? {
+              additionalInputMessages: [quotePrompt(contexts)],
+              additionalKwargs: buildReferenceMessageMetadata(contexts),
+            }
+          : {}),
+        onAccepted: () => {
+          if (quotes.length) sidecar.clearConversationQuotes();
+          options?.onAccepted?.();
+        },
       },
-    });
+    );
+    if (!accepted) return false;
     failedSend.value = null;
+    return true;
   } catch (error) {
     failedSend.value = { text, files };
-    composer.value?.replaceDraft(text);
     warnings.value.push(
       error instanceof Error ? error.message : "Request failed.",
     );
+    if (options) throw error;
+    return false;
   }
 }
 async function retrySend() {
@@ -583,10 +686,11 @@ async function respondHumanInput(
   request: HumanInputRequest,
   response: HumanInputResponse,
 ) {
-  if (isDemo.value) return;
+  if (isDemo.value) return false;
   const targetThreadId = routeThreadId.value;
-  if (!targetThreadId) return;
-  await stream.sendMessage(
+  if (!targetThreadId) return false;
+  let accepted = false;
+  const dispatched = await stream.sendMessage(
     targetThreadId,
     { text: buildHumanInputResponseText(request, response) },
     undefined,
@@ -595,8 +699,24 @@ async function respondHumanInput(
         hide_from_ui: true,
         human_input_response: response,
       },
+      onAccepted: () => {
+        accepted = true;
+      },
     },
   );
+  return dispatched && accepted;
+}
+
+function updateContext(value: Record<string, unknown>) {
+  updateThreadSettings("context", value);
+}
+
+async function stopRun() {
+  suggestionGeneration.invalidate();
+  suggestionController?.abort();
+  suggestionController = null;
+  followupsLoading.value = false;
+  await stream.stop();
 }
 async function branch(messageId: string, messageIds: string[]) {
   if (isDemo.value) return;
@@ -650,6 +770,11 @@ async function updateAndRerun() {
   );
 }
 function resetNewChat() {
+  suggestionGeneration.invalidate();
+  suggestionController?.abort();
+  suggestionController = null;
+  followupsLoading.value = false;
+  followups.value = [];
   stream.resetView();
   preparedThreadId.value = null;
   draftThreadId.value = globalThis.crypto.randomUUID();
@@ -658,16 +783,37 @@ onMounted(() => globalThis.addEventListener("deerflow:new-chat", resetNewChat));
 onMounted(() =>
   globalThis.addEventListener("deerflow:sidebar-state", updateSidebarState),
 );
-onMounted(() => {
-  if (!props.bootstrap || !props.agentName) return;
-  void send(
-    $i18n.t.value.agents.nameStepBootstrapMessage.replace(
-      "{name}",
-      props.agentName,
-    ),
-    [],
-  );
-});
+let bootstrapAgentName: string | null = null;
+watch(
+  [
+    () => props.bootstrap,
+    () => props.agentName,
+    agentResolved,
+    modelCatalog.loading,
+    selectedModel,
+  ],
+  ([bootstrap, agentName, resolved, modelsLoading]) => {
+    if (
+      !bootstrap ||
+      !agentName ||
+      isDemo.value ||
+      !resolved ||
+      modelsLoading ||
+      bootstrapAgentName === agentName
+    ) {
+      return;
+    }
+    bootstrapAgentName = agentName;
+    void send(
+      $i18n.t.value.agents.nameStepBootstrapMessage.replace(
+        "{name}",
+        agentName,
+      ),
+      [],
+    );
+  },
+  { immediate: true },
+);
 onMounted(async () => {
   if (isDemo.value) return;
   try {
@@ -710,14 +856,27 @@ onMounted(async () => {
     await router.replace("/workspace/chats/new");
   }
 });
-onMounted(async () => {
-  if (!props.agentName || isDemo.value) return;
-  try {
-    agent.value = await getAgent(props.agentName);
-  } catch {
+watch(
+  [() => props.agentName, isDemo],
+  async ([agentName, demo]) => {
+    const request = ++agentRequest;
     agent.value = null;
-  }
-});
+    if (!agentName || demo) {
+      agentResolved.value = true;
+      return;
+    }
+    agentResolved.value = false;
+    try {
+      const resolvedAgent = await getAgent(agentName);
+      if (request === agentRequest) agent.value = resolvedAgent;
+    } catch {
+      if (request === agentRequest) agent.value = null;
+    } finally {
+      if (request === agentRequest) agentResolved.value = true;
+    }
+  },
+  { immediate: true },
+);
 onUnmounted(() =>
   globalThis.removeEventListener("deerflow:new-chat", resetNewChat),
 );
@@ -725,7 +884,11 @@ onUnmounted(() =>
   globalThis.removeEventListener("deerflow:sidebar-state", updateSidebarState),
 );
 onUnmounted(() => {
+  agentRequest += 1;
   clearTimeout(completionNotificationTimer);
+  suggestionGeneration.invalidate();
+  suggestionController?.abort();
+  suggestionController = null;
 });
 </script>
 
@@ -774,7 +937,21 @@ onUnmounted(() => {
           <div class="min-w-0 flex-1 truncate text-sm font-medium">
             {{ currentTitle }}
           </div>
-          <ContextUsageBadge v-if="!isDemo" :context-usage="contextUsage" />
+          <TokenUsageIndicator
+            v-if="!isDemo && modelCatalog.tokenUsageEnabled.value"
+            :thread-id="routeThreadId"
+            :messages="visibleMessages"
+            :pending-messages="pendingUsageMessages"
+            :backend-usage="persistedTokenUsage"
+            :context-usage="contextUsage"
+            :enabled="modelCatalog.tokenUsageEnabled.value"
+            :preferences="settings.tokenUsage"
+            @preferences-change="updateThreadSettings('tokenUsage', $event)"
+          />
+          <ContextUsageBadge
+            v-else-if="!isDemo"
+            :context-usage="contextUsage"
+          />
           <span
             v-if="agentName"
             class="bg-secondary text-secondary-foreground rounded-full px-2.5 py-1 text-xs"
@@ -849,6 +1026,13 @@ onUnmounted(() => {
           :has-more-history="stream.hasMoreHistory.value"
           :history-loading-more="stream.isHistoryLoadingMore.value"
           :history-error="stream.historyError.value"
+          :thread-error="stream.error.value"
+          :submit-human-input="respondHumanInput"
+          :token-usage-inline-mode="
+            modelCatalog.tokenUsageEnabled.value
+              ? settings.tokenUsage.inlineMode
+              : 'off'
+          "
           :tail-request="mainTailRequest"
           :interactive="!isDemo"
           selection-mode="main"
@@ -950,14 +1134,14 @@ onUnmounted(() => {
                 v-if="followupsLoading"
                 class="text-muted-foreground bg-background/80 rounded-full border px-4 py-1.5 text-xs backdrop-blur-sm"
               >
-                Generating follow-up questions...
+                {{ $i18n.t.value.inputBox.followupLoading }}
               </span>
               <button
                 v-for="suggestion in followups"
                 :key="suggestion"
                 type="button"
                 class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-3 py-1.5 text-xs"
-                @click="composer?.replaceDraft(suggestion)"
+                @click="composer?.offerFollowup(suggestion)"
               >
                 {{ suggestion }}
               </button>
@@ -975,7 +1159,7 @@ onUnmounted(() => {
                   :key="suggestion"
                   type="button"
                   class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-3 py-1.5 text-xs"
-                  @click="composer?.replaceDraft(suggestion)"
+                  @click="composer?.offerFollowup(suggestion)"
                 >
                   {{ suggestion }}
                 </button>
@@ -990,28 +1174,37 @@ onUnmounted(() => {
                 ×
               </button>
             </div>
+            <TodoList
+              v-if="authoritativeTodos.length"
+              :todos="authoritativeTodos"
+              class="mb-2"
+            />
             <ChatComposer
               ref="composer"
               :thread-key="routeThreadId ?? 'new'"
               :target-thread-id="routeThreadId ?? draftThreadId"
+              :user-id="currentUserId"
               :agent-name="agentName"
+              :default-model-name="agent?.model"
+              :model-selection-ready="agentResolved"
               :streaming="stream.isStreaming.value"
               :uploading="localUploading"
               :is-welcome="isWelcomeMode"
               :prompt-history="promptHistory"
               :ensure-thread="ensureThread"
+              :submit-message="send"
               :references="sidecar.conversationQuotes.value"
               :context="context"
               :goal="activeGoal"
               :disabled="isDemo"
               @send="send"
-              @stop="stream.stop()"
+              @stop="stopRun"
               @uploading-change="
                 localUploading = $event;
                 stream.isUploading.value = $event;
               "
               @clear-references="sidecar.clearConversationQuotes()"
-              @context-change="contextOverrides = $event"
+              @context-change="updateContext"
               @goal-change="localGoal = $event"
             />
           </div>
@@ -1038,28 +1231,19 @@ onUnmounted(() => {
         @select="artifactPanel.select($event)"
       />
       <SidecarPanel
-        v-else-if="
-          routeThreadId &&
-          (activePanel === 'sidecar' ||
-            (activePanel === null && sidecar.sidecarThreadId.value))
-        "
-        v-show="activePanel === 'sidecar'"
-        :parent-thread-id="routeThreadId"
-        :parent-messages="stream.messages.value"
-        :sidecar-thread-id="sidecar.sidecarThreadId.value"
+        v-if="routeThreadId && activePanel === 'sidecar'"
+        :session="sidecarSession"
         :references="sidecar.activeReferences.value"
         :context="sidecar.context"
         :active="activePanel === 'sidecar'"
-        @update:sidecar-thread-id="sidecar.sidecarThreadId.value = $event"
         @update:context="sidecar.setContext($event)"
         @clear-references="sidecar.clearActiveReferences()"
         @add-reference="sidecar.openContext($event)"
         @close="sidecar.close()"
         @deleted="sidecar.clearThreadAndClose()"
-        @ready="sidecarReady = true"
       />
       <BrowserPanel
-        v-else-if="routeThreadId && activePanel === 'browser'"
+        v-if="routeThreadId && activePanel === 'browser'"
         :thread-id="routeThreadId"
         :active="activePanel === 'browser'"
         @close="browserOpen = false"

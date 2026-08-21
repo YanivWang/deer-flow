@@ -20,9 +20,22 @@ import {
   watch,
   type ComponentPublicInstance,
 } from "vue";
-import { CheckCircle2, GitBranch, RefreshCw, Wrench } from "lucide-vue-next";
+import {
+  Check,
+  CheckCircle2,
+  Copy,
+  GitBranch,
+  RefreshCw,
+  ThumbsDown,
+  ThumbsUp,
+  Wrench,
+} from "lucide-vue-next";
+import { useMutation, useQueryClient } from "@tanstack/vue-query";
 
 import HumanInputCard from "@/components/chat/HumanInputCard.vue";
+import CitationSourcesPanel from "@/components/chat/CitationSourcesPanel.vue";
+import MessageAttachments from "@/components/chat/MessageAttachments.vue";
+import MessageTokenUsage from "@/components/chat/MessageTokenUsage.vue";
 import MarkdownLink from "@/components/chat/MarkdownLink.vue";
 import SubtaskCard from "@/components/chat/SubtaskCard.vue";
 import { MARKDOWN_LINK_CONTEXT } from "@/components/chat/markdown-link-context";
@@ -37,15 +50,20 @@ import { extractCitationSources } from "@/core/citations/sources";
 import {
   deriveHumanInputThreadState,
   extractHumanInputRequest,
+  shouldClearPendingHumanInputOnThreadError,
   type HumanInputRequest,
   type HumanInputResponse,
 } from "@/core/messages/human-input";
+import { deriveAssistantTurnUsageState } from "@/core/messages/derived-state";
 import {
   extractContentFromMessage,
   extractReasoningContentFromMessage,
   getBranchableAssistantGroupIds,
   getLatestEditableTurn,
+  getAssistantTurnCopyData,
+  getMessageCopyData,
   getMessageGroups,
+  stripUploadedFilesTag,
 } from "@/core/messages/utils";
 import { getSafeMarkdown } from "@/core/markdown/safe-markdown";
 import {
@@ -60,6 +78,13 @@ import {
 import type { Subtask } from "@/core/tasks/types";
 import type { Message } from "@/core/types/message";
 import { readReferenceMessageContexts } from "@/core/sidecar";
+import {
+  deleteFeedback,
+  upsertFeedback,
+  type FeedbackData,
+} from "@/core/api/feedback";
+import { writeTextToClipboard } from "@/core/clipboard";
+import { threadHistoryQueryKey } from "@/core/threads/history";
 
 const StreamMarkdown = defineAsyncComponent(
   () => import("@/components/markdown/StreamMarkdown.vue"),
@@ -85,6 +110,12 @@ const props = withDefaults(
     hasMoreHistory?: boolean;
     historyLoadingMore?: boolean;
     historyError?: unknown;
+    threadError?: unknown;
+    submitHumanInput?: (
+      request: HumanInputRequest,
+      response: HumanInputResponse,
+    ) => boolean | undefined | Promise<boolean | undefined>;
+    tokenUsageInlineMode?: "off" | "per_turn" | "step_debug";
   }>(),
   {
     active: true,
@@ -107,6 +138,29 @@ type SelectionPayload = {
   displayIndex: number;
 };
 const pendingHumanInputs = ref(new Set<string>());
+const queryClient = useQueryClient();
+const feedbackState = ref(new Map<string, FeedbackData | null>());
+const copiedMessage = ref<string | null>(null);
+const actionError = ref("");
+const feedbackMutation = useMutation({
+  mutationFn: async (variables: {
+    threadId: string;
+    runId: string;
+    rating: number;
+    remove: boolean;
+  }) => {
+    if (variables.remove) {
+      await deleteFeedback(variables.threadId, variables.runId);
+      return null;
+    }
+    return upsertFeedback(
+      variables.threadId,
+      variables.runId,
+      variables.rating,
+    );
+  },
+});
+let previousHumanInputThreadError: unknown = props.threadError;
 provide(MARKDOWN_LINK_CONTEXT, {
   threadId: computed(() => props.threadId),
   isMock: computed(() => props.isMock),
@@ -165,6 +219,9 @@ const groups = computed(() =>
   getMessageGroups(props.messages, {
     isCurrentTurnLoading: props.streaming,
   }),
+);
+const turnUsageMessagesByGroupIndex = computed(
+  () => deriveAssistantTurnUsageState(groups.value).byGroupIndex,
 );
 const branchable = computed(() =>
   getBranchableAssistantGroupIds(groups.value, props.streaming),
@@ -254,7 +311,7 @@ function subtaskId(
 ) {
   return toolCallId ?? `task-${groupIndex}-${callIndex}`;
 }
-async function submitHumanInput(
+async function handleHumanInputSubmit(
   request: HumanInputRequest,
   response: HumanInputResponse,
 ) {
@@ -262,7 +319,22 @@ async function submitHumanInput(
     ...pendingHumanInputs.value,
     request.request_id,
   ]);
-  emit("humanInput", request, response);
+  try {
+    if (props.submitHumanInput) {
+      const accepted = await props.submitHumanInput(request, response);
+      if (accepted === false) {
+        const next = new Set(pendingHumanInputs.value);
+        next.delete(request.request_id);
+        pendingHumanInputs.value = next;
+      }
+      return;
+    }
+    emit("humanInput", request, response);
+  } catch {
+    const next = new Set(pendingHumanInputs.value);
+    next.delete(request.request_id);
+    pendingHumanInputs.value = next;
+  }
 }
 function groupIds(index: number) {
   const ids: string[] = [];
@@ -277,6 +349,81 @@ function lastAI(index: number) {
   return [...(groups.value[index]?.messages ?? [])]
     .reverse()
     .find((message) => message.type === "ai");
+}
+function readFeedback(message: Message | undefined): FeedbackData | null {
+  const raw = message ? Reflect.get(message, "feedback") : null;
+  if (!raw || typeof raw !== "object") return null;
+  const rating = Reflect.get(raw, "rating");
+  const feedbackId = Reflect.get(raw, "feedback_id");
+  if ((rating !== 1 && rating !== -1) || typeof feedbackId !== "string") {
+    return null;
+  }
+  const comment = Reflect.get(raw, "comment");
+  return {
+    feedback_id: feedbackId,
+    rating,
+    comment: typeof comment === "string" ? comment : null,
+  };
+}
+function feedbackForGroup(index: number) {
+  const runId = runIdOfGroup(index);
+  if (!runId) return null;
+  if (feedbackState.value.has(runId)) {
+    return feedbackState.value.get(runId) ?? null;
+  }
+  return readFeedback(lastAI(index));
+}
+function setFeedback(runId: string, feedback: FeedbackData | null) {
+  const next = new Map(feedbackState.value);
+  next.set(runId, feedback);
+  feedbackState.value = next;
+}
+async function toggleFeedback(index: number, rating: 1 | -1) {
+  if (!props.threadId) return;
+  const runId = runIdOfGroup(index);
+  if (!runId || feedbackMutation.isPending.value) return;
+  actionError.value = "";
+  const previous = feedbackForGroup(index);
+  const remove = previous?.rating === rating;
+  setFeedback(
+    runId,
+    remove
+      ? null
+      : {
+          feedback_id: previous?.feedback_id ?? `optimistic:${runId}`,
+          rating,
+          comment: previous?.comment ?? null,
+        },
+  );
+  try {
+    const result = await feedbackMutation.mutateAsync({
+      threadId: props.threadId,
+      runId,
+      rating,
+      remove,
+    });
+    setFeedback(runId, result);
+    await queryClient.invalidateQueries({
+      queryKey: threadHistoryQueryKey(props.threadId),
+      exact: true,
+    });
+  } catch (error) {
+    setFeedback(runId, previous);
+    actionError.value =
+      error instanceof Error ? error.message : "Failed to update feedback.";
+  }
+}
+async function copyMessage(key: string, value: string | null) {
+  if (!value) return;
+  actionError.value = "";
+  if (!(await writeTextToClipboard(value))) {
+    actionError.value = "Failed to copy message.";
+    return;
+  }
+  copiedMessage.value = key;
+  setTimeout(() => {
+    if (copiedMessage.value === key) copiedMessage.value = null;
+  }, 2_000);
 }
 function scrollToTail(mode: "smooth" | "instant" = "instant") {
   if (!scroller.value || props.active === false || !followingTail.value) return;
@@ -622,6 +769,48 @@ watch(humanInputState, (state) => {
   );
 });
 watch(
+  () => props.threadError,
+  (currentError) => {
+    const clear = shouldClearPendingHumanInputOnThreadError({
+      currentError,
+      previousError: previousHumanInputThreadError,
+      pendingRequestCount: pendingHumanInputs.value.size,
+    });
+    previousHumanInputThreadError = currentError;
+    if (clear) pendingHumanInputs.value = new Set();
+  },
+);
+watch(
+  () => props.streaming,
+  (streaming, previousStreaming) => {
+    if (previousStreaming && !streaming) {
+      pendingHumanInputs.value = new Set();
+    }
+  },
+);
+watch(
+  () => props.threadId,
+  () => {
+    pendingHumanInputs.value = new Set();
+    previousHumanInputThreadError = props.threadError;
+    feedbackState.value = new Map();
+    actionError.value = "";
+  },
+);
+watch(
+  () => props.messages,
+  () => {
+    if (feedbackMutation.isPending.value) return;
+    const next = new Map(feedbackState.value);
+    groups.value.forEach((_, index) => {
+      const runId = runIdOfGroup(index);
+      if (runId) next.set(runId, readFeedback(lastAI(index)));
+    });
+    feedbackState.value = next;
+  },
+  { immediate: true },
+);
+watch(
   () => props.historyLoadingMore,
   async (loading, previous) => {
     if (loading || !previous || !historyAnchor) return;
@@ -767,35 +956,65 @@ onUnmounted(() => {
                 )
               "
               @submit="
-                submitHumanInput(extractHumanInputRequest(message)!, $event)
+                handleHumanInputSubmit(
+                  extractHumanInputRequest(message)!,
+                  $event,
+                )
               "
             />
             <template v-if="message.type === 'human'">
-              <p>{{ text(message) }}</p>
+              <MessageAttachments
+                :message="message"
+                :thread-id="threadId"
+                :is-mock="isMock"
+              />
+              <p>{{ stripUploadedFilesTag(text(message)) }}</p>
               <ReferenceAttachment
                 :references="messageReferences(message)"
                 test-id="message-reference-attachment"
                 class="mt-2"
               />
-              <button
-                v-if="
-                  interactive !== false &&
-                  editable?.humanMessage.id === message.id
-                "
-                type="button"
-                class="text-muted-foreground absolute right-0 -bottom-7 text-xs opacity-0 transition-opacity group-hover:opacity-100 hover:underline"
-                aria-label="Edit and rerun"
-                @click="
-                  emit(
-                    'edit',
-                    message.id ?? '',
-                    text(message),
-                    groupIds(entry.index),
-                  )
-                "
+              <div
+                class="text-muted-foreground absolute right-0 -bottom-7 flex gap-2 text-xs opacity-0 transition-opacity group-hover:opacity-100"
               >
-                Edit and rerun
-              </button>
+                <button
+                  type="button"
+                  aria-label="Copy message"
+                  @click="
+                    copyMessage(
+                      message.id ?? `human:${entry.index}`,
+                      getMessageCopyData(message),
+                    )
+                  "
+                >
+                  <Check
+                    v-if="
+                      copiedMessage === (message.id ?? `human:${entry.index}`)
+                    "
+                    :size="14"
+                  />
+                  <Copy v-else :size="14" />
+                </button>
+                <button
+                  v-if="
+                    interactive !== false &&
+                    editable?.humanMessage.id === message.id
+                  "
+                  type="button"
+                  class="hover:underline"
+                  aria-label="Edit and rerun"
+                  @click="
+                    emit(
+                      'edit',
+                      message.id ?? '',
+                      text(message),
+                      groupIds(entry.index),
+                    )
+                  "
+                >
+                  Edit and rerun
+                </button>
+              </div>
             </template>
             <template v-else-if="message.type === 'ai'">
               <details v-if="reasoning(message)" class="mb-3" open>
@@ -819,22 +1038,7 @@ onUnmounted(() => {
                 :components="messageMarkdownComponents"
                 :parse-incomplete-markdown="streaming"
               />
-              <div
-                v-if="citations(message).length"
-                class="mt-3 flex flex-wrap gap-2"
-                aria-label="Sources"
-              >
-                <MarkdownLink
-                  v-for="source in citations(message)"
-                  :key="source.id"
-                  :href="source.url"
-                  target="_blank"
-                  rel="noreferrer"
-                  class="text-muted-foreground hover:text-foreground rounded-full border px-2 py-1 text-xs transition-colors"
-                >
-                  {{ source.title }}
-                </MarkdownLink>
-              </div>
+              <CitationSourcesPanel :sources="citations(message)" />
               <button
                 v-for="artifact in artifactTargets(message)"
                 :key="artifact.path"
@@ -904,10 +1108,76 @@ onUnmounted(() => {
             :disabled="streaming"
           />
 
+          <MessageTokenUsage
+            v-if="turnUsageMessagesByGroupIndex[entry.index]"
+            :messages="turnUsageMessagesByGroupIndex[entry.index] ?? []"
+            :mode="tokenUsageInlineMode ?? 'off'"
+            :loading="streaming"
+          />
+
           <div
             v-if="entry.group.type === 'assistant'"
             class="text-muted-foreground mt-2 flex gap-1 text-xs opacity-0 transition-opacity group-hover:opacity-100"
           >
+            <button
+              type="button"
+              aria-label="Copy response"
+              @click="
+                copyMessage(
+                  `assistant:${entry.group.id ?? entry.index}`,
+                  getAssistantTurnCopyData(entry.group.messages, {
+                    isStreaming: streaming && entry.index === groups.length - 1,
+                  }),
+                )
+              "
+            >
+              <Check
+                v-if="
+                  copiedMessage === `assistant:${entry.group.id ?? entry.index}`
+                "
+                :size="14"
+              />
+              <Copy v-else :size="14" />
+            </button>
+            <template
+              v-if="
+                interactive !== false &&
+                threadId &&
+                workspaceChangesRun(entry.index) &&
+                !streaming
+              "
+            >
+              <button
+                type="button"
+                aria-label="Helpful"
+                :disabled="feedbackMutation.isPending.value"
+                @click="toggleFeedback(entry.index, 1)"
+              >
+                <ThumbsUp
+                  :size="14"
+                  :class="
+                    feedbackForGroup(entry.index)?.rating === 1
+                      ? 'text-foreground fill-current'
+                      : ''
+                  "
+                />
+              </button>
+              <button
+                type="button"
+                aria-label="Not helpful"
+                :disabled="feedbackMutation.isPending.value"
+                @click="toggleFeedback(entry.index, -1)"
+              >
+                <ThumbsDown
+                  :size="14"
+                  :class="
+                    feedbackForGroup(entry.index)?.rating === -1
+                      ? 'text-foreground fill-current'
+                      : ''
+                  "
+                />
+              </button>
+            </template>
             <button
               v-if="
                 interactive !== false && branchable.has(entry.group.id ?? '')
@@ -956,6 +1226,13 @@ onUnmounted(() => {
           :style="{ height: `${virtualBottomHeight}px` }"
         />
       </ul>
+      <p
+        v-if="actionError"
+        role="alert"
+        class="text-destructive mx-auto w-full max-w-[var(--container-width-md)] pb-4 text-xs"
+      >
+        {{ actionError }}
+      </p>
     </div>
     <div
       v-if="selection"

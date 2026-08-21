@@ -11,6 +11,8 @@ import { onMounted, ref } from "vue";
 
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import type { User } from "@/core/auth/types";
+import { getSessionComposerDraftStorage } from "@/core/threads/composer-draft";
+import { clearComposerDrafts } from "@/core/threads/composer-draft-lifecycle";
 
 const user = ref<User | null>(null);
 const currentPassword = ref("");
@@ -74,7 +76,14 @@ async function changePassword() {
 }
 
 async function logout() {
-  await fetchWithAuth("/api/v1/auth/logout", { method: "POST" });
+  const response = await fetchWithAuth("/api/v1/auth/logout", {
+    method: "POST",
+  });
+  if (!response.ok) {
+    error.value = "Failed to sign out.";
+    return;
+  }
+  clearComposerDrafts(getSessionComposerDraftStorage() as Storage | null);
   await navigateTo("/login");
 }
 </script>

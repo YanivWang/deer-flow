@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /*
-  【文件职责】     运行与父 thread 隔离的 DeerFlow sidecar 隐藏会话。
+  【文件职责】     渲染与父 thread 隔离的 DeerFlow sidecar 会话。
   【对应 frontend/】 src/components/workspace/sidecar/sidecar-panel.tsx
   【架构位置】     L3 extension reference
   【主要导出】     默认 SidecarPanel 组件
-  【依赖关系】     useThreadStream · sidecar API · MessageList
-  【边界与注意】   复用唯一 session 状态机；作为 L2 扩展点的子会话参考实现。
+  【依赖关系】     useSidecarSession · MessageList · ReferenceAttachment
+  【边界与注意】   只做 UI 适配；restore/create/run/files/HIL 由唯一 session 拥有。
 */
 import {
   computed,
@@ -25,59 +25,43 @@ import {
 
 import MessageList from "@/components/chat/MessageList.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
-import { useThreadStream } from "@/composables/useThreadStream";
+import type { SidecarSession } from "@/composables/useSidecarSession";
 import type { SidecarReference } from "@/composables/useSidecar";
-import { fetch as fetchWithAuth } from "@/core/api/fetcher";
-import { getBackendBaseURL } from "@/core/config";
 import { isImeComposing } from "@/core/input/ime";
 import { loadModels } from "@/core/models/api";
 import type { Model } from "@/core/models/types";
 import {
-  buildParentConversationContext,
-  buildReferenceMessageMetadata,
-  buildSidecarContextPrompt,
   buildMessageSidecarContext,
   type SidecarContext,
 } from "@/core/sidecar";
-import { createSidecarThread } from "@/core/sidecar/api";
 import type { ThreadRunContextInput } from "@/core/threads/submit";
 import type { Message } from "@/core/types/message";
 
 const props = defineProps<{
-  parentThreadId: string;
-  parentMessages: Message[];
-  sidecarThreadId: string | null;
+  session: SidecarSession;
   references: SidecarReference[];
   context: ThreadRunContextInput;
   active: boolean;
 }>();
 const emit = defineEmits<{
-  "update:sidecarThreadId": [value: string | null];
   "update:context": [value: ThreadRunContextInput];
   clearReferences: [];
   addReference: [value: SidecarContext];
   close: [];
   deleted: [];
-  ready: [];
 }>();
 
-const threadId = ref(props.sidecarThreadId);
-const input = ref("");
 const compositionActive = ref(false);
 const models = ref<Model[]>([]);
 const modeMenu = ref(false);
 const modelMenu = ref(false);
 const deleteDialog = ref(false);
-const deleting = ref(false);
-const selectedFiles = ref<File[]>([]);
 const localContext = reactive<ThreadRunContextInput>({ ...props.context });
+const sessionInput = computed({
+  get: () => props.session.input.value,
+  set: (value: string) => props.session.setInput(value),
+});
 
-watch(
-  () => props.sidecarThreadId,
-  (value) => {
-    threadId.value = value;
-  },
-);
 watch(
   () => props.context,
   (value) => Object.assign(localContext, value),
@@ -150,79 +134,11 @@ onMounted(async () => {
   }
 });
 
-const stream = useThreadStream({
-  threadId,
-  displayThreadId: threadId,
-  context: () => localContext,
-  onStart(startedThreadId) {
-    threadId.value = startedThreadId;
-    emit("update:sidecarThreadId", startedThreadId);
-  },
-});
-watch(
-  [threadId, stream.isHistoryLoading, () => stream.messages.value.length],
-  ([id, loading, messageCount]) => {
-    if (id && !loading && messageCount > 0) emit("ready");
-  },
-  { immediate: true },
-);
-
-function hiddenContextMessage(prompt: string): Message {
-  return {
-    type: "human",
-    content: [{ type: "text", text: prompt }],
-    additional_kwargs: {
-      hide_from_ui: true,
-      sidecar_context: true,
-      parent_thread_id: props.parentThreadId,
-    },
-  } as Message;
-}
-
-async function ensureThread(references: SidecarReference[]) {
-  if (threadId.value) return threadId.value;
-  if (references.length === 0) {
-    throw new Error("Select text before starting a side chat.");
-  }
-  const created = await createSidecarThread({
-    parentThreadId: props.parentThreadId,
-    context: references.map((reference) => reference.context),
-  });
-  threadId.value = created.thread_id;
-  emit("update:sidecarThreadId", created.thread_id);
-  return created.thread_id;
-}
-
-async function submit() {
-  const text = input.value.trim();
-  if (!text || stream.isStreaming.value) return;
-  const references = [...props.references];
-  try {
-    const targetThreadId = await ensureThread(references);
-    const contexts = references.map((reference) => reference.context);
-    const prompt = buildSidecarContextPrompt(contexts, {
-      parentConversation: buildParentConversationContext(props.parentMessages),
-    });
-    await stream.sendMessage(targetThreadId, { text }, undefined, {
-      additionalInputMessages: [hiddenContextMessage(prompt)],
-      additionalKwargs: {
-        sidecar_visible_message: true,
-        ...(contexts.length ? buildReferenceMessageMetadata(contexts) : {}),
-      },
-      onSent() {
-        input.value = "";
-        emit("clearReferences");
-      },
-    });
-  } catch {
-    // The visible draft remains so the user can retry.
-  }
-}
 function onKeydown(event: KeyboardEvent) {
   if (isImeComposing(event, compositionActive.value)) return;
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
-    void submit();
+    void props.session.submit();
   }
 }
 function addSelectedReference(payload: {
@@ -238,30 +154,23 @@ function addSelectedReference(payload: {
   if (context) emit("addReference", context);
 }
 function chooseFiles(event: Event) {
-  selectedFiles.value = Array.from(
-    (event.target as HTMLInputElement).files ?? [],
-  );
+  const input = event.target as HTMLInputElement;
+  props.session.addFiles(Array.from(input.files ?? []));
+  input.value = "";
 }
 
 async function confirmDelete() {
-  if (!threadId.value || deleting.value) return;
-  deleting.value = true;
-  try {
-    const response = await fetchWithAuth(
-      `${getBackendBaseURL()}/api/threads/${encodeURIComponent(threadId.value)}`,
-      { method: "DELETE" },
-    );
-    if (!response.ok) throw new Error("Failed to delete side chat.");
-    threadId.value = null;
-    emit("update:sidecarThreadId", null);
+  if (await props.session.deleteThread()) {
     emit("deleted");
     deleteDialog.value = false;
-  } finally {
-    deleting.value = false;
   }
 }
 function onEscape(event: KeyboardEvent) {
-  if (event.key === "Escape" && deleteDialog.value && !deleting.value) {
+  if (
+    event.key === "Escape" &&
+    deleteDialog.value &&
+    !props.session.deleting.value
+  ) {
     deleteDialog.value = false;
   }
 }
@@ -282,7 +191,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
         Ask a follow-up
       </h2>
       <button
-        v-if="threadId"
+        v-if="session.threadId.value"
         type="button"
         data-testid="sidecar-delete-button"
         aria-label="Delete side chat"
@@ -307,17 +216,25 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
       data-testid="sidecar-message-list"
       test-id="sidecar-message-list"
       selection-mode="sidecar"
-      :messages="stream.messages.value"
-      :raw-messages="stream.messages.value"
-      :streaming="stream.isStreaming.value"
-      :loading="stream.isHistoryLoading.value"
+      :messages="session.stream.messages.value"
+      :raw-messages="session.stream.messages.value"
+      :streaming="session.stream.isStreaming.value"
+      :loading="session.stream.isHistoryLoading.value"
+      :thread-id="session.threadId.value"
+      :thread-error="session.stream.error.value"
+      :submit-human-input="session.submitHumanInput"
+      interactive
       :active="active"
       resize-scroll="instant"
       @selection-add="addSelectedReference"
     />
 
     <div class="flex shrink-0 flex-col gap-2 px-3 pb-4">
-      <form class="mx-auto w-full" @submit.prevent="submit">
+      <form
+        class="mx-auto w-full"
+        :aria-busy="session.submissionPending.value"
+        @submit.prevent="session.submit()"
+      >
         <ReferenceAttachment
           :references="references"
           test-id="sidecar-reference-attachment"
@@ -328,8 +245,27 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
         <div
           class="border-input bg-background rounded-2xl border p-2 shadow-sm"
         >
+          <div
+            v-if="session.selectedFiles.value.length"
+            class="mb-2 flex flex-wrap gap-2 text-xs"
+          >
+            <span
+              v-for="file in session.selectedFiles.value"
+              :key="`${file.name}:${file.size}:${file.lastModified}`"
+              class="bg-secondary border-border flex items-center gap-1 rounded-lg border px-2 py-1"
+            >
+              {{ file.name }}
+              <button
+                type="button"
+                :aria-label="`Remove ${file.name}`"
+                @click="session.removeFile(file)"
+              >
+                <X :size="12" />
+              </button>
+            </span>
+          </div>
           <textarea
-            v-model="input"
+            v-model="sessionInput"
             name="message"
             placeholder="Ask a deeper follow-up..."
             aria-label="Ask a deeper follow-up"
@@ -408,13 +344,25 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
               type="submit"
               aria-label="Submit"
               class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full disabled:opacity-50"
-              :disabled="!input.trim() || stream.isStreaming.value"
+              :disabled="
+                (!session.input.value.trim() &&
+                  session.selectedFiles.value.length === 0) ||
+                session.stream.isStreaming.value ||
+                session.submissionPending.value
+              "
             >
               <ArrowUp :size="16" />
             </button>
           </div>
         </div>
       </form>
+      <p
+        v-if="session.fileError.value || session.errorMessage.value"
+        role="status"
+        class="px-2 text-xs text-red-600"
+      >
+        {{ session.fileError.value || session.errorMessage.value }}
+      </p>
       <p class="text-muted-foreground/70 px-4 text-center text-xs leading-4">
         Deerflow is AI and can make mistakes
       </p>
@@ -426,7 +374,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
       v-if="deleteDialog"
       data-slot="dialog-overlay"
       class="fixed inset-0 z-[70] flex items-center justify-center bg-black/45"
-      @click.self="!deleting && (deleteDialog = false)"
+      @click.self="!session.deleting.value && (deleteDialog = false)"
     >
       <section
         data-slot="dialog-content"
@@ -435,7 +383,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
         class="bg-background relative w-[min(92vw,28rem)] rounded-xl border p-5 shadow-2xl"
       >
         <button
-          v-if="!deleting"
+          v-if="!session.deleting.value"
           data-slot="dialog-close"
           type="button"
           aria-label="Close"
@@ -453,7 +401,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
           <button
             type="button"
             class="rounded-md border px-3 py-2 text-sm"
-            :disabled="deleting"
+            :disabled="session.deleting.value"
             @click="deleteDialog = false"
           >
             Cancel
@@ -462,10 +410,10 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
             type="button"
             data-testid="sidecar-delete-confirm-button"
             class="bg-destructive text-destructive-foreground rounded-md px-3 py-2 text-sm"
-            :disabled="deleting"
+            :disabled="session.deleting.value"
             @click="confirmDelete"
           >
-            {{ deleting ? "Deleting…" : "Delete" }}
+            {{ session.deleting.value ? "Deleting…" : "Delete" }}
           </button>
         </div>
       </section>

@@ -11,16 +11,14 @@
 
 当前已确认仍违反或未完整覆盖的合同包括：
 
-| 合同                             | 对应差异 ID                               |
-| -------------------------------- | ----------------------------------------- |
-| D3、D6～D8                       | `ARTIFACT-01`～`ARTIFACT-04`              |
-| E1、E4～E8                       | `COMPOSER-01`～`COMPOSER-04`、`THREAD-01` |
-| F6、F9～F10                      | `HIL-01`、`SIDECAR-03`                    |
-| G1～G6                           | `STREAM-01`、`STREAM-02`                  |
-| H8（未完整覆盖）                 | `MESSAGE-04`                              |
-| I 组尚未覆盖的连接/导航/输入要求 | `BROWSER-01`～`BROWSER-03`                |
-| K3、K5 的错误/状态消费           | `THREAD-02`、`SETTINGS-01`                |
-| N1、N4 的产品接入                | `SIDECAR-02`、`MESSAGE-01`、`I18N-01`     |
+| 合同                             | 对应差异 ID                  |
+| -------------------------------- | ---------------------------- |
+| D3、D6～D8                       | `ARTIFACT-01`～`ARTIFACT-04` |
+| E6、E12 的 compact 后续边界      | `THREAD-01`                  |
+| G1～G6                           | `STREAM-01`、`STREAM-02`     |
+| I 组尚未覆盖的连接/导航/输入要求 | `BROWSER-01`～`BROWSER-03`   |
+| K3、K5 的错误/状态消费           | `THREAD-02`、`SETTINGS-01`   |
+| N4 的其他产品接入                | `I18N-01`                    |
 
 该映射不是差异清单的替代品；新的未满足合同先加入 `PARITY_GAPS.md`，再补合同和测试。
 
@@ -100,6 +98,11 @@ payload，而不是只测协议层能否转发一个由测试手工构造的 `st
 | B11 | citation 链接的 `citation:` 标签要从**完整 children 树**推导                                                                                                                                                            | 流式期间 children 可能是元素或数组，不是纯字符串                                                                             |
 | B12 | 消息视口贴底时，流式内容的每次尺寸增长都继续跟随底部；用户主动上滚后立即释放，回到底部时恢复                                                                                                                            | AI token 会持续追加在同一个消息组内，不能只监听组数量；语义与 React `use-stick-to-bottom` 的 resize/follow 行为一致          |
 | B13 | 实际 `MessageList → StreamMarkdown` 的全部链接必须经过统一 MarkdownLink；协议 allowlist 先于 citation/artifact 分支，危险 href 降级为不可点击文本；HTTP(S) 外链与 artifact/citation 使用 `target="_blank"` 和安全 `rel` | 只在默认 Markdown pipeline 加 sanitizer 不能保护消息实际覆盖的 `components.a` 路径                                           |
+| B14 | HumanMessage 附件以持久化 `additional_kwargs.files` 为主，并兼容 `current_uploads` / `uploaded_files` 标签；图片走 thread artifact 预览，普通文件走安全新窗口下载                                                       | 刷新后的 UI 不能依赖 composer 本地 `File` 状态                                                                               |
+| B15 | feedback 只绑定 Gateway `run_id`：create/update/delete 使用 Vue Query mutation，先乐观更新；失败回滚并显示错误，成功只失效当前 thread history key                                                                       | feedback 属于服务端状态；全局清缓存会污染无关会话                                                                            |
+| B16 | human 与 assistant turn 都提供复制；citation sources 展开后显示去重 URL、domain、引用次数和单条 reference copy，且只接受 core 已归一化的 HTTP(S) URL                                                                    | 保持 WP-02 Markdown 安全合同，同时补齐消息操作                                                                               |
+| B17 | `thread.values.todos` 从 live snapshot 或持久化 thread state 读取，只渲染真实 `pending` / `in_progress` / `completed` 状态                                                                                              | stream `values` 是 todos 的权威生产链，不在消息文本中反推                                                                    |
+| B18 | token usage feature 由完整 models 响应的 `token_usage.enabled` 控制；线程最终 snapshot 为总量基线，只追加当前 active run 的 SSE usage，settled 后以最终 snapshot 替换；inline off 不渲染局部 usage                      | 避免刷新丢失、跨线程闪回和增量/最终值重复累计                                                                                |
 
 > 主要代码位置：`app/core/messages/utils.ts`、`app/core/messages/run-duration.ts`、
 > `app/core/messages/workspace-change-anchor.ts`、`app/components/chat/MessageList.vue`。
@@ -148,40 +151,47 @@ sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
 
 ## E. Composer / 输入框
 
-| #   | 约束                                                                                                                                                                       |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| E1  | Composer 草稿是 **tab 作用域**：只把文本 + 选中的 slash 技能名存 `sessionStorage`，按 user / agent / 逻辑会话作用域分键                                                    |
-| E2  | 新会话页用固定作用域 `"new"`（其运行时 `threadId` 每次刷新都是新 UUID）；已建立的会话用真实 thread ID                                                                      |
-| E3  | 附件、sidecar 引用、语音状态、polish 撤销状态**不持久化**                                                                                                                  |
-| E4  | `InputBox` 要等技能列表就绪后再恢复技能 chip；技能缺失或被禁用时**降级为可编辑的斜杠文本**                                                                                 |
-| E5  | 只有在发送通过 in-flight 守卫之后，才通过 `SendMessageOptions.onSent` 清除草稿                                                                                             |
-| E6  | `/goal` 与 `/compact` 是**内置命令，不是技能激活**；在正常聊天提交前拦截                                                                                                   |
-| E7  | `/goal <condition>` 除设置目标外还要把条件文本作为下一个用户任务提交（立即开跑）；查询状态与 clear 不启动 run                                                              |
-| E8  | goal / compact 请求绑定当前 `threadId` 并带 `AbortController`：切换 thread 或卸载 composer 要中止在途请求，防止过期响应污染新 thread                                       |
-| E9  | 选中技能 chip 后，在旁边的可编辑文本里输入 `/` 要能**重新打开**技能列表；选中条目是**替换 chip 而非追加**（wire 格式只允许一个前导 `/skill`）                              |
-| E10 | 已选中 chip 时**不提供内置命令**（`/goal` 会被当作聊天文本提交）                                                                                                           |
-| E11 | 斜杠**只在输入起始位置**打开列表（`getLeadingSlashSkillQuery`）—— 由 `tests/e2e/chat.spec.ts` 固定                                                                         |
-| E12 | established thread 的 `/compact` 只允许一个在途请求；成功清草稿并失效 thread/history/search/token 六个 key，4xx/409 保留输入并显示 Gateway 原始 `detail`；新会话不调用 API |
+| #   | 约束                                                                                                                                                                                                               |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| E1  | Composer 草稿是 **tab 作用域**：只把文本 + 选中的 slash 技能名存 `sessionStorage`，按 user / agent / 逻辑会话作用域分键                                                                                            |
+| E2  | 新会话草稿使用稳定 `new` scope，实际 run/context target 使用本次 runtime UUID；已建立会话两者都用真实 thread ID。新建/删除后返回 `/new` 必须重置 runtime UUID，但同一 tab 的未发送草稿仍可恢复                     |
+| E3  | 附件、sidecar 引用、语音状态、polish 撤销状态**不持久化**                                                                                                                                                          |
+| E4  | `InputBox` 要等技能列表就绪后再恢复技能 chip；技能缺失或被禁用时**降级为可编辑的斜杠文本**                                                                                                                         |
+| E5  | 草稿与附件只有在 Gateway 已创建 run、runner 发出 `onStart` 后，才通过 `onAccepted` 清除；调用提交函数或写入乐观消息都不算后台接受                                                                                  |
+| E6  | `/goal` 与 `/compact` 是**内置命令，不是技能激活**；在正常聊天提交前拦截                                                                                                                                           |
+| E7  | `/goal <condition>` 除设置目标外还要把条件文本作为下一个用户任务提交（立即开跑）；查询状态与 clear 不启动 run                                                                                                      |
+| E8  | goal / compact / polish / post-run suggestion 绑定 thread、route、agent 与 generation，并尽量带 `AbortController`；切换、stop、替代请求或卸载后旧结果不得回写                                                      |
+| E9  | 选中技能 chip 后，在旁边的可编辑文本里输入 `/` 要能**重新打开**技能列表；选中条目是**替换 chip 而非追加**（wire 格式只允许一个前导 `/skill`）                                                                      |
+| E10 | 已选中 chip 时**不提供内置命令**（`/goal` 会被当作聊天文本提交）                                                                                                                                                   |
+| E11 | 斜杠**只在输入起始位置**打开列表（`getLeadingSlashSkillQuery`）—— 由 `tests/e2e/chat.spec.ts` 固定                                                                                                                 |
+| E12 | established thread 的 `/compact` 只允许一个在途请求；成功清草稿并失效 thread/history/search/token 六个 key，4xx/409 保留输入并显示 Gateway 原始 `detail`；新会话不调用 API                                         |
+| E13 | models 与 skills catalog 是 Vue Query 服务端状态；默认模型按 requested → agent default → Gateway 顺序选择。最终 run payload 按 capability 归一化 mode，unsupported reasoning effort 必须省略                       |
+| E14 | 主 composer 与 sidecar 上传/发送前保留 text、skill、files 与 context；失败、取消、断网、同步异常、路由切换均不清草稿。已成功上传的同一 `File` 在最终 thread 重试时复用，双击/上传中重复提交被 in-flight guard 丢弃 |
+| E15 | follow-up 在空草稿时直接发送；已有 text/skill/file 时必须提供 append-and-send、replace-and-send、cancel。所有按钮使用现有 i18n 字典，不静默覆盖                                                                    |
 
 ---
 
 ## F. Human input 协议
 
-| #   | 约束                                                                                                                                                                          |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| F1  | **请求侧有版本，回复侧固定 v1。** v1 = `free_text` / `choice_with_other`；v2 增加 `form`                                                                                      |
-| F2  | 表单卡片提交 `response_kind: "text"`，值为"人类可读摘要 + 一个以稳定字段名为键的 JSON 块"（`buildHumanInputFormSubmissionValue`）                                             |
-| F3  | 校验器要拒绝未知版本 / 模式，以及与 `Object.prototype` 成员冲突的字段名 → 降级为纯文本 ToolMessage                                                                            |
-| F4  | 表单值只走 own-property 读取（`readHumanInputFormValue`）                                                                                                                     |
-| F5  | select 字段从空字符串占位状态起就是受控的                                                                                                                                     |
-| F6  | checkbox 用原生 `<input type="checkbox">`，显式初始化为 `false`（`buildInitialHumanInputFormValues`）；**不加 HTML `required` 属性**（原生约束校验会拦截自定义提交路径）      |
-| F7  | 表单控件需 label/`for`、`aria-required` + 视觉隐藏的本地化"必填"标记、`aria-invalid` 与错误关联；只要还有字段无效，错误节点保持挂载                                           |
-| F8  | **Composer 绕过闭合**：可见的普通 human 消息只回答"在它之前打开的最新一个未回答请求"——只关最新一个。更早的请求重新成为活动卡片                                                |
-| F9  | 已回答状态从**原始 `thread.messages`** 推导（回复是隐藏的）；pending 卡片在隐藏回复出现、派发被丢弃、或新的 `thread.error` 报告异步流失败时清除                               |
-| F10 | 页面级卡片提交回调发普通 human 消息，把 `hide_from_ui: true` 与响应载荷放在 `sendMessage` 第 4 个参数的 `additionalKwargs`；第 3 个参数仍是 run 上下文（如 `{ agent_name }`） |
-| F11 | 有未答请求时 composer 入口**保持可用**；普通可见消息会绕过卡片并启动下一个 run                                                                                                |
+| #   | 约束                                                                                                                                                                                                          |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F1  | **请求侧有版本，回复侧固定 v1。** v1 = `free_text` / `choice_with_other`；v2 增加 `form`                                                                                                                      |
+| F2  | 表单卡片提交 `response_kind: "text"`，值为"人类可读摘要 + 一个以稳定字段名为键的 JSON 块"（`buildHumanInputFormSubmissionValue`）                                                                             |
+| F3  | 校验器要拒绝未知版本 / 模式，以及与 `Object.prototype` 成员冲突的字段名 → 降级为纯文本 ToolMessage                                                                                                            |
+| F4  | 表单值只走 own-property 读取（`readHumanInputFormValue`）                                                                                                                                                     |
+| F5  | select 字段从空字符串占位状态起就是受控的                                                                                                                                                                     |
+| F6  | checkbox 用原生 `<input type="checkbox">`，显式初始化为 `false`（`buildInitialHumanInputFormValues`）；required checkbox 的 `false` 是未满足，但**不加 HTML `required` 属性**（原生约束会拦截自定义提交路径） |
+| F7  | 表单控件需 label/`for`、`aria-required` + 视觉隐藏的本地化"必填"标记、`aria-invalid` 与错误关联；只要还有字段无效，错误节点保持挂载                                                                           |
+| F8  | **Composer 绕过闭合**：可见的普通 human 消息只回答"在它之前打开的最新一个未回答请求"——只关最新一个。更早的请求重新成为活动卡片                                                                                |
+| F9  | 已回答状态从**原始 `thread.messages`** 推导（回复是隐藏的）；pending 在隐藏回复出现、派发失败/丢弃、新 `thread.error`、run 终态或 thread 切换时清除；失败时保留卡片输入供重试                                 |
+| F10 | 页面级卡片提交回调发普通 human 消息，把 `hide_from_ui: true` 与响应载荷放在 `sendMessage` 第 4 个参数的 `additionalKwargs`；第 3 个参数仍是 run 上下文（如 `{ agent_name }`）                                 |
+| F11 | 有未答请求时 composer 入口**保持可用**；普通可见消息会绕过卡片并启动下一个 run                                                                                                                                |
 
 > 主要代码位置：`app/core/messages/human-input.ts`、`app/components/chat/HumanInputCard.vue`。
+
+sidecar 必须把同一回调绑定到自己的 thread/stream；restore/create、普通发送、附件和 HIL
+只能由 `useSidecarSession` 这一条路径拥有。面板隐藏不终止 run，只有真实删除才清空 thread
+与本地瞬态状态。
 
 ---
 

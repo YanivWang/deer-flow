@@ -1,0 +1,464 @@
+import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query";
+import { flushPromises, mount } from "@vue/test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ref } from "vue";
+
+import ChatComposer from "@/components/chat/ChatComposer.vue";
+import { enUS } from "@/core/i18n/locales/en-US";
+import {
+  buildComposerDraftKey,
+  writeComposerDraft,
+} from "@/core/threads/composer-draft";
+
+const mocks = vi.hoisted(() => ({
+  loadSkills: vi.fn(),
+  loadModels: vi.fn(),
+  getUploadLimits: vi.fn(),
+  uploadFiles: vi.fn(),
+  polishInputDraft: vi.fn(),
+  fetchWithAuth: vi.fn(),
+}));
+
+vi.mock("@/core/skills/api", () => ({ loadSkills: mocks.loadSkills }));
+vi.mock("@/core/models/api", () => ({ loadModels: mocks.loadModels }));
+vi.mock("@/core/uploads/api", () => ({
+  getUploadLimits: mocks.getUploadLimits,
+  uploadFiles: mocks.uploadFiles,
+}));
+vi.mock("@/core/input-polish/api", () => ({
+  polishInputDraft: mocks.polishInputDraft,
+}));
+vi.mock("@/core/api/fetcher", () => ({ fetch: mocks.fetchWithAuth }));
+
+function mountComposer(
+  submitMessage = vi.fn(async (_text, _files, options) => {
+    options.onAccepted();
+    return true;
+  }),
+) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const wrapper = mount(ChatComposer, {
+    props: {
+      threadKey: "thread-1",
+      targetThreadId: "thread-1",
+      userId: "user-1",
+      agentName: null,
+      streaming: false,
+      uploading: false,
+      promptHistory: [],
+      context: { model_name: "reasoner", mode: "pro" },
+      submitMessage,
+    },
+    global: {
+      plugins: [[VueQueryPlugin, { queryClient }]],
+      stubs: {
+        ReferenceAttachment: true,
+        ConfettiButton: true,
+        GoalStatus: true,
+      },
+    },
+  });
+  return { wrapper, submitMessage };
+}
+
+async function selectFile(
+  wrapper: ReturnType<typeof mount>["wrapper"],
+  file: File,
+) {
+  const input = wrapper.get("input[type='file']");
+  Object.defineProperty(input.element, "files", {
+    configurable: true,
+    value: [file],
+  });
+  await input.trigger("change");
+}
+
+describe("WP-03 composer submission and stale lifecycle", () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    vi.stubGlobal("useNuxtApp", () => ({
+      $i18n: { t: ref(enUS), locale: ref("en-US") },
+    }));
+    mocks.loadSkills
+      .mockReset()
+      .mockResolvedValue([{ name: "enabled", description: "", enabled: true }]);
+    mocks.loadModels.mockReset().mockResolvedValue({
+      models: [
+        {
+          id: "reasoner",
+          name: "reasoner",
+          model: "provider-reasoner",
+          display_name: "Reasoner",
+          supports_thinking: true,
+          supports_reasoning_effort: true,
+        },
+      ],
+      token_usage: { enabled: true },
+    });
+    mocks.getUploadLimits.mockReset().mockResolvedValue(undefined);
+    mocks.uploadFiles.mockReset();
+    mocks.polishInputDraft.mockReset();
+    mocks.fetchWithAuth.mockReset();
+  });
+
+  it("keeps text and files on upload failure", async () => {
+    mocks.uploadFiles.mockRejectedValue(new Error("Upload rejected"));
+    const { wrapper, submitMessage } = mountComposer();
+    await flushPromises();
+    await wrapper.get("textarea[name='message']").setValue("Review this file");
+    await selectFile(wrapper, new File(["hello"], "notes.txt"));
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(submitMessage).not.toHaveBeenCalled();
+    expect((wrapper.get("textarea").element as HTMLTextAreaElement).value).toBe(
+      "Review this file",
+    );
+    expect(wrapper.text()).toContain("notes.txt");
+    expect(wrapper.text()).toContain("Upload rejected");
+  });
+
+  it("reuses an uploaded file after send failure and clears only on run acceptance", async () => {
+    mocks.uploadFiles.mockResolvedValue({
+      success: true,
+      files: [
+        {
+          filename: "notes.txt",
+          size: 5,
+          path: "/tmp/notes.txt",
+          virtual_path: "/mnt/user-data/uploads/notes.txt",
+          artifact_url: "/artifact",
+        },
+      ],
+      message: "ok",
+      skipped_files: [],
+    });
+    const submitMessage = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Run rejected"))
+      .mockImplementationOnce(async (_text, _files, options) => {
+        options.onAccepted();
+        return true;
+      });
+    const { wrapper } = mountComposer(submitMessage);
+    await flushPromises();
+    await wrapper.get("textarea[name='message']").setValue("Review this file");
+    await selectFile(wrapper, new File(["hello"], "notes.txt"));
+
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+    expect(wrapper.text()).toContain("notes.txt");
+    expect((wrapper.get("textarea").element as HTMLTextAreaElement).value).toBe(
+      "Review this file",
+    );
+
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+    expect(mocks.uploadFiles).toHaveBeenCalledTimes(1);
+    expect(submitMessage).toHaveBeenCalledTimes(2);
+    expect((wrapper.get("textarea").element as HTMLTextAreaElement).value).toBe(
+      "",
+    );
+    expect(wrapper.text()).not.toContain("notes.txt");
+  });
+
+  it("offers append, replace, and cancel, then sends the selected result", async () => {
+    const submitMessage = vi.fn(async (_text, _files, options) => {
+      options.onAccepted();
+      return true;
+    });
+    const { wrapper } = mountComposer(submitMessage);
+    await flushPromises();
+    const textarea = wrapper.get("textarea[name='message']");
+    await textarea.setValue("Existing draft");
+    (
+      wrapper.vm as unknown as { offerFollowup(value: string): void }
+    ).offerFollowup("Suggested question");
+    await flushPromises();
+
+    expect(wrapper.get("[role='dialog']").text()).toContain(
+      "Suggested question",
+    );
+    await wrapper.get("[role='dialog'] button").trigger("click");
+    expect((textarea.element as HTMLTextAreaElement).value).toBe(
+      "Existing draft",
+    );
+    expect(submitMessage).not.toHaveBeenCalled();
+
+    (
+      wrapper.vm as unknown as { offerFollowup(value: string): void }
+    ).offerFollowup("Suggested question");
+    await flushPromises();
+    await wrapper.findAll("[role='dialog'] button")[1]!.trigger("click");
+    await flushPromises();
+    expect(submitMessage).toHaveBeenLastCalledWith(
+      "Existing draft\nSuggested question",
+      [],
+      expect.objectContaining({ onAccepted: expect.any(Function) }),
+    );
+
+    await textarea.setValue("Another draft");
+    (
+      wrapper.vm as unknown as { offerFollowup(value: string): void }
+    ).offerFollowup("Replacement");
+    await flushPromises();
+    await wrapper.findAll("[role='dialog'] button")[2]!.trigger("click");
+    await flushPromises();
+    expect(submitMessage).toHaveBeenLastCalledWith(
+      "Replacement",
+      [],
+      expect.objectContaining({ onAccepted: expect.any(Function) }),
+    );
+  });
+
+  it("keeps new-session drafts isolated and rejects a stale accepted callback after route change", async () => {
+    mocks.uploadFiles.mockResolvedValue({
+      success: true,
+      files: [
+        {
+          filename: "thread-one.txt",
+          size: 3,
+          path: "/tmp/thread-one.txt",
+          virtual_path: "/mnt/user-data/uploads/thread-one.txt",
+          artifact_url: "/artifact",
+        },
+      ],
+      message: "ok",
+      skipped_files: [],
+    });
+    let accept!: () => void;
+    let resolveSubmit!: (value: boolean) => void;
+    const submitMessage = vi.fn(
+      (_text, _files, options) =>
+        new Promise<boolean>((resolve) => {
+          accept = options.onAccepted;
+          resolveSubmit = resolve;
+        }),
+    );
+    const { wrapper } = mountComposer(submitMessage);
+    await flushPromises();
+    const textarea = wrapper.get("textarea[name='message']");
+    await textarea.setValue("Thread one draft");
+    await selectFile(wrapper, new File(["one"], "thread-one.txt"));
+    await wrapper.get("form").trigger("submit");
+    expect(submitMessage).toHaveBeenCalledTimes(1);
+
+    await wrapper.setProps({
+      threadKey: "thread-2",
+      targetThreadId: "thread-2",
+    });
+    await flushPromises();
+    expect((textarea.element as HTMLTextAreaElement).value).toBe("");
+    expect(wrapper.text()).not.toContain("thread-one.txt");
+
+    accept();
+    resolveSubmit(true);
+    await flushPromises();
+    await wrapper.setProps({
+      threadKey: "thread-1",
+      targetThreadId: "thread-1",
+    });
+    await flushPromises();
+    expect((textarea.element as HTMLTextAreaElement).value).toBe(
+      "Thread one draft",
+    );
+    expect(wrapper.text()).toContain("thread-one.txt");
+  });
+
+  it("drops duplicate submits while the first request is in flight", async () => {
+    let accept!: () => void;
+    let resolveSubmit!: (value: boolean) => void;
+    const submitMessage = vi.fn(
+      (_text, _files, options) =>
+        new Promise<boolean>((resolve) => {
+          accept = options.onAccepted;
+          resolveSubmit = resolve;
+        }),
+    );
+    const { wrapper } = mountComposer(submitMessage);
+    await flushPromises();
+    await wrapper.get("textarea[name='message']").setValue("Only once");
+    await wrapper.get("form").trigger("submit");
+    await wrapper.get("form").trigger("submit");
+    expect(submitMessage).toHaveBeenCalledTimes(1);
+    expect(Object.values(sessionStorage).join("\n")).not.toContain("Only once");
+
+    accept();
+    resolveSubmit(true);
+    await flushPromises();
+    expect((wrapper.get("textarea").element as HTMLTextAreaElement).value).toBe(
+      "",
+    );
+  });
+
+  it("does not recreate an ordinary draft after storage is explicitly cleared", async () => {
+    const { wrapper } = mountComposer();
+    await flushPromises();
+    await wrapper
+      .get("textarea[name='message']")
+      .setValue("Discard this draft");
+    expect(Object.values(sessionStorage).join("\n")).toContain(
+      "Discard this draft",
+    );
+
+    sessionStorage.clear();
+    globalThis.dispatchEvent(new Event("pagehide"));
+    wrapper.unmount();
+    expect(sessionStorage.length).toBe(0);
+  });
+
+  it("does not let a polish result write into another route", async () => {
+    let resolvePolish!: (value: {
+      rewritten_text: string;
+      changed: boolean;
+    }) => void;
+    mocks.polishInputDraft.mockImplementation(
+      () => new Promise((resolve) => (resolvePolish = resolve)),
+    );
+    const { wrapper } = mountComposer();
+    await flushPromises();
+    await wrapper.get("textarea[name='message']").setValue("Old route draft");
+    await wrapper.get("[data-testid='polish-input-button']").trigger("click");
+    await wrapper.setProps({
+      threadKey: "thread-2",
+      targetThreadId: "thread-2",
+    });
+    resolvePolish({ rewritten_text: "Stale rewrite", changed: true });
+    await flushPromises();
+
+    expect((wrapper.get("textarea").element as HTMLTextAreaElement).value).toBe(
+      "",
+    );
+  });
+
+  it("invalidates polish and goal results when a run is stopped or the route changes", async () => {
+    let resolvePolish!: (value: {
+      rewritten_text: string;
+      changed: boolean;
+    }) => void;
+    mocks.polishInputDraft.mockImplementation(
+      () => new Promise((resolve) => (resolvePolish = resolve)),
+    );
+    let resolveGoal!: (value: Response) => void;
+    mocks.fetchWithAuth.mockImplementation(
+      () => new Promise<Response>((resolve) => (resolveGoal = resolve)),
+    );
+    const { wrapper } = mountComposer();
+    await flushPromises();
+    const textarea = wrapper.get("textarea[name='message']");
+    await textarea.setValue("Polish me");
+    await wrapper.get("[data-testid='polish-input-button']").trigger("click");
+    await wrapper.setProps({ streaming: true });
+    await wrapper.get("button[aria-label='Stop']").trigger("click");
+    resolvePolish({ rewritten_text: "Stale polish", changed: true });
+    await flushPromises();
+    expect((textarea.element as HTMLTextAreaElement).value).toBe("Polish me");
+
+    wrapper.unmount();
+    const { wrapper: goalWrapper } = mountComposer();
+    await flushPromises();
+    await goalWrapper
+      .get("textarea[name='message']")
+      .setValue("/goal Ship WP-03");
+    await goalWrapper.get("form").trigger("submit");
+    await vi.waitFor(() =>
+      expect(mocks.fetchWithAuth).toHaveBeenCalledTimes(1),
+    );
+    await goalWrapper.setProps({
+      threadKey: "thread-2",
+      targetThreadId: "thread-2",
+    });
+    resolveGoal(
+      new Response(JSON.stringify({ goal: { objective: "Ship WP-03" } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await flushPromises();
+    expect(goalWrapper.emitted("goalChange")).toBeUndefined();
+    expect(
+      (goalWrapper.get("textarea").element as HTMLTextAreaElement).value,
+    ).toBe("");
+  });
+
+  it("degrades a disabled saved skill to editable slash text after catalog load", async () => {
+    writeComposerDraft(
+      sessionStorage,
+      buildComposerDraftKey({
+        userId: "user-1",
+        agentName: null,
+        threadId: "thread-1",
+      }),
+      { text: "Analyze it", skillName: "disabled-skill" },
+    );
+    const { wrapper } = mountComposer();
+    await flushPromises();
+    expect((wrapper.get("textarea").element as HTMLTextAreaElement).value).toBe(
+      "/disabled-skill Analyze it",
+    );
+  });
+
+  it("waits for the agent default before selecting a catalog fallback model", async () => {
+    mocks.loadModels.mockResolvedValue({
+      models: [
+        {
+          id: "flash",
+          name: "flash",
+          model: "provider-flash",
+          display_name: "Flash",
+          supports_thinking: false,
+          supports_reasoning_effort: false,
+        },
+        {
+          id: "agent-reasoner",
+          name: "agent-reasoner",
+          model: "provider-reasoner",
+          display_name: "Agent Reasoner",
+          supports_thinking: true,
+          supports_reasoning_effort: true,
+        },
+      ],
+      token_usage: { enabled: true },
+    });
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = mount(ChatComposer, {
+      props: {
+        threadKey: "thread-1",
+        targetThreadId: "thread-1",
+        userId: "user-1",
+        agentName: "researcher",
+        defaultModelName: null,
+        modelSelectionReady: false,
+        streaming: false,
+        uploading: false,
+        promptHistory: [],
+        context: {},
+      },
+      global: {
+        plugins: [[VueQueryPlugin, { queryClient }]],
+        stubs: {
+          ReferenceAttachment: true,
+          ConfettiButton: true,
+          GoalStatus: true,
+        },
+      },
+    });
+    await flushPromises();
+    expect(wrapper.emitted("contextChange")).toBeUndefined();
+
+    await wrapper.setProps({ defaultModelName: "agent-reasoner" });
+    await flushPromises();
+    expect(wrapper.emitted("contextChange")).toBeUndefined();
+
+    await wrapper.setProps({ modelSelectionReady: true });
+    await flushPromises();
+    expect(wrapper.emitted("contextChange")?.at(-1)?.[0]).toMatchObject({
+      model_name: "agent-reasoner",
+      mode: "pro",
+    });
+  });
+});

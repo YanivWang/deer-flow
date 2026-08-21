@@ -81,59 +81,59 @@
 
 ## 5. 总清单
 
-| ID          | 优先级 | 状态 | 工作包 | 未对齐点                                                       |
-| ----------- | ------ | ---- | ------ | -------------------------------------------------------------- |
-| API-01      | P0     | DONE | WP-01  | Nuxt 代理会拒绝没有请求体和 `Content-Length` 的 DELETE         |
-| AUTH-01     | P0     | DONE | WP-01  | OIDC callback 没有验证 session 和执行安全跳转                  |
-| AUTH-02     | P0     | DONE | WP-01  | `/workspace` 仍是占位页，没有进入默认聊天页                    |
-| AUTH-03     | P1     | DONE | WP-01  | Gateway 不可用被当成未登录，缺少离线/恢复状态                  |
-| SEC-01      | P0     | DONE | WP-01  | 实际消息 Markdown 链接没有协议 allowlist                       |
-| STREAM-01   | P0     | DONE | WP-02  | Vue 丢弃 task 与 `llm_retry` custom SSE 事件                   |
-| STREAM-02   | P0     | DONE | WP-02  | Subtask 没有实时/历史 steps、模型与 token 展示                 |
-| THREAD-01   | P1     | DONE | WP-02  | `/compact` 只显示建议，没有调用 compact API                    |
-| THREAD-02   | P1     | DONE | WP-02  | prepared replay 丢失后端错误且缓存失效不完整                   |
-| THREAD-03   | P0     | DONE | WP-02  | 主线程搜索结果没有过滤 sidecar 线程                            |
-| THREAD-04   | P0     | DONE | WP-02  | 删除主线程不级联删除 sidecar 线程                              |
-| THREAD-05   | P1     | DONE | WP-02  | 历史记录自动请求所有分页，没有按需加载                         |
-| COMPOSER-01 | P1     | TODO | WP-03  | 草稿 key 固定为 anonymous，恢复时不校验 skill 可用性           |
-| COMPOSER-02 | P1     | TODO | WP-03  | 模型默认值、能力、mode、reasoning 和线程上下文未对齐           |
-| COMPOSER-03 | P1     | TODO | WP-03  | 上传/发送失败前已清空输入，无法可靠恢复用户内容                |
-| COMPOSER-04 | P1     | TODO | WP-03  | follow-up 覆盖草稿，异步 polish/goal/suggestion 缺 stale guard |
-| HIL-01      | P1     | TODO | WP-03  | 必填 checkbox=false 未判空，线程错误不清理 pending HIL         |
-| MESSAGE-01  | P1     | TODO | WP-03  | 已发送附件没有在消息记录中显示                                 |
-| MESSAGE-02  | P1     | TODO | WP-03  | 消息 feedback API 已存在但界面没有入口                         |
-| MESSAGE-03  | P1     | TODO | WP-03  | `thread.values.todos` 没有渲染                                 |
-| MESSAGE-04  | P1     | TODO | WP-03  | models/thread token usage 响应未完整消费和展示                 |
-| MESSAGE-05  | P1     | TODO | WP-03  | 消息复制、引用来源详情等操作不完整                             |
-| SIDECAR-01  | P0     | TODO | WP-04  | 未等待 sidecar 恢复就创建，可能产生重复线程                    |
-| SIDECAR-02  | P0     | TODO | WP-04  | sidecar 已选择文件没有进入发送请求                             |
-| SIDECAR-03  | P0     | TODO | WP-04  | sidecar MessageList 没有接入 human-input 提交                  |
-| BROWSER-01  | P0     | TODO | WP-05  | connecting 阶段丢导航，断线没有有界重连                        |
-| BROWSER-02  | P0     | TODO | WP-05  | 缺 REST fallback、live/static 模式和 URL 同步                  |
-| BROWSER-03  | P0     | TODO | WP-05  | 点击坐标、滚轮、键盘和 IME 行为未对齐                          |
-| ARTIFACT-01 | P0     | TODO | WP-06  | 未知二进制文件会被当作文本加载和保存                           |
-| ARTIFACT-02 | P1     | TODO | WP-06  | 切换/关闭/离开页面没有未保存内容保护                           |
-| ARTIFACT-03 | P1     | TODO | WP-06  | 缺 discard/exit/copy/open/install-skill 等操作                 |
-| ARTIFACT-04 | P1     | TODO | WP-06  | 截断内容仍可进入 HTML preview，缺安全边界                      |
-| SCHEDULE-01 | P1     | TODO | WP-07  | 创建任务硬编码 cron/UTC，context 输入不完整                    |
-| SCHEDULE-02 | P1     | TODO | WP-07  | 缺编辑、删除、类型筛选、recipes 和完整状态筛选                 |
-| SCHEDULE-03 | P1     | TODO | WP-07  | 缺完整运行历史、运行详情和错误展示                             |
-| CHANNEL-01  | P1     | TODO | WP-08  | 页面没有以 connections 响应作为真实连接状态                    |
-| CHANNEL-02  | P1     | TODO | WP-08  | connect 响应的 `url`、`expires_in` 和轮询未消费                |
-| CHANNEL-03  | P1     | TODO | WP-08  | disconnect API 已存在但没有界面和状态收敛                      |
-| AGENT-01    | P1     | TODO | WP-09  | 新 Agent 保存不识别 setup_agent 结果和 created 状态            |
-| AGENT-02    | P1     | TODO | WP-09  | Agent 设置没有按模型能力归一化请求字段                         |
-| AGENT-03    | P2     | TODO | WP-09  | Agent 卡片没有展示 tool groups                                 |
-| MEMORY-01   | P1     | TODO | WP-10  | 导入 memory 没有运行时 schema 校验和预览确认                   |
-| MEMORY-02   | P1     | TODO | WP-10  | 删除/清空 memory 没有二次确认                                  |
-| MEMORY-03   | P1     | TODO | WP-10  | confidence 编辑、校验、搜索和筛选不完整                        |
-| SETTINGS-01 | P1     | TODO | WP-10  | Skill/Tool 页面没有消费 admin-required 错误和权限              |
-| SHELL-01    | P1     | TODO | WP-11  | 工作区缺 Gateway banner、command palette 和全局 toast          |
-| SHELL-02    | P1     | TODO | WP-11  | SettingsDialog 缺 focus trap，关闭后不清理 query               |
-| SHELL-03    | P1     | TODO | WP-11  | 聊天列表缺 share/export/updated time                           |
-| CHANGES-01  | P2     | TODO | WP-11  | workspace changes 响应字段和详情错误未完整展示                 |
-| I18N-01     | P1     | TODO | WP-12  | 大量核心产品界面仍为英文硬编码                                 |
-| THEME-01    | P2     | TODO | WP-12  | system theme 不监听操作系统主题变化                            |
+| ID          | 优先级 | 状态 | 工作包 | 未对齐点                                                         |
+| ----------- | ------ | ---- | ------ | ---------------------------------------------------------------- |
+| API-01      | P0     | DONE | WP-01  | Nuxt 代理会拒绝没有请求体和 `Content-Length` 的 DELETE           |
+| AUTH-01     | P0     | DONE | WP-01  | OIDC callback 没有验证 session 和执行安全跳转                    |
+| AUTH-02     | P0     | DONE | WP-01  | `/workspace` 仍是占位页，没有进入默认聊天页                      |
+| AUTH-03     | P1     | DONE | WP-01  | Gateway 不可用被当成未登录，缺少离线/恢复状态                    |
+| SEC-01      | P0     | DONE | WP-01  | 实际消息 Markdown 链接没有协议 allowlist                         |
+| STREAM-01   | P0     | DONE | WP-02  | Vue 丢弃 task 与 `llm_retry` custom SSE 事件                     |
+| STREAM-02   | P0     | DONE | WP-02  | Subtask 没有实时/历史 steps、模型与 token 展示                   |
+| THREAD-01   | P1     | DONE | WP-02  | `/compact` 只显示建议，没有调用 compact API                      |
+| THREAD-02   | P1     | DONE | WP-02  | prepared replay 丢失后端错误且缓存失效不完整                     |
+| THREAD-03   | P0     | DONE | WP-02  | 主线程搜索结果没有过滤 sidecar 线程                              |
+| THREAD-04   | P0     | DONE | WP-02  | 删除主线程不级联删除 sidecar 线程                                |
+| THREAD-05   | P1     | DONE | WP-02  | 历史记录自动请求所有分页，没有按需加载                           |
+| COMPOSER-01 | P1     | DONE | WP-03  | 草稿按 user/agent/thread 隔离，恢复时重新校验 skill              |
+| COMPOSER-02 | P1     | DONE | WP-03  | agent 默认模型、能力、mode、reasoning 与线程上下文已归一化       |
+| COMPOSER-03 | P1     | DONE | WP-03  | 仅 run accepted 后清理；上传/发送失败保留并复用用户内容          |
+| COMPOSER-04 | P1     | DONE | WP-03  | follow-up 显式决策；polish/goal/suggestion 使用 generation guard |
+| HIL-01      | P1     | DONE | WP-03  | required/checkbox/pending/error/thread 生命周期已接通            |
+| MESSAGE-01  | P1     | DONE | WP-03  | 现代与 legacy 已发送附件均在消息记录中渲染                       |
+| MESSAGE-02  | P1     | DONE | WP-03  | feedback create/update/delete、错误回滚与刷新恢复已接通          |
+| MESSAGE-03  | P1     | DONE | WP-03  | `thread.values.todos` 已按权威状态渲染                           |
+| MESSAGE-04  | P1     | DONE | WP-03  | models/thread token usage、total/per-turn/debug 偏好已消费       |
+| MESSAGE-05  | P1     | DONE | WP-03  | user/assistant copy 与 citation source 详情已补齐                |
+| SIDECAR-01  | P0     | DONE | WP-04  | 单一 session owner 串行 restore/create，拒绝过期结果回写         |
+| SIDECAR-02  | P0     | DONE | WP-04  | sidecar 附件按最终 thread 上传并进入结构化发送请求               |
+| SIDECAR-03  | P0     | DONE | WP-04  | sidecar MessageList 已接入真实 thread/error/HIL 提交             |
+| BROWSER-01  | P0     | TODO | WP-05  | connecting 阶段丢导航，断线没有有界重连                          |
+| BROWSER-02  | P0     | TODO | WP-05  | 缺 REST fallback、live/static 模式和 URL 同步                    |
+| BROWSER-03  | P0     | TODO | WP-05  | 点击坐标、滚轮、键盘和 IME 行为未对齐                            |
+| ARTIFACT-01 | P0     | TODO | WP-06  | 未知二进制文件会被当作文本加载和保存                             |
+| ARTIFACT-02 | P1     | TODO | WP-06  | 切换/关闭/离开页面没有未保存内容保护                             |
+| ARTIFACT-03 | P1     | TODO | WP-06  | 缺 discard/exit/copy/open/install-skill 等操作                   |
+| ARTIFACT-04 | P1     | TODO | WP-06  | 截断内容仍可进入 HTML preview，缺安全边界                        |
+| SCHEDULE-01 | P1     | TODO | WP-07  | 创建任务硬编码 cron/UTC，context 输入不完整                      |
+| SCHEDULE-02 | P1     | TODO | WP-07  | 缺编辑、删除、类型筛选、recipes 和完整状态筛选                   |
+| SCHEDULE-03 | P1     | TODO | WP-07  | 缺完整运行历史、运行详情和错误展示                               |
+| CHANNEL-01  | P1     | TODO | WP-08  | 页面没有以 connections 响应作为真实连接状态                      |
+| CHANNEL-02  | P1     | TODO | WP-08  | connect 响应的 `url`、`expires_in` 和轮询未消费                  |
+| CHANNEL-03  | P1     | TODO | WP-08  | disconnect API 已存在但没有界面和状态收敛                        |
+| AGENT-01    | P1     | TODO | WP-09  | 新 Agent 保存不识别 setup_agent 结果和 created 状态              |
+| AGENT-02    | P1     | TODO | WP-09  | Agent 设置没有按模型能力归一化请求字段                           |
+| AGENT-03    | P2     | TODO | WP-09  | Agent 卡片没有展示 tool groups                                   |
+| MEMORY-01   | P1     | TODO | WP-10  | 导入 memory 没有运行时 schema 校验和预览确认                     |
+| MEMORY-02   | P1     | TODO | WP-10  | 删除/清空 memory 没有二次确认                                    |
+| MEMORY-03   | P1     | TODO | WP-10  | confidence 编辑、校验、搜索和筛选不完整                          |
+| SETTINGS-01 | P1     | TODO | WP-10  | Skill/Tool 页面没有消费 admin-required 错误和权限                |
+| SHELL-01    | P1     | TODO | WP-11  | 工作区缺 Gateway banner、command palette 和全局 toast            |
+| SHELL-02    | P1     | TODO | WP-11  | SettingsDialog 缺 focus trap，关闭后不清理 query                 |
+| SHELL-03    | P1     | TODO | WP-11  | 聊天列表缺 share/export/updated time                             |
+| CHANGES-01  | P2     | TODO | WP-11  | workspace changes 响应字段和详情错误未完整展示                   |
+| I18N-01     | P1     | TODO | WP-12  | 大量核心产品界面仍为英文硬编码                                   |
+| THEME-01    | P2     | TODO | WP-12  | system theme 不监听操作系统主题变化                              |
 
 ## 6. 详细工作包
 
@@ -221,20 +221,14 @@
 
 #### 当前代码事实
 
-- [`app/components/chat/ChatComposer.vue`](app/components/chat/ChatComposer.vue) 的 draft owner 固定为 `anonymous`。
-- 恢复 draft 时直接恢复 skillName，没有重新确认该 skill 仍启用。
-- 默认模型取 models 第一项，没有完整合并 agent 默认模型、能力、mode、thinking、reasoning effort。
-- context overrides 由 AgentChat 共享 ref 持有，没有形成清晰的 thread-scoped 持久化与路由切换重置规则。
-- submit 在 upload/send 完成前清空输入和 draft；失败后用户文本/skill/文件选择不能可靠恢复。
-- follow-up 使用 replace draft，已有输入会被直接覆盖。
-- polish 有 AbortController，但组件销毁时没有完整取消；goal 和 post-run suggestion 缺少 thread/route generation guard。
-- [`app/components/chat/HumanInputCard.vue`](app/components/chat/HumanInputCard.vue) 的必填判断没有把 checkbox `false` 当成缺失。
-- pending HIL 主要依赖响应消息清理，已搬运的 thread-error 清理函数没有接入。
-- MessageList 的 human branch 没有读取 `additional_kwargs.files`。
-- [`app/core/api/feedback.ts`](app/core/api/feedback.ts) 已实现 upsert/delete，实际消息没有 feedback 操作。
-- AgentChat 没有渲染 `thread.values.todos`。
-- [`app/core/models/api.ts`](app/core/models/api.ts) 返回 `{ models, token_usage }`，Composer 只取 `models`。
-- Vue 已有 usage model/local preference 纯函数，但没有形成 total/per-turn/inline 展示。
+- [`useComposerDraft.ts`](app/composables/useComposerDraft.ts) 以真实 user + agent/lead-agent + 真实 thread 或稳定 `new` scope 持有 tab 草稿；skill catalog ready 后才恢复并降级已禁用 skill。成功登出和确认删除 thread 会按作用域清理草稿。
+- [`ChatComposer.vue`](app/components/chat/ChatComposer.vue) 把 text、skill、files 与上传结果保留到 Gateway run handle 到达；创建失败、4xx、取消、路由切换继续可重试，成功上传文件不会重复上传，重复提交由单一 in-flight guard 丢弃。
+- [`useModels.ts`](app/composables/useModels.ts)、[`models/capabilities.ts`](app/core/models/capabilities.ts) 与 [`useThreadSettings.ts`](app/composables/useThreadSettings.ts) 共同解析 agent 默认模型、thinking/mode/reasoning 能力与 thread/agent-scoped context；不支持的字段不进入最终 payload。
+- follow-up 在非空草稿上显式提供 append-and-send、replace-and-send、cancel；[`async/generation.ts`](app/core/async/generation.ts) 统一阻止 polish、goal 与 post-run suggestion 在 stop、unmount 或 route/thread 变化后写回。
+- [`HumanInputCard.vue`](app/components/chat/HumanInputCard.vue) 对 required checkbox=false、select/multi-select 与文本字段统一校验并暴露 aria-invalid；MessageList 在失败、thread error、路由切换与终态收敛 pending HIL。
+- [`MessageAttachments.vue`](app/components/chat/MessageAttachments.vue) 从持久化消息读取现代 files 与 legacy upload tag；刷新后不依赖 composer 本地状态。
+- MessageList 已接入 feedback create/update/delete、失败回滚、复制 user/assistant 消息与 citation source 详情；反馈随 history 行恢复。
+- AgentChat 渲染权威 `thread.values.todos`；[`useThreadTokenUsage.ts`](app/composables/useThreadTokenUsage.ts) 对响应 `thread_id` 二次校验，header total、per-turn/debug 与 off 偏好由统一 usage model 驱动。
 
 #### 必须实现
 
@@ -265,6 +259,8 @@
 - human message 的 image/file/legacy upload DOM 测试。
 - feedback create/update/delete 与后端错误回滚测试。
 - todo、token total、per-turn、隐藏偏好测试。
+- 本工作包实测：`make e2e-m4a` 4/4、`make e2e-m4a-stream` 6/6、`make e2e-m7` 130/130、`make e2e-m7-local` 8/8、`make e2e-m7-auth` 10/10、`make e2e-m7-real-protocol` 1/1、`make e2e-m7-visual` 7/7；视觉 baseline 未更新。
+- `make migration-check` 通过；沙箱外 `make verify` 为 132 个 test files / 1203 tests 全绿并完成 Nuxt 生产构建。React `pnpm check` 通过，沙箱外 `pnpm test` 为 128 个 test files / 1001 tests 全绿。
 
 ### WP-04：Sidecar 完整会话
 
@@ -272,9 +268,10 @@
 
 #### 当前代码事实
 
-- [`app/components/workspace/sidecar/SidecarPanel.vue`](app/components/workspace/sidecar/SidecarPanel.vue) 的 `ensureThread` 没有等待 composable 内部异步 restore 完成。
-- `selectedFiles` 会变化并展示，但 submit body 没有消费它。
-- sidecar MessageList 没有监听并转发 `human-input`。
+- [`app/composables/useSidecarSession.ts`](app/composables/useSidecarSession.ts) 是每个 `AgentChat` 唯一的 sidecar session owner：恢复完成且确认不存在后才创建，并在 main thread/context/scope 变化时拒绝旧结果回写。
+- 主 composer 与 sidecar 共用 [`app/core/uploads/submission-files.ts`](app/core/uploads/submission-files.ts)，附件上传到最终 sidecar thread，完整成功的同一 `File` 可在 run 失败后复用。
+- [`app/components/workspace/sidecar/SidecarPanel.vue`](app/components/workspace/sidecar/SidecarPanel.vue) 只渲染 session，并把真实 thread、stream error 与 HIL callback 传给共享 MessageList/HumanInputCard。
+- session 位于面板组件之外；关闭或切换右侧面板不会销毁流，真实删除才清空 thread、草稿、附件与上传缓存。
 - React [`src/components/workspace/sidecar/sidecar-panel.tsx`](../frontend/src/components/workspace/sidecar/sidecar-panel.tsx) 先 restore，再决定是否 create，并把附件/HIL 接入 sidecar run。
 
 #### 必须实现
@@ -293,9 +290,10 @@
 
 #### 验收与测试
 
-- 延迟 restore 的并发测试证明 create 只发一次。
-- sidecar 附件请求抓包断言与主 Composer 字段一致。
-- sidecar HIL 成功、失败、刷新恢复 E2E。
+- WP-04 新增 4 个测试文件 / 17 个用例，覆盖延迟 restore 并发、create 去重、最终 sidecar thread 附件上传、失败重试复用、草稿/附件隔离、IME、关闭重开不中断 run，以及 HIL required/false-checkbox/pending/error/刷新恢复。
+- React 共享 sidecar Playwright 7/7，抓包断言结构化附件目标为最终 sidecar thread，并覆盖活动 run 关闭/重开与 HIL 请求/响应。
+- 浏览器门禁实测：`make e2e-m4a` 4/4、`make e2e-m4a-stream` 6/6、`make e2e-m7` 130/130、`make e2e-m7-local` 8/8、`make e2e-m7-auth` 10/10、`make e2e-m7-real-protocol` 1/1、`make e2e-m7-visual` 7/7；视觉 baseline 未更新。
+- `make migration-check` 通过；沙箱外 `make verify` 为 136 个 test files / 1220 tests 全绿并完成 Nuxt 生产构建。React `pnpm check` 通过，`pnpm test` 为 128 个 test files / 1001 tests 全绿。
 
 ### WP-05：Browser control
 

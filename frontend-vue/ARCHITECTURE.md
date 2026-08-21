@@ -47,12 +47,23 @@ Compose Watch 同步源码并在依赖清单变化时重建对应镜像；Nginx 
 3. `packages/agent-core/src/session/` 管理 create-once、resume 游标、gap、重试、取消和终态；
    `src/store/` 合并同一宏任务内的通知并发布不可变 snapshot。
 4. TanStack Query/composable 将 live snapshot、checkpoint 历史、乐观消息和分页数据
-   合并为 UI 状态。`useThreads.ts` 是主线程列表的唯一 server-state 所有者，Pinia 不保留
-   第二份列表。排序、sidecar 过滤与身份规则集中在 `app/core/threads/`。
+   合并为 UI 状态。`useThreads.ts` 是主线程列表的唯一 server-state 所有者；models、skills、
+   session 与 thread token usage 也各有唯一 Vue Query composable，Pinia 不保留第二份真相。
+   排序、sidecar 过滤与身份规则集中在 `app/core/threads/`。
 5. custom 帧由 `tasks/custom-event.ts` 统一折叠 task 生命周期、步骤、累计 token、模型和
    `llm_retry`；`SubtaskCard.vue` 展开历史 run 时才回填持久化步骤。
 6. `MessageList.vue`、composer、产物/sidecar/browser 面板消费同一线程状态；产物面板等扩展
    通过事件和 panel state 接入，不改变 L1 session 状态机。
+
+Composer 的 tab 草稿由 `useComposerDraft.ts` 集中管理，key 是 user + agent/lead-agent +
+真实 thread 或稳定 `new` 草稿 scope；新会话实际 run target 仍使用本次 runtime UUID。
+技能目录 ready 后才恢复，后台 run `onStart` 前不清草稿。
+本地 `File` 与已上传 descriptor 留在 composer 内存中，失败可重试但不进入服务端缓存。
+模型/模式经 `models/capabilities.ts` 归一化后才进入 `threads/submit.ts` 的最终 context。
+
+MessageList 直接消费持久化消息：现代/legacy 附件、Gateway 历史行 feedback、隐藏 HIL 回复、
+citation 和 per-turn usage 都不依赖提交前 UI 状态。`thread.values.todos` 与最终 token usage
+仍由 thread snapshot/API 提供；反馈写入是 Vue Query mutation，只精确失效当前历史 key。
 
 流式重连、消息顺序、缓存失效和面板行为的硬合同见
 [`BEHAVIOR_CONTRACTS.md`](BEHAVIOR_CONTRACTS.md)。
@@ -77,14 +88,19 @@ Compose Watch 同步源码并在依赖清单变化时重建对应镜像；Nginx 
 以下是目标所有权边界。当前尚未完全遵守的缓存失效、thread-scoped composer、sidecar
 生命周期等事项以 [`PARITY_GAPS.md`](PARITY_GAPS.md) 为执行清单。
 
-- 线程列表、历史页和 token usage：TanStack Query 缓存；`useThreads.ts` 负责主列表的
+- 线程列表、历史页、models、skills、session 和 token usage：TanStack Query 缓存；`useThreads.ts` 负责主列表的
   raw-offset 分页和 sidecar 过滤，失效/删除镜像规则在 `app/core/threads/cache-invalidation.ts`。
 - 当前流、乐观消息、prepared replay 掩码、task/retry 状态：thread composable 的
   thread-scoped ref；切换 thread、stop、error、finish 或 scope dispose 时按合同收敛。
 - Pinia 只允许保存跨页面的客户端/UI 状态，不得复制 thread/session 等服务端真相。
 - artifacts、sidecar、browser：各自 composable 持有面板状态，但最终业务数据仍来自同一
-  thread snapshot/API。
-- composer draft、上传、语音和通知是前端瞬态状态；不得错误跨 thread 复用。
+  thread snapshot/API。sidecar 进一步拆成 `useSidecar` 的开关/引用状态与
+  `useSidecarSession` 的唯一会话状态；后者独占 restore-before-create、run、附件上传缓存、
+  HIL 与真实删除，`SidecarPanel` 只做 UI 适配。隐藏或切换右侧面板不销毁 session，切换主
+  thread 或 scope dispose 才使旧异步结果失效。
+- composer draft 是 `sessionStorage` 的 tab 状态，只持久化文本/skill；user、agent 与逻辑会话
+  三维隔离，并在确认 logout/thread delete 后清理。上传文件、语音、follow-up dialog、polish
+  和 generation guard 是组件/composable 瞬态状态，不得错误跨 thread 复用。
 - locale 使用 `app/core/i18n/`、`app/plugins/i18n.ts` 与兼容 cookie；字典完整性由
   `make i18n-check` 守护。
 

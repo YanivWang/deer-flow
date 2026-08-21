@@ -52,13 +52,20 @@ vi.mock("@/composables/useThreadHistory", () => ({
 
 interface FakeRunner extends ThreadRunner {
   submissions: Parameters<ThreadRunner["submit"]>[0][];
+  emitStart(threadId?: string, runId?: string): void;
   emitCustom(data: unknown): void;
   emitUpdate(data: unknown): void;
   setMessages(messages: Message[]): void;
   settle(status: "completed" | "cancelled"): void;
 }
 
-function createFakeRunner(options: ThreadRunnerOptions): FakeRunner {
+function createFakeRunner(
+  options: ThreadRunnerOptions,
+  {
+    autoStart = true,
+    failBeforeStart = false,
+  }: { autoStart?: boolean; failBeforeStart?: boolean } = {},
+): FakeRunner {
   let messages: Message[] = [];
   let status = "idle";
   const snapshot = {
@@ -79,8 +86,18 @@ function createFakeRunner(options: ThreadRunnerOptions): FakeRunner {
     subscribe: () => () => {},
     async submit(input) {
       submissions.push(input);
+      if (failBeforeStart) {
+        const error = new Error("Run creation rejected.");
+        status = "failed";
+        options.onSessionState?.({ status: "failed", error } as never);
+        options.onError?.(error as never);
+        options.onSettled?.({ status: "failed", error } as never);
+        return;
+      }
       status = "streaming";
-      options.onStart?.({ threadId: input.threadId, runId: "run-1" });
+      if (autoStart) {
+        options.onStart?.({ threadId: input.threadId, runId: "run-1" });
+      }
       options.onSnapshot?.();
     },
     stop() {
@@ -89,6 +106,9 @@ function createFakeRunner(options: ThreadRunnerOptions): FakeRunner {
     abort() {},
     reset() {},
     flushNotifications() {},
+    emitStart(startedThreadId = "thread-1", runId = "run-1") {
+      options.onStart?.({ threadId: startedThreadId, runId });
+    },
     emitCustom: (data) => options.onCustomEvent?.(data),
     emitUpdate: (data) => options.onUpdateEvent?.(data),
     setMessages(next) {
@@ -237,7 +257,10 @@ describe("useThreadStream · K3 编辑并重跑", () => {
   });
 });
 
-function mountStream(threadId = ref<string | null>("thread-1")) {
+function mountStream(
+  threadId = ref<string | null>("thread-1"),
+  runnerOptions: { autoStart?: boolean; failBeforeStart?: boolean } = {},
+) {
   let fake: FakeRunner | undefined;
   let api: ReturnType<typeof useThreadStream> | undefined;
   const queryClient = new QueryClient({
@@ -261,7 +284,7 @@ function mountStream(threadId = ref<string | null>("thread-1")) {
           error: (message) => errors.push(message),
         },
         runnerFactory: (options) => {
-          fake = createFakeRunner(options);
+          fake = createFakeRunner(options, runnerOptions);
           return fake;
         },
       });
@@ -327,6 +350,36 @@ describe("useThreadStream · production stream modes", () => {
       "updates",
       "custom",
     ]);
+    ctx.wrapper.unmount();
+  });
+
+  it("fires accepted callbacks only after the Gateway run start is observed", async () => {
+    const ctx = mountStream(ref("thread-1"), { autoStart: false });
+    const onAccepted = vi.fn();
+
+    await expect(
+      ctx.api.sendMessage("thread-1", { text: "hi" }, undefined, {
+        onAccepted,
+      }),
+    ).resolves.toBe(true);
+    expect(onAccepted).not.toHaveBeenCalled();
+
+    ctx.fake.emitStart("thread-1", "run-accepted");
+    expect(onAccepted).toHaveBeenCalledTimes(1);
+    ctx.wrapper.unmount();
+  });
+
+  it("rejects a create-stage failure before accepted callbacks can clear retry state", async () => {
+    const ctx = mountStream(ref("thread-1"), { failBeforeStart: true });
+    const onAccepted = vi.fn();
+
+    await expect(
+      ctx.api.sendMessage("thread-1", { text: "keep me" }, undefined, {
+        onAccepted,
+      }),
+    ).rejects.toThrow("Run creation rejected.");
+    expect(onAccepted).not.toHaveBeenCalled();
+    expect(ctx.api.messages.value).toEqual([]);
     ctx.wrapper.unmount();
   });
 });

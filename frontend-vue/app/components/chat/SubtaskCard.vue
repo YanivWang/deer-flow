@@ -17,6 +17,7 @@ import {
   Wrench,
 } from "lucide-vue-next";
 
+import ShineBorder from "@/components/ui/effects/ShineBorder.vue";
 import { fetchSubtaskSteps } from "@/core/tasks/api";
 import type { SubtaskStep } from "@/core/tasks/steps";
 import type { SubtaskResultUpdate } from "@/core/tasks/subtask-result";
@@ -112,6 +113,11 @@ onUnmounted(() => {
     :aria-busy="viewModel.status === 'in_progress' || isLoading"
     :data-task-id="taskId"
   >
+    <ShineBorder
+      v-if="viewModel.status === 'in_progress'"
+      :border-width="1.5"
+      :shine-color="['#A07CFE', '#FE8FB5', '#FFBE7B']"
+    />
     <button
       data-testid="subtask-toggle"
       type="button"

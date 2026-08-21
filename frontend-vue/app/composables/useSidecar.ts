@@ -1,11 +1,11 @@
 /*
-  【文件职责】     单个主 thread 的 sidecar 子会话、引用与恢复状态。
+  【文件职责】     单个主 thread 的 sidecar 面板开关、引用与共享 thread id。
   【对应 frontend/】 frontend/src/components/workspace/sidecar/context.tsx
   【架构位置】     L3（DeerFlow sidecar）
   【主要导出】     useSidecar
-  【依赖关系】     core/sidecar · thread submit context · AgentChat/SidecarPanel
-  【边界与注意】   sidecar thread 与主 thread 隔离；切换主 thread 立即清场并
-                   immediate 恢复，强制恢复会清掉后端已删除的缓存 id。
+  【依赖关系】     core/sidecar · thread submit context · AgentChat
+  【边界与注意】   只持有 UI/reference 状态；恢复、创建、run、附件与 HIL
+                   全部由 useSidecarSession 的唯一生命周期拥有。
 */
 
 import { reactive, ref, toValue, watch } from "vue";
@@ -19,7 +19,6 @@ import {
   type SidecarContext,
   type SidecarReferenceStateItem,
 } from "@/core/sidecar";
-import { findLatestSidecarThread } from "@/core/sidecar/api";
 import type { ThreadRunContextInput } from "@/core/threads/submit";
 
 export type SidecarReference = SidecarReferenceStateItem;
@@ -34,37 +33,12 @@ export function useSidecar(options: {
   const sidecarThreadId = ref<string | null>(null);
   const context = reactive<ThreadRunContextInput>({});
   let referenceId = 0;
-  let restoreRequest:
-    { parentThreadId: string; promise: Promise<string | null> } | undefined;
 
   function setContext(next: ThreadRunContextInput) {
     for (const key of Object.keys(context)) {
       Reflect.deleteProperty(context, key);
     }
     Object.assign(context, next);
-  }
-
-  async function restoreSidecarThread({ force = false } = {}) {
-    const parentThreadId = toValue(options.parentThreadId);
-    if (!parentThreadId) return null;
-    if (!force && sidecarThreadId.value) return sidecarThreadId.value;
-    if (restoreRequest?.parentThreadId === parentThreadId) {
-      return restoreRequest.promise;
-    }
-    const promise = findLatestSidecarThread({ parentThreadId })
-      .then((thread) => {
-        if (toValue(options.parentThreadId) !== parentThreadId) return null;
-        const threadId = thread?.thread_id ?? null;
-        if (threadId) sidecarThreadId.value = threadId;
-        else if (force) sidecarThreadId.value = null;
-        return threadId;
-      })
-      .catch(() => null)
-      .finally(() => {
-        if (restoreRequest?.promise === promise) restoreRequest = undefined;
-      });
-    restoreRequest = { parentThreadId, promise };
-    return promise;
   }
 
   watch(
@@ -74,9 +48,7 @@ export function useSidecar(options: {
       activeReferences.value = [];
       conversationQuotes.value = [];
       sidecarThreadId.value = null;
-      restoreRequest = undefined;
       setContext({ ...toValue(options.context) });
-      void restoreSidecarThread();
     },
     { immediate: true },
   );
@@ -115,8 +87,15 @@ export function useSidecar(options: {
   function clearConversationQuotes() {
     conversationQuotes.value = [];
   }
-  function clearActiveReferences() {
-    activeReferences.value = [];
+  function clearActiveReferences(accepted?: SidecarReference[]) {
+    if (!accepted) {
+      activeReferences.value = [];
+      return;
+    }
+    const acceptedIds = new Set(accepted.map((reference) => reference.id));
+    activeReferences.value = activeReferences.value.filter(
+      (reference) => !acceptedIds.has(reference.id),
+    );
   }
   function close() {
     open.value = false;
@@ -134,7 +113,6 @@ export function useSidecar(options: {
     sidecarThreadId,
     context,
     setContext,
-    restoreSidecarThread,
     openContext,
     addContextToConversation,
     fromSelection,

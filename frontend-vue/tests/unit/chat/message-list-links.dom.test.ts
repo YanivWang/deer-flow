@@ -8,9 +8,12 @@
 */
 
 import { flushPromises, mount } from "@vue/test-utils";
+import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ref } from "vue";
 
 import MessageList from "@/components/chat/MessageList.vue";
+import { enUS } from "@/core/i18n/locales/en-US";
 
 class ResizeObserverStub {
   observe() {}
@@ -19,6 +22,9 @@ class ResizeObserverStub {
 }
 
 beforeEach(() => {
+  vi.stubGlobal("useNuxtApp", () => ({
+    $i18n: { t: ref(enUS), locale: ref("en-US") },
+  }));
   vi.stubGlobal("ResizeObserver", ResizeObserverStub);
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
     return window.setTimeout(() => callback(performance.now()), 16);
@@ -54,6 +60,9 @@ describe("MessageList MarkdownLink integration", () => {
         loading: false,
         threadId: "thread-1",
         interactive: false,
+      },
+      global: {
+        plugins: [[VueQueryPlugin, { queryClient: new QueryClient() }]],
       },
     });
 
@@ -123,6 +132,9 @@ describe("MessageList on-demand history", () => {
         threadId: "thread-1",
         hasMoreHistory: true,
         historyLoadingMore: false,
+      },
+      global: {
+        plugins: [[VueQueryPlugin, { queryClient: new QueryClient() }]],
       },
     });
     await flushPromises();

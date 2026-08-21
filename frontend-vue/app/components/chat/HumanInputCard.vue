@@ -28,6 +28,7 @@ const props = defineProps<{
   active: boolean;
   pending: boolean;
 }>();
+const { $i18n } = useNuxtApp();
 const emit = defineEmits<{
   submit: [response: HumanInputResponse];
 }>();
@@ -38,6 +39,7 @@ const form = ref<Record<string, HumanInputFormValue>>(
   buildInitialHumanInputFormValues(props.request.fields ?? []),
 );
 const error = ref("");
+const invalidFields = ref(new Set<string>());
 const compositionActive = ref(false);
 const disabled = computed(
   () => !props.active || props.pending || !!props.answered,
@@ -45,6 +47,11 @@ const disabled = computed(
 
 function setFormValue(name: string, value: HumanInputFormValue) {
   form.value = { ...form.value, [name]: value };
+  if (invalidFields.value.has(name)) {
+    const next = new Set(invalidFields.value);
+    next.delete(name);
+    invalidFields.value = next;
+  }
 }
 function formValue(name: string) {
   return readHumanInputFormValue(form.value, name);
@@ -56,7 +63,7 @@ function selectedValues(event: Event) {
 }
 function submitText(value = text.value) {
   if (!value.trim()) {
-    error.value = "Please provide an answer.";
+    error.value = $i18n.t.value.humanInput.emptyError;
     return;
   }
   error.value = "";
@@ -74,22 +81,27 @@ function onTextKeydown(event: KeyboardEvent, value?: string) {
   submitText(value);
 }
 function submitForm() {
-  const invalid = (props.request.fields ?? []).some((field) => {
-    if (!field.required) return false;
+  const invalid = new Set<string>();
+  for (const field of props.request.fields ?? []) {
+    if (!field.required) continue;
     const value = formValue(field.name);
-    return (
+    if (
       value === undefined ||
       value === "" ||
+      value === false ||
       (Array.isArray(value) && value.length === 0)
-    );
-  });
-  if (invalid) {
-    error.value = "Please complete all required fields.";
+    ) {
+      invalid.add(field.name);
+    }
+  }
+  invalidFields.value = invalid;
+  if (invalid.size > 0) {
+    error.value = $i18n.t.value.humanInput.requiredError;
     return;
   }
   const value = buildHumanInputFormSubmissionValue(props.request, form.value);
   if (!value.trim()) {
-    error.value = "Please provide an answer.";
+    error.value = $i18n.t.value.humanInput.emptyError;
     return;
   }
   error.value = "";
@@ -106,7 +118,9 @@ function submitForm() {
     <p v-if="request.context" class="mt-1 text-sm text-gray-500">
       {{ request.context }}
     </p>
-    <p v-if="answered" class="mt-3 text-sm">Answered: {{ answered.value }}</p>
+    <p v-if="answered" class="mt-3 text-sm">
+      {{ $i18n.t.value.humanInput.answeredValue(answered.value) }}
+    </p>
 
     <template v-else-if="request.input_mode === 'form'">
       <div class="mt-3 space-y-3">
@@ -122,13 +136,18 @@ function submitForm() {
             aria-hidden="true"
             >*</span
           >
-          <span v-if="field.required" class="sr-only">required</span>
+          <span v-if="field.required" class="sr-only">{{
+            $i18n.t.value.humanInput.requiredA11yLabel
+          }}</span>
           <input
             v-if="field.type === 'checkbox'"
+            :id="`${request.request_id}-${field.name}`"
             type="checkbox"
             class="ml-2"
             :checked="formValue(field.name) === true"
             :disabled="disabled"
+            :aria-required="field.required"
+            :aria-invalid="invalidFields.has(field.name)"
             @change="
               setFormValue(
                 field.name,
@@ -143,6 +162,7 @@ function submitForm() {
             :multiple="field.type === 'multi_select'"
             :disabled="disabled"
             :aria-required="field.required"
+            :aria-invalid="invalidFields.has(field.name)"
             @change="
               setFormValue(
                 field.name,
@@ -152,7 +172,9 @@ function submitForm() {
               )
             "
           >
-            <option v-if="field.type === 'select'" value="">Select…</option>
+            <option v-if="field.type === 'select'" value="">
+              {{ $i18n.t.value.humanInput.selectPlaceholder }}
+            </option>
             <option
               v-for="option in field.options ?? []"
               :key="option.id"
@@ -168,6 +190,7 @@ function submitForm() {
             :value="String(formValue(field.name) ?? '')"
             :disabled="disabled"
             :aria-required="field.required"
+            :aria-invalid="invalidFields.has(field.name)"
             @input="
               setFormValue(
                 field.name,
@@ -189,6 +212,7 @@ function submitForm() {
             :value="String(formValue(field.name) ?? '')"
             :disabled="disabled"
             :aria-required="field.required"
+            :aria-invalid="invalidFields.has(field.name)"
             @input="
               setFormValue(
                 field.name,
@@ -204,7 +228,7 @@ function submitForm() {
         :disabled="disabled"
         @click="submitForm"
       >
-        Submit
+        {{ $i18n.t.value.humanInput.submit }}
       </button>
     </template>
 
@@ -235,7 +259,7 @@ function submitForm() {
         <input
           v-model="other"
           class="border-input min-w-0 flex-1 rounded border p-2 text-sm"
-          placeholder="Other answer"
+          :placeholder="$i18n.t.value.humanInput.otherPlaceholder"
           :disabled="disabled"
           @keydown="onTextKeydown($event, other)"
           @compositionstart="compositionActive = true"
@@ -247,7 +271,7 @@ function submitForm() {
           :disabled="disabled"
           @click="submitText(other)"
         >
-          Submit
+          {{ $i18n.t.value.humanInput.submit }}
         </button>
       </div>
     </template>
@@ -267,10 +291,12 @@ function submitForm() {
         :disabled="disabled"
         @click="submitText()"
       >
-        Submit
+        {{ $i18n.t.value.humanInput.submit }}
       </button>
     </div>
-    <p v-if="pending" class="mt-2 text-xs text-gray-500">Submitting…</p>
+    <p v-if="pending" class="mt-2 text-xs text-gray-500">
+      {{ $i18n.t.value.humanInput.pending }}
+    </p>
     <p v-if="error" role="alert" class="mt-2 text-sm text-red-600">
       {{ error }}
     </p>

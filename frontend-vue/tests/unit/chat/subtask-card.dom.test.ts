@@ -19,6 +19,25 @@ const { fetchSubtaskSteps } = vi.hoisted(() => ({
 vi.mock("@/core/tasks/api", () => ({ fetchSubtaskSteps }));
 
 describe("SubtaskCard", () => {
+  it("shows the streaming shine border only while a subtask is in progress", async () => {
+    const wrapper = mount(SubtaskCard, {
+      props: {
+        taskId: "task-streaming",
+        description: "Draft the plan",
+        prompt: "Draft the plan",
+        pendingStatus: "in_progress",
+        isLoading: true,
+      },
+    });
+    expect(wrapper.find('[data-effect="shine-border"]').exists()).toBe(true);
+
+    await wrapper.setProps({
+      pendingStatus: "completed",
+      isLoading: false,
+    });
+    expect(wrapper.find('[data-effect="shine-border"]').exists()).toBe(false);
+  });
+
   it("renders normalized terminal metadata and backfills history on expand", async () => {
     fetchSubtaskSteps.mockResolvedValue(fetchedSteps);
     const liveTask: Subtask = {

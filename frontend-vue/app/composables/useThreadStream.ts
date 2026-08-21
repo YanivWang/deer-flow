@@ -94,6 +94,7 @@ import {
 } from "@/core/threads/submit";
 import { isHiddenFromUIMessage } from "@/core/messages/utils";
 import type { FileInMessage } from "@/core/messages/utils";
+import type { Model } from "@/core/models/types";
 import type { Message } from "@/core/types/message";
 import {
   clearThreadRetryNotice,
@@ -114,6 +115,7 @@ export interface UseThreadStreamOptions {
   threadId: MaybeRefOrGetter<string | null | undefined>;
   displayThreadId?: MaybeRefOrGetter<string | null | undefined>;
   context: MaybeRefOrGetter<ThreadRunContextInput>;
+  model?: MaybeRefOrGetter<Model | null | undefined>;
   notify?: ThreadStreamNotifier;
   onSend?: (threadId: string) => void;
   onStart?: (threadId: string, runId: string) => void;
@@ -147,6 +149,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     threadId: threadIdInput,
     displayThreadId: displayThreadIdInput,
     context,
+    model,
     notify = noopNotifier,
     onSend,
     onStart,
@@ -185,6 +188,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
   };
   let summarizedMessageIds = new Set<string>();
   let sendInFlight = false;
+  let pendingAcceptedCallback: (() => void) | null = null;
   let startedAnnounced = false;
   /**
    * 本次 run 真正建出来的 thread id（05 C9 的边界条件）。
@@ -211,6 +215,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
   const sessionStatus = ref<string>("idle");
   const activeRunId = ref<string | null>(null);
   const customEventState = shallowRef(createThreadCustomEventState());
+  const streamError = shallowRef<unknown>(null);
 
   const runner: ThreadRunner = runnerFactory({
     protocol: createDeerFlowRunProtocol({ baseUrl: getLangGraphBaseURL() }),
@@ -258,6 +263,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     preparedReplayController?.abort();
     preparedReplayController = null;
     customEventState.value = createThreadCustomEventState();
+    pendingAcceptedCallback = null;
     runner.abort();
   });
 
@@ -306,6 +312,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
 
   // ---- 事件处理 ----------------------------------------------------------
   function handleStreamStart(startedThreadId: string, runId: string) {
+    streamError.value = null;
     activeRunId.value = runId;
     if (
       optimisticThreadId.value &&
@@ -327,6 +334,9 @@ export function useThreadStream(options: UseThreadStreamOptions) {
       onStart?.(startedThreadId, runId);
       startedAnnounced = true;
     }
+    const accepted = pendingAcceptedCallback;
+    pendingAcceptedCallback = null;
+    accepted?.();
   }
 
   function handleUpdateEvent(data: unknown) {
@@ -419,6 +429,8 @@ export function useThreadStream(options: UseThreadStreamOptions) {
   }
 
   function handleStreamError(error: Error) {
+    streamError.value = error;
+    pendingAcceptedCallback = null;
     customEventState.value = clearThreadRetryNotice(customEventState.value);
     optimisticMessages.value = [];
     optimisticThreadId.value = null;
@@ -446,32 +458,39 @@ export function useThreadStream(options: UseThreadStreamOptions) {
   }
 
   // ---- 切 thread 时的清场（C9 的「切换 thread 时清除」） ------------------
-  watch(threadId, (next, previous) => {
-    // `new` 提交后 URL 换成真 id：同一个 thread，不清场。见 adoptedThreadId。
-    if (previous === null && next !== null && next === adoptedThreadId) return;
-    preparedReplayGeneration += 1;
-    preparedReplayController?.abort();
-    preparedReplayController = null;
-    pendingPreparedReplay = null;
-    runner.reset();
-    activeRunId.value = null;
-    customEventState.value = createThreadCustomEventState();
-    startedAnnounced = false;
-    sendInFlight = false;
-    transientHistoryBridge = [];
-    transientHistoryOrder = EMPTY_MESSAGE_IDENTITIES;
-    transientHistoryThreadId = null;
-    renderedMessageSnapshot = {
-      threadId: null,
-      messages: EMPTY_MESSAGES,
-      order: EMPTY_MESSAGE_IDENTITIES,
-    };
-    summarizedMessageIds = new Set();
-    localTurnOrderBaseline = null;
-    pendingSupersededRunIds.value = new Set();
-    pendingSupersededMessageIds.value = new Set();
-    previousHumanMessageCount = humanMessageCount.value;
-  });
+  watch(
+    threadId,
+    (next, previous) => {
+      // `new` 提交后 URL 换成真 id：同一个 thread，不清场。见 adoptedThreadId。
+      if (previous === null && next !== null && next === adoptedThreadId)
+        return;
+      preparedReplayGeneration += 1;
+      preparedReplayController?.abort();
+      preparedReplayController = null;
+      pendingPreparedReplay = null;
+      runner.reset();
+      activeRunId.value = null;
+      customEventState.value = createThreadCustomEventState();
+      startedAnnounced = false;
+      sendInFlight = false;
+      pendingAcceptedCallback = null;
+      streamError.value = null;
+      transientHistoryBridge = [];
+      transientHistoryOrder = EMPTY_MESSAGE_IDENTITIES;
+      transientHistoryThreadId = null;
+      renderedMessageSnapshot = {
+        threadId: null,
+        messages: EMPTY_MESSAGES,
+        order: EMPTY_MESSAGE_IDENTITIES,
+      };
+      summarizedMessageIds = new Set();
+      localTurnOrderBaseline = null;
+      pendingSupersededRunIds.value = new Set();
+      pendingSupersededMessageIds.value = new Set();
+      previousHumanMessageCount = humanMessageCount.value;
+    },
+    { flush: "sync" },
+  );
 
   // 历史确认后逐条释放瞬态桥。immediate 见 05 M5：首屏那一批确认不能漏。
   watch(
@@ -594,12 +613,17 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     sendOptions?: {
       additionalInputMessages?: Message[];
       additionalKwargs?: Record<string, unknown>;
-      onSent?: () => void;
+      onAccepted?: () => void;
     },
-  ): Promise<void> {
-    if (sendInFlight) return;
+  ): Promise<boolean> {
+    if (sendInFlight) return false;
     sendInFlight = true;
-    sendOptions?.onSent?.();
+    streamError.value = null;
+    let acceptedByBackend = false;
+    pendingAcceptedCallback = () => {
+      acceptedByBackend = true;
+      sendOptions?.onAccepted?.();
+    };
 
     const text = message.text.trim();
     previousHumanMessageCount = humanMessageCount.value;
@@ -643,14 +667,26 @@ export function useThreadStream(options: UseThreadStreamOptions) {
             toValue(context),
             targetThreadId,
             extraContext,
+            model ? toValue(model) : undefined,
           ),
         },
       });
+      const settledState = runner.getSessionState();
+      if (!acceptedByBackend && settledState.status === "failed") {
+        // `ThreadRunner` deliberately turns transport exceptions into a terminal
+        // state so every observer sees one consistent lifecycle. Sending is the
+        // exception: callers must still distinguish "the Gateway accepted a run"
+        // from "the create request failed before a handle existed" so drafts and
+        // attachments remain retryable.
+        throw settledState.error;
+      }
       void queryClient.invalidateQueries({ queryKey: ["threads", "search"] });
       void queryClient.invalidateQueries({
         queryKey: [...INFINITE_THREADS_QUERY_KEY_PREFIX],
       });
+      return true;
     } catch (error) {
+      pendingAcceptedCallback = null;
       optimisticMessages.value = [];
       optimisticThreadId.value = null;
       liveMessagesThreadId.value = null;
@@ -745,7 +781,12 @@ export function useThreadStream(options: UseThreadStreamOptions) {
           checkpoint: prepared.checkpoint,
           metadata: prepared.metadata,
           config: { recursion_limit: 1000 },
-          context: buildRunContext(toValue(context), targetThreadId),
+          context: buildRunContext(
+            toValue(context),
+            targetThreadId,
+            undefined,
+            model ? toValue(model) : undefined,
+          ),
         },
       });
       if (
@@ -846,6 +887,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
       optimisticThreadId.value = null;
       customEventState.value = clearThreadRetryNotice(customEventState.value);
       sendInFlight = false;
+      pendingAcceptedCallback = null;
     }
   }
 
@@ -870,6 +912,8 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     preparedReplayController = null;
     pendingPreparedReplay = null;
     sendInFlight = false;
+    pendingAcceptedCallback = null;
+    streamError.value = null;
     runner.reset();
     activeRunId.value = null;
     customEventState.value = createThreadCustomEventState();
@@ -900,6 +944,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     isHistoryLoading: history.loadingInitial,
     isHistoryLoadingMore: history.loadingMore,
     historyError: history.error,
+    error: streamError,
     hasMoreHistory: history.hasMore,
     loadMoreHistory: history.loadMore,
     sendMessage,
