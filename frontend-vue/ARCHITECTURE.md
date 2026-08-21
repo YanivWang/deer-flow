@@ -3,6 +3,11 @@
 本文描述 `frontend-vue` 当前代码结构和依赖边界。它只维护长期有效的实现事实；阶段计划、
 迁移过程和单次验收结果不属于本文件。
 
+> **状态边界：** 本文件描述已经存在或应保持的架构边界，不表示 L3 产品能力已与 React
+> 完全对齐。当前源码确认的 API 消费、页面、流式、交互和安全差异统一维护在
+> [`PARITY_GAPS.md`](PARITY_GAPS.md)。如果架构描述与实际源码不一致，以当前源码为准，
+> 并在同一改动中修正文档。
+
 ## 运行拓扑
 
 浏览器只访问同源的 Nuxt/Nginx 入口。`/api/langgraph/**` 在代理到 Gateway 前改写为
@@ -60,6 +65,9 @@ Compose Watch 同步源码并在依赖清单变化时重建对应镜像；Nginx 
 
 ## 状态所有权
 
+以下是目标所有权边界。当前尚未完全遵守的缓存失效、thread-scoped composer、sidecar
+生命周期等事项以 [`PARITY_GAPS.md`](PARITY_GAPS.md) 为执行清单。
+
 - 线程列表、历史页和 token usage：TanStack Query 缓存；失效规则在
   `app/core/threads/cache-invalidation.ts`。
 - 当前流、乐观消息和线程级组合状态：`app/stores/threads.ts` 与线程 composable。
@@ -81,5 +89,5 @@ make container-smoke # 生产镜像、health、SIGTERM、Showcase 资源与拒�
 ```
 
 Makefile 中保留的 `m0`、`m4a`、`m7` 等名称是已经稳定下来的测试套件标识，不表示项目仍在
-迁移。新增功能应按实际影响选择 unit、协议、浏览器、视觉、真实 Gateway 或生产镜像门禁，
-不要从旧阶段编号推断完成状态。
+迁移，也不表示可平替差异已经关闭。新增功能应按实际影响选择 unit、协议、浏览器、视觉、
+真实 Gateway 或生产镜像门禁，不要从旧阶段编号或单次全绿推断完成状态。

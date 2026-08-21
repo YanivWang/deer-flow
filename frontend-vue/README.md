@@ -2,19 +2,26 @@
 
 English | [简体中文](README_zh.md)
 
-`frontend-vue` is the complete Nuxt 4 implementation of the DeerFlow web
-application. It uses the same Gateway contracts as `../frontend` and covers the
-chat workspace, artifacts, sidecar, browser control, agents, channels,
-integrations, scheduled tasks, settings, goal/mode, authentication, Showcase,
-mobile layouts and production container.
+`frontend-vue` is the coexisting Nuxt 4 implementation of the DeerFlow web
+application. It uses the same Gateway surface as `../frontend` and has
+implementations for the chat workspace, artifacts, sidecar, browser control,
+agents, channels, integrations, scheduled tasks, settings, goal/mode,
+authentication, Showcase, mobile layouts and the production container. A
+source-level audit found open request/response-consumption and product-behavior
+gaps; their executable checklist is maintained in
+[PARITY_GAPS.md](PARITY_GAPS.md).
 
 React remains the default production hostname; Vue is selected only by
-`DEER_FLOW_VUE_HOSTNAME`. This is a deployment choice, not a missing Vue feature.
-Public DNS, TLS, outer-proxy trust and real IdP callback registration must still
-be configured in the target environment.
+`DEER_FLOW_VUE_HOSTNAME`. This is a deployment topology, not proof that Vue is
+ready to replace React. P0/P1 items in [PARITY_GAPS.md](PARITY_GAPS.md) block a
+default cutover. Public DNS, TLS, outer-proxy trust and real IdP callback
+registration must still be configured in the target environment.
 
 ## Documentation
 
+- [PARITY_GAPS.md](PARITY_GAPS.md): source-backed React/Vue replacement gaps,
+  execution order, acceptance criteria and completion evidence. Existing green
+  gates must not be treated as proof that these gaps are closed.
 - [ARCHITECTURE.md](ARCHITECTURE.md): current layers, runtime flow, state
   ownership, proxy and authentication boundaries.
 - [BEHAVIOR_CONTRACTS.md](BEHAVIOR_CONTRACTS.md): product, streaming, ordering,
@@ -79,8 +86,8 @@ make container-smoke
 
 Run `make help` for every specialized proxy, protocol, real-Gateway, visual,
 inventory and maintenance command. Some command names retain historical `m0`–`m7`
-suite identifiers; they are stable test entrypoints and do not indicate an
-unfinished migration.
+suite identifiers; they are stable test entrypoints and do not communicate the
+completion state of the replacement gaps.
 
 ## Runtime configuration
 

@@ -1,0 +1,657 @@
+# React / Vue 可平替差异与执行清单
+
+> 状态：当前源码审计后的未完成清单。
+>
+> 基线日期：2026-08-21。
+>
+> React 基线：`../frontend`；Vue 实现：当前目录 `frontend-vue`。
+>
+> 核心目标：两个前端共用同一个 Gateway/API，可以在不改变后台的前提下互相替换。
+
+## 1. 文档用途
+
+本文档只记录两类事项：
+
+1. React 当前已提供、属于应用本体范围，而 Vue 尚未实现或没有完整实现的行为；
+2. 两端虽然调用了同一个 API，但 Vue 在请求参数、响应处理、错误、缓存、流式事件、状态或交互上没有与 React 对齐的事项。
+
+本文档同时是后续开发窗口的执行入口。新窗口开始工作时：
+
+1. 先执行 `git status --short`，不得覆盖已有改动；
+2. 阅读本文档中准备处理的工作包；
+3. 重新检查对应的当前 React/Vue 源码，行号可能变化，本文档不能替代源码；
+4. 一次只把一个边界清晰的工作包改为 `IN PROGRESS`；
+5. 实现、测试和门禁全部完成后，才可改为 `DONE`，并在“完成证据”中填写提交或测试；
+6. 如果 React 后续改变了同一能力，必须重新审核 Vue 的请求、响应和可观察行为。
+
+本文档不是要求复制 React 代码。对齐对象是产品和协议的可观察契约；Vue 必须采用 Vue/Nuxt 生态的主流实现方式。
+
+### 当前文档所有权
+
+- 本文件：未完成差异、优先级、执行顺序、验收和完成证据；
+- [`ARCHITECTURE.md`](ARCHITECTURE.md)：长期架构和状态所有权边界；
+- [`BEHAVIOR_CONTRACTS.md`](BEHAVIOR_CONTRACTS.md)：已经满足后必须持续保持、以及替换前必须达到的硬行为；
+- [`REUSE.md`](REUSE.md)：L1/L2 复用边界，不负责证明 L3 产品完整性；
+- [`README.md`](README.md) / [`README_zh.md`](README_zh.md)：运行和门禁入口；
+- [`../docs/dual-frontend-production.md`](../docs/dual-frontend-production.md)：双 hostname 部署与回滚，不负责证明产品对齐。
+
+历史 `frontend-vue-build-docs/**`、`frontend-refactor-docs/**` 已从当前仓库删除，它们是迁移
+过程材料，不得恢复为当前完成状态依据。若其中仍有有效规则，应以当前源码重新验证后写入
+上述现行文档，而不是恢复整份旧计划或旧“parity closure”结论。
+
+## 2. 明确不需要对齐的范围
+
+以下内容不进入本文档的待办，也不能因为“React 有”而重新搬进 Vue：
+
+- React 营销落地页；Vue 的 `/`、`/pricing`、`/about` 可以继续作为公司自定义占位页；
+- React 文档站、博客、Nextra 内容和相关依赖；
+- `?mock=true`、`public/demo`、Next mock route handlers 等静态录制回放产品模式；
+- 没有产品消费者的 `@xyflow/react` canvas 组件；
+- Next Route Handler 与 Nuxt/Nitro server route 的框架实现形式；但它们产生的 HTTP 行为必须一致；
+- landing 独占或已无消费者的组件和依赖；
+- React 与 Vue 图标库、组件库内部 DOM、React Context/hook 的具体写法；
+- 不影响布局、键盘、焦点、可访问性、测试选择器或外部集成的内部组件拆分差异。
+
+仍需严格对齐：URL、method、query、headers、body、响应解析、错误信息、缓存失效、SSE/WS 事件、用户状态、页面能力、交互顺序、语义 DOM、键盘和焦点行为、响应式布局。
+
+## 3. Vue 实现原则
+
+- 服务端状态使用 `@tanstack/vue-query` 的 query/mutation/invalidation；不要用 Pinia 手写第二套服务端缓存。
+- Pinia 只保存需要跨页面共享的客户端状态，例如当前用户、工作区 UI、线程列表展示状态。
+- 组件内生命周期使用 `ref`、`computed`、`watch`、`onScopeDispose`、`provide/inject`；不要照搬 React hook/context 形状。
+- 流式协议、文件类型策略、缓存 key、payload 归一化等框架无关规则应保留为纯 TypeScript，并由 Vue composable 调用。
+- Dialog、Popover、Select 等优先使用 Reka UI 等 Vue 无障碍 primitives，保持焦点锁定、Escape、aria 和键盘语义。
+- DOM 不要求字符级相同，但信息层级、操作入口、顺序、可访问名称、focus order、响应式布局必须产生等价用户结果。
+- 不允许为了兼容 Vue 页面而发明后端字段、修改字段含义或维持 React/Vue 两套 API 语义。
+
+## 4. 状态与优先级
+
+状态：
+
+- `TODO`：已确认差异，尚未实施；
+- `IN PROGRESS`：当前只有一个窗口负责；
+- `BLOCKED`：外部依赖阻塞，并且已记录可复现证据；
+- `DONE`：源码、自动化测试和要求的门禁全部完成。
+
+优先级：
+
+- `P0`：安全、数据损坏、认证、核心流式协议或主要功能不可用，阻断 Vue 替换；
+- `P1`：主要产品能力、请求/响应语义或状态不一致，替换前必须完成；
+- `P2`：非阻断但需要对齐的交互、可访问性、展示或可维护性问题。
+
+## 5. 总清单
+
+| ID          | 优先级 | 状态 | 工作包 | 未对齐点                                                       |
+| ----------- | ------ | ---- | ------ | -------------------------------------------------------------- |
+| API-01      | P0     | TODO | WP-01  | Nuxt 代理会拒绝没有请求体和 `Content-Length` 的 DELETE         |
+| AUTH-01     | P0     | TODO | WP-01  | OIDC callback 没有验证 session 和执行安全跳转                  |
+| AUTH-02     | P0     | TODO | WP-01  | `/workspace` 仍是占位页，没有进入默认聊天页                    |
+| AUTH-03     | P1     | TODO | WP-01  | Gateway 不可用被当成未登录，缺少离线/恢复状态                  |
+| SEC-01      | P0     | TODO | WP-01  | 实际消息 Markdown 链接没有协议 allowlist                       |
+| STREAM-01   | P0     | TODO | WP-02  | Vue 丢弃 task 与 `llm_retry` custom SSE 事件                   |
+| STREAM-02   | P0     | TODO | WP-02  | Subtask 没有实时/历史 steps、模型与 token 展示                 |
+| THREAD-01   | P1     | TODO | WP-02  | `/compact` 只显示建议，没有调用 compact API                    |
+| THREAD-02   | P1     | TODO | WP-02  | prepared replay 丢失后端错误且缓存失效不完整                   |
+| THREAD-03   | P0     | TODO | WP-02  | 主线程搜索结果没有过滤 sidecar 线程                            |
+| THREAD-04   | P0     | TODO | WP-02  | 删除主线程不级联删除 sidecar 线程                              |
+| THREAD-05   | P1     | TODO | WP-02  | 历史记录自动请求所有分页，没有按需加载                         |
+| COMPOSER-01 | P1     | TODO | WP-03  | 草稿 key 固定为 anonymous，恢复时不校验 skill 可用性           |
+| COMPOSER-02 | P1     | TODO | WP-03  | 模型默认值、能力、mode、reasoning 和线程上下文未对齐           |
+| COMPOSER-03 | P1     | TODO | WP-03  | 上传/发送失败前已清空输入，无法可靠恢复用户内容                |
+| COMPOSER-04 | P1     | TODO | WP-03  | follow-up 覆盖草稿，异步 polish/goal/suggestion 缺 stale guard |
+| HIL-01      | P1     | TODO | WP-03  | 必填 checkbox=false 未判空，线程错误不清理 pending HIL         |
+| MESSAGE-01  | P1     | TODO | WP-03  | 已发送附件没有在消息记录中显示                                 |
+| MESSAGE-02  | P1     | TODO | WP-03  | 消息 feedback API 已存在但界面没有入口                         |
+| MESSAGE-03  | P1     | TODO | WP-03  | `thread.values.todos` 没有渲染                                 |
+| MESSAGE-04  | P1     | TODO | WP-03  | models/thread token usage 响应未完整消费和展示                 |
+| MESSAGE-05  | P1     | TODO | WP-03  | 消息复制、引用来源详情等操作不完整                             |
+| SIDECAR-01  | P0     | TODO | WP-04  | 未等待 sidecar 恢复就创建，可能产生重复线程                    |
+| SIDECAR-02  | P0     | TODO | WP-04  | sidecar 已选择文件没有进入发送请求                             |
+| SIDECAR-03  | P0     | TODO | WP-04  | sidecar MessageList 没有接入 human-input 提交                  |
+| BROWSER-01  | P0     | TODO | WP-05  | connecting 阶段丢导航，断线没有有界重连                        |
+| BROWSER-02  | P0     | TODO | WP-05  | 缺 REST fallback、live/static 模式和 URL 同步                  |
+| BROWSER-03  | P0     | TODO | WP-05  | 点击坐标、滚轮、键盘和 IME 行为未对齐                          |
+| ARTIFACT-01 | P0     | TODO | WP-06  | 未知二进制文件会被当作文本加载和保存                           |
+| ARTIFACT-02 | P1     | TODO | WP-06  | 切换/关闭/离开页面没有未保存内容保护                           |
+| ARTIFACT-03 | P1     | TODO | WP-06  | 缺 discard/exit/copy/open/install-skill 等操作                 |
+| ARTIFACT-04 | P1     | TODO | WP-06  | 截断内容仍可进入 HTML preview，缺安全边界                      |
+| SCHEDULE-01 | P1     | TODO | WP-07  | 创建任务硬编码 cron/UTC，context 输入不完整                    |
+| SCHEDULE-02 | P1     | TODO | WP-07  | 缺编辑、删除、类型筛选、recipes 和完整状态筛选                 |
+| SCHEDULE-03 | P1     | TODO | WP-07  | 缺完整运行历史、运行详情和错误展示                             |
+| CHANNEL-01  | P1     | TODO | WP-08  | 页面没有以 connections 响应作为真实连接状态                    |
+| CHANNEL-02  | P1     | TODO | WP-08  | connect 响应的 `url`、`expires_in` 和轮询未消费                |
+| CHANNEL-03  | P1     | TODO | WP-08  | disconnect API 已存在但没有界面和状态收敛                      |
+| AGENT-01    | P1     | TODO | WP-09  | 新 Agent 保存不识别 setup_agent 结果和 created 状态            |
+| AGENT-02    | P1     | TODO | WP-09  | Agent 设置没有按模型能力归一化请求字段                         |
+| AGENT-03    | P2     | TODO | WP-09  | Agent 卡片没有展示 tool groups                                 |
+| MEMORY-01   | P1     | TODO | WP-10  | 导入 memory 没有运行时 schema 校验和预览确认                   |
+| MEMORY-02   | P1     | TODO | WP-10  | 删除/清空 memory 没有二次确认                                  |
+| MEMORY-03   | P1     | TODO | WP-10  | confidence 编辑、校验、搜索和筛选不完整                        |
+| SETTINGS-01 | P1     | TODO | WP-10  | Skill/Tool 页面没有消费 admin-required 错误和权限              |
+| SHELL-01    | P1     | TODO | WP-11  | 工作区缺 Gateway banner、command palette 和全局 toast          |
+| SHELL-02    | P1     | TODO | WP-11  | SettingsDialog 缺 focus trap，关闭后不清理 query               |
+| SHELL-03    | P1     | TODO | WP-11  | 聊天列表缺 share/export/updated time                           |
+| CHANGES-01  | P2     | TODO | WP-11  | workspace changes 响应字段和详情错误未完整展示                 |
+| I18N-01     | P1     | TODO | WP-12  | 大量核心产品界面仍为英文硬编码                                 |
+| THEME-01    | P2     | TODO | WP-12  | system theme 不监听操作系统主题变化                            |
+
+## 6. 详细工作包
+
+### WP-01：API 代理、认证与消息安全
+
+包含：`API-01`、`AUTH-01`、`AUTH-02`、`AUTH-03`、`SEC-01`。
+
+#### 当前代码事实
+
+- Vue [`server/utils/gateway-proxy.ts`](server/utils/gateway-proxy.ts) 的 `METHODS_WITH_BODY` 包含 DELETE；没有 `Transfer-Encoding` 且没有 `Content-Length` 时直接返回 411。
+- Vue 的 channels、feedback、memory、scheduled tasks、uploads、agents、sidecar DELETE 调用都没有请求体。例如 [`app/core/channels/api.ts`](app/core/channels/api.ts) 的两个 disconnect 请求。
+- [`app/pages/auth/callback.vue`](app/pages/auth/callback.vue) 只有静态“正在完成登录”界面。
+- React [`src/app/(auth)/auth/callback/page.tsx`](<../frontend/src/app/(auth)/auth/callback/page.tsx>) 请求 `/api/v1/auth/me`，验证安全 next path，并分别处理成功和失败跳转。
+- [`app/pages/workspace/index.vue`](app/pages/workspace/index.vue) 是占位内容；React [`src/app/workspace/page.tsx`](../frontend/src/app/workspace/page.tsx) 在真实模式进入 `/workspace/chats/new`。
+- [`app/middleware/auth.global.ts`](app/middleware/auth.global.ts) 在 Gateway 不可用时进入 login error，工作区没有持续可见的恢复提示。
+- 实际聊天的 [`app/components/chat/MessageList.vue`](app/components/chat/MessageList.vue) 只覆盖 Markdown 的 `pre` 和 `img`，没有覆盖 `a`。
+- [`app/core/markdown/render.ts`](app/core/markdown/render.ts) 会把 HAST 属性传给真实 DOM；实际 MessageList 路径没有接入安全 link renderer。
+- React [`src/components/workspace/messages/markdown-link.tsx`](../frontend/src/components/workspace/messages/markdown-link.tsx) 在普通链接和 citation 之前执行协议 allowlist，并解析 artifact 链接。
+
+#### 必须实现
+
+1. Nitro 代理只在请求确实声明了 body 时读取和限制 body；bodyless DELETE 必须正常转发。
+2. 保留现有 body size、path traversal、SSE、cookie/header 安全边界。
+3. callback 在客户端检查 session，使用已有 safe-next 逻辑，成功进入安全目标，失败进入明确登录错误。
+4. `/workspace` 必须进入默认聊天创建页，不能留下产品占位页。
+5. Gateway 不可用与未登录必须是不同状态；恢复后可以重新进入工作区，不需要清 cookie 或重载整个应用。
+6. 所有消息 `<a>` 必须经过统一 Vue MarkdownLink 组件：只允许安全协议，支持 artifact/citation，外链具有正确的 `target`/`rel`。
+
+#### Vue 实现建议
+
+- 代理规则保留在 Nitro server util，并提取一个纯函数判断“方法是否允许 body”和“请求是否实际携带 body”。
+- auth session 使用 Vue Query/composable 管理，路由中间件只做路由判定，不复制一份 session 状态。
+- Markdown link 作为 Vue component 注入 `StreamMarkdown` components map；不要依赖未在实际消息路径启用的 rehype 插件。
+
+#### 验收与测试
+
+- 新增 proxy 测试：无 body DELETE、带 body DELETE、超限 body、chunked、SSE、traversal。
+- 新增真实 Nuxt route 测试，证明 disconnect/delete 请求不返回 411。
+- callback 测试覆盖成功、安全 next、外域 next、401、Gateway 失败。
+- `/workspace` 路由测试覆盖默认跳转。
+- MessageList DOM 测试覆盖 `javascript:`、`data:`、相对链接、https、artifact 和 citation。
+
+### WP-02：流式事件、线程状态与历史
+
+包含：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05`。
+
+#### 当前代码事实
+
+- [`app/composables/useThreadStream.ts`](app/composables/useThreadStream.ts) 的 `handleCustomEvent` 除 `stream_replay_gap` 外直接返回。
+- React [`src/core/threads/hooks.ts`](../frontend/src/core/threads/hooks.ts) 还处理 task update、`task_running` steps 和 `llm_retry`。
+- Vue 已有 [`app/core/tasks/subtask-update.ts`](app/core/tasks/subtask-update.ts)、`lifecycle.ts`、`presentation.ts`、`steps.ts`，但没有接入实际流。
+- [`app/components/chat/MessageList.vue`](app/components/chat/MessageList.vue) 只从终态 tool result 构造 subtask 卡片。
+- React [`src/components/workspace/messages/subtask-card.tsx`](../frontend/src/components/workspace/messages/subtask-card.tsx) 合并实时 task context 和历史 steps，并展示模型/token/时间线。
+- [`app/components/chat/ChatComposer.vue`](app/components/chat/ChatComposer.vue) 提示 `/compact`，submit 只特殊处理 goal，`compactThreadContext` 没有消费者。
+- prepared replay 失败使用通用错误，完成后只 invalidates `['threads', 'search']`。
+- [`app/stores/threads.ts`](app/stores/threads.ts) 直接合并 thread search 结果，没有调用已存在的 `filterThreadSearchResults`。
+- 同一 store 删除线程时只删除主线程；React 会搜索并级联清理 sidecar。
+- [`app/composables/useThreadHistory.ts`](app/composables/useThreadHistory.ts) 在存在 next page 时继续请求，直到拉完。
+
+#### 必须实现
+
+1. custom event 统一进入 task/retry/replay reducer；事件去重、顺序和终态规则必须与 React 相同。
+2. Subtask 卡片同时支持实时 steps 和刷新后的历史 steps，不因页面刷新丢失时间线。
+3. `/compact` 必须调用 compact API，显示 pending/success/error，并刷新当前 thread、history、search、token usage。
+4. prepared replay 使用统一 response error parser，并执行完整 cache invalidation。
+5. 所有主聊天列表/搜索必须排除 sidecar；分页 offset 必须按原始结果推进，不能因过滤重复请求。
+6. 删除主线程时级联删除其 sidecar，部分失败要有可重试错误状态。
+7. 历史默认按需分页，支持 sentinel 和显式“加载更多”，不能自动拉取整个线程。
+
+#### Vue 实现建议
+
+- 建立 `useThreadSession(threadId)`，用 `shallowRef`/纯 reducer 保存流状态，并通过 `onScopeDispose` 取消请求。
+- Vue Query 维护 thread、history、tasks、token usage 的服务端状态；集中定义 query keys 和 invalidation helper。
+- `SubtaskCard.vue` 独立于 MessageList，接受归一化 view model，不在模板中重新解释 wire event。
+
+#### 验收与测试
+
+- 使用与 React 相同的 task/retry/gap fixture 做 reducer 和 DOM 测试。
+- E2E 覆盖实时 subtask、刷新后恢复、retry、终态和错误态。
+- `/compact` 覆盖成功、409/4xx 错误文本、重复点击和 cache refresh。
+- 搜索 fixture 同时返回主线程和 sidecar，断言 UI 只显示主线程且 raw offset 正确。
+- 删除测试证明主线程和全部 sidecar 都被删除。
+- 100+ 页历史 fixture 证明初次只请求第一页，滚动/按钮才请求下一页。
+
+### WP-03：Composer、Human Input 与消息输出
+
+包含：`COMPOSER-01`～`COMPOSER-04`、`HIL-01`、`MESSAGE-01`～`MESSAGE-05`。
+
+#### 当前代码事实
+
+- [`app/components/chat/ChatComposer.vue`](app/components/chat/ChatComposer.vue) 的 draft owner 固定为 `anonymous`。
+- 恢复 draft 时直接恢复 skillName，没有重新确认该 skill 仍启用。
+- 默认模型取 models 第一项，没有完整合并 agent 默认模型、能力、mode、thinking、reasoning effort。
+- context overrides 由 AgentChat 共享 ref 持有，没有形成清晰的 thread-scoped 持久化与路由切换重置规则。
+- submit 在 upload/send 完成前清空输入和 draft；失败后用户文本/skill/文件选择不能可靠恢复。
+- follow-up 使用 replace draft，已有输入会被直接覆盖。
+- polish 有 AbortController，但组件销毁时没有完整取消；goal 和 post-run suggestion 缺少 thread/route generation guard。
+- [`app/components/chat/HumanInputCard.vue`](app/components/chat/HumanInputCard.vue) 的必填判断没有把 checkbox `false` 当成缺失。
+- pending HIL 主要依赖响应消息清理，已搬运的 thread-error 清理函数没有接入。
+- MessageList 的 human branch 没有读取 `additional_kwargs.files`。
+- [`app/core/api/feedback.ts`](app/core/api/feedback.ts) 已实现 upsert/delete，实际消息没有 feedback 操作。
+- AgentChat 没有渲染 `thread.values.todos`。
+- [`app/core/models/api.ts`](app/core/models/api.ts) 返回 `{ models, token_usage }`，Composer 只取 `models`。
+- Vue 已有 usage model/local preference 纯函数，但没有形成 total/per-turn/inline 展示。
+
+#### 必须实现
+
+1. 草稿按真实 user + thread/agent 隔离；登出、切用户、删除线程时不得泄漏。
+2. 草稿恢复必须验证 skill 当前存在且启用。
+3. 模型选择遵守 agent 默认值和模型 capabilities；不支持的 thinking/reasoning 字段必须归一化为 `null` 或不发送，与 React 请求一致。
+4. context overrides 是 thread-scoped；切线程、切 agent、创建新聊天时按 React 规则恢复或重置。
+5. 只有发送被后台接受后才清空草稿；上传/发送失败必须恢复文本、skill 和仍可复用的文件。
+6. follow-up 在已有草稿时提供 append/replace/cancel，不得静默覆盖。
+7. polish、goal、follow-up 在 unmount、route change、thread change、用户 stop 后不能写回旧页面。
+8. HIL 的 required、checkbox、提交中、失败、thread error、刷新恢复规则与 React 一致。
+9. 人类消息渲染现代 files 字段和兼容的 legacy upload 内容。
+10. AI 消息提供 feedback、copy、citation source 等等价操作。
+11. 渲染 todos，并消费 models/thread token usage；尊重用户的 token 展示偏好。
+
+#### Vue 实现建议
+
+- 从 ChatComposer 拆出 `useComposerDraft`、`useModelCapabilities`、`useComposerCommands`、`useComposerSubmission`。
+- 用递增 generation/token 或 effect scope 防止过期异步任务写回；销毁时统一 abort。
+- MessageList 拆成 `HumanMessage`、`AssistantMessage`、`MessageAttachments`、`MessageActions`、`TodoList`、`HumanInputCard`。
+- feedback 和 token usage 使用 Vue Query mutation/query，成功后精确更新或失效对应 key。
+
+#### 验收与测试
+
+- 两个用户、两个线程、agent/non-agent 的 draft 隔离测试。
+- capability payload 参数快照必须与 React 语义一致。
+- 上传 4xx、发送 4xx、取消、路由切换时输入不丢失且无过期写回。
+- human message 的 image/file/legacy upload DOM 测试。
+- feedback create/update/delete 与后端错误回滚测试。
+- todo、token total、per-turn、隐藏偏好测试。
+
+### WP-04：Sidecar 完整会话
+
+包含：`SIDECAR-01`～`SIDECAR-03`。
+
+#### 当前代码事实
+
+- [`app/components/workspace/sidecar/SidecarPanel.vue`](app/components/workspace/sidecar/SidecarPanel.vue) 的 `ensureThread` 没有等待 composable 内部异步 restore 完成。
+- `selectedFiles` 会变化并展示，但 submit body 没有消费它。
+- sidecar MessageList 没有监听并转发 `human-input`。
+- React [`src/components/workspace/sidecar/sidecar-panel.tsx`](../frontend/src/components/workspace/sidecar/sidecar-panel.tsx) 先 restore，再决定是否 create，并把附件/HIL 接入 sidecar run。
+
+#### 必须实现
+
+1. sidecar 初始化具有单一状态机：idle → restoring → ready/creating → ready/error。
+2. 同一个 main thread + context 只允许一个有效 sidecar create 请求。
+3. selected files 按与主 Composer 相同的验证、上传、payload 和失败恢复规则发送。
+4. sidecar 可回答 HIL，pending/error/刷新恢复规则与主聊天一致。
+5. 关闭/重开面板不能丢失正在执行的 sidecar run。
+
+#### Vue 实现建议
+
+- 用 `useSidecarSession(mainThreadId)` 统一 restore/create/run/files/HIL；组件不直接拼线程生命周期。
+- restore/create 使用共享 Promise 或 mutation mutex 防重复。
+- 主聊天和 sidecar 复用框架无关的 file payload 与 HIL validator，不复制业务规则。
+
+#### 验收与测试
+
+- 延迟 restore 的并发测试证明 create 只发一次。
+- sidecar 附件请求抓包断言与主 Composer 字段一致。
+- sidecar HIL 成功、失败、刷新恢复 E2E。
+
+### WP-05：Browser control
+
+包含：`BROWSER-01`～`BROWSER-03`。
+
+#### 当前代码事实
+
+- [`app/components/workspace/browser-view/useBrowserStream.ts`](app/components/workspace/browser-view/useBrowserStream.ts) 在 connecting 时直接丢弃 navigate；error/close 没有完整的有界重连和 pending intent flush。
+- seed 变化使用原始值比较，没有 React 的归一化策略。
+- [`app/components/workspace/browser-view/BrowserPanel.vue`](app/components/workspace/browser-view/BrowserPanel.vue) 只有 WS navigate。
+- 没有 REST navigate fallback、live/static mode、后端 URL 同步、pointer move、wheel。
+- 点击坐标按整个 object-contain 元素计算，没有扣除 letterbox；键盘输入缺少完整 preventDefault/IME 守卫。
+- React 基线位于 [`use-browser-stream.ts`](../frontend/src/components/workspace/browser-view/use-browser-stream.ts) 和 [`browser-view-panel.tsx`](../frontend/src/components/workspace/browser-view/browser-view-panel.tsx)。
+
+#### 必须实现
+
+1. connecting 时保留最后一次导航 intent，连接成功后发送。
+2. close/error 使用有上限的指数退避；切线程、关闭面板和组件销毁必须停止重连。
+3. WS 不可用时使用同一后台 REST navigate API；错误状态可重试。
+4. live/static 模式、当前 URL、页面 title/状态按后端事件收敛。
+5. click/move 坐标映射到实际图像内容区域，忽略 letterbox 外点击。
+6. wheel、keyboard、组合输入、浏览器快捷键阻止规则与 React 一致。
+
+#### Vue 实现建议
+
+- `useBrowserStream` 做纯连接状态机，`BrowserPanel` 只处理展示和输入事件。
+- REST fallback 使用 Vue Query mutation。
+- 单独提取 viewport geometry 和 keyboard policy 纯函数，覆盖不同宽高比。
+
+#### 验收与测试
+
+- connecting navigate、断线重连上限、切线程取消、seed 更新测试。
+- WS 失败后 REST fallback 的集成测试。
+- 16:9、竖屏和 letterbox 坐标测试；wheel/keyboard/IME DOM 测试。
+
+### WP-06：Artifacts 文件策略与编辑生命周期
+
+包含：`ARTIFACT-01`～`ARTIFACT-04`。
+
+#### 当前代码事实
+
+- [`app/components/workspace/artifacts/ArtifactPanel.vue`](app/components/workspace/artifacts/ArtifactPanel.vue) 对未知扩展名回退为 text/code，并允许加载和 PUT。
+- React [`src/core/utils/files.tsx`](../frontend/src/core/utils/files.tsx) 使用显式 text/code/preview 白名单，未知文件回退为 download-only。
+- Vue 切文件、关闭面板和离开页面没有统一 dirty confirm/beforeunload。
+- 缺 edit exit、discard、copy、open in new window、install skill 等 React 已有操作。
+- 截断内容仍可切入 HTML `srcdoc` preview。
+
+#### 必须实现
+
+1. 建立显式文件策略：text/code、safe preview、browser media、download-only；未知类型默认 download-only。
+2. doc/docx/xls/xlsx/ppt/pptx/zip/二进制不得经文本 loader 或文本 PUT。
+3. dirty 状态在切文件、关闭 panel、关闭页面、路由离开时都有一致确认。
+4. 保存、失败、discard、exit edit 的 draft 状态可预测且可测试。
+5. 补齐 copy/open/download/install-skill；权限和错误响应必须展示。
+6. truncated 内容禁止进入可能误导或不安全的 HTML preview。
+
+#### Vue 实现建议
+
+- 文件策略为纯 TypeScript `classifyArtifact(path, metadata)`，组件只消费分类结果。
+- 拆分 `ArtifactFileList`、`ArtifactEditor`、`ArtifactPreview`、`ArtifactActions` 和 `useArtifactDraft`。
+- 使用 Vue Router leave guard + `beforeunload`，只在 dirty 时注册。
+
+#### 验收与测试
+
+- 文本、代码、图片、音频、视频、SVG、Office、archive、无扩展名矩阵测试。
+- 未知二进制永不调用 text loader/PUT。
+- dirty switch/close/route/beforeunload、save error、discard DOM 测试。
+- truncated HTML 不创建 preview iframe/srcdoc。
+
+### WP-07：Scheduled tasks
+
+包含：`SCHEDULE-01`～`SCHEDULE-03`。
+
+#### 当前代码事实
+
+- [`app/pages/workspace/scheduled-tasks.vue`](app/pages/workspace/scheduled-tasks.vue) 创建时固定 `0 9 * * *` 和 `UTC`，context 主要从 query 推导。
+- 页面只调用 create/fetch/pause/resume/trigger。
+- [`app/core/scheduled-tasks/api.ts`](app/core/scheduled-tasks/api.ts) 已有 update/delete，但没有页面消费者。
+- React [`src/app/workspace/scheduled-tasks/page.tsx`](../frontend/src/app/workspace/scheduled-tasks/page.tsx) 有 schedule form、timezone、context mode、recipes、编辑、删除、类型/状态筛选和更完整 runs。
+
+#### 必须实现
+
+1. 创建表单支持 interval/cron/one-time 等后台实际类型、timezone、context mode/target。
+2. 请求 payload 的空值、日期、UTC 转换、cron 和 enabled 语义与 React 一致。
+3. 支持 edit/delete，成功后正确 invalidates list/detail/runs。
+4. 支持 recipes、类型筛选、全部后台状态筛选。
+5. 展示完整 run history、状态、时间、错误和手动 trigger 结果。
+
+#### Vue 实现建议
+
+- 页面只负责布局；拆为 `ScheduledTaskForm`、`Filters`、`TaskList`、`TaskDetail`、`RunList`。
+- create/update/delete/pause/resume/trigger 都使用 Vue Query mutations 和集中 query keys。
+- 复用现有 cron/schedule/recipes 纯函数，不在模板里再次拼时间语义。
+
+#### 验收与测试
+
+- 对每种 schedule type 做 payload contract 测试。
+- timezone/DST/one-time 转换测试。
+- create/edit/delete/filter/trigger/runs E2E，断言请求和缓存刷新。
+
+### WP-08：Channels 连接生命周期
+
+包含：`CHANNEL-01`～`CHANNEL-03`。
+
+#### 当前代码事实
+
+- [`app/composables/useChannels.ts`](app/composables/useChannels.ts) 同时加载 providers 和 connections。
+- [`app/components/workspace/channels/ChannelConnections.vue`](app/components/workspace/channels/ChannelConnections.vue) 没有把 connections 合并成真实状态，主要展示 provider 的 `connection_status`。
+- connect 结果只消费 `instruction`，忽略 `url` 和 `expires_in`。
+- 已搬运 `open-connect-url`、poll helper 和两个 disconnect API，但实际组件没有使用。
+- React [`src/core/channels/hooks.ts`](../frontend/src/core/channels/hooks.ts) 会打开 deep-link、按 expires 轮询，并在 unmount 时停止。
+
+#### 必须实现
+
+1. provider 能力和用户 connection 实例分离；连接状态以 connections 响应为准。
+2. connect 响应存在 `url` 时安全打开/跳转；instruction 作为补充，不得代替 URL。
+3. 按 `expires_in` 有界轮询，成功、过期、取消、卸载都停止。
+4. 支持断开单个 connection/provider，成功后重新读取真实状态。
+5. 多账号、多 connection provider 的 DOM 和操作目标明确。
+
+#### Vue 实现建议
+
+- `useChannelConnections` 使用 Vue Query + effect scope 管理 poll timer。
+- 复用已有 provider-state、connect-poll、open-connect-url 纯函数。
+
+#### 验收与测试
+
+- connect URL、instruction-only、expires、poll success/timeout/unmount 测试。
+- disconnect 单连接和 provider 的请求/刷新测试。
+- providers 与 connections 状态冲突时，以 connection 响应展示。
+
+### WP-09：Agents 创建与设置
+
+包含：`AGENT-01`～`AGENT-03`。
+
+#### 当前代码事实
+
+- [`app/components/chat/AgentChat.vue`](app/components/chat/AgentChat.vue) 的 Save 发送普通可见消息，之后只做一次 getAgent，没有识别 setup_agent tool result、重试和 created UI。
+- React [`src/app/workspace/agents/new/page.tsx`](../frontend/src/app/workspace/agents/new/page.tsx) 在 run finish 后检查 setup_agent，有限重试读取 agent，并进入 created 状态。
+- [`app/pages/workspace/agents/index.vue`](app/pages/workspace/agents/index.vue) 使用自由文本模型字段，并直接提交 thinking/reasoning。
+- React [`src/components/workspace/agents/agent-settings-dialog.tsx`](../frontend/src/components/workspace/agents/agent-settings-dialog.tsx) 按模型 capabilities 将不支持字段归一化。
+- Vue agent 卡片只展示 model/skills，不展示 tool groups。
+
+#### 必须实现
+
+1. Save 使用与 React 等价但不污染聊天记录的保存指令。
+2. run finish 检测 setup_agent 结果；有限重试 getAgent；成功进入 created 状态并提供导航。
+3. 重复点击、失败重试和刷新不能创建多个 Agent。
+4. Agent 设置使用后台模型列表和 capabilities；payload 空值与 React 一致。
+5. 卡片展示 tool groups 和 skills，feature disabled/permission/error 状态清楚。
+
+#### Vue 实现建议
+
+- 抽出 `useAgentCreationSession` 管理 idle/saving/verifying/created/error。
+- 设置表单用 schema/computed 根据 selected model capabilities 动态启用字段。
+
+#### 验收与测试
+
+- setup_agent 成功、延迟可见、永久失败、重复 save 测试。
+- 每类模型 capability 的 update payload contract 测试。
+- card tool groups/skills DOM 测试。
+
+### WP-10：Memory、Skill 与 Tool 设置
+
+包含：`MEMORY-01`～`MEMORY-03`、`SETTINGS-01`。
+
+#### 当前代码事实
+
+- [`app/components/workspace/settings/MemorySettings.vue`](app/components/workspace/settings/MemorySettings.vue) 将 JSON 直接断言为 UserMemory 并立即导入。
+- delete/clear 没有确认；新增 confidence 固定为 `0.8`，缺完整编辑和校验。
+- React [`src/components/workspace/settings/memory-settings-page.tsx`](../frontend/src/components/workspace/settings/memory-settings-page.tsx) 有运行时验证、导入预览确认、删除/清空确认、confidence 和搜索筛选。
+- Vue Skill/Tool 页面捕获通用错误，没有消费 API 层已定义的 admin-required 错误/角色语义。
+
+#### 必须实现
+
+1. 导入前做运行时 schema 校验，展示合法/非法项和确认，不得直接信任 TypeScript assertion。
+2. 删除单项、清空全部、覆盖导入必须二次确认。
+3. confidence 的范围、步进、错误与后台合同一致；支持编辑、搜索、筛选。
+4. Skill/Tool 对 admin-required、只读用户、请求失败使用不同状态；无权限时禁用 mutation。
+
+#### Vue 实现建议
+
+- 使用 schema validator 或显式 type guard；解析和验证保持纯函数。
+- destructive dialog 使用统一 Vue dialog primitive。
+- permissions 从 session/query 派生，不在每个设置组件重复猜测。
+
+#### 验收与测试
+
+- malformed/partial/extra-field/重复 memory import 测试。
+- 所有 destructive action 的 cancel/confirm/request failure 测试。
+- non-admin/admin 的 skill/tool DOM 和“不得发送 mutation”测试。
+
+### WP-11：Workspace shell、导航和 changes
+
+包含：`SHELL-01`～`SHELL-03`、`CHANGES-01`。
+
+#### 当前代码事实
+
+- [`app/layouts/workspace.vue`](app/layouts/workspace.vue) 只挂载 sidebar、main 和 settings。
+- React [`src/app/workspace/workspace-content.tsx`](../frontend/src/app/workspace/workspace-content.tsx) 还挂载 Gateway unavailable banner、command palette、settings deep-link 和 toaster。
+- Vue SettingsDialog 只处理 overlay/Escape，没有 focus trap；关闭后保留 settings query。
+- [`app/components/workspace/ThreadSidebar.vue`](app/components/workspace/ThreadSidebar.vue) 菜单只有 rename/pin/delete。
+- [`app/core/threads/export.ts`](app/core/threads/export.ts) 的导出函数没有消费者；聊天列表也缺 updated time。
+- [`app/components/workspace/changes/WorkspaceChangesBadge.vue`](app/components/workspace/changes/WorkspaceChangesBadge.vue) 没有完整显示 `truncated`、file status、`diff_unavailable_reason`，详情加载没有明确 catch/error UI。
+
+#### 必须实现
+
+1. 工作区提供 Gateway unavailable/恢复、全局 toast 和 React 当前快捷操作的等价 command palette。
+2. 快捷键不与输入框、IME、浏览器快捷键冲突。
+3. SettingsDialog 具有 focus trap、初始焦点、焦点归还、Escape、aria；关闭清理 query，浏览器前进/后退可恢复深链。
+4. sidebar/chat list 提供 share/export，并显示 updated time；请求、剪贴板和下载错误可见。
+5. changes 展示 summary truncated、每个 file status、无法 diff 的具体原因以及 detail error/retry。
+
+#### Vue 实现建议
+
+- Workspace providers 用 layout-level composables/provide，不需要复制 React Provider 树。
+- Dialog/command palette 使用 Vue 无障碍 primitive。
+- export 调用已有纯函数；菜单状态和网络状态留在独立 action component。
+
+#### 验收与测试
+
+- Gateway 断开/恢复、toast、Meta/Ctrl-K、Shift-N 等快捷键测试。
+- Settings focus cycle、Escape、焦点归还、query/back-forward 测试。
+- share/export/updated_at 测试。
+- changes 的 truncated、binary、large、sensitive、symlink、error/retry fixture 测试。
+
+### WP-12：国际化与主题
+
+包含：`I18N-01`、`THEME-01`。
+
+#### 当前代码事实
+
+- 当前 Vue 产品 `.vue` 文件中只有少数组件显式接入 i18n；聊天消息、Agent、scheduled tasks、channels、browser、artifacts、sidecar、多个 settings 页面仍有大量英文硬编码。
+- [`app/components/workspace/settings/AppearanceSettings.vue`](app/components/workspace/settings/AppearanceSettings.vue) 在 system 模式只读取一次 `matchMedia`，没有监听系统主题变化。
+- 词典 key 检查通过只能证明两个 locale key 集合一致，不能证明产品组件使用了词典。
+
+#### 必须实现
+
+1. 所有范围内产品界面文本进入统一 i18n；动态后端文本、代码、文件名和用户内容不得错误翻译。
+2. aria-label、title、empty/error/loading、toast、dialog 文本也必须翻译。
+3. system theme 监听 `prefers-color-scheme` change；切换到显式 light/dark 时解绑或忽略系统变化。
+4. SSR/hydration 不出现主题闪烁或 server/client 不一致。
+
+#### Vue 实现建议
+
+- 按功能域组织 key，但继续使用现有 i18n plugin 和 locale 类型检查。
+- 创建轻量 source guard，阻止新的核心模板直接加入英文产品文本；允许测试 fixture、代码、协议常量。
+- theme listener 封装 composable，并在 `onScopeDispose` 移除监听。
+
+#### 验收与测试
+
+- zh-CN/en-US 对 chat、agents、scheduled、settings、browser、artifacts 的关键页面 E2E。
+- i18n key/unused/source guard 全绿。
+- system theme change、显式主题不跟随、销毁解绑和 hydration 测试。
+
+## 7. 推荐实施顺序
+
+必须按依赖推进，不建议多个窗口同时修改 `AgentChat.vue`、`ChatComposer.vue`、`MessageList.vue` 或 `useThreadStream.ts`。
+
+1. **阶段 A：安全与入口**：WP-01。
+2. **阶段 B：协议和线程状态**：WP-02。
+3. **阶段 C：聊天输入输出**：WP-03，然后 WP-04。
+4. **阶段 D：高风险工作区面板**：WP-05、WP-06；两者可由不同窗口并行。
+5. **阶段 E：业务页面**：WP-07、WP-08、WP-09；避免同时修改公共 query key。
+6. **阶段 F：设置与壳层**：WP-10、WP-11。
+7. **阶段 G：全局收口**：WP-12、完整视觉/真实后端/双前端验证。
+
+每个工作包完成后，都要重新搜索本文档列出的“已存在但没有消费者”的 API/helper，不能保留新的双轨实现。
+
+## 8. 每个工作包的完成定义
+
+一个 ID 只有同时满足以下条件才可改为 `DONE`：
+
+- 当前 React 行为和后台合同已从源码重新确认；
+- Vue 使用 Vue/Nuxt 方案实现，没有引入 React 运行时或复制 React 状态容器；
+- 请求的 URL/method/query/headers/body 与共享后台合同一致；
+- 成功、空数据、4xx、5xx、取消、超时、重试和路由切换均有明确处理；
+- Vue unit/DOM 测试覆盖纯逻辑与组件状态；
+- 关键用户路径有 E2E，必要时包含真实 Gateway/真实 Nuxt proxy；
+- 无障碍交互包含键盘、焦点、aria、IME；
+- 相关旧实现、孤儿 helper 或重复状态路径被移除；
+- `make verify` 通过；
+- 根据变更范围运行下方专项门禁；
+- `git diff --check` 通过，工作区没有无关改动；
+- 本文档状态和完成证据已更新。
+
+## 9. 验证命令
+
+从 `frontend-vue` 目录运行：
+
+```bash
+make verify
+make migration-check
+make e2e-m7
+make e2e-m7-auth
+make e2e-m7-real-protocol
+make e2e-m7-visual
+make asset-budget
+make container-smoke
+```
+
+按工作包至少增加：
+
+- WP-01：proxy/security/auth、真实 Nuxt route；
+- WP-02～WP-04：stream、thread history、chat、sidecar E2E；
+- WP-05：browser unit + real backend；
+- WP-06：artifact write + binary/truncated/dirty guard；
+- WP-07：scheduled tasks API contract + E2E；
+- WP-08：channels poll/deep-link/disconnect；
+- WP-09～WP-11：agents/settings/workspace E2E；
+- WP-12：i18n、theme、visual。
+
+React 基线也必须保持：
+
+```bash
+cd ../frontend
+pnpm check
+pnpm test
+```
+
+本基线审计时结果：React 1001/1001 tests 通过；Vue 1100/1100 tests、类型检查、格式检查、OpenAPI 检查和 Nuxt production build 通过。现有门禁通过不等于上述差异已完成，因为多数差异尚无对应测试。
+
+## 10. 后续窗口交接模板
+
+完成或暂停一个工作包时，在任务回复和本文档中留下：
+
+```text
+工作包：WP-xx
+处理 ID：XXX-01, XXX-02
+状态：DONE / BLOCKED / IN PROGRESS
+React 基线：文件 + symbol/行号
+Vue 改动：文件列表
+API 对齐：method/path/query/headers/body/response/error/cache
+交互对齐：DOM/键盘/焦点/响应式/异常态
+新增测试：测试文件 + 用例名称
+已运行门禁：命令 + 结果
+未运行门禁：命令 + 原因
+剩余风险：明确事实，不猜测后台
+提交：commit hash（如果用户授权提交）
+```
+
+## 11. 本次审计覆盖与证据边界
+
+- 已机械通读 `frontend` 与 `frontend-vue` 的 1,088 个受控代码/配置文件，共 231,034 行。
+- API 定义层已有较高复用度；主要缺口集中在 Vue 页面/composable 对响应和 helper 的实际消费，而不是缺少 TypeScript 函数声明。
+- 已确认的孤儿能力包括 compact、subtask steps/task presentation、scheduled update/delete、channel disconnect/deep-link、thread export、skill install 等；完成工作包时应优先接通现有正确实现，避免再造一套。
+- 本文档只记录当前源码能够证明的前端差异。真实 IdP、外部 channel provider、真实浏览器控制后端等仍需用对应环境做最终验收；没有运行的真实环境门禁不得写成“已验证”。
+- 审计没有修改业务代码；创建本文档前后工作树中的用户改动必须继续保留。
+
+## 12. 完成证据
+
+在此追加，不删除历史记录：
+
+| 日期       | 工作包/ID | 证据                                                                  | 备注                    |
+| ---------- | --------- | --------------------------------------------------------------------- | ----------------------- |
+| 2026-08-21 | 基线审计  | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过 | 所有 ID 初始状态为 TODO |

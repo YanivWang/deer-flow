@@ -1,12 +1,29 @@
 # Vue 前端行为合同
 
-本文记录 `frontend-vue` 当前实现必须持续满足的产品和协议行为。它不是迁移计划，
-也不记录某次测试运行结果；真实实现以当前源码为准，验证入口以
+本文记录 `frontend-vue` 已满足后必须持续保持、以及为了替换 React 必须达到的产品和
+协议行为。它不是完成清单，也不表示每一条当前都已实现；真实实现以当前源码为准，
+未满足项及执行状态以 [PARITY_GAPS.md](PARITY_GAPS.md) 为准，验证入口以
 [README.md](README.md) 和各测试配置为准。
 
 全表 **A–N 共 14 组**。A–K 是产品行为，L 是 SSE/会话协议约束，M 是 Vue
-框架语义约束，N 是需要跨浏览器或跨层验证的模块。修改相关代码时必须同时更新本合同和
-对应测试，不能用单次全绿替代逐项判断。
+框架语义约束，N 是需要跨浏览器或跨层验证的模块。修改相关代码时必须同时更新本合同、
+差异清单和对应测试，不能用单次全绿替代逐项判断。
+
+当前已确认仍违反或未完整覆盖的合同包括：
+
+| 合同                             | 对应差异 ID                               |
+| -------------------------------- | ----------------------------------------- |
+| D3、D6～D8                       | `ARTIFACT-01`～`ARTIFACT-04`              |
+| E1、E4～E8                       | `COMPOSER-01`～`COMPOSER-04`、`THREAD-01` |
+| F6、F9～F10                      | `HIL-01`、`SIDECAR-03`                    |
+| G1～G6                           | `STREAM-01`、`STREAM-02`                  |
+| H8                               | `MESSAGE-04`                              |
+| I 组尚未覆盖的连接/导航/输入要求 | `BROWSER-01`～`BROWSER-03`                |
+| J 组尚未覆盖的 callback/恢复要求 | `AUTH-01`～`AUTH-03`                      |
+| K3、K5 的错误/状态消费           | `THREAD-02`、`SETTINGS-01`                |
+| N1、N4 的产品接入                | `SIDECAR-02`、`MESSAGE-01`、`I18N-01`     |
+
+该映射不是差异清单的替代品；新的未满足合同先加入 `PARITY_GAPS.md`，再补合同和测试。
 
 ---
 
@@ -25,7 +42,7 @@
 | A7  | gap 发生时要清空乐观 / 瞬态 / subtask 状态、失效持久化历史缓存、显示本地化恢复警告                                         | —                                                                                                                                                                                     |
 | A8  | Stop 后立即失效 4 类缓存（当前 thread、thread history、token usage、侧栏/搜索），并**再安排一次延迟 refetch**              | SDK 的 stop 可能在后端标题定稿提交前就以 abort + fire-and-forget cancel 结束                                                                                                          |
 
-> 当前实现：`packages/agent-core/src/session/`、`packages/agent-core/src/transport/`、
+> 主要代码位置：`packages/agent-core/src/session/`、`packages/agent-core/src/transport/`、
 > `app/core/agent-deerflow/`、`app/core/threads/cache-invalidation.ts` 和
 > `app/composables/useThreadStream.ts`。
 
@@ -84,7 +101,7 @@ payload，而不是只测协议层能否转发一个由测试手工构造的 `st
 | B11 | citation 链接的 `citation:` 标签要从**完整 children 树**推导                                 | 流式期间 children 可能是元素或数组，不是纯字符串                                                                             |
 | B12 | 消息视口贴底时，流式内容的每次尺寸增长都继续跟随底部；用户主动上滚后立即释放，回到底部时恢复 | AI token 会持续追加在同一个消息组内，不能只监听组数量；语义与 React `use-stick-to-bottom` 的 resize/follow 行为一致          |
 
-> 当前实现：`app/core/messages/utils.ts`、`app/core/messages/run-duration.ts`、
+> 主要代码位置：`app/core/messages/utils.ts`、`app/core/messages/run-duration.ts`、
 > `app/core/messages/workspace-change-anchor.ts`、`app/components/chat/MessageList.vue`。
 
 B12 由 `MessageList.vue` 的内容 `ResizeObserver` 驱动。主会话按 React 默认值平滑跟随，
@@ -107,7 +124,7 @@ sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
 | C8  | 本地提交的回合要记录 pre-submit 身份基线：若 `messages-tuple` 先于 `values` 发布新的 AI/tool 步骤，只把非基线的可见步骤移到新 human 之后，不动历史、隐藏控制消息和重连的 run |
 | C9  | 该本地顺序锚点要**保持到 finish / stop / stream error**；下次本地提交时替换，切换 thread 或 replay-gap 恢复时清除                                                            |
 
-> 当前实现集中在 `app/core/threads/history.ts`、`message-merge.ts`、
+> 主要代码位置集中在 `app/core/threads/history.ts`、`message-merge.ts`、
 > `local-turn-order.ts`、`cache-invalidation.ts` 以及 `app/composables/useThreadHistory.ts`、
 > `useThreadStream.ts`。这些纯函数和生命周期测试必须一起维护。
 
@@ -162,7 +179,7 @@ sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
 | F10 | 页面级卡片提交回调发普通 human 消息，把 `hide_from_ui: true` 与响应载荷放在 `sendMessage` 第 4 个参数的 `additionalKwargs`；第 3 个参数仍是 run 上下文（如 `{ agent_name }`） |
 | F11 | 有未答请求时 composer 入口**保持可用**；普通可见消息会绕过卡片并启动下一个 run                                                                                                |
 
-> 当前实现：`app/core/messages/human-input.ts`、`app/components/chat/HumanInputCard.vue`。
+> 主要代码位置：`app/core/messages/human-input.ts`、`app/components/chat/HumanInputCard.vue`。
 
 ---
 

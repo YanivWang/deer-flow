@@ -15,21 +15,24 @@ guide rather than expecting full detail here:
   architecture lives in `frontend-vue/ARCHITECTURE.md` and hard behavior contracts in
   `frontend-vue/BEHAVIOR_CONTRACTS.md`.
 
-The Vue application is fully implemented. React remains the default production hostname and Vue
-is selected by a secondary hostname; treat that as the current deployment topology, not a
-migration-status signal. Vue owns its framework-specific stream/artifact-panel, agent-chat,
-channels, integrations and thread-history tests. Shared specs are limited to framework-neutral
-behavior, so a React change enters Vue-owned surfaces only through an explicit Vue implementation
-and test update. Public DNS/TLS/outer-proxy/real-IdP activation remains environment-owned.
+The Vue application runs alongside React, but the current source audit has open P0/P1 replacement
+gaps in [`frontend-vue/PARITY_GAPS.md`](frontend-vue/PARITY_GAPS.md). React remains the default
+production hostname and Vue is selected by a secondary hostname; that is only the current
+deployment topology and is not evidence of product or API-consumption parity. Vue owns its
+framework-specific stream/artifact-panel, agent-chat, channels, integrations and thread-history
+tests. Shared specs are limited to framework-neutral behavior, so a React change enters Vue-owned
+surfaces only through an explicit idiomatic Vue implementation and test update. Public
+DNS/TLS/outer-proxy/real-IdP activation remains environment-owned.
 
 ## What is DeerFlow
 
 DeerFlow is a LangGraph-based AI super-agent system with a full-stack architecture. The
 backend runs a "super agent" with sandboxed execution, persistent memory, subagent
 delegation, and extensible tools (built-in, MCP, community), all per-thread isolated. The
-default frontend is a Next.js chat UI, with a complete Nuxt/Vue implementation available on
-the configured secondary hostname. External IM platforms (Feishu, Slack, Telegram, Discord,
-DingTalk) bridge into the same agent through the Gateway.
+default frontend is a Next.js chat UI, with a coexisting Nuxt/Vue implementation available on
+the configured secondary hostname. The Vue replacement gaps are tracked in
+[`frontend-vue/PARITY_GAPS.md`](frontend-vue/PARITY_GAPS.md). External IM platforms (Feishu,
+Slack, Telegram, Discord, DingTalk) bridge into the same agent through the Gateway.
 
 ## Service Topology
 
@@ -73,7 +76,7 @@ deer-flow/
 │   ├── packages/harness/           # deerflow-harness package (import: deerflow.*) — agent framework
 │   └── app/                        # FastAPI Gateway + IM channels (import: app.*)
 ├── frontend/                       # Next.js frontend (pnpm) — see frontend/AGENTS.md
-├── frontend-vue/                   # Complete Nuxt/Vue frontend — see frontend-vue/README.md
+├── frontend-vue/                   # Coexisting Nuxt/Vue frontend; replacement gaps in PARITY_GAPS.md
 ├── docker/                         # docker-compose files, nginx config, provisioner
 ├── skills/                         # Agent skills: public/ (committed), custom/ (gitignored)
 │                                    # Managed integration skill packs are global at .deer-flow/integrations/skills/{provider}/

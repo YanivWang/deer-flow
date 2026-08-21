@@ -11,6 +11,11 @@
 
 这是一条可回滚的并行入口，不是 Vue 默认切换。
 
+> **发布状态：** secondary hostname 只用于共存验证，不代表 Vue 已达到替换条件。
+> 当前 P0/P1 阻断项见
+> [`../frontend-vue/PARITY_GAPS.md`](../frontend-vue/PARITY_GAPS.md)；关闭这些事项并完成
+> 目标环境验收前，不得把 Vue 切成默认前端。
+
 ## 启动与本机验证
 
 不要修改或删除现有 `.env`。用进程环境选择 Vue 主机名：
@@ -91,6 +96,8 @@ make down
 未知 Host 始终仍落到 React，因此 React 是现阶段的安全默认入口。
 
 将 Vue 改成默认前端需要单独修改 Nginx map 的 `default`、重新完成生产验收并准备反向回滚；
-当前配置变量不会隐式完成默认切换。Vue 的仓库内测试和容器 smoke 不替代目标环境的
-DNS/TLS、外层代理和真实 IdP 验证；这些配置完成前，不应公开激活 Vue hostname。
+当前配置变量不会隐式完成默认切换。切换前还必须关闭
+[`frontend-vue/PARITY_GAPS.md`](../frontend-vue/PARITY_GAPS.md) 的全部 P0/P1 项。Vue 的
+仓库内测试和容器 smoke 不替代目标环境的 DNS/TLS、外层代理和真实 IdP 验证；这些配置
+完成前，不应公开激活 Vue hostname。
 `@deerflow/agent-core` 仍是仓库内私有包，没有发布到 npm，也不会改变生产路由。

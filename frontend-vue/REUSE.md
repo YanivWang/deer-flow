@@ -5,13 +5,18 @@ This guide describes the contracts that are reusable **from this checkout**. The
 supported paths today are a workspace dependency or a tarball produced with
 `pnpm pack`; do not write an npm registry version into another project.
 
+This guide is about reuse boundaries, not React/Vue product parity. Open L3
+replacement gaps are tracked in [PARITY_GAPS.md](PARITY_GAPS.md); a green L1/L2
+consumer test must not be used as evidence that the DeerFlow Vue application is
+ready to replace React.
+
 ## 1. Choose the layer you need
 
-| Layer | Reuse boundary                                                         | What the new project supplies                                                 |
-| ----- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| L1    | `packages/agent-core/`                                                 | Backend `RunProtocol`, event classifier, `EventReducer`, message adapter      |
-| L2    | Markdown + Button sources listed below; proven chat behavior contracts | Host message model, product composition, styling and business extension cards |
-| L3    | DeerFlow application wiring                                            | Replace it; do not copy it as if it were generic                              |
+| Layer | Reuse boundary                                                             | What the new project supplies                                                 |
+| ----- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| L1    | `packages/agent-core/`                                                     | Backend `RunProtocol`, event classifier, `EventReducer`, message adapter      |
+| L2    | Markdown + Button sources listed below; documented chat behavior contracts | Host message model, product composition, styling and business extension cards |
+| L3    | DeerFlow application wiring                                                | Replace it; do not copy it as if it were generic                              |
 
 There is deliberately no `packages/agent-ui-kit`. The current chat components
 still import DeerFlow stores, endpoints and product types. Creating a package
@@ -136,8 +141,9 @@ Current public component seams are:
 - `MermaidDiagram`: code and dark mode; parse failure falls back to code.
 - `Button`: shadcn-vue-compatible variants and sizes.
 
-The following behavior is proven and reusable as a pattern, but its current Vue
-component is an **L3 UI adapter**, not a portable package:
+The following behavior has focused tests and is reusable as a pattern, but those
+tests do not prove complete product parity. Its current Vue component is an
+**L3 UI adapter**, not a portable package:
 
 | Behavior                                   | Current source and seam                                                                                                                                                 | Why it is not in the L2 source set                                            |
 | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
