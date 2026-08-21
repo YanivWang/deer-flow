@@ -15,6 +15,7 @@ import {
   ref,
   watch,
 } from "vue";
+import { useQueryClient } from "@tanstack/vue-query";
 import {
   ArrowUp,
   FlaskConical,
@@ -64,6 +65,9 @@ import {
   parseGoalCommand,
   readGoalResponseError,
 } from "@/core/threads/goal";
+import { invalidateThreadCaches } from "@/core/threads/cache-invalidation";
+import { isCompactCommand } from "@/core/threads/compact-command";
+import { compactThreadContext } from "@/core/threads/api";
 import type { GoalState } from "@/core/threads/types";
 import {
   appendSpeechTranscript,
@@ -91,6 +95,7 @@ const props = defineProps<{
   disabled?: boolean;
 }>();
 const { $i18n } = useNuxtApp();
+const queryClient = useQueryClient();
 const emit = defineEmits<{
   send: [text: string, files: FileInMessage[]];
   stop: [];
@@ -108,6 +113,9 @@ const limits = ref<UploadLimits | undefined>();
 const suggestionIndex = ref(0);
 const polishOriginal = ref<string | null>(null);
 const polishing = ref(false);
+const compactPending = ref(false);
+let compactController: AbortController | null = null;
+let compactGeneration = 0;
 const polishController = ref<AbortController | null>(null);
 const toast = ref("");
 const models = ref<Model[]>([]);
@@ -219,6 +227,15 @@ function restore() {
   selectedSkill.value = draft?.skillName ?? null;
 }
 watch(draftKey, restore);
+watch(
+  () => props.targetThreadId,
+  () => {
+    compactGeneration += 1;
+    compactController?.abort();
+    compactController = null;
+    compactPending.value = false;
+  },
+);
 watch([input, selectedSkill], persist);
 watch(selectedSkill, async () => {
   await nextTick();
@@ -269,6 +286,8 @@ function selectMode(mode: (typeof modes.value)[number]) {
   modeMenu.value = false;
 }
 onBeforeUnmount(() => {
+  compactGeneration += 1;
+  compactController?.abort();
   voiceStopRequested = true;
   if (voiceRestartTimer) clearTimeout(voiceRestartTimer);
   voiceRecognition.value?.abort();
@@ -360,11 +379,14 @@ function selectSuggestion() {
 
 async function submit() {
   if (props.disabled) return;
-  if (suggestions.value.length > 0 && selectSuggestion()) return;
   const plain = input.value.trim();
   const text = selectedSkill.value
     ? `/${selectedSkill.value}${plain ? ` ${plain}` : ""}`
     : plain;
+  const compactCommand =
+    selectedFiles.value.length === 0 && isCompactCommand(text);
+  if (!compactCommand && suggestions.value.length > 0 && selectSuggestion())
+    return;
   if (!text && selectedFiles.value.length === 0) return;
   const placeholder = findSuggestionTemplatePlaceholder(text);
   if (placeholder) {
@@ -372,6 +394,66 @@ async function submit() {
     const element = textarea.value;
     element?.focus();
     element?.setSelectionRange(placeholder.start, placeholder.end);
+    return;
+  }
+
+  if (compactCommand) {
+    if (compactPending.value) return;
+    if (props.isWelcome) {
+      clearComposerDraft(getSessionComposerDraftStorage(), draftKey.value);
+      input.value = "";
+      selectedSkill.value = null;
+      toast.value = "There is no conversation context to compact yet.";
+      return;
+    }
+    compactPending.value = true;
+    const generation = ++compactGeneration;
+    const controller = new AbortController();
+    compactController?.abort();
+    compactController = controller;
+    const targetThreadId = props.targetThreadId;
+    try {
+      const result = await compactThreadContext(targetThreadId, {
+        signal: controller.signal,
+        agentName:
+          typeof props.context?.agent_name === "string"
+            ? props.context.agent_name
+            : props.agentName,
+        modelName:
+          typeof props.context?.model_name === "string"
+            ? props.context.model_name
+            : null,
+      });
+      if (
+        controller.signal.aborted ||
+        generation !== compactGeneration ||
+        targetThreadId !== props.targetThreadId
+      ) {
+        return;
+      }
+      clearComposerDraft(getSessionComposerDraftStorage(), draftKey.value);
+      input.value = "";
+      selectedSkill.value = null;
+      historyIndex = -1;
+      invalidateThreadCaches(queryClient, targetThreadId);
+      toast.value = result.compacted
+        ? "Conversation context compacted."
+        : result.reason
+          ? `Context was not compacted: ${result.reason}`
+          : "Conversation context did not need compaction.";
+    } catch (error) {
+      if (
+        !controller.signal.aborted &&
+        generation === compactGeneration &&
+        targetThreadId === props.targetThreadId
+      ) {
+        toast.value =
+          error instanceof Error ? error.message : "Failed to compact context.";
+      }
+    } finally {
+      if (compactController === controller) compactController = null;
+      if (generation === compactGeneration) compactPending.value = false;
+    }
     return;
   }
 
@@ -584,6 +666,7 @@ defineExpose({ replaceDraft });
       class="mx-auto w-full"
       :class="disabled ? 'pointer-events-none opacity-60' : ''"
       :aria-disabled="disabled"
+      :aria-busy="compactPending"
       @submit.prevent="submit"
     >
       <ReferenceAttachment
@@ -643,7 +726,7 @@ defineExpose({ replaceDraft });
           placeholder="How can I assist you today?"
           rows="2"
           class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none"
-          :disabled="disabled || polishing"
+          :disabled="disabled || polishing || compactPending"
           @keydown="onKeydown"
           @compositionstart="compositionActive = true"
           @compositionend="compositionActive = false"
@@ -827,7 +910,9 @@ defineExpose({ replaceDraft });
             class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full disabled:opacity-50"
             aria-label="Send"
             :disabled="
-              disabled || (!input.trim() && selectedFiles.length === 0)
+              disabled ||
+              compactPending ||
+              (!input.trim() && selectedFiles.length === 0)
             "
           >
             <ArrowUp :size="16" />

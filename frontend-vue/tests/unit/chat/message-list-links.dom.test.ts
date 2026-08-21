@@ -112,3 +112,40 @@ describe("MessageList MarkdownLink integration", () => {
     wrapper.unmount();
   });
 });
+
+describe("MessageList on-demand history", () => {
+  it("does not auto-fetch, coalesces requests and preserves the viewport after prepend", async () => {
+    const wrapper = mount(MessageList, {
+      props: {
+        messages: [],
+        streaming: false,
+        loading: false,
+        threadId: "thread-1",
+        hasMoreHistory: true,
+        historyLoadingMore: false,
+      },
+    });
+    await flushPromises();
+    expect(wrapper.emitted("loadMoreHistory")).toBeUndefined();
+
+    const scroller = wrapper.get('[role="log"] > div').element as HTMLElement;
+    let scrollHeight = 500;
+    Object.defineProperty(scroller, "scrollHeight", {
+      configurable: true,
+      get: () => scrollHeight,
+    });
+    scroller.scrollTop = 20;
+    const button = wrapper.get('[data-testid="load-earlier-messages"]');
+    await button.trigger("click");
+    await button.trigger("click");
+    expect(wrapper.emitted("loadMoreHistory")).toHaveLength(1);
+
+    await wrapper.setProps({ historyLoadingMore: true });
+    scrollHeight = 720;
+    await wrapper.setProps({ historyLoadingMore: false });
+    await flushPromises();
+    expect(scroller.scrollTop).toBe(240);
+
+    wrapper.unmount();
+  });
+});

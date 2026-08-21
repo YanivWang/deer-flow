@@ -280,6 +280,9 @@ test.describe("Thread history", () => {
     );
 
     await page.goto(`/workspace/chats/${MOCK_THREAD_ID}`);
+    const loadEarlierButton = page.getByTestId("load-earlier-messages");
+    await expect(loadEarlierButton).toBeVisible({ timeout: 15_000 });
+    await loadEarlierButton.click();
     await expect
       .poll(() => cursorPageRequestCount, { timeout: 15_000 })
       .toBeGreaterThan(0);

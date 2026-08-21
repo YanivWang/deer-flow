@@ -18,7 +18,6 @@ app/core/api/types.gen.ts
 app/core/agents/api.ts
 app/core/agents/feature-cache.ts
 app/core/agents/types.ts
-app/core/api/errors.ts
 app/core/api/feedback.ts
 app/core/api/fetcher.ts
 app/core/api/index.ts
@@ -83,7 +82,6 @@ app/core/tasks/lifecycle.ts
 app/core/tasks/presentation.ts
 app/core/tasks/steps.ts
 app/core/tasks/subtask-update.ts
-app/core/threads/api.ts
 app/core/threads/composer-draft.ts
 app/core/threads/index.ts
 app/core/threads/thread-list-model.ts

@@ -20,7 +20,7 @@
 
 import type { InfiniteData, QueryClient } from "@tanstack/vue-query";
 
-import type { ThreadsClient } from "../types/message";
+import type { ThreadSearchQuery } from "../types/message";
 
 import {
   filterThreadSearchResults,
@@ -46,7 +46,7 @@ export type InfiniteThreadsParams = Omit<
 
 type InfiniteThreadsSearchClient = {
   threads: {
-    search: ThreadsClient["search"];
+    search(query?: ThreadSearchQuery<AgentThreadState>): Promise<AgentThread[]>;
   };
 };
 
@@ -76,11 +76,11 @@ export async function fetchInfiniteThreadsPage(
 
   while (threads.length < pageSize) {
     const currentLimit = pageSize - threads.length;
-    const response = (await apiClient.threads.search<AgentThreadState>({
+    const response = await apiClient.threads.search({
       ...params,
       limit: currentLimit,
       offset,
-    })) as AgentThread[];
+    });
 
     threads.push(...filterThreadSearchResults(response, params));
     offset += response.length;

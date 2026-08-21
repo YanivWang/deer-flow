@@ -151,6 +151,7 @@ tests do not prove complete product parity. Its current Vue component is an
 | Composer                                   | `threads/composer-draft.ts`, `ChatComposer.vue`; thread/context/streaming props plus send/stop/upload/context/goal events                                               | Imports DeerFlow skills, uploads, models, goal, polish and sidecar types      |
 | Human input                                | `core/messages/human-input.ts`, `HumanInputCard.vue`; request/answered/active/pending plus submit                                                                       | Request extraction is tied to DeerFlow ToolMessage wire shape                 |
 | Child session                              | `SidecarPanel.vue` consuming the same `MessageList` and `useThreadStream`                                                                                               | Hidden-thread metadata and APIs are DeerFlow-specific                         |
+| Subtask timeline                           | `SubtaskCard.vue` consuming normalized task state and on-expand history                                                                                                 | Task events and run-event URLs are DeerFlow-specific                          |
 
 A new project should keep the behavioral invariants and replace those host
 adapters against its own message model. Do not add a second message state machine
@@ -185,9 +186,9 @@ Replace every applicable group below when moving to another backend/product:
    - `app/core/auth/**`, `app/middleware/auth.global.ts`, login/setup/callback
      pages and the relevant auth layout.
 3. Vue/thread application adapter:
-   - `app/composables/useThreadStream.ts`, `useThreadHistory.ts`,
+   - `app/composables/useThreadStream.ts`, `useThreadHistory.ts`, `useThreads.ts`,
      `thread-context.ts`, `useCoalescedStreamMessages.ts`;
-   - `app/core/threads/**`, `app/stores/threads.ts` and thread routes.
+   - `app/core/threads/**` and thread routes. Pinia does not own a duplicate thread list.
 4. DeerFlow product extensions:
    - `app/core/artifacts/**`, `components/workspace/artifacts/**`,
      `useArtifactsPanel.ts`;

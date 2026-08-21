@@ -119,3 +119,11 @@ updates at most 80 ms apart to keep Markdown and message grouping responsive.
 While the viewport remains at the bottom, message-content resizes keep the
 active answer in view. Scrolling upward releases that follow behavior until the
 user returns to the bottom, matching the React frontend.
+
+Task lifecycle and `llm_retry` custom events are folded into thread-scoped UI
+state. Subtask cards expose status, model, cumulative token usage and live
+steps; expanding a card backfills persisted steps after reload. Long
+conversations initially request only the newest history page, with explicit or
+upward-scroll loading for older pages. `/compact` is a real Gateway command for
+established conversations and keeps the draft intact when the Gateway rejects
+the request.

@@ -27,10 +27,14 @@
                    本地化警告文案同理走 `notify` 端口，不在 core 里选 toast 实现。
 */
 
-import type { QueryClient } from "@tanstack/vue-query";
+import type { InfiniteData, QueryClient } from "@tanstack/vue-query";
 
 import { threadHistoryQueryKey } from "./history";
-import { INFINITE_THREADS_QUERY_KEY_PREFIX } from "./infinite";
+import {
+  filterInfiniteThreadsCache,
+  INFINITE_THREADS_QUERY_KEY_PREFIX,
+} from "./infinite";
+import type { AgentThread } from "./types";
 import { threadTokenUsageQueryKey } from "./token-usage";
 
 /**
@@ -54,6 +58,14 @@ export function invalidateStoppedThreadCaches(
   queryClient: QueryClient,
   threadId: string | null | undefined,
 ) {
+  invalidateThreadCaches(queryClient, threadId);
+}
+
+/** Invalidate every cache that can retain thread-derived server state. */
+export function invalidateThreadCaches(
+  queryClient: QueryClient,
+  threadId: string | null | undefined,
+) {
   for (const queryKey of THREAD_CACHE_KEYS.global()) {
     void queryClient.invalidateQueries({ queryKey });
   }
@@ -62,6 +74,33 @@ export function invalidateStoppedThreadCaches(
   }
   for (const queryKey of THREAD_CACHE_KEYS.threadScoped(threadId)) {
     void queryClient.invalidateQueries({ queryKey });
+  }
+}
+
+/** Remove deleted rows and every thread-scoped cache without dropping siblings. */
+export function removeDeletedThreadCaches(
+  queryClient: QueryClient,
+  threadIds: readonly string[],
+) {
+  const deleted = new Set(threadIds);
+  if (deleted.size === 0) return;
+  queryClient.setQueriesData(
+    { queryKey: ["threads", "search"], exact: false },
+    (oldData: AgentThread[] | undefined) =>
+      oldData?.filter((thread) => !deleted.has(thread.thread_id)),
+  );
+  queryClient.setQueriesData(
+    { queryKey: [...INFINITE_THREADS_QUERY_KEY_PREFIX], exact: false },
+    (oldData: InfiniteData<AgentThread[]> | undefined) =>
+      filterInfiniteThreadsCache(
+        oldData,
+        (thread) => !deleted.has(thread.thread_id),
+      ),
+  );
+  for (const threadId of deleted) {
+    for (const queryKey of THREAD_CACHE_KEYS.threadScoped(threadId)) {
+      queryClient.removeQueries({ queryKey, exact: true });
+    }
   }
 }
 

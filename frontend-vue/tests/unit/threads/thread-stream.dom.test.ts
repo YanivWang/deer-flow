@@ -42,6 +42,8 @@ vi.mock("@/composables/useThreadHistory", () => ({
   useThreadHistory: () => ({
     messages: ref<Message[]>([]),
     loading: ref(false),
+    loadingInitial: ref(false),
+    loadingMore: ref(false),
     hasMore: ref(false),
     loadMore: () => Promise.resolve(),
     error: ref(null),
@@ -158,6 +160,78 @@ describe("useThreadStream · K3 编辑并重跑", () => {
         metadata: { replay: "edit" },
       },
     });
+    expect(ctx.invalidated).toEqual(
+      expect.arrayContaining([
+        ["threads", "search"],
+        ["threads", "searchInfinite"],
+        ["thread", "thread-1"],
+        ["thread-messages", "thread-1"],
+        ["thread", "metadata", "thread-1"],
+        ["thread-token-usage", "thread-1"],
+      ]),
+    );
+    ctx.wrapper.unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it("保留 prepare 的 HTTP 状态与 Gateway detail，并让失败状态完全收敛", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              detail: "The selected turn is no longer replayable.",
+            }),
+            {
+              status: 409,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+      ),
+    );
+    const ctx = mountStream();
+
+    await expect(ctx.api.regenerateMessage("thread-1", "ai-1")).resolves.toBe(
+      false,
+    );
+    expect(ctx.errors).toEqual(["The selected turn is no longer replayable."]);
+    expect(ctx.fake.submissions).toHaveLength(0);
+
+    ctx.wrapper.unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it("切换 thread 会取消 prepare，迟到响应不能提交也不能污染新页面", async () => {
+    let resolvePrepare!: (response: Response) => void;
+    const fetchMock = vi.fn(
+      () => new Promise<Response>((resolve) => (resolvePrepare = resolve)),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const threadId = ref<string | null>("thread-1");
+    const ctx = mountStream(threadId);
+
+    const first = ctx.api.regenerateMessage("thread-1", "ai-1");
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await expect(ctx.api.regenerateMessage("thread-1", "ai-1")).resolves.toBe(
+      false,
+    );
+    threadId.value = "thread-2";
+    await flushPromises();
+    resolvePrepare(
+      new Response(
+        JSON.stringify({
+          target_run_id: "old-run",
+          input: { messages: [] },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await expect(first).resolves.toBe(false);
+    expect(ctx.fake.submissions).toHaveLength(0);
+    expect(ctx.errors).toEqual([]);
+
     ctx.wrapper.unmount();
     vi.unstubAllGlobals();
   });
@@ -170,6 +244,7 @@ function mountStream(threadId = ref<string | null>("thread-1")) {
     defaultOptions: { queries: { retry: false } },
   });
   const invalidated: unknown[][] = [];
+  const errors: string[] = [];
   const originalInvalidate = queryClient.invalidateQueries.bind(queryClient);
   queryClient.invalidateQueries = ((filters?: { queryKey?: unknown[] }) => {
     if (filters?.queryKey) invalidated.push(filters.queryKey);
@@ -181,7 +256,10 @@ function mountStream(threadId = ref<string | null>("thread-1")) {
       api = useThreadStream({
         threadId,
         context: ref({ mode: "flash" }),
-        notify: { warn: (key) => warnings.push(key), error: () => {} },
+        notify: {
+          warn: (key) => warnings.push(key),
+          error: (message) => errors.push(message),
+        },
         runnerFactory: (options) => {
           fake = createFakeRunner(options);
           return fake;
@@ -205,6 +283,7 @@ function mountStream(threadId = ref<string | null>("thread-1")) {
       return api!;
     },
     warnings,
+    errors,
     invalidated,
     queryClient,
   };

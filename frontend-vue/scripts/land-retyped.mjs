@@ -346,6 +346,15 @@ import type { User } from "./types";`,
         brandLark: "Lark",
         connectionStarted: "Connection link opened",`,
     },
+    {
+      why: "WP-01 gateway recovery keeps its retry actions in the generated locale contract.",
+      find: `    gatewayUnavailable: "Gateway is temporarily unavailable.",
+    gatewayUnavailableRetrying: "Retrying in the background…",`,
+      replace: `    gatewayUnavailable: "Gateway is temporarily unavailable.",
+    gatewayUnavailableRetrying: "Retrying in the background…",
+    retryNow: "Try again",
+    retrying: "Retrying...",`,
+    },
   ],
   "i18n/locales/zh-CN.ts": [
     {
@@ -370,6 +379,15 @@ import type { User } from "./types";`,
         brandLark: "Lark",
         connectionStarted: "连接链接已打开",`,
     },
+    {
+      why: "WP-01 网关恢复操作继续由生成式中文 locale 合同持有。",
+      find: `    gatewayUnavailable: "网关暂时不可用。",
+    gatewayUnavailableRetrying: "正在后台重试…",`,
+      replace: `    gatewayUnavailable: "网关暂时不可用。",
+    gatewayUnavailableRetrying: "正在后台重试…",
+    retryNow: "立即重试",
+    retrying: "正在重试...",`,
+    },
   ],
   "i18n/locales/types.ts": [
     {
@@ -389,6 +407,15 @@ import type { User } from "./types";`,
         brandFeishu: string;
         brandLark: string;
         connectionStarted: string;`,
+    },
+    {
+      why: "Declare the WP-01 gateway recovery actions added to both generated dictionaries.",
+      find: `    gatewayUnavailable: string;
+    gatewayUnavailableRetrying: string;`,
+      replace: `    gatewayUnavailable: string;
+    gatewayUnavailableRetrying: string;
+    retryNow: string;
+    retrying: string;`,
     },
   ],
 };

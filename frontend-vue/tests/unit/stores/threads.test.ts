@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { mergeThreadSnapshot } from "@/stores/threads";
+import { mergeThreadSnapshot } from "@/core/threads/thread-snapshot";
 import type { AgentThread } from "@/core/threads/types";
 
 function thread(values: AgentThread["values"]): AgentThread {

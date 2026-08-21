@@ -76,8 +76,8 @@ const threadSidebar = readFileSync(
   new URL("../../app/components/workspace/ThreadSidebar.vue", import.meta.url),
   "utf8",
 );
-const threadStore = readFileSync(
-  new URL("../../app/stores/threads.ts", import.meta.url),
+const threadQueries = readFileSync(
+  new URL("../../app/composables/useThreads.ts", import.meta.url),
   "utf8",
 );
 const toolSettings = readFileSync(
@@ -145,11 +145,18 @@ describe("M6 inventory and browser contract", () => {
   });
 
   it("keeps thread rename fail-closed and the dialog open after a failed write", () => {
-    expect(threadStore).toContain("threads.updateState(threadId");
+    expect(threadQueries).toContain("apiClient.threads.updateState(threadId");
     expect(threadSidebar).toMatch(
       /await threads\.rename[\s\S]*renameThreadId\.value = null;[\s\S]*catch \(cause\)/,
     );
     expect(threadSidebar).toContain('role="alert"');
+  });
+
+  it("keeps thread server state in Vue Query and routes deletes through the sidecar cascade", () => {
+    expect(threadQueries).toContain("useInfiniteQuery");
+    expect(threadQueries).toContain("fetchInfiniteThreadsPage");
+    expect(threadQueries).toContain("deleteThreadCascade");
+    expect(threadQueries).not.toContain("defineStore");
   });
 
   it("updates one MCP server before refreshing authoritative config", () => {

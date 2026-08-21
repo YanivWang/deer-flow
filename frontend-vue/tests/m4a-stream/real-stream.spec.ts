@@ -1,5 +1,5 @@
 /*
-  【文件职责】     M4a 的**真流** gate：分块到达、心跳、Last-Event-ID 续传、gap→A7。
+  【文件职责】     M4a 的**真流** gate：分块、task/retry、心跳、续传、gap→A7。
   【对应 frontend/】 无；补的是共享合同在 M4b 之前覆盖不到的一段
   【架构位置】     测试
   【主要导出】     无
@@ -18,7 +18,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 /** 让这一条用例的 create 走假 Gateway 的哪个脚本。用改写 URL 而不是 fulfill：
  *  `route.continue()` 由浏览器真正发出请求，响应体仍然是流式的。 */
-async function useScript(page: Page, script: "plain" | "gap" | "scroll") {
+async function useScript(
+  page: Page,
+  script: "plain" | "gap" | "scroll" | "task",
+) {
   await page.route("**/api/langgraph/threads/*/runs/stream*", (route) => {
     const url = new URL(route.request().url());
     url.searchParams.set("script", script);
@@ -139,6 +142,37 @@ test.describe("M4a 真流 gate", () => {
     // 就被吃掉（05 L9）；漏进 reducer 会多出若干条空消息。
     await expect(items).toHaveCount(2);
     await expect(page.locator("text=keep-alive")).toHaveCount(0);
+  });
+
+  test("真实分块 custom 事件展示 retry，并收敛为带步骤、模型和 token 的终态 Subtask", async ({
+    page,
+  }) => {
+    await useScript(page, "task");
+    const textarea = await openNewChat(page);
+    await textarea.fill("Research the market");
+    await textarea.press("Enter");
+
+    const retry = page.getByTestId("llm-retry-status");
+    await expect(retry).toHaveText("The model is busy. Retrying…", {
+      timeout: 20_000,
+    });
+    await expect(retry).toBeHidden({ timeout: 20_000 });
+
+    const card = page.locator('[data-task-id="task-1"]');
+    await expect(card).toContainText("Research the market", {
+      timeout: 20_000,
+    });
+    await expect(card).toContainText("Completed");
+    await expect(card).toContainText("scenario-model");
+    await expect(card).toContainText("30");
+
+    const toggle = card.getByTestId("subtask-toggle");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(toggle).toBeFocused();
+    await expect(card).toContainText("Planning the research");
+    await expect(card).toContainText("web_search");
+    await expect(card).toContainText("Market evidence ready.");
   });
 
   test("gap：带 Last-Event-ID 续传，并触发 A7 的清空与本地化警告", async ({

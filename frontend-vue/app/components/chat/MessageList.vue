@@ -20,19 +20,12 @@ import {
   watch,
   type ComponentPublicInstance,
 } from "vue";
-import {
-  CheckCircle2,
-  CircleDashed,
-  CircleX,
-  GitBranch,
-  RefreshCw,
-  Wrench,
-} from "lucide-vue-next";
+import { CheckCircle2, GitBranch, RefreshCw, Wrench } from "lucide-vue-next";
 
 import HumanInputCard from "@/components/chat/HumanInputCard.vue";
 import MarkdownLink from "@/components/chat/MarkdownLink.vue";
+import SubtaskCard from "@/components/chat/SubtaskCard.vue";
 import { MARKDOWN_LINK_CONTEXT } from "@/components/chat/markdown-link-context";
-import ShineBorder from "@/components/ui/effects/ShineBorder.vue";
 import WorkspaceChangesBadge from "@/components/workspace/changes/WorkspaceChangesBadge.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import { richContentComponents } from "@/components/markdown/components";
@@ -62,7 +55,9 @@ import {
 import {
   derivePendingSubtaskStatus,
   parseSubtaskResult,
+  type SubtaskResultUpdate,
 } from "@/core/tasks/subtask-result";
+import type { Subtask } from "@/core/tasks/types";
 import type { Message } from "@/core/types/message";
 import { readReferenceMessageContexts } from "@/core/sidecar";
 
@@ -85,6 +80,11 @@ const props = withDefaults(
     interactive?: boolean;
     artifactPaths?: readonly string[];
     isMock?: boolean;
+    subtasks?: Record<string, Subtask>;
+    activeRunId?: string | null;
+    hasMoreHistory?: boolean;
+    historyLoadingMore?: boolean;
+    historyError?: unknown;
   }>(),
   {
     active: true,
@@ -99,6 +99,7 @@ const emit = defineEmits<{
   artifact: [path: string];
   selectionAsk: [payload: SelectionPayload];
   selectionAdd: [payload: SelectionPayload];
+  loadMoreHistory: [];
 }>();
 type SelectionPayload = {
   message: Message;
@@ -178,11 +179,15 @@ const humanInputState = computed(() =>
   deriveHumanInputThreadState(props.rawMessages ?? props.messages),
 );
 const scroller = ref<HTMLElement | null>(null);
+const historySentinel = ref<HTMLElement | null>(null);
 const windowStart = ref<number | null>(null);
 const followingTail = ref(true);
 const selection = ref<SelectionPayload | null>(null);
 let userScrollIntent = false;
 let contentResizeObserver: ResizeObserver | undefined;
+let historyObserver: IntersectionObserver | undefined;
+let historyAnchor: { scrollHeight: number; scrollTop: number } | null = null;
+const historyInteractionArmed = ref(false);
 let followAnimationFrame: number | undefined;
 let retainFollowUntil = 0;
 const VIRTUAL_WINDOW_SIZE = 50;
@@ -220,20 +225,34 @@ function reasoning(message: Message) {
 function citations(message: Message) {
   return extractCitationSources(text(message));
 }
-function subtaskResult(toolCallId: string | undefined) {
+function subtaskTerminal(
+  toolCallId: string | undefined,
+): SubtaskResultUpdate | undefined {
   const result = props.messages.find(
     (message) => message.type === "tool" && message.tool_call_id === toolCallId,
   );
-  if (!result) {
-    return {
-      status: derivePendingSubtaskStatus(
-        toolCallId,
-        props.messages,
-        props.streaming,
-      ),
-    };
-  }
+  if (!result) return undefined;
   return parseSubtaskResult(text(result), result.additional_kwargs);
+}
+function subtaskPendingStatus(toolCallId: string | undefined) {
+  return derivePendingSubtaskStatus(
+    toolCallId,
+    props.messages,
+    props.streaming,
+  );
+}
+function subtaskDescription(args: Record<string, unknown> | undefined) {
+  return typeof args?.description === "string" ? args.description : "Subtask";
+}
+function subtaskPrompt(args: Record<string, unknown> | undefined) {
+  return typeof args?.prompt === "string" ? args.prompt : "";
+}
+function subtaskId(
+  toolCallId: string | undefined,
+  groupIndex: number,
+  callIndex: number,
+) {
+  return toolCallId ?? `task-${groupIndex}-${callIndex}`;
 }
 async function submitHumanInput(
   request: HumanInputRequest,
@@ -333,6 +352,13 @@ function onScroll() {
     windowStart.value = maxStart;
     return;
   }
+  if (
+    historyInteractionArmed.value &&
+    scroller.value.scrollTop <= 80 &&
+    props.hasMoreHistory
+  ) {
+    requestHistoryLoad();
+  }
   if (userScrollIntent) {
     stopFollowingTail();
     userScrollIntent = false;
@@ -347,6 +373,7 @@ function onScroll() {
 }
 function onScrollIntent() {
   userScrollIntent = true;
+  historyInteractionArmed.value = true;
 }
 function onWheel(event: WheelEvent) {
   if (
@@ -354,6 +381,7 @@ function onWheel(event: WheelEvent) {
     scroller.value &&
     scroller.value.scrollHeight > scroller.value.clientHeight
   ) {
+    historyInteractionArmed.value = true;
     userScrollIntent = false;
     stopFollowingTail();
   }
@@ -363,8 +391,33 @@ function onScrollKey(event: KeyboardEvent) {
     ["ArrowUp", "PageUp", "Home"].includes(event.key) ||
     (event.key === " " && event.shiftKey)
   ) {
+    historyInteractionArmed.value = true;
     onScrollIntent();
   }
+}
+function historyErrorMessage() {
+  const error = props.historyError;
+  return error instanceof Error
+    ? error.message
+    : typeof error === "string"
+      ? error
+      : "Failed to load earlier messages.";
+}
+function requestHistoryLoad() {
+  if (
+    !props.hasMoreHistory ||
+    props.historyLoadingMore ||
+    !scroller.value ||
+    historyAnchor
+  ) {
+    return;
+  }
+  historyAnchor = {
+    scrollHeight: scroller.value.scrollHeight,
+    scrollTop: scroller.value.scrollTop,
+  };
+  stopFollowingTail();
+  emit("loadMoreHistory");
 }
 function onSelection(index: number) {
   if (!props.selectionMode) return;
@@ -568,12 +621,50 @@ watch(humanInputState, (state) => {
     ),
   );
 });
+watch(
+  () => props.historyLoadingMore,
+  async (loading, previous) => {
+    if (loading || !previous || !historyAnchor) return;
+    await nextTick();
+    if (scroller.value) {
+      const addedHeight =
+        scroller.value.scrollHeight - historyAnchor.scrollHeight;
+      scroller.value.scrollTop =
+        historyAnchor.scrollTop + Math.max(0, addedHeight);
+    }
+    historyAnchor = null;
+  },
+);
+watch(
+  () => props.threadId,
+  () => {
+    historyInteractionArmed.value = false;
+    historyAnchor = null;
+  },
+);
+watch(historySentinel, (element, previous) => {
+  if (previous) historyObserver?.unobserve(previous);
+  if (!element || !("IntersectionObserver" in globalThis)) return;
+  historyObserver ??= new IntersectionObserver(
+    (entries) => {
+      if (
+        entries.some((entry) => entry.isIntersecting) &&
+        historyInteractionArmed.value
+      ) {
+        requestHistoryLoad();
+      }
+    },
+    { root: scroller.value, rootMargin: "96px 0px 0px" },
+  );
+  historyObserver.observe(element);
+});
 onMounted(() => {
   globalThis.addEventListener("keydown", onKey);
 });
 onUnmounted(() => {
   globalThis.removeEventListener("keydown", onKey);
   contentResizeObserver?.disconnect();
+  historyObserver?.disconnect();
   if (followAnimationFrame !== undefined) {
     cancelAnimationFrame(followAnimationFrame);
   }
@@ -598,6 +689,38 @@ onUnmounted(() => {
     >
       <div v-if="loading" class="py-8 text-center text-sm text-gray-500">
         Loading conversation…
+      </div>
+      <div
+        v-if="hasMoreHistory || historyLoadingMore || historyError"
+        class="mx-auto flex w-full max-w-[var(--container-width-md)] justify-center pt-3"
+      >
+        <span v-if="historyError" role="alert" class="text-destructive text-xs">
+          {{ historyErrorMessage() }}
+          <button
+            type="button"
+            class="ml-2 underline"
+            @click="requestHistoryLoad"
+          >
+            Try again
+          </button>
+        </span>
+        <button
+          v-else-if="hasMoreHistory && !historyLoadingMore"
+          ref="historySentinel"
+          data-testid="load-earlier-messages"
+          type="button"
+          class="text-muted-foreground hover:text-foreground rounded px-3 py-1 text-xs underline"
+          @click="requestHistoryLoad"
+        >
+          Load earlier messages
+        </button>
+        <span
+          v-else-if="historyLoadingMore"
+          role="status"
+          class="text-muted-foreground text-xs"
+        >
+          Loading earlier messages…
+        </span>
       </div>
       <ul
         :ref="setContentElement"
@@ -722,68 +845,24 @@ onUnmounted(() => {
                 {{ artifact.label }}
               </button>
               <div
-                v-for="call in message.tool_calls ?? []"
-                :key="call.id"
+                v-for="(call, callIndex) in message.tool_calls ?? []"
+                :key="subtaskId(call.id, entry.index, callIndex)"
                 class="my-2 text-sm"
               >
                 <template v-if="call.name === 'task'">
-                  <div
-                    class="relative overflow-hidden rounded-lg border px-3 py-2"
-                  >
-                    <ShineBorder
-                      v-if="subtaskResult(call.id).status === 'in_progress'"
-                      :border-width="1.5"
-                      :shine-color="['#A07CFE', '#FE8FB5', '#FFBE7B']"
-                    />
-                    <div class="flex items-center gap-2 py-1.5">
-                      <CheckCircle2
-                        v-if="subtaskResult(call.id).status === 'completed'"
-                        :size="16"
-                        class="text-emerald-600"
-                      />
-                      <CircleX
-                        v-else-if="subtaskResult(call.id).status === 'failed'"
-                        :size="16"
-                        class="text-destructive"
-                      />
-                      <CircleDashed
-                        v-else
-                        :size="16"
-                        class="text-muted-foreground animate-spin"
-                      />
-                      <span class="font-medium">{{
-                        String(call.args?.description ?? "Subtask")
-                      }}</span>
-                    </div>
-                    <p
-                      :class="
-                        subtaskResult(call.id).status === 'failed'
-                          ? 'text-destructive'
-                          : 'text-muted-foreground'
-                      "
-                      class="pl-6 text-xs"
-                    >
-                      {{
-                        subtaskResult(call.id).status === "completed"
-                          ? "Subtask completed"
-                          : subtaskResult(call.id).status === "failed"
-                            ? "Subtask failed"
-                            : "Running subtask"
-                      }}
-                    </p>
-                    <p
-                      v-if="subtaskResult(call.id).result"
-                      class="mt-1 pl-6 text-sm"
-                    >
-                      {{ subtaskResult(call.id).result }}
-                    </p>
-                    <p
-                      v-if="subtaskResult(call.id).error"
-                      class="text-destructive mt-1 pl-6 text-sm"
-                    >
-                      {{ subtaskResult(call.id).error }}
-                    </p>
-                  </div>
+                  <SubtaskCard
+                    :task-id="subtaskId(call.id, entry.index, callIndex)"
+                    :thread-id="threadId"
+                    :run-id="runIdOfGroup(entry.index) ?? activeRunId"
+                    :description="subtaskDescription(call.args)"
+                    :prompt="subtaskPrompt(call.args)"
+                    :live-task="
+                      subtasks?.[subtaskId(call.id, entry.index, callIndex)]
+                    "
+                    :terminal="subtaskTerminal(call.id)"
+                    :pending-status="subtaskPendingStatus(call.id)"
+                    :is-loading="streaming"
+                  />
                 </template>
                 <template v-else>
                   <details class="group/tool">

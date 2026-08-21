@@ -91,3 +91,11 @@ Nuxt/Gateway 链路验证。`NUXT_PUBLIC_M0_TEST_PAGES=1` 只为测试开放内�
 
 生产路由、OIDC callback 规则和回滚命令统一维护在
 [双前端生产说明](../docs/dual-frontend-production.md) 中。
+
+## 流式与历史行为
+
+聊天 run 显式订阅 `values`、`messages-tuple`、`updates` 和 `custom`。task 生命周期与
+`llm_retry` custom 事件统一折叠为 thread-scoped UI 状态；子任务卡片展示状态、模型、累计
+token 和实时步骤，刷新后展开卡片可回填持久化步骤。长会话初次只请求最新一页历史，只有
+显式按钮或用户向上滚动后才加载更早页面。已建立会话的 `/compact` 会调用真实 Gateway
+接口；Gateway 拒绝时保留草稿并展示原始错误。

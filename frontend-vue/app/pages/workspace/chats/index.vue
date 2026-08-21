@@ -7,9 +7,9 @@
   【依赖关系】     AgentChat · workspace routing
   【边界与注意】   DeerFlow 路由接线，不属于 L2。
 */
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
-import { useThreadsStore } from "@/stores/threads";
+import { useThreads } from "@/composables/useThreads";
 import {
   channelSourceOfThread,
   pathOfThread,
@@ -17,7 +17,7 @@ import {
 } from "@/core/threads/utils";
 
 definePageMeta({ layout: "workspace" });
-const threads = useThreadsStore();
+const threads = useThreads();
 const search = ref("");
 const sentinel = ref<HTMLElement | null>(null);
 let observer: IntersectionObserver | null = null;
@@ -38,6 +38,10 @@ onMounted(() => {
     }
   });
   if (sentinel.value) observer.observe(sentinel.value);
+});
+watch(sentinel, (element, previous) => {
+  if (previous) observer?.unobserve(previous);
+  if (element) observer?.observe(element);
 });
 onUnmounted(() => observer?.disconnect());
 </script>

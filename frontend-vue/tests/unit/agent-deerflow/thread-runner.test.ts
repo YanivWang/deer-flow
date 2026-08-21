@@ -146,4 +146,54 @@ describe("createThreadRunner", () => {
     expect(runner.getWireMessages()).toEqual([]);
     expect(runner.getSessionState().status).toBe("idle");
   });
+
+  it("reset 后旧 create 即使迟到也不能再写入新页面状态", async () => {
+    let resolveCreate!: (value: {
+      handle: DeerFlowRunHandle;
+      response: Response;
+    }) => void;
+    const create = vi.fn(
+      () =>
+        new Promise<{ handle: DeerFlowRunHandle; response: Response }>(
+          (resolve) => {
+            resolveCreate = resolve;
+          },
+        ),
+    );
+    const onCustomEvent = vi.fn();
+    const onSettled = vi.fn();
+    const runner = createThreadRunner({
+      protocol: {
+        create,
+        resume: async () => sse(""),
+        cancel: async () => ({ kind: "terminal", outcome: "cancelled" }),
+        inspect: async () => ({
+          terminal: true,
+          outcome: "completed",
+          reason: "",
+        }),
+      },
+      loadDurableState: async () => undefined,
+      scheduleNotify: (flush) => flush(),
+      onCustomEvent,
+      onSettled,
+    });
+
+    const submission = runner.submit({ threadId: "old-thread", payload: {} });
+    await vi.waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+    runner.reset();
+    resolveCreate({
+      handle: { threadId: "old-thread", runId: "old-run" },
+      response: sse(
+        `event: custom\ndata: {"type":"task_running","task_id":"old"}\nid: a\n\n` +
+          `event: end\ndata: {}\n\n`,
+      ),
+    });
+    await submission;
+
+    expect(onCustomEvent).not.toHaveBeenCalled();
+    expect(onSettled).not.toHaveBeenCalled();
+    expect(runner.getWireMessages()).toEqual([]);
+    expect(runner.getSessionState().status).toBe("idle");
+  });
 });

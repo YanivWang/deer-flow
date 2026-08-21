@@ -18,8 +18,8 @@
                    两份实现迟早会在 cookie 轮换上分叉。
 */
 
-import { throwGatewayApiError } from "@/core/api/errors";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
+import { throwGatewayResponseError } from "@/core/api/errors";
 import type { AgentThread, AgentThreadState } from "@/core/threads/types";
 import type { ThreadSearchQuery } from "@/core/types/message";
 
@@ -85,7 +85,7 @@ export function createDeerFlowApiClient(
     fallback: string,
   ): Promise<T> {
     const response = await fetchImpl(url, init);
-    if (!response.ok) await throwGatewayApiError(response, fallback);
+    if (!response.ok) await throwGatewayResponseError(response, fallback);
     // 204 与空 body 都不能喂给 json()：SyntaxError 会把「删除成功」报成失败。
     if (response.status === 204) return undefined as T;
     const text = await response.text();

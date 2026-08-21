@@ -90,6 +90,128 @@ function* initialScript(deltas = DELTAS) {
   }
 }
 
+async function writeTaskScript(response) {
+  response.write(
+    frame("metadata", { run_id: RUN_ID, thread_id: THREAD_ID }, "t1"),
+  );
+  await sleep(40);
+  response.write(
+    frame(
+      "values",
+      {
+        title: "Market research",
+        messages: [
+          {
+            id: "human-task__user",
+            type: "human",
+            content: "Research the market",
+          },
+          {
+            id: "ai-task",
+            type: "ai",
+            content: "",
+            tool_calls: [
+              {
+                id: "task-1",
+                name: "task",
+                type: "tool_call",
+                args: {
+                  description: "Research the market",
+                  prompt: "Find current evidence",
+                },
+              },
+            ],
+          },
+        ],
+      },
+      "t2",
+    ),
+  );
+  await sleep(40);
+  response.write(
+    frame(
+      "custom",
+      {
+        type: "llm_retry",
+        attempt: 1,
+        max_attempts: 2,
+        wait_ms: 500,
+        reason: "rate_limit",
+        message: "The model is busy. Retrying…",
+      },
+      "t3",
+    ),
+  );
+  // Keep the retry visible long enough for the browser to observe the
+  // transient state before task progress clears it.
+  await sleep(700);
+  response.write(
+    frame(
+      "custom",
+      {
+        type: "task_started",
+        task_id: "task-1",
+        description: "Research the market",
+        prompt: "Find current evidence",
+        subagent_type: "research",
+        model_name: "scenario-model",
+      },
+      "t4",
+    ),
+  );
+  await sleep(80);
+  response.write(
+    frame(
+      "custom",
+      {
+        type: "task_running",
+        task_id: "task-1",
+        message_index: 1,
+        message: { type: "ai", content: "Planning the research" },
+        model_name: "scenario-model",
+        usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 },
+      },
+      "t5",
+    ),
+  );
+  await sleep(80);
+  response.write(
+    frame(
+      "custom",
+      {
+        type: "task_running",
+        task_id: "task-1",
+        message_index: 2,
+        message: {
+          type: "tool",
+          name: "web_search",
+          content: "Found evidence",
+        },
+        model_name: "scenario-model",
+        usage: { input_tokens: 20, output_tokens: 10, total_tokens: 30 },
+      },
+      "t6",
+    ),
+  );
+  await sleep(80);
+  response.write(
+    frame(
+      "custom",
+      {
+        type: "task_completed",
+        task_id: "task-1",
+        result: "Market evidence ready.",
+        model_name: "scenario-model",
+        usage: { input_tokens: 20, output_tokens: 10, total_tokens: 30 },
+      },
+      "t7",
+    ),
+  );
+  await sleep(80);
+  response.write(frame("end", {}, "t8"));
+  response.end();
+}
+
 async function writeChunked(
   response,
   chunks,
@@ -173,6 +295,10 @@ const server = createServer(async (request, response) => {
   ) {
     request.resume();
     openSse(response);
+    if (script === "task") {
+      await writeTaskScript(response);
+      return;
+    }
     const deltas = script === "scroll" ? SCROLL_DELTAS : DELTAS;
     const ok = await writeChunked(response, [...initialScript(deltas)], {
       delayMs: script === "scroll" ? 90 : 40,
@@ -261,6 +387,12 @@ const server = createServer(async (request, response) => {
     response.end(
       JSON.stringify({ data: [], has_more: false, next_before_seq: null }),
     );
+    return;
+  }
+
+  if (/\/threads\/[^/]+\/runs\/[^/]+\/events$/.test(url.pathname)) {
+    response.setHeader("content-type", "application/json");
+    response.end("[]");
     return;
   }
 

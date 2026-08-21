@@ -57,7 +57,7 @@
 ## 3. Vue 实现原则
 
 - 服务端状态使用 `@tanstack/vue-query` 的 query/mutation/invalidation；不要用 Pinia 手写第二套服务端缓存。
-- Pinia 只保存需要跨页面共享的客户端状态，例如当前用户、工作区 UI、线程列表展示状态。
+- Pinia 只保存需要跨页面共享的客户端状态，例如工作区 UI；thread/session 等服务端真相只由 Vue Query/composable 持有。
 - 组件内生命周期使用 `ref`、`computed`、`watch`、`onScopeDispose`、`provide/inject`；不要照搬 React hook/context 形状。
 - 流式协议、文件类型策略、缓存 key、payload 归一化等框架无关规则应保留为纯 TypeScript，并由 Vue composable 调用。
 - Dialog、Popover、Select 等优先使用 Reka UI 等 Vue 无障碍 primitives，保持焦点锁定、Escape、aria 和键盘语义。
@@ -88,13 +88,13 @@
 | AUTH-02     | P0     | DONE | WP-01  | `/workspace` 仍是占位页，没有进入默认聊天页                    |
 | AUTH-03     | P1     | DONE | WP-01  | Gateway 不可用被当成未登录，缺少离线/恢复状态                  |
 | SEC-01      | P0     | DONE | WP-01  | 实际消息 Markdown 链接没有协议 allowlist                       |
-| STREAM-01   | P0     | TODO | WP-02  | Vue 丢弃 task 与 `llm_retry` custom SSE 事件                   |
-| STREAM-02   | P0     | TODO | WP-02  | Subtask 没有实时/历史 steps、模型与 token 展示                 |
-| THREAD-01   | P1     | TODO | WP-02  | `/compact` 只显示建议，没有调用 compact API                    |
-| THREAD-02   | P1     | TODO | WP-02  | prepared replay 丢失后端错误且缓存失效不完整                   |
-| THREAD-03   | P0     | TODO | WP-02  | 主线程搜索结果没有过滤 sidecar 线程                            |
-| THREAD-04   | P0     | TODO | WP-02  | 删除主线程不级联删除 sidecar 线程                              |
-| THREAD-05   | P1     | TODO | WP-02  | 历史记录自动请求所有分页，没有按需加载                         |
+| STREAM-01   | P0     | DONE | WP-02  | Vue 丢弃 task 与 `llm_retry` custom SSE 事件                   |
+| STREAM-02   | P0     | DONE | WP-02  | Subtask 没有实时/历史 steps、模型与 token 展示                 |
+| THREAD-01   | P1     | DONE | WP-02  | `/compact` 只显示建议，没有调用 compact API                    |
+| THREAD-02   | P1     | DONE | WP-02  | prepared replay 丢失后端错误且缓存失效不完整                   |
+| THREAD-03   | P0     | DONE | WP-02  | 主线程搜索结果没有过滤 sidecar 线程                            |
+| THREAD-04   | P0     | DONE | WP-02  | 删除主线程不级联删除 sidecar 线程                              |
+| THREAD-05   | P1     | DONE | WP-02  | 历史记录自动请求所有分页，没有按需加载                         |
 | COMPOSER-01 | P1     | TODO | WP-03  | 草稿 key 固定为 anonymous，恢复时不校验 skill 可用性           |
 | COMPOSER-02 | P1     | TODO | WP-03  | 模型默认值、能力、mode、reasoning 和线程上下文未对齐           |
 | COMPOSER-03 | P1     | TODO | WP-03  | 上传/发送失败前已清空输入，无法可靠恢复用户内容                |
@@ -180,18 +180,15 @@
 
 包含：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05`。
 
-#### 当前代码事实
+#### 当前实现事实
 
-- [`app/composables/useThreadStream.ts`](app/composables/useThreadStream.ts) 的 `handleCustomEvent` 除 `stream_replay_gap` 外直接返回。
-- React [`src/core/threads/hooks.ts`](../frontend/src/core/threads/hooks.ts) 还处理 task update、`task_running` steps 和 `llm_retry`。
-- Vue 已有 [`app/core/tasks/subtask-update.ts`](app/core/tasks/subtask-update.ts)、`lifecycle.ts`、`presentation.ts`、`steps.ts`，但没有接入实际流。
-- [`app/components/chat/MessageList.vue`](app/components/chat/MessageList.vue) 只从终态 tool result 构造 subtask 卡片。
-- React [`src/components/workspace/messages/subtask-card.tsx`](../frontend/src/components/workspace/messages/subtask-card.tsx) 合并实时 task context 和历史 steps，并展示模型/token/时间线。
-- [`app/components/chat/ChatComposer.vue`](app/components/chat/ChatComposer.vue) 提示 `/compact`，submit 只特殊处理 goal，`compactThreadContext` 没有消费者。
-- prepared replay 失败使用通用错误，完成后只 invalidates `['threads', 'search']`。
-- [`app/stores/threads.ts`](app/stores/threads.ts) 直接合并 thread search 结果，没有调用已存在的 `filterThreadSearchResults`。
-- 同一 store 删除线程时只删除主线程；React 会搜索并级联清理 sidecar。
-- [`app/composables/useThreadHistory.ts`](app/composables/useThreadHistory.ts) 在存在 next page 时继续请求，直到拉完。
+- [`app/core/tasks/custom-event.ts`](app/core/tasks/custom-event.ts) 是 task 生命周期、`task_running` steps、`llm_retry` 与 replay-gap 的单一 reducer；[`useThreadStream.ts`](app/composables/useThreadStream.ts) 负责 thread/scope 生命周期清理。
+- [`SubtaskCard.vue`](app/components/chat/SubtaskCard.vue) 合并实时 state、终态 ToolMessage 与展开时的历史 `subagent.step` backfill，展示模型、累计 token、步骤、结果和可重试错误。
+- [`ChatComposer.vue`](app/components/chat/ChatComposer.vue) 对已建立会话执行真实 `/compact`；在途 guard、AbortController、成功清草稿、4xx/409 保留输入与六类缓存失效均已接通。
+- prepared replay 使用统一 [`api/errors.ts`](app/core/api/errors.ts) 保留 status/body/detail，并以 generation + abort 阻止旧 prepare/stream 写回新路由；所有退出路径收敛 guard、掩码和乐观态。
+- [`useThreads.ts`](app/composables/useThreads.ts) 是 thread 列表唯一 server-state 所有者，复用 raw-offset sidecar 过滤 helper；旧 Pinia thread store 已删除。
+- [`threads/delete.ts`](app/core/threads/delete.ts) 全量搜索 parent sidecar、并发删除后再删主 thread；部分失败保留主 thread、清除已成功项缓存并向侧栏暴露重试。
+- [`useThreadHistory.ts`](app/composables/useThreadHistory.ts) 初次只请求最新一页，MessageList 按显式按钮或用户向上交互后的 sentinel 加载下一页并保持滚动锚点。
 
 #### 必须实现
 
@@ -652,7 +649,8 @@ API 对齐：method/path/query/headers/body/response/error/cache
 
 在此追加，不删除历史记录：
 
-| 日期       | 工作包/ID                                       | 证据                                                                                                                                                                              | 备注                                        |
-| ---------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| 2026-08-21 | 基线审计                                        | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                             | 所有 ID 初始状态为 TODO                     |
-| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01` | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过 | 本机回环监听环境重跑通过；本地提交、未 push |
+| 日期       | 工作包/ID                                                 | 证据                                                                                                                                                                                                                              | 备注                                                 |
+| ---------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| 2026-08-21 | 基线审计                                                  | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                                                                             | 所有 ID 初始状态为 TODO                              |
+| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01`           | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过                                                 | 本机回环监听环境重跑通过；本地提交、未 push          |
+| 2026-08-21 | WP-02：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05` | `make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 130/130；`make e2e-m7-real-protocol` 1/1；`make migration-check` 通过；`make verify` 1166/1166 且 production build 通过；React `pnpm check` 与 `pnpm test` 1001/1001 | 回环门禁在允许本机监听的环境重跑；未 commit、未 push |

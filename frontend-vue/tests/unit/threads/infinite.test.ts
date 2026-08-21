@@ -8,6 +8,7 @@ import {
 import {
   STOP_THREAD_FINALIZATION_REFETCH_DELAY_MS,
   invalidateStoppedThreadCaches,
+  removeDeletedThreadCaches,
   stopThreadAndInvalidateCaches,
 } from "@/core/threads/cache-invalidation";
 import {
@@ -502,5 +503,42 @@ describe("invalidateStoppedThreadCaches", () => {
       client.clear();
       vi.useRealTimers();
     }
+  });
+});
+
+describe("removeDeletedThreadCaches", () => {
+  test("removes only deleted main/sidecar ids from array, infinite and scoped caches", () => {
+    const client = new QueryClient();
+    client.setQueryData(
+      ["threads", "search"],
+      [makeThread("main"), makeThread("side"), makeThread("keep")],
+    );
+    client.setQueryData([...INFINITE_THREADS_QUERY_KEY_PREFIX, "all"], {
+      pages: [[makeThread("main"), makeThread("side"), makeThread("keep")]],
+      pageParams: [0],
+    });
+    client.setQueryData(["thread", "main"], { status: "idle" });
+    client.setQueryData(["thread", "keep"], { status: "idle" });
+
+    removeDeletedThreadCaches(client, ["main", "side"]);
+
+    expect(
+      client
+        .getQueryData<AgentThread[]>(["threads", "search"])
+        ?.map((thread) => thread.thread_id),
+    ).toEqual(["keep"]);
+    expect(
+      client
+        .getQueryData<InfiniteData<AgentThread[]>>([
+          ...INFINITE_THREADS_QUERY_KEY_PREFIX,
+          "all",
+        ])
+        ?.pages.flat()
+        .map((thread) => thread.thread_id),
+    ).toEqual(["keep"]);
+    expect(client.getQueryData(["thread", "main"])).toBeUndefined();
+    expect(client.getQueryData(["thread", "keep"])).toEqual({
+      status: "idle",
+    });
   });
 });

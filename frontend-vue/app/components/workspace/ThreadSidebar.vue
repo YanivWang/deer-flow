@@ -27,8 +27,9 @@ import {
 
 import ChannelConnections from "@/components/workspace/channels/ChannelConnections.vue";
 import { useSettingsDialog } from "@/composables/useSettingsDialog";
+import { useThreads } from "@/composables/useThreads";
 import { useWorkspaceFeatures } from "@/composables/useWorkspaceFeatures";
-import { useThreadsStore } from "@/stores/threads";
+import { ThreadCascadeDeleteError } from "@/core/threads/delete";
 import {
   channelSourceOfThread,
   pathOfThread,
@@ -38,7 +39,7 @@ import { isEditableKeyboardTarget } from "@/core/input/keyboard";
 
 const route = useRoute();
 const router = useRouter();
-const threads = useThreadsStore();
+const threads = useThreads();
 const features = useWorkspaceFeatures();
 const settingsDialog = useSettingsDialog();
 const menuThreadId = ref<string | null>(null);
@@ -51,6 +52,9 @@ const settingsOpen = ref(false);
 const renameThreadId = ref<string | null>(null);
 const renameTitle = ref("");
 const renameError = ref<string | null>(null);
+const deleteError = ref<string | null>(null);
+const failedDeleteThreadId = ref<string | null>(null);
+const deletingThreadId = ref<string | null>(null);
 let observer: IntersectionObserver | null = null;
 let focusBeforeMobileOpen: HTMLElement | null = null;
 
@@ -136,6 +140,11 @@ onUnmounted(() => {
   globalThis.removeEventListener("keydown", onWindowKeydown);
 });
 
+watch(sentinel, (element, previous) => {
+  if (previous) observer?.unobserve(previous);
+  if (element) observer?.observe(element);
+});
+
 watch(mobileOpen, async (open) => {
   globalThis.dispatchEvent(
     new CustomEvent("deerflow:sidebar-state", { detail: { open } }),
@@ -167,12 +176,25 @@ function startNewChat() {
 }
 
 async function removeThread(threadId: string) {
+  if (deletingThreadId.value) return;
   menuThreadId.value = null;
   const active = route.path.endsWith(`/${threadId}`);
+  deleteError.value = null;
+  failedDeleteThreadId.value = null;
+  deletingThreadId.value = threadId;
   try {
     await threads.remove(threadId);
-  } finally {
     if (active) await router.push("/workspace/chats/new");
+  } catch (cause) {
+    failedDeleteThreadId.value = threadId;
+    deleteError.value =
+      cause instanceof ThreadCascadeDeleteError
+        ? cause.message
+        : cause instanceof Error
+          ? cause.message
+          : "Failed to delete conversation.";
+  } finally {
+    deletingThreadId.value = null;
   }
 }
 
@@ -381,6 +403,7 @@ function setTheme(theme: "light" | "dark") {
           <button
             role="menuitem"
             class="text-destructive hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left"
+            :disabled="deletingThreadId === thread.thread_id"
             @click="removeThread(thread.thread_id)"
           >
             <Trash2 :size="14" /> Delete
@@ -394,6 +417,22 @@ function setTheme(theme: "light" | "dark") {
         class="h-1"
       />
     </ul>
+    <div
+      v-if="sidebarExpanded && deleteError"
+      role="alert"
+      class="border-destructive/30 bg-destructive/5 text-destructive mx-2 mb-2 rounded-md border p-2 text-xs"
+    >
+      <p>{{ deleteError }}</p>
+      <button
+        v-if="failedDeleteThreadId"
+        type="button"
+        class="mt-1 underline"
+        :disabled="Boolean(deletingThreadId)"
+        @click="removeThread(failedDeleteThreadId)"
+      >
+        Try again
+      </button>
+    </div>
     <div class="relative mt-auto p-2">
       <div
         v-if="settingsOpen"

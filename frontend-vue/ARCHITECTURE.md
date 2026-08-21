@@ -46,9 +46,12 @@ Compose Watch 同步源码并在依赖清单变化时重建对应镜像；Nginx 
    和 `reducer.ts` 把 Gateway wire 事件转换成内核动作。
 3. `packages/agent-core/src/session/` 管理 create-once、resume 游标、gap、重试、取消和终态；
    `src/store/` 合并同一宏任务内的通知并发布不可变 snapshot。
-4. Pinia/TanStack Query/composable 将 live snapshot、checkpoint 历史、乐观消息和分页数据
-   合并为 UI 状态。排序与身份规则集中在 `app/core/threads/`，组件不各自实现第二套归并。
-5. `MessageList.vue`、composer、产物/sidecar/browser 面板消费同一线程状态；产物面板等扩展
+4. TanStack Query/composable 将 live snapshot、checkpoint 历史、乐观消息和分页数据
+   合并为 UI 状态。`useThreads.ts` 是主线程列表的唯一 server-state 所有者，Pinia 不保留
+   第二份列表。排序、sidecar 过滤与身份规则集中在 `app/core/threads/`。
+5. custom 帧由 `tasks/custom-event.ts` 统一折叠 task 生命周期、步骤、累计 token、模型和
+   `llm_retry`；`SubtaskCard.vue` 展开历史 run 时才回填持久化步骤。
+6. `MessageList.vue`、composer、产物/sidecar/browser 面板消费同一线程状态；产物面板等扩展
    通过事件和 panel state 接入，不改变 L1 session 状态机。
 
 流式重连、消息顺序、缓存失效和面板行为的硬合同见
@@ -74,9 +77,11 @@ Compose Watch 同步源码并在依赖清单变化时重建对应镜像；Nginx 
 以下是目标所有权边界。当前尚未完全遵守的缓存失效、thread-scoped composer、sidecar
 生命周期等事项以 [`PARITY_GAPS.md`](PARITY_GAPS.md) 为执行清单。
 
-- 线程列表、历史页和 token usage：TanStack Query 缓存；失效规则在
-  `app/core/threads/cache-invalidation.ts`。
-- 当前流、乐观消息和线程级组合状态：`app/stores/threads.ts` 与线程 composable。
+- 线程列表、历史页和 token usage：TanStack Query 缓存；`useThreads.ts` 负责主列表的
+  raw-offset 分页和 sidecar 过滤，失效/删除镜像规则在 `app/core/threads/cache-invalidation.ts`。
+- 当前流、乐观消息、prepared replay 掩码、task/retry 状态：thread composable 的
+  thread-scoped ref；切换 thread、stop、error、finish 或 scope dispose 时按合同收敛。
+- Pinia 只允许保存跨页面的客户端/UI 状态，不得复制 thread/session 等服务端真相。
 - artifacts、sidecar、browser：各自 composable 持有面板状态，但最终业务数据仍来自同一
   thread snapshot/API。
 - composer draft、上传、语音和通知是前端瞬态状态；不得错误跨 thread 复用。

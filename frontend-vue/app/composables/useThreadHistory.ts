@@ -19,6 +19,7 @@ import { useInfiniteQuery } from "@tanstack/vue-query";
 import { computed, ref, toValue, watch, type MaybeRefOrGetter } from "vue";
 
 import { fetch } from "@/core/api/fetcher";
+import { readGatewayResponseError } from "@/core/api/errors";
 import { getBackendBaseURL } from "@/core/config";
 import {
   buildThreadMessagesPageUrl,
@@ -34,21 +35,6 @@ import { buildVisibleHistoryMessages } from "@/core/threads/message-identity";
 import type { RunMessage } from "@/core/threads/types";
 
 const EMPTY_RUN_MESSAGES: RunMessage[] = [];
-
-async function readResponseErrorMessage(
-  response: Response,
-  fallback = "Request failed.",
-) {
-  try {
-    const data = (await response.json()) as { detail?: unknown };
-    if (typeof data?.detail === "string" && data.detail.trim()) {
-      return data.detail;
-    }
-  } catch {
-    // Use the fallback below when the response body is not JSON.
-  }
-  return response.statusText || fallback;
-}
 
 export interface UseThreadHistoryOptions {
   enabled?: MaybeRefOrGetter<boolean>;
@@ -85,11 +71,9 @@ export function useThreadHistory(
         signal,
       });
       if (!response.ok) {
-        throw new Error(
-          await readResponseErrorMessage(
-            response,
-            "Failed to load thread history.",
-          ),
+        throw await readGatewayResponseError(
+          response,
+          "Failed to load thread history.",
         );
       }
       const page = parseThreadMessagesPageResponse(await response.json());
@@ -119,15 +103,17 @@ export function useThreadHistory(
     getNextPageParam: getThreadHistoryNextPageParam,
   });
 
-  watch(
-    () => historyQuery.hasNextPage.value,
-    (canLoadMore) => {
-      if (canLoadMore && !historyQuery.isFetchingNextPage.value) {
-        void historyQuery.fetchNextPage();
-      }
-    },
-    { immediate: true },
-  );
+  let loadMorePromise: ReturnType<typeof historyQuery.fetchNextPage> | null =
+    null;
+
+  function loadMore() {
+    if (!historyQuery.hasNextPage.value) return Promise.resolve();
+    if (loadMorePromise) return loadMorePromise;
+    loadMorePromise = historyQuery.fetchNextPage().finally(() => {
+      loadMorePromise = null;
+    });
+    return loadMorePromise;
+  }
 
   const currentMessageRows = computed(() =>
     flattenThreadHistoryPages(historyQuery.data.value?.pages ?? []),
@@ -192,8 +178,10 @@ export function useThreadHistory(
       () =>
         historyQuery.isLoading.value || historyQuery.isFetchingNextPage.value,
     ),
+    loadingInitial: historyQuery.isLoading,
+    loadingMore: historyQuery.isFetchingNextPage,
     hasMore: computed(() => Boolean(historyQuery.hasNextPage.value)),
-    loadMore: () => historyQuery.fetchNextPage(),
+    loadMore,
     error: historyQuery.error,
   };
 }

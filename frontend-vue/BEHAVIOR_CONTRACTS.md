@@ -123,6 +123,7 @@ sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
 | C7  | 动态上下文会把提交的用户消息从 `X` 重新键为 `X__user`；UI 身份匹配**只对 human message** 归一化该保留后缀                                                                    |
 | C8  | 本地提交的回合要记录 pre-submit 身份基线：若 `messages-tuple` 先于 `values` 发布新的 AI/tool 步骤，只把非基线的可见步骤移到新 human 之后，不动历史、隐藏控制消息和重连的 run |
 | C9  | 该本地顺序锚点要**保持到 finish / stop / stream error**；下次本地提交时替换，切换 thread 或 replay-gap 恢复时清除                                                            |
+| C10 | 历史初次只请求最新一页；只有显式按钮或用户向上交互后的 sentinel 才取下一页。重复触发要合并，前插旧消息后保持可见内容的滚动锚点                                               |
 
 > 主要代码位置集中在 `app/core/threads/history.ts`、`message-merge.ts`、
 > `local-turn-order.ts`、`cache-invalidation.ts` 以及 `app/composables/useThreadHistory.ts`、
@@ -147,19 +148,20 @@ sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
 
 ## E. Composer / 输入框
 
-| #   | 约束                                                                                                                                          |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| E1  | Composer 草稿是 **tab 作用域**：只把文本 + 选中的 slash 技能名存 `sessionStorage`，按 user / agent / 逻辑会话作用域分键                       |
-| E2  | 新会话页用固定作用域 `"new"`（其运行时 `threadId` 每次刷新都是新 UUID）；已建立的会话用真实 thread ID                                         |
-| E3  | 附件、sidecar 引用、语音状态、polish 撤销状态**不持久化**                                                                                     |
-| E4  | `InputBox` 要等技能列表就绪后再恢复技能 chip；技能缺失或被禁用时**降级为可编辑的斜杠文本**                                                    |
-| E5  | 只有在发送通过 in-flight 守卫之后，才通过 `SendMessageOptions.onSent` 清除草稿                                                                |
-| E6  | `/goal` 与 `/compact` 是**内置命令，不是技能激活**；在正常聊天提交前拦截                                                                      |
-| E7  | `/goal <condition>` 除设置目标外还要把条件文本作为下一个用户任务提交（立即开跑）；查询状态与 clear 不启动 run                                 |
-| E8  | goal / compact 请求绑定当前 `threadId` 并带 `AbortController`：切换 thread 或卸载 composer 要中止在途请求，防止过期响应污染新 thread          |
-| E9  | 选中技能 chip 后，在旁边的可编辑文本里输入 `/` 要能**重新打开**技能列表；选中条目是**替换 chip 而非追加**（wire 格式只允许一个前导 `/skill`） |
-| E10 | 已选中 chip 时**不提供内置命令**（`/goal` 会被当作聊天文本提交）                                                                              |
-| E11 | 斜杠**只在输入起始位置**打开列表（`getLeadingSlashSkillQuery`）—— 由 `tests/e2e/chat.spec.ts` 固定                                            |
+| #   | 约束                                                                                                                                                                       |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E1  | Composer 草稿是 **tab 作用域**：只把文本 + 选中的 slash 技能名存 `sessionStorage`，按 user / agent / 逻辑会话作用域分键                                                    |
+| E2  | 新会话页用固定作用域 `"new"`（其运行时 `threadId` 每次刷新都是新 UUID）；已建立的会话用真实 thread ID                                                                      |
+| E3  | 附件、sidecar 引用、语音状态、polish 撤销状态**不持久化**                                                                                                                  |
+| E4  | `InputBox` 要等技能列表就绪后再恢复技能 chip；技能缺失或被禁用时**降级为可编辑的斜杠文本**                                                                                 |
+| E5  | 只有在发送通过 in-flight 守卫之后，才通过 `SendMessageOptions.onSent` 清除草稿                                                                                             |
+| E6  | `/goal` 与 `/compact` 是**内置命令，不是技能激活**；在正常聊天提交前拦截                                                                                                   |
+| E7  | `/goal <condition>` 除设置目标外还要把条件文本作为下一个用户任务提交（立即开跑）；查询状态与 clear 不启动 run                                                              |
+| E8  | goal / compact 请求绑定当前 `threadId` 并带 `AbortController`：切换 thread 或卸载 composer 要中止在途请求，防止过期响应污染新 thread                                       |
+| E9  | 选中技能 chip 后，在旁边的可编辑文本里输入 `/` 要能**重新打开**技能列表；选中条目是**替换 chip 而非追加**（wire 格式只允许一个前导 `/skill`）                              |
+| E10 | 已选中 chip 时**不提供内置命令**（`/goal` 会被当作聊天文本提交）                                                                                                           |
+| E11 | 斜杠**只在输入起始位置**打开列表（`getLeadingSlashSkillQuery`）—— 由 `tests/e2e/chat.spec.ts` 固定                                                                         |
+| E12 | established thread 的 `/compact` 只允许一个在途请求；成功清草稿并失效 thread/history/search/token 六个 key，4xx/409 保留输入并显示 Gateway 原始 `detail`；新会话不调用 API |
 
 ---
 
@@ -193,6 +195,9 @@ sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
 | G4  | `useUpdateSubtask` 针对镜像最新 state 的 `tasksRef` 应用更新（**不是闭包快照**），使迟到的回填不会覆盖 SSE 步骤或兄弟 subtask                                                    |
 | G5  | `stepsForDisplay` 保留 tool 步骤与有文本的 AI 步骤；完成后丢弃末尾的 final-answer AI 步骤（它已作为 `result` 显示）                                                              |
 | G6  | 重新加载后从终态 ToolMessage 元数据（`subagent_model_name` / `subagent_token_usage`）恢复，**不需要**逐卡片拉事件                                                                |
+| G7  | `task_started/running/completed/failed/cancelled/timed_out` 进入同一个 reducer；`message_index` 去重排序，迟到进度不得把终态回滚                                                 |
+| G8  | `llm_retry` 必须显示 Gateway 提供的用户文案，并在下一条有效进度、普通 update、finish、error 或 replay-gap 时清除                                                                 |
+| G9  | Subtask 卡片的折叠按钮保持 `aria-expanded`/`aria-controls` 与键盘焦点；历史步骤失败要显示可重试错误                                                                              |
 
 ---
 
@@ -254,6 +259,10 @@ Vue 前端使用 `splitpanes`。它通过响应式 `:size` 和 `@resize` / `@res
 | K4  | 重命名走同一条序列化状态写入路由；活动 run 返回 409 时对话框保持打开并显示服务端错误                                                                                                      |
 | K5  | 设置 > 工具的 MCP 开关调用定向的 `PATCH /api/mcp/config`；在该 mutation 的成功 refetch 完成前禁用开关；通过 toast 显示后端错误 `detail`；**成功后才**失效 `["mcpConfig"]`                 |
 | K6  | 定时后台运行是**非交互**的：`context.non_interactive=true` 时 lead-agent 工具集排除 `ask_clarification`。该键只对内部认证的调用方生效，客户端提交的会被丢弃（后端行为，前端不要伪造）     |
+| K7  | prepared replay 的 prepare 与 stream 共用 generation/AbortController；重复提交、切路由、stop、error、cancel 和成功都必须清掉 guard、乐观态与 superseded masks                             |
+| K8  | Gateway 非成功响应统一保留 HTTP status、FastAPI `detail`、结构化 body 与原始正文，不能在 prepared replay 或 compact 路径换成通用错误                                                      |
+| K9  | 所有主 thread 列表按**原始后端行数**推进 offset，再过滤 sidecar；Pinia 不保存第二份 server-state 列表                                                                                     |
+| K10 | 删除主 thread 时先全量搜索并并发删除 sidecar，sidecar 全成功后才删主 thread；部分失败保留主 thread、清掉已成功缓存并暴露失败 ID 的可见重试                                                |
 
 > K6 是后端合同。前端只验证请求中不会伪造 `context.non_interactive`；后端的工具集裁剪
 > 由后端测试负责。

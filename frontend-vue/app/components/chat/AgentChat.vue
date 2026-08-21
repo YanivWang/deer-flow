@@ -23,6 +23,7 @@ import SidecarPanel from "@/components/workspace/sidecar/SidecarPanel.vue";
 import { useArtifactsPanel } from "@/composables/useArtifactsPanel";
 import { useSidecar } from "@/composables/useSidecar";
 import { useThreadStream } from "@/composables/useThreadStream";
+import { useThreads } from "@/composables/useThreads";
 import { useNotifications } from "@/composables/useNotifications";
 import { useWorkspaceFeatures } from "@/composables/useWorkspaceFeatures";
 import {
@@ -55,7 +56,6 @@ import {
   type SidecarContext,
 } from "@/core/sidecar";
 import { buildWriteFileArtifactURL } from "@/core/artifacts/utils";
-import { useThreadsStore } from "@/stores/threads";
 import { getAgent } from "@/core/agents/api";
 import type { Agent } from "@/core/agents/types";
 
@@ -67,7 +67,7 @@ const props = defineProps<{
 const { $i18n } = useNuxtApp();
 const route = useRoute();
 const router = useRouter();
-const threads = useThreadsStore();
+const threads = useThreads();
 const isDemo = computed(
   () => props.demo === true || route.query.mock === "true",
 );
@@ -844,6 +844,11 @@ onUnmounted(() => {
           :thread-id="routeThreadId"
           :artifact-paths="artifactPanel.artifacts.value"
           :is-mock="isDemo"
+          :subtasks="stream.subtasks.value"
+          :active-run-id="stream.activeRunId.value"
+          :has-more-history="stream.hasMoreHistory.value"
+          :history-loading-more="stream.isHistoryLoadingMore.value"
+          :history-error="stream.historyError.value"
           :tail-request="mainTailRequest"
           :interactive="!isDemo"
           selection-mode="main"
@@ -855,6 +860,7 @@ onUnmounted(() => {
           @regenerate="regenerate"
           @edit="beginEdit"
           @human-input="respondHumanInput"
+          @load-more-history="stream.loadMoreHistory()"
         />
         <div
           v-if="editState"
@@ -882,6 +888,14 @@ onUnmounted(() => {
             </button>
           </div>
         </div>
+        <p
+          v-if="stream.llmRetry.value"
+          data-testid="llm-retry-status"
+          role="status"
+          class="absolute right-4 bottom-48 z-40 max-w-md rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-700 shadow"
+        >
+          {{ stream.llmRetry.value.message }}
+        </p>
         <p
           v-if="warnings.length"
           role="status"

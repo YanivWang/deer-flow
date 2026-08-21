@@ -33,6 +33,7 @@
 | `types/message.contract.ts`       | `ADDED`   | —                                                 | `AgentMessageContent` 联合的类型层护栏。放 `app/` 而不是 `tests/`，因为 `tests/` 不过 vue-tsc。                                                                                        |
 | `scheduled-tasks/schedule.ts`     | `ADDED`   | —                                                 | `ScheduleValue` 从 React 组件文件搬进 core，纠正依赖方向（06 §M1 1b 的 `retype-component-type`）。                                                                                     |
 | `api/client.ts`                   | `ADDED`   | —                                                 | M2 自写的 7 个 REST 方法，替代 SDK `Client`（02 §249）。上游没有对应文件——那部分职责在 SDK 里。                                                                                        |
+| `api/errors.ts`                   | `ADAPTED` | `api/errors.ts`                                   | WP-02：统一全部 Gateway REST 错误解析，兼容旧导出同时保留 HTTP status、结构化 body 与原始正文。                                                                                        |
 | `api/types.gen.ts`                | `ADDED`   | —                                                 | **生成物，勿手改。** `make gen-api-types` 从 `baseline/openapi.snapshot.json` 生成（02 §340 / 04 §267）。上游对应物是 SDK 借来的 REST 信封类型。                                       |
 | `api/api-client.ts`               | `ADAPTED` | `api/api-client.ts`                               | M2 REWRITE。上游 471 行里大部分是给 SDK 打补丁，没有 SDK 就没有补丁的对象；有意不搬的三样写在文件头。                                                                                  |
 | `agent-deerflow/endpoints.ts`     | `ADDED`   | —                                                 | L3：run 相关 URL 与 `Content-Location` 解析（05 L12）。上游散在 SDK 内部。                                                                                                             |
@@ -58,6 +59,12 @@
 | `threads/cache-invalidation.ts`   | `ADAPTED` | `threads/hooks.ts`                                | M4a：05 A7/A8。相对上游删掉 `isMock` 形参（M4a 删 mock 分支），metadata key 少一段；A8 的 6 个 key 提成 `THREAD_CACHE_KEYS` 一张表。                                                   |
 | `threads/submit.ts`               | `ADAPTED` | `threads/hooks.ts`                                | M4a：提交请求体。唯一结构改动是把上游两处逐字重复的 run context 字面量合并成 `buildRunContext`，理由见文件头。                                                                         |
 | `threads/goal.ts`                 | `ADAPTED` | `components/workspace/input-box-helpers.ts`       | M6：保留 React 的 `/goal` 命令边界、4000 字符限制与错误正文规则；去掉 React 提交动作类型，只导出 Vue composer 和 goal 状态组件共用的纯函数。                                           |
+| `threads/api.ts`                  | `ADAPTED` | `threads/api.ts`                                  | WP-02：`/compact` 等 Gateway 写操作统一使用 Vue 的保真响应错误，保留 HTTP status、detail 与原始正文。                                                                                  |
+| `threads/compact-command.ts`      | `ADDED`   | —                                                 | WP-02：`/compact` 与 `/context compact` 的完整命令识别，避免把普通消息误判为内建命令。                                                                                                 |
+| `threads/delete.ts`               | `ADAPTED` | `threads/hooks.ts`                                | WP-02：全量搜索 parent sidecar、并发删除、主 thread 后删，并将部分失败 ID 交给可见重试 UI。                                                                                            |
+| `threads/thread-snapshot.ts`      | `ADAPTED` | `threads/hooks.ts`                                | WP-02：列表稀疏快照与已缓存详细 thread state 的稳定合并。                                                                                                                              |
+| `tasks/custom-event.ts`           | `ADAPTED` | `threads/hooks.ts`                                | WP-02：统一归约 task 生命周期、步骤、模型、token、llm_retry 与 replay-gap；终态和累计用量单调。                                                                                        |
+| `tasks/view-model.ts`             | `ADAPTED` | `components/workspace/messages/subtask-card.tsx`  | WP-02：将实时步骤、历史 backfill 与 terminal tool result 合并成 Vue SubtaskCard 的纯展示模型。                                                                                         |
 | `agent-deerflow/thread-runner.ts` | `ADDED`   | —                                                 | M4a：L1 内核 + L3 协议的装配层，M2 内核的第一个真实调用方。上游对应物在 SDK 内部（StreamManager），没有源文件。                                                                        |
 | `i18n/resolve.ts`                 | `ADDED`   | —                                                 | M4a：按点分路径取文案。上游没有对应物——它的 core 与 React 同处一层，直接写属性访问；这里 core 只发字典 key（A7），取文案在 UI 边界。                                                   |
 | `i18n/cookies.ts`                 | `ADAPTED` | `i18n/cookies.ts`                                 | M4a REWRITE（05 N4）。持久化格式逐字保留（改名 = 老用户丢语言偏好）；上游第三个函数 `getLocaleFromCookieServer` import `next/headers`，不迁。                                          |
@@ -68,7 +75,6 @@
 | `agents/api.ts` | `COPIED` | `agents/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `agents/feature-cache.ts` | `COPIED` | `agents/feature-cache.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `agents/types.ts` | `COPIED` | `agents/types.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
-| `api/errors.ts` | `COPIED` | `api/errors.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `api/feedback.ts` | `COPIED` | `api/feedback.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `api/fetcher.ts` | `COPIED` | `api/fetcher.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `api/index.ts` | `COPIED` | `api/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
@@ -133,7 +139,6 @@
 | `tasks/presentation.ts` | `COPIED` | `tasks/presentation.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `tasks/steps.ts` | `COPIED` | `tasks/steps.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `tasks/subtask-update.ts` | `COPIED` | `tasks/subtask-update.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
-| `threads/api.ts` | `COPIED` | `threads/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `threads/composer-draft.ts` | `COPIED` | `threads/composer-draft.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `threads/index.ts` | `COPIED` | `threads/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `threads/thread-list-model.ts` | `COPIED` | `threads/thread-list-model.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |

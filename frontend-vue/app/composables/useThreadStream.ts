@@ -52,8 +52,10 @@ import { createThreadRunner } from "@/core/agent-deerflow/thread-runner";
 import { createDeerFlowRunProtocol } from "@/core/agent-deerflow/run-protocol";
 import { getBackendBaseURL, getLangGraphBaseURL } from "@/core/config";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
+import { throwGatewayResponseError } from "@/core/api/errors";
 import {
   createGapRecoveryReset,
+  invalidateThreadCaches,
   invalidateStoppedThreadCaches,
   stopThreadAndInvalidateCaches,
 } from "@/core/threads/cache-invalidation";
@@ -93,6 +95,11 @@ import {
 import { isHiddenFromUIMessage } from "@/core/messages/utils";
 import type { FileInMessage } from "@/core/messages/utils";
 import type { Message } from "@/core/types/message";
+import {
+  clearThreadRetryNotice,
+  createThreadCustomEventState,
+  reduceThreadCustomEvent,
+} from "@/core/tasks/custom-event";
 
 import { useCoalescedStreamMessages } from "./useCoalescedStreamMessages";
 import { useThreadHistory } from "./useThreadHistory";
@@ -192,10 +199,18 @@ export function useThreadStream(options: UseThreadStreamOptions) {
    */
   let adoptedThreadId: string | null = null;
   let pendingFinalizationTimer: ReturnType<typeof setTimeout> | null = null;
+  let preparedReplayController: AbortController | null = null;
+  let preparedReplayGeneration = 0;
+  let pendingPreparedReplay: {
+    targetRunId: string;
+    supersededMessageIds: readonly string[];
+  } | null = null;
 
   // ---- runner ------------------------------------------------------------
   const snapshotVersion = shallowRef(0);
   const sessionStatus = ref<string>("idle");
+  const activeRunId = ref<string | null>(null);
+  const customEventState = shallowRef(createThreadCustomEventState());
 
   const runner: ThreadRunner = runnerFactory({
     protocol: createDeerFlowRunProtocol({ baseUrl: getLangGraphBaseURL() }),
@@ -239,6 +254,10 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     if (pendingFinalizationTimer !== null) {
       clearTimeout(pendingFinalizationTimer);
     }
+    preparedReplayGeneration += 1;
+    preparedReplayController?.abort();
+    preparedReplayController = null;
+    customEventState.value = createThreadCustomEventState();
     runner.abort();
   });
 
@@ -287,6 +306,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
 
   // ---- 事件处理 ----------------------------------------------------------
   function handleStreamStart(startedThreadId: string, runId: string) {
+    activeRunId.value = runId;
     if (
       optimisticThreadId.value &&
       (optimisticThreadId.value === currentViewThreadId.value ||
@@ -310,6 +330,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
   }
 
   function handleUpdateEvent(data: unknown) {
+    customEventState.value = clearThreadRetryNotice(customEventState.value);
     const summarization = getSummarizationMiddlewareMessages(data);
     if (summarization && summarization.length >= 2) {
       for (const message of summarization) {
@@ -372,13 +393,11 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     }
   }
 
-  /** 05 A7。触发点是 `custom` 帧，理由见 gap-recovery.ts。 */
+  /** task / retry / replay-gap custom 事件只在这一处进入纯 reducer。 */
   function handleCustomEvent(data: unknown) {
-    const type =
-      typeof data === "object" && data !== null
-        ? Reflect.get(data, "type")
-        : undefined;
-    if (type !== "stream_replay_gap") return;
+    const reduced = reduceThreadCustomEvent(customEventState.value, data);
+    customEventState.value = reduced.state;
+    if (reduced.effect !== "replay_gap") return;
 
     const reset = createGapRecoveryReset();
     if (reset.clearOptimistic) {
@@ -400,11 +419,13 @@ export function useThreadStream(options: UseThreadStreamOptions) {
   }
 
   function handleStreamError(error: Error) {
+    customEventState.value = clearThreadRetryNotice(customEventState.value);
     optimisticMessages.value = [];
     optimisticThreadId.value = null;
     liveMessagesThreadId.value = null;
     pendingSupersededRunIds.value = new Set();
     pendingSupersededMessageIds.value = new Set();
+    pendingPreparedReplay = null;
     notify.error(error.message || "Request failed.");
     if (threadId.value) {
       invalidateStoppedThreadCaches(queryClient, threadId.value);
@@ -412,6 +433,14 @@ export function useThreadStream(options: UseThreadStreamOptions) {
   }
 
   function handleStreamFinish() {
+    customEventState.value = clearThreadRetryNotice(customEventState.value);
+    if (pendingPreparedReplay) {
+      clearPreparedReplayMasks(
+        pendingPreparedReplay.targetRunId,
+        pendingPreparedReplay.supersededMessageIds,
+      );
+      pendingPreparedReplay = null;
+    }
     onFinish?.(runner.getSnapshot().state);
     invalidateStoppedThreadCaches(queryClient, threadId.value);
   }
@@ -420,7 +449,13 @@ export function useThreadStream(options: UseThreadStreamOptions) {
   watch(threadId, (next, previous) => {
     // `new` 提交后 URL 换成真 id：同一个 thread，不清场。见 adoptedThreadId。
     if (previous === null && next !== null && next === adoptedThreadId) return;
+    preparedReplayGeneration += 1;
+    preparedReplayController?.abort();
+    preparedReplayController = null;
+    pendingPreparedReplay = null;
     runner.reset();
+    activeRunId.value = null;
+    customEventState.value = createThreadCustomEventState();
     startedAnnounced = false;
     sendInFlight = false;
     transientHistoryBridge = [];
@@ -644,6 +679,10 @@ export function useThreadStream(options: UseThreadStreamOptions) {
   ): Promise<boolean> {
     if (sendInFlight || !targetThreadId) return false;
     sendInFlight = true;
+    const generation = ++preparedReplayGeneration;
+    const controller = new AbortController();
+    preparedReplayController?.abort();
+    preparedReplayController = controller;
     previousHumanMessageCount = humanMessageCount.value;
     localTurnOrderBaseline = identitiesOf(persistedMessages.value);
     liveMessagesThreadId.value = targetThreadId;
@@ -658,12 +697,23 @@ export function useThreadStream(options: UseThreadStreamOptions) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(prepareBody),
+          signal: controller.signal,
         },
       );
       if (!response.ok) {
-        throw new Error(`Failed to prepare ${preparePath}.`);
+        await throwGatewayResponseError(
+          response,
+          `Failed to prepare ${preparePath}.`,
+        );
       }
       const prepared = (await response.json()) as PreparedReplay;
+      if (
+        controller.signal.aborted ||
+        generation !== preparedReplayGeneration ||
+        targetThreadId !== threadId.value
+      ) {
+        return false;
+      }
       preparedRunId = prepared.target_run_id;
       supersededMessageIds =
         prepared.source_message_ids ?? fallbackSupersededMessageIds;
@@ -675,6 +725,10 @@ export function useThreadStream(options: UseThreadStreamOptions) {
         ...pendingSupersededMessageIds.value,
         ...supersededMessageIds,
       ]);
+      pendingPreparedReplay = {
+        targetRunId: prepared.target_run_id,
+        supersededMessageIds,
+      };
 
       const replacementMessages = prepared.input.messages ?? [];
       if (replacementMessages.length > 0) {
@@ -694,7 +748,25 @@ export function useThreadStream(options: UseThreadStreamOptions) {
           context: buildRunContext(toValue(context), targetThreadId),
         },
       });
-      void queryClient.invalidateQueries({ queryKey: ["threads", "search"] });
+      if (
+        controller.signal.aborted ||
+        generation !== preparedReplayGeneration ||
+        targetThreadId !== threadId.value
+      ) {
+        return false;
+      }
+      const status = runner.getSessionState().status;
+      if (status === "failed" || status === "cancelled") {
+        if (pendingPreparedReplay) {
+          clearPreparedReplayMasks(
+            pendingPreparedReplay.targetRunId,
+            pendingPreparedReplay.supersededMessageIds,
+          );
+          pendingPreparedReplay = null;
+        }
+        return false;
+      }
+      invalidateThreadCaches(queryClient, targetThreadId);
       return true;
     } catch (error) {
       optimisticMessages.value = [];
@@ -704,10 +776,20 @@ export function useThreadStream(options: UseThreadStreamOptions) {
       if (preparedRunId) {
         clearPreparedReplayMasks(preparedRunId, supersededMessageIds);
       }
-      notify.error(error instanceof Error ? error.message : String(error));
+      pendingPreparedReplay = null;
+      if (
+        !controller.signal.aborted &&
+        generation === preparedReplayGeneration &&
+        targetThreadId === threadId.value
+      ) {
+        notify.error(error instanceof Error ? error.message : String(error));
+      }
       return false;
     } finally {
-      sendInFlight = false;
+      if (preparedReplayController === controller) {
+        preparedReplayController = null;
+      }
+      if (generation === preparedReplayGeneration) sendInFlight = false;
     }
   }
 
@@ -743,11 +825,28 @@ export function useThreadStream(options: UseThreadStreamOptions) {
 
   /** 05 A8。延迟那一次的 handle 留着，卸载时取消。 */
   async function stop(): Promise<void> {
-    pendingFinalizationTimer = await stopThreadAndInvalidateCaches(
-      queryClient,
-      () => runner.stop(),
-      threadId.value,
-    );
+    preparedReplayGeneration += 1;
+    preparedReplayController?.abort();
+    preparedReplayController = null;
+    try {
+      pendingFinalizationTimer = await stopThreadAndInvalidateCaches(
+        queryClient,
+        () => runner.stop(),
+        threadId.value,
+      );
+    } finally {
+      if (pendingPreparedReplay) {
+        clearPreparedReplayMasks(
+          pendingPreparedReplay.targetRunId,
+          pendingPreparedReplay.supersededMessageIds,
+        );
+        pendingPreparedReplay = null;
+      }
+      optimisticMessages.value = [];
+      optimisticThreadId.value = null;
+      customEventState.value = clearThreadRetryNotice(customEventState.value);
+      sendInFlight = false;
+    }
   }
 
   function clearPreparedReplayMasks(
@@ -766,10 +865,19 @@ export function useThreadStream(options: UseThreadStreamOptions) {
 
   function resetView() {
     adoptedThreadId = null;
+    preparedReplayGeneration += 1;
+    preparedReplayController?.abort();
+    preparedReplayController = null;
+    pendingPreparedReplay = null;
+    sendInFlight = false;
     runner.reset();
+    activeRunId.value = null;
+    customEventState.value = createThreadCustomEventState();
     optimisticMessages.value = [];
     optimisticThreadId.value = null;
     liveMessagesThreadId.value = null;
+    pendingSupersededRunIds.value = new Set();
+    pendingSupersededMessageIds.value = new Set();
     renderedMessageSnapshot = {
       threadId: null,
       messages: EMPTY_MESSAGES,
@@ -784,9 +892,14 @@ export function useThreadStream(options: UseThreadStreamOptions) {
       void snapshotVersion.value;
       return runner.getSnapshot().state;
     }),
+    activeRunId,
+    subtasks: computed(() => customEventState.value.tasks),
+    llmRetry: computed(() => customEventState.value.retry),
     isStreaming,
     isUploading: isUploading as Ref<boolean>,
-    isHistoryLoading: history.loading,
+    isHistoryLoading: history.loadingInitial,
+    isHistoryLoadingMore: history.loadingMore,
+    historyError: history.error,
     hasMoreHistory: history.hasMore,
     loadMoreHistory: history.loadMore,
     sendMessage,

@@ -1,4 +1,13 @@
+/*
+  【文件职责】     Thread token、branch、metadata 与 context compact Gateway API。
+  【对应 frontend/】 core/threads/api.ts
+  【架构位置】     L3
+  【主要导出】     fetchThreadTokenUsage · branch/patch/compact thread helpers
+  【依赖关系】     core/api/fetcher · core/api/errors · core/config
+  【边界与注意】   写请求共用保真 Gateway 错误；compact 固定 force 并支持 abort。
+*/
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
+import { throwGatewayResponseError } from "@/core/api/errors";
 import { getBackendBaseURL } from "@/core/config";
 
 import type { AgentThread, ThreadTokenUsageResponse } from "./types";
@@ -47,21 +56,6 @@ export type ThreadMetadataPatchResponse = Pick<
   "thread_id" | "status" | "created_at" | "updated_at" | "metadata"
 >;
 
-async function readThreadAPIError(
-  response: Response,
-  fallback: string,
-): Promise<string> {
-  try {
-    const body = (await response.json()) as { detail?: unknown };
-    if (typeof body.detail === "string" && body.detail) {
-      return body.detail;
-    }
-  } catch {
-    // Fall through to the caller-provided message.
-  }
-  return fallback;
-}
-
 export async function fetchThreadTokenUsage(
   threadId: string,
 ): Promise<ThreadTokenUsageResponse | null> {
@@ -102,9 +96,7 @@ export async function branchThreadFromTurn(
   );
 
   if (!response.ok) {
-    throw new Error(
-      await readThreadAPIError(response, "Failed to branch conversation."),
-    );
+    await throwGatewayResponseError(response, "Failed to branch conversation.");
   }
 
   return (await response.json()) as ThreadBranchResponse;
@@ -126,9 +118,7 @@ export async function patchThreadMetadata(
   );
 
   if (!response.ok) {
-    throw new Error(
-      await readThreadAPIError(response, "Failed to update conversation."),
-    );
+    await throwGatewayResponseError(response, "Failed to update conversation.");
   }
 
   return (await response.json()) as ThreadMetadataPatchResponse;
@@ -155,9 +145,7 @@ export async function compactThreadContext(
   );
 
   if (!response.ok) {
-    throw new Error(
-      await readThreadAPIError(response, "Failed to compact context."),
-    );
+    await throwGatewayResponseError(response, "Failed to compact context.");
   }
 
   return (await response.json()) as ThreadCompactResponse;

@@ -152,6 +152,7 @@ export function createThreadRunner(options: ThreadRunnerOptions): ThreadRunner {
   let sessionState: RunSessionState<DeerFlowRunHandle> = { status: "idle" };
   let active: ReturnType<typeof createGapAwareRun> | undefined;
   let announcedHandle: string | undefined;
+  let generation = 0;
 
   const unsubscribeSnapshot = store.subscribe(() => onSnapshot?.());
 
@@ -166,6 +167,7 @@ export function createThreadRunner(options: ThreadRunnerOptions): ThreadRunner {
   }
 
   async function consume(input: DeerFlowRunInput): Promise<void> {
+    const runGeneration = ++generation;
     const run = createGapAwareRun({
       protocol,
       loadDurableState,
@@ -182,6 +184,7 @@ export function createThreadRunner(options: ThreadRunnerOptions): ThreadRunner {
 
     try {
       for await (const output of run.run(input)) {
+        if (runGeneration !== generation) break;
         if (output.kind === "state") {
           sessionState = output.state;
           onSessionState?.(output.state);
@@ -210,6 +213,7 @@ export function createThreadRunner(options: ThreadRunnerOptions): ThreadRunner {
         if (mode === "custom") onCustomEvent?.(parseData(output.event));
       }
     } catch (cause) {
+      if (runGeneration !== generation) return;
       const error =
         cause instanceof AgentStreamError
           ? cause
@@ -219,7 +223,7 @@ export function createThreadRunner(options: ThreadRunnerOptions): ThreadRunner {
       onError?.(error);
       onSettled?.(sessionState);
     } finally {
-      active = undefined;
+      if (runGeneration === generation) active = undefined;
     }
   }
 
@@ -242,10 +246,12 @@ export function createThreadRunner(options: ThreadRunnerOptions): ThreadRunner {
       active?.stop();
     },
     abort() {
+      generation += 1;
       active?.abort();
       unsubscribeSnapshot();
     },
     reset() {
+      generation += 1;
       active?.abort();
       active = undefined;
       announcedHandle = undefined;
