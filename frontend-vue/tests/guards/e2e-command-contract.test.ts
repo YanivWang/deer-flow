@@ -54,6 +54,10 @@ const m7Config = readFileSync(
   new URL("../../playwright.m7.config.ts", import.meta.url),
   "utf8",
 );
+const wp07RealConfig = readFileSync(
+  new URL("../../playwright.wp07-real-backend.config.ts", import.meta.url),
+  "utf8",
+);
 const browserStream = readFileSync(
   new URL(
     "../../app/components/workspace/browser-view/useBrowserStream.ts",
@@ -186,9 +190,9 @@ describe("M5 artifact inventory", () => {
 });
 
 describe("Vue M7 gate ownership", () => {
-  it("keeps the exact WP-06 26-file / 135-test gate and owns framework-specific specs", () => {
+  it("keeps the exact WP-07 26-file / 138-test gate and owns framework-specific specs", () => {
     expect(m7Inventory.expectedFileCount).toBe(26);
-    expect(m7Inventory.expectedTestCount).toBe(135);
+    expect(m7Inventory.expectedTestCount).toBe(138);
     expect(m7Inventory.specFiles).toHaveLength(26);
     expect(m7Inventory.specFiles).toContain(
       "frontend-vue/tests/m5/artifact-batched-stream.spec.ts",
@@ -209,6 +213,7 @@ describe("Vue M7 gate ownership", () => {
       "agent-chat.spec.ts",
       "channels.spec.ts",
       "integrations.spec.ts",
+      "scheduled-tasks.spec.ts",
       "thread-history.spec.ts",
     ]) {
       expect(m7Inventory.specFiles).toContain(`frontend-vue/tests/m7/${spec}`);
@@ -227,6 +232,16 @@ describe("Vue M7 gate ownership", () => {
     expect(workspacePanels).not.toContain("animationTimer");
     expect(agentChat).not.toContain("artifactOpenTimer");
     expect(messageList).not.toContain("AIMessageChunk");
+  });
+
+  it("owns a dedicated WP-07 real FastAPI/SQLite/Chromium gate", () => {
+    expect(makefile).toContain("e2e-wp07-real-backend:");
+    expect(makefile).toContain(
+      "playwright test -c playwright.wp07-real-backend.config.ts",
+    );
+    expect(wp07RealConfig).toContain("scripts/run_replay_gateway.py");
+    expect(wp07RealConfig).toContain('testDir: "tests/wp07-real-backend"');
+    expect(wp07RealConfig).toContain("NUXT_PUBLIC_AUTH_DISABLED=1");
   });
 });
 

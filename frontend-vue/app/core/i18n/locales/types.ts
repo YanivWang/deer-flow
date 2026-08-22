@@ -286,11 +286,15 @@ export interface Translations {
       threadIdPlaceholder: string;
     };
     filters: {
+      statusLabel: string;
+      typeLabel: string;
       allStatuses: string;
       enabled: string;
       paused: string;
+      running: string;
       completed: string;
       failed: string;
+      cancelled: string;
       allTypes: string;
       cron: string;
       once: string;
@@ -308,8 +312,15 @@ export interface Translations {
       runsCountOne: string;
       noRuns: string;
       noSelection: string;
+      noTasks: string;
       filteredByThread: string;
       loadFailed: string;
+      loading: string;
+      loadingRuns: string;
+      loadMore: string;
+      loadingMore: string;
+      runCount: string;
+      runningLocked: string;
     };
     actions: {
       edit: string;
@@ -319,6 +330,14 @@ export interface Translations {
       trigger: string;
       delete: string;
     };
+    feedback: {
+      created: string;
+      updated: string;
+      pause: string;
+      resume: string;
+      trigger: string;
+      deleted: string;
+    };
     deleteConfirm: string;
     errors: {
       create: string;
@@ -327,6 +346,7 @@ export interface Translations {
       resume: string;
       trigger: string;
       delete: string;
+      loadRuns: string;
     };
     edit: {
       titlePlaceholder: string;
@@ -342,6 +362,14 @@ export interface Translations {
       cancelled: string;
     };
     runTrigger: { scheduled: string; manual: string };
+    runFields: {
+      scheduledFor: string;
+      startedAt: string;
+      finishedAt: string;
+      threadId: string;
+      runId: string;
+      error: string;
+    };
     runStatus: {
       queued: string;
       running: string;

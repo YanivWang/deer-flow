@@ -50,6 +50,8 @@ const HAND_MAINTAINED = {
     "Existing Vue SSR-free locale cookie adapter is maintained in place.",
   "threads/api.ts":
     "WP-02 preserves Gateway HTTP status/body through the shared Vue error parser.",
+  "scheduled-tasks/api.ts":
+    "WP-07 adds abortable detail and limit/offset runs queries while narrowing create/update payloads to the Gateway contract.",
 };
 
 /** 台账单元格里的 `|` 会把表格切断；COPIED 的说明是脚本给的，不该出现，兜一下。 */

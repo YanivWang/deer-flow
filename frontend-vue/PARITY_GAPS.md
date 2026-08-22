@@ -2,7 +2,7 @@
 
 > 状态：当前源码审计后的未完成清单。
 >
-> 基线日期：2026-08-21。
+> 基线日期：2026-08-22。
 >
 > React 基线：`../frontend`；Vue 实现：当前目录 `frontend-vue`。
 >
@@ -115,9 +115,9 @@
 | ARTIFACT-02 | P1     | DONE | WP-06  | 单一 draft owner 统一保护切换、关闭、跨面板、路由与页面离开      |
 | ARTIFACT-03 | P1     | DONE | WP-06  | save/discard/exit/copy/open/download/install 与错误/权限已接通   |
 | ARTIFACT-04 | P1     | DONE | WP-06  | 正式与流式 HTML 仅在完整、未截断且结构闭合时进入 iframe preview  |
-| SCHEDULE-01 | P1     | TODO | WP-07  | 创建任务硬编码 cron/UTC，context 输入不完整                      |
-| SCHEDULE-02 | P1     | TODO | WP-07  | 缺编辑、删除、类型筛选、recipes 和完整状态筛选                   |
-| SCHEDULE-03 | P1     | TODO | WP-07  | 缺完整运行历史、运行详情和错误展示                               |
+| SCHEDULE-01 | P1     | DONE | WP-07  | once/cron、DST 时区与 fresh/reuse 精确 payload 已接通            |
+| SCHEDULE-02 | P1     | DONE | WP-07  | 编辑、确认删除、recipes、类型与六状态筛选已接通                  |
+| SCHEDULE-03 | P1     | DONE | WP-07  | 分页 run history、完整详情、轮询与错误收敛已接通                 |
 | CHANNEL-01  | P1     | TODO | WP-08  | 页面没有以 connections 响应作为真实连接状态                      |
 | CHANNEL-02  | P1     | TODO | WP-08  | connect 响应的 `url`、`expires_in` 和轮询未消费                  |
 | CHANNEL-03  | P1     | TODO | WP-08  | disconnect API 已存在但没有界面和状态收敛                        |
@@ -377,30 +377,55 @@
 
 #### 当前代码事实
 
-- [`app/pages/workspace/scheduled-tasks.vue`](app/pages/workspace/scheduled-tasks.vue) 创建时固定 `0 9 * * *` 和 `UTC`，context 主要从 query 推导。
-- 页面只调用 create/fetch/pause/resume/trigger。
-- [`app/core/scheduled-tasks/api.ts`](app/core/scheduled-tasks/api.ts) 已有 update/delete，但没有页面消费者。
-- React [`src/app/workspace/scheduled-tasks/page.tsx`](../frontend/src/app/workspace/scheduled-tasks/page.tsx) 有 schedule form、timezone、context mode、recipes、编辑、删除、类型/状态筛选和更完整 runs。
-
-#### 必须实现
-
-1. 创建表单支持 interval/cron/one-time 等后台实际类型、timezone、context mode/target。
-2. 请求 payload 的空值、日期、UTC 转换、cron 和 enabled 语义与 React 一致。
-3. 支持 edit/delete，成功后正确 invalidates list/detail/runs。
-4. 支持 recipes、类型筛选、全部后台状态筛选。
-5. 展示完整 run history、状态、时间、错误和手动 trigger 结果。
-
-#### Vue 实现建议
-
-- 页面只负责布局；拆为 `ScheduledTaskForm`、`Filters`、`TaskList`、`TaskDetail`、`RunList`。
-- create/update/delete/pause/resume/trigger 都使用 Vue Query mutations 和集中 query keys。
-- 复用现有 cron/schedule/recipes 纯函数，不在模板里再次拼时间语义。
+- Gateway 当前只接受 `schedule_type=once|cron`；create body 为 context、title、prompt、
+  schedule type/spec 和 timezone。PATCH 只允许 context、thread、title、prompt、spec、timezone，
+  不允许修改 schedule type；enabled/paused 只通过 pause/resume endpoint 改变。客户端不提交
+  `context.non_interactive`。
+- [`app/core/scheduled-tasks/form.ts`](app/core/scheduled-tasks/form.ts) 是表单与 wire payload 的
+  唯一 owner：支持 hourly/daily/weekly/monthly/custom cron、浏览器默认但可编辑的 IANA
+  timezone、DST-safe once wall time → UTC，以及 fresh/reuse thread 规则。编辑保持原 schedule
+  type，recipes 只回填同一表单并保留 `{{repo}}` 等占位符。
+- [`app/composables/useScheduledTasks.ts`](app/composables/useScheduledTasks.ts) 与
+  [`app/core/scheduled-tasks/query-keys.ts`](app/core/scheduled-tasks/query-keys.ts) 独占全局列表、
+  thread 列表、detail、分页 runs 和 mutation invalidation。queryFn 从自己的 key 取 task/thread，
+  AbortSignal 与 observer scope 负责取消；只有看到 queued/running run 才轮询。
+- 页面只编排 route 默认值、筛选与 selection；Form、Filters、List、Detail、RunList 分工。类型
+  筛选覆盖 once/cron，状态筛选覆盖 enabled/paused/running/completed/failed/cancelled；删除后二次
+  确认，筛选或删除使 selection 不可见时确定性回到首项/空值。
+- run history 使用 `limit/offset` 与显式加载更多，展示 trigger、六种 run status、scheduled/
+  started/finished time、thread/run ID 与 error。running 和 mutation pending 状态禁用冲突/重复
+  操作；403/404/409/422/502 保留 Gateway detail，401 遵循共享 fetcher 的登录跳转合同。
 
 #### 验收与测试
 
-- 对每种 schedule type 做 payload contract 测试。
-- timezone/DST/one-time 转换测试。
-- create/edit/delete/filter/trigger/runs E2E，断言请求和缓存刷新。
+- 严格 TDD 红灯起步：新增 `tests/unit/wp07/` 后首先因 form/query-key/view-model/composable/API
+  缺失而 5 files 全部失败；最终聚焦 unit/DOM 为 5 files / 33 tests，覆盖精确 payload、cron
+  presets、browser timezone、DST gap/fold、fresh/reuse、PATCH 禁止字段、全部错误码、query
+  invalidation、stale task/runs 与 observer dispose。
+- Vue-owned [`tests/m7/scheduled-tasks.spec.ts`](tests/m7/scheduled-tasks.spec.ts) 为 9 tests：
+  create/edit/pause/resume/trigger/delete、recipe、once/DST、六 task 状态、两种类型、running
+  lock、错误展示/401 跳转、runs 50+5 分页和详细字段；完整 M7 清单为 26 files / 138 tests。
+- `make e2e-wp07-real-backend` 为 2/2：真实 FastAPI Gateway、SQLite repository/service、HTTP、
+  Nuxt preview 与 Chromium 验证真实 once/cron create、Gateway 归一化与 422、context/thread
+  权限、PATCH、pause/resume、trigger、runs 详细字段与 delete。手动 trigger 使用签入 replay
+  model，真实 run 最终按 artifact delivery 策略收敛为 failed，Vue 和 HTTP 均保留同一终态与
+  error；认证由 `DEER_FLOW_AUTH_DISABLED=1` 隔离。
+- 该 real-backend gate 不等于生产 scheduler 的真实时间推进、生产模型、真实 IdP、DNS/TLS
+  或外层代理证据；这些边界仍由目标环境负责。
+
+#### 最终顺序门禁
+
+- 2026-08-22 全部通过：WP-07 unit/DOM 5 files / 33 tests；`make e2e-m7-list`
+  26 files / 138 tests；`make e2e-m7` 138/138；`make e2e-wp07-real-backend` 2/2；
+  `make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7-local` 8/8；
+  `make e2e-m7-auth` 10/10；`make e2e-m7-real-protocol` 1/1；`make e2e-m7-visual`
+  7/7（baseline 未更新）；`make migration-check` 通过（58 个生成测试、20 个 RETYPED）；
+  `make verify` 155 test files / 1337 tests、landed 59 files / 561 tests、2 locales / 各
+  788 keys、216 file headers、类型/格式/OpenAPI/production build 全部通过。
+- `make verify` 有 59 个 lint warning、0 error；生产构建另有既有 chunk-size、Tailwind
+  sourcemap 与 unused external import warning。沙箱内首轮完整 Vitest 因
+  `listen EPERM 127.0.0.1` 令 12 个 fake-upstream 用例超时，完全相同命令在允许回环监听的
+  环境原样重跑后 1337/1337 通过。
 
 ### WP-08：Channels 连接生命周期
 
@@ -534,7 +559,7 @@
 
 #### 当前代码事实
 
-- 当前 Vue 产品 `.vue` 文件中只有少数组件显式接入 i18n；聊天消息、Agent、scheduled tasks、channels、browser、artifacts、sidecar、多个 settings 页面仍有大量英文硬编码。
+- 当前 Vue 产品 `.vue` 文件中只有少数组件显式接入 i18n；聊天消息、Agent、channels、browser、artifacts、sidecar、多个 settings 页面仍有大量英文硬编码。WP-07 直接触及的 scheduled-task 表单、筛选、详情、run history 与反馈已进入当前 en-US/zh-CN 字典。
 - [`app/components/workspace/settings/AppearanceSettings.vue`](app/components/workspace/settings/AppearanceSettings.vue) 在 system 模式只读取一次 `matchMedia`，没有监听系统主题变化。
 - 词典 key 检查通过只能证明两个 locale key 集合一致，不能证明产品组件使用了词典。
 

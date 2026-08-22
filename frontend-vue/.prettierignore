@@ -58,7 +58,6 @@ app/core/memory/types.ts
 app/core/messages/workspace-change-anchor.ts
 app/core/models/index.ts
 app/core/models/types.ts
-app/core/scheduled-tasks/api.ts
 app/core/scheduled-tasks/cron.ts
 app/core/scheduled-tasks/types.ts
 app/core/settings/local.ts

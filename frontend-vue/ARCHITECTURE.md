@@ -137,6 +137,13 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
 - browser 的静态 frame/open 归 `AgentChat`，transport 归 per-panel controller，REST 归
   `BrowserPanel` 的 Vue Query mutation；三者不得互相复制。Gateway `url`/`tabs` 事件与 REST
   响应是 URL/title 真相，live/static 只是客户端展示状态。
+- scheduled tasks 的服务端真相只归 `useScheduledTasks` 的 TanStack Query key tree：全局列表、
+  thread 列表、detail 与分页 runs 使用不同 key，mutation 通过 `query-keys.ts` 集中声明精确
+  invalidation/remove 目标。页面只拥有 route 默认值、筛选和当前 selection；selection 在过滤或
+  删除后由纯 view-model 确定性收敛。`form.ts` 独占 once/cron、recipe、timezone/DST 与
+  create/PATCH payload 转换，组件不得另拼 wire body。runs 只由 infinite query 的
+  `limit/offset` 分页持有，活动 run 轮询随 query observer/scope dispose 停止，旧 task/thread
+  请求不能写入新 key。
 - composer draft 是 `sessionStorage` 的 tab 状态，只持久化文本/skill；user、agent 与逻辑会话
   三维隔离，并在确认 logout/thread delete 后清理。上传文件、语音、follow-up dialog、polish
   和 generation guard 是组件/composable 瞬态状态，不得错误跨 thread 复用。
@@ -151,6 +158,7 @@ make verify          # lint、格式、类型、单测、清单、i18n、OpenAPI
 make consumer-check  # 打包并在隔离 consumer 中验证 @deerflow/agent-core
 make e2e-list        # 列出共享产品合同
 make e2e-m7          # 当前完整 Vue 浏览器合同入口（名称为既有测试套件标识）
+make e2e-wp07-real-backend # 真实 Gateway/SQLite/HTTP/Nuxt/Chromium 的 scheduled-task 合同
 make container-smoke # 生产镜像、health、SIGTERM、Showcase 资源与拒绝策略
 ```
 

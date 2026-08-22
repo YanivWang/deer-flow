@@ -5,7 +5,7 @@
 未满足项及执行状态以 [PARITY_GAPS.md](PARITY_GAPS.md) 为准，验证入口以
 [README.md](README.md) 和各测试配置为准。
 
-全表 **A–N 共 14 组**。A–K 是产品行为，L 是 SSE/会话协议约束，M 是 Vue
+全表 **A–O 共 15 组**。A–K 与 O 是产品行为，L 是 SSE/会话协议约束，M 是 Vue
 框架语义约束，N 是需要跨浏览器或跨层验证的模块。修改相关代码时必须同时更新本合同、
 差异清单和对应测试，不能用单次全绿替代逐项判断。
 
@@ -342,6 +342,26 @@ raw trace、代理 smoke 和 replay Gateway 浏览器测试覆盖，不能只依
 | N2  | `app/composables/useNotifications.ts`                | 只在浏览器支持且用户授权时发通知；页面可见性与 run 生命周期变化不得产生重复通知                          |
 | N3  | `app/core/voice-input/speech-recognition.ts`         | 不支持 SpeechRecognition 或权限失败时必须可恢复；语音状态不持久化                                        |
 | N4  | `app/core/i18n/`、`app/plugins/i18n.ts`              | locale cookie 名与期限必须保持兼容；切换语言、首帧解析和字典完整性由 i18n gate 验证                      |
+
+---
+
+## O. Scheduled tasks
+
+| #   | 约束                                                                                                                                                                                                                                       |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| O1  | Gateway wire 只支持 `schedule_type=once\|cron`。create 不发送空字段、`enabled`、`interval`或`context.non_interactive`；PATCH 不发送 `schedule_type`，启停只走 pause/resume endpoint                                                        |
+| O2  | `fresh_thread_per_run` 不携带旧 `thread_id`；`reuse_thread` 必须携带用户可访问的真实 thread。route query 只初始化表单/列表作用域，用户仍可切换 context                                                                                     |
+| O3  | cron preset 只生成 hourly/daily/weekly/monthly 的五段表达式；custom 原样交给 Gateway 校验。timezone 默认浏览器时区但可编辑，非法 cron/timezone 必须显示 Gateway 的 422 `detail`                                                            |
+| O4  | once 的 `datetime-local` 按所选 IANA timezone 转为显式 UTC ISO；DST gap、过去时间与不满足 Gateway min-delay 的值不能伪装成功。重复时刻使用确定性的较早 occurrence                                                                          |
+| O5  | `useScheduledTasks` 是 list/thread-list/detail/runs 的唯一服务端状态 owner；query key 与 mutation invalidation 只能在集中 factory 中定义。create/update/delete/pause/resume/trigger 后必须刷新实际受影响的全局、thread、detail 与 runs key |
+| O6  | task/type 筛选覆盖 once/cron 与 enabled/paused/running/completed/failed/cancelled；当前 selection 被过滤或删除后必须确定性地选择首个可见 task 或清空                                                                                       |
+| O7  | running 时 edit/pause/resume/trigger/delete 的冲突操作禁用；mutation pending 阻止重复提交。403/404/409/422/502 的 status/detail 保留到可见错误面；401 遵循共享 fetcher 的 `Unauthorized` + 登录跳转合同，均不得被本地成功提示覆盖          |
+| O8  | run history 使用 `limit/offset` 分页或明确“加载更多”，不得把默认前 50 条当作完整历史；每条 run 显示 trigger、queued/running/success/failed/skipped/interrupted、scheduled/started/finished time、thread/run ID 与 error                    |
+| O9  | 只有含 queued/running run 的 runs query 轮询；task/thread 切换、query disable 与 scope dispose 后 observer/timer/AbortController 必须清理。旧请求只能回写自己的 query key，不能跨 task/thread 污染新选择                                   |
+| O10 | delete 必须二次确认；recipes 只填充同一表单并保留 `{{repo}}` 等占位符，不建立第二条提交路径。真实 Gateway 的 create/update/pause/resume/trigger/delete 响应与 runs 数据是最终真相                                                          |
+
+> O1 与 K6 共同固定 `context.non_interactive` 的所有权：它只能由内部认证的 scheduler
+> launch path 添加，浏览器客户端永远不提交该键。
 
 ---
 

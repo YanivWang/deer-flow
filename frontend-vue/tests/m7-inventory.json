@@ -1,6 +1,6 @@
 {
   "expectedFileCount": 26,
-  "expectedTestCount": 135,
+  "expectedTestCount": 138,
   "specFiles": [
     "frontend-vue/tests/m7/agent-chat.spec.ts",
     "frontend/tests/e2e/agents-feature-disabled.spec.ts",
@@ -15,7 +15,7 @@
     "frontend/tests/e2e/chat-thread-init-ordering.spec.ts",
     "frontend/tests/e2e/chat.spec.ts",
     "frontend-vue/tests/m7/integrations.spec.ts",
-    "frontend/tests/e2e/scheduled-tasks.spec.ts",
+    "frontend-vue/tests/m7/scheduled-tasks.spec.ts",
     "frontend/tests/e2e/settings-notification.spec.ts",
     "frontend/tests/e2e/sidebar.spec.ts",
     "frontend/tests/e2e/sidecar-chat.spec.ts",

@@ -68,6 +68,7 @@ make e2e-m5-real-backend # 真实 Gateway artifact Range/PUT/冲突合同
 make e2e-m6             # 包含 Vue 自有 browser DOM/wire 合同
 make e2e-m6-real-backend # 真实本地 Gateway + Chromium browser runtime
 make e2e-m7             # 完整 Vue 浏览器合同
+make e2e-wp07-real-backend # 真实 Gateway scheduled-task HTTP/UI 生命周期
 make e2e-m7-auth        # 认证请求与安全
 make proxy-security     # Nitro body 限制、无 body/chunked DELETE、SSE 与 traversal
 make e2e-m7-real-protocol
@@ -114,6 +115,21 @@ Artifact 能力只由显式的路径/source 策略决定：已知 UTF-8 文本�
 保存携带已加载修订；Gateway 冲突或权限错误会保留本地草稿。dirty 草稿统一保护切文件、
 关面板、切线程、路由离开和页面关闭。打开与下载会先执行带认证的一字节 Range 预检；
 安装 Skill 只对真实 skill artifact 和具备管理员权限的当前用户开放。
+
+## 定时任务
+
+工作区定时任务页面支持 Gateway 实际拥有的 `once` 与 `cron` 类型、
+hourly/daily/weekly/monthly/custom cron、可编辑 IANA 时区、DST-aware 单次时间转换、
+新建 thread 或复用现有 thread 的 context，以及内置 recipes。编辑时保持 schedule type
+不可变；暂停、恢复、立即触发和二次确认删除分别使用 Gateway 的专用 endpoint。筛选覆盖两种
+类型和全部六种 task 状态；运行历史使用明确的 `limit/offset` 分页，并展示全部 run 状态、
+时间、thread/run ID 和错误。
+
+`make e2e-wp07-real-backend` 会启动真实本地 FastAPI Gateway、SQLite、Nuxt preview 与
+Playwright Chromium，覆盖真实 once/cron 创建与校验、context/thread 权限、PATCH、
+pause/resume、trigger、分页 run 记录和 delete。模型侧使用签入的 replay fixture，认证也处于
+测试隔离模式；该门禁不证明生产 scheduler/模型、真实时间推进、DNS/TLS、外层代理信任或
+真实 IdP。
 
 ## 流式与历史行为
 

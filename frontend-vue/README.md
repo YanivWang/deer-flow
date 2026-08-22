@@ -81,6 +81,7 @@ make e2e-m5-real-backend # real Gateway artifact Range/PUT/conflict contracts
 make e2e-m6             # includes Vue-owned browser DOM/wire contracts
 make e2e-m6-real-backend # real local Gateway + Chromium browser runtime
 make e2e-m7             # full Vue browser contract
+make e2e-wp07-real-backend # real Gateway scheduled-task HTTP/UI lifecycle
 make e2e-m7-auth        # authentication requests and security
 make proxy-security     # Nitro body limits, bodyless/chunked DELETE, SSE and traversal
 make e2e-m7-real-protocol
@@ -138,6 +139,25 @@ permission errors preserve the local draft. Dirty drafts protect file, panel,
 thread and route changes as well as page unload. Open and download first perform
 an authenticated one-byte Range probe; skill installation is available only for
 real skill artifacts when the current user has admin permission.
+
+## Scheduled tasks
+
+The workspace scheduled-task page supports the Gateway's actual `once` and
+`cron` types, hourly/daily/weekly/monthly/custom cron input, editable IANA
+timezones, DST-aware one-time conversion, fresh or reused thread context, and
+the built-in recipes. Editing preserves the immutable schedule type; pause,
+resume, trigger and confirmed delete use their dedicated Gateway endpoints.
+Filters include both schedule types and all six task statuses. Run history is
+loaded with explicit `limit/offset` pagination and shows all Gateway run states,
+times, thread/run IDs and errors.
+
+`make e2e-wp07-real-backend` starts a real local FastAPI Gateway backed by
+SQLite, the Nuxt preview server and Playwright Chromium. It covers real
+once/cron create and validation, context/thread permissions, PATCH,
+pause/resume, trigger, paged run records and delete. The model side uses a
+checked-in replay fixture, and authentication is test-isolated; this is not
+evidence for a production scheduler/model, wall-clock advancement, DNS/TLS,
+outer proxy trust or a real IdP.
 
 ## Streaming behavior
 

@@ -43,6 +43,13 @@
 | `types/message.ts`                    | `ADDED`   | —                                                          | 替代 `@langchain/langgraph-sdk` 的 wire 类型，16 个 RETYPED 指向它（06 §M1 1b）。上游没有对应文件——它借的是 SDK 的类型。                                                               |
 | `types/message.contract.ts`           | `ADDED`   | —                                                          | `AgentMessageContent` 联合的类型层护栏。放 `app/` 而不是 `tests/`，因为 `tests/` 不过 vue-tsc。                                                                                        |
 | `scheduled-tasks/schedule.ts`         | `ADDED`   | —                                                          | `ScheduleValue` 从 React 组件文件搬进 core，纠正依赖方向（06 §M1 1b 的 `retype-component-type`）。                                                                                     |
+| `scheduled-tasks/api.ts`              | `ADAPTED` | `scheduled-tasks/api.ts`                                   | WP-07：增加可取消的详情与 limit/offset runs 查询，并把 create/PATCH payload 收窄到 Gateway 实际字段。                                                                                  |
+| `scheduled-tasks/form.ts`             | `ADAPTED` | `app/workspace/scheduled-tasks/page.tsx`                   | WP-07：把 create/edit/context/recipe payload 与 DST 严格往返从 React 页面和组件收敛成可测纯逻辑。                                                                                      |
+| `scheduled-tasks/query-keys.ts`       | `ADAPTED` | `core/scheduled-tasks/hooks.ts`                            | WP-07：用集中 key/invalidation 合同替代 React hook 内分散失效，runs 只绑定对应 task。                                                                                                  |
+| `scheduled-tasks/view-model.ts`       | `ADAPTED` | `app/workspace/scheduled-tasks/page.tsx`                   | WP-07：完整覆盖 Gateway 六种 task status、两种 schedule type 和确定性 selection 恢复。                                                                                                 |
+| `i18n/locales/en-US.ts`               | `ADAPTED` | `i18n/locales/en-US.ts`                                    | WP-07：仅扩展 scheduledTasks 的完整筛选、分页、反馈、run 字段与错误文案。                                                                                                              |
+| `i18n/locales/types.ts`               | `ADAPTED` | `i18n/locales/types.ts`                                    | WP-07：仅声明 Vue-owned scheduledTasks 词典扩展，不放宽其他翻译类型。                                                                                                                  |
+| `i18n/locales/zh-CN.ts`               | `ADAPTED` | `i18n/locales/zh-CN.ts`                                    | WP-07：与英文逐键对齐的 scheduledTasks 中文文案。                                                                                                                                      |
 | `api/client.ts`                       | `ADDED`   | —                                                          | M2 自写的 7 个 REST 方法，替代 SDK `Client`（02 §249）。上游没有对应文件——那部分职责在 SDK 里。                                                                                        |
 | `api/errors.ts`                       | `ADAPTED` | `api/errors.ts`                                            | WP-02：统一全部 Gateway REST 错误解析，兼容旧导出同时保留 HTTP status、结构化 body 与原始正文。                                                                                        |
 | `api/types.gen.ts`                    | `ADDED`   | —                                                          | **生成物，勿手改。** `make gen-api-types` 从 `baseline/openapi.snapshot.json` 生成（02 §340 / 04 §267）。上游对应物是 SDK 借来的 REST 信封类型。                                       |
@@ -131,7 +138,6 @@
 | `messages/workspace-change-anchor.ts` | `COPIED` | `messages/workspace-change-anchor.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `models/index.ts` | `COPIED` | `models/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `models/types.ts` | `COPIED` | `models/types.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
-| `scheduled-tasks/api.ts` | `COPIED` | `scheduled-tasks/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `scheduled-tasks/cron.ts` | `COPIED` | `scheduled-tasks/cron.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `scheduled-tasks/types.ts` | `COPIED` | `scheduled-tasks/types.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `settings/local.ts` | `COPIED` | `settings/local.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
@@ -177,9 +183,6 @@
 | `artifacts/utils.ts` | `RETYPED` | `artifacts/utils.ts` | 依赖不迁的模块（static-mode.ts），该 import 必须删除或改写。 删掉 isStaticWebsiteOnly 早返回与随之无消费方的 staticDemoArtifactURL。 |
 | `auth/auth-disabled-user.ts` | `RETYPED` | `auth/auth-disabled-user.ts` | 读 process.env；Nuxt 客户端产物没有该全局，改为接收注入的 runtime options。 |
 | `config/index.ts` | `RETYPED` | `config/index.ts` | 改为接收普通 runtime options，纯 core 不调用 useRuntimeConfig()。（@/env → runtime options） |
-| `i18n/locales/en-US.ts` | `RETYPED` | `i18n/locales/en-US.ts` | 图标包换 Vue 版；LucideIcon 与所用图标名在 lucide-vue-next 中同名（已实测）。（lucide-react → lucide-vue-next） |
-| `i18n/locales/types.ts` | `RETYPED` | `i18n/locales/types.ts` | 图标包换 Vue 版；LucideIcon 与所用图标名在 lucide-vue-next 中同名（已实测）。（lucide-react → lucide-vue-next） |
-| `i18n/locales/zh-CN.ts` | `RETYPED` | `i18n/locales/zh-CN.ts` | 图标包换 Vue 版；LucideIcon 与所用图标名在 lucide-vue-next 中同名（已实测）。（lucide-react → lucide-vue-next） |
 | `messages/derived-state.ts` | `RETYPED` | `messages/derived-state.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
 | `messages/human-input.ts` | `RETYPED` | `messages/human-input.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
 | `messages/run-duration.ts` | `RETYPED` | `messages/run-duration.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） |
