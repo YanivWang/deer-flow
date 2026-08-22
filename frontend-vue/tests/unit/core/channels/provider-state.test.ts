@@ -1,15 +1,18 @@
 /*
-  由 scripts/rstest-to-vitest.mjs 从 frontend/tests/unit/core/channels/provider-state.test.ts 机械生成。
-  基线 27a425b0 · 改动仅限 @rstest/core → vitest、rs.* → vi.*。
-  勿手改：make codemod-check 会红。需要为 Vue 侧适配就登记进 HAND_MAINTAINED。
+  【文件职责】     固定 provider capability/runtime-config 纯函数合同。
+  【对应 frontend/】 tests/unit/core/channels/provider-state.test.ts
+  【架构位置】     L1 core unit test
+  【主要导出】     Vitest cases
+  【依赖关系】     core/channels/provider-state
+  【边界与注意】   WP-08 适配：connection_status 不是 connect capability，也不能阻止多账号新增。
 */
 
 import { describe, expect, it } from "vitest";
 
 import {
-  providerCanConnect,
   providerCanEditRuntimeConfig,
   providerNeedsRuntimeConfig,
+  providerSupportsConnect,
 } from "@/core/channels/provider-state";
 import type { ChannelProvider } from "@/core/channels/types";
 
@@ -34,29 +37,29 @@ function makeProvider(overrides: Partial<ChannelProvider>): ChannelProvider {
   };
 }
 
-describe("providerCanConnect", () => {
-  it("allows connecting a configured, not yet connected provider", () => {
-    expect(providerCanConnect(makeProvider({}))).toBe(true);
+describe("providerSupportsConnect", () => {
+  it("allows connecting a configured provider", () => {
+    expect(providerSupportsConnect(makeProvider({}))).toBe(true);
   });
 
-  it("rejects an already connected provider", () => {
+  it("does not treat a connected summary as a capability veto", () => {
     expect(
-      providerCanConnect(makeProvider({ connection_status: "connected" })),
-    ).toBe(false);
+      providerSupportsConnect(makeProvider({ connection_status: "connected" })),
+    ).toBe(true);
   });
 
   it("rejects a non-connectable provider", () => {
-    expect(providerCanConnect(makeProvider({ connectable: false }))).toBe(
+    expect(providerSupportsConnect(makeProvider({ connectable: false }))).toBe(
       false,
     );
   });
 
   it("falls back to enabled+configured when connectable is missing", () => {
-    expect(providerCanConnect(makeProvider({ connectable: undefined }))).toBe(
-      true,
-    );
     expect(
-      providerCanConnect(
+      providerSupportsConnect(makeProvider({ connectable: undefined })),
+    ).toBe(true);
+    expect(
+      providerSupportsConnect(
         makeProvider({ connectable: undefined, configured: false }),
       ),
     ).toBe(false);

@@ -118,9 +118,9 @@
 | SCHEDULE-01 | P1     | DONE | WP-07  | once/cron、DST 时区与 fresh/reuse 精确 payload 已接通            |
 | SCHEDULE-02 | P1     | DONE | WP-07  | 编辑、确认删除、recipes、类型与六状态筛选已接通                  |
 | SCHEDULE-03 | P1     | DONE | WP-07  | 分页 run history、完整详情、轮询与错误收敛已接通                 |
-| CHANNEL-01  | P1     | TODO | WP-08  | 页面没有以 connections 响应作为真实连接状态                      |
-| CHANNEL-02  | P1     | TODO | WP-08  | connect 响应的 `url`、`expires_in` 和轮询未消费                  |
-| CHANNEL-03  | P1     | TODO | WP-08  | disconnect API 已存在但没有界面和状态收敛                        |
+| CHANNEL-01  | P1     | DONE | WP-08  | scoped connections 是状态/多账号唯一真相，provider 只保留能力    |
+| CHANNEL-02  | P1     | DONE | WP-08  | URL/instruction/有限 expires poll 与全生命周期 cleanup 已接通    |
+| CHANNEL-03  | P1     | DONE | WP-08  | 单 connection 与管理员 provider runtime 删除已明确分流并重读     |
 | AGENT-01    | P1     | TODO | WP-09  | 新 Agent 保存不识别 setup_agent 结果和 created 状态              |
 | AGENT-02    | P1     | TODO | WP-09  | Agent 设置没有按模型能力归一化请求字段                           |
 | AGENT-03    | P2     | TODO | WP-09  | Agent 卡片没有展示 tool groups                                   |
@@ -433,11 +433,19 @@
 
 #### 当前代码事实
 
-- [`app/composables/useChannels.ts`](app/composables/useChannels.ts) 同时加载 providers 和 connections。
-- [`app/components/workspace/channels/ChannelConnections.vue`](app/components/workspace/channels/ChannelConnections.vue) 没有把 connections 合并成真实状态，主要展示 provider 的 `connection_status`。
-- connect 结果只消费 `instruction`，忽略 `url` 和 `expires_in`。
-- 已搬运 `open-connect-url`、poll helper 和两个 disconnect API，但实际组件没有使用。
-- React [`src/core/channels/hooks.ts`](../frontend/src/core/channels/hooks.ts) 会打开 deep-link、按 expires 轮询，并在 unmount 时停止。
+- [`app/composables/useChannelConnections.ts`](app/composables/useChannelConnections.ts) 是按认证
+  user scope 隔离的 providers/connections Vue Query、四类 mutation、poll 与 cleanup 唯一 owner；
+  旧模块级 `useChannels` ref 缓存已删除，Pinia 没有复制 server state。
+- [`app/core/channels/state.ts`](app/core/channels/state.ts) 只从 connections 响应推导用户状态和
+  多账号列表；provider 的 `connection_status` 即使冲突也不会覆盖它。
+- connect 同时消费 `url`、`instruction`、`expires_in`。poll 有有限 deadline、expired 状态和
+  AbortSignal；cancel/unmount/scope switch 都清理，旧 scope 只能写旧 key。新增账号还会忽略
+  发起绑定前已 connected 的 ID，避免旧账号让新绑定误判成功。
+- Settings 按稳定 connection ID 展示并断开单个账号；管理员 provider runtime 删除单独标识、
+  二次确认，并按 Gateway 语义撤销实例级 provider 配置。两类成功都重读 providers/connections。
+- Gateway 实际合同为 `GET /providers`、`GET /connections`、`POST /{provider}/connect`、
+  `DELETE /connections/{connection_id}` 与管理员 `DELETE /{provider}/runtime-config`。真实响应的
+  400/401/403/404/429 detail 由共享 fetch/error 边界保留。
 
 #### 必须实现
 
@@ -454,9 +462,16 @@
 
 #### 验收与测试
 
-- connect URL、instruction-only、expires、poll success/timeout/unmount 测试。
-- disconnect 单连接和 provider 的请求/刷新测试。
-- providers 与 connections 状态冲突时，以 connection 响应展示。
+- 严格 TDD 红灯起步：新增测试首先因 `query-keys`、`state`、`useChannelConnections` 缺失，且
+  旧 poll 没有 AbortSignal、expired callback、有限上界而失败；最终 WP-08 unit/DOM 为
+  4 files / 21 tests，连同既有 channels/guard 聚焦门禁为 9 files / 55 tests。
+- Vue-owned M7 channels 为 11 tests：覆盖 provider/connection 冲突、URL popup、instruction-only、
+  多账号、有限过期、导航 dispose、pending/race、单 connection/provider 删除、429 与 401；完整
+  M7 清单更新为 26 files / 144 tests。
+- `make e2e-wp08-real-backend` 为 3/3：真实 FastAPI Auth/CSRF/channel router/SQLite repository、
+  connect code/deep-link response、用户隔离、多账号收敛、精确 DELETE、provider runtime revoke 与
+  400/401/403/404/429。只有外部 Slack/Telegram worker 与 callback 使用签入的受控 fixture；不
+  证明真实 IM 平台授权、生产凭据、deep-link handler、DNS/TLS、外层代理或真实 IdP。
 
 ### WP-09：Agents 创建与设置
 
@@ -680,8 +695,9 @@ API 对齐：method/path/query/headers/body/response/error/cache
 
 在此追加，不删除历史记录：
 
-| 日期       | 工作包/ID                                                 | 证据                                                                                                                                                                                                                              | 备注                                                 |
-| ---------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| 2026-08-21 | 基线审计                                                  | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                                                                             | 所有 ID 初始状态为 TODO                              |
-| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01`           | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过                                                 | 本机回环监听环境重跑通过；本地提交、未 push          |
-| 2026-08-21 | WP-02：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05` | `make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 130/130；`make e2e-m7-real-protocol` 1/1；`make migration-check` 通过；`make verify` 1166/1166 且 production build 通过；React `pnpm check` 与 `pnpm test` 1001/1001 | 回环门禁在允许本机监听的环境重跑；未 commit、未 push |
+| 日期       | 工作包/ID                                                 | 证据                                                                                                                                                                                                                                                                                 | 备注                                                   |
+| ---------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| 2026-08-21 | 基线审计                                                  | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                                                                                                                                | 所有 ID 初始状态为 TODO                                |
+| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01`           | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过                                                                                                    | 本机回环监听环境重跑通过；本地提交、未 push            |
+| 2026-08-21 | WP-02：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05` | `make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 130/130；`make e2e-m7-real-protocol` 1/1；`make migration-check` 通过；`make verify` 1166/1166 且 production build 通过；React `pnpm check` 与 `pnpm test` 1001/1001                                                    | 回环门禁在允许本机监听的环境重跑；未 commit、未 push   |
+| 2026-08-22 | WP-08：`CHANNEL-01`～`CHANNEL-03`                         | WP-08 unit/DOM 21/21；聚焦 Vitest 55/55；M7 channels 11/11、全量 144/144；real Gateway 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 159 files / 1358 tests 且 production build 通过 | 真实 IM/IdP/DNS/TLS/外层代理未验证；未 commit、未 push |

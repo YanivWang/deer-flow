@@ -514,6 +514,7 @@ export interface Translations {
   channels: {
     title: string;
     connect: string;
+    addAccount: string;
     modify: string;
     reconnect: string;
     disconnect: string;
@@ -525,6 +526,18 @@ export interface Translations {
     unconfigured: string;
     unavailable: string;
     unavailableShort: string;
+    accounts: string;
+    noAccounts: string;
+    removeProviderConfig: string;
+    removeProviderTitle: (name: string) => string;
+    removeProviderDescription: string;
+    connectTitle: string;
+    waitingForConnection: string;
+    connectLinkOpened: string;
+    connectionExpired: string;
+    disconnectAccount: (name: string) => string;
+    cancel: string;
+    close: string;
     setupTitle: (name: string) => string;
     setupEditTitle: (name: string) => string;
     setupDescription: string;

@@ -1,7 +1,10 @@
 /*
-  由 scripts/rstest-to-vitest.mjs 从 frontend/tests/unit/core/channels/connect-poll.test.ts 机械生成。
-  基线 27a425b0 · 改动仅限 @rstest/core → vitest、rs.* → vi.*。
-  勿手改：make codemod-check 会红。需要为 Vue 侧适配就登记进 HAND_MAINTAINED。
+  【文件职责】     保留 React baseline poll cases，并固定 Vue WP-08 的到期即停语义。
+  【对应 frontend/】 tests/unit/core/channels/connect-poll.test.ts
+  【架构位置】     L3 hand-maintained baseline adaptation
+  【主要导出】     无；Vitest cases
+  【依赖关系】     core/channels/connect-poll
+  【边界与注意】   已登记 HAND_MAINTAINED；deadline 到达后不得再发一个无意义请求。
 */
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -82,11 +85,13 @@ describe("startConnectionPoll", () => {
       connection("telegram", "pending"),
     ]);
     let nowValue = 0;
+    const onExpired = vi.fn();
     startConnectionPoll({
       provider: "telegram",
       expiresInSeconds: Number.NaN,
       fetchConnections,
       onConnected: vi.fn(),
+      onExpired,
       intervalMs: 1000,
       now: () => nowValue,
     });
@@ -99,9 +104,11 @@ describe("startConnectionPoll", () => {
     // running forever (Date.now() >= NaN would otherwise never be true).
     nowValue = 10_000_000;
     await vi.advanceTimersByTimeAsync(1000);
-    expect(fetchConnections).toHaveBeenCalledTimes(2);
+    expect(fetchConnections).toHaveBeenCalledTimes(1);
+    expect(onExpired).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(10000);
-    expect(fetchConnections).toHaveBeenCalledTimes(2);
+    expect(fetchConnections).toHaveBeenCalledTimes(1);
+    expect(onExpired).toHaveBeenCalledTimes(1);
   });
 });

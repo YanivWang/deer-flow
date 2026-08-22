@@ -82,6 +82,7 @@ make e2e-m6             # includes Vue-owned browser DOM/wire contracts
 make e2e-m6-real-backend # real local Gateway + Chromium browser runtime
 make e2e-m7             # full Vue browser contract
 make e2e-wp07-real-backend # real Gateway scheduled-task HTTP/UI lifecycle
+make e2e-wp08-real-backend # real Auth/Gateway/SQLite channel lifecycle
 make e2e-m7-auth        # authentication requests and security
 make proxy-security     # Nitro body limits, bodyless/chunked DELETE, SSE and traversal
 make e2e-m7-real-protocol
@@ -158,6 +159,26 @@ pause/resume, trigger, paged run records and delete. The model side uses a
 checked-in replay fixture, and authentication is test-isolated; this is not
 evidence for a production scheduler/model, wall-clock advancement, DNS/TLS,
 outer proxy trust or a real IdP.
+
+## Channels
+
+Channel providers describe server capability and runtime configuration; they do
+not own a user's connection status. The authenticated user's
+`/api/channels/connections` response is the sole status and account-instance
+truth, including multiple accounts for one provider. Connect consumes the
+Gateway URL, instruction and finite expiry window, opens deep links through a
+synchronously prepared browser window, and polls only the scoped connections
+query until a new account connects, expires or is cancelled. Query, mutation,
+poll and AbortController cleanup all belong to `useChannelConnections`.
+
+Settings expose two intentionally different destructive actions: a user can
+disconnect one exact connection ID, while an administrator can remove the
+provider runtime configuration, which revokes that provider's active
+connections instance-wide. `make e2e-wp08-real-backend` proves the real
+FastAPI/Auth/CSRF/SQLite routes and Vue convergence with a controlled external
+channel worker/callback fixture. It does not prove real Slack, Telegram,
+Discord, Feishu or other platform authorization, production credentials,
+deep-link handlers, DNS/TLS, outer proxies or a real IdP.
 
 ## Streaming behavior
 

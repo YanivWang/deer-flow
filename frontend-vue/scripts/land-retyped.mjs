@@ -429,11 +429,11 @@ const HAND_MAINTAINED = {
   "artifacts/loader.ts":
     "WP-06 gates loading behind explicit text policy and preserves Gateway errors and abort semantics.",
   "i18n/locales/en-US.ts":
-    "WP-07 adds Vue-owned scheduled-task completeness, pagination, feedback, and error copy.",
+    "WP-07 adds scheduled-task copy; WP-08 adds Vue-owned multi-account channel lifecycle copy.",
   "i18n/locales/types.ts":
-    "WP-07 declares the Vue-owned scheduled-task dictionary extensions.",
+    "WP-07/WP-08 declare Vue-owned scheduled-task and channel dictionary extensions.",
   "i18n/locales/zh-CN.ts":
-    "WP-07 adds the matching Chinese scheduled-task dictionary extensions.",
+    "WP-07/WP-08 add the matching Chinese scheduled-task and channel dictionary extensions.",
 };
 
 /** 六段式文件头（04 §6）。COPIED 档不加（04 已裁决），RETYPED 是我们的代码，必须加。 */

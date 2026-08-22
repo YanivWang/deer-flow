@@ -33,10 +33,7 @@ app/core/auth/remember-login.ts
 app/core/auth/setup.ts
 app/core/auth/static-user.ts
 app/core/auth/types.ts
-app/core/channels/api.ts
-app/core/channels/connect-poll.ts
 app/core/channels/open-connect-url.ts
-app/core/channels/provider-state.ts
 app/core/channels/types.ts
 app/core/citations/sources.ts
 app/core/clipboard.ts

@@ -625,6 +625,7 @@ export const enUS: Translations = {
   channels: {
     title: "Channels",
     connect: "Connect",
+    addAccount: "Add account",
     modify: "Modify",
     reconnect: "Reconnect",
     disconnect: "Disconnect",
@@ -636,6 +637,21 @@ export const enUS: Translations = {
     unconfigured: "Not configured",
     unavailable: "Channel connections are unavailable right now.",
     unavailableShort: "Unavailable",
+    accounts: "Connected accounts",
+    noAccounts: "No channel accounts yet.",
+    removeProviderConfig: "Remove provider configuration",
+    removeProviderTitle: (name: string) =>
+      `Remove ${name} provider configuration?`,
+    removeProviderDescription:
+      "This admin action stops the provider runtime and revokes every active connection for this provider.",
+    connectTitle: "Connect channel",
+    waitingForConnection: "Waiting for the channel account to connect…",
+    connectLinkOpened: "The provider connection page opened in a new tab.",
+    connectionExpired:
+      "This connection code expired. Start a new connection to try again.",
+    disconnectAccount: (name: string) => `Disconnect ${name}`,
+    cancel: "Cancel",
+    close: "Close",
     setupTitle: (name: string) => `Connect ${name}`,
     setupEditTitle: (name: string) => `Modify ${name}`,
     setupDescription:
@@ -643,6 +659,7 @@ export const enUS: Translations = {
     saveAndConnect: "Save and connect",
     saveChanges: "Save changes",
     descriptions: {
+      buzz: "Buzz channels and direct messages through your DeerFlow agent.",
       telegram: "Telegram direct messages through your DeerFlow bot.",
       slack: "Slack workspace messages and mentions.",
       discord: "Discord server messages through your DeerFlow bot.",

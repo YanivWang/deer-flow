@@ -365,6 +365,21 @@ raw trace、代理 smoke 和 replay Gateway 浏览器测试覆盖，不能只依
 
 ---
 
+## P. Channels
+
+| #   | 约束                                                                                                                                                                                                                                   |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1  | providers 只描述 capability/config/connectable；当前用户所有账号、connection ID 与展示 status 只从 scoped `/connections` query 推导。两端冲突时 connections 获胜，多账号保持响应顺序与稳定 ID。                                        |
+| P2  | `useChannelConnections` 是 providers/connections query、connect/configure/disconnect mutation、invalidation、poll 与 cleanup 的唯一 owner；Pinia 和组件不得复制 server state。query key 必须包含认证 user scope。                      |
+| P3  | connect 必须同时消费 `url`、`instruction`、`expires_in`：deep link 通过同步预开窗口交给现有 URL helper；URL-only 和 instruction-only 都可见且可收敛。                                                                                  |
+| P4  | expiry 必须规范到正数且不超过一小时的有限 deadline。success、expiry、cancel、重新连接、组件卸载、effect scope dispose 或 user scope 切换都清 timer 并 abort 在途请求；late result 不得跨 scope 回写。                                  |
+| P5  | 新多账号绑定只由发起请求后新出现/重新激活的 connected instance 完成；绑定前已 connected 的 ID 不能让新 poll 提前成功。waiting mutation/poll 阻止同 provider 重复 connect。                                                             |
+| P6  | 用户断开只走 `DELETE /api/channels/connections/{connection_id}`；管理员移除运行时只走 `DELETE /api/channels/{provider}/runtime-config`，后者是实例级配置删除与全 provider active connections revoke，UI 必须明确区分并二次确认。       |
+| P7  | mutation 成功后重读 providers 与 connections；失败保留 Gateway detail，401 继续走共享登录跳转，400/403/404/429 不得被本地成功态覆盖。                                                                                                  |
+| P8  | Mock E2E 证明 DOM、deep-link、instruction、poll/expiry/dispose、多账号、两个删除目标、pending/race 与错误展示；real-backend gate 证明 Auth/CSRF/router/SQLite/HTTP/UI。受控外部 worker/callback 不等于真实 IM 平台授权或生产网络证明。 |
+
+---
+
 ## 使用建议
 
 1. 修改 `app/core/` 时连同单测和调用方一起检查；通用包变更还要运行 `make consumer-check`。

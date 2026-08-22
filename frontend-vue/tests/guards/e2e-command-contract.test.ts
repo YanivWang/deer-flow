@@ -192,7 +192,7 @@ describe("M5 artifact inventory", () => {
 describe("Vue M7 gate ownership", () => {
   it("keeps the exact WP-07 26-file / 138-test gate and owns framework-specific specs", () => {
     expect(m7Inventory.expectedFileCount).toBe(26);
-    expect(m7Inventory.expectedTestCount).toBe(138);
+    expect(m7Inventory.expectedTestCount).toBe(144);
     expect(m7Inventory.specFiles).toHaveLength(26);
     expect(m7Inventory.specFiles).toContain(
       "frontend-vue/tests/m5/artifact-batched-stream.spec.ts",

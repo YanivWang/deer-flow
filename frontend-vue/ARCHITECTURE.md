@@ -144,6 +144,12 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
   create/PATCH payload 转换，组件不得另拼 wire body。runs 只由 infinite query 的
   `limit/offset` 分页持有，活动 run 轮询随 query observer/scope dispose 停止，旧 task/thread
   请求不能写入新 key。
+- channels 的服务端真相只归 `useChannelConnections`：providers key 只保存能力、配置与
+  connectable，connections key 按认证 user scope 保存全部账号 instance，并独占展示状态。
+  connect/configure/单 connection DELETE/provider runtime DELETE 后重读两端；connect poll 只
+  更新原 scope 的 connections key，发起绑定前已 connected 的 ID 不得完成新账号绑定。
+  generation、AbortSignal、effect scope dispose 共同阻止旧 query/poll/mutation 跨用户回写。
+  Pinia、组件和 provider.connection_status 均不得建立第二份用户连接真相。
 - composer draft 是 `sessionStorage` 的 tab 状态，只持久化文本/skill；user、agent 与逻辑会话
   三维隔离，并在确认 logout/thread delete 后清理。上传文件、语音、follow-up dialog、polish
   和 generation guard 是组件/composable 瞬态状态，不得错误跨 thread 复用。

@@ -72,6 +72,10 @@ const HAND_MAINTAINED = {
     "顺带删掉整套 NEXT_PUBLIC_* 环境变量夹具：配置改成注入 runtime options 之后它一个字节都读不到。",
     "另增 Vue showcase 显式 isMock transport 用例；其余用例逐字保留。理由与边界写在该文件的六段式文件头里。",
   ].join(" "),
+  "channels/connect-poll.test.ts":
+    "WP-08 replaces the copied post-deadline fetch expectation with explicit expiry-before-fetch and AbortSignal lifecycle coverage.",
+  "channels/provider-state.test.ts":
+    "WP-08 removes provider connection_status as a connectability veto so existing accounts do not block multi-account binding.",
 };
 
 // ---------------------------------------------------------------------------

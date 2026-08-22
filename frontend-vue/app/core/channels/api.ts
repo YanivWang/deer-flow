@@ -1,3 +1,12 @@
+/*
+  【文件职责】     访问 Gateway channel provider/configuration/connection lifecycle endpoints。
+  【对应 frontend/】 core/channels/api.ts
+  【架构位置】     L3 Gateway HTTP contract
+  【主要导出】     list/connect/configure/disconnect channel APIs
+  【依赖关系】     core/api/fetcher · errors · config
+  【边界与注意】   mutation target 原样编码；AbortSignal 与 Gateway detail 必须保真传递。
+*/
+
 import { throwGatewayApiError } from "@/core/api/errors";
 import { fetch } from "@/core/api/fetcher";
 import { getBackendBaseURL } from "@/core/config";
@@ -12,12 +21,20 @@ import type {
   ChannelRuntimeConfigValues,
 } from "./types";
 
+export interface ChannelRequestOptions {
+  signal?: AbortSignal;
+}
+
 function channelsUrl(path: string): string {
   return `${getBackendBaseURL()}/api/channels${path}`;
 }
 
-export async function listChannelProviders(): Promise<ChannelProvidersResponse> {
-  const response = await fetch(channelsUrl("/providers"));
+export async function listChannelProviders(
+  options: ChannelRequestOptions = {},
+): Promise<ChannelProvidersResponse> {
+  const response = options.signal
+    ? await fetch(channelsUrl("/providers"), { signal: options.signal })
+    : await fetch(channelsUrl("/providers"));
   if (!response.ok) {
     await throwGatewayApiError(
       response,
@@ -27,8 +44,12 @@ export async function listChannelProviders(): Promise<ChannelProvidersResponse> 
   return response.json() as Promise<ChannelProvidersResponse>;
 }
 
-export async function listChannelConnections(): Promise<ChannelConnection[]> {
-  const response = await fetch(channelsUrl("/connections"));
+export async function listChannelConnections(
+  options: ChannelRequestOptions = {},
+): Promise<ChannelConnection[]> {
+  const response = options.signal
+    ? await fetch(channelsUrl("/connections"), { signal: options.signal })
+    : await fetch(channelsUrl("/connections"));
   if (!response.ok) {
     await throwGatewayApiError(
       response,
@@ -41,10 +62,11 @@ export async function listChannelConnections(): Promise<ChannelConnection[]> {
 
 export async function connectChannelProvider(
   provider: ChannelProviderId,
+  options: ChannelRequestOptions = {},
 ): Promise<ChannelConnectResponse> {
   const response = await fetch(
     channelsUrl(`/${encodeURIComponent(provider)}/connect`),
-    { method: "POST" },
+    { method: "POST", ...(options.signal ? { signal: options.signal } : {}) },
   );
   if (!response.ok) {
     await throwGatewayApiError(
@@ -58,6 +80,7 @@ export async function connectChannelProvider(
 export async function configureChannelProvider(
   provider: ChannelProviderId,
   values: ChannelRuntimeConfigValues,
+  options: ChannelRequestOptions = {},
 ): Promise<ChannelProvider> {
   const response = await fetch(
     channelsUrl(`/${encodeURIComponent(provider)}/runtime-config`),
@@ -65,6 +88,7 @@ export async function configureChannelProvider(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ values }),
+      ...(options.signal ? { signal: options.signal } : {}),
     },
   );
   if (!response.ok) {
@@ -78,10 +102,14 @@ export async function configureChannelProvider(
 
 export async function disconnectChannelConnection(
   connectionId: string,
+  options: ChannelRequestOptions = {},
 ): Promise<void> {
   const response = await fetch(
     channelsUrl(`/connections/${encodeURIComponent(connectionId)}`),
-    { method: "DELETE" },
+    {
+      method: "DELETE",
+      ...(options.signal ? { signal: options.signal } : {}),
+    },
   );
   if (!response.ok) {
     await throwGatewayApiError(
@@ -93,10 +121,14 @@ export async function disconnectChannelConnection(
 
 export async function disconnectChannelProvider(
   provider: ChannelProviderId,
+  options: ChannelRequestOptions = {},
 ): Promise<ChannelProvider> {
   const response = await fetch(
     channelsUrl(`/${encodeURIComponent(provider)}/runtime-config`),
-    { method: "DELETE" },
+    {
+      method: "DELETE",
+      ...(options.signal ? { signal: options.signal } : {}),
+    },
   );
   if (!response.ok) {
     await throwGatewayApiError(

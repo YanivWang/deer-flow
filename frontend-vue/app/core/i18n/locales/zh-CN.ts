@@ -598,6 +598,7 @@ export const zhCN: Translations = {
   channels: {
     title: "渠道",
     connect: "连接",
+    addAccount: "添加账号",
     modify: "修改",
     reconnect: "重新连接",
     disconnect: "断开连接",
@@ -609,6 +610,19 @@ export const zhCN: Translations = {
     unconfigured: "未配置",
     unavailable: "当前无法使用渠道连接。",
     unavailableShort: "不可用",
+    accounts: "已连接账号",
+    noAccounts: "尚无渠道账号。",
+    removeProviderConfig: "移除 Provider 配置",
+    removeProviderTitle: (name: string) => `移除 ${name} Provider 配置？`,
+    removeProviderDescription:
+      "这是管理员操作，将停止 Provider 运行时并撤销该 Provider 的全部有效连接。",
+    connectTitle: "连接渠道",
+    waitingForConnection: "正在等待渠道账号完成连接…",
+    connectLinkOpened: "Provider 连接页已在新标签页中打开。",
+    connectionExpired: "连接码已过期，请重新发起连接。",
+    disconnectAccount: (name: string) => `断开 ${name}`,
+    cancel: "取消",
+    close: "关闭",
     setupTitle: (name: string) => `连接 ${name}`,
     setupEditTitle: (name: string) => `修改 ${name}`,
     setupDescription:
@@ -616,6 +630,7 @@ export const zhCN: Translations = {
     saveAndConnect: "保存并连接",
     saveChanges: "保存修改",
     descriptions: {
+      buzz: "通过 DeerFlow Agent 接收 Buzz 渠道消息和私聊。",
       telegram: "通过 DeerFlow Bot 接收 Telegram 私聊消息。",
       slack: "接收 Slack 工作区消息和提及。",
       discord: "通过 DeerFlow Bot 接收 Discord 服务器消息。",

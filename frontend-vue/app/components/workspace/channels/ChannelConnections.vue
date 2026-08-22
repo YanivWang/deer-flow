@@ -1,54 +1,91 @@
 <script setup lang="ts">
 /*
-  【文件职责】     管理 DeerFlow 外部 channel 的连接与状态。
-  【对应 frontend/】 src/components/workspace/channels/channel-connections.tsx
-  【架构位置】     L3
+  【文件职责】     展示用户 channel instances，并编排连接、配置、单连接与管理员 provider 删除。
+  【对应 frontend/】 src/components/workspace/channels/* · settings/channels-settings-page.tsx
+  【架构位置】     L3 product UI
   【主要导出】     默认 ChannelConnections 组件
-  【依赖关系】     channels APIs · useChannels
-  【边界与注意】   provider/channel 产品接线，不属于通用 UI。
+  【依赖关系】     useChannelConnections · auth session · channels helpers
+  【边界与注意】   connections 是状态真相；provider 删除是全局管理员动作，不能伪装成用户断开。
 */
-import { computed, onMounted, ref } from "vue";
 
+import { computed, ref } from "vue";
+
+import ChannelProviderIcon from "./ChannelProviderIcon.vue";
+import { useAuthSession } from "@/composables/useAuthSession";
+import { useChannelConnections } from "@/composables/useChannelConnections";
 import {
-  configureChannelProvider,
-  connectChannelProvider,
-} from "@/core/channels/api";
+  AUTH_DISABLED_USER,
+  isAuthDisabledMode,
+} from "@/core/auth/auth-disabled-user";
+import {
+  closeConnectWindow,
+  openConnectUrl,
+  prepareConnectWindow,
+  type ChannelConnectWindow,
+} from "@/core/channels/open-connect-url";
 import {
   providerCanEditRuntimeConfig,
   providerNeedsRuntimeConfig,
+  providerSupportsConnect,
 } from "@/core/channels/provider-state";
+import {
+  getChannelConnectionLabel,
+  type ChannelProviderView,
+} from "@/core/channels/state";
 import type {
+  ChannelConnection,
   ChannelProvider,
+  ChannelProviderId,
   ChannelRuntimeConfigValues,
 } from "@/core/channels/types";
-import { useChannels } from "@/composables/useChannels";
-import ChannelProviderIcon from "./ChannelProviderIcon.vue";
 
 withDefaults(defineProps<{ variant?: "sidebar" | "settings" }>(), {
   variant: "sidebar",
 });
-const channels = useChannels();
+
+const { $i18n } = useNuxtApp();
+const text = computed(() => $i18n.t.value.channels);
+const authDisabled = isAuthDisabledMode();
+const auth = useAuthSession({ enabled: computed(() => !authDisabled) });
+const scopeKey = computed(() => {
+  if (authDisabled) return AUTH_DISABLED_USER.id;
+  const session = auth.session.value;
+  return session?.tag === "authenticated" ? session.user.id : "";
+});
+const isAdmin = computed(() => {
+  if (authDisabled) return AUTH_DISABLED_USER.system_role === "admin";
+  const session = auth.session.value;
+  return (
+    session?.tag === "authenticated" && session.user.system_role === "admin"
+  );
+});
+const channels = useChannelConnections({
+  scopeKey,
+  enabled: computed(() => Boolean(scopeKey.value)),
+});
+
 const editing = ref<ChannelProvider | null>(null);
 const values = ref<ChannelRuntimeConfigValues>({});
-const saving = ref(false);
 const actionError = ref<string | null>(null);
-const connectInstruction = ref<string | null>(null);
+const activeConnectProvider = ref<ChannelProviderId | null>(null);
+const removingProvider = ref<ChannelProvider | null>(null);
 
-const descriptions: Record<string, string> = {
-  buzz: "Buzz channels and direct messages through your DeerFlow agent.",
-  telegram: "Telegram direct messages",
-  slack: "Slack workspace messages",
-  discord: "Discord server messages",
-  feishu: "Feishu and Lark messages",
-  dingtalk: "DingTalk Stream Push messages",
-  wechat: "WeChat iLink messages",
-  wecom: "WeCom messages",
-};
+const activeFlow = computed(() => {
+  const provider = activeConnectProvider.value;
+  return provider ? channels.connectFlows.value[provider] : undefined;
+});
 
-onMounted(() => void channels.refresh());
+function errorMessage(cause: unknown, fallback: string) {
+  return cause instanceof Error && cause.message ? cause.message : fallback;
+}
 
-function isConnected(provider: ChannelProvider) {
-  return provider.connection_status === "connected";
+function statusLabel(status: string) {
+  const labels = text.value;
+  if (status === "connected") return labels.connected;
+  if (status === "pending") return labels.pending;
+  if (status === "revoked") return labels.revoked;
+  if (status === "not_connected") return labels.notConnected;
+  return status.replaceAll("_", " ");
 }
 
 function beginSetup(provider: ChannelProvider) {
@@ -57,106 +94,247 @@ function beginSetup(provider: ChannelProvider) {
   actionError.value = null;
 }
 
-async function beginConnect(provider: ChannelProvider) {
+function prepareWindow(provider: ChannelProvider): ChannelConnectWindow {
+  return provider.auth_mode === "deep_link" ? prepareConnectWindow() : null;
+}
+
+async function connectProvider(
+  provider: ChannelProvider,
+  connectWindow: ChannelConnectWindow = prepareWindow(provider),
+) {
   actionError.value = null;
-  connectInstruction.value = null;
   if (providerNeedsRuntimeConfig(provider)) {
+    closeConnectWindow(connectWindow);
     beginSetup(provider);
     return;
   }
-  if (isConnected(provider) && providerCanEditRuntimeConfig(provider)) {
-    beginSetup(provider);
+  if (!providerSupportsConnect(provider)) {
+    closeConnectWindow(connectWindow);
+    actionError.value = provider.unavailable_reason || text.value.unavailable;
     return;
   }
   try {
-    const result = await connectChannelProvider(provider.provider);
-    connectInstruction.value = result.instruction;
+    const response = await channels.connect(provider.provider);
+    activeConnectProvider.value = provider.provider;
+    if (response.url) openConnectUrl(response.url, connectWindow);
+    else closeConnectWindow(connectWindow);
   } catch (cause) {
-    actionError.value =
-      cause instanceof Error ? cause.message : "Failed to connect channel";
+    closeConnectWindow(connectWindow);
+    actionError.value = errorMessage(cause, text.value.unavailable);
   }
 }
 
 async function saveRuntimeConfig() {
-  if (!editing.value || saving.value) return;
   const provider = editing.value;
-  saving.value = true;
+  if (!provider || channels.isProviderPending(provider.provider)) return;
+  const hasActiveConnection = channels.connections.value.some(
+    (connection) =>
+      connection.provider === provider.provider &&
+      (connection.status === "connected" || connection.status === "pending"),
+  );
+  const connectWindow = hasActiveConnection ? null : prepareWindow(provider);
   actionError.value = null;
   try {
-    const next = await configureChannelProvider(
-      provider.provider,
-      values.value,
-    );
-    channels.replaceProvider(next);
-    // The write response deliberately need not echo stored secret placeholders
-    // or the provider's field schema. Re-read the authoritative provider state
-    // before a connected entry can be opened for editing again.
-    await channels.refresh();
+    const next = await channels.configure(provider.provider, values.value);
     editing.value = null;
-    if (next.connection_status !== "connected") {
-      const result = await connectChannelProvider(next.provider);
-      connectInstruction.value = result.instruction;
-    }
+    if (!hasActiveConnection) await connectProvider(next, connectWindow);
+    else closeConnectWindow(connectWindow);
   } catch (cause) {
-    actionError.value =
-      cause instanceof Error
-        ? cause.message
-        : "Failed to save channel settings";
-  } finally {
-    saving.value = false;
+    closeConnectWindow(connectWindow);
+    actionError.value = errorMessage(cause, text.value.unavailable);
   }
 }
 
+async function disconnectConnection(connection: ChannelConnection) {
+  actionError.value = null;
+  try {
+    await channels.disconnectConnection(connection.id);
+  } catch (cause) {
+    actionError.value = errorMessage(cause, text.value.unavailable);
+  }
+}
+
+async function confirmProviderRemoval() {
+  const provider = removingProvider.value;
+  if (!provider) return;
+  actionError.value = null;
+  try {
+    await channels.disconnectProvider(provider.provider);
+    removingProvider.value = null;
+  } catch (cause) {
+    actionError.value = errorMessage(cause, text.value.unavailable);
+  }
+}
+
+function closeConnectDialog() {
+  const provider = activeConnectProvider.value;
+  if (provider && activeFlow.value?.status === "waiting") {
+    channels.cancelConnect(provider);
+  }
+  activeConnectProvider.value = null;
+}
+
+function connectLabel(view: ChannelProviderView) {
+  return view.connections.some(
+    (connection) =>
+      connection.status === "connected" || connection.status === "pending",
+  )
+    ? text.value.addAccount
+    : text.value.connect;
+}
+
 const dialogTitle = computed(() => {
-  if (!editing.value) return "";
-  return `${editing.value.configured ? "Modify" : "Connect"} ${editing.value.display_name}`;
+  const provider = editing.value;
+  if (!provider) return "";
+  return provider.configured
+    ? text.value.setupEditTitle(provider.display_name)
+    : text.value.setupTitle(provider.display_name);
 });
 </script>
 
 <template>
   <section
-    v-if="channels.enabled.value || channels.providers.value.length"
+    v-if="
+      channels.enabled.value ||
+      channels.providerViews.value.length ||
+      channels.error.value ||
+      actionError
+    "
     :class="variant === 'settings' ? 'space-y-3' : 'space-y-1'"
   >
     <h3
       v-if="variant === 'sidebar'"
       class="text-muted-foreground px-2 pt-2 text-xs font-medium"
     >
-      Channels
+      {{ text.title }}
     </h3>
-    <div
-      v-for="provider in channels.providers.value"
-      :key="provider.provider"
-      class="border-border flex items-center justify-between gap-3"
-      :class="
-        variant === 'settings'
-          ? 'border-b py-3 last:border-0'
-          : 'hover:bg-sidebar-accent rounded-md px-2 py-1'
-      "
+
+    <p
+      v-if="channels.error.value || actionError"
+      role="alert"
+      class="px-2 text-sm text-red-600"
     >
-      <ChannelProviderIcon :provider="provider.provider" class="shrink-0" />
-      <div class="min-w-0 flex-1">
-        <div class="truncate text-sm font-medium">
-          {{ provider.display_name }}
-        </div>
-        <p v-if="variant === 'settings'" class="text-muted-foreground text-xs">
-          {{ descriptions[provider.provider] ?? provider.display_name }}
-        </p>
-      </div>
-      <button
-        type="button"
-        class="shrink-0 rounded-md border px-2 py-1 text-xs"
-        @click="beginConnect(provider)"
+      {{ actionError || channels.error.value?.message }}
+    </p>
+
+    <article
+      v-for="view in channels.providerViews.value"
+      :key="view.provider.provider"
+      class="border-border"
+      :data-testid="`channel-provider-${view.provider.provider}`"
+      :class="variant === 'settings' ? 'border-b py-3 last:border-0' : ''"
+    >
+      <div
+        class="flex items-center justify-between gap-3"
+        :class="
+          variant === 'sidebar'
+            ? 'hover:bg-sidebar-accent rounded-md px-2 py-1'
+            : ''
+        "
       >
-        {{
-          variant === "settings" && provider.configured
-            ? "Modify"
-            : isConnected(provider)
-              ? "Connected"
-              : "Connect"
-        }}
-      </button>
-    </div>
+        <ChannelProviderIcon
+          :provider="view.provider.provider"
+          class="shrink-0"
+        />
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-sm font-medium">
+            {{ view.provider.display_name }}
+          </div>
+          <p
+            v-if="variant === 'settings'"
+            class="text-muted-foreground text-xs"
+          >
+            {{
+              text.descriptions[view.provider.provider] ??
+              view.provider.display_name
+            }}
+          </p>
+          <span
+            class="text-muted-foreground text-xs"
+            :data-testid="`channel-status-${view.provider.provider}`"
+          >
+            {{ statusLabel(view.status) }}
+          </span>
+        </div>
+        <div class="flex shrink-0 flex-wrap justify-end gap-1">
+          <button
+            type="button"
+            class="rounded-md border px-2 py-1 text-xs"
+            :disabled="
+              channels.isProviderPending(view.provider.provider) ||
+              (!(
+                view.provider.connectable ??
+                (view.provider.enabled && view.provider.configured)
+              ) &&
+                !providerNeedsRuntimeConfig(view.provider))
+            "
+            @click="connectProvider(view.provider)"
+          >
+            {{ connectLabel(view) }}
+          </button>
+          <button
+            v-if="
+              variant === 'settings' &&
+              view.provider.configured &&
+              providerCanEditRuntimeConfig(view.provider)
+            "
+            type="button"
+            class="rounded-md border px-2 py-1 text-xs"
+            :disabled="channels.isProviderPending(view.provider.provider)"
+            @click="beginSetup(view.provider)"
+          >
+            {{ text.modify }}
+          </button>
+          <button
+            v-if="variant === 'settings' && isAdmin && view.provider.configured"
+            type="button"
+            class="rounded-md border px-2 py-1 text-xs text-red-600"
+            :disabled="channels.isProviderPending(view.provider.provider)"
+            :aria-label="`${text.removeProviderConfig}: ${view.provider.display_name}`"
+            @click="removingProvider = view.provider"
+          >
+            {{ text.removeProviderConfig }}
+          </button>
+        </div>
+      </div>
+
+      <div v-if="variant === 'settings'" class="mt-3 space-y-2 pl-8">
+        <h4 class="text-xs font-medium">{{ text.accounts }}</h4>
+        <p
+          v-if="view.connections.length === 0"
+          class="text-muted-foreground text-xs"
+        >
+          {{ text.noAccounts }}
+        </p>
+        <div
+          v-for="connection in view.connections"
+          :key="connection.id"
+          class="bg-muted/40 flex items-center justify-between gap-3 rounded-md px-3 py-2"
+          :data-testid="`channel-connection-${connection.id}`"
+        >
+          <div class="min-w-0">
+            <div class="truncate text-xs font-medium">
+              {{ getChannelConnectionLabel(connection) }}
+            </div>
+            <div class="text-muted-foreground text-xs">
+              {{ statusLabel(connection.status) }}
+            </div>
+          </div>
+          <button
+            v-if="connection.status !== 'revoked'"
+            type="button"
+            class="rounded-md border px-2 py-1 text-xs"
+            :disabled="channels.isConnectionPending(connection.id)"
+            :aria-label="
+              text.disconnectAccount(getChannelConnectionLabel(connection))
+            "
+            @click="disconnectConnection(connection)"
+          >
+            {{ text.disconnect }}
+          </button>
+        </div>
+      </div>
+    </article>
   </section>
 
   <div
@@ -171,11 +349,8 @@ const dialogTitle = computed(() => {
       @submit.prevent="saveRuntimeConfig"
     >
       <h2 class="text-lg font-semibold">{{ dialogTitle }}</h2>
-      <p
-        v-if="editing.unavailable_reason"
-        class="text-muted-foreground mt-1 text-sm"
-      >
-        {{ editing.unavailable_reason }}
+      <p class="text-muted-foreground mt-1 text-sm">
+        {{ editing.unavailable_reason || text.setupDescription }}
       </p>
       <div class="mt-4 space-y-3">
         <label
@@ -197,47 +372,101 @@ const dialogTitle = computed(() => {
           />
         </label>
       </div>
-      <p v-if="actionError" role="alert" class="mt-3 text-sm text-red-600">
-        {{ actionError }}
-      </p>
       <div class="mt-5 flex justify-end gap-2">
         <button
           type="button"
           class="rounded-md border px-3 py-2"
           @click="editing = null"
         >
-          Cancel
+          {{ text.cancel }}
         </button>
         <button
           type="submit"
           class="bg-primary text-primary-foreground rounded-md px-3 py-2"
-          :disabled="saving"
+          :disabled="channels.isProviderPending(editing.provider)"
         >
-          Save and connect
+          {{
+            channels.connections.value.some(
+              (connection) =>
+                connection.provider === editing?.provider &&
+                (connection.status === "connected" ||
+                  connection.status === "pending"),
+            )
+              ? text.saveChanges
+              : text.saveAndConnect
+          }}
         </button>
       </div>
     </form>
   </div>
 
   <div
-    v-if="connectInstruction"
+    v-if="activeConnectProvider && activeFlow"
     role="dialog"
-    aria-label="Channel connection"
+    :aria-label="text.connectTitle"
     aria-modal="true"
     class="fixed inset-0 z-[90] grid place-items-center bg-black/40 p-4"
   >
     <div
       class="bg-background border-border w-full max-w-md rounded-xl border p-5 shadow-xl"
     >
-      <h2 class="text-lg font-semibold">Connect channel</h2>
-      <p class="mt-3 text-sm">{{ connectInstruction }}</p>
+      <h2 class="text-lg font-semibold">{{ text.connectTitle }}</h2>
+      <p v-if="activeFlow.response.instruction" class="mt-3 text-sm">
+        {{ activeFlow.response.instruction }}
+      </p>
+      <p v-if="activeFlow.response.url" class="mt-2 text-sm">
+        {{ text.connectLinkOpened }}
+      </p>
+      <p class="mt-2 text-sm" data-testid="channel-connect-state">
+        {{
+          activeFlow.status === "expired"
+            ? text.connectionExpired
+            : activeFlow.status === "connected"
+              ? text.connected
+              : text.waitingForConnection
+        }}
+      </p>
       <button
         type="button"
         class="mt-5 rounded-md border px-3 py-2"
-        @click="connectInstruction = null"
+        @click="closeConnectDialog"
       >
-        Close
+        {{ activeFlow.status === "waiting" ? text.cancel : text.close }}
       </button>
+    </div>
+  </div>
+
+  <div
+    v-if="removingProvider"
+    role="dialog"
+    :aria-label="text.removeProviderTitle(removingProvider.display_name)"
+    aria-modal="true"
+    class="fixed inset-0 z-[90] grid place-items-center bg-black/40 p-4"
+  >
+    <div
+      class="bg-background border-border w-full max-w-md rounded-xl border p-5 shadow-xl"
+    >
+      <h2 class="text-lg font-semibold">
+        {{ text.removeProviderTitle(removingProvider.display_name) }}
+      </h2>
+      <p class="mt-3 text-sm">{{ text.removeProviderDescription }}</p>
+      <div class="mt-5 flex justify-end gap-2">
+        <button
+          type="button"
+          class="rounded-md border px-3 py-2"
+          @click="removingProvider = null"
+        >
+          {{ text.cancel }}
+        </button>
+        <button
+          type="button"
+          class="rounded-md border px-3 py-2 text-red-600"
+          :disabled="channels.isProviderPending(removingProvider.provider)"
+          @click="confirmProviderRemoval"
+        >
+          {{ text.removeProviderConfig }}
+        </button>
+      </div>
     </div>
   </div>
 </template>

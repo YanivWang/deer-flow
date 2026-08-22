@@ -52,6 +52,12 @@ const HAND_MAINTAINED = {
     "WP-02 preserves Gateway HTTP status/body through the shared Vue error parser.",
   "scheduled-tasks/api.ts":
     "WP-07 adds abortable detail and limit/offset runs queries while narrowing create/update payloads to the Gateway contract.",
+  "channels/api.ts":
+    "WP-08 threads AbortSignal through scoped channel queries and all lifecycle mutations.",
+  "channels/connect-poll.ts":
+    "WP-08 adds abortable polling, explicit expiry, finite bounds, and multi-account baseline isolation.",
+  "channels/provider-state.ts":
+    "WP-08 keeps connectability capability-only because scoped connection instances, not provider summaries, own user status and multi-account eligibility.",
 };
 
 /** 台账单元格里的 `|` 会把表格切断；COPIED 的说明是脚本给的，不该出现，兜一下。 */

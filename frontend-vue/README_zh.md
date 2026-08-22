@@ -69,6 +69,7 @@ make e2e-m6             # 包含 Vue 自有 browser DOM/wire 合同
 make e2e-m6-real-backend # 真实本地 Gateway + Chromium browser runtime
 make e2e-m7             # 完整 Vue 浏览器合同
 make e2e-wp07-real-backend # 真实 Gateway scheduled-task HTTP/UI 生命周期
+make e2e-wp08-real-backend # 真实 Auth/Gateway/SQLite channel 生命周期
 make e2e-m7-auth        # 认证请求与安全
 make proxy-security     # Nitro body 限制、无 body/chunked DELETE、SSE 与 traversal
 make e2e-m7-real-protocol
@@ -130,6 +131,21 @@ Playwright Chromium，覆盖真实 once/cron 创建与校验、context/thread �
 pause/resume、trigger、分页 run 记录和 delete。模型侧使用签入的 replay fixture，认证也处于
 测试隔离模式；该门禁不证明生产 scheduler/模型、真实时间推进、DNS/TLS、外层代理信任或
 真实 IdP。
+
+## Channels
+
+Channel provider 只描述服务端能力与运行时配置，不拥有用户连接状态。当前认证用户的
+`/api/channels/connections` 响应是连接状态和账号 instance 的唯一真相，同一 provider 可同时
+展示多个账号。Connect 会精确消费 Gateway 的 URL、instruction 与有限 expiry：deep link
+通过同步预开的浏览器窗口打开，轮询只观察当前用户 scope 下的 connections，直到新增账号
+成功、过期或取消。query、mutation、poll 与 AbortController cleanup 全部由
+`useChannelConnections` 独占。
+
+Settings 明确区分两种破坏性操作：用户按准确 connection ID 断开单个账号；管理员移除
+provider runtime 配置，该操作会在实例级撤销此 provider 的有效连接。
+`make e2e-wp08-real-backend` 使用受控外部 worker/callback fixture，真实验证
+FastAPI/Auth/CSRF/SQLite 路由与 Vue 收敛；它不证明 Slack、Telegram、Discord、Feishu 等
+真实平台授权、生产凭据、真实 deep-link handler、DNS/TLS、外层代理或真实 IdP。
 
 ## 流式与历史行为
 

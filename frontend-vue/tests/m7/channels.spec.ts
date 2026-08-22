@@ -64,6 +64,17 @@ function mockChannelsAPI(
   page: Page,
   providers: MockChannelProvider[] = defaultProviders(),
   onSlackConnect?: () => void,
+  initialConnections = providers
+    .filter((provider) => provider.connection_status === "connected")
+    .map((provider) => ({
+      id: `${provider.provider}-account`,
+      provider: provider.provider,
+      status: "connected",
+      external_account_name: `${provider.display_name} user`,
+      workspace_name: "DeerFlow",
+      scopes: [],
+      metadata: {},
+    })),
 ) {
   void page.route("**/api/channels/providers", (route) => {
     return route.fulfill({
@@ -80,7 +91,7 @@ function mockChannelsAPI(
     return route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ connections: [] }),
+      body: JSON.stringify({ connections: initialConnections }),
     });
   });
 
@@ -121,7 +132,7 @@ test.describe("IM channels", () => {
     await expect(sidebar.getByText("WeChat")).toBeVisible();
     await expect(sidebar.getByText("WeCom")).toBeVisible();
     await expect(
-      sidebar.getByRole("button", { name: "Connected" }),
+      sidebar.getByRole("button", { name: "Add account" }),
     ).toHaveCount(8);
 
     await sidebar.getByRole("button", { name: /Settings and more/ }).click();
@@ -148,6 +159,7 @@ test.describe("IM channels", () => {
   }) => {
     mockLangGraphAPI(page);
     let slackConfigured = false;
+    let slackConnected = false;
     let submittedValues: Record<string, string> | undefined;
 
     void page.route("**/api/channels/providers", (route) => {
@@ -207,7 +219,21 @@ test.describe("IM channels", () => {
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ connections: [] }),
+        body: JSON.stringify({
+          connections: slackConnected
+            ? [
+                {
+                  id: "slack-account",
+                  provider: "slack",
+                  status: "connected",
+                  external_account_name: "Slack user",
+                  workspace_name: "DeerFlow",
+                  scopes: [],
+                  metadata: {},
+                },
+              ]
+            : [],
+        }),
       });
     });
 
@@ -234,7 +260,21 @@ test.describe("IM channels", () => {
       });
     });
 
-    void page.route("**/api/channels/slack/connect", (route) => route.abort());
+    void page.route("**/api/channels/slack/connect", (route) => {
+      slackConnected = true;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          provider: "slack",
+          mode: "binding_code",
+          url: null,
+          code: "abc123",
+          instruction: "Send /connect abc123 to the DeerFlow Slack bot.",
+          expires_in: 600,
+        }),
+      });
+    });
 
     await page.goto("/workspace/chats/new");
 
@@ -259,10 +299,21 @@ test.describe("IM channels", () => {
     await setupDialog.getByRole("button", { name: "Save and connect" }).click();
 
     await expect(setupDialog).toBeHidden();
+    const connectDialog = page.getByRole("dialog", { name: "Connect channel" });
+    await expect(connectDialog.getByTestId("channel-connect-state")).toHaveText(
+      "Connected",
+      { timeout: 10_000 },
+    );
+    await connectDialog.getByRole("button", { name: "Close" }).click();
     await expect(
-      sidebar.getByRole("button", { name: "Connected" }),
+      sidebar.getByRole("button", { name: "Add account" }),
     ).toBeVisible();
-    await sidebar.getByRole("button", { name: "Connected" }).click();
+
+    await sidebar.getByRole("button", { name: /Settings and more/ }).click();
+    await page.getByRole("menuitem", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "Channels" }).click();
+    const settings = page.getByRole("dialog", { name: "Settings" });
+    await settings.getByRole("button", { name: "Modify" }).click();
     await expect(
       page.getByRole("dialog", { name: "Modify Slack" }),
     ).toBeVisible();
@@ -454,7 +505,16 @@ test.describe("IM channels", () => {
 
     const sidebar = page.locator("[data-sidebar='sidebar']");
     await expect(sidebar.getByText("Feishu")).toBeVisible({ timeout: 15_000 });
-    await sidebar.getByRole("button", { name: "Connected" }).click();
+    await expect(
+      sidebar.getByRole("button", { name: "Add account" }),
+    ).toBeVisible();
+    await sidebar.getByRole("button", { name: /Settings and more/ }).click();
+    await page.getByRole("menuitem", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "Channels" }).click();
+    await page
+      .getByRole("dialog", { name: "Settings" })
+      .getByRole("button", { name: "Modify" })
+      .click();
 
     const setupDialog = page.getByRole("dialog", { name: "Modify Feishu" });
     await expect(setupDialog).toBeVisible();
@@ -462,5 +522,387 @@ test.describe("IM channels", () => {
       "cli_feishu_app",
     );
     await expect(setupDialog.getByLabel("App secret")).toHaveValue("********");
+  });
+
+  test("connections response overrides a stale connected provider summary", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page);
+    mockChannelsAPI(
+      page,
+      [
+        {
+          provider: "slack",
+          display_name: "Slack",
+          enabled: true,
+          configured: true,
+          connectable: true,
+          auth_mode: "binding_code",
+          connection_status: "connected",
+          credential_fields: [],
+        },
+      ],
+      undefined,
+      [],
+    );
+
+    await page.goto("/workspace/chats/new");
+    const sidebar = page.locator("[data-sidebar='sidebar']");
+    await expect(sidebar.getByTestId("channel-status-slack")).toHaveText(
+      "Not connected",
+      { timeout: 15_000 },
+    );
+    await expect(
+      sidebar.getByRole("button", { name: "Connect" }),
+    ).toBeVisible();
+  });
+
+  test("multi-account polling and the two deletion targets stay distinct", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page);
+    const slack = {
+      provider: "slack",
+      display_name: "Slack",
+      enabled: true,
+      configured: true,
+      connectable: true,
+      auth_mode: "binding_code",
+      connection_status: "not_connected",
+      credential_fields: [],
+    };
+    let connections = [
+      {
+        id: "connection-a",
+        provider: "slack",
+        status: "connected",
+        external_account_name: "Alice",
+        workspace_name: "DeerFlow",
+        scopes: [],
+        metadata: {},
+      },
+    ];
+    let pollReads = 0;
+    let binding = false;
+    const disconnectedIds: string[] = [];
+    let removedProvider: string | null = null;
+
+    void page.route("**/api/channels/providers", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ enabled: true, providers: [slack] }),
+      }),
+    );
+    void page.route("**/api/channels/connections", (route) => {
+      if (binding) {
+        pollReads += 1;
+        if (pollReads >= 3) {
+          connections = connections.map((connection) =>
+            connection.id === "connection-b"
+              ? { ...connection, status: "connected" }
+              : connection,
+          );
+        }
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ connections }),
+      });
+    });
+    void page.route("**/api/channels/slack/connect", (route) => {
+      binding = true;
+      connections = [
+        ...connections,
+        {
+          id: "connection-b",
+          provider: "slack",
+          status: "pending",
+          external_account_name: "Bob",
+          workspace_name: "DeerFlow",
+          scopes: [],
+          metadata: {},
+        },
+      ];
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          provider: "slack",
+          mode: "binding_code",
+          url: null,
+          code: "multi123",
+          instruction: "Send /connect multi123 to the DeerFlow Slack bot.",
+          expires_in: 30,
+        }),
+      });
+    });
+    void page.route("**/api/channels/connections/connection-a", (route) => {
+      disconnectedIds.push("connection-a");
+      connections = connections.map((connection) =>
+        connection.id === "connection-a"
+          ? { ...connection, status: "revoked" }
+          : connection,
+      );
+      return route.fulfill({ status: 204, body: "" });
+    });
+    void page.route("**/api/channels/slack/runtime-config", (route) => {
+      if (route.request().method() !== "DELETE") return route.fallback();
+      removedProvider = "slack";
+      connections = connections.map((connection) => ({
+        ...connection,
+        status: "revoked",
+      }));
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...slack,
+          configured: false,
+          connectable: false,
+        }),
+      });
+    });
+
+    await page.goto("/workspace/chats/new");
+    const sidebar = page.locator("[data-sidebar='sidebar']");
+    await expect(sidebar.getByText("Slack")).toBeVisible({ timeout: 15_000 });
+    await sidebar.getByRole("button", { name: /Settings and more/ }).click();
+    await page.getByRole("menuitem", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "Channels" }).click();
+    const settings = page.getByRole("dialog", { name: "Settings" });
+
+    await settings.getByRole("button", { name: "Add account" }).click();
+    const connectDialog = page.getByRole("dialog", { name: "Connect channel" });
+    await expect(connectDialog).toContainText(
+      "Send /connect multi123 to the DeerFlow Slack bot.",
+    );
+    await expect(
+      settings.getByRole("button", { name: "Add account" }),
+    ).toBeDisabled();
+    await expect(connectDialog.getByTestId("channel-connect-state")).toHaveText(
+      "Connected",
+      { timeout: 10_000 },
+    );
+    await connectDialog.getByRole("button", { name: "Close" }).click();
+    await expect(
+      settings.getByTestId("channel-connection-connection-a"),
+    ).toContainText("Alice · DeerFlow");
+    await expect(
+      settings.getByTestId("channel-connection-connection-b"),
+    ).toContainText("Bob · DeerFlow");
+
+    await settings
+      .getByRole("button", { name: "Disconnect Alice · DeerFlow" })
+      .click();
+    await expect(
+      settings.getByTestId("channel-connection-connection-a"),
+    ).toContainText("Disconnected");
+    expect(disconnectedIds).toEqual(["connection-a"]);
+
+    await settings
+      .getByRole("button", {
+        name: "Remove provider configuration: Slack",
+      })
+      .click();
+    const removalDialog = page.getByRole("dialog", {
+      name: "Remove Slack provider configuration?",
+    });
+    await expect(removalDialog).toContainText(
+      "revokes every active connection",
+    );
+    await removalDialog
+      .getByRole("button", { name: "Remove provider configuration" })
+      .click();
+    expect(removedProvider).toBe("slack");
+  });
+
+  test("deep-link connect opens the URL and keeps its instruction visible", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page);
+    mockChannelsAPI(
+      page,
+      [
+        {
+          provider: "telegram",
+          display_name: "Telegram",
+          enabled: true,
+          configured: true,
+          connectable: true,
+          auth_mode: "deep_link",
+          connection_status: "not_connected",
+          credential_fields: [],
+        },
+      ],
+      undefined,
+      [],
+    );
+    void page.route("**/api/channels/telegram/connect", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          provider: "telegram",
+          mode: "deep_link",
+          url: "/about",
+          code: "deep123",
+          instruction: "Finish the connection in Telegram.",
+          expires_in: 30,
+        }),
+      }),
+    );
+
+    await page.goto("/workspace/chats/new");
+    const popupPromise = page.waitForEvent("popup");
+    await page
+      .locator("[data-sidebar='sidebar']")
+      .getByRole("button", { name: "Connect" })
+      .click();
+    const popup = await popupPromise;
+    await popup.waitForURL("**/about");
+    await expect(
+      page.getByRole("dialog", { name: "Connect channel" }),
+    ).toContainText("Finish the connection in Telegram.");
+    await popup.close();
+  });
+
+  test("finite expiry stops polling and navigation disposes the channel owner", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page);
+    let connectionReads = 0;
+    void page.route("**/api/channels/providers", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          enabled: true,
+          providers: [
+            {
+              provider: "slack",
+              display_name: "Slack",
+              enabled: true,
+              configured: true,
+              connectable: true,
+              auth_mode: "binding_code",
+              connection_status: "not_connected",
+              credential_fields: [],
+            },
+          ],
+        }),
+      }),
+    );
+    void page.route("**/api/channels/connections", (route) => {
+      connectionReads += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ connections: [] }),
+      });
+    });
+    void page.route("**/api/channels/slack/connect", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          provider: "slack",
+          mode: "binding_code",
+          url: null,
+          code: "expire123",
+          instruction: "Use the short-lived code.",
+          expires_in: 0.01,
+        }),
+      }),
+    );
+
+    await page.goto("/workspace/chats/new");
+    await page
+      .locator("[data-sidebar='sidebar']")
+      .getByRole("button", { name: "Connect" })
+      .click();
+    const connectDialog = page.getByRole("dialog", { name: "Connect channel" });
+    await expect(
+      connectDialog.getByTestId("channel-connect-state"),
+    ).toContainText("expired", { timeout: 10_000 });
+    const readsAtExpiry = connectionReads;
+    await page.waitForTimeout(2500);
+    expect(connectionReads).toBe(readsAtExpiry);
+    await page.goto("/about");
+    await page.waitForTimeout(2500);
+    expect(connectionReads).toBe(readsAtExpiry);
+  });
+
+  test("Gateway 429 detail remains visible instead of a local success", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page);
+    mockChannelsAPI(
+      page,
+      [
+        {
+          provider: "slack",
+          display_name: "Slack",
+          enabled: true,
+          configured: true,
+          connectable: true,
+          auth_mode: "binding_code",
+          connection_status: "not_connected",
+          credential_fields: [],
+        },
+      ],
+      undefined,
+      [],
+    );
+    void page.route("**/api/channels/slack/connect", (route) =>
+      route.fulfill({
+        status: 429,
+        contentType: "application/json",
+        body: JSON.stringify({
+          detail: "Too many pending channel connection codes.",
+        }),
+      }),
+    );
+
+    await page.goto("/workspace/chats/new");
+    await page
+      .locator("[data-sidebar='sidebar']")
+      .getByRole("button", { name: "Connect" })
+      .click();
+    await expect(page.getByRole("alert")).toHaveText(
+      "Too many pending channel connection codes.",
+    );
+  });
+
+  test("channel query 401 follows the shared login redirect", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page);
+    void page.route("**/api/channels/providers", (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({
+          detail: {
+            code: "not_authenticated",
+            message: "Authentication required",
+          },
+        }),
+      }),
+    );
+    void page.route("**/api/channels/connections", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ connections: [] }),
+      }),
+    );
+
+    await page.goto("/workspace/chats/new");
+    await expect(page).toHaveURL(/\/login\?next=/);
+    expect(new URL(page.url()).searchParams.get("next")).toBe(
+      "/workspace/chats/new",
+    );
   });
 });

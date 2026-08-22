@@ -35,7 +35,28 @@ def main() -> int:
 
     home = Path(tempfile.mkdtemp(prefix="replay-gw-"))
     cfg = home / "config.yaml"
-    cfg.write_text(build_config_yaml(model_block=REPLAY_MODEL_BLOCK, home=home), encoding="utf-8")
+    config_yaml = build_config_yaml(model_block=REPLAY_MODEL_BLOCK, home=home)
+    channel_fixture_enabled = os.environ.get("DEERFLOW_ENABLE_CHANNEL_TEST_SEED") == "1"
+    if channel_fixture_enabled:
+        config_yaml += """\
+channel_connections:
+  enabled: true
+  slack:
+    enabled: true
+  telegram:
+    enabled: true
+    bot_username: deerflow_e2e_bot
+channels:
+  slack:
+    enabled: true
+    bot_token: xoxb-controlled-e2e
+    app_token: xapp-controlled-e2e
+  telegram:
+    enabled: true
+    bot_token: telegram-controlled-e2e
+    bot_username: deerflow_e2e_bot
+"""
+    cfg.write_text(config_yaml, encoding="utf-8")
 
     # Override (not setdefault): the replay gateway must be hermetic, so an outer
     # DEER_FLOW_HOME can't leak in and shift prompt-affecting paths/skills.
@@ -43,7 +64,7 @@ def main() -> int:
     os.environ["DEER_FLOW_CONFIG_PATH"] = str(cfg)
     os.environ["DEER_FLOW_EXTENSIONS_CONFIG_PATH"] = str(prepare_hermetic_extras(home))
     os.environ["DEERFLOW_REPLAY_FIXTURE"] = args.fixture
-    os.environ.setdefault("AUTH_JWT_SECRET", "ci-replay-secret")
+    os.environ.setdefault("AUTH_JWT_SECRET", "ci-replay-secret-at-least-32-bytes")
     os.environ["GATEWAY_CORS_ORIGINS"] = args.cors
     # Child / dynamic imports (resolve_class) search PYTHONPATH too.
     os.environ["PYTHONPATH"] = os.pathsep.join(p for p in (str(_BACKEND), str(_BACKEND / "tests"), os.environ.get("PYTHONPATH", "")) if p)
@@ -51,6 +72,10 @@ def main() -> int:
     import uvicorn
 
     target: str | object = "app.gateway.app:app"
+    if channel_fixture_enabled:
+        from channel_e2e_fixture import install_channel_service_fixture
+
+        install_channel_service_fixture()
     # Test-only: attach the run/message seeder used by the multi-run render-order
     # e2e (#3352). Imported from tests/ and mounted here only — never in the
     # production app. Pass the app object (not the import string) so the extra
@@ -63,6 +88,15 @@ def main() -> int:
         gateway_app.include_router(seed_router)
         target = gateway_app
         print("[replay-gw] test-only seed router mounted at /api/test-only/seed-runs", flush=True)
+
+    if channel_fixture_enabled:
+        from channel_e2e_fixture import router as channel_seed_router
+
+        from app.gateway.app import app as gateway_app
+
+        gateway_app.include_router(channel_seed_router)
+        target = gateway_app
+        print("[replay-gw] controlled external-channel fixture mounted at /api/test-only/channels", flush=True)
 
     print(f"[replay-gw] config={cfg} fixture={args.fixture} cors={args.cors} port={args.port}", flush=True)
     uvicorn.run(target, host="127.0.0.1", port=args.port, log_level="warning")
