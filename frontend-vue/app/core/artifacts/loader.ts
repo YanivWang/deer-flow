@@ -1,16 +1,14 @@
 /*
-  【文件职责】     见下方源码；本文件由 frontend/src/core/artifacts/loader.ts retype 而来。
+  【文件职责】     WP-06 有界加载正式 UTF-8 artifact，并保留 Gateway 错误与 revision。
   【对应 frontend/】 frontend/src/core/artifacts/loader.ts
   【架构位置】     L3
   【主要导出】     ARTIFACT_PREVIEW_MAX_BYTES / loadArtifactContent / loadArtifactContentFromToolCall
   【依赖关系】     见下方 import；改写清单由 scripts/land-retyped.mjs 声明
-  【边界与注意】   RETYPED：内容**不是**上游逐字节等同，因此不参与 COPIED hash 护城河。
-                   相对上游的改动只有这些：SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk/react → @/core/types/message）
-                   勿手改——`make land-retyped-check` 会红；确需手改就登记进
-                   land-retyped.mjs 的 HAND_MAINTAINED 并写明理由。
+  【边界与注意】   ADAPTED：只有显式 text policy 可调用；.skill/未知/二进制没有兼容分支。
 */
 
 import type { BaseStream } from "@/core/types/message";
+import { fetch } from "@/core/api/fetcher";
 
 import type { AgentThreadState } from "../threads";
 
@@ -43,22 +41,21 @@ export async function loadArtifactContent({
   threadId,
   isMock,
   full = false,
+  signal,
 }: {
   filepath: string;
   threadId: string;
   isMock?: boolean;
   full?: boolean;
+  signal?: AbortSignal;
 }) {
-  let enhancedFilepath = filepath;
-  if (filepath.endsWith(".skill")) {
-    enhancedFilepath = filepath + "/SKILL.md";
-  }
-  const url = urlOfArtifact({ filepath: enhancedFilepath, threadId, isMock });
+  const url = urlOfArtifact({ filepath, threadId, isMock });
   const response = await fetch(url, {
     cache: "no-store",
     headers: full
       ? undefined
       : { Range: `bytes=0-${ARTIFACT_PREVIEW_MAX_BYTES - 1}` },
+    signal,
   });
   const contentRange = parseContentRange(response.headers.get("Content-Range"));
   if (response.status === 416 && contentRange?.total === 0) {
@@ -72,7 +69,14 @@ export async function loadArtifactContent({
     };
   }
   if (!response.ok) {
-    throw new Error(`Failed to load artifact: ${response.status}`);
+    const data = (await response.json().catch(() => ({}))) as {
+      detail?: unknown;
+    };
+    const detail =
+      typeof data.detail === "string"
+        ? data.detail
+        : `HTTP ${response.status}: ${response.statusText}`;
+    throw new Error(detail);
   }
 
   const bytes = await response.arrayBuffer();

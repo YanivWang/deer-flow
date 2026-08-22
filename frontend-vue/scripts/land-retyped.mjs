@@ -423,9 +423,12 @@ import type { User } from "./types";`,
 /**
  * 落地物一律不许手改（--check 会红）。确实需要针对 Vue 侧改写时，
  * 它就不再是「上游 + 声明」推出来的：登记到这里并写明理由，本脚本从此不碰它。
- * 目前为空。
+ * WP-06 起 artifact loader 由 Vue 文件策略和 Gateway 错误合同共同拥有。
  */
-const HAND_MAINTAINED = {};
+const HAND_MAINTAINED = {
+  "artifacts/loader.ts":
+    "WP-06 gates loading behind explicit text policy and preserves Gateway errors and abort semantics.",
+};
 
 /** 六段式文件头（04 §6）。COPIED 档不加（04 已裁决），RETYPED 是我们的代码，必须加。 */
 const HEADERS = {

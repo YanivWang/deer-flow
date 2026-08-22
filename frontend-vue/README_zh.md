@@ -63,6 +63,8 @@ make dev       # http://localhost:3100
 make verify
 make consumer-check     # 修改 packages/agent-core 时运行
 make e2e-list           # 查看共享浏览器合同清单
+make e2e-m5             # artifacts、sidecar 与面板生命周期合同
+make e2e-m5-real-backend # 真实 Gateway artifact Range/PUT/冲突合同
 make e2e-m6             # 包含 Vue 自有 browser DOM/wire 合同
 make e2e-m6-real-backend # 真实本地 Gateway + Chromium browser runtime
 make e2e-m7             # 完整 Vue 浏览器合同
@@ -100,6 +102,18 @@ Nuxt/Gateway 链路验证。`NUXT_PUBLIC_M0_TEST_PAGES=1` 只为测试开放内�
 REST 导航。URL/title 只接受 Gateway WebSocket 事件或 REST 响应。关闭面板、切换线程或
 feature 禁用都会停止重连 timer、socket 和未完成 REST。详细所有权与输入/清理硬合同见
 [ARCHITECTURE.md](ARCHITECTURE.md) 和 [BEHAVIOR_CONTRACTS.md](BEHAVIOR_CONTRACTS.md)。
+
+## Artifacts
+
+Artifact 能力只由显式的路径/source 策略决定：已知 UTF-8 文本和代码可加载，图片、音频、
+视频与 PDF 使用专用预览；Office、archive、SVG、无扩展名和未知二进制一律 fail closed 为
+仅下载。MIME 元数据不能把未知文件提升为可编辑文本。正式 HTML 只有完整加载并通过文档
+完整性检查后才创建预览。
+
+只有 `/mnt/user-data/outputs` 下完整加载且带 SHA-256 修订的正式 UTF-8 文件可以编辑。
+保存携带已加载修订；Gateway 冲突或权限错误会保留本地草稿。dirty 草稿统一保护切文件、
+关面板、切线程、路由离开和页面关闭。打开与下载会先执行带认证的一字节 Range 预检；
+安装 Skill 只对真实 skill artifact 和具备管理员权限的当前用户开放。
 
 ## 流式与历史行为
 

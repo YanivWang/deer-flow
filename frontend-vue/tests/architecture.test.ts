@@ -288,7 +288,17 @@ describe("M8 L2 reusable UI boundary", () => {
       ),
       "utf8",
     );
+    const artifactPreview = readFileSync(
+      new URL(
+        "../app/components/workspace/artifacts/ArtifactPreview.vue",
+        import.meta.url,
+      ),
+      "utf8",
+    );
     expect(artifactPanel).toContain(
+      'import ArtifactPreview from "./ArtifactPreview.vue"',
+    );
+    expect(artifactPreview).toContain(
       'import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue"',
     );
   });

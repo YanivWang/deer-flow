@@ -36,7 +36,7 @@ help:
 	@echo "  make e2e-m5-real-backend       run M5 write-file/artifact against replay Gateway"
 	@echo "  make e2e-m6-real-backend       run M6 browser panel against browser-enabled replay Gateway"
 	@echo "  make e2e-m6                    run the exact M6 remaining-L3 shared contract gate"
-	@echo "  make e2e-m7-list               verify/list the exact 25-file M7 shared inventory"
+	@echo "  make e2e-m7-list               verify/list the exact 26-file M7 shared inventory"
 	@echo "  make e2e-m7                    verify then run the full M7 shared contract gate"
 	@echo "  make e2e-m7-local              run exact M7 sidebar/IME/keyboard/a11y contracts"
 	@echo "  make e2e-m7-auth               run exact M7 auth request/security contracts"

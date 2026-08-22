@@ -11,13 +11,12 @@
 
 当前已确认仍违反或未完整覆盖的合同包括：
 
-| 合同                        | 对应差异 ID                  |
-| --------------------------- | ---------------------------- |
-| D3、D6～D8                  | `ARTIFACT-01`～`ARTIFACT-04` |
-| E6、E12 的 compact 后续边界 | `THREAD-01`                  |
-| G1～G6                      | `STREAM-01`、`STREAM-02`     |
-| K3、K5 的错误/状态消费      | `THREAD-02`、`SETTINGS-01`   |
-| N4 的其他产品接入           | `I18N-01`                    |
+| 合同                        | 对应差异 ID                |
+| --------------------------- | -------------------------- |
+| E6、E12 的 compact 后续边界 | `THREAD-01`                |
+| G1～G6                      | `STREAM-01`、`STREAM-02`   |
+| K3、K5 的错误/状态消费      | `THREAD-02`、`SETTINGS-01` |
+| N4 的其他产品接入           | `I18N-01`                  |
 
 该映射不是差异清单的替代品；新的未满足合同先加入 `PARITY_GAPS.md`，再补合同和测试。
 
@@ -135,16 +134,19 @@ sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
 
 ## D. Artifacts
 
-| #   | 约束                                                                                                                                   | 为什么                                                                                                                                                      |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D1  | 文件工具的 artifact 自动打开必须在 **effect 内**执行并带 timer 清理                                                                    | 渲染 `write_file` / `str_replace` / 暂存写入更新时**绝不能在渲染期间起定时器**                                                                              |
-| D2  | `write_file` / `str_replace` 可在 loading 时打开流式草稿 URL；`finalize_artifact_write` **只在工具返回 `OK` 后**打开真实 artifact 路径 | —                                                                                                                                                           |
-| D3  | HTML 预览要过与 `app/core/artifacts/preview.ts` 相同的轻量文档完整性检查                                                               | 已完成的 `.html`/`.htm` 草稿若 `html`/`body` 标签缺失或错序、或 `head`/`style`/`script` 不配对，**留在代码视图**而不是塞进 iframe。文档仍在组装时允许前缀块 |
-| D4  | `ThreadState.artifacts` 是**权威列表**；provider 只持久化 thread 作用域的面板 UI 状态（open、选中路径、刷新引导缓存）                  | 历史加载完成前，**初始的空流值不得覆盖已恢复的状态**                                                                                                        |
-| D5  | run 结束时刷新一次正式 artifact 内容；瞬态 `write-file:` 预览保持消息驱动                                                              | —                                                                                                                                                           |
-| D6  | 显式编辑**只对 `/mnt/user-data/outputs` 下已打开的正式 UTF-8 文本 artifact** 开放                                                      | 草稿留在 provider 内存直到保存，切换右侧面板不丢；受已加载的 SHA-256 修订保护，不被远程刷新覆盖                                                             |
-| D7  | run 进行中禁止保存；修订变化时保留草稿并提示冲突，**不得覆盖 agent 输出**                                                              | —                                                                                                                                                           |
-| D8  | 常规 artifact 文本加载最多通过 HTTP byte range 请求**前 1 MiB**                                                                        | 截断预览必须保持轻量并提供显式的"加载完整文件"操作；在用户请求并拿到完整内容之前**不要挂载 CodeMirror**                                                     |
+| #   | 约束                                                                                                                                                        | 为什么                                                                                                                                                                    |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | 文件工具的 artifact 自动打开必须在 **effect 内**执行并带 timer 清理                                                                                         | 渲染 `write_file` / `str_replace` / 暂存写入更新时**绝不能在渲染期间起定时器**                                                                                            |
+| D2  | `write_file` / `str_replace` 可在 loading 时打开流式草稿 URL；`finalize_artifact_write` **只在工具返回 `OK` 后**打开真实 artifact 路径                      | —                                                                                                                                                                         |
+| D3  | HTML 预览要过 `app/core/artifacts/preview-policy.ts` 的轻量文档完整性检查；正式文件还必须完整加载且未截断                                                   | 已完成的 `.html`/`.htm` 若 `html`/`body` 标签缺失或错序、或 `head`/`style`/`script` 不配对，**留在代码视图**而不是塞进 iframe。仅仍在组装的 write-file 草稿允许安全前缀块 |
+| D4  | `ThreadState.artifacts` 是**权威列表**；provider 只持久化 thread 作用域的面板 UI 状态（open、选中路径、刷新引导缓存）                                       | 历史加载完成前，**初始的空流值不得覆盖已恢复的状态**                                                                                                                      |
+| D5  | run 结束时刷新一次正式 artifact 内容；瞬态 `write-file:` 预览保持消息驱动                                                                                   | —                                                                                                                                                                         |
+| D6  | 显式编辑**只对 `/mnt/user-data/outputs` 下完整加载、带 SHA-256 修订的正式 UTF-8 文本 artifact**开放                                                         | Office、archive、SVG、未知扩展名、无扩展名和其他二进制必须 fail closed 为 download-only，不能进入文本 loader 或 PUT；MIME 不得把未知扩展名提升为可编辑文本                |
+| D7  | run 进行中禁止保存；保存携带精确 `expected_sha256`。远程刷新或 412 冲突都保留本地草稿并显示冲突，**不得覆盖 agent 输出**                                    | 成功保存以 Gateway 返回的 SHA/size 建立新 baseline；403/404/409/412/413/415 保留真实状态与 detail，不能伪装成功                                                           |
+| D8  | 常规 artifact 文本加载最多通过 HTTP byte range 请求**前 1 MiB**；只有显式加载完整内容后才允许编辑或正式 HTML 预览                                           | 截断预览必须保持轻量并提供显式的“加载完整文件”操作；在用户请求并拿到完整内容之前**不要挂载 CodeMirror 或 iframe**                                                         |
+| D9  | `useArtifactDraft` 是 baseline、remote、draft、dirty、conflict 和 edit 状态的唯一 owner；切文件、关面板、切右侧产品、切线程、路由离开和页面关闭共用该 owner | 仅 dirty 时注册 `beforeunload`；确认离开后确定性丢弃，取消则保持当前文件、面板和草稿；远程刷新不能覆盖 dirty draft                                                        |
+| D10 | copy/open/download/install-skill 均由显式策略决定可见性；open/download 先用认证 GET Range 预检，install 只对真实 skill artifact + admin 开放                | 预检只读取一字节，合法空文件的 `416 + Content-Range: bytes */0` 视为可访问；其他权限/Gateway 错误必须可见                                                                 |
+| D11 | 正式 artifact、write-file 瞬态草稿和 skill artifact 是不同来源；自动历史打开不得覆盖用户或持久化选择，旧 load/save/action 结果不得跨路径回写                | 每次 path/kind/thread 变化都要 abort 并递增 generation；组件按 FileList、Editor、Preview、Actions 分工，面板根只编排当前选择                                              |
 
 ---
 

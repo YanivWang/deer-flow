@@ -8,10 +8,10 @@
                    状态。watch 必须 immediate，且历史 loading 时不能用初始空值覆盖恢复。
 */
 
-import { computed, onBeforeUnmount, reactive, ref, toValue, watch } from "vue";
+import { ref, toValue, watch } from "vue";
 import type { MaybeRefOrGetter } from "vue";
 
-import type { ArtifactDraftState } from "@/core/artifacts/editing";
+import { useArtifactDraft } from "@/composables/useArtifactDraft";
 
 const STORAGE_PREFIX = "deerflow:artifacts:v1";
 
@@ -79,8 +79,7 @@ export function useArtifactsPanel(options: {
   const autoSelect = ref(true);
   const panelSize = ref(40);
   const openedPresentedArtifacts = ref<string[]>([]);
-  const drafts = reactive<Record<string, ArtifactDraftState>>({});
-  const editingPath = ref<string | null>(null);
+  const draftOwner = useArtifactDraft();
   const hydratedThreadId = ref<string | null>(null);
 
   function persist() {
@@ -106,10 +105,7 @@ export function useArtifactsPanel(options: {
   watch(
     () => toValue(options.threadId),
     (threadId) => {
-      for (const key of Object.keys(drafts)) {
-        Reflect.deleteProperty(drafts, key);
-      }
-      editingPath.value = null;
+      draftOwner.reset();
       openedPresentedArtifacts.value = [];
       autoOpen.value = true;
       if (!threadId) {
@@ -146,7 +142,15 @@ export function useArtifactsPanel(options: {
         !artifacts.value.includes(selectedArtifact.value) &&
         !openedPresentedArtifacts.value.includes(selectedArtifact.value)
       ) {
-        selectedArtifact.value = null;
+        if (draftOwner.hasUnsavedDrafts.value) {
+          if (
+            !openedPresentedArtifacts.value.includes(selectedArtifact.value)
+          ) {
+            openedPresentedArtifacts.value.push(selectedArtifact.value);
+          }
+        } else {
+          selectedArtifact.value = null;
+        }
       }
     },
     { immediate: true },
@@ -157,14 +161,30 @@ export function useArtifactsPanel(options: {
   });
 
   function setOpen(value: boolean) {
+    if (
+      !value &&
+      selectedArtifact.value &&
+      !draftOwner.requestLeave(selectedArtifact.value)
+    ) {
+      return false;
+    }
     if (!value && autoOpen.value) {
       autoOpen.value = false;
       autoSelect.value = false;
     }
     open.value = value;
+    return true;
   }
 
   function select(path: string, automatic = false) {
+    if (automatic && !autoSelect.value) return false;
+    if (
+      selectedArtifact.value &&
+      selectedArtifact.value !== path &&
+      !draftOwner.requestLeave(selectedArtifact.value)
+    ) {
+      return false;
+    }
     selectedArtifact.value = path;
     if (!path.startsWith("write-file:") && !artifacts.value.includes(path)) {
       if (!openedPresentedArtifacts.value.includes(path)) {
@@ -172,26 +192,13 @@ export function useArtifactsPanel(options: {
       }
     }
     if (!automatic) autoSelect.value = false;
-    setOpen(true);
+    if (!automatic || autoOpen.value) setOpen(true);
+    return true;
   }
 
   function close() {
-    setOpen(false);
+    return setOpen(false);
   }
-
-  const hasUnsavedDrafts = computed(() =>
-    Object.values(drafts).some(
-      (draft) => draft.draftContent !== draft.baselineContent,
-    ),
-  );
-  function beforeUnload(event: BeforeUnloadEvent) {
-    if (hasUnsavedDrafts.value) event.preventDefault();
-  }
-  if (import.meta.client)
-    globalThis.addEventListener("beforeunload", beforeUnload);
-  onBeforeUnmount(() =>
-    globalThis.removeEventListener("beforeunload", beforeUnload),
-  );
 
   return {
     artifacts,
@@ -201,9 +208,8 @@ export function useArtifactsPanel(options: {
     autoOpen,
     autoSelect,
     panelSize,
-    drafts,
-    editingPath,
-    hasUnsavedDrafts,
+    draftOwner,
+    hasUnsavedDrafts: draftOwner.hasUnsavedDrafts,
     select,
     setOpen,
     close,

@@ -1,4 +1,4 @@
-/* M5 real-Gateway contract: durable run handle, SSE tool call and artifact draft. */
+/* M5 real-Gateway contract: replay SSE plus artifact Range/PUT/412/file-policy UI. */
 import { defineConfig, devices } from "@playwright/test";
 
 const frontendPort = process.env.E2E_FRONTEND_PORT ?? "3101";

@@ -3,7 +3,7 @@
   【对应 frontend/】 frontend/playwright.config.ts
   【架构位置】     测试
   【主要导出】     Playwright M5 config
-  【边界与注意】   inventory 固定 6 files / 27 tests；不包含 M6+ spec。
+  【边界与注意】   inventory 固定 6 files / 29 tests；不包含 M6+ spec。
 */
 
 import { readFileSync } from "node:fs";

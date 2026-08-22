@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,6 +18,35 @@ const fixture = JSON.parse(
     "utf8",
   ),
 ) as { prompt: string };
+
+function sha256(content: string | Buffer) {
+  return createHash("sha256").update(content).digest("hex");
+}
+
+async function selectPresentedArtifact(
+  page: import("@playwright/test").Page,
+  threadId: string,
+  path: string,
+) {
+  await page.evaluate(
+    ({ threadId: id, selected }) => {
+      const key = `deerflow:artifacts:v1:${encodeURIComponent(`/workspace/chats/${id}`)}`;
+      sessionStorage.setItem(
+        key,
+        JSON.stringify({
+          artifacts: [],
+          openedPresentedArtifacts: [selected],
+          selectedArtifact: selected,
+          open: true,
+          panelSize: 40,
+        }),
+      );
+    },
+    { threadId, selected: path },
+  );
+  await page.reload();
+  await expect(page.locator("#artifacts")).toBeVisible({ timeout: 30_000 });
+}
 
 test("real Gateway streams a write-file draft into the artifact panel", async ({
   page,
@@ -48,4 +78,172 @@ test("real Gateway streams a write-file draft into the artifact panel", async ({
   await expect(
     artifacts.getByText("hi from replay.", { exact: true }),
   ).toBeVisible();
+
+  await expect(page).toHaveURL(/\/workspace\/chats\/[0-9a-f-]+$/);
+  const threadId = page.url().split("/").at(-1)!;
+  const notePath = "/mnt/user-data/outputs/note.txt";
+  const noteUrl = `${APP}/api/threads/${threadId}/artifacts/mnt/user-data/outputs/note.txt`;
+
+  const ranged = await context.request.get(noteUrl, {
+    headers: { Range: "bytes=0-1" },
+  });
+  expect(ranged.status(), await ranged.text()).toBe(206);
+  expect(ranged.headers()["content-range"]).toBe("bytes 0-1/15");
+  expect(ranged.headers().etag).toBeTruthy();
+
+  const full = await context.request.get(noteUrl);
+  const original = await full.text();
+  expect(original).toBe("hi from replay.");
+  const firstPut = await context.request.put(noteUrl, {
+    data: {
+      content: "server baseline",
+      expected_sha256: sha256(original),
+    },
+  });
+  const firstPutText = await firstPut.text();
+  expect(firstPut.status(), firstPutText).toBe(200);
+  const firstPutBody = JSON.parse(firstPutText) as {
+    path: string;
+    sha256: string;
+    size: number;
+  };
+  expect(firstPutBody).toEqual({
+    path: notePath,
+    sha256: sha256("server baseline"),
+    size: 15,
+  });
+
+  const browserProbe = await page.evaluate(async (url) => {
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: { Range: "bytes=0-1048575" },
+    });
+    const bytes = await response.arrayBuffer();
+    return {
+      status: response.status,
+      contentRange: response.headers.get("content-range"),
+      body: new TextDecoder().decode(bytes),
+    };
+  }, noteUrl);
+  expect(browserProbe).toEqual({
+    status: 206,
+    contentRange: "bytes 0-14/15",
+    body: "server baseline",
+  });
+
+  const browserLoadPromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      response.url().includes("/artifacts/mnt/user-data/outputs/note.txt"),
+  );
+  await selectPresentedArtifact(page, threadId, notePath);
+  const browserLoad = await browserLoadPromise;
+  expect(browserLoad.status()).toBe(206);
+  expect(browserLoad.request().headers().range).toBe("bytes=0-1048575");
+  expect(new TextDecoder().decode(await browserLoad.body())).toBe(
+    "server baseline",
+  );
+  const formalPanel = page.locator("#artifacts");
+  await expect(
+    formalPanel.getByText("server baseline", { exact: true }),
+  ).toBeVisible({ timeout: 30_000 });
+  await formalPanel.getByLabel("Edit artifact").click();
+  await formalPanel.getByTestId("artifact-editor").fill("vue draft survives");
+
+  const concurrentPut = await context.request.put(noteUrl, {
+    data: {
+      content: "remote winner",
+      expected_sha256: firstPutBody.sha256,
+    },
+  });
+  expect(concurrentPut.status(), await concurrentPut.text()).toBe(200);
+  const conflictResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" &&
+      response.url().includes("/artifacts/mnt/user-data/outputs/note.txt"),
+  );
+  await formalPanel.getByLabel("Save artifact").click();
+  const conflictResponse = await conflictResponsePromise;
+  expect(conflictResponse.status()).toBe(412);
+  expect(conflictResponse.request().postDataJSON()).toEqual({
+    content: "vue draft survives",
+    expected_sha256: firstPutBody.sha256,
+  });
+  await expect(formalPanel.getByRole("alert")).toContainText(
+    "Artifact changed since it was opened",
+  );
+  await expect(formalPanel.getByTestId("artifact-editor")).toHaveValue(
+    "vue draft survives",
+  );
+  await formalPanel.getByLabel("Discard artifact changes").click();
+
+  const uploads = [
+    {
+      name: "report.docx",
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      buffer: Buffer.from("PK\u0003\u0004docx"),
+    },
+    {
+      name: "bundle.zip",
+      mimeType: "application/zip",
+      buffer: Buffer.from("PK\u0003\u0004zip"),
+    },
+    {
+      name: "payload.bin",
+      mimeType: "application/octet-stream",
+      buffer: Buffer.from([0, 1, 2, 3]),
+    },
+  ];
+  for (const file of uploads) {
+    const uploaded = await context.request.post(
+      `${APP}/api/threads/${threadId}/uploads`,
+      { multipart: { files: file } },
+    );
+    expect(uploaded.status(), await uploaded.text()).toBe(200);
+  }
+
+  const artifactGets: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "GET" && request.url().includes("/artifacts/")) {
+      artifactGets.push(decodeURIComponent(request.url()));
+    }
+  });
+  for (const file of uploads) {
+    const path = `/mnt/user-data/uploads/${file.name}`;
+    await selectPresentedArtifact(page, threadId, path);
+    const policyPanel = page.locator("#artifacts");
+    await expect(policyPanel.getByText("Download-only file.")).toBeVisible();
+    await expect(policyPanel.getByLabel("Edit artifact")).toHaveCount(0);
+    await expect(policyPanel.getByTestId("artifact-editor")).toHaveCount(0);
+    expect(artifactGets.some((url) => url.includes(file.name))).toBe(false);
+  }
+
+  const largeHtml = Buffer.from(
+    `<!doctype html><html><body>${"x".repeat(1_100_000)}</body></html>`,
+  );
+  const htmlUpload = await context.request.post(
+    `${APP}/api/threads/${threadId}/uploads`,
+    {
+      multipart: {
+        files: {
+          name: "large.html",
+          mimeType: "text/html",
+          buffer: largeHtml,
+        },
+      },
+    },
+  );
+  expect(htmlUpload.status(), await htmlUpload.text()).toBe(200);
+  await selectPresentedArtifact(
+    page,
+    threadId,
+    "/mnt/user-data/uploads/large.html",
+  );
+  const htmlPanel = page.locator("#artifacts");
+  await expect(htmlPanel.getByLabel("Load full file")).toBeVisible();
+  await expect(
+    htmlPanel.locator("iframe[title='Artifact preview']"),
+  ).toHaveCount(0);
+  await expect(htmlPanel.getByTestId("artifact-editor")).toHaveCount(0);
 });

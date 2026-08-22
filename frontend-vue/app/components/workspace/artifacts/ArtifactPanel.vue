@@ -1,42 +1,41 @@
 <script setup lang="ts">
 /*
-  【文件职责】     DeerFlow artifact 加载、预览、编辑、冲突和下载面板。
+  【文件职责】     编排 artifact 分类、有限加载、预览、编辑、动作与 stale 结果隔离。
   【对应 frontend/】 src/components/workspace/artifacts/artifact-panel.tsx
   【架构位置】     L3 extension reference
   【主要导出】     默认 ArtifactPanel 组件
-  【依赖关系】     artifacts API · StreamMarkdown L2 · useArtifactsPanel
-  【边界与注意】   M8 的单向扩展参考：消费 L2，artifact 业务不得反向进入 L2。
+  【依赖关系】     ArtifactPolicy · useArtifactDraft · ArtifactFileList/Editor/Preview/Actions
+  【边界与注意】   drafts/离开决策由父层唯一 owner 持有；本组件只拥有当前 path 的短生命周期 I/O。
 */
-import { computed, reactive, ref, watch } from "vue";
-import { Download, Edit3, Eye, Save, X } from "lucide-vue-next";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { Eye, X } from "lucide-vue-next";
 
-import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue";
+import ArtifactActions from "./ArtifactActions.vue";
+import ArtifactEditor from "./ArtifactEditor.vue";
+import ArtifactFileList from "./ArtifactFileList.vue";
+import ArtifactPreview from "./ArtifactPreview.vue";
+
 import {
-  updateArtifactContent,
   ArtifactRequestError,
+  updateArtifactContent,
 } from "@/core/artifacts/api";
-import {
-  canEditOpenedArtifact,
-  createArtifactDraft,
-  reconcileArtifactDraft,
-  type ArtifactDraftState,
-} from "@/core/artifacts/editing";
+import { probeArtifactAction } from "@/core/artifacts/actions";
 import {
   loadArtifactContent,
   loadArtifactContentFromToolCall,
 } from "@/core/artifacts/loader";
 import {
-  getArtifactViewState,
-  isWriteFileArtifact,
-  rewriteHtmlPreviewResourceUrls,
-} from "@/core/artifacts/preview";
+  canInstallSkillArtifact,
+  canLoadArtifactText,
+  canSaveArtifactText,
+  classifyArtifact,
+} from "@/core/artifacts/policy";
+import { canRenderArtifactHtml } from "@/core/artifacts/preview-policy";
 import { urlOfArtifact } from "@/core/artifacts/utils";
+import { writeTextToClipboard } from "@/core/clipboard";
+import { installSkill } from "@/core/skills/api";
 import type { Message } from "@/core/types/message";
-import {
-  rawHtmlRehypePlugins,
-  rehypeHeadingSlugs,
-} from "@/core/markdown/plugins";
-import type { PluggableList } from "unified";
+import type { ArtifactDraftOwner } from "@/composables/useArtifactDraft";
 
 const props = defineProps<{
   threadId: string;
@@ -46,167 +45,240 @@ const props = defineProps<{
   messages: Message[];
   streaming: boolean;
   isMock?: boolean;
+  isAdmin?: boolean;
+  draftOwner: ArtifactDraftOwner;
 }>();
-const emit = defineEmits<{
-  close: [];
-  select: [path: string];
-}>();
+const emit = defineEmits<{ close: []; select: [path: string] }>();
 
 const content = ref("");
 const contentUrl = ref<string>();
 const sha256 = ref<string>();
 const truncated = ref(false);
+const fullContentLoaded = ref(false);
 const previewBytes = ref<number>();
 const totalBytes = ref<number>();
 const loading = ref(false);
 const error = ref("");
-const artifactMenuOpen = ref(false);
-const fullRequested = ref(false);
+const notice = ref("");
 const viewMode = ref<"code" | "preview">("code");
-const editing = ref(false);
 const saving = ref(false);
-const drafts = reactive<Record<string, ArtifactDraftState>>({});
-const artifactRehypePlugins: PluggableList = [
-  ...rawHtmlRehypePlugins.slice(0, 1),
-  rehypeHeadingSlugs,
-  ...rawHtmlRehypePlugins.slice(1),
-];
+const installing = ref(false);
+let loadGeneration = 0;
+let saveGeneration = 0;
+let actionGeneration = 0;
+let loadController: AbortController | null = null;
+let actionController: AbortController | null = null;
+let disposed = false;
 
-const isWrite = computed(() => isWriteFileArtifact(props.selected));
+const isWrite = computed(() => props.selected.startsWith("write-file:"));
 const filepath = computed(() => {
   if (!isWrite.value) return props.selected;
   try {
     return decodeURIComponent(new URL(props.selected).pathname);
   } catch {
-    return props.selected.replace(/^write-file:/, "");
+    return props.selected.slice("write-file:".length);
   }
 });
 const filename = computed(
   () => filepath.value.split("/").filter(Boolean).at(-1) ?? filepath.value,
 );
-const extension = computed(
-  () => filename.value.split(".").at(-1)?.toLowerCase() ?? "",
-);
-const browserKind = computed<"image" | "audio" | "video" | "document" | null>(
-  () => {
-    if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(extension.value))
-      return "image";
-    if (["mp3", "wav", "ogg", "m4a"].includes(extension.value)) return "audio";
-    if (["mp4", "webm", "mov"].includes(extension.value)) return "video";
-    if (["pdf"].includes(extension.value)) return "document";
-    return null;
-  },
-);
-const language = computed(() => {
-  if (["md", "markdown", "skill"].includes(extension.value)) return "markdown";
-  if (["html", "htm"].includes(extension.value)) return "html";
-  return "text";
-});
-const codeFile = computed(
-  () => browserKind.value === null || language.value !== "text",
+const policy = computed(() =>
+  classifyArtifact(props.selected, { isMock: props.isMock }),
 );
 const toolResult = computed(() => {
   if (!isWrite.value) return undefined;
-  const callId = new URL(props.selected).searchParams.get("tool_call_id");
+  let callId: string | null = null;
+  try {
+    callId = new URL(props.selected).searchParams.get("tool_call_id");
+  } catch {
+    return undefined;
+  }
   if (!callId) return undefined;
-  const result = props.messages.find(
-    (message) => message.type === "tool" && message.tool_call_id === callId,
+  const message = props.messages.find(
+    (candidate) =>
+      candidate.type === "tool" && candidate.tool_call_id === callId,
   );
-  if (!result) return undefined;
-  return typeof result.content === "string" ? result.content : undefined;
+  return typeof message?.content === "string" ? message.content : undefined;
 });
-const previewState = computed(() =>
-  getArtifactViewState({
-    filepath: props.selected,
-    isSupportPreview:
-      language.value === "html" || language.value === "markdown",
-    toolResult: toolResult.value,
-    content: content.value,
+const options = computed(() => [
+  ...new Set([
+    ...props.openedPresentedArtifacts.filter(
+      (path) => !props.artifacts.includes(path),
+    ),
+    ...props.artifacts,
+  ]),
+]);
+const activeDraft = computed(() => props.draftOwner.ensure(filepath.value));
+const editing = computed(
+  () => props.draftOwner.editingPath.value === filepath.value,
+);
+const dirty = computed(
+  () => activeDraft.value.draftContent !== activeDraft.value.baselineContent,
+);
+const canEdit = computed(() =>
+  canSaveArtifactText(policy.value, {
+    hasRevision: Boolean(sha256.value),
+    fullContentLoaded: fullContentLoaded.value,
   }),
 );
-const src = computed(() =>
+const sourceUrl = computed(() =>
   urlOfArtifact({
     filepath: filepath.value,
     threadId: props.threadId,
     isMock: props.isMock,
   }),
 );
-const options = computed(() => {
-  const opened = props.openedPresentedArtifacts.filter(
-    (path) => !props.artifacts.includes(path),
-  );
-  return [...new Set([...opened, ...props.artifacts])];
-});
-const activeDraft = computed(
-  () => drafts[filepath.value] ?? createArtifactDraft(filepath.value),
-);
-const dirty = computed(
-  () => activeDraft.value.draftContent !== activeDraft.value.baselineContent,
-);
-const canEdit = computed(() =>
-  canEditOpenedArtifact({
+const downloadUrl = computed(() =>
+  urlOfArtifact({
     filepath: filepath.value,
-    isCodeFile: codeFile.value,
-    isWriteFile: isWrite.value,
-    isSkillFile: filepath.value.endsWith(".skill"),
-    isMock: props.isMock ?? false,
-    hasRevision: Boolean(sha256.value),
-    isStaticWebsite: false,
+    threadId: props.threadId,
+    download: true,
+    isMock: props.isMock,
   }),
 );
-const displayedContent = computed(() =>
-  editing.value ? activeDraft.value.draftContent : content.value,
+const htmlPreviewAllowed = computed(
+  () =>
+    policy.value.kind === "text" &&
+    policy.value.language === "html" &&
+    canRenderArtifactHtml({
+      source:
+        policy.value.source === "write-file-draft"
+          ? policy.value.source
+          : "formal",
+      content: content.value,
+      truncated: truncated.value,
+      fullContentLoaded: fullContentLoaded.value,
+      toolResult: toolResult.value,
+    }),
+);
+const previewAllowed = computed(() => {
+  if (
+    policy.value.kind === "browser-media" ||
+    policy.value.kind === "safe-document"
+  ) {
+    return true;
+  }
+  if (policy.value.kind !== "text") return false;
+  if (
+    policy.value.source === "write-file-draft" &&
+    toolResult.value !== undefined &&
+    toolResult.value.trim() !== "OK"
+  ) {
+    return false;
+  }
+  return policy.value.language === "markdown" || htmlPreviewAllowed.value;
+});
+const canCopy = computed(
+  () => policy.value.kind === "text" && !truncated.value && !loading.value,
+);
+const hasGatewayArtifact = computed(
+  () => policy.value.source !== "write-file-draft",
+);
+const canInstall = computed(() =>
+  canInstallSkillArtifact(policy.value, { isAdmin: props.isAdmin === true }),
 );
 
-async function load(full = false) {
-  loading.value = true;
+function resetTransientState() {
+  loading.value = false;
+  content.value = "";
+  contentUrl.value = undefined;
+  sha256.value = undefined;
+  truncated.value = false;
+  fullContentLoaded.value = false;
+  previewBytes.value = undefined;
+  totalBytes.value = undefined;
   error.value = "";
-  try {
-    if (isWrite.value) {
-      const draft = loadArtifactContentFromToolCall({
-        url: props.selected,
-        thread: { messages: props.messages } as never,
-      });
-      content.value = typeof draft === "string" ? draft : "";
-      contentUrl.value = undefined;
-      sha256.value = undefined;
-      truncated.value = false;
-    } else if (browserKind.value === null || language.value !== "text") {
-      const result = await loadArtifactContent({
-        filepath: props.selected,
-        threadId: props.threadId,
-        isMock: props.isMock,
-        full,
-      });
-      content.value = result.content;
-      contentUrl.value = result.url;
-      sha256.value = result.sha256;
-      truncated.value = result.truncated;
-      previewBytes.value = result.previewBytes;
-      totalBytes.value = result.totalBytes;
-      if (result.sha256) {
-        const current =
-          drafts[filepath.value] ?? createArtifactDraft(filepath.value);
-        drafts[filepath.value] = reconcileArtifactDraft(current, {
-          content: result.content,
-          sha256: result.sha256,
-        });
-      }
-    }
-    viewMode.value = previewState.value.initialViewMode;
-  } catch (reason) {
-    error.value =
-      reason instanceof Error ? reason.message : "Failed to load artifact";
-  } finally {
+  notice.value = "";
+  viewMode.value = "code";
+}
+
+async function load(full = false) {
+  const generation = ++loadGeneration;
+  const selected = props.selected;
+  const threadId = props.threadId;
+  error.value = "";
+  notice.value = "";
+
+  if (policy.value.source === "write-file-draft") {
+    const draft = loadArtifactContentFromToolCall({
+      url: selected,
+      thread: { messages: props.messages } as never,
+    });
+    content.value = typeof draft === "string" ? draft : "";
+    truncated.value = false;
+    fullContentLoaded.value = toolResult.value !== undefined;
+    viewMode.value = previewAllowed.value ? "preview" : "code";
+    return;
+  }
+
+  if (!canLoadArtifactText(policy.value)) {
     loading.value = false;
+    return;
+  }
+
+  loadController?.abort();
+  loadController = new AbortController();
+  loading.value = true;
+  try {
+    const result = await loadArtifactContent({
+      filepath: selected,
+      threadId,
+      isMock: props.isMock,
+      full,
+      signal: loadController.signal,
+    });
+    if (
+      disposed ||
+      generation !== loadGeneration ||
+      selected !== props.selected ||
+      threadId !== props.threadId
+    ) {
+      return;
+    }
+    content.value = result.content;
+    contentUrl.value = result.url;
+    sha256.value = result.sha256;
+    truncated.value = result.truncated;
+    fullContentLoaded.value = !result.truncated;
+    previewBytes.value = result.previewBytes;
+    totalBytes.value = result.totalBytes;
+    if (result.sha256) {
+      props.draftOwner.reconcile(filepath.value, {
+        content: result.content,
+        sha256: result.sha256,
+      });
+    }
+    viewMode.value = previewAllowed.value ? "preview" : "code";
+  } catch (reason) {
+    if (
+      generation === loadGeneration &&
+      !disposed &&
+      !(reason instanceof DOMException && reason.name === "AbortError")
+    ) {
+      error.value =
+        reason instanceof Error ? reason.message : "Failed to load artifact";
+    }
+  } finally {
+    if (generation === loadGeneration && !disposed) {
+      loading.value = false;
+      loadController = null;
+    }
   }
 }
 
 watch(
   () => [props.selected, props.threadId] as const,
   () => {
-    fullRequested.value = false;
-    editing.value = false;
+    loadGeneration += 1;
+    saveGeneration += 1;
+    actionGeneration += 1;
+    loadController?.abort();
+    loadController = null;
+    actionController?.abort();
+    actionController = null;
+    saving.value = false;
+    installing.value = false;
+    resetTransientState();
     void load(false);
   },
   { immediate: true },
@@ -219,62 +291,160 @@ watch(
   { deep: true },
 );
 
-async function loadFull() {
-  fullRequested.value = true;
-  await load(true);
-}
 function beginEdit() {
-  if (!canEdit.value) return;
-  editing.value = true;
+  if (canEdit.value) props.draftOwner.beginEdit(filepath.value);
 }
-function selectArtifact(path: string) {
-  artifactMenuOpen.value = false;
-  emit("select", path);
+
+function updateDraft(value: string) {
+  props.draftOwner.update(filepath.value, value);
 }
+
+function discard() {
+  props.draftOwner.discard(filepath.value);
+  props.draftOwner.requestExitEdit(filepath.value);
+  content.value = activeDraft.value.remoteContent;
+  sha256.value = activeDraft.value.remoteSha256 ?? undefined;
+  error.value = "";
+}
+
+function exitEdit() {
+  if (!props.draftOwner.requestExitEdit(filepath.value)) return;
+  content.value = activeDraft.value.remoteContent;
+  sha256.value = activeDraft.value.remoteSha256 ?? undefined;
+  error.value = "";
+}
+
 async function save() {
+  const draft = activeDraft.value;
   if (
     !canEdit.value ||
     !dirty.value ||
     props.streaming ||
     saving.value ||
-    activeDraft.value.conflict ||
-    !activeDraft.value.baselineSha256
-  )
+    draft.conflict ||
+    !draft.baselineSha256
+  ) {
     return;
+  }
+  const generation = ++saveGeneration;
+  const selected = props.selected;
+  const threadId = props.threadId;
+  const path = filepath.value;
+  const savedContent = draft.draftContent;
   saving.value = true;
+  error.value = "";
   try {
     const result = await updateArtifactContent({
-      threadId: props.threadId,
-      filepath: filepath.value,
-      content: activeDraft.value.draftContent,
-      expectedSha256: activeDraft.value.baselineSha256,
+      threadId,
+      filepath: path,
+      content: savedContent,
+      expectedSha256: draft.baselineSha256,
     });
-    drafts[filepath.value] = {
-      filepath: filepath.value,
-      baselineContent: activeDraft.value.draftContent,
-      baselineSha256: result.sha256,
-      draftContent: activeDraft.value.draftContent,
-      conflict: false,
-    };
-    content.value = activeDraft.value.draftContent;
-    sha256.value = result.sha256;
-    editing.value = false;
-  } catch (reason) {
-    if (reason instanceof ArtifactRequestError && reason.status === 412) {
-      drafts[filepath.value] = { ...activeDraft.value, conflict: true };
-      error.value = "The artifact changed remotely. Your draft was preserved.";
-    } else if (
-      reason instanceof ArtifactRequestError &&
-      reason.status === 409
+    if (
+      disposed ||
+      generation !== saveGeneration ||
+      selected !== props.selected ||
+      threadId !== props.threadId
     ) {
-      error.value = "The artifact cannot be saved while a run is active.";
-    } else {
-      error.value = reason instanceof Error ? reason.message : "Save failed";
+      return;
     }
+    props.draftOwner.completeSave(path, result.sha256);
+    content.value = savedContent;
+    sha256.value = result.sha256;
+    props.draftOwner.requestExitEdit(path);
+  } catch (reason) {
+    if (
+      disposed ||
+      generation !== saveGeneration ||
+      selected !== props.selected ||
+      threadId !== props.threadId
+    ) {
+      return;
+    }
+    const status =
+      reason instanceof ArtifactRequestError ? reason.status : undefined;
+    if (status !== undefined) props.draftOwner.failSave(path, status);
+    error.value = reason instanceof Error ? reason.message : "Save failed";
   } finally {
-    saving.value = false;
+    if (generation === saveGeneration && !disposed) saving.value = false;
   }
 }
+
+async function copyArtifact() {
+  error.value = "";
+  if ((await writeTextToClipboard(content.value)) === false) {
+    error.value = "Unable to copy artifact content.";
+  }
+}
+
+async function runGatewayAction(kind: "open" | "download") {
+  const generation = ++actionGeneration;
+  actionController?.abort();
+  actionController = new AbortController();
+  error.value = "";
+  const url = kind === "open" ? sourceUrl.value : downloadUrl.value;
+  try {
+    await probeArtifactAction(url, actionController.signal);
+    if (disposed || generation !== actionGeneration) return;
+    if (kind === "open") {
+      globalThis.open(url, "_blank", "noopener,noreferrer");
+    } else {
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename.value;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    }
+  } catch (reason) {
+    if (generation === actionGeneration && !disposed) {
+      error.value = reason instanceof Error ? reason.message : `${kind} failed`;
+    }
+  } finally {
+    if (generation === actionGeneration) actionController = null;
+  }
+}
+
+async function installArtifactSkill() {
+  if (!canInstall.value || installing.value) return;
+  const generation = ++actionGeneration;
+  installing.value = true;
+  error.value = "";
+  notice.value = "";
+  try {
+    const result = await installSkill({
+      thread_id: props.threadId,
+      path: filepath.value,
+    });
+    if (disposed || generation !== actionGeneration) return;
+    if (!result.success) {
+      error.value = result.message;
+      return;
+    }
+    notice.value = result.message;
+  } catch (reason) {
+    if (generation === actionGeneration && !disposed) {
+      error.value = reason instanceof Error ? reason.message : "Install failed";
+    }
+  } finally {
+    if (generation === actionGeneration && !disposed) installing.value = false;
+  }
+}
+
+async function loadFull() {
+  await load(true);
+}
+
+onBeforeUnmount(() => {
+  disposed = true;
+  loadGeneration += 1;
+  saveGeneration += 1;
+  actionGeneration += 1;
+  loadController?.abort();
+  loadController = null;
+  actionController?.abort();
+  actionController = null;
+});
 </script>
 
 <template>
@@ -286,40 +456,21 @@ async function save() {
     <header
       class="border-border flex h-12 shrink-0 items-center gap-2 border-b px-3"
     >
-      <div v-if="!isWrite" class="relative min-w-0 flex-1">
-        <button
-          type="button"
-          role="combobox"
-          :aria-expanded="artifactMenuOpen"
-          aria-label="Select artifact"
-          class="hover:bg-accent block h-8 w-full truncate rounded px-2 text-left text-sm font-medium"
-          @click="artifactMenuOpen = !artifactMenuOpen"
-        >
-          {{ filename }}
-        </button>
-        <div
-          v-if="artifactMenuOpen"
-          role="listbox"
-          class="bg-background border-border absolute top-full left-0 z-40 mt-1 max-h-64 min-w-full overflow-auto rounded-md border p-1 shadow-lg"
-        >
-          <button
-            v-for="option in options"
-            :key="option"
-            type="button"
-            role="option"
-            :aria-selected="option === filepath"
-            class="hover:bg-accent block w-full rounded px-2 py-1.5 text-left text-sm whitespace-nowrap"
-            @click="selectArtifact(option)"
-          >
-            {{ option.split("/").at(-1) }}
-          </button>
-        </div>
-      </div>
+      <ArtifactFileList
+        v-if="!isWrite"
+        :current="filepath"
+        :options="options"
+        @select="emit('select', $event)"
+      />
       <strong v-else class="min-w-0 flex-1 truncate text-sm">{{
         filename
       }}</strong>
       <button
-        v-if="previewState.canPreview"
+        v-if="
+          policy.kind === 'text' &&
+          ['html', 'markdown'].includes(policy.language) &&
+          previewAllowed
+        "
         type="button"
         :aria-label="viewMode === 'preview' ? 'Show code' : 'Show preview'"
         class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
@@ -327,34 +478,27 @@ async function save() {
       >
         <Eye :size="15" />
       </button>
-      <button
-        v-if="canEdit && !editing"
-        type="button"
-        aria-label="Edit artifact"
-        class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-        @click="beginEdit"
-      >
-        <Edit3 :size="15" />
-      </button>
-      <button
-        v-if="editing"
-        type="button"
-        aria-label="Save artifact"
-        class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-        :disabled="streaming || saving || !dirty || activeDraft.conflict"
-        @click="save"
-      >
-        <Save :size="15" />
-      </button>
-      <a
-        :href="urlOfArtifact({ filepath, threadId, download: true, isMock })"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Download artifact"
-        class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-      >
-        <Download :size="15" />
-      </a>
+      <ArtifactActions
+        :can-edit="canEdit"
+        :editing="editing"
+        :dirty="dirty"
+        :conflict="activeDraft.conflict"
+        :streaming="streaming"
+        :saving="saving"
+        :can-copy="canCopy"
+        :can-open="hasGatewayArtifact"
+        :can-download="hasGatewayArtifact"
+        :can-install="canInstall"
+        :installing="installing"
+        @edit="beginEdit"
+        @save="save"
+        @exit="exitEdit"
+        @discard="discard"
+        @copy="copyArtifact"
+        @open="runGatewayAction('open')"
+        @download="runGatewayAction('download')"
+        @install="installArtifactSkill"
+      />
       <button
         type="button"
         aria-label="Close artifacts"
@@ -365,63 +509,31 @@ async function save() {
       </button>
     </header>
 
+    <p v-if="error" role="alert" class="text-destructive px-4 pt-3 text-sm">
+      {{ error }}
+    </p>
+    <p v-if="notice" role="status" class="px-4 pt-3 text-sm">{{ notice }}</p>
     <div class="relative min-h-0 flex-1 overflow-auto">
       <p v-if="loading" class="text-muted-foreground p-4 text-sm">
         Loading artifact…
       </p>
-      <p v-else-if="error" class="text-destructive p-4 text-sm">{{ error }}</p>
-      <template v-else-if="browserKind && language === 'text'">
-        <img
-          v-if="browserKind === 'image'"
-          :src="src"
-          :alt="filename"
-          class="size-full object-contain"
-        />
-        <audio
-          v-else-if="browserKind === 'audio'"
-          :src="src"
-          :aria-label="filename"
-          controls
-          class="m-auto w-4/5"
-        />
-        <video
-          v-else-if="browserKind === 'video'"
-          :src="src"
-          :aria-label="filename"
-          controls
-          playsinline
-          class="size-full bg-black object-contain"
-        />
-        <iframe v-else :src="src" class="size-full" sandbox="" />
-      </template>
-      <textarea
-        v-else-if="editing"
-        v-model="drafts[filepath]!.draftContent"
-        class="size-full resize-none bg-transparent p-4 font-mono text-xs outline-none"
-        spellcheck="false"
+      <ArtifactEditor
+        v-else-if="editing && canEdit"
+        :model-value="activeDraft.draftContent"
+        @update:model-value="updateDraft"
       />
-      <div
-        v-else-if="viewMode === 'preview' && language === 'markdown'"
-        class="size-full overflow-auto px-4 py-3"
-      >
-        <StreamMarkdown
-          :content="displayedContent"
-          :rehype-plugins="artifactRehypePlugins"
-        />
-      </div>
-      <iframe
-        v-else-if="viewMode === 'preview' && language === 'html'"
-        title="Artifact preview"
-        class="size-full"
-        sandbox="allow-scripts allow-forms"
-        :srcdoc="rewriteHtmlPreviewResourceUrls(displayedContent, contentUrl)"
-      />
-      <pre
+      <ArtifactPreview
         v-else
-        class="min-h-full overflow-auto p-4 font-mono text-xs leading-5 whitespace-pre-wrap"
-        >{{ displayedContent }}</pre>
+        :policy="policy"
+        :filename="filename"
+        :content="content"
+        :url="sourceUrl"
+        :content-url="contentUrl"
+        :view-mode="viewMode"
+        :html-preview-allowed="htmlPreviewAllowed"
+      />
       <div
-        v-if="truncated && !fullRequested"
+        v-if="truncated"
         class="border-border bg-background sticky right-0 bottom-0 left-0 flex items-center justify-between border-t px-4 py-3 text-sm"
       >
         <span class="text-muted-foreground">
@@ -429,7 +541,9 @@ async function save() {
         </span>
         <button
           type="button"
+          aria-label="Load full file"
           class="rounded border px-3 py-1.5"
+          :disabled="loading"
           @click="loadFull"
         >
           Load full file

@@ -31,6 +31,11 @@
 | `browser/geometry.ts`                 | `ADAPTED` | `components/workspace/browser-view/browser-view-panel.tsx` | WP-05：提取 object-contain 内容盒坐标和 wheel delta 归一化，显式拒绝 letterbox 外指针。                                                                                                |
 | `browser/keyboard.ts`                 | `ADAPTED` | `components/workspace/browser-view/keyboard.ts`            | WP-05：保留 React 的远端 text/key 语义，并补齐 keyup、IME 与宿主浏览器/系统快捷键边界。                                                                                                |
 | `browser/protocol.ts`                 | `ADAPTED` | `components/workspace/browser-view/use-browser-stream.ts`  | WP-05：集中声明 Gateway 已存在的 browser 输入、tab 与连接状态；不发明 live/static wire 字段。                                                                                          |
+| `artifacts/actions.ts`                | `ADAPTED` | `components/workspace/artifacts/artifact-file-detail.tsx`  | WP-06：open/download 在浏览器动作前通过既有 GET + Range 预检，保留 Gateway status/detail，不伪造成功。                                                                                 |
+| `artifacts/draft.ts`                  | `ADAPTED` | `core/artifacts/editing.ts`                                | WP-06：将 baseline、latest remote、dirty draft 与 412 冲突收敛成纯状态机，远端刷新不覆盖用户草稿。                                                                                     |
+| `artifacts/loader.ts`                 | `ADAPTED` | `core/artifacts/loader.ts`                                 | WP-06：加载受显式 text policy 约束，去掉 `.skill` 隐式文本分支，保留 Gateway detail，并接受 AbortSignal。                                                                              |
+| `artifacts/policy.ts`                 | `ADAPTED` | `core/utils/files.tsx`                                     | WP-06：显式 allowlist 分类和加载/保存/install 能力；未知、无扩展名、SVG、Office 与归档 fail closed。                                                                                   |
+| `artifacts/preview-policy.ts`         | `ADAPTED` | `core/artifacts/preview.ts`                                | WP-06：正式 HTML 必须完整且未截断才可 iframe；write_file 的流式前缀和完成态 D3 边界分离。                                                                                              |
 | `async/generation.ts`                 | `ADDED`   | —                                                          | WP-03：route/thread/generation 的框架无关 stale guard；由 composer 与 post-run suggestions 共用，替代散落的 mounted flag。                                                             |
 | `input/ime.ts`                        | `ADAPTED` | `lib/ime.ts`                                               | M7 输入法保护纯函数；去掉 React `nativeEvent` 包装，保留 composition state、`isComposing` 与 Safari keyCode 229 三重判定。                                                             |
 | `input/keyboard.ts`                   | `ADDED`   | —                                                          | M7 全局键盘边界；识别 input/textarea/select/contenteditable，防止 sidebar 快捷键劫持合法文本输入。                                                                                     |
@@ -169,7 +174,6 @@
 
 <!-- RETYPED:BEGIN 由 `make land-retyped` 生成，勿手改 -->
 
-| `artifacts/loader.ts` | `RETYPED` | `artifacts/loader.ts` | SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk/react → @/core/types/message） |
 | `artifacts/utils.ts` | `RETYPED` | `artifacts/utils.ts` | 依赖不迁的模块（static-mode.ts），该 import 必须删除或改写。 删掉 isStaticWebsiteOnly 早返回与随之无消费方的 staticDemoArtifactURL。 |
 | `auth/auth-disabled-user.ts` | `RETYPED` | `auth/auth-disabled-user.ts` | 读 process.env；Nuxt 客户端产物没有该全局，改为接收注入的 runtime options。 |
 | `config/index.ts` | `RETYPED` | `config/index.ts` | 改为接收普通 runtime options，纯 core 不调用 useRuntimeConfig()。（@/env → runtime options） |

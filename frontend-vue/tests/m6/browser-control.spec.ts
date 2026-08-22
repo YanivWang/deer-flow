@@ -7,7 +7,13 @@
   【边界与注意】   Mock Gateway/WS 证明浏览器接线；真实握手、权限与 Chromium runtime 由 M6 real gate 证明。
 */
 
-import { expect, test, type Page, type WebSocketRoute } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Locator,
+  type Page,
+  type WebSocketRoute,
+} from "@playwright/test";
 
 import {
   mockLangGraphAPI,
@@ -91,6 +97,34 @@ async function prepareBrowser(page: Page) {
   };
 }
 
+async function waitForStableBoundingBox(locator: Locator) {
+  let previous = "";
+  let stableSamples = 0;
+  await expect
+    .poll(
+      async () => {
+        const box = await locator.boundingBox();
+        if (!box) {
+          previous = "";
+          stableSamples = 0;
+          return false;
+        }
+        const signature = [box.x, box.y, box.width, box.height]
+          .map((value) => value.toFixed(1))
+          .join(":");
+        stableSamples = signature === previous ? stableSamples + 1 : 0;
+        previous = signature;
+        return stableSamples >= 2;
+      },
+      { timeout: 5_000, intervals: [50, 100, 100] },
+    )
+    .toBe(true);
+
+  const box = await locator.boundingBox();
+  if (!box) throw new Error("Browser image has no stable bounding box.");
+  return box;
+}
+
 test.describe("Vue browser control", () => {
   test("auto-opens the newest static frame and converges URL/title from live Gateway state", async ({
     page,
@@ -133,12 +167,11 @@ test.describe("Vue browser control", () => {
         image.evaluate((element) => (element as HTMLImageElement).naturalWidth),
       )
       .toBe(800);
-    const box = await image.boundingBox();
-    expect(box).not.toBeNull();
-    const centerX = box!.x + box!.width / 2;
-    const centerY = box!.y + box!.height / 2;
+    const box = await waitForStableBoundingBox(image);
+    const centerX = box.x + box.width / 2;
+    const centerY = box.y + box.height / 2;
 
-    await page.mouse.click(box!.x + 2, box!.y + 2);
+    await page.mouse.click(box.x + 2, box.y + 2);
     await page.mouse.click(centerX, centerY);
     await page.mouse.move(centerX + 8, centerY + 4);
     await page.mouse.wheel(4, 8);

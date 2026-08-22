@@ -125,7 +125,12 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
   thread-scoped ref；切换 thread、stop、error、finish 或 scope dispose 时按合同收敛。
 - Pinia 只允许保存跨页面的客户端/UI 状态，不得复制 thread/session 等服务端真相。
 - artifacts、sidecar、browser：各自 composable/集成根持有面板状态，但最终业务数据仍来自同一
-  thread snapshot/API。sidecar 进一步拆成 `useSidecar` 的开关/引用状态与
+  thread snapshot/API。artifacts 由 `useArtifactsPanel` 持有 open/selection UI 状态，
+  `useArtifactDraft` 独占 baseline/remote/draft/dirty/conflict/edit 生命周期；切文件、关面板、
+  切右侧产品、切线程、路由离开和 `beforeunload` 都必须先经过该 owner。文件能力只由
+  `app/core/artifacts/policy.ts` 的显式扩展名/source allowlist 决定，未知、Office、archive、
+  SVG、无扩展名和其他二进制 fail closed；MIME 不提升能力。`ArtifactPanel` 只编排当前路径的
+  abort/generation 与 I/O，FileList、Editor、Preview、Actions 不复制状态。sidecar 进一步拆成 `useSidecar` 的开关/引用状态与
   `useSidecarSession` 的唯一会话状态；后者独占 restore-before-create、run、附件上传缓存、
   HIL 与真实删除，`SidecarPanel` 只做 UI 适配。隐藏或切换右侧面板不销毁 session，切换主
   thread 或 scope dispose 才使旧异步结果失效。

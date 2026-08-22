@@ -76,6 +76,8 @@ module changes:
 make verify
 make consumer-check     # changes to packages/agent-core
 make e2e-list           # inspect the shared browser-contract inventory
+make e2e-m5             # artifacts, sidecar and panel lifecycle contracts
+make e2e-m5-real-backend # real Gateway artifact Range/PUT/conflict contracts
 make e2e-m6             # includes Vue-owned browser DOM/wire contracts
 make e2e-m6-real-backend # real local Gateway + Chromium browser runtime
 make e2e-m7             # full Vue browser contract
@@ -120,6 +122,22 @@ REST responses. Closing the panel, changing threads, or disabling the feature
 stops reconnect timers, sockets, and pending REST work. Detailed ownership and
 hard input/cleanup rules live in [ARCHITECTURE.md](ARCHITECTURE.md) and
 [BEHAVIOR_CONTRACTS.md](BEHAVIOR_CONTRACTS.md).
+
+## Artifacts
+
+Artifact capabilities are selected by an explicit path/source policy. Known
+UTF-8 text and code can be loaded; images, audio, video and PDF use dedicated
+previews; Office files, archives, SVG, extensionless files and unknown binaries
+fail closed to download-only. MIME metadata never promotes an unknown filename
+to editable text. Formal HTML is previewed only after the complete document has
+loaded and passed the document-integrity check.
+
+Only fully loaded formal UTF-8 files under `/mnt/user-data/outputs` can enter
+edit mode. Saves carry the loaded SHA-256 revision, and Gateway conflicts or
+permission errors preserve the local draft. Dirty drafts protect file, panel,
+thread and route changes as well as page unload. Open and download first perform
+an authenticated one-byte Range probe; skill installation is available only for
+real skill artifacts when the current user has admin permission.
 
 ## Streaming behavior
 

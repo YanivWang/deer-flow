@@ -8,6 +8,8 @@ import { mockLangGraphAPI } from "../../../frontend/tests/e2e/utils/mock-api";
 const THREAD_ID = "00000000-0000-0000-0000-000000004354";
 const RUN_ID = "00000000-0000-0000-0000-000000004355";
 const MISSING_PATH_THREAD_ID = "00000000-0000-0000-0000-000000004356";
+const POLICY_THREAD_ID = "00000000-0000-0000-0000-000000004357";
+const DIRTY_THREAD_ID = "00000000-0000-0000-0000-000000004358";
 const ARTIFACT_PATH = "/artifact-fixtures/batched-report.md";
 
 const INITIAL_MESSAGES = [
@@ -235,4 +237,118 @@ test("does not open an artifact for a file tool call without a path", async ({
   await expect(writeFileStep).toBeVisible({ timeout: 15_000 });
   await writeFileStep.click();
   await expect(page.locator("#artifacts")).toBeHidden();
+});
+
+test("fails closed for Office/archive files and requires a full D3-valid HTML response", async ({
+  page,
+}) => {
+  const docx = "/mnt/user-data/outputs/report.docx";
+  const archive = "/mnt/user-data/outputs/bundle.zip";
+  const html = "/mnt/user-data/outputs/large.html";
+  const completeHtml =
+    "<!doctype html><html><head><style>body{color:red}</style></head><body>complete</body></html>";
+  mockLangGraphAPI(page, {
+    threads: [
+      {
+        thread_id: POLICY_THREAD_ID,
+        title: "Artifact file policy",
+        messages: INITIAL_MESSAGES,
+        artifacts: [docx, archive, html],
+      },
+    ],
+  });
+  let nonTextLoads = 0;
+  await page.route("**/api/threads/*/artifacts/**", async (route) => {
+    const url = decodeURIComponent(route.request().url());
+    if (url.includes("report.docx") || url.includes("bundle.zip")) {
+      nonTextLoads += 1;
+      return route.fulfill({ status: 500, body: "must not load" });
+    }
+    if (url.includes("large.html")) {
+      const range = route.request().headers().range;
+      if (range) {
+        return route.fulfill({
+          status: 206,
+          contentType: "text/html",
+          headers: {
+            "Content-Range": `bytes 0-${completeHtml.length - 1}/2000000`,
+          },
+          body: completeHtml,
+        });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: completeHtml,
+      });
+    }
+    return route.fallback();
+  });
+
+  await page.goto(`/workspace/chats/${POLICY_THREAD_ID}`);
+  await page.getByTestId("artifact-trigger").click();
+  const panel = page.locator("#artifacts");
+  await expect(panel.getByText("Download-only file.")).toBeVisible();
+  await expect(panel.getByLabel("Edit artifact")).toHaveCount(0);
+
+  await panel.getByRole("combobox").click();
+  await panel.getByRole("option", { name: "bundle.zip" }).click();
+  await expect(panel.getByText("Download-only file.")).toBeVisible();
+  expect(nonTextLoads).toBe(0);
+
+  await panel.getByRole("combobox").click();
+  await panel.getByRole("option", { name: "large.html" }).click();
+  await expect(panel.getByLabel("Load full file")).toBeVisible();
+  await expect(panel.locator("iframe[title='Artifact preview']")).toHaveCount(
+    0,
+  );
+  await expect(panel.getByTestId("artifact-editor")).toHaveCount(0);
+  await panel.getByLabel("Load full file").click();
+  await expect(panel.locator("iframe[title='Artifact preview']")).toBeVisible();
+});
+
+test("uses the same dirty guard for file switch and panel close", async ({
+  page,
+}) => {
+  const first = "/mnt/user-data/outputs/first.txt";
+  const second = "/mnt/user-data/outputs/second.txt";
+  mockLangGraphAPI(page, {
+    threads: [
+      {
+        thread_id: DIRTY_THREAD_ID,
+        title: "Artifact dirty lifecycle",
+        messages: INITIAL_MESSAGES,
+        artifacts: [first, second],
+      },
+    ],
+  });
+  await page.route("**/api/threads/*/artifacts/**", (route) => {
+    const content = decodeURIComponent(route.request().url()).includes(
+      "second.txt",
+    )
+      ? "second"
+      : "first";
+    return route.fulfill({
+      status: 200,
+      contentType: "text/plain",
+      headers: { ETag: `"${"a".repeat(64)}"` },
+      body: content,
+    });
+  });
+
+  await page.goto(`/workspace/chats/${DIRTY_THREAD_ID}`);
+  await page.getByTestId("artifact-trigger").click();
+  const panel = page.locator("#artifacts");
+  await panel.getByLabel("Edit artifact").click();
+  await panel.getByTestId("artifact-editor").fill("dirty draft");
+
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await panel.getByRole("combobox").click();
+  await panel.getByRole("option", { name: "second.txt" }).click();
+  await expect(panel.getByTestId("artifact-editor")).toHaveValue("dirty draft");
+  await expect(panel.getByRole("combobox")).toContainText("first.txt");
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await panel.getByLabel("Close artifacts").click();
+  await expect(panel).toBeHidden();
 });

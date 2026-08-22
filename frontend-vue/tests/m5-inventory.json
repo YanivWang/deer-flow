@@ -1,6 +1,6 @@
 {
   "expectedFileCount": 6,
-  "expectedTestCount": 27,
+  "expectedTestCount": 29,
   "specFiles": [
     "frontend/tests/e2e/artifact-preview.spec.ts",
     "frontend/tests/e2e/artifact-stream-state.spec.ts",

@@ -97,6 +97,13 @@ const currentUserId = computed(() => {
   const session = auth.session.value;
   return session?.tag === "authenticated" ? session.user.id : null;
 });
+const isAdmin = computed(() => {
+  if (authDisabled) return AUTH_DISABLED_USER.system_role === "admin";
+  const session = auth.session.value;
+  return (
+    session?.tag === "authenticated" && session.user.system_role === "admin"
+  );
+});
 
 const routeThreadId = computed(() => {
   const raw = route.params.thread_id;
@@ -375,10 +382,10 @@ const activePanel = computed<"artifacts" | "sidecar" | "browser" | null>(() => {
 });
 const panelOpen = computed(() => activePanel.value !== null);
 
-function openArtifact(path: string) {
+function openArtifact(path: string, automatic = false) {
+  if (!artifactPanel.select(path, automatic)) return;
   browserOpen.value = false;
   sidecar.close();
-  artifactPanel.select(path);
 }
 async function toggleSidecar() {
   if (sidecar.open.value) {
@@ -386,14 +393,13 @@ async function toggleSidecar() {
     return;
   }
   const restored = await sidecarSession.restore({ force: true });
-  if (restored) {
+  if (restored && artifactPanel.close()) {
     browserOpen.value = false;
-    artifactPanel.close();
     sidecar.open.value = true;
   }
 }
 function openBrowser() {
-  artifactPanel.close();
+  if (!artifactPanel.close()) return;
   sidecar.close();
   browserOpen.value = true;
 }
@@ -411,8 +417,22 @@ function askInSidecar(payload: {
     payload.displayIndex,
   );
   if (!next) return;
-  artifactPanel.close();
+  if (!artifactPanel.close()) return;
   sidecar.openContext(next);
+}
+
+function showArtifacts() {
+  const first = artifactPanel.artifacts.value[0];
+  if (
+    !artifactPanel.selectedArtifact.value &&
+    first &&
+    !artifactPanel.select(first)
+  ) {
+    return;
+  }
+  if (!artifactPanel.setOpen(true)) return;
+  browserOpen.value = false;
+  sidecar.close();
 }
 function addToConversation(payload: {
   message: Message;
@@ -499,7 +519,7 @@ watch(
     const key = `${routeThreadId.value ?? "new"}\u0000${target}`;
     if (key === lastAutoOpenedArtifact.value) return;
     lastAutoOpenedArtifact.value = key;
-    openArtifact(target);
+    openArtifact(target, true);
   },
   { immediate: true },
 );
@@ -1018,14 +1038,7 @@ onUnmounted(() => {
           </button>
           <ArtifactTrigger
             :count="artifactPanel.artifacts.value.length"
-            @open="
-              browserOpen = false;
-              sidecar.close();
-              artifactPanel.setOpen(true);
-              if (!artifactPanel.selectedArtifact.value) {
-                artifactPanel.select(artifactPanel.artifacts.value[0]!);
-              }
-            "
+            @open="showArtifacts"
           />
           <BrowserTrigger v-if="browserEnabled" @open="openBrowser" />
           <NuxtLink
@@ -1273,6 +1286,8 @@ onUnmounted(() => {
         :messages="demoMessages ?? stream.messages.value"
         :streaming="stream.isStreaming.value"
         :is-mock="isDemo"
+        :is-admin="isAdmin"
+        :draft-owner="artifactPanel.draftOwner"
         @close="artifactPanel.close()"
         @select="artifactPanel.select($event)"
       />

@@ -22,6 +22,9 @@ const inventory = JSON.parse(
 const m6Inventory = JSON.parse(
   readFileSync(new URL("../m6-inventory.json", import.meta.url), "utf8"),
 ) as typeof inventory;
+const m5Inventory = JSON.parse(
+  readFileSync(new URL("../m5-inventory.json", import.meta.url), "utf8"),
+) as typeof inventory;
 const m7Inventory = JSON.parse(
   readFileSync(new URL("../m7-inventory.json", import.meta.url), "utf8"),
 ) as typeof inventory;
@@ -171,10 +174,21 @@ describe("M6 inventory and browser contract", () => {
   });
 });
 
+describe("M5 artifact inventory", () => {
+  it("keeps the exact WP-06 6-file / 29-test gate", () => {
+    expect(m5Inventory.expectedFileCount).toBe(6);
+    expect(m5Inventory.expectedTestCount).toBe(29);
+    expect(m5Inventory.specFiles).toHaveLength(6);
+    expect(m5Inventory.specFiles).toContain(
+      "frontend-vue/tests/m5/artifact-batched-stream.spec.ts",
+    );
+  });
+});
+
 describe("Vue M7 gate ownership", () => {
-  it("keeps the exact WP-05 26-file / 133-test gate and owns framework-specific specs", () => {
+  it("keeps the exact WP-06 26-file / 135-test gate and owns framework-specific specs", () => {
     expect(m7Inventory.expectedFileCount).toBe(26);
-    expect(m7Inventory.expectedTestCount).toBe(133);
+    expect(m7Inventory.expectedTestCount).toBe(135);
     expect(m7Inventory.specFiles).toHaveLength(26);
     expect(m7Inventory.specFiles).toContain(
       "frontend-vue/tests/m5/artifact-batched-stream.spec.ts",

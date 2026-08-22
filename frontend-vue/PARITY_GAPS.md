@@ -111,10 +111,10 @@
 | BROWSER-01  | P0     | DONE | WP-05  | connecting 阶段丢导航，断线没有有界重连                          |
 | BROWSER-02  | P0     | DONE | WP-05  | 缺 REST fallback、live/static 模式和 URL 同步                    |
 | BROWSER-03  | P0     | DONE | WP-05  | 点击坐标、滚轮、键盘和 IME 行为未对齐                            |
-| ARTIFACT-01 | P0     | TODO | WP-06  | 未知二进制文件会被当作文本加载和保存                             |
-| ARTIFACT-02 | P1     | TODO | WP-06  | 切换/关闭/离开页面没有未保存内容保护                             |
-| ARTIFACT-03 | P1     | TODO | WP-06  | 缺 discard/exit/copy/open/install-skill 等操作                   |
-| ARTIFACT-04 | P1     | TODO | WP-06  | 截断内容仍可进入 HTML preview，缺安全边界                        |
+| ARTIFACT-01 | P0     | DONE | WP-06  | 显式类型/来源策略 fail closed；未知二进制不进入文本加载或 PUT    |
+| ARTIFACT-02 | P1     | DONE | WP-06  | 单一 draft owner 统一保护切换、关闭、跨面板、路由与页面离开      |
+| ARTIFACT-03 | P1     | DONE | WP-06  | save/discard/exit/copy/open/download/install 与错误/权限已接通   |
+| ARTIFACT-04 | P1     | DONE | WP-06  | 正式与流式 HTML 仅在完整、未截断且结构闭合时进入 iframe preview  |
 | SCHEDULE-01 | P1     | TODO | WP-07  | 创建任务硬编码 cron/UTC，context 输入不完整                      |
 | SCHEDULE-02 | P1     | TODO | WP-07  | 缺编辑、删除、类型筛选、recipes 和完整状态筛选                   |
 | SCHEDULE-03 | P1     | TODO | WP-07  | 缺完整运行历史、运行详情和错误展示                               |
@@ -330,7 +330,7 @@
 - Vue unit/DOM：`tests/unit/wp05/` 共 7 个文件 / 24 个用例，覆盖 connecting pending、退避上限、seed 归一化、stale thread、二进制/legacy frame、消息帧/REST 所有权、REST 错误、live/static、竖屏 letterbox、move/wheel、keyboard/IME 与 cleanup。
 - Vue-owned Playwright：`tests/m6/browser-control.spec.ts` 3 个用例，覆盖 ToolMessage 静态帧自动打开、Gateway URL/title 收敛、输入 wire、Static REST 失败和同目标重试；该层使用 Mock Gateway/Mock WS，不冒充真实后端。
 - Real-Gateway：`tests/m6-real-backend/browser-panel.spec.ts` 使用本地真实 FastAPI Gateway 与真实 Playwright Chromium browser runtime 验证 REST 响应、二进制 WS 帧和 Vue UI 收敛；Gateway harness 的模型侧是 replay，不冒充生产模型/环境。
-- 聚焦 TDD：7 个 Vue unit/DOM 文件、23/23 用例通过；新增 Vue-owned Playwright 3/3 通过。
+- 聚焦 TDD：7 个 Vue unit/DOM 文件、24/24 用例通过；新增 Vue-owned Playwright 3/3 通过。
 - 最终顺序门禁（2026-08-22）全部通过：`make e2e-m6-list` 9 files / 33 tests；`make e2e-m6` 33/33；`make e2e-m6-real-backend` 1/1；`make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 26 files / 133/133；`make e2e-m7-local` 8/8；`make e2e-m7-auth` 10/10；`make e2e-m7-real-protocol` 1/1；`make e2e-m7-visual` 7/7（baseline 未更新）；`make migration-check` 通过；`make verify` 143 test files / 1244 tests、类型/格式/collection/i18n/OpenAPI/header/production build 全部通过。
 - 首次聚焦 Playwright 和首次完整 Vitest 在受限 sandbox 分别命中 `listen EPERM`；均未改代码/命令语义，在允许 `127.0.0.1` 回环监听后原样通过。`make verify` 仍报告仓库既有 lint warnings，但 0 errors。
 
@@ -340,22 +340,24 @@
 
 #### 当前代码事实
 
-- [`app/components/workspace/artifacts/ArtifactPanel.vue`](app/components/workspace/artifacts/ArtifactPanel.vue) 对未知扩展名回退为 text/code，并允许加载和 PUT。
-- React [`src/core/utils/files.tsx`](../frontend/src/core/utils/files.tsx) 使用显式 text/code/preview 白名单，未知文件回退为 download-only。
-- Vue 切文件、关闭面板和离开页面没有统一 dirty confirm/beforeunload。
-- 缺 edit exit、discard、copy、open in new window、install skill 等 React 已有操作。
-- 截断内容仍可切入 HTML `srcdoc` preview。
+- [`app/core/artifacts/policy.ts`](app/core/artifacts/policy.ts) 以扩展名与来源显式区分 text/code、browser media、PDF、skill archive 和 download-only；未知、无扩展名、SVG、Office、archive 与其他二进制 fail closed，MIME 不提升能力。
+- 正式文本仍使用 Gateway GET Range，默认上限 1 MiB；只有显式加载完整、未截断且取得内容 SHA-256 后，`/mnt/user-data/outputs` 下的正式 UTF-8 文件才进入 editor/PUT。瞬态 write-file 草稿和 skill artifact 不冒充正式可写文件。
+- [`app/composables/useArtifactDraft.ts`](app/composables/useArtifactDraft.ts) 是 baseline/remote/draft/dirty/conflict/edit 的唯一 owner；切文件、关面板、切 sidecar/browser、切 thread、路由离开与仅 dirty 时的 `beforeunload` 都走同一确认合同。
+- 保存发送精确 `expected_sha256`；成功以 Gateway 返回的 SHA/size 更新 baseline，远程刷新和 412 都保留本地草稿。403/404/409/412/413/415 与 install 权限错误保持可见，discard/exit edit 可预测。
+- [`app/core/artifacts/preview-policy.ts`](app/core/artifacts/preview-policy.ts) 要求正式 HTML 完整、未截断且文档有序配对；仍在组装的 write-file 只允许安全前缀，工具返回 `OK` 后同样必须完整才进入 iframe。
+- [`ArtifactFileList.vue`](app/components/workspace/artifacts/ArtifactFileList.vue)、[`ArtifactEditor.vue`](app/components/workspace/artifacts/ArtifactEditor.vue)、[`ArtifactPreview.vue`](app/components/workspace/artifacts/ArtifactPreview.vue) 和 [`ArtifactActions.vue`](app/components/workspace/artifacts/ArtifactActions.vue) 分离列表、编辑、预览与操作；面板根只编排当前路径的 abort/generation 和 I/O。自动历史打开不会覆盖用户或持久化选择。
+- copy/open/download/install-skill 由策略显式控制；open/download 先执行认证 GET 一字节 Range 预检，精确接受空文件 `416 + Content-Range: bytes */0`，其他 Gateway 错误不伪装成功；install 只对真实 skill artifact + admin 开放。
 
-#### 必须实现
+#### 已实现
 
-1. 建立显式文件策略：text/code、safe preview、browser media、download-only；未知类型默认 download-only。
-2. doc/docx/xls/xlsx/ppt/pptx/zip/二进制不得经文本 loader 或文本 PUT。
-3. dirty 状态在切文件、关闭 panel、关闭页面、路由离开时都有一致确认。
-4. 保存、失败、discard、exit edit 的 draft 状态可预测且可测试。
-5. 补齐 copy/open/download/install-skill；权限和错误响应必须展示。
-6. truncated 内容禁止进入可能误导或不安全的 HTML preview。
+1. 显式文件策略覆盖 text/code、safe preview、browser media、PDF、skill archive 与 download-only；未知类型默认 download-only。
+2. doc/docx/xls/xlsx/ppt/pptx/zip/无扩展名/未知二进制不会经过文本 loader 或文本 PUT。
+3. dirty 状态在切文件、关闭 panel、跨 sidecar/browser/thread、关闭页面和路由离开时使用同一确认合同。
+4. 保存成功/失败、远程刷新、412 conflict、discard 与 exit edit 的 draft 状态由纯 reducer 固化并覆盖测试。
+5. copy/open/download/install-skill 均由分类与权限矩阵控制，预检和 Gateway 错误保持可见。
+6. truncated 或结构不完整的 HTML 不会进入 iframe preview；流式 write-file 仅在满足 D3 完整性后预览。
 
-#### Vue 实现建议
+#### Vue 实现落点
 
 - 文件策略为纯 TypeScript `classifyArtifact(path, metadata)`，组件只消费分类结果。
 - 拆分 `ArtifactFileList`、`ArtifactEditor`、`ArtifactPreview`、`ArtifactActions` 和 `useArtifactDraft`。
@@ -363,10 +365,11 @@
 
 #### 验收与测试
 
-- 文本、代码、图片、音频、视频、SVG、Office、archive、无扩展名矩阵测试。
-- 未知二进制永不调用 text loader/PUT。
-- dirty switch/close/route/beforeunload、save error、discard DOM 测试。
-- truncated HTML 不创建 preview iframe/srcdoc。
+- `tests/unit/wp06/` 共 7 个文件 / 58 个用例，覆盖文本、代码、图片、音频、视频、PDF、SVG、Office、archive、无扩展名、未知二进制、来源与权限矩阵；未知/二进制不进入 loader/PUT。
+- unit/DOM 覆盖 dirty switch/close/sidecar/browser/thread/route/beforeunload、save success、403/404/409/412/413/415、远程刷新、discard/exit、run guard、stale load/save/action 和 text→write transition。
+- Vue-owned M5 新增 download-only、完整 D3 HTML、dirty switch/close 浏览器合同；清单为 6 files / 29 tests。正式截断 HTML 不创建 iframe/editor，并提供显式加载完整文件。
+- `tests/m5-real-backend/artifact-write.spec.ts` 使用同一真实本地 FastAPI Gateway、Nuxt 与 Playwright Chromium 验证 206 Range/ETag、真实 PUT SHA/size、并发修改后的真实 412 与草稿保留、Office/archive/unknown 零文本 GET，以及 1.1 MiB HTML 截断边界。模型侧使用 replay，不等于生产模型、DNS/TLS、外层代理或真实 IdP 证明。
+- 最终顺序门禁（2026-08-22）全部通过：聚焦 WP-06 unit/DOM 7 files / 58 tests；`make e2e-m5-list` 6 files / 29 tests；`make e2e-m5` 29/29；`make e2e-m5-real-backend` 1/1；`make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7-list` 26 files / 135 tests；`make e2e-m7` 135/135；`make e2e-m7-local` 8/8；`make e2e-m7-auth` 10/10；`make e2e-m7-real-protocol` 1/1；`make e2e-m7-visual` 7/7（baseline 未更新）；`make migration-check` 通过；`make verify` 150 test files / 1303 tests、landed 59 files / 561 tests、2 locales / 各 764 keys、205 file headers、类型/格式/OpenAPI/production build 全部通过。
 
 ### WP-07：Scheduled tasks
 
