@@ -397,6 +397,20 @@ raw trace、代理 smoke 和 replay Gateway 浏览器测试覆盖，不能只依
 
 ---
 
+## R. Memory、Skills 与 MCP 设置
+
+| #   | 约束                                                                                                                                                                                                                                                                                                          |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | `useMemory` 是 `/api/memory` response、fact mutation、clear、import、export 与 scope cleanup 的唯一服务端状态 owner；组件不得复制 response。mutation pending 阻止重复提交，成功写入/重读同一 query，失败保留 status/detail 和当前 dialog/import preview。                                                     |
+| R2  | import 只接受完整 export root、六个 summary section 与 facts 数组。malformed/partial/type/range/storage-invalid fact/重复 fact ID 在纯 validator 内拒绝且不发请求；forward extra 与不同 ID 的重复 content 保留到 preview 并警告，Gateway 忽略未知 request 字段的事实必须可见。                                |
+| R3  | fact confidence 是有限数值 `0..1`，UI step 为 `0.01`，显式 0 必须保留。edit PATCH 只发送实际改变的 `content/category/confidence`；搜索匹配 content/category，confidence 筛选与无数据/无匹配空态必须区分。                                                                                                     |
+| R4  | delete fact、clear all 与覆盖 import 都必须使用可访问的 alert dialog 二次确认；cancel 零请求，pending 锁定关闭/重复动作，失败保留 dialog 与 Gateway detail。create/edit 也使用同一 pending/focus/escape 边界，不调用 `window.confirm`。                                                                       |
+| R5  | 权限只从共享 session 与 auth-disabled Gateway 语义派生。Skills GET 对 authenticated user 开放，Skills PUT 只允许 admin；MCP GET/PATCH/PUT 均只允许 admin。已知 non-admin 的 MCP 页面必须零 I/O，两类 mutation 在无权限时都必须 disabled 且零请求。                                                            |
+| R6  | Skill toggle 只发送 `{enabled}`；MCP toggle 只发送 `{server_name, enabled}`。两者不做 optimistic flip，成功后 authoritative re-read 各自共享 query key；401 走共享登录，403/admin-required 与普通网络/服务错误分开展示，不得用本地成功态覆盖。                                                                |
+| R7  | Mock M7 覆盖导入 preview/失败保留、CRUD/搜索筛选/确认、auth-disabled admin 与普通用户零 MCP I/O；real-backend gate 以真实 Auth/CSRF/FastAPI/DeerMem/Noop 固定 400/404/409/422/500/501，并证明 skills/MCP atomic write/cache reload/secret masking/Nuxt/UI。fixture 不等于外部 backend/MCP/IdP/凭据/网络证明。 |
+
+---
+
 ## 使用建议
 
 1. 修改 `app/core/` 时连同单测和调用方一起检查；通用包变更还要运行 `make consumer-check`。

@@ -10,7 +10,7 @@
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
 import { useQuery } from "@tanstack/vue-query";
 
-import { loadSkills } from "@/core/skills/api";
+import { loadSkills, SkillRequestError } from "@/core/skills/api";
 
 export const SKILLS_QUERY_KEY = ["skills"] as const;
 
@@ -22,9 +22,10 @@ export function useSkillsCatalog(
 ) {
   const query = useQuery({
     queryKey: SKILLS_QUERY_KEY,
-    queryFn: loadSkills,
+    queryFn: ({ signal }) => loadSkills({ signal }),
     enabled: computed(() => toValue(options.enabled ?? true)),
     refetchOnWindowFocus: false,
+    retry: (count, error) => !(error instanceof SkillRequestError) && count < 3,
   });
 
   return {
@@ -32,5 +33,6 @@ export function useSkillsCatalog(
     ready: computed(() => query.isFetched.value || query.isError.value),
     loading: query.isLoading,
     error: query.error,
+    refetch: query.refetch,
   };
 }

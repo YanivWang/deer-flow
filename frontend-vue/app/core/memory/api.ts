@@ -1,3 +1,13 @@
+/*
+  【文件职责】     调用 Gateway Memory document、CRUD、import/export HTTP 合同。
+  【对应 frontend/】 core/memory/api.ts
+  【架构位置】     L3 Gateway adapter
+  【主要导出】     load/clear/create/update/delete/import/export Memory
+  【依赖关系】     authenticated fetch · shared Gateway error parser
+  【边界与注意】   所有方法可取消；非 2xx 保留 status/detail，响应不压扁 metadata。
+*/
+
+import { readGatewayResponseError } from "../api/errors";
 import { fetch } from "../api/fetcher";
 import { getBackendBaseURL } from "../config";
 
@@ -68,58 +78,79 @@ async function readMemoryResponse(
   }
 
   if (!response.ok) {
-    const errorData = (await response.json().catch(() => ({}))) as {
-      detail?: unknown;
-    };
-    const detailMessage = formatErrorDetail(errorData.detail);
-    throw new Error(
-      detailMessage ?? `${fallbackMessage}: ${response.statusText}`,
-    );
+    const error = await readGatewayResponseError(response, fallbackMessage);
+    const detail =
+      error.body && typeof error.body === "object"
+        ? Reflect.get(error.body, "detail")
+        : undefined;
+    const detailMessage = formatErrorDetail(detail);
+    if (detailMessage && detailMessage !== error.message) {
+      error.message = detailMessage;
+    }
+    throw error;
   }
 
   return response.json() as Promise<UserMemory>;
 }
 
-export async function loadMemory(): Promise<UserMemory> {
-  const response = await fetch(`${getBackendBaseURL()}/api/memory`);
+export async function loadMemory(
+  options: { signal?: AbortSignal } = {},
+): Promise<UserMemory> {
+  const response = await fetch(`${getBackendBaseURL()}/api/memory`, options);
   return readMemoryResponse(response, "Failed to fetch memory");
 }
 
-export async function clearMemory(): Promise<UserMemory> {
+export async function clearMemory(
+  options: { signal?: AbortSignal } = {},
+): Promise<UserMemory> {
   const response = await fetch(`${getBackendBaseURL()}/api/memory`, {
     method: "DELETE",
+    signal: options.signal,
   });
   return readMemoryResponse(response, "Failed to clear memory");
 }
 
-export async function deleteMemoryFact(factId: string): Promise<UserMemory> {
+export async function deleteMemoryFact(
+  factId: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<UserMemory> {
   const response = await fetch(
     `${getBackendBaseURL()}/api/memory/facts/${encodeURIComponent(factId)}`,
     {
       method: "DELETE",
+      signal: options.signal,
     },
   );
   return readMemoryResponse(response, "Failed to delete memory fact");
 }
 
-export async function exportMemory(): Promise<UserMemory> {
-  const response = await fetch(`${getBackendBaseURL()}/api/memory/export`);
+export async function exportMemory(
+  options: { signal?: AbortSignal } = {},
+): Promise<UserMemory> {
+  const response = await fetch(`${getBackendBaseURL()}/api/memory/export`, {
+    signal: options.signal,
+  });
   return readMemoryResponse(response, "Failed to export memory");
 }
 
-export async function importMemory(memory: UserMemory): Promise<UserMemory> {
+export async function importMemory(
+  memory: UserMemory,
+  options: { signal?: AbortSignal } = {},
+): Promise<UserMemory> {
   const response = await fetch(`${getBackendBaseURL()}/api/memory/import`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(memory),
+    signal: options.signal,
   });
   return readMemoryResponse(response, "Failed to import memory");
 }
 
 export async function createMemoryFact(
   input: MemoryFactInput,
+  options: { signal?: AbortSignal } = {},
 ): Promise<UserMemory> {
   const response = await fetch(`${getBackendBaseURL()}/api/memory/facts`, {
     method: "POST",
@@ -127,6 +158,7 @@ export async function createMemoryFact(
       "Content-Type": "application/json",
     },
     body: JSON.stringify(input),
+    signal: options.signal,
   });
   return readMemoryResponse(response, "Failed to create memory fact");
 }
@@ -134,6 +166,7 @@ export async function createMemoryFact(
 export async function updateMemoryFact(
   factId: string,
   input: MemoryFactPatchInput,
+  options: { signal?: AbortSignal } = {},
 ): Promise<UserMemory> {
   const response = await fetch(
     `${getBackendBaseURL()}/api/memory/facts/${encodeURIComponent(factId)}`,
@@ -143,6 +176,7 @@ export async function updateMemoryFact(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
+      signal: options.signal,
     },
   );
   return readMemoryResponse(response, "Failed to update memory fact");

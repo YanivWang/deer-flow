@@ -52,9 +52,9 @@
 | `channels/provider-state.ts`          | `ADAPTED` | `channels/provider-state.ts`                                   | WP-08：connectability 只描述 provider capability；删除以 provider summary status 阻止新增多账号的旧分支。                                                                              |
 | `channels/query-keys.ts`              | `ADDED`   | —                                                              | WP-08：providers/connections 按认证用户 scope 隔离的唯一 Vue Query key 合同。                                                                                                          |
 | `channels/state.ts`                   | `ADAPTED` | `settings/channels-settings-page.tsx`                          | WP-08：provider 只保留能力/配置；用户展示状态和多账号列表只从 connections 响应推导。                                                                                                   |
-| `i18n/locales/en-US.ts`               | `ADAPTED` | `i18n/locales/en-US.ts`                                        | WP-07 scheduledTasks 与 WP-08 多账号 channels lifecycle 的 Vue-owned 英文词典扩展。                                                                                                    |
-| `i18n/locales/types.ts`               | `ADAPTED` | `i18n/locales/types.ts`                                        | WP-07/WP-08 仅声明 Vue-owned scheduledTasks 与 channels 词典扩展，不放宽其他翻译类型。                                                                                                 |
-| `i18n/locales/zh-CN.ts`               | `ADAPTED` | `i18n/locales/zh-CN.ts`                                        | WP-07 scheduledTasks 与 WP-08 channels lifecycle 中文文案，逐键对齐英文。                                                                                                              |
+| `i18n/locales/en-US.ts`               | `ADAPTED` | `i18n/locales/en-US.ts`                                        | WP-07–10 的 Vue-owned scheduled tasks、channels、Agents 与 Settings 校验/权限英文词典扩展。                                                                                            |
+| `i18n/locales/types.ts`               | `ADAPTED` | `i18n/locales/types.ts`                                        | WP-07–10 逐键声明对应 Vue-owned 词典扩展，不放宽其他翻译类型。                                                                                                                         |
+| `i18n/locales/zh-CN.ts`               | `ADAPTED` | `i18n/locales/zh-CN.ts`                                        | WP-07–10 的匹配中文文案，逐键对齐英文。                                                                                                                                                |
 | `api/client.ts`                       | `ADDED`   | —                                                              | M2 自写的 7 个 REST 方法，替代 SDK `Client`（02 §249）。上游没有对应文件——那部分职责在 SDK 里。                                                                                        |
 | `api/errors.ts`                       | `ADAPTED` | `api/errors.ts`                                                | WP-02：统一全部 Gateway REST 错误解析，兼容旧导出同时保留 HTTP status、结构化 body 与原始正文。                                                                                        |
 | `api/types.gen.ts`                    | `ADDED`   | —                                                              | **生成物，勿手改。** `make gen-api-types` 从 `baseline/openapi.snapshot.json` 生成（02 §340 / 04 §267）。上游对应物是 SDK 借来的 REST 信封类型。                                       |
@@ -102,6 +102,16 @@
 | `agents/presentation.ts`              | `ADAPTED` | `components/workspace/agents/agent-card.tsx`                   | WP-09：保留 model、skills、tool_groups 的真实响应顺序，并区分 null 不限制与空 whitelist。                                                                                              |
 | `agents/query-keys.ts`                | `ADDED`   | —                                                              | WP-09：集中声明 Agent list/detail Vue Query identity，供创建、更新与删除统一同步。                                                                                                     |
 | `agents/settings.ts`                  | `ADAPTED` | `components/workspace/agents/agent-settings-dialog-helpers.ts` | WP-09：按真实模型 capability 生成 exact PUT body，保留 false/0/null 并校验温度与 max_tokens。                                                                                          |
+| `mcp/api.ts`                          | `ADAPTED` | `mcp/api.ts`                                                   | WP-10：接入可取消的唯一 query owner 与保真 Gateway 错误，显式分类 admin-required 403。                                                                                                 |
+| `mcp/query-keys.ts`                   | `ADDED`   | —                                                              | WP-10：MCP config 的唯一 Vue Query identity。                                                                                                                                          |
+| `memory/api.ts`                       | `ADAPTED` | `memory/api.ts`                                                | WP-10：全部 Memory 请求可取消且保留 Gateway status/detail，完整响应回填单一缓存。                                                                                                      |
+| `memory/query-keys.ts`                | `ADDED`   | —                                                              | WP-10：Memory document 的唯一 Vue Query identity。                                                                                                                                     |
+| `memory/schema.ts`                    | `ADAPTED` | `components/workspace/settings/memory-settings-page.tsx`       | WP-10：把 React import guard 提升为完整运行时 schema；extra 保留并警告，duplicate ID 拒绝，duplicate content 显式保留。                                                                |
+| `memory/types.ts`                     | `ADAPTED` | `memory/types.ts`                                              | WP-10：复用生成 Fact 合同并保留 response/import 的 metadata 与 forward fields。                                                                                                        |
+| `memory/view-model.ts`                | `ADAPTED` | `components/workspace/settings/memory-settings-page.tsx`       | WP-10：集中 fact 表单、显式 0、PATCH omission 与 search/filter/empty 规则。                                                                                                            |
+| `settings/permissions.ts`             | `ADAPTED` | `core/auth/AuthProvider.tsx`                                   | WP-10：从唯一 session/auth-disabled synthetic admin 派生 Skills read/manage 与 MCP admin-only 权限，不引入 static-only 假角色。                                                        |
+| `skills/api.ts`                       | `ADAPTED` | `skills/api.ts`                                                | WP-10：catalog/toggle 可取消，GET 与 admin-only PUT 的错误语义分离。                                                                                                                   |
+| `skills/type.ts`                      | `ADAPTED` | `skills/type.ts`                                               | WP-10：按真实 Gateway SkillResponse 把 license 收窄为 string 或 null。                                                                                                                 |
 
 <!-- COPIED:BEGIN 由 `make land-copied` 生成，勿手改 -->
 
@@ -135,12 +145,9 @@
 | `input-polish/api.ts` | `COPIED` | `input-polish/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `integrations/lark/api.ts` | `COPIED` | `integrations/lark/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `integrations/lark/types.ts` | `COPIED` | `integrations/lark/types.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
-| `mcp/api.ts` | `COPIED` | `mcp/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `mcp/index.ts` | `COPIED` | `mcp/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `mcp/types.ts` | `COPIED` | `mcp/types.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
-| `memory/api.ts` | `COPIED` | `memory/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `memory/index.ts` | `COPIED` | `memory/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
-| `memory/types.ts` | `COPIED` | `memory/types.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `messages/workspace-change-anchor.ts` | `COPIED` | `messages/workspace-change-anchor.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `models/index.ts` | `COPIED` | `models/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `models/types.ts` | `COPIED` | `models/types.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
@@ -153,10 +160,8 @@
 | `sidecar/reference-metadata.ts` | `COPIED` | `sidecar/reference-metadata.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `sidecar/reference-state.ts` | `COPIED` | `sidecar/reference-state.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `sidecar/thread.ts` | `COPIED` | `sidecar/thread.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
-| `skills/api.ts` | `COPIED` | `skills/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `skills/index.ts` | `COPIED` | `skills/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `skills/slash.ts` | `COPIED` | `skills/slash.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
-| `skills/type.ts` | `COPIED` | `skills/type.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `streamdown/mermaid.ts` | `COPIED` | `streamdown/mermaid.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `streamdown/preprocess.ts` | `COPIED` | `streamdown/preprocess.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `suggestions/api.ts` | `COPIED` | `suggestions/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |

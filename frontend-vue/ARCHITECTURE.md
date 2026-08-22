@@ -162,6 +162,16 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
   保留镜像。`agents/settings.ts` 独占 capability-aware exact PUT body，`agents/presentation.ts`
   独占 card 的 model/skills/tool-groups 映射；`tool_groups` 的 null/empty/ordered values 不在
   模板中重新解释。
+- Memory 服务端真相只归 `useMemory` 的单一 TanStack Query key；fact create/PATCH/delete、
+  clear/import 成功后由该 owner 写入或重读同一缓存，组件不保留第二份 response。导入解析与
+  storage-valid fact 检查只归 `memory/schema.ts` 纯函数：完整 export 结构才进入 preview，重复
+  fact ID 拒绝，forward extra 与不同 ID 的重复 content 保留并警告。搜索、confidence 筛选和
+  PATCH diff 只归 `memory/view-model.ts`，显式 `0` 不得被 truthy 判断丢失。
+- Settings 权限只从共享 `useAuthSession` 与 Gateway auth-disabled 语义经
+  `useSettingsPermissions` 派生。`useSkillSettings` 复用 catalog 的 skills query key，允许普通
+  authenticated user 读取但只允许 admin mutation；`useMCPConfig` 是 MCP config 的唯一 owner，
+  已知 non-admin 时不发 GET/PATCH。两类 mutation 均不 optimistic，并在成功后 authoritative
+  re-read；401、403/admin-required 与通用请求失败保持不同状态。
 - composer draft 是 `sessionStorage` 的 tab 状态，只持久化文本/skill；user、agent 与逻辑会话
   三维隔离，并在确认 logout/thread delete 后清理。上传文件、语音、follow-up dialog、polish
   和 generation guard 是组件/composable 瞬态状态，不得错误跨 thread 复用。
@@ -178,6 +188,7 @@ make e2e-list        # 列出共享产品合同
 make e2e-m7          # 当前完整 Vue 浏览器合同入口（名称为既有测试套件标识）
 make e2e-wp07-real-backend # 真实 Gateway/SQLite/HTTP/Nuxt/Chromium 的 scheduled-task 合同
 make e2e-wp09-real-backend # 真实 Auth/LangGraph/setup_agent/SQLite Agent 合同
+make e2e-wp10-real-backend # 真实 Auth/DeerMem/Noop/Skills/MCP/Nuxt/Chromium 设置与错误合同
 make container-smoke # 生产镜像、health、SIGTERM、Showcase 资源与拒绝策略
 ```
 

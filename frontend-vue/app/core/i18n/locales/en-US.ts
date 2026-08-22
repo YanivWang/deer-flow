@@ -838,6 +838,8 @@ export const enUS: Translations = {
   settings: {
     title: "Settings",
     description: "Adjust how DeerFlow looks and behaves for you.",
+    sessionUnavailable:
+      "The current session could not be verified. Check the Gateway connection and try again.",
     sections: {
       account: "Account",
       appearance: "Appearance",
@@ -864,6 +866,12 @@ export const enUS: Translations = {
       importFileLabel: "Selected file",
       importInvalidFile:
         "Failed to read the selected memory file. Please choose a valid JSON export.",
+      importSchemaIssue: (code, path) =>
+        `The memory export is invalid (${code} at ${path}).`,
+      importExtraWarning: (count) =>
+        `${count} unknown field${count === 1 ? "" : "s"} will be sent unchanged, but the Gateway may ignore them.`,
+      importDuplicateContentWarning: (count) =>
+        `${count} duplicate-content fact${count === 1 ? "" : "s"} will be preserved because their IDs are different.`,
       importSuccess: "Memory imported",
       manualFactSource: "Manual",
       addFact: "Add fact",

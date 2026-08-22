@@ -453,11 +453,11 @@ const HAND_MAINTAINED = {
   "artifacts/loader.ts":
     "WP-06 gates loading behind explicit text policy and preserves Gateway errors and abort semantics.",
   "i18n/locales/en-US.ts":
-    "WP-07 adds scheduled-task copy; WP-08 adds channels; WP-09 adds Agent lifecycle, cards, and capability settings copy.",
+    "WP-07 adds scheduled-task copy; WP-08 adds channels; WP-09 adds Agents; WP-10 adds settings validation and permission copy.",
   "i18n/locales/types.ts":
-    "WP-07/WP-08/WP-09 declare Vue-owned scheduled-task, channel, and Agent dictionary extensions.",
+    "WP-07/WP-08/WP-09/WP-10 declare Vue-owned scheduled-task, channel, Agent, and settings dictionary extensions.",
   "i18n/locales/zh-CN.ts":
-    "WP-07/WP-08/WP-09 add the matching Chinese scheduled-task, channel, and Agent dictionary extensions.",
+    "WP-07/WP-08/WP-09/WP-10 add the matching Chinese scheduled-task, channel, Agent, and settings dictionary extensions.",
 };
 
 const PROVENANCE_NOTES = {

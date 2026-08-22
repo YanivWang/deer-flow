@@ -38,6 +38,11 @@ def main() -> int:
     config_yaml = build_config_yaml(model_block=REPLAY_MODEL_BLOCK, home=home)
     channel_fixture_enabled = os.environ.get("DEERFLOW_ENABLE_CHANNEL_TEST_SEED") == "1"
     agent_fixture_enabled = os.environ.get("DEERFLOW_ENABLE_AGENT_TEST_MODEL") == "1"
+    settings_fixture_enabled = os.environ.get("DEERFLOW_ENABLE_SETTINGS_TEST_SEED") == "1"
+    settings_memory_backend = os.environ.get("DEERFLOW_SETTINGS_TEST_MEMORY_BACKEND")
+    settings_home_marker = os.environ.get("DEERFLOW_SETTINGS_TEST_HOME_MARKER")
+    if not settings_fixture_enabled and (settings_memory_backend or settings_home_marker):
+        raise RuntimeError("Settings test controls require DEERFLOW_ENABLE_SETTINGS_TEST_SEED=1")
     if agent_fixture_enabled:
         from agent_e2e_fixture import AGENT_E2E_MODEL_BLOCK
 
@@ -61,13 +66,24 @@ channels:
     bot_token: telegram-controlled-e2e
     bot_username: deerflow_e2e_bot
 """
+    if settings_memory_backend:
+        from settings_e2e_fixture import configure_settings_memory_backend
+
+        config_yaml = configure_settings_memory_backend(config_yaml, settings_memory_backend)
     cfg.write_text(config_yaml, encoding="utf-8")
 
     # Override (not setdefault): the replay gateway must be hermetic, so an outer
     # DEER_FLOW_HOME can't leak in and shift prompt-affecting paths/skills.
     os.environ["DEER_FLOW_HOME"] = str(home)
     os.environ["DEER_FLOW_CONFIG_PATH"] = str(cfg)
-    os.environ["DEER_FLOW_EXTENSIONS_CONFIG_PATH"] = str(prepare_hermetic_extras(home))
+    extensions_path = prepare_hermetic_extras(home)
+    if settings_fixture_enabled:
+        from settings_e2e_fixture import prepare_settings_e2e_fixture, publish_settings_test_home
+
+        prepare_settings_e2e_fixture(home, extensions_path)
+        if settings_home_marker:
+            publish_settings_test_home(home, Path(settings_home_marker))
+    os.environ["DEER_FLOW_EXTENSIONS_CONFIG_PATH"] = str(extensions_path)
     os.environ["DEERFLOW_REPLAY_FIXTURE"] = args.fixture
     os.environ.setdefault("AUTH_JWT_SECRET", "ci-replay-secret-at-least-32-bytes")
     os.environ["GATEWAY_CORS_ORIGINS"] = args.cors

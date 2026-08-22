@@ -1,49 +1,58 @@
 <script setup lang="ts">
 /*
-  【文件职责】     管理 DeerFlow skill 启用状态与详情。
+  【文件职责】     复用 composer skill catalog，并按 session role 管理全局 skill 开关。
   【对应 frontend/】 src/components/workspace/settings/skill-settings.tsx
-  【架构位置】     L3
+  【架构位置】     L3 product UI
   【主要导出】     默认 SkillSettings 组件
-  【依赖关系】     skills APIs · settings dialog
-  【边界与注意】   skill 是 L1 禁入业务概念，不属于 L2。
+  【依赖关系】     useSettingsPermissions · useSkillSettings
+  【边界与注意】   普通用户可读 catalog 但不能 PUT；create-skill 对话入口不是全局启停权限。
 */
-import { computed, onMounted, ref } from "vue";
 
-import { enableSkill, loadSkills } from "@/core/skills/api";
-import type { Skill } from "@/core/skills/type";
+import { computed, ref } from "vue";
+
 import { useSettingsDialog } from "@/composables/useSettingsDialog";
+import { useSettingsPermissions } from "@/composables/useSettingsPermissions";
+import { useSkillSettings } from "@/composables/useSkillSettings";
+import { SkillRequestError } from "@/core/skills/api";
+import type { Skill } from "@/core/skills/type";
 
+const { $i18n } = useNuxtApp();
+const t = computed(() => $i18n.t.value);
 const settings = useSettingsDialog();
-const skills = ref<Skill[]>([]);
+const access = useSettingsPermissions();
+const skills = useSkillSettings({
+  canManage: access.canManageSkills,
+  enabled: access.canReadSkills,
+});
 const filter = ref<"public" | "custom">("public");
-const loading = ref(false);
-const error = ref("");
+const actionError = ref("");
+const pendingName = ref<string | null>(null);
 const filtered = computed(() =>
-  skills.value.filter((skill) => skill.category === filter.value),
+  skills.skills.value.filter((skill) => skill.category === filter.value),
 );
 
-async function load() {
-  loading.value = true;
-  error.value = "";
-  try {
-    skills.value = await loadSkills();
-  } catch (cause) {
-    error.value =
-      cause instanceof Error ? cause.message : "Failed to load skills";
-  } finally {
-    loading.value = false;
+function errorMessage(cause: unknown) {
+  if (cause instanceof SkillRequestError && cause.isAdminRequired) {
+    return t.value.settings.skills.adminRequired;
   }
+  return cause instanceof Error && cause.message
+    ? cause.message
+    : t.value.settings.skills.description;
 }
 
-async function toggle(skill: Skill, enabled: boolean) {
-  const previous = skill.enabled;
-  skill.enabled = enabled;
+async function toggle(skill: Skill, event: Event) {
+  const input = event.target as HTMLInputElement;
+  const enabled = input.checked;
+  input.checked = skill.enabled;
+  if (!access.canManageSkills.value || skills.pending.value) return;
+  actionError.value = "";
+  pendingName.value = skill.name;
   try {
-    await enableSkill(skill.name, enabled);
+    await skills.toggle(skill.name, enabled);
   } catch (cause) {
-    skill.enabled = previous;
-    error.value =
-      cause instanceof Error ? cause.message : "Failed to update skill";
+    actionError.value = errorMessage(cause);
+  } finally {
+    pendingName.value = null;
   }
 }
 
@@ -51,63 +60,103 @@ async function createSkill() {
   settings.close();
   await navigateTo("/workspace/chats/new?mode=skill");
 }
-
-onMounted(() => void load());
 </script>
 
 <template>
-  <section class="space-y-4">
+  <section class="space-y-4" data-testid="skill-settings">
     <header class="flex items-start justify-between gap-4">
       <div>
-        <h2 class="text-lg font-semibold">Skills</h2>
+        <h2 class="text-lg font-semibold">{{ t.settings.skills.title }}</h2>
         <p class="text-muted-foreground text-sm">
-          Enable installed skills or create one through the agent workflow.
+          {{ t.settings.skills.description }}
         </p>
       </div>
       <button
         type="button"
         class="bg-primary text-primary-foreground rounded-md px-3 py-2"
+        data-testid="create-skill"
         @click="createSkill"
       >
-        Create skill
+        {{ t.settings.skills.createSkill }}
       </button>
     </header>
-    <div class="flex gap-2">
-      <button
-        v-for="kind in ['public', 'custom'] as const"
-        :key="kind"
-        type="button"
-        class="rounded-md border px-3 py-1.5 text-sm capitalize"
-        :class="filter === kind ? 'bg-accent' : ''"
-        @click="filter = kind"
-      >
-        {{ kind }}
-      </button>
-    </div>
-    <p v-if="loading" class="text-muted-foreground text-sm">Loading…</p>
-    <p v-if="error" role="alert" class="text-sm text-red-600">{{ error }}</p>
+
     <p
-      v-if="!loading && !error && filtered.length === 0"
-      class="text-muted-foreground rounded-md border p-4 text-sm"
+      v-if="access.permissions.value.state === 'loading'"
+      class="text-muted-foreground text-sm"
     >
-      No {{ filter }} skills installed.
+      {{ t.common.loading }}
     </p>
-    <div
-      v-for="skill in filtered"
-      :key="skill.name"
-      class="border-border flex items-center justify-between gap-4 rounded-md border p-3"
+    <p
+      v-else-if="access.permissions.value.state === 'unavailable'"
+      role="alert"
+      class="rounded-md bg-red-50 p-3 text-sm text-red-700"
+      data-testid="settings-session-unavailable"
     >
-      <div class="min-w-0">
-        <div class="font-medium">{{ skill.name }}</div>
-        <p class="text-muted-foreground text-sm">{{ skill.description }}</p>
+      {{ t.settings.sessionUnavailable }}
+    </p>
+    <template v-else>
+      <p
+        v-if="access.permissions.value.adminRequired"
+        class="rounded-md bg-amber-50 p-3 text-sm text-amber-800"
+        data-testid="skills-admin-required"
+      >
+        {{ t.settings.skills.adminRequired }}
+      </p>
+      <div class="flex gap-2">
+        <button
+          v-for="kind in ['public', 'custom'] as const"
+          :key="kind"
+          type="button"
+          class="rounded-md border px-3 py-1.5 text-sm"
+          :class="filter === kind ? 'bg-accent' : ''"
+          @click="filter = kind"
+        >
+          {{ kind === "public" ? t.common.public : t.common.custom }}
+        </button>
       </div>
-      <input
-        type="checkbox"
-        role="switch"
-        :aria-label="skill.name"
-        :checked="skill.enabled"
-        @change="toggle(skill, ($event.target as HTMLInputElement).checked)"
-      />
-    </div>
+      <p v-if="skills.loading.value" class="text-muted-foreground text-sm">
+        {{ t.common.loading }}
+      </p>
+      <p v-if="skills.error.value" role="alert" class="text-sm text-red-600">
+        {{ errorMessage(skills.error.value) }}
+      </p>
+      <p
+        v-if="actionError"
+        role="alert"
+        class="text-sm text-red-600"
+        data-testid="skill-action-error"
+      >
+        {{ actionError }}
+      </p>
+      <p
+        v-if="
+          !skills.loading.value && !skills.error.value && filtered.length === 0
+        "
+        class="text-muted-foreground rounded-md border p-4 text-sm"
+      >
+        {{ t.settings.skills.emptyTitle }}
+      </p>
+      <div
+        v-for="skill in filtered"
+        :key="skill.name"
+        class="border-border flex items-center justify-between gap-4 rounded-md border p-3"
+        :data-testid="`skill-${skill.name}`"
+      >
+        <div class="min-w-0">
+          <div class="font-medium">{{ skill.name }}</div>
+          <p class="text-muted-foreground text-sm">{{ skill.description }}</p>
+        </div>
+        <input
+          type="checkbox"
+          role="switch"
+          :aria-label="skill.name"
+          :checked="skill.enabled"
+          :disabled="!access.canManageSkills.value || skills.pending.value"
+          :data-pending="pendingName === skill.name || undefined"
+          @change="toggle(skill, $event)"
+        />
+      </div>
+    </template>
   </section>
 </template>

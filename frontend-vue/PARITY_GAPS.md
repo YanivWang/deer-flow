@@ -124,10 +124,10 @@
 | AGENT-01    | P1     | DONE | WP-09  | setup_agent 结果、有限可见性验证与 created/error/retry 已收敛    |
 | AGENT-02    | P1     | DONE | WP-09  | Agent 设置已按模型能力构造精确 PUT 并清理 stale override         |
 | AGENT-03    | P2     | DONE | WP-09  | Agent 卡片已精确展示 model、skills 与 tool groups                |
-| MEMORY-01   | P1     | TODO | WP-10  | 导入 memory 没有运行时 schema 校验和预览确认                     |
-| MEMORY-02   | P1     | TODO | WP-10  | 删除/清空 memory 没有二次确认                                    |
-| MEMORY-03   | P1     | TODO | WP-10  | confidence 编辑、校验、搜索和筛选不完整                          |
-| SETTINGS-01 | P1     | TODO | WP-10  | Skill/Tool 页面没有消费 admin-required 错误和权限                |
+| MEMORY-01   | P1     | DONE | WP-10  | 完整 export runtime schema、storage 校验、warning preview 已接通 |
+| MEMORY-02   | P1     | DONE | WP-10  | 删除、清空与覆盖导入使用 pending-safe alert dialog 二次确认      |
+| MEMORY-03   | P1     | DONE | WP-10  | confidence 0～1 编辑/diff、搜索、筛选与空态已接通                |
+| SETTINGS-01 | P1     | DONE | WP-10  | Skills/MCP 已按共享 session 区分读写权限、403 与通用失败         |
 | SHELL-01    | P1     | TODO | WP-11  | 工作区缺 Gateway banner、command palette 和全局 toast            |
 | SHELL-02    | P1     | TODO | WP-11  | SettingsDialog 缺 focus trap，关闭后不清理 query                 |
 | SHELL-03    | P1     | TODO | WP-11  | 聊天列表缺 share/export/updated time                             |
@@ -524,31 +524,28 @@
 
 包含：`MEMORY-01`～`MEMORY-03`、`SETTINGS-01`。
 
-#### 当前代码事实
+#### 已实现合同
 
-- [`app/components/workspace/settings/MemorySettings.vue`](app/components/workspace/settings/MemorySettings.vue) 将 JSON 直接断言为 UserMemory 并立即导入。
-- delete/clear 没有确认；新增 confidence 固定为 `0.8`，缺完整编辑和校验。
-- React [`src/components/workspace/settings/memory-settings-page.tsx`](../frontend/src/components/workspace/settings/memory-settings-page.tsx) 有运行时验证、导入预览确认、删除/清空确认、confidence 和搜索筛选。
-- Vue Skill/Tool 页面捕获通用错误，没有消费 API 层已定义的 admin-required 错误/角色语义。
-
-#### 必须实现
-
-1. 导入前做运行时 schema 校验，展示合法/非法项和确认，不得直接信任 TypeScript assertion。
-2. 删除单项、清空全部、覆盖导入必须二次确认。
-3. confidence 的范围、步进、错误与后台合同一致；支持编辑、搜索、筛选。
-4. Skill/Tool 对 admin-required、只读用户、请求失败使用不同状态；无权限时禁用 mutation。
-
-#### Vue 实现建议
-
-- 使用 schema validator 或显式 type guard；解析和验证保持纯函数。
-- destructive dialog 使用统一 Vue dialog primitive。
-- permissions 从 session/query 派生，不在每个设置组件重复猜测。
-
-#### 验收与测试
-
-- malformed/partial/extra-field/重复 memory import 测试。
-- 所有 destructive action 的 cancel/confirm/request failure 测试。
-- non-admin/admin 的 skill/tool DOM 和“不得发送 mutation”测试。
+- [`useMemory.ts`](app/composables/useMemory.ts) 独占 Memory query/mutation/export 与 scoped abort；
+  [`memory/schema.ts`](app/core/memory/schema.ts) 纯校验完整 HTTP export，拒绝 malformed、partial、
+  storage-invalid fact 和重复 ID，保留 forward extra 与不同 ID 的重复 content 并在 preview 警告。
+- [`MemorySettings.vue`](app/components/workspace/settings/MemorySettings.vue) 使用真实 revision/fact
+  metadata、搜索与 confidence 筛选，create/edit 支持 `0..1`、`0.01` step 和显式 `0`，PATCH
+  只发送 diff。delete、clear 与覆盖 import 使用统一 pending-safe alert dialog；失败保留当前
+  dialog/preview 与 Gateway status/detail。
+- [`useSettingsPermissions.ts`](app/composables/useSettingsPermissions.ts) 从共享 session query 与
+  auth-disabled Gateway 语义派生权限，不建立 static role。Skills 对普通用户保持可读、禁用写；
+  MCP 对已知 non-admin 零 GET/PATCH。`useSkillSettings` 与 `useMCPConfig` 分别独占共享 query
+  key，精确发送 `{enabled}` / `{server_name, enabled}`，不 optimistic，成功后 authoritative re-read。
+- Vue-owned M7 Settings 为 6 tests，覆盖 import preview/无效数据零请求、失败保留、CRUD/
+  搜索/筛选/二次确认和 auth-disabled admin；auth M7 增至 2 files / 13 tests，覆盖普通用户零
+  MCP I/O、真实 403 分类与 mutation 401 登录边界；完整 M7 清单为 27 files / 156 tests。
+- `make e2e-wp10-real-backend` 为 5/5：真实 Auth/CSRF/FastAPI、用户隔离 DeerMem 与独立 Noop
+  manager，精确覆盖 400/404/duplicate 409/revision-conflict 409/422/corrupted 500/unsupported
+  501；同时证明 Skills GET/admin PUT、MCP admin GET/PATCH、atomic config write/cache reload、
+  secret masking、Nuxt/Chromium 与 UI 收敛。fixture 只 seed operator-owned skill/MCP 文件，并仅
+  暴露本轮临时 home 以损坏后恢复隔离 manifest；不证明 Mem0/Honcho/OpenViking、真实外部
+  MCP、生产 SkillScan/LLM/IdP/凭据、DNS/TLS、外层代理或部署。
 
 ### WP-11：Workspace shell、导航和 changes
 
@@ -667,7 +664,9 @@ make container-smoke
 - WP-06：artifact write + binary/truncated/dirty guard；
 - WP-07：scheduled tasks API contract + E2E；
 - WP-08：channels poll/deep-link/disconnect；
-- WP-09～WP-11：agents/settings/workspace E2E；
+- WP-09：agents unit/DOM + real Gateway；
+- WP-10：Memory/Settings unit/DOM + `make e2e-wp10-real-backend`；
+- WP-11：workspace E2E；
 - WP-12：i18n、theme、visual。
 
 React 基线也必须保持：
@@ -711,10 +710,11 @@ API 对齐：method/path/query/headers/body/response/error/cache
 
 在此追加，不删除历史记录：
 
-| 日期       | 工作包/ID                                                 | 证据                                                                                                                                                                                                                                                                                                                | 备注                                                                              |
-| ---------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| 2026-08-21 | 基线审计                                                  | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                                                                                                                                                               | 所有 ID 初始状态为 TODO                                                           |
-| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01`           | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过                                                                                                                                   | 本机回环监听环境重跑通过；本地提交、未 push                                       |
-| 2026-08-21 | WP-02：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05` | `make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 130/130；`make e2e-m7-real-protocol` 1/1；`make migration-check` 通过；`make verify` 1166/1166 且 production build 通过；React `pnpm check` 与 `pnpm test` 1001/1001                                                                                   | 回环门禁在允许本机监听的环境重跑；未 commit、未 push                              |
-| 2026-08-22 | WP-08：`CHANNEL-01`～`CHANNEL-03`                         | WP-08 unit/DOM 21/21；聚焦 Vitest 55/55；M7 channels 11/11、全量 144/144；real Gateway 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 159 files / 1358 tests 且 production build 通过                                | 真实 IM/IdP/DNS/TLS/外层代理未验证；未 commit、未 push                            |
-| 2026-08-22 | WP-09：`AGENT-01`～`AGENT-03`                             | WP-09 unit/DOM 8 files / 61 tests；backend focused 56/56；M7 agents 18/18、全量 150/150；real Gateway 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 165 files / 1394 tests 且 production build 通过 | 外部 LLM、生产 provider/凭据、真实 IdP/DNS/TLS/外层代理未验证；未 commit、未 push |
+| 日期       | 工作包/ID                                                 | 证据                                                                                                                                                                                                                                                                                                                                                                                                           | 备注                                                                                           |
+| ---------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 2026-08-21 | 基线审计                                                  | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                                                                                                                                                                                                                                                          | 所有 ID 初始状态为 TODO                                                                        |
+| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01`           | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过                                                                                                                                                                                                                              | 本机回环监听环境重跑通过；本地提交、未 push                                                    |
+| 2026-08-21 | WP-02：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05` | `make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 130/130；`make e2e-m7-real-protocol` 1/1；`make migration-check` 通过；`make verify` 1166/1166 且 production build 通过；React `pnpm check` 与 `pnpm test` 1001/1001                                                                                                                                                                              | 回环门禁在允许本机监听的环境重跑；未 commit、未 push                                           |
+| 2026-08-22 | WP-08：`CHANNEL-01`～`CHANNEL-03`                         | WP-08 unit/DOM 21/21；聚焦 Vitest 55/55；M7 channels 11/11、全量 144/144；real Gateway 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 159 files / 1358 tests 且 production build 通过                                                                                                                           | 真实 IM/IdP/DNS/TLS/外层代理未验证；未 commit、未 push                                         |
+| 2026-08-22 | WP-09：`AGENT-01`～`AGENT-03`                             | WP-09 unit/DOM 8 files / 61 tests；backend focused 56/56；M7 agents 18/18、全量 150/150；real Gateway 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 165 files / 1394 tests 且 production build 通过                                                                                            | 外部 LLM、生产 provider/凭据、真实 IdP/DNS/TLS/外层代理未验证；未 commit、未 push              |
+| 2026-08-23 | WP-10：`MEMORY-01`～`MEMORY-03`、`SETTINGS-01`            | WP-10 unit/DOM 5 files / 59 tests；backend focused 210/210；Ruff check/format 通过；M7 settings 6/6、全量 156/156；WP-10 real Gateway 5/5（DeerMem + Noop，400/404/409/422/500/501）；WP-09 real 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 13/13、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 170 files / 1454 tests 且 production build 通过 | Mem0/Honcho/OpenViking、外部 MCP/LLM、生产 IdP/凭据/DNS/TLS/外层代理未验证；未 commit、未 push |

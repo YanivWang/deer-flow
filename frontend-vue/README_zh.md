@@ -67,10 +67,11 @@ make e2e-m5             # artifacts、sidecar 与面板生命周期合同
 make e2e-m5-real-backend # 真实 Gateway artifact Range/PUT/冲突合同
 make e2e-m6             # 包含 Vue 自有 browser DOM/wire 合同
 make e2e-m6-real-backend # 真实本地 Gateway + Chromium browser runtime
-make e2e-m7             # 完整 Vue 浏览器合同
+make e2e-m7             # 完整 Vue 浏览器合同：27 files / 156 tests
 make e2e-wp07-real-backend # 真实 Gateway scheduled-task HTTP/UI 生命周期
 make e2e-wp08-real-backend # 真实 Auth/Gateway/SQLite channel 生命周期
 make e2e-wp09-real-backend # 真实 Auth/Gateway/setup_agent/Agent 持久化
+make e2e-wp10-real-backend # 真实 Auth/DeerMem/Noop/Skills/MCP 设置生命周期
 make e2e-m7-auth        # 认证请求与安全
 make proxy-security     # Nitro body 限制、无 body/chunked DELETE、SSE 与 traversal
 make e2e-m7-real-protocol
@@ -167,6 +168,27 @@ skills/tool groups 的响应顺序和重复项；`tool_groups: null` 明确显�
 LangGraph、`setup_agent`、SQLite Agent 持久化、用户隔离和 Vue UI 收敛；只有外部 LLM
 被确定性模型替换。该门禁不证明生产模型/provider、生产模型凭据、真实 IdP、DNS/TLS、
 外层代理或生产部署。
+
+## Memory 与管理员设置
+
+Memory 是用户隔离的服务端状态，只由 `useMemory` 持有。页面支持搜索、confidence 筛选、
+精确的 `0`～`1` confidence 编辑、导出，以及带确认的新增、编辑、删除与清空，不在组件内
+复制 Gateway 响应。导入只接受完整 export 结构，并先展示覆盖预览。malformed、storage
+不接受的 fact 和重复 fact ID 会在请求前拒绝；未知字段及不同 ID 的重复 content 会保留到
+预览并明确警告。Gateway 按请求模型校验时可能忽略 forward-compatible 未知字段。
+
+普通认证用户可以读取 Skills，但只有管理员可以启停；MCP 配置的读取和写入都只允许管理员，
+因此 session 已证明是普通用户时，Vue 不会发送 MCP 请求。auth-disabled 合同环境沿用
+Gateway 的管理员语义，不额外发明 static role。每次 mutation 只发送文档定义的字段，成功后
+重读共享 TanStack Query 缓存；权限错误与未认证、普通传输错误分别展示。
+
+`make e2e-wp10-real-backend` 通过 Nuxt 与 Playwright Chromium 真实经过本地 Auth/CSRF、
+FastAPI router、用户隔离 DeerMem、独立真实 Noop manager、skill discovery/config write、MCP
+原子配置写入和 secret masking，并固定 malformed 422、校验 400、missing 404、duplicate 与
+revision-conflict 409、corrupted-storage 500、unsupported 501。fixture 只 seed operator-owned
+skill/MCP 输入文件，并仅为损坏后恢复自身 manifest 的断言暴露本轮隔离临时 home。该门禁不
+证明 Mem0/Honcho/OpenViking、真实外部 MCP 进程、生产 SkillScan/LLM/IdP/凭据、DNS/TLS、
+外层代理或部署。
 
 ## 流式与历史行为
 

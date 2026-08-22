@@ -28,6 +28,9 @@ const m5Inventory = JSON.parse(
 const m7Inventory = JSON.parse(
   readFileSync(new URL("../m7-inventory.json", import.meta.url), "utf8"),
 ) as typeof inventory;
+const m7AuthInventory = JSON.parse(
+  readFileSync(new URL("../m7-auth-inventory.json", import.meta.url), "utf8"),
+) as typeof inventory;
 const workspacePanels = readFileSync(
   new URL(
     "../../app/components/workspace/WorkspacePanels.vue",
@@ -62,6 +65,10 @@ const wp09RealConfig = readFileSync(
   new URL("../../playwright.wp09-real-backend.config.ts", import.meta.url),
   "utf8",
 );
+const wp10RealConfig = readFileSync(
+  new URL("../../playwright.wp10-real-backend.config.ts", import.meta.url),
+  "utf8",
+);
 const browserStream = readFileSync(
   new URL(
     "../../app/components/workspace/browser-view/useBrowserStream.ts",
@@ -92,10 +99,7 @@ const threadQueries = readFileSync(
   "utf8",
 );
 const toolSettings = readFileSync(
-  new URL(
-    "../../app/components/workspace/settings/ToolSettings.vue",
-    import.meta.url,
-  ),
+  new URL("../../app/composables/useMCPConfig.ts", import.meta.url),
   "utf8",
 );
 
@@ -173,12 +177,11 @@ describe("M6 inventory and browser contract", () => {
     expect(threadQueries).not.toContain("defineStore");
   });
 
-  it("updates one MCP server before refreshing authoritative config", () => {
-    expect(toolSettings).toContain("await updateMCPServerState(name, enabled)");
-    expect(toolSettings).toMatch(
-      /await updateMCPServerState\(name, enabled\);[\s\S]*config\.value = await loadMCPConfig\(\)/,
-    );
-    expect(toolSettings).toContain('role="alert"');
+  it("updates one MCP server through the single query owner before authoritative re-read", () => {
+    expect(toolSettings).toContain("updateMCPServerState");
+    expect(toolSettings).toContain("MCP_CONFIG_QUERY_KEY");
+    expect(toolSettings).toContain("invalidateQueries");
+    expect(toolSettings).not.toContain("defineStore");
   });
 });
 
@@ -194,10 +197,10 @@ describe("M5 artifact inventory", () => {
 });
 
 describe("Vue M7 gate ownership", () => {
-  it("keeps the exact WP-09 26-file / 150-test gate and owns framework-specific specs", () => {
-    expect(m7Inventory.expectedFileCount).toBe(26);
-    expect(m7Inventory.expectedTestCount).toBe(150);
-    expect(m7Inventory.specFiles).toHaveLength(26);
+  it("keeps the exact WP-10 27-file / 156-test gate and owns framework-specific specs", () => {
+    expect(m7Inventory.expectedFileCount).toBe(27);
+    expect(m7Inventory.expectedTestCount).toBe(156);
+    expect(m7Inventory.specFiles).toHaveLength(27);
     expect(m7Inventory.specFiles).toContain(
       "frontend-vue/tests/m5/artifact-batched-stream.spec.ts",
     );
@@ -218,6 +221,7 @@ describe("Vue M7 gate ownership", () => {
       "channels.spec.ts",
       "integrations.spec.ts",
       "scheduled-tasks.spec.ts",
+      "settings.spec.ts",
       "thread-history.spec.ts",
     ]) {
       expect(m7Inventory.specFiles).toContain(`frontend-vue/tests/m7/${spec}`);
@@ -227,6 +231,11 @@ describe("Vue M7 gate ownership", () => {
     expect(vueWorkflow).toContain("run: make e2e-m7");
     expect(m7Config).toContain("retries: 0");
     expect(m7Config).toContain("workers: process.env.CI ? 2 : undefined");
+    expect(m7AuthInventory.expectedFileCount).toBe(2);
+    expect(m7AuthInventory.expectedTestCount).toBe(13);
+    expect(m7AuthInventory.specFiles).toContain(
+      "frontend-vue/tests/m7/settings-auth.spec.ts",
+    );
   });
 
   it("does not reintroduce React DOM or fixed-timer shims in Vue panel behavior", () => {
@@ -257,6 +266,25 @@ describe("Vue M7 gate ownership", () => {
     expect(wp09RealConfig).toContain('testDir: "tests/wp09-real-backend"');
     expect(wp09RealConfig).toContain('DEERFLOW_ENABLE_AGENT_TEST_MODEL: "1"');
     expect(wp09RealConfig).toContain("NUXT_PUBLIC_AUTH_DISABLED=0");
+  });
+
+  it("owns a dedicated WP-10 real Auth/Memory/Skills/MCP/Chromium gate", () => {
+    expect(makefile).toContain("e2e-wp10-real-backend:");
+    expect(makefile).toContain(
+      "playwright test -c playwright.wp10-real-backend.config.ts",
+    );
+    expect(wp10RealConfig).toContain("scripts/run_replay_gateway.py");
+    expect(wp10RealConfig).toContain('testDir: "tests/wp10-real-backend"');
+    expect(wp10RealConfig).toContain('DEERFLOW_ENABLE_SETTINGS_TEST_SEED: "1"');
+    expect(wp10RealConfig).toContain(
+      'DEERFLOW_SETTINGS_TEST_MEMORY_BACKEND: "deermem"',
+    );
+    expect(wp10RealConfig).toContain(
+      'DEERFLOW_SETTINGS_TEST_MEMORY_BACKEND: "noop"',
+    );
+    expect(wp10RealConfig).toContain("DEERFLOW_SETTINGS_TEST_HOME_MARKER");
+    expect(makefile).toContain("E2E_WP10_UNSUPPORTED_GATEWAY_PORT");
+    expect(wp10RealConfig).toContain("NUXT_PUBLIC_AUTH_DISABLED=0");
   });
 });
 

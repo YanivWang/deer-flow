@@ -180,6 +180,18 @@ Direct pytest collection or execution of `tests/test_client_live.py` remains
 skipped unless `DEER_FLOW_RUN_LIVE_TESTS=1` is set. Do not add that opt-in to
 default CI workflows.
 
+`scripts/run_replay_gateway.py` may enable the WP-10 settings acceptance seed
+with `DEERFLOW_ENABLE_SETTINGS_TEST_SEED=1`. The seed in
+`tests/settings_e2e_fixture.py` prepares only ephemeral operator-owned public
+skill and MCP config inputs before importing the Gateway. Under that same
+explicit flag, `DEERFLOW_SETTINGS_TEST_MEMORY_BACKEND=deermem|noop` selects one
+checked-in manager through the normal config/factory path, while
+`DEERFLOW_SETTINGS_TEST_HOME_MARKER` may publish only the current temporary
+home path so acceptance can corrupt and restore its isolated `memory.json`.
+Auth, CSRF, per-user manager/storage, Skills and MCP routers, atomic config
+writes, cache reloads and secret masking remain the production implementations;
+do not add a test-only settings router or bypass those boundaries.
+
 ### Running the Full Application
 
 From the **project root** directory:

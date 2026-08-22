@@ -803,6 +803,7 @@ export const zhCN: Translations = {
   settings: {
     title: "设置",
     description: "根据你的偏好调整 DeerFlow 的界面和行为。",
+    sessionUnavailable: "无法验证当前会话，请检查 Gateway 连接后重试。",
     sections: {
       account: "账号",
       appearance: "外观",
@@ -827,6 +828,12 @@ export const zhCN: Translations = {
       importConfirmDescription: "这会用选中的 JSON 备份覆盖当前记忆。",
       importFileLabel: "已选择文件",
       importInvalidFile: "读取记忆文件失败，请选择有效的 JSON 导出文件。",
+      importSchemaIssue: (code, path) =>
+        `记忆导出结构无效（${code}，位置 ${path}）。`,
+      importExtraWarning: (count) =>
+        `${count} 个未知字段会原样发送，但 Gateway 可能忽略它们。`,
+      importDuplicateContentWarning: (count) =>
+        `${count} 条内容重复但 ID 不同的事实会被保留。`,
       importSuccess: "记忆已导入",
       manualFactSource: "手动添加",
       addFact: "添加事实",
@@ -854,7 +861,7 @@ export const zhCN: Translations = {
       factValidationConfidence: "置信度必须是 0 到 1 之间的数字。",
       noFacts: "还没有保存的事实。",
       summaryReadOnly:
-        "摘要分区当前仍为只读。现在你可以清空全部记忆或删除单条事实。",
+        "摘要分区当前仍为只读。现在你可以添加、编辑或删除单条事实，也可以清空全部记忆。",
       memoryFullyEmpty: "还没有保存任何记忆。",
       factPreviewLabel: "即将删除的事实",
       searchPlaceholder: "搜索记忆",

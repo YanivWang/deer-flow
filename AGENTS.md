@@ -112,6 +112,11 @@ Scheduled-task note:
 - The scheduled-task MVP adds a workspace page at `/workspace/scheduled-tasks` plus a background scheduler service gated by `config.yaml -> scheduler.enabled`.
 - Scheduled background runs are intentionally non-interactive: they execute through the normal run lifecycle, but the lead-agent toolset excludes `ask_clarification` when `context.non_interactive=true`. The key is honored only for internally-authenticated callers (the scheduler launch path); client-supplied `context.non_interactive` is dropped.
 
+Vue settings note:
+
+- `frontend-vue` keeps Memory, Skills and MCP server state in dedicated TanStack Query owners. Memory is user-scoped; Skills are readable by ordinary authenticated users but mutable only by administrators; MCP config reads and writes are administrator-only. Known non-administrators must not probe the MCP endpoint.
+- Memory imports are runtime-validated before a confirmed overwrite. Duplicate fact IDs and storage-invalid facts are rejected; forward fields and duplicate content under different IDs remain visible warnings. The dedicated real boundary is `cd frontend-vue && make e2e-wp10-real-backend`, which uses production Auth/CSRF/router/manager/config paths with real DeerMem and Noop managers. Its fixture seeds only operator-owned skill/MCP inputs and exposes only that run's isolated temporary home for corruption/recovery assertions.
+
 ## Commands: Root vs. Module
 
 **Root `make` targets drive the whole stack** (run from the repo root):

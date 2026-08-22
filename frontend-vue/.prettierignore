@@ -45,12 +45,9 @@ app/core/i18n/translations.ts
 app/core/input-polish/api.ts
 app/core/integrations/lark/api.ts
 app/core/integrations/lark/types.ts
-app/core/mcp/api.ts
 app/core/mcp/index.ts
 app/core/mcp/types.ts
-app/core/memory/api.ts
 app/core/memory/index.ts
-app/core/memory/types.ts
 app/core/messages/workspace-change-anchor.ts
 app/core/models/index.ts
 app/core/models/types.ts
@@ -63,10 +60,8 @@ app/core/sidecar/index.ts
 app/core/sidecar/reference-metadata.ts
 app/core/sidecar/reference-state.ts
 app/core/sidecar/thread.ts
-app/core/skills/api.ts
 app/core/skills/index.ts
 app/core/skills/slash.ts
-app/core/skills/type.ts
 app/core/streamdown/mermaid.ts
 app/core/streamdown/preprocess.ts
 app/core/suggestions/api.ts

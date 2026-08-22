@@ -708,6 +708,7 @@ export interface Translations {
   settings: {
     title: string;
     description: string;
+    sessionUnavailable: string;
     sections: {
       account: string;
       appearance: string;
@@ -731,6 +732,9 @@ export interface Translations {
       importConfirmDescription: string;
       importFileLabel: string;
       importInvalidFile: string;
+      importSchemaIssue: (code: string, path: string) => string;
+      importExtraWarning: (count: number) => string;
+      importDuplicateContentWarning: (count: number) => string;
       importSuccess: string;
       manualFactSource: string;
       addFact: string;

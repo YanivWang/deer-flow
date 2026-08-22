@@ -80,10 +80,11 @@ make e2e-m5             # artifacts, sidecar and panel lifecycle contracts
 make e2e-m5-real-backend # real Gateway artifact Range/PUT/conflict contracts
 make e2e-m6             # includes Vue-owned browser DOM/wire contracts
 make e2e-m6-real-backend # real local Gateway + Chromium browser runtime
-make e2e-m7             # full Vue browser contract
+make e2e-m7             # full Vue browser contract: 27 files / 156 tests
 make e2e-wp07-real-backend # real Gateway scheduled-task HTTP/UI lifecycle
 make e2e-wp08-real-backend # real Auth/Gateway/SQLite channel lifecycle
 make e2e-wp09-real-backend # real Auth/Gateway/setup_agent/Agent persistence
+make e2e-wp10-real-backend # real Auth/DeerMem/Noop/Skills/MCP settings lifecycle
 make e2e-m7-auth        # authentication requests and security
 make proxy-security     # Nitro body limits, bodyless/chunked DELETE, SSE and traversal
 make e2e-m7-real-protocol
@@ -205,6 +206,37 @@ the thread/run router, LangGraph, `setup_agent`, SQLite Agent persistence,
 user isolation and Vue convergence. Only the external LLM is replaced with a
 deterministic model. The gate is not evidence for a production model/provider,
 model credentials, production IdP, DNS/TLS, outer proxies or deployment.
+
+## Memory and administrator settings
+
+Memory is user-scoped server state owned by `useMemory`. The page supports
+search and confidence filtering, exact `0`–`1` confidence editing, export, and
+confirmed create/edit/delete/clear operations without keeping a component-local
+copy of the Gateway response. Imports require the complete export structure and
+a preview confirmation. Malformed data, storage-invalid facts and duplicate fact
+IDs are rejected before any request; unknown fields and duplicate content under
+different IDs are retained for preview with explicit warnings. The Gateway may
+ignore forward-compatible unknown fields when it validates the request model.
+
+Skills remain readable by an authenticated ordinary user, but only an
+administrator can enable or disable them. MCP configuration is administrator-
+only for both reads and writes, so the Vue page sends no MCP request when the
+session already proves the user is not an administrator. Auth-disabled contract
+environments use the Gateway's administrator semantics instead of inventing a
+separate static role. Each mutation sends only the documented wire fields and
+then re-reads its shared TanStack Query cache; permission failures remain
+distinct from authentication and transport failures.
+
+`make e2e-wp10-real-backend` exercises real local Auth/CSRF, FastAPI routers,
+user-isolated DeerMem storage, a separate real Noop manager, skill
+discovery/config writes, MCP atomic config writes and secret masking through
+Nuxt and Playwright Chromium. It pins malformed 422, validation 400, missing
+404, duplicate and revision-conflict 409, corrupted-storage 500 and unsupported
+operation 501 responses. The fixture only seeds operator-owned skill/MCP input
+files and exposes the run's isolated temporary home long enough to corrupt and
+restore its own manifest. It does not prove Mem0/Honcho/OpenViking, a real
+external MCP process, production SkillScan/LLM/IdP/credentials, DNS/TLS, an
+outer proxy or deployment.
 
 ## Streaming behavior
 

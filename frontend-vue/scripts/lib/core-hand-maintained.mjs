@@ -14,6 +14,12 @@ export const HAND_MAINTAINED_COPIED = {
     "WP-02 unifies Gateway response parsing while preserving the legacy export.",
   "i18n/cookies.ts":
     "Existing Vue SSR-free locale cookie adapter is maintained in place.",
+  "mcp/api.ts":
+    "WP-10 adds abortable settings ownership and typed admin-required Gateway errors.",
+  "memory/api.ts":
+    "WP-10 adds abortable Memory CRUD/import/export and shared lossless Gateway errors.",
+  "memory/types.ts":
+    "WP-10 preserves generated Gateway fact metadata plus forward-compatible import fields.",
   "threads/api.ts":
     "WP-02 preserves Gateway HTTP status/body through the shared Vue error parser.",
   "scheduled-tasks/api.ts":
@@ -24,4 +30,8 @@ export const HAND_MAINTAINED_COPIED = {
     "WP-08 adds abortable polling, explicit expiry, finite bounds, and multi-account baseline isolation.",
   "channels/provider-state.ts":
     "WP-08 keeps connectability capability-only because scoped connection instances, not provider summaries, own user status and multi-account eligibility.",
+  "skills/api.ts":
+    "WP-10 adds abortable catalog/toggle requests and typed admin-required errors.",
+  "skills/type.ts":
+    "WP-10 aligns nullable license with the real Gateway SkillResponse contract.",
 };
