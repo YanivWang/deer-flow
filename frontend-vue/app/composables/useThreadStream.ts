@@ -119,7 +119,10 @@ export interface UseThreadStreamOptions {
   notify?: ThreadStreamNotifier;
   onSend?: (threadId: string) => void;
   onStart?: (threadId: string, runId: string) => void;
-  onFinish?: (state: Record<string, unknown>) => void;
+  onFinish?: (
+    state: Record<string, unknown>,
+    messages: readonly Message[],
+  ) => void;
   /** 测试注入点，取代上游的 23 处 `isMock`。 */
   runnerFactory?: (options: ThreadRunnerOptions) => ThreadRunner;
 }
@@ -453,7 +456,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
       );
       pendingPreparedReplay = null;
     }
-    onFinish?.(runner.getSnapshot().state);
+    onFinish?.(runner.getSnapshot().state, runner.getWireMessages());
     invalidateStoppedThreadCaches(queryClient, threadId.value);
   }
 
@@ -614,10 +617,16 @@ export function useThreadStream(options: UseThreadStreamOptions) {
       additionalInputMessages?: Message[];
       additionalKwargs?: Record<string, unknown>;
       onAccepted?: () => void;
+      signal?: AbortSignal;
     },
   ): Promise<boolean> {
+    if (sendOptions?.signal?.aborted) {
+      throw new DOMException("The operation was aborted.", "AbortError");
+    }
     if (sendInFlight) return false;
     sendInFlight = true;
+    const abortRunner = () => runner.abort();
+    sendOptions?.signal?.addEventListener("abort", abortRunner, { once: true });
     streamError.value = null;
     let acceptedByBackend = false;
     pendingAcceptedCallback = () => {
@@ -694,6 +703,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
       localTurnOrderBaseline = null;
       throw error;
     } finally {
+      sendOptions?.signal?.removeEventListener("abort", abortRunner);
       sendInFlight = false;
     }
   }

@@ -407,6 +407,7 @@ export interface Translations {
     nameStepHint: string;
     nameStepPlaceholder: string;
     nameStepContinue: string;
+    nameStepChecking: string;
     nameStepInvalidError: string;
     nameStepAlreadyExistsError: string;
     nameStepNetworkError: string;
@@ -416,6 +417,15 @@ export interface Translations {
     nameStepBootstrapMessage: string;
     save: string;
     saving: string;
+    verifying: string;
+    retry: string;
+    creationError: string;
+    saveNotAccepted: string;
+    creationLoadFailed: string;
+    creationVisibilityUnavailable: string;
+    creationRequestFailed: string;
+    creationMissingToolResult: string;
+    creationRunFailed: string;
     saveRequested: string;
     saveHint: string;
     saveCommandMessage: string;
@@ -441,6 +451,26 @@ export interface Translations {
     settingsSaved: string;
     settingsInvalidTemperature: string;
     settingsInvalidMaxTokens: string;
+    settingsInvalidModel: string;
+    settingsModelsLoading: string;
+    settingsModelsFailed: string;
+    settingsModelUnavailable: string;
+    settingsReasoningLow: string;
+    settingsReasoningMedium: string;
+    settingsReasoningHigh: string;
+    settingsCancel: string;
+    settingsSave: string;
+    settingsSaving: string;
+    settingsSaveFailed: string;
+    loading: string;
+    loadFailed: string;
+    deleteFailed: string;
+    cardModel: string;
+    cardSkills: string;
+    cardSkillsNone: string;
+    cardToolGroups: string;
+    cardToolGroupsAll: string;
+    cardToolGroupsNone: string;
   };
 
   // Breadcrumb

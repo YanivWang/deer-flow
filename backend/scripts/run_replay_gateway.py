@@ -37,6 +37,11 @@ def main() -> int:
     cfg = home / "config.yaml"
     config_yaml = build_config_yaml(model_block=REPLAY_MODEL_BLOCK, home=home)
     channel_fixture_enabled = os.environ.get("DEERFLOW_ENABLE_CHANNEL_TEST_SEED") == "1"
+    agent_fixture_enabled = os.environ.get("DEERFLOW_ENABLE_AGENT_TEST_MODEL") == "1"
+    if agent_fixture_enabled:
+        from agent_e2e_fixture import AGENT_E2E_MODEL_BLOCK
+
+        config_yaml = build_config_yaml(model_block=AGENT_E2E_MODEL_BLOCK, home=home)
     if channel_fixture_enabled:
         config_yaml += """\
 channel_connections:
@@ -76,6 +81,10 @@ channels:
         from channel_e2e_fixture import install_channel_service_fixture
 
         install_channel_service_fixture()
+    if agent_fixture_enabled:
+        from agent_e2e_fixture import install_agent_model_fixture
+
+        install_agent_model_fixture()
     # Test-only: attach the run/message seeder used by the multi-run render-order
     # e2e (#3352). Imported from tests/ and mounted here only — never in the
     # production app. Pass the app object (not the import string) so the extra
@@ -97,6 +106,18 @@ channels:
         gateway_app.include_router(channel_seed_router)
         target = gateway_app
         print("[replay-gw] controlled external-channel fixture mounted at /api/test-only/channels", flush=True)
+
+    if agent_fixture_enabled:
+        from agent_e2e_fixture import router as agent_fixture_router
+
+        from app.gateway.app import app as gateway_app
+
+        gateway_app.include_router(agent_fixture_router)
+        target = gateway_app
+        print(
+            "[replay-gw] controlled Agent model fixture mounted at /api/test-only/agents",
+            flush=True,
+        )
 
     print(f"[replay-gw] config={cfg} fixture={args.fixture} cors={args.cors} port={args.port}", flush=True)
     uvicorn.run(target, host="127.0.0.1", port=args.port, log_level="warning")

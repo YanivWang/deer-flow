@@ -21,13 +21,80 @@ const MOCK_AGENTS = [
     name: "test-agent",
     description: "A test agent for E2E tests",
     system_prompt: "You are a test agent.",
+    model: "reasoning",
+    tool_groups: ["browser", "file:read", "browser"],
+    skills: ["review", "review", "long-skill-name"],
+    model_settings: { temperature: 0, max_tokens: 200000 },
+    thinking_enabled: false,
+    reasoning_effort: "high",
   },
   {
     name: "second-agent",
     description: "Another test agent for E2E tests",
     system_prompt: "You are another test agent.",
+    model: null,
+    tool_groups: [],
+    skills: [],
   },
 ];
+
+const MOCK_MODELS = [
+  {
+    id: "basic",
+    name: "basic",
+    model: "provider/basic",
+    display_name: "Basic",
+    supports_thinking: false,
+    supports_reasoning_effort: false,
+  },
+  {
+    id: "reasoning",
+    name: "reasoning",
+    model: "provider/reasoning",
+    display_name: "Reasoning",
+    supports_thinking: true,
+    supports_reasoning_effort: true,
+  },
+];
+
+function setupAgentStream(
+  route: Parameters<typeof handleRunStream>[0],
+  status: "success" | "error",
+) {
+  const messages = [
+    {
+      type: "ai",
+      id: `setup-call-message-${status}`,
+      content: "",
+      tool_calls: [
+        {
+          id: `setup-call-${status}`,
+          name: "setup_agent",
+          args: { soul: "# Reviewer", description: "Reviews code" },
+        },
+      ],
+    },
+    {
+      type: "tool",
+      id: `setup-result-${status}`,
+      content:
+        status === "success"
+          ? "Agent 'reviewer' created successfully!"
+          : "Error: storage permission denied",
+      tool_call_id: `setup-call-${status}`,
+      status,
+    },
+    {
+      type: "ai",
+      id: `setup-prose-${status}`,
+      content:
+        status === "success"
+          ? "The first version is ready."
+          : "Agent created successfully!",
+    },
+  ];
+  return handleRunStream(route, { messages }, messages);
+}
 
 test.describe("Agent chat", () => {
   test("agent gallery page loads and shows agents", async ({ page }) => {
@@ -39,6 +106,338 @@ test.describe("Agent chat", () => {
     await expect(page.getByText("test-agent")).toBeVisible({
       timeout: 15_000,
     });
+  });
+
+  test("agent gallery preserves exact model, duplicate skills, and tool-group order", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page, { agents: MOCK_AGENTS });
+    await page.goto("/workspace/agents");
+
+    const card = page.getByTestId("agent-card-test-agent");
+    await expect(card.getByTestId("agent-model")).toHaveText("reasoning");
+    await expect(card.getByTestId("agent-tool-group")).toHaveText([
+      "browser",
+      "file:read",
+      "browser",
+    ]);
+    await expect(card.getByTestId("agent-skill")).toHaveText([
+      "review",
+      "review",
+      "long-skill-name",
+    ]);
+    await expect(
+      page
+        .getByTestId("agent-card-second-agent")
+        .getByTestId("agent-tool-groups-none"),
+    ).toHaveText("No configured tool groups");
+  });
+
+  test("settings use real capabilities, send exact PUT, and re-read the list", async ({
+    page,
+  }) => {
+    let mutableAgents = structuredClone(MOCK_AGENTS);
+    let putBody: Record<string, unknown> | undefined;
+    let listReads = 0;
+    const agentRequests: string[] = [];
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      if (url.pathname.startsWith("/api/agents")) {
+        agentRequests.push(`${request.method()} ${url.pathname}`);
+      }
+    });
+    mockLangGraphAPI(page, { agents: mutableAgents });
+    await page.route("**/api/models", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          models: MOCK_MODELS,
+          token_usage: { enabled: false },
+        }),
+      }),
+    );
+    await page.route("**/api/agents", (route) => {
+      if (route.request().method() === "GET") {
+        listReads += 1;
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ agents: mutableAgents }),
+        });
+      }
+      return route.fallback();
+    });
+    await page.route(/\/api\/agents\/test-agent$/, (route) => {
+      if (route.request().method() !== "PUT") return route.fallback();
+      putBody = route.request().postDataJSON() as Record<string, unknown>;
+      mutableAgents = mutableAgents.map((item) =>
+        item.name === "test-agent"
+          ? {
+              ...item,
+              model: "basic",
+              model_settings: {
+                temperature: 0,
+                max_tokens: 200000,
+              },
+              thinking_enabled: null,
+              reasoning_effort: null,
+            }
+          : item,
+      );
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mutableAgents[0]),
+      });
+    });
+
+    await page.goto("/workspace/agents");
+    await page
+      .getByRole("button", { name: "Model settings: test-agent" })
+      .click();
+    await page.getByTestId("agent-settings-model").selectOption("basic");
+    await expect(page.getByTestId("agent-settings-thinking")).toHaveCount(0);
+    await expect(page.getByTestId("agent-settings-reasoning")).toHaveCount(0);
+    await page.getByTestId("agent-settings-temperature").fill("0");
+    await page.getByTestId("agent-settings-max-tokens").fill("200000");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+
+    await expect
+      .poll(() => ({ putBody, agentRequests }))
+      .toEqual({
+        putBody: {
+          model: "basic",
+          model_settings: { temperature: 0, max_tokens: 200000 },
+          thinking_enabled: null,
+          reasoning_effort: null,
+        },
+        agentRequests: expect.arrayContaining([
+          "GET /api/agents",
+          "PUT /api/agents/test-agent",
+        ]),
+      });
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(
+      page.getByTestId("agent-card-test-agent").getByTestId("agent-model"),
+    ).toHaveText("basic");
+    expect(listReads).toBeGreaterThanOrEqual(2);
+  });
+
+  test("settings failure stays visible and does not submit twice", async ({
+    page,
+  }) => {
+    let puts = 0;
+    mockLangGraphAPI(page, { agents: MOCK_AGENTS });
+    await page.route("**/api/models", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          models: MOCK_MODELS,
+          token_usage: { enabled: false },
+        }),
+      }),
+    );
+    await page.route(/\/api\/agents\/test-agent$/, (route) => {
+      if (route.request().method() !== "PUT") return route.fallback();
+      puts += 1;
+      return route.fulfill({
+        status: 422,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Unknown model 'retired'" }),
+      });
+    });
+
+    await page.goto("/workspace/agents");
+    await page
+      .getByRole("button", { name: "Model settings: test-agent" })
+      .click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("alert")).toContainText(
+      "Unknown model 'retired'",
+    );
+    expect(puts).toBe(1);
+  });
+
+  test("model discovery failure is visible with no retry storm", async ({
+    page,
+  }) => {
+    let modelReads = 0;
+    mockLangGraphAPI(page, { agents: MOCK_AGENTS });
+    await page.route("**/api/models", (route) => {
+      modelReads += 1;
+      return route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "model catalog unavailable" }),
+      });
+    });
+
+    await page.goto("/workspace/agents");
+    await page
+      .getByRole("button", { name: "Model settings: test-agent" })
+      .click();
+    await expect(page.getByRole("alert")).toContainText(
+      "model catalog unavailable",
+    );
+    await page.waitForTimeout(300);
+    expect(modelReads).toBe(1);
+  });
+
+  test("creation requires a successful setup_agent ToolMessage, hides save input, and deduplicates save", async ({
+    page,
+  }) => {
+    let hiddenRuns = 0;
+    let created = false;
+    let lastInput: unknown[] = [];
+    mockLangGraphAPI(page, { agents: [] });
+    await page.route("**/api/agents/check?*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ available: true, name: "reviewer" }),
+      }),
+    );
+    await page.route("**/api/agents/reviewer", (route) =>
+      route.fulfill({
+        status: created ? 200 : 404,
+        contentType: "application/json",
+        body: JSON.stringify(
+          created
+            ? {
+                name: "reviewer",
+                description: "Reviews code",
+                model: "reasoning",
+                tool_groups: ["browser"],
+                skills: ["review"],
+              }
+            : { detail: "Agent not found" },
+        ),
+      }),
+    );
+    await page.route("**/api/agents", (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+              agents: created
+                ? [
+                    {
+                      name: "reviewer",
+                      description: "Reviews code",
+                      model: "reasoning",
+                      tool_groups: ["browser"],
+                      skills: ["review"],
+                    },
+                  ]
+                : [],
+            }),
+          })
+        : route.fallback(),
+    );
+    await page.route("**/api/langgraph/threads/*/runs/stream", (route) => {
+      const body = route.request().postDataJSON() as {
+        input?: {
+          messages?: Array<{ additional_kwargs?: { hide_from_ui?: boolean } }>;
+        };
+      };
+      lastInput = body.input?.messages ?? [];
+      const hidden = body.input?.messages?.some(
+        (message) => message.additional_kwargs?.hide_from_ui === true,
+      );
+      if (!hidden) return handleRunStream(route);
+      hiddenRuns += 1;
+      created = true;
+      return setupAgentStream(route, "success");
+    });
+
+    await page.goto("/workspace/agents/new");
+    await page.getByLabel("Name your new Agent").fill("reviewer");
+    await page.getByRole("button", { name: "Continue" }).click();
+    const save = page.getByTestId("agent-save");
+    await expect(save).toBeEnabled({ timeout: 15_000 });
+    await save.evaluate((element) => {
+      element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    await expect(page.getByTestId("agent-created")).toBeVisible({
+      timeout: 15_000,
+    });
+    expect(hiddenRuns).toBe(1);
+    expect(lastInput).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          additional_kwargs: expect.objectContaining({ hide_from_ui: true }),
+        }),
+      ]),
+    );
+    await expect(
+      page.getByText(/Please save this custom agent now based on everything/),
+    ).toHaveCount(0);
+  });
+
+  test("assistant success prose cannot mask a setup_agent error and explicit retry creates one new run", async ({
+    page,
+  }) => {
+    let hiddenRuns = 0;
+    let created = false;
+    mockLangGraphAPI(page, { agents: [] });
+    await page.route("**/api/agents/check?*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ available: true, name: "reviewer" }),
+      }),
+    );
+    await page.route("**/api/agents/reviewer", (route) =>
+      route.fulfill({
+        status: created ? 200 : 404,
+        contentType: "application/json",
+        body: JSON.stringify(
+          created
+            ? {
+                name: "reviewer",
+                description: "Reviews code",
+                model: null,
+                tool_groups: null,
+                skills: null,
+              }
+            : { detail: "Agent not found" },
+        ),
+      }),
+    );
+    await page.route("**/api/langgraph/threads/*/runs/stream", (route) => {
+      const body = route.request().postDataJSON() as {
+        input?: {
+          messages?: Array<{ additional_kwargs?: { hide_from_ui?: boolean } }>;
+        };
+      };
+      const hidden = body.input?.messages?.some(
+        (message) => message.additional_kwargs?.hide_from_ui === true,
+      );
+      if (!hidden) return handleRunStream(route);
+      hiddenRuns += 1;
+      if (hiddenRuns === 1) return setupAgentStream(route, "error");
+      created = true;
+      return setupAgentStream(route, "success");
+    });
+
+    await page.goto("/workspace/agents/new");
+    await page.getByLabel("Name your new Agent").fill("reviewer");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByTestId("agent-save").click();
+    await expect(page.getByTestId("agent-creation-error")).toContainText(
+      "storage permission denied",
+    );
+    await expect(page.getByTestId("agent-created")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Try again" }).click();
+    await expect(page.getByTestId("agent-created")).toBeVisible();
+    expect(hiddenRuns).toBe(2);
   });
 
   test("agent chat page loads with input box and AI disclaimer", async ({

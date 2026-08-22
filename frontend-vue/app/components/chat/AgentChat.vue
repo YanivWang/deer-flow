@@ -8,6 +8,7 @@
   【边界与注意】   集成根而非 L2 组件；artifact/sidecar/browser 接线不得反向进入通用层。
 */
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { useQueryClient } from "@tanstack/vue-query";
 import { CalendarClock, Menu, Share2 } from "lucide-vue-next";
 
 import ChatComposer from "@/components/chat/ChatComposer.vue";
@@ -23,6 +24,7 @@ import BrowserPanel from "@/components/workspace/browser-view/BrowserPanel.vue";
 import BrowserTrigger from "@/components/workspace/browser-view/BrowserTrigger.vue";
 import SidecarPanel from "@/components/workspace/sidecar/SidecarPanel.vue";
 import { useArtifactsPanel } from "@/composables/useArtifactsPanel";
+import { useAgentCreationSession } from "@/composables/useAgentCreationSession";
 import { useSidecar } from "@/composables/useSidecar";
 import { useSidecarSession } from "@/composables/useSidecarSession";
 import { useThreadStream } from "@/composables/useThreadStream";
@@ -65,6 +67,8 @@ import {
 } from "@/core/sidecar";
 import { buildWriteFileArtifactURL } from "@/core/artifacts/utils";
 import { getAgent } from "@/core/agents/api";
+import { buildAgentSaveSubmission } from "@/core/agents/creation-session";
+import { agentKeys } from "@/core/agents/query-keys";
 import type { Agent } from "@/core/agents/types";
 import { resolveComposerModel } from "@/core/models/capabilities";
 import { createAsyncGeneration } from "@/core/async/generation";
@@ -83,6 +87,7 @@ const { $i18n } = useNuxtApp();
 const route = useRoute();
 const router = useRouter();
 const threads = useThreads();
+const queryClient = useQueryClient();
 const isDemo = computed(
   () => props.demo === true || route.query.mock === "true",
 );
@@ -179,9 +184,16 @@ const editState = ref<{
   text: string;
   messageIds: string[];
 } | null>(null);
+let finishAgentCreationRun: (messages: readonly Message[]) => void = () => {};
 
 const stream = useThreadStream({
   threadId: streamThreadId,
+  // Bootstrap creation intentionally stays on /workspace/agents/new until
+  // setup_agent succeeds. Keep the prepared real thread visible without
+  // enabling route-owned history queries for it.
+  displayThreadId: computed(
+    () => streamThreadId.value ?? preparedThreadId.value,
+  ),
   context,
   model: selectedModel,
   notify: {
@@ -202,7 +214,8 @@ const stream = useThreadStream({
       void router.replace(path);
     }
   },
-  onFinish(state) {
+  onFinish(state, completedMessages) {
+    finishAgentCreationRun(completedMessages);
     const id = routeThreadId.value;
     const title = Reflect.get(state, "title");
     if (id && typeof title === "string" && title.trim()) {
@@ -249,6 +262,53 @@ const stream = useThreadStream({
     );
   },
 });
+const creation = useAgentCreationSession({
+  agentName: () => props.agentName ?? "",
+  submitSave: (signal) => {
+    const submission = buildAgentSaveSubmission(
+      $i18n.t.value.agents.saveCommandMessage,
+    );
+    return send(submission.text, submission.files, {
+      additionalKwargs: submission.additionalKwargs,
+      signal,
+      reportFailure: false,
+    });
+  },
+  loadAgent: (name, signal) => getAgent(name, { signal }),
+  async onCreated(created) {
+    agent.value = created;
+    agentResolved.value = true;
+    queryClient.setQueryData(agentKeys.detail(created.name), created);
+    queryClient.setQueryData<Agent[]>(agentKeys.list(), (rows) => {
+      const current = rows ?? [];
+      return current.some((row) => row.name === created.name)
+        ? current.map((row) => (row.name === created.name ? created : row))
+        : [...current, created];
+    });
+    await queryClient.invalidateQueries({
+      queryKey: agentKeys.list(),
+      exact: true,
+    });
+  },
+  copy: {
+    saveNotAccepted: $i18n.t.value.agents.saveNotAccepted,
+    loadFailed: $i18n.t.value.agents.creationLoadFailed,
+    visibilityUnavailable: $i18n.t.value.agents.creationVisibilityUnavailable,
+    requestFailed: $i18n.t.value.agents.creationRequestFailed,
+    missingToolResult: $i18n.t.value.agents.creationMissingToolResult,
+    runFailed: $i18n.t.value.agents.creationRunFailed,
+  },
+});
+finishAgentCreationRun = (messages) => {
+  if (props.bootstrap) void creation.onRunFinished(messages);
+};
+watch(stream.error, (error) => {
+  if (props.bootstrap && error) creation.onRunError(error);
+});
+const creationBusy = computed(
+  () =>
+    creation.status.value === "saving" || creation.status.value === "verifying",
+);
 const authoritativeArtifacts = computed(() => {
   if (isDemo.value) return demoArtifacts.value;
   const state = stream.state.value;
@@ -706,7 +766,12 @@ async function ensureThread() {
 async function send(
   text: string,
   files: FileInMessage[],
-  options?: { onAccepted?: () => void },
+  options?: {
+    onAccepted?: () => void;
+    additionalKwargs?: Record<string, unknown>;
+    signal?: AbortSignal;
+    reportFailure?: boolean;
+  },
 ) {
   if (isDemo.value) return false;
   followups.value = [];
@@ -720,12 +785,20 @@ async function send(
       { text, files },
       undefined,
       {
-        ...(contexts.length
+        ...(contexts.length || options?.additionalKwargs
           ? {
-              additionalInputMessages: [quotePrompt(contexts)],
-              additionalKwargs: buildReferenceMessageMetadata(contexts),
+              ...(contexts.length
+                ? { additionalInputMessages: [quotePrompt(contexts)] }
+                : {}),
+              additionalKwargs: {
+                ...options?.additionalKwargs,
+                ...(contexts.length
+                  ? buildReferenceMessageMetadata(contexts)
+                  : {}),
+              },
             }
           : {}),
+        signal: options?.signal,
         onAccepted: () => {
           if (quotes.length) sidecar.clearConversationQuotes();
           options?.onAccepted?.();
@@ -736,10 +809,12 @@ async function send(
     failedSend.value = null;
     return true;
   } catch (error) {
-    failedSend.value = { text, files };
-    warnings.value.push(
-      error instanceof Error ? error.message : "Request failed.",
-    );
+    if (options?.reportFailure !== false) {
+      failedSend.value = { text, files };
+      warnings.value.push(
+        error instanceof Error ? error.message : "Request failed.",
+      );
+    }
     if (options) throw error;
     return false;
   }
@@ -1026,14 +1101,24 @@ onUnmounted(() => {
           <button
             v-if="bootstrap"
             type="button"
+            data-testid="agent-save"
             class="rounded-md border px-3 py-1.5 text-xs"
-            :disabled="stream.isStreaming.value"
-            @click="send($i18n.t.value.agents.saveCommandMessage, [])"
+            :disabled="
+              stream.isStreaming.value ||
+              creationBusy ||
+              creation.status.value === 'created'
+            "
+            @click="creation.save"
           >
             {{
-              stream.isStreaming.value
-                ? $i18n.t.value.agents.saving
-                : $i18n.t.value.agents.save
+              creation.status.value === "verifying"
+                ? $i18n.t.value.agents.verifying
+                : creation.status.value === "created"
+                  ? $i18n.t.value.agents.agentCreated
+                  : creation.status.value === "saving" ||
+                      stream.isStreaming.value
+                    ? $i18n.t.value.agents.saving
+                    : $i18n.t.value.agents.save
             }}
           </button>
           <ArtifactTrigger
@@ -1155,6 +1240,18 @@ onUnmounted(() => {
           </button>
         </p>
         <div
+          v-if="bootstrap && creation.status.value === 'error'"
+          data-testid="agent-creation-error"
+          role="alert"
+          class="absolute right-4 bottom-36 left-4 z-40 mx-auto max-w-xl rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 shadow"
+        >
+          <strong>{{ $i18n.t.value.agents.creationError }}:</strong>
+          {{ creation.error.value }}
+          <button type="button" class="ml-2 underline" @click="creation.retry">
+            {{ $i18n.t.value.agents.retry }}
+          </button>
+        </div>
+        <div
           class="right-0 bottom-0 left-0 z-30 flex justify-center px-3 sm:px-4"
           :class="isWelcomeMode ? 'absolute' : 'relative shrink-0 pb-4'"
         >
@@ -1166,8 +1263,43 @@ onUnmounted(() => {
                 : 'max-w-[var(--container-width-md)]',
             ]"
           >
+            <section
+              v-if="
+                bootstrap &&
+                creation.status.value === 'created' &&
+                creation.agent.value
+              "
+              data-testid="agent-created"
+              class="bg-background mx-auto w-full max-w-lg rounded-xl border p-6 text-center shadow-sm"
+            >
+              <div class="text-3xl" aria-hidden="true">✓</div>
+              <h2 class="mt-2 text-xl font-semibold">
+                {{ $i18n.t.value.agents.agentCreated }}
+              </h2>
+              <p class="text-muted-foreground mt-2 text-sm">
+                {{ creation.agent.value.name }} ·
+                {{ creation.agent.value.description }}
+              </p>
+              <div class="mt-5 flex flex-wrap justify-center gap-2">
+                <NuxtLink
+                  :to="`/workspace/agents/${encodeURIComponent(creation.agent.value.name)}/chats/new`"
+                  class="bg-primary text-primary-foreground rounded-md px-3 py-2 text-sm"
+                >
+                  {{ $i18n.t.value.agents.startChatting }}
+                </NuxtLink>
+                <NuxtLink
+                  to="/workspace/agents"
+                  class="rounded-md border px-3 py-2 text-sm"
+                >
+                  {{ $i18n.t.value.agents.backToGallery }}
+                </NuxtLink>
+              </div>
+            </section>
             <div
-              v-if="isWelcomeMode"
+              v-if="
+                isWelcomeMode &&
+                !(bootstrap && creation.status.value === 'created')
+              "
               class="mx-auto flex w-full flex-col items-center justify-center gap-2 px-4 py-4 text-center sm:px-8"
             >
               <div
@@ -1186,6 +1318,7 @@ onUnmounted(() => {
             </div>
             <div
               v-if="isWelcomeMode || followupsLoading || followups.length"
+              v-show="!(bootstrap && creation.status.value === 'created')"
               data-slot="suggestions-list"
               class="mb-2 flex w-full flex-wrap justify-center gap-2"
             >
@@ -1234,11 +1367,15 @@ onUnmounted(() => {
               </button>
             </div>
             <TodoList
-              v-if="authoritativeTodos.length"
+              v-if="
+                authoritativeTodos.length &&
+                !(bootstrap && creation.status.value === 'created')
+              "
               :todos="authoritativeTodos"
               class="mb-2"
             />
             <ChatComposer
+              v-if="!(bootstrap && creation.status.value === 'created')"
               ref="composer"
               :thread-key="routeThreadId ?? 'new'"
               :target-thread-id="routeThreadId ?? draftThreadId"

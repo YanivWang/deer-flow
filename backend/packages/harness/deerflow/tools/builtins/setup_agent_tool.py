@@ -42,6 +42,7 @@ def setup_agent(
                     ToolMessage(
                         content="Error: soul content is empty; refusing to create agent with an empty SOUL.md",
                         tool_call_id=runtime.tool_call_id,
+                        status="error",
                     )
                 ]
             }
@@ -75,10 +76,10 @@ def setup_agent(
         return Command(
             update={
                 "created_agent_name": agent_name,
-                "messages": [ToolMessage(content=f"Agent '{agent_name}' created successfully!", tool_call_id=runtime.tool_call_id)],
+                "messages": [ToolMessage(content=f"Agent '{agent_name}' created successfully!", tool_call_id=runtime.tool_call_id, status="success")],
             }
         )
 
     except Exception as e:
         logger.error(f"[agent_creator] Failed to create agent '{agent_name}': {e}", exc_info=True)
-        return Command(update={"messages": [ToolMessage(content=f"Error: {e}", tool_call_id=runtime.tool_call_id)]})
+        return Command(update={"messages": [ToolMessage(content=f"Error: {e}", tool_call_id=runtime.tool_call_id, status="error")]})

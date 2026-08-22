@@ -22,10 +22,11 @@ export function useModels(
 ) {
   const query = useQuery({
     queryKey: MODELS_QUERY_KEY,
-    queryFn: loadModels,
+    queryFn: ({ signal }) => loadModels({ signal }),
     enabled: computed(() => toValue(options.enabled ?? true)),
     refetchOnWindowFocus: false,
     staleTime: Infinity,
+    retry: false,
   });
 
   return {

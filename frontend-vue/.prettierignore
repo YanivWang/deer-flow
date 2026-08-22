@@ -15,7 +15,6 @@ app/core/api/types.gen.ts
 # COPIED 档必须逐字节等同上游。prettier 3.9.6 与上游的 3.8.1 对 7 个文件意见不同，
 # 一次 `make format` 就会让 core-provenance.test.ts 变红。这里只挡 COPIED，
 # app/core/ 下我们自己写的文件照常格式化。
-app/core/agents/api.ts
 app/core/agents/feature-cache.ts
 app/core/agents/types.ts
 app/core/api/feedback.ts

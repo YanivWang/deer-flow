@@ -168,6 +168,14 @@ export function resolveMarkdownArtifactURL(
   ],
   "models/api.ts": [
     {
+      why: "WP-09 routes model discovery through the shared authenticated fetch and lossless Gateway error parser.",
+      find: `import { getBackendBaseURL } from "../config";`,
+      replace: `import { throwGatewayResponseError } from "@/core/api/errors";
+import { fetch } from "@/core/api/fetcher";
+
+import { getBackendBaseURL } from "../config";`,
+    },
+    {
       why: "早返回与它唯一的消费对象 STATIC_MODELS_RESPONSE 一起删。",
       find: `const STATIC_MODELS_RESPONSE: ModelsResponse = {
   models: [],
@@ -182,6 +190,22 @@ export async function loadModels(): Promise<ModelsResponse> {
   const res`,
       replace: `export async function loadModels(): Promise<ModelsResponse> {
   const res`,
+    },
+    {
+      why: "Model discovery is abortable and a non-2xx response is an error, not an empty successful catalog.",
+      find: `export async function loadModels(): Promise<ModelsResponse> {
+  const res = await fetch(\`\${getBackendBaseURL()}/api/models\`);
+  const data`,
+      replace: `export async function loadModels(
+  options: { signal?: AbortSignal } = {},
+): Promise<ModelsResponse> {
+  const res = await fetch(\`\${getBackendBaseURL()}/api/models\`, {
+    signal: options.signal,
+  });
+  if (!res.ok) {
+    await throwGatewayResponseError(res, "Failed to load models.");
+  }
+  const data`,
     },
   ],
   // --- runtime options（06 §M1 1a、08 §Runtime config 与认证边界） ---
@@ -429,11 +453,16 @@ const HAND_MAINTAINED = {
   "artifacts/loader.ts":
     "WP-06 gates loading behind explicit text policy and preserves Gateway errors and abort semantics.",
   "i18n/locales/en-US.ts":
-    "WP-07 adds scheduled-task copy; WP-08 adds Vue-owned multi-account channel lifecycle copy.",
+    "WP-07 adds scheduled-task copy; WP-08 adds channels; WP-09 adds Agent lifecycle, cards, and capability settings copy.",
   "i18n/locales/types.ts":
-    "WP-07/WP-08 declare Vue-owned scheduled-task and channel dictionary extensions.",
+    "WP-07/WP-08/WP-09 declare Vue-owned scheduled-task, channel, and Agent dictionary extensions.",
   "i18n/locales/zh-CN.ts":
-    "WP-07/WP-08 add the matching Chinese scheduled-task and channel dictionary extensions.",
+    "WP-07/WP-08/WP-09 add the matching Chinese scheduled-task, channel, and Agent dictionary extensions.",
+};
+
+const PROVENANCE_NOTES = {
+  "models/api.ts":
+    "WP-09 uses abortable authenticated fetch and throws the shared lossless Gateway error for non-2xx model discovery.",
 };
 
 /** 六段式文件头（04 §6）。COPIED 档不加（04 已裁决），RETYPED 是我们的代码，必须加。 */
@@ -582,7 +611,11 @@ function applyPatches(text, patches, source) {
 }
 
 function header(entry, sourceRoot, exportsLine) {
-  const reasons = entry.reasons.map((reason) => reason.detail).join("");
+  const baseReasons = entry.reasons.map((reason) => reason.detail).join("");
+  const provenanceNote = PROVENANCE_NOTES[entry.source];
+  const reasons = provenanceNote
+    ? `${baseReasons} ${provenanceNote}`
+    : baseReasons;
   return `/*
   【文件职责】     见下方源码；本文件由 ${sourceRoot}/${entry.source} retype 而来。
   【对应 frontend/】 ${sourceRoot}/${entry.source}
@@ -676,7 +709,12 @@ const cell = (text) => text.replace(/\|/g, "\\|");
 
 function renderBlock(entries) {
   const rows = entries.map((entry) => {
-    const detail = entry.reasons.map((reason) => reason.detail).join(" ");
+    const detail = [
+      ...entry.reasons.map((reason) => reason.detail),
+      PROVENANCE_NOTES[entry.source] ?? "",
+    ]
+      .filter(Boolean)
+      .join(" ");
     return `| \`${entry.source}\` | \`RETYPED\` | \`${entry.source}\` | ${cell(detail)} |`;
   });
   return [BEGIN, ...rows, END].join("\n");

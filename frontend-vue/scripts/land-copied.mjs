@@ -33,6 +33,7 @@ import {
   resolveCommit,
   sha256,
 } from "./lib/source-facts.mjs";
+import { HAND_MAINTAINED_COPIED } from "./lib/core-hand-maintained.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const LEDGER = join(ROOT, "app/core/PROVENANCE.md");
@@ -41,24 +42,6 @@ const BEGIN = "<!-- COPIED:BEGIN 由 `make land-copied` 生成，勿手改 -->";
 const END = "<!-- COPIED:END -->";
 const IGNORE_BEGIN = "# COPIED:BEGIN 由 `make land-copied` 生成，勿手改";
 const IGNORE_END = "# COPIED:END";
-
-/** Intentionally diverged Vue-owned files that started in the COPIED class. */
-const HAND_MAINTAINED = {
-  "api/errors.ts":
-    "WP-02 unifies Gateway response parsing while preserving the legacy export.",
-  "i18n/cookies.ts":
-    "Existing Vue SSR-free locale cookie adapter is maintained in place.",
-  "threads/api.ts":
-    "WP-02 preserves Gateway HTTP status/body through the shared Vue error parser.",
-  "scheduled-tasks/api.ts":
-    "WP-07 adds abortable detail and limit/offset runs queries while narrowing create/update payloads to the Gateway contract.",
-  "channels/api.ts":
-    "WP-08 threads AbortSignal through scoped channel queries and all lifecycle mutations.",
-  "channels/connect-poll.ts":
-    "WP-08 adds abortable polling, explicit expiry, finite bounds, and multi-account baseline isolation.",
-  "channels/provider-state.ts":
-    "WP-08 keeps connectability capability-only because scoped connection instances, not provider summaries, own user status and multi-account eligibility.",
-};
 
 /** 台账单元格里的 `|` 会把表格切断；COPIED 的说明是脚本给的，不该出现，兜一下。 */
 const cell = (text) => text.replace(/\|/g, "\\|");
@@ -116,7 +99,7 @@ async function main() {
   const commit = resolveCommit(manifest.baselineCommit);
   const copied = manifest.files
     .filter((entry) => entry.class === "COPIED")
-    .filter((entry) => !HAND_MAINTAINED[entry.source])
+    .filter((entry) => !HAND_MAINTAINED_COPIED[entry.source])
     .sort((a, b) => a.source.localeCompare(b.source));
 
   if (!write) {
@@ -142,7 +125,7 @@ async function main() {
     if (
       LANDING_CLASSES.has(entry.class) ||
       entry.handWritten ||
-      HAND_MAINTAINED[entry.source]
+      HAND_MAINTAINED_COPIED[entry.source]
     )
       continue;
     const stale = join(ROOT, "app/core", entry.source);

@@ -83,6 +83,7 @@ make e2e-m6-real-backend # real local Gateway + Chromium browser runtime
 make e2e-m7             # full Vue browser contract
 make e2e-wp07-real-backend # real Gateway scheduled-task HTTP/UI lifecycle
 make e2e-wp08-real-backend # real Auth/Gateway/SQLite channel lifecycle
+make e2e-wp09-real-backend # real Auth/Gateway/setup_agent/Agent persistence
 make e2e-m7-auth        # authentication requests and security
 make proxy-security     # Nitro body limits, bodyless/chunked DELETE, SSE and traversal
 make e2e-m7-real-protocol
@@ -179,6 +180,31 @@ FastAPI/Auth/CSRF/SQLite routes and Vue convergence with a controlled external
 channel worker/callback fixture. It does not prove real Slack, Telegram,
 Discord, Feishu or other platform authorization, production credentials,
 deep-link handlers, DNS/TLS, outer proxies or a real IdP.
+
+## Agents
+
+Agent creation keeps the bootstrap conversation on the new-agent page while
+using its prepared real thread as the visible stream scope. Save sends one
+hidden human instruction, then correlates an `AIMessage.tool_calls` entry named
+`setup_agent` with the matching `ToolMessage.tool_call_id`. Only an explicit
+`status: "success"` starts a finite visibility check; tool errors, run errors
+and exhausted 404 retries remain visible and retryable. Duplicate clicks share
+the same in-flight owner, and route/scope disposal aborts both the run and the
+bounded `GET /api/agents/{name}` verification.
+
+`useAgents` and `useModels` are the only server-state owners for the gallery
+and model catalog. Settings select from the real model response and send the
+exact `model`, `model_settings`, `thinking_enabled` and `reasoning_effort`
+contract, including explicit `false`, numeric zero and `null` clearing when a
+new model lacks a capability. Cards preserve the response order and duplicates
+for skills and tool groups; `tool_groups: null` is shown as an unrestricted
+configured-group filter, while `[]` is shown as no configured groups.
+
+`make e2e-wp09-real-backend` exercises real FastAPI Auth/CSRF/features/models,
+the thread/run router, LangGraph, `setup_agent`, SQLite Agent persistence,
+user isolation and Vue convergence. Only the external LLM is replaced with a
+deterministic model. The gate is not evidence for a production model/provider,
+model credentials, production IdP, DNS/TLS, outer proxies or deployment.
 
 ## Streaming behavior
 

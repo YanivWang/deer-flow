@@ -1,7 +1,7 @@
 # frontend-vue M0 developer entrypoint. package.json intentionally contains only postinstall.
 
 .PHONY: help install dev build preview lint format format-check typecheck typecheck-core test verify asset-budget header-check \
-	e2e-install e2e-list e2e-m0 e2e-m4a e2e-m4a-stream e2e-m4b-list e2e-m4b e2e-m5-list e2e-m5 e2e-m5-real-backend e2e-m6-list e2e-m6 e2e-m6-real-backend e2e-m7-list e2e-m7 e2e-wp07-real-backend e2e-wp08-real-backend e2e-m7-local-list e2e-m7-local e2e-m7-auth-list e2e-m7-auth e2e-m7-real-protocol e2e-m7-visual e2e-external e2e e2e-auth e2e-real-backend e2e-visual \
+	e2e-install e2e-list e2e-m0 e2e-m4a e2e-m4a-stream e2e-m4b-list e2e-m4b e2e-m5-list e2e-m5 e2e-m5-real-backend e2e-m6-list e2e-m6 e2e-m6-real-backend e2e-m7-list e2e-m7 e2e-wp07-real-backend e2e-wp08-real-backend e2e-wp09-real-backend e2e-m7-local-list e2e-m7-local e2e-m7-auth-list e2e-m7-auth e2e-m7-real-protocol e2e-m7-visual e2e-external e2e e2e-auth e2e-real-backend e2e-visual \
 	proxy-smoke auth-disabled-smoke auth-cookie-smoke visual-baseline-smoke splitpanes-smoke \
 	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke \
 	baseline-refresh baseline-check land-copied land-retyped land-retyped-check \
@@ -25,6 +25,8 @@ E2E_WP07_FRONTEND_PORT ?= 3110
 E2E_WP07_GATEWAY_PORT ?= 8013
 E2E_WP08_FRONTEND_PORT ?= 3111
 E2E_WP08_GATEWAY_PORT ?= 8014
+E2E_WP09_FRONTEND_PORT ?= 3112
+E2E_WP09_GATEWAY_PORT ?= 8015
 IMAGE ?= deer-flow-frontend-vue:ci
 
 help:
@@ -44,6 +46,7 @@ help:
 	@echo "  make e2e-m7                    verify then run the full M7 shared contract gate"
 	@echo "  make e2e-wp07-real-backend     run scheduled tasks against real FastAPI/SQLite Gateway"
 	@echo "  make e2e-wp08-real-backend     run channel lifecycle against real Auth/FastAPI/SQLite Gateway"
+	@echo "  make e2e-wp09-real-backend     run Agent lifecycle/settings against real Auth/FastAPI/SQLite Gateway"
 	@echo "  make e2e-m7-local              run exact M7 sidebar/IME/keyboard/a11y contracts"
 	@echo "  make e2e-m7-auth               run exact M7 auth request/security contracts"
 	@echo "  make e2e-m7-real-protocol      run real Gateway resume/gap/browser-cancel contract"
@@ -227,6 +230,10 @@ e2e-wp07-real-backend:
 e2e-wp08-real-backend:
 	test -f ../frontend/node_modules/@playwright/test/package.json
 	E2E_WP08_FRONTEND_PORT=$(E2E_WP08_FRONTEND_PORT) E2E_WP08_GATEWAY_PORT=$(E2E_WP08_GATEWAY_PORT) $(E2E_EXEC) playwright test -c playwright.wp08-real-backend.config.ts
+
+e2e-wp09-real-backend:
+	test -f ../frontend/node_modules/@playwright/test/package.json
+	E2E_WP09_FRONTEND_PORT=$(E2E_WP09_FRONTEND_PORT) E2E_WP09_GATEWAY_PORT=$(E2E_WP09_GATEWAY_PORT) $(E2E_EXEC) playwright test -c playwright.wp09-real-backend.config.ts
 
 e2e-m7-local-list:
 	test -f ../frontend/node_modules/@playwright/test/package.json

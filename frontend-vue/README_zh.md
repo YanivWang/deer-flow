@@ -70,6 +70,7 @@ make e2e-m6-real-backend # 真实本地 Gateway + Chromium browser runtime
 make e2e-m7             # 完整 Vue 浏览器合同
 make e2e-wp07-real-backend # 真实 Gateway scheduled-task HTTP/UI 生命周期
 make e2e-wp08-real-backend # 真实 Auth/Gateway/SQLite channel 生命周期
+make e2e-wp09-real-backend # 真实 Auth/Gateway/setup_agent/Agent 持久化
 make e2e-m7-auth        # 认证请求与安全
 make proxy-security     # Nitro body 限制、无 body/chunked DELETE、SSE 与 traversal
 make e2e-m7-real-protocol
@@ -146,6 +147,26 @@ provider runtime 配置，该操作会在实例级撤销此 provider 的有效�
 `make e2e-wp08-real-backend` 使用受控外部 worker/callback fixture，真实验证
 FastAPI/Auth/CSRF/SQLite 路由与 Vue 收敛；它不证明 Slack、Telegram、Discord、Feishu 等
 真实平台授权、生产凭据、真实 deep-link handler、DNS/TLS、外层代理或真实 IdP。
+
+## Agents
+
+Agent 创建在 bootstrap 期间保留 new-agent 页面，同时把预先创建的真实 thread 作为可见流
+scope。Save 只发送一条隐藏 human 指令，再将名为 `setup_agent` 的
+`AIMessage.tool_calls` 与相同 `ToolMessage.tool_call_id` 关联；只有明确的
+`status: "success"` 才进入有限可见性验证。tool/run 错误和耗尽 404 重试都会保持可见且可重试；
+重复点击复用同一个在途 owner，路由或 scope 销毁会同时中止 run 和有界的
+`GET /api/agents/{name}` 验证。
+
+Gallery 和模型目录的服务端状态分别只归 `useAgents`、`useModels`。设置从真实模型响应选择，
+精确提交 `model`、`model_settings`、`thinking_enabled`、`reasoning_effort`，包括显式
+`false`、数值零，以及切换到不支持 capability 的模型时用 `null` 清理旧配置。卡片保留
+skills/tool groups 的响应顺序和重复项；`tool_groups: null` 明确显示为不限制已配置分组，
+`[]` 明确显示为没有配置分组。
+
+`make e2e-wp09-real-backend` 真实经过 FastAPI Auth/CSRF/features/models、thread/run router、
+LangGraph、`setup_agent`、SQLite Agent 持久化、用户隔离和 Vue UI 收敛；只有外部 LLM
+被确定性模型替换。该门禁不证明生产模型/provider、生产模型凭据、真实 IdP、DNS/TLS、
+外层代理或生产部署。
 
 ## 流式与历史行为
 

@@ -61,6 +61,13 @@ Composer 的 tab 草稿由 `useComposerDraft.ts` 集中管理，key 是 user + a
 本地 `File` 与已上传 descriptor 留在 composer 内存中，失败可重试但不进入服务端缓存。
 模型/模式经 `models/capabilities.ts` 归一化后才进入 `threads/submit.ts` 的最终 context。
 
+Agent 创建沿用同一个 thread runner，没有第二条保存 transport。`AgentChat` 创建真实 prepared
+thread 后，在 bootstrap 页面通过 `displayThreadId` 消费该 thread 的 live snapshot；Save 的隐藏
+human 指令由 `useAgentCreationSession` 独占生命周期。纯 `agents/creation-session.ts` 只把
+`AIMessage.tool_calls[].name === "setup_agent"` 与匹配 `ToolMessage.tool_call_id`、显式
+`status` 关联，assistant 文本不参与成功判定。成功结果进入有界 `getAgent` 验证；generation、
+AbortController、timer cleanup 和 effect-scope dispose 共同拒绝旧 run/验证结果回写。
+
 MessageList 直接消费持久化消息：现代/legacy 附件、Gateway 历史行 feedback、隐藏 HIL 回复、
 citation 和 per-turn usage 都不依赖提交前 UI 状态。`thread.values.todos` 与最终 token usage
 仍由 thread snapshot/API 提供；反馈写入是 Vue Query mutation，只精确失效当前历史 key。
@@ -150,6 +157,11 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
   更新原 scope 的 connections key，发起绑定前已 connected 的 ID 不得完成新账号绑定。
   generation、AbortSignal、effect scope dispose 共同阻止旧 query/poll/mutation 跨用户回写。
   Pinia、组件和 provider.connection_status 均不得建立第二份用户连接真相。
+- agents/models 的服务端真相只归 `useAgents` 与 `useModels` 的 TanStack Query key；gallery、
+  creation success、settings update 与 delete 都同步或失效同一份 Agent key，组件和 Pinia 不
+  保留镜像。`agents/settings.ts` 独占 capability-aware exact PUT body，`agents/presentation.ts`
+  独占 card 的 model/skills/tool-groups 映射；`tool_groups` 的 null/empty/ordered values 不在
+  模板中重新解释。
 - composer draft 是 `sessionStorage` 的 tab 状态，只持久化文本/skill；user、agent 与逻辑会话
   三维隔离，并在确认 logout/thread delete 后清理。上传文件、语音、follow-up dialog、polish
   和 generation guard 是组件/composable 瞬态状态，不得错误跨 thread 复用。
@@ -165,6 +177,7 @@ make consumer-check  # 打包并在隔离 consumer 中验证 @deerflow/agent-cor
 make e2e-list        # 列出共享产品合同
 make e2e-m7          # 当前完整 Vue 浏览器合同入口（名称为既有测试套件标识）
 make e2e-wp07-real-backend # 真实 Gateway/SQLite/HTTP/Nuxt/Chromium 的 scheduled-task 合同
+make e2e-wp09-real-backend # 真实 Auth/LangGraph/setup_agent/SQLite Agent 合同
 make container-smoke # 生产镜像、health、SIGTERM、Showcase 资源与拒绝策略
 ```
 

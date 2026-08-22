@@ -56,6 +56,7 @@ def test_setup_agent_rejects_invalid_agent_name_before_writing(tmp_path, monkeyp
 
     messages = result.update["messages"]
     assert len(messages) == 1
+    assert messages[0].status == "error"
     assert "Invalid agent name" in messages[0].content
     assert not (tmp_path / "users" / "test-user-autouse" / "agents").exists()
     assert not (outside_dir / "evil" / "SOUL.md").exists()
@@ -122,12 +123,13 @@ class TestSetupAgentNoDataLoss:
 
     def test_successful_setup_creates_files(self, tmp_path: Path):
         """Happy path: setup_agent creates config.yaml and SOUL.md."""
-        _call_setup_agent(tmp_path, soul="# My Agent", description="A test agent")
+        result = _call_setup_agent(tmp_path, soul="# My Agent", description="A test agent")
 
         agent_dir = tmp_path / "users" / "test-user-autouse" / "agents" / "test-agent"
         assert agent_dir.exists()
         assert (agent_dir / "SOUL.md").read_text() == "# My Agent"
         assert (agent_dir / "config.yaml").exists()
+        assert result.update["messages"][0].status == "success"
 
     @pytest.mark.no_auto_user
     def test_runtime_user_id_used_when_contextvar_missing(self, tmp_path: Path):
@@ -164,6 +166,7 @@ class TestSetupAgentEmptySoulGuard:
 
         messages = result.update["messages"]
         assert len(messages) == 1
+        assert messages[0].status == "error"
         assert "soul content is empty" in messages[0].content
         assert "created_agent_name" not in result.update
         agent_dir = tmp_path / "users" / "test-user-autouse" / "agents" / "test-agent"

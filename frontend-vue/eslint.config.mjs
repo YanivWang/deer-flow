@@ -9,6 +9,7 @@
                    而 eslint 实测对其中 4 个文件报 5 处（no-empty、import/first…）。
                    这些是上游的写法，我们**不能**改——改了护城河就没了。
                    清单直接从 manifest 推出，不手写：文件降级出 COPIED 就自动恢复受检。
+                   Vue 手工维护的原 COPIED 文件由 landing 与 lint 共用一张清单并恢复受检。
                    同一份清单在 .prettierignore 里由 `make land-copied` 生成。
                    ignores 必须**单独成一个 config 对象**才是全局忽略；
                    和 rules 写在同一个对象里只会把该对象自己的规则排除掉，
@@ -22,12 +23,14 @@
 import { readFileSync } from "node:fs";
 
 import withNuxt from "./.nuxt/eslint.config.mjs";
+import { HAND_MAINTAINED_COPIED } from "./scripts/lib/core-hand-maintained.mjs";
 
 const manifest = JSON.parse(
   readFileSync(new URL("baseline/core-manifest.json", import.meta.url), "utf8"),
 );
 const copied = manifest.files
   .filter((entry) => entry.class === "COPIED")
+  .filter((entry) => !HAND_MAINTAINED_COPIED[entry.source])
   .map((entry) => `app/core/${entry.source}`);
 const retyped = manifest.files
   .filter((entry) => entry.class === "RETYPED")

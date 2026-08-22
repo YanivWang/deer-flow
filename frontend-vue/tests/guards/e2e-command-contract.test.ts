@@ -58,6 +58,10 @@ const wp07RealConfig = readFileSync(
   new URL("../../playwright.wp07-real-backend.config.ts", import.meta.url),
   "utf8",
 );
+const wp09RealConfig = readFileSync(
+  new URL("../../playwright.wp09-real-backend.config.ts", import.meta.url),
+  "utf8",
+);
 const browserStream = readFileSync(
   new URL(
     "../../app/components/workspace/browser-view/useBrowserStream.ts",
@@ -190,9 +194,9 @@ describe("M5 artifact inventory", () => {
 });
 
 describe("Vue M7 gate ownership", () => {
-  it("keeps the exact WP-07 26-file / 138-test gate and owns framework-specific specs", () => {
+  it("keeps the exact WP-09 26-file / 150-test gate and owns framework-specific specs", () => {
     expect(m7Inventory.expectedFileCount).toBe(26);
-    expect(m7Inventory.expectedTestCount).toBe(144);
+    expect(m7Inventory.expectedTestCount).toBe(150);
     expect(m7Inventory.specFiles).toHaveLength(26);
     expect(m7Inventory.specFiles).toContain(
       "frontend-vue/tests/m5/artifact-batched-stream.spec.ts",
@@ -242,6 +246,17 @@ describe("Vue M7 gate ownership", () => {
     expect(wp07RealConfig).toContain("scripts/run_replay_gateway.py");
     expect(wp07RealConfig).toContain('testDir: "tests/wp07-real-backend"');
     expect(wp07RealConfig).toContain("NUXT_PUBLIC_AUTH_DISABLED=1");
+  });
+
+  it("owns a dedicated WP-09 real Auth/LangGraph/setup_agent/SQLite/Chromium gate", () => {
+    expect(makefile).toContain("e2e-wp09-real-backend:");
+    expect(makefile).toContain(
+      "playwright test -c playwright.wp09-real-backend.config.ts",
+    );
+    expect(wp09RealConfig).toContain("scripts/run_replay_gateway.py");
+    expect(wp09RealConfig).toContain('testDir: "tests/wp09-real-backend"');
+    expect(wp09RealConfig).toContain('DEERFLOW_ENABLE_AGENT_TEST_MODEL: "1"');
+    expect(wp09RealConfig).toContain("NUXT_PUBLIC_AUTH_DISABLED=0");
   });
 });
 

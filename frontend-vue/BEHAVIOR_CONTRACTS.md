@@ -5,7 +5,7 @@
 未满足项及执行状态以 [PARITY_GAPS.md](PARITY_GAPS.md) 为准，验证入口以
 [README.md](README.md) 和各测试配置为准。
 
-全表 **A–O 共 15 组**。A–K 与 O 是产品行为，L 是 SSE/会话协议约束，M 是 Vue
+全表 **A–Q 共 17 组**。A–K 与 O–Q 是产品行为，L 是 SSE/会话协议约束，M 是 Vue
 框架语义约束，N 是需要跨浏览器或跨层验证的模块。修改相关代码时必须同时更新本合同、
 差异清单和对应测试，不能用单次全绿替代逐项判断。
 
@@ -377,6 +377,23 @@ raw trace、代理 smoke 和 replay Gateway 浏览器测试覆盖，不能只依
 | P6  | 用户断开只走 `DELETE /api/channels/connections/{connection_id}`；管理员移除运行时只走 `DELETE /api/channels/{provider}/runtime-config`，后者是实例级配置删除与全 provider active connections revoke，UI 必须明确区分并二次确认。       |
 | P7  | mutation 成功后重读 providers 与 connections；失败保留 Gateway detail，401 继续走共享登录跳转，400/403/404/429 不得被本地成功态覆盖。                                                                                                  |
 | P8  | Mock E2E 证明 DOM、deep-link、instruction、poll/expiry/dispose、多账号、两个删除目标、pending/race 与错误展示；real-backend gate 证明 Auth/CSRF/router/SQLite/HTTP/UI。受控外部 worker/callback 不等于真实 IM 平台授权或生产网络证明。 |
+
+---
+
+## Q. Agents
+
+| #   | 约束                                                                                                                                                                                                                                                          |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q1  | bootstrap 页面创建 prepared real thread 后不提前离开 `/workspace/agents/new`，但必须把该 thread 作为 `displayThreadId` 消费 live snapshot；route-owned history 仍保持 disabled。                                                                              |
+| Q2  | Save 只发送一条 `hide_from_ui: true` 的 human 指令。成功判定只允许匹配 `AIMessage.tool_calls[].name=setup_agent` 的 call ID 与同 ID `ToolMessage`，并要求 ToolMessage 明确 `status=success`；assistant prose、未匹配 tool result 或缺 status 都不能冒充成功。 |
+| Q3  | `useAgentCreationSession` 是 idle/saving/verifying/created/error、重复提交 guard、run 完成、有限 visibility retry 和 cleanup 的唯一 owner；组件不得再建 timer、一次性 `getAgent` 或第二条保存路径。                                                           |
+| Q4  | visibility retry 只重试 404，使用有限 `[0, 200, 500, 1000, 2000]` ms 预算；tool/run/其他 Gateway 错误立即保留真实 detail。retry verification 不得新建第二个 run，已 created 后不得再次提交。                                                                  |
+| Q5  | run 与验证共享 generation/AbortSignal 边界；取消、route/scope dispose 或新 session 会清 timer、abort 在途请求并拒绝 late result 回写。                                                                                                                        |
+| Q6  | `useAgents` 与 `useModels` 是 Agent list/detail、model catalog、update/delete cache convergence 的唯一服务端状态 owner；feature 尚未 ready 或 disabled 时不查询，自动 retry 关闭，Pinia/组件不复制缓存。                                                      |
+| Q7  | 设置模型只来自 `/api/models`。`__default__` 发送 `model: null`，并使用模型列表首项的 capability；未知显式模型拒绝提交。temperature 为 0–2，max_tokens 为 1–200000 整数；两者都空时 `model_settings: null`，显式 0 不得丢失。                                  |
+| Q8  | thinking 使用 true/false/null 三态；reasoning 使用 low/medium/high/null。模型不支持对应 capability 时必须发送 null 清除 stale override；mutation pending 禁止重复保存/删除，失败保持 dialog 和 Gateway detail，成功同步并重读 Agent list。                    |
+| Q9  | Agent card 的 model、skills、tool_groups 只来自 Agent 响应，保留顺序、重复和长文本。`tool_groups: null` 表示不限制已配置 group，`[]` 表示没有配置 group；不得改写成“全部工具/无工具”。                                                                        |
+| Q10 | Mock M7 证明 Vue DOM、隐藏保存、tool correlation、错误/retry、capability exact payload 与 card；real-backend gate 证明 Auth/CSRF/features/models/thread-run/setup_agent/SQLite/user isolation/HTTP/UI。受控 LLM 不等于真实 provider 或生产环境证明。          |
 
 ---
 

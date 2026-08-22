@@ -22,7 +22,7 @@ import type { AgentSnapshot } from "@deerflow/agent-core";
 import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query";
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, h, ref } from "vue";
+import { defineComponent, h, ref, type Ref } from "vue";
 
 import { STREAM_RENDER_COALESCE_MS } from "@/core/threads/coalesce";
 
@@ -260,6 +260,11 @@ describe("useThreadStream · K3 编辑并重跑", () => {
 function mountStream(
   threadId = ref<string | null>("thread-1"),
   runnerOptions: { autoStart?: boolean; failBeforeStart?: boolean } = {},
+  onFinish?: (
+    state: Record<string, unknown>,
+    messages: readonly Message[],
+  ) => void,
+  displayThreadId?: Ref<string | null>,
 ) {
   let fake: FakeRunner | undefined;
   let api: ReturnType<typeof useThreadStream> | undefined;
@@ -278,11 +283,13 @@ function mountStream(
     setup() {
       api = useThreadStream({
         threadId,
+        ...(displayThreadId ? { displayThreadId } : {}),
         context: ref({ mode: "flash" }),
         notify: {
           warn: (key) => warnings.push(key),
           error: (message) => errors.push(message),
         },
+        onFinish,
         runnerFactory: (options) => {
           fake = createFakeRunner(options, runnerOptions);
           return fake;
@@ -381,6 +388,50 @@ describe("useThreadStream · production stream modes", () => {
     expect(onAccepted).not.toHaveBeenCalled();
     expect(ctx.api.messages.value).toEqual([]);
     ctx.wrapper.unmount();
+  });
+
+  it("passes the runner wire messages to onFinish even when durable state omits messages", () => {
+    const onFinish = vi.fn();
+    const ctx = mountStream(ref("thread-1"), {}, onFinish);
+    const finalMessages = [
+      {
+        id: "tool-result-1",
+        type: "tool",
+        tool_call_id: "setup-agent-1",
+        status: "success",
+        content: "Agent saved.",
+      } as Message,
+    ];
+
+    ctx.fake.setMessages(finalMessages);
+    ctx.fake.settle("completed");
+
+    expect(onFinish).toHaveBeenCalledOnce();
+    expect(onFinish).toHaveBeenCalledWith({}, finalMessages);
+    ctx.wrapper.unmount();
+  });
+
+  it("keeps a prepared bootstrap thread visible before the route adopts its id", async () => {
+    vi.useFakeTimers();
+    const preparedThreadId = ref<string | null>(null);
+    const ctx = mountStream(ref(null), {}, undefined, preparedThreadId);
+    preparedThreadId.value = "bootstrap-thread";
+
+    await ctx.api.sendMessage("bootstrap-thread", { text: "Design an agent" });
+    ctx.fake.setMessages([
+      {
+        id: "bootstrap-answer",
+        type: "ai",
+        content: "Let's design the agent before saving.",
+      } as Message,
+    ]);
+    await settleCoalescing();
+
+    expect(ctx.api.messages.value.map((message) => message.id)).toContain(
+      "bootstrap-answer",
+    );
+    ctx.wrapper.unmount();
+    vi.useRealTimers();
   });
 });
 

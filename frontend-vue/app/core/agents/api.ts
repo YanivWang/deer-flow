@@ -1,8 +1,22 @@
+/*
+  【文件职责】     提供 Agent CRUD、名称检查与 feature API 的认证 Gateway transport。
+  【对应 frontend/】 core/agents/api.ts
+  【架构位置】     L3 Agent HTTP contract
+  【主要导出】     list/get/create/update/delete/check Agent · typed errors
+  【依赖关系】     shared authenticated fetch · Gateway response error · config
+  【边界与注意】   WP-09 后由 Vue Query 持有 server state；本层只保留可中止 transport 与精确 status/detail。
+*/
+
+import {
+  readGatewayResponseError,
+  type GatewayResponseError,
+} from "@/core/api/errors";
 import { fetch } from "@/core/api/fetcher";
 import { getBackendBaseURL } from "@/core/config";
-export { fetchAgentsApiEnabled } from "@/core/features/api";
 
 import type { Agent, CreateAgentRequest, UpdateAgentRequest } from "./types";
+
+export { fetchAgentsApiEnabled } from "@/core/features/api";
 
 const BACKEND_UNAVAILABLE_STATUSES = new Set([502, 503, 504]);
 
@@ -36,16 +50,52 @@ function isAgentsApiDisabledDetail(detail: string | undefined): boolean {
   return typeof detail === "string" && detail.includes("agents_api.enabled");
 }
 
-export async function listAgents(): Promise<Agent[]> {
-  const res = await fetch(`${getBackendBaseURL()}/api/agents`);
-  if (!res.ok) throw new Error(`Failed to load agents: ${res.statusText}`);
+async function agentResponseError(
+  res: Response,
+  fallback: string,
+): Promise<GatewayResponseError> {
+  return readGatewayResponseError(res, fallback);
+}
+
+async function throwAgentResponseError(
+  res: Response,
+  fallback: string,
+): Promise<never> {
+  const error = await agentResponseError(res, fallback);
+  const detail =
+    typeof error.body === "object" && error.body !== null
+      ? Reflect.get(error.body, "detail")
+      : undefined;
+  if (isAgentsApiDisabledDetail(detail)) {
+    throw new AgentsApiDisabledError(detail);
+  }
+  throw error;
+}
+
+export async function listAgents(
+  options: { signal?: AbortSignal } = {},
+): Promise<Agent[]> {
+  const res = await fetch(`${getBackendBaseURL()}/api/agents`, {
+    signal: options.signal,
+  });
+  if (!res.ok) {
+    await throwAgentResponseError(res, "Failed to load agents.");
+  }
   const data = (await res.json()) as { agents: Agent[] };
   return data.agents;
 }
 
-export async function getAgent(name: string): Promise<Agent> {
-  const res = await fetch(`${getBackendBaseURL()}/api/agents/${name}`);
-  if (!res.ok) throw new Error(`Agent '${name}' not found`);
+export async function getAgent(
+  name: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<Agent> {
+  const res = await fetch(
+    `${getBackendBaseURL()}/api/agents/${encodeURIComponent(name)}`,
+    { signal: options.signal },
+  );
+  if (!res.ok) {
+    await throwAgentResponseError(res, `Failed to load agent '${name}'.`);
+  }
   return res.json() as Promise<Agent>;
 }
 
@@ -56,11 +106,7 @@ export async function createAgent(request: CreateAgentRequest): Promise<Agent> {
     body: JSON.stringify(request),
   });
   if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { detail?: string };
-    if (isAgentsApiDisabledDetail(err.detail)) {
-      throw new AgentsApiDisabledError(err.detail!);
-    }
-    throw new Error(err.detail ?? `Failed to create agent: ${res.statusText}`);
+    await throwAgentResponseError(res, "Failed to create agent.");
   }
   return res.json() as Promise<Agent>;
 }
@@ -68,33 +114,48 @@ export async function createAgent(request: CreateAgentRequest): Promise<Agent> {
 export async function updateAgent(
   name: string,
   request: UpdateAgentRequest,
+  options: { signal?: AbortSignal } = {},
 ): Promise<Agent> {
-  const res = await fetch(`${getBackendBaseURL()}/api/agents/${name}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-  });
+  const res = await fetch(
+    `${getBackendBaseURL()}/api/agents/${encodeURIComponent(name)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+      signal: options.signal,
+    },
+  );
   if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { detail?: string };
-    throw new Error(err.detail ?? `Failed to update agent: ${res.statusText}`);
+    await throwAgentResponseError(res, `Failed to update agent '${name}'.`);
   }
   return res.json() as Promise<Agent>;
 }
 
-export async function deleteAgent(name: string): Promise<void> {
-  const res = await fetch(`${getBackendBaseURL()}/api/agents/${name}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error(`Failed to delete agent: ${res.statusText}`);
+export async function deleteAgent(
+  name: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<void> {
+  const res = await fetch(
+    `${getBackendBaseURL()}/api/agents/${encodeURIComponent(name)}`,
+    {
+      method: "DELETE",
+      signal: options.signal,
+    },
+  );
+  if (!res.ok) {
+    await throwAgentResponseError(res, `Failed to delete agent '${name}'.`);
+  }
 }
 
 export async function checkAgentName(
   name: string,
+  options: { signal?: AbortSignal } = {},
 ): Promise<{ available: boolean; name: string }> {
   let res: Response;
   try {
     res = await fetch(
       `${getBackendBaseURL()}/api/agents/check?name=${encodeURIComponent(name)}`,
+      { signal: options.signal },
     );
   } catch {
     throw new AgentNameCheckError(

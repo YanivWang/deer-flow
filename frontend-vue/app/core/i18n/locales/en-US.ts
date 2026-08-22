@@ -505,6 +505,7 @@ export const enUS: Translations = {
       "Letters, digits, and hyphens only — stored lowercase (e.g. code-reviewer)",
     nameStepPlaceholder: "e.g. code-reviewer",
     nameStepContinue: "Continue",
+    nameStepChecking: "Checking…",
     nameStepInvalidError:
       "Invalid name — use only letters, digits, and hyphens",
     nameStepAlreadyExistsError: "An agent with this name already exists",
@@ -518,6 +519,16 @@ export const enUS: Translations = {
       "The new custom agent name is {name}. Help me design its purpose, behavior, and SOUL.md before saving it.",
     save: "Save agent",
     saving: "Saving agent...",
+    verifying: "Verifying agent...",
+    retry: "Try again",
+    creationError: "Agent creation failed",
+    saveNotAccepted: "The save request was not accepted.",
+    creationLoadFailed: "Failed to load the created agent.",
+    creationVisibilityUnavailable:
+      "The created agent is not visible yet. Try verification again.",
+    creationRequestFailed: "Failed to request agent creation.",
+    creationMissingToolResult: "The run finished without a setup_agent result.",
+    creationRunFailed: "The agent creation run failed.",
     saveRequested:
       "Save requested. DeerFlow is generating and saving an initial version now.",
     saveHint:
@@ -549,6 +560,26 @@ export const enUS: Translations = {
     settingsInvalidTemperature: "Temperature must be between 0 and 2",
     settingsInvalidMaxTokens:
       "Max output tokens must be a positive integer up to 200,000",
+    settingsInvalidModel: "Choose an available model.",
+    settingsModelsLoading: "Loading model capabilities…",
+    settingsModelsFailed: "Failed to load model capabilities",
+    settingsModelUnavailable: "Unavailable",
+    settingsReasoningLow: "Low",
+    settingsReasoningMedium: "Medium",
+    settingsReasoningHigh: "High",
+    settingsCancel: "Cancel",
+    settingsSave: "Save",
+    settingsSaving: "Saving…",
+    settingsSaveFailed: "Failed to save model settings",
+    loading: "Loading agents…",
+    loadFailed: "Failed to load agents",
+    deleteFailed: "Failed to delete agent",
+    cardModel: "Model",
+    cardSkills: "Skills",
+    cardSkillsNone: "No skills",
+    cardToolGroups: "Tool groups",
+    cardToolGroupsAll: "All configured tool groups",
+    cardToolGroupsNone: "No configured tool groups",
   },
 
   // Breadcrumb
