@@ -192,6 +192,14 @@ Auth, CSRF, per-user manager/storage, Skills and MCP routers, atomic config
 writes, cache reloads and secret masking remain the production implementations;
 do not add a test-only settings router or bypass those boundaries.
 
+With `DEERFLOW_ENABLE_TEST_SEED=1`, the replay gateway mounts
+`tests/seed_runs_router.py` only for acceptance. A seeded run may include a
+controlled `workspace_changes` payload; the fixture writes the normal
+`workspace_changes` event shape through `app.state.run_event_store`. Production
+Auth, thread ownership, event lookup and `include_files`/`include_diff` response
+filtering remain in the normal router/harness path. Do not mount this seeder in
+the production app or replace those read boundaries with fixture routes.
+
 ### Running the Full Application
 
 From the **project root** directory:

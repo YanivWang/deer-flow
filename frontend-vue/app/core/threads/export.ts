@@ -1,13 +1,10 @@
 /*
-  【文件职责】     见下方源码；本文件由 frontend/src/core/threads/export.ts retype 而来。
+  【文件职责】     生成可见 thread transcript 并安全触发浏览器下载。
   【对应 frontend/】 frontend/src/core/threads/export.ts
   【架构位置】     L3
   【主要导出】     ExportOptions / ThreadExportFormat / formatThreadAsMarkdown / formatThreadAsJSON / downloadAsFile / exportThreadAsMarkdown 等 8 个
-  【依赖关系】     见下方 import；改写清单由 scripts/land-retyped.mjs 声明
-  【边界与注意】   RETYPED：内容**不是**上游逐字节等同，因此不参与 COPIED hash 护城河。
-                   相对上游的改动只有这些：SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message）
-                   勿手改——`make land-retyped-check` 会红；确需手改就登记进
-                   land-retyped.mjs 的 HAND_MAINTAINED 并写明理由。
+  【依赖关系】     message utils · thread utils · browser Blob/URL
+  【边界与注意】   ADAPTED：沿用 React 格式/MIME；WP-11 用 finally 保证异常下载也清理 DOM/URL。
 */
 
 import type { Message } from "@/core/types/message";
@@ -217,9 +214,12 @@ export function downloadAsFile(
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  try {
+    a.click();
+  } finally {
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function exportThreadAsMarkdown(

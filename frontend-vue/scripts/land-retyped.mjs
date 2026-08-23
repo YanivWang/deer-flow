@@ -453,11 +453,13 @@ const HAND_MAINTAINED = {
   "artifacts/loader.ts":
     "WP-06 gates loading behind explicit text policy and preserves Gateway errors and abort semantics.",
   "i18n/locales/en-US.ts":
-    "WP-07 adds scheduled-task copy; WP-08 adds channels; WP-09 adds Agents; WP-10 adds settings validation and permission copy.",
+    "WP-07 through WP-11 declare Vue-owned scheduled-task, channel, Agent, settings, and workspace-shell dictionary extensions.",
   "i18n/locales/types.ts":
-    "WP-07/WP-08/WP-09/WP-10 declare Vue-owned scheduled-task, channel, Agent, and settings dictionary extensions.",
+    "WP-07 through WP-11 declare Vue-owned scheduled-task, channel, Agent, settings, and workspace-shell dictionary extensions.",
   "i18n/locales/zh-CN.ts":
-    "WP-07/WP-08/WP-09/WP-10 add the matching Chinese scheduled-task, channel, Agent, and settings dictionary extensions.",
+    "WP-07 through WP-11 add the matching Chinese scheduled-task, channel, Agent, settings, and workspace-shell dictionary extensions.",
+  "threads/export.ts":
+    "WP-11 keeps the React formatter contract but guarantees object-URL and temporary-anchor cleanup when browser download throws.",
 };
 
 const PROVENANCE_NOTES = {

@@ -15,8 +15,10 @@ import {
   pathOfThread,
   titleOfThread,
 } from "@/core/threads/utils";
+import { formatThreadUpdatedTime } from "@/core/threads/updated-time";
 
 definePageMeta({ layout: "workspace" });
+const { $i18n } = useNuxtApp();
 const threads = useThreads();
 const search = ref("");
 const sentinel = ref<HTMLElement | null>(null);
@@ -29,6 +31,10 @@ const filtered = computed(() => {
       )
     : threads.displayedThreads;
 });
+
+function updatedTime(value: string | null | undefined) {
+  return formatThreadUpdatedTime(value, new Date(), $i18n.locale.value);
+}
 
 onMounted(() => {
   void threads.loadInitial();
@@ -61,7 +67,16 @@ onUnmounted(() => observer?.disconnect());
         :to="pathOfThread(thread)"
         class="border-border hover:bg-accent flex items-center justify-between rounded-lg border p-4"
       >
-        <span>{{ titleOfThread(thread) }}</span>
+        <span class="min-w-0">
+          <span class="block truncate">{{ titleOfThread(thread) }}</span>
+          <time
+            v-if="updatedTime(thread.updated_at)"
+            :datetime="thread.updated_at"
+            class="text-muted-foreground mt-1 block text-xs"
+          >
+            {{ $i18n.t.value.chats.updatedAt(updatedTime(thread.updated_at)!) }}
+          </time>
+        </span>
         <span
           v-if="channelSourceOfThread(thread)"
           class="text-xs text-gray-500"

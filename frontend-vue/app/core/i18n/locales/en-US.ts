@@ -167,6 +167,9 @@ export const enUS: Translations = {
     truncatedUnavailable: "Diff omitted because the change set is too large.",
     symlinkUnavailable: "Symlink change. Diff unavailable.",
     truncatedSummary: "Some changes were truncated.",
+    symlinkCreated: "Symlink created",
+    loadFailed: "Failed to load workspace changes.",
+    retry: "Retry",
   },
 
   // Input Box
@@ -600,8 +603,10 @@ export const enUS: Translations = {
     logout: "Log out",
     gatewayUnavailable: "Gateway is temporarily unavailable.",
     gatewayUnavailableRetrying: "Retrying in the background…",
+    gatewayRecovered: "Gateway connection restored.",
     retryNow: "Try again",
     retrying: "Retrying...",
+    dismissNotification: "Dismiss notification",
   },
 
   // Conversation
@@ -623,6 +628,9 @@ export const enUS: Translations = {
     pinChat: "Pin chat",
     unpinChat: "Unpin chat",
     pinChatFailed: "Failed to update pinned chat",
+    noMessagesToExport: "This conversation has no messages to export.",
+    shareFailed: "Failed to share conversation.",
+    updatedAt: (value) => `Updated ${value}`,
   },
 
   // Sidecar

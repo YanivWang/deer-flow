@@ -244,6 +244,11 @@ test("workspace keeps Gateway unavailability visible and recovers in place", asy
       .getByRole("status")
       .filter({ hasText: /Gateway is temporarily unavailable/i }),
   ).toBeHidden();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: /Gateway connection restored/i }),
+  ).toBeVisible();
   await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
 });
 

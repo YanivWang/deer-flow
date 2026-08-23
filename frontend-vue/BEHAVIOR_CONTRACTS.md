@@ -411,6 +411,20 @@ raw trace、代理 smoke 和 replay Gateway 浏览器测试覆盖，不能只依
 
 ---
 
+## S. Workspace shell、导航与 Workspace Changes
+
+| #   | 约束                                                                                                                                                                                                                                                                                                                                                                     |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| S1  | Workspace layout 只能挂载一个 command palette、settings host 和 toast owner。全局 listener 必须随 layout scope 解绑；离开 workspace 后快捷键不得继续生效。                                                                                                                                                                                                               |
+| S2  | 快捷键精确匹配 Meta/Ctrl-K、Meta/Ctrl-Shift-N、Meta/Ctrl-comma、Meta/Ctrl-slash 与 Meta/Ctrl-B；拒绝 repeat、IME、Alt 和双 command modifier。除 palette K 外，input/textarea/select/contenteditable 不得触发全局动作。                                                                                                                                                   |
+| S3  | Settings section 由有效 `settings` query 唯一决定。dialog 必须有 modal aria、初始焦点、focus trap、Escape 和焦点归还；用户关闭只移除 `settings` 并保留其他 query/hash，浏览器 back/forward 重放开闭状态。                                                                                                                                                                |
+| S4  | Gateway banner 与 route middleware 复用唯一 auth session Query。401 才跳登录；unavailable 不清 session/cookie。只有 unavailable→authenticated 边沿显示恢复通知，且 middleware 先填充 unavailable 时也不能丢边沿。                                                                                                                                                        |
+| S5  | Share 只生成 React 等价稳定 URL 并写剪贴板，不调用不存在的 share API。Export 必须先读真实 thread state；无消息、Gateway、剪贴板和下载错误可见，临时 anchor/object URL 在成功和异常路径都清理。列表相对时间只来自有效 `updated_at`。                                                                                                                                      |
+| S6  | `useWorkspaceChanges` 是 summary/detail 的唯一 server-state owner；key 必须包含 thread/run/include_files/include_diff 并透传 AbortSignal。切换 key 时旧请求被取消，late response 不得覆盖当前 thread/run。                                                                                                                                                               |
+| S7  | UI 完整显示 summary `truncated`、created/modified/deleted/symlink_created 和 binary/large/sensitive/truncated/symlink reason；summary/detail 错误保留 Gateway detail 并提供显式 retry。Mock M7 证明 DOM/焦点/浏览器边界；WP-11 real gate 证明真实 Auth/owner check/thread state/event store/response filtering/Nuxt/UI，受控 event 与注入 503 不等于生产网络或部署证明。 |
+
+---
+
 ## 使用建议
 
 1. 修改 `app/core/` 时连同单测和调用方一起检查；通用包变更还要运行 `make consumer-check`。

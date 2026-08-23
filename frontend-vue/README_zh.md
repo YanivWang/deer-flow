@@ -67,11 +67,12 @@ make e2e-m5             # artifacts、sidecar 与面板生命周期合同
 make e2e-m5-real-backend # 真实 Gateway artifact Range/PUT/冲突合同
 make e2e-m6             # 包含 Vue 自有 browser DOM/wire 合同
 make e2e-m6-real-backend # 真实本地 Gateway + Chromium browser runtime
-make e2e-m7             # 完整 Vue 浏览器合同：27 files / 156 tests
+make e2e-m7             # 完整 Vue 浏览器合同：28 files / 160 tests
 make e2e-wp07-real-backend # 真实 Gateway scheduled-task HTTP/UI 生命周期
 make e2e-wp08-real-backend # 真实 Auth/Gateway/SQLite channel 生命周期
 make e2e-wp09-real-backend # 真实 Auth/Gateway/setup_agent/Agent 持久化
 make e2e-wp10-real-backend # 真实 Auth/DeerMem/Noop/Skills/MCP 设置生命周期
+make e2e-wp11-real-backend # 真实 Auth/thread/workspace-changes 壳层生命周期
 make e2e-m7-auth        # 认证请求与安全
 make proxy-security     # Nitro body 限制、无 body/chunked DELETE、SSE 与 traversal
 make e2e-m7-real-protocol
@@ -189,6 +190,30 @@ revision-conflict 409、corrupted-storage 500、unsupported 501。fixture 只 se
 skill/MCP 输入文件，并仅为损坏后恢复自身 manifest 的断言暴露本轮隔离临时 home。该门禁不
 证明 Mem0/Honcho/OpenViking、真实外部 MCP 进程、生产 SkillScan/LLM/IdP/凭据、DNS/TLS、
 外层代理或部署。
+
+## Workspace 壳层与 Workspace Changes
+
+workspace layout 只持有一个 command palette、settings host 和 toast store。palette 实现
+React 当前跨平台快捷键集合，并排除 repeat、IME 和 editable target 冲突。Settings 由路由
+持有：`?settings=<section>` 打开具备 focus trap 的 dialog，关闭只移除该 query key，浏览器
+前进/后退恢复同一深链和焦点边界。Gateway unavailable 与 authenticated recovery 共用唯一
+session Query owner，包括路由 middleware 先于 banner 挂载写入 unavailable 的时序。
+
+每个 recent-thread menu 独立持有 rename、pin、share、export 和 delete 状态。Share 沿用纯
+客户端稳定 URL/clipboard 合同，不发明 Gateway endpoint；Export 先加载真实 thread state，
+再调用已有 serializer，并始终释放临时 anchor 与 object URL。列表 recency 只从 Gateway
+`updated_at` 渲染。
+
+Workspace-change summary/detail 使用独立 TanStack Query identity，完整包含 thread、run 和
+两个 include flag。identity 切换会中止旧请求，late response 不能覆盖当前结果。UI 保留 summary
+truncated、四种 status、五种精确 diff unavailable reason、保真 Gateway error 与显式 retry。
+
+`make e2e-wp11-real-backend` 通过 Nuxt 与 Chromium 真实经过本地 Auth/CSRF/FastAPI Gateway、
+thread/checkpoint、run-event store、production owner check 和 workspace-changes response builder。
+隔离的 test-only seed 只向 Gateway 自身 event store 写一条受控 workspace event；include 过滤、
+状态/reason 保留、认证、跨用户拒绝、thread state、clipboard 和下载仍是生产路径。唯一注入的
+503 只用于证明 unavailable 到真实 session 的恢复；该门禁不证明生产 IdP、DNS/TLS、外层
+代理或部署。
 
 ## 流式与历史行为
 

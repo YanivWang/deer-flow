@@ -163,6 +163,9 @@ export const zhCN: Translations = {
     truncatedUnavailable: "变更集过大，已省略 diff。",
     symlinkUnavailable: "符号链接变更，无法展示 diff。",
     truncatedSummary: "部分变更已被截断。",
+    symlinkCreated: "新增符号链接",
+    loadFailed: "加载工作区变更失败。",
+    retry: "重试",
   },
 
   // Input Box
@@ -573,8 +576,10 @@ export const zhCN: Translations = {
     logout: "退出登录",
     gatewayUnavailable: "网关暂时不可用。",
     gatewayUnavailableRetrying: "正在后台重试…",
+    gatewayRecovered: "网关连接已恢复。",
     retryNow: "立即重试",
     retrying: "正在重试...",
+    dismissNotification: "关闭通知",
   },
 
   // Conversation
@@ -595,6 +600,9 @@ export const zhCN: Translations = {
     pinChat: "置顶对话",
     unpinChat: "取消置顶",
     pinChatFailed: "更新对话置顶状态失败",
+    noMessagesToExport: "此对话没有可导出的消息。",
+    shareFailed: "分享对话失败。",
+    updatedAt: (value) => `更新于${value}`,
   },
 
   // Sidecar

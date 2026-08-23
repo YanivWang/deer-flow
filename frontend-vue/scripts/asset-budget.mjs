@@ -28,7 +28,10 @@ const budgets = {
     maxRaw: 360_000,
   },
   "vendor-codemirror": { totalRaw: 0, totalGzip: 0, maxRaw: 0 },
-  "vendor-ui": { totalRaw: 110_000, totalGzip: 35_000, maxRaw: 60_000 },
+  // WP-11 mounts Reka dialog/dropdown primitives in the workspace shell. Keep
+  // measured headroom for that accessibility payload while the independent
+  // whole-client and per-chunk ceilings continue to catch broad regressions.
+  "vendor-ui": { totalRaw: 250_000, totalGzip: 80_000, maxRaw: 150_000 },
 };
 const overallBudget = {
   totalRaw: 14_500_000,

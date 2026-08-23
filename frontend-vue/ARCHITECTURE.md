@@ -172,6 +172,15 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
   authenticated user 读取但只允许 admin mutation；`useMCPConfig` 是 MCP config 的唯一 owner，
   已知 non-admin 时不发 GET/PATCH。两类 mutation 均不 optimistic，并在成功后 authoritative
   re-read；401、403/admin-required 与通用请求失败保持不同状态。
+- Workspace shell 的 command palette、settings host 与 toast store 只在
+  `app/layouts/workspace.vue` 各挂载一次。`useSettingsDialog` 只持有客户端 dialog/focus
+  边界，实际 open section 由 route query 决定；关闭仅移除 `settings`，保留其余 query/hash。
+  Gateway banner 复用唯一 session Query，并立即观察 middleware 预填的 unavailable 状态，
+  因此恢复通知不依赖组件先于路由守卫挂载。
+- workspace changes 的服务端真相只归 `useWorkspaceChanges`。summary/detail 由
+  thread/run/include_files/include_diff 完整 key 隔离，queryFn 必须消费 AbortSignal；组件只持有
+  panel open 状态，不复制 response/error。recent-thread 的 share/export pending 状态归每个
+  `ThreadActionsMenu` 实例，线程列表仍只由 `useThreads` 持有。
 - composer draft 是 `sessionStorage` 的 tab 状态，只持久化文本/skill；user、agent 与逻辑会话
   三维隔离，并在确认 logout/thread delete 后清理。上传文件、语音、follow-up dialog、polish
   和 generation guard 是组件/composable 瞬态状态，不得错误跨 thread 复用。
@@ -189,6 +198,7 @@ make e2e-m7          # 当前完整 Vue 浏览器合同入口（名称为既有�
 make e2e-wp07-real-backend # 真实 Gateway/SQLite/HTTP/Nuxt/Chromium 的 scheduled-task 合同
 make e2e-wp09-real-backend # 真实 Auth/LangGraph/setup_agent/SQLite Agent 合同
 make e2e-wp10-real-backend # 真实 Auth/DeerMem/Noop/Skills/MCP/Nuxt/Chromium 设置与错误合同
+make e2e-wp11-real-backend # 真实 Auth/thread/event-store/workspace-changes/Nuxt/Chromium 壳层合同
 make container-smoke # 生产镜像、health、SIGTERM、Showcase 资源与拒绝策略
 ```
 

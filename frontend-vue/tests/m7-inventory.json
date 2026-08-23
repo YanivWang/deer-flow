@@ -1,6 +1,6 @@
 {
-  "expectedFileCount": 27,
-  "expectedTestCount": 156,
+  "expectedFileCount": 28,
+  "expectedTestCount": 160,
   "specFiles": [
     "frontend-vue/tests/m7/agent-chat.spec.ts",
     "frontend/tests/e2e/agents-feature-disabled.spec.ts",
@@ -24,6 +24,7 @@
     "frontend/tests/e2e/subtask-card.spec.ts",
     "frontend/tests/e2e/thread-history-mermaid.spec.ts",
     "frontend-vue/tests/m7/thread-history.spec.ts",
+    "frontend-vue/tests/m7/workspace-shell.spec.ts",
     "frontend/tests/e2e/thread-list-infinite-scroll.spec.ts",
     "frontend/tests/e2e/thread-list-pin.spec.ts",
     "frontend/tests/e2e/ui-polish-mobile.spec.ts",

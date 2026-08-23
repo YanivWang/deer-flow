@@ -69,6 +69,10 @@ const wp10RealConfig = readFileSync(
   new URL("../../playwright.wp10-real-backend.config.ts", import.meta.url),
   "utf8",
 );
+const wp11RealConfig = readFileSync(
+  new URL("../../playwright.wp11-real-backend.config.ts", import.meta.url),
+  "utf8",
+);
 const browserStream = readFileSync(
   new URL(
     "../../app/components/workspace/browser-view/useBrowserStream.ts",
@@ -197,10 +201,10 @@ describe("M5 artifact inventory", () => {
 });
 
 describe("Vue M7 gate ownership", () => {
-  it("keeps the exact WP-10 27-file / 156-test gate and owns framework-specific specs", () => {
-    expect(m7Inventory.expectedFileCount).toBe(27);
-    expect(m7Inventory.expectedTestCount).toBe(156);
-    expect(m7Inventory.specFiles).toHaveLength(27);
+  it("keeps the exact WP-11 28-file / 160-test gate and owns framework-specific specs", () => {
+    expect(m7Inventory.expectedFileCount).toBe(28);
+    expect(m7Inventory.expectedTestCount).toBe(160);
+    expect(m7Inventory.specFiles).toHaveLength(28);
     expect(m7Inventory.specFiles).toContain(
       "frontend-vue/tests/m5/artifact-batched-stream.spec.ts",
     );
@@ -285,6 +289,17 @@ describe("Vue M7 gate ownership", () => {
     expect(wp10RealConfig).toContain("DEERFLOW_SETTINGS_TEST_HOME_MARKER");
     expect(makefile).toContain("E2E_WP10_UNSUPPORTED_GATEWAY_PORT");
     expect(wp10RealConfig).toContain("NUXT_PUBLIC_AUTH_DISABLED=0");
+  });
+
+  it("owns a dedicated WP-11 real Auth/thread/workspace-changes/Chromium gate", () => {
+    expect(makefile).toContain("e2e-wp11-real-backend:");
+    expect(makefile).toContain(
+      "playwright test -c playwright.wp11-real-backend.config.ts",
+    );
+    expect(wp11RealConfig).toContain("scripts/run_replay_gateway.py");
+    expect(wp11RealConfig).toContain('testDir: "tests/wp11-real-backend"');
+    expect(wp11RealConfig).toContain('DEERFLOW_ENABLE_TEST_SEED: "1"');
+    expect(wp11RealConfig).toContain("NUXT_PUBLIC_AUTH_DISABLED=0");
   });
 });
 

@@ -12,22 +12,38 @@ import { computed, watch } from "vue";
 
 import { useAuthSession } from "@/composables/useAuthSession";
 import { buildLoginLocation, isEnabledRuntimeFlag } from "@/core/auth/decision";
+import { createGatewayRecoveryTracker } from "@/core/workspace-shell/gateway-recovery";
+import { useWorkspaceToast } from "@/core/workspace-shell/toast";
 
+const { $i18n } = useNuxtApp();
 const config = useRuntimeConfig();
 const route = useRoute();
+const toast = useWorkspaceToast();
 const enabled = computed(
   () => !isEnabledRuntimeFlag(config.public.authDisabled),
 );
 const { session, isFetching, refresh } = useAuthSession({ enabled });
 const unavailable = computed(() => session.value?.tag === "unavailable");
+const recovery = createGatewayRecoveryTracker(() =>
+  toast.success($i18n.t.value.workspace.gatewayRecovered),
+);
 
-watch(session, (current) => {
-  if (current?.tag === "unauthenticated") {
-    void navigateTo(buildLoginLocation(route.fullPath), { replace: true });
-  } else if (current?.tag === "authenticated" && current.user.needs_setup) {
-    void navigateTo("/setup", { replace: true });
-  }
-});
+watch(
+  session,
+  (current) => {
+    recovery.observe(current?.tag);
+    if (current?.tag === "unauthenticated") {
+      void navigateTo(buildLoginLocation(route.fullPath), { replace: true });
+    } else if (current?.tag === "authenticated" && current.user.needs_setup) {
+      void navigateTo("/setup", { replace: true });
+    }
+  },
+  // The route middleware can populate the shared Query owner before this
+  // component mounts. Observe that first unavailable state too, otherwise the
+  // subsequent authenticated value has no unavailable predecessor and the
+  // recovery edge is lost.
+  { immediate: true },
+);
 </script>
 
 <template>

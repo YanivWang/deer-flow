@@ -17,15 +17,13 @@ import {
   MessageSquarePlus,
   MessagesSquare,
   Moon,
-  MoreHorizontal,
-  Pencil,
   Pin,
   Settings,
   Sun,
-  Trash2,
 } from "lucide-vue-next";
 
 import ChannelConnections from "@/components/workspace/channels/ChannelConnections.vue";
+import ThreadActionsMenu from "@/components/workspace/ThreadActionsMenu.vue";
 import { useSettingsDialog } from "@/composables/useSettingsDialog";
 import { useThreads } from "@/composables/useThreads";
 import { useWorkspaceFeatures } from "@/composables/useWorkspaceFeatures";
@@ -35,20 +33,19 @@ import {
   pathOfThread,
   titleOfThread,
 } from "@/core/threads/utils";
-import { isEditableKeyboardTarget } from "@/core/input/keyboard";
 
 const route = useRoute();
 const router = useRouter();
 const threads = useThreads();
 const features = useWorkspaceFeatures();
 const settingsDialog = useSettingsDialog();
-const menuThreadId = ref<string | null>(null);
 const sentinel = ref<HTMLElement | null>(null);
 const sidebarElement = ref<HTMLElement | null>(null);
 const collapsed = ref(false);
 const mobileOpen = ref(false);
 const sidebarExpanded = computed(() => !collapsed.value || mobileOpen.value);
 const settingsOpen = ref(false);
+const settingsTrigger = ref<HTMLButtonElement | null>(null);
 const renameThreadId = ref<string | null>(null);
 const renameTitle = ref("");
 const renameError = ref<string | null>(null);
@@ -79,13 +76,6 @@ function toggleSidebar() {
 }
 
 function onWindowKeydown(event: KeyboardEvent) {
-  if (event.key.toLowerCase() === "b" && (event.metaKey || event.ctrlKey)) {
-    if (event.defaultPrevented || isEditableKeyboardTarget(event.target))
-      return;
-    event.preventDefault();
-    toggleSidebar();
-    return;
-  }
   if (event.key === "Escape" && mobileOpen.value) {
     event.preventDefault();
     closeMobileSidebar();
@@ -177,7 +167,6 @@ function startNewChat() {
 
 async function removeThread(threadId: string) {
   if (deletingThreadId.value) return;
-  menuThreadId.value = null;
   const active = route.path.endsWith(`/${threadId}`);
   deleteError.value = null;
   failedDeleteThreadId.value = null;
@@ -203,7 +192,6 @@ function beginRename(threadId: string) {
   renameThreadId.value = threadId;
   renameTitle.value = thread ? titleOfThread(thread) : "";
   renameError.value = null;
-  menuThreadId.value = null;
 }
 
 async function submitRename() {
@@ -221,6 +209,11 @@ async function submitRename() {
 function setTheme(theme: "light" | "dark") {
   document.documentElement.classList.toggle("dark", theme === "dark");
   localStorage.setItem("deerflow-theme", theme);
+}
+
+function openSettingsDialog() {
+  settingsOpen.value = false;
+  settingsDialog.show("account", { returnFocus: settingsTrigger.value });
 }
 </script>
 
@@ -366,49 +359,16 @@ function setTheme(theme: "light" | "dark") {
             >{{ channelSourceOfThread(thread)?.label }}</span
           >
         </NuxtLink>
-        <button
-          type="button"
-          aria-label="More"
-          class="mr-1 rounded px-2 py-1 opacity-0 group-hover:opacity-100 focus:opacity-100"
-          @click="
-            menuThreadId =
-              menuThreadId === thread.thread_id ? null : thread.thread_id
+        <ThreadActionsMenu
+          :thread="thread"
+          :pinned="threads.isPinned(thread)"
+          :deleting="deletingThreadId === thread.thread_id"
+          @rename="beginRename(thread.thread_id)"
+          @toggle-pin="
+            threads.setPinned(thread.thread_id, !threads.isPinned(thread))
           "
-        >
-          <MoreHorizontal :size="16" />
-        </button>
-        <div
-          v-if="menuThreadId === thread.thread_id"
-          role="menu"
-          class="bg-popover text-popover-foreground border-border absolute top-9 right-1 z-30 w-36 rounded-md border p-1 shadow-lg"
-        >
-          <button
-            role="menuitem"
-            class="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left"
-            @click="beginRename(thread.thread_id)"
-          >
-            <Pencil :size="14" /> Rename
-          </button>
-          <button
-            role="menuitem"
-            class="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left"
-            @click="
-              threads.setPinned(thread.thread_id, !threads.isPinned(thread));
-              menuThreadId = null;
-            "
-          >
-            <Pin :size="14" />
-            {{ threads.isPinned(thread) ? "Unpin chat" : "Pin chat" }}
-          </button>
-          <button
-            role="menuitem"
-            class="text-destructive hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left"
-            :disabled="deletingThreadId === thread.thread_id"
-            @click="removeThread(thread.thread_id)"
-          >
-            <Trash2 :size="14" /> Delete
-          </button>
-        </div>
+          @delete="removeThread(thread.thread_id)"
+        />
       </li>
       <li
         v-if="threads.hasMore"
@@ -443,10 +403,7 @@ function setTheme(theme: "light" | "dark") {
           role="menuitem"
           type="button"
           class="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5"
-          @click="
-            settingsOpen = false;
-            settingsDialog.show();
-          "
+          @click="openSettingsDialog"
         >
           <Settings :size="14" /> Settings
         </button>
@@ -486,6 +443,7 @@ function setTheme(theme: "light" | "dark") {
         </div>
       </div>
       <button
+        ref="settingsTrigger"
         type="button"
         class="text-muted-foreground hover:bg-sidebar-accent flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm"
         :title="collapsed ? 'Settings & more' : undefined"

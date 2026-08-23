@@ -128,10 +128,10 @@
 | MEMORY-02   | P1     | DONE | WP-10  | 删除、清空与覆盖导入使用 pending-safe alert dialog 二次确认      |
 | MEMORY-03   | P1     | DONE | WP-10  | confidence 0～1 编辑/diff、搜索、筛选与空态已接通                |
 | SETTINGS-01 | P1     | DONE | WP-10  | Skills/MCP 已按共享 session 区分读写权限、403 与通用失败         |
-| SHELL-01    | P1     | TODO | WP-11  | 工作区缺 Gateway banner、command palette 和全局 toast            |
-| SHELL-02    | P1     | TODO | WP-11  | SettingsDialog 缺 focus trap，关闭后不清理 query                 |
-| SHELL-03    | P1     | TODO | WP-11  | 聊天列表缺 share/export/updated time                             |
-| CHANGES-01  | P2     | TODO | WP-11  | workspace changes 响应字段和详情错误未完整展示                   |
+| SHELL-01    | P1     | DONE | WP-11  | 单例 Gateway banner、command palette、toast 与清理合同已接通     |
+| SHELL-02    | P1     | DONE | WP-11  | Settings focus/aria/query/history/焦点归还已接通                 |
+| SHELL-03    | P1     | DONE | WP-11  | share/export/updated time 与可见错误已接通                       |
+| CHANGES-01  | P2     | DONE | WP-11  | 完整字段/reason、Query abort/stale、error/retry 已接通           |
 | I18N-01     | P1     | TODO | WP-12  | 大量核心产品界面仍为英文硬编码                                   |
 | THEME-01    | P2     | TODO | WP-12  | system theme 不监听操作系统主题变化                              |
 
@@ -551,35 +551,29 @@
 
 包含：`SHELL-01`～`SHELL-03`、`CHANGES-01`。
 
-#### 当前代码事实
+#### 已实现合同
 
-- [`app/layouts/workspace.vue`](app/layouts/workspace.vue) 只挂载 sidebar、main 和 settings。
-- React [`src/app/workspace/workspace-content.tsx`](../frontend/src/app/workspace/workspace-content.tsx) 还挂载 Gateway unavailable banner、command palette、settings deep-link 和 toaster。
-- Vue SettingsDialog 只处理 overlay/Escape，没有 focus trap；关闭后保留 settings query。
-- [`app/components/workspace/ThreadSidebar.vue`](app/components/workspace/ThreadSidebar.vue) 菜单只有 rename/pin/delete。
-- [`app/core/threads/export.ts`](app/core/threads/export.ts) 的导出函数没有消费者；聊天列表也缺 updated time。
-- [`app/components/workspace/changes/WorkspaceChangesBadge.vue`](app/components/workspace/changes/WorkspaceChangesBadge.vue) 没有完整显示 `truncated`、file status、`diff_unavailable_reason`，详情加载没有明确 catch/error UI。
-
-#### 必须实现
-
-1. 工作区提供 Gateway unavailable/恢复、全局 toast 和 React 当前快捷操作的等价 command palette。
-2. 快捷键不与输入框、IME、浏览器快捷键冲突。
-3. SettingsDialog 具有 focus trap、初始焦点、焦点归还、Escape、aria；关闭清理 query，浏览器前进/后退可恢复深链。
-4. sidebar/chat list 提供 share/export，并显示 updated time；请求、剪贴板和下载错误可见。
-5. changes 展示 summary truncated、每个 file status、无法 diff 的具体原因以及 detail error/retry。
-
-#### Vue 实现建议
-
-- Workspace providers 用 layout-level composables/provide，不需要复制 React Provider 树。
-- Dialog/command palette 使用 Vue 无障碍 primitive。
-- export 调用已有纯函数；菜单状态和网络状态留在独立 action component。
+- [`app/layouts/workspace.vue`](app/layouts/workspace.vue) 单例挂载 command palette、settings host、
+  Gateway banner 与 toast owner；全局 listener/timer 随 scope 清理。快捷键精确覆盖 React 当前
+  K/Shift-N/comma/slash/B，拒绝 repeat、IME、Alt、双 modifier 和 editable 冲突。
+- Settings 使用 Reka Dialog 的 modal/focus trap/初始焦点/Escape/焦点归还；有效 route query 是
+  open section 真相，关闭只移除 `settings`，保留其余 query/hash，back/forward 可重放。
+- recent-thread 独立 action menu 接通 rename/pin/share/export/delete；share 仍是纯客户端稳定 URL，
+  export 从真实 thread state 加载并在异常时也清理浏览器资源。聊天列表从 `updated_at` 渲染相对时间。
+- [`useWorkspaceChanges.ts`](app/composables/useWorkspaceChanges.ts) 独占 summary/detail Query；完整
+  key 和 AbortSignal 阻止 thread/run 切换后的 stale 回写。组件显示 truncated、四种 status、五种
+  unavailable reason、保真 Gateway detail 与 retry。
 
 #### 验收与测试
 
-- Gateway 断开/恢复、toast、Meta/Ctrl-K、Shift-N 等快捷键测试。
-- Settings focus cycle、Escape、焦点归还、query/back-forward 测试。
-- share/export/updated_at 测试。
-- changes 的 truncated、binary、large、sensitive、symlink、error/retry fixture 测试。
+- WP-11 unit/DOM 覆盖 shortcuts、toast/recovery、settings query/focus、thread action、export cleanup、
+  workspace status/reason/error/retry 与真实 stale/abort owner。
+- Vue-owned M7 新增 4 个 shell scenarios，完整清单为 28 files / 160 tests；真实 Chromium 覆盖
+  快捷键清理、settings deep-link/history/focus、share/export/updated time 与 changes 可见/重试。
+- `make e2e-wp11-real-backend` 通过 production Auth/CSRF/owner check、thread/checkpoint、run/event
+  store 与 workspace-changes response builder，覆盖 401、跨用户 404、include flags、真实 state
+  export 和 unavailable→真实 session 恢复。fixture 只写本轮隔离 event；唯一 503 是明确网络注入，
+  不证明生产 IdP、DNS/TLS、外层代理或部署。
 
 ### WP-12：国际化与主题
 
@@ -710,11 +704,12 @@ API 对齐：method/path/query/headers/body/response/error/cache
 
 在此追加，不删除历史记录：
 
-| 日期       | 工作包/ID                                                 | 证据                                                                                                                                                                                                                                                                                                                                                                                                           | 备注                                                                                           |
-| ---------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| 2026-08-21 | 基线审计                                                  | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                                                                                                                                                                                                                                                          | 所有 ID 初始状态为 TODO                                                                        |
-| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01`           | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过                                                                                                                                                                                                                              | 本机回环监听环境重跑通过；本地提交、未 push                                                    |
-| 2026-08-21 | WP-02：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05` | `make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 130/130；`make e2e-m7-real-protocol` 1/1；`make migration-check` 通过；`make verify` 1166/1166 且 production build 通过；React `pnpm check` 与 `pnpm test` 1001/1001                                                                                                                                                                              | 回环门禁在允许本机监听的环境重跑；未 commit、未 push                                           |
-| 2026-08-22 | WP-08：`CHANNEL-01`～`CHANNEL-03`                         | WP-08 unit/DOM 21/21；聚焦 Vitest 55/55；M7 channels 11/11、全量 144/144；real Gateway 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 159 files / 1358 tests 且 production build 通过                                                                                                                           | 真实 IM/IdP/DNS/TLS/外层代理未验证；未 commit、未 push                                         |
-| 2026-08-22 | WP-09：`AGENT-01`～`AGENT-03`                             | WP-09 unit/DOM 8 files / 61 tests；backend focused 56/56；M7 agents 18/18、全量 150/150；real Gateway 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 165 files / 1394 tests 且 production build 通过                                                                                            | 外部 LLM、生产 provider/凭据、真实 IdP/DNS/TLS/外层代理未验证；未 commit、未 push              |
-| 2026-08-23 | WP-10：`MEMORY-01`～`MEMORY-03`、`SETTINGS-01`            | WP-10 unit/DOM 5 files / 59 tests；backend focused 210/210；Ruff check/format 通过；M7 settings 6/6、全量 156/156；WP-10 real Gateway 5/5（DeerMem + Noop，400/404/409/422/500/501）；WP-09 real 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 13/13、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 170 files / 1454 tests 且 production build 通过 | Mem0/Honcho/OpenViking、外部 MCP/LLM、生产 IdP/凭据/DNS/TLS/外层代理未验证；未 commit、未 push |
+| 日期       | 工作包/ID                                                 | 证据                                                                                                                                                                                                                                                                                                                                                                                                                 | 备注                                                                                                                                                     |
+| ---------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | 基线审计                                                  | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                                                                                                                                                                                                                                                                | 所有 ID 初始状态为 TODO                                                                                                                                  |
+| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01`           | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过                                                                                                                                                                                                                                    | 本机回环监听环境重跑通过；本地提交、未 push                                                                                                              |
+| 2026-08-21 | WP-02：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05` | `make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 130/130；`make e2e-m7-real-protocol` 1/1；`make migration-check` 通过；`make verify` 1166/1166 且 production build 通过；React `pnpm check` 与 `pnpm test` 1001/1001                                                                                                                                                                                    | 回环门禁在允许本机监听的环境重跑；未 commit、未 push                                                                                                     |
+| 2026-08-22 | WP-08：`CHANNEL-01`～`CHANNEL-03`                         | WP-08 unit/DOM 21/21；聚焦 Vitest 55/55；M7 channels 11/11、全量 144/144；real Gateway 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 159 files / 1358 tests 且 production build 通过                                                                                                                                 | 真实 IM/IdP/DNS/TLS/外层代理未验证；未 commit、未 push                                                                                                   |
+| 2026-08-22 | WP-09：`AGENT-01`～`AGENT-03`                             | WP-09 unit/DOM 8 files / 61 tests；backend focused 56/56；M7 agents 18/18、全量 150/150；real Gateway 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 165 files / 1394 tests 且 production build 通过                                                                                                  | 外部 LLM、生产 provider/凭据、真实 IdP/DNS/TLS/外层代理未验证；未 commit、未 push                                                                        |
+| 2026-08-23 | WP-10：`MEMORY-01`～`MEMORY-03`、`SETTINGS-01`            | WP-10 unit/DOM 5 files / 59 tests；backend focused 210/210；Ruff check/format 通过；M7 settings 6/6、全量 156/156；WP-10 real Gateway 5/5（DeerMem + Noop，400/404/409/422/500/501）；WP-09 real 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 13/13、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 170 files / 1454 tests 且 production build 通过       | Mem0/Honcho/OpenViking、外部 MCP/LLM、生产 IdP/凭据/DNS/TLS/外层代理未验证；未 commit、未 push                                                           |
+| 2026-08-23 | WP-11：`SHELL-01`～`SHELL-03`、`CHANGES-01`               | WP-11 unit/DOM + guard 9 files / 58 tests；M7 workspace shell 4/4、全量 160/160；M7 local 8/8、auth 13/13、real protocol 1/1、visual 7/7（baseline 无差异）；WP-11 real Gateway/Nuxt 1/1；WP-10 real 5/5；M4a 4/4、stream 6/6；`make migration-check` 通过；`make verify` 178 files / 1497 tests 且 production build 通过；asset budget、container smoke、backend 11313 passed / 72 skipped；`git diff --check` 通过 | real gate 保留生产 Auth/CSRF/owner/event-store/changes router；seed event 与恢复 503 为受控 fixture；生产 IdP/DNS/TLS/外层代理未验证；未 commit、未 push |

@@ -143,6 +143,9 @@ export interface Translations {
     truncatedUnavailable: string;
     symlinkUnavailable: string;
     truncatedSummary: string;
+    symlinkCreated: string;
+    loadFailed: string;
+    retry: string;
   };
 
   // Input Box
@@ -491,8 +494,10 @@ export interface Translations {
     logout: string;
     gatewayUnavailable: string;
     gatewayUnavailableRetrying: string;
+    gatewayRecovered: string;
     retryNow: string;
     retrying: string;
+    dismissNotification: string;
   };
 
   // Conversation
@@ -513,6 +518,9 @@ export interface Translations {
     pinChat: string;
     unpinChat: string;
     pinChatFailed: string;
+    noMessagesToExport: string;
+    shareFailed: string;
+    updatedAt: (value: string) => string;
   };
 
   // Sidecar

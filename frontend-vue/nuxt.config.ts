@@ -26,18 +26,18 @@ function clientChunkFileName(chunk: ClientChunk) {
     return "_nuxt/vendor-codemirror-[hash].js";
   }
   if (
-    /node_modules\/.+\/(?:@vue|vue|vue-router|pinia|@pinia|@tanstack\/vue-query)/.test(
-      ids,
-    )
-  ) {
-    return "_nuxt/vendor-vue-[hash].js";
-  }
-  if (
     /node_modules\/.+\/(?:reka-ui|lucide-vue-next|class-variance-authority|clsx|tailwind-merge|splitpanes)/.test(
       ids,
     )
   ) {
     return "_nuxt/vendor-ui-[hash].js";
+  }
+  if (
+    /node_modules\/.+\/(?:@vue|vue|vue-router|pinia|@pinia|@tanstack\/vue-query)/.test(
+      ids,
+    )
+  ) {
+    return "_nuxt/vendor-vue-[hash].js";
   }
   return `_nuxt/${chunk.name}-[hash].js`;
 }

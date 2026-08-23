@@ -25,7 +25,7 @@ mirrors exactly what ``runtime/journal.py`` writes for real runs
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
@@ -49,6 +49,11 @@ class SeedRun(BaseModel):
     # so a later created_at must mean a later run for the ordering to be faithful.
     created_at: str
     messages: list[SeedMessage]
+    # Optional controlled payload for frontend workspace-change acceptance.
+    # The production response builder still owns include_files/include_diff
+    # filtering; this fixture only writes the same event journal shape emitted
+    # by deerflow.workspace_changes.record_workspace_changes.
+    workspace_changes: dict[str, Any] | None = None
 
 
 class SeedRunsBody(BaseModel):
@@ -90,6 +95,22 @@ async def seed_runs(body: SeedRunsBody, request: Request) -> dict:
                     "category": "message",
                     "content": msg.model_dump(),
                     "metadata": {"caller": "lead_agent"},
+                    "created_at": run.created_at,
+                }
+            )
+        if run.workspace_changes is not None:
+            summary = run.workspace_changes.get("summary")
+            changed = 0
+            if isinstance(summary, dict):
+                changed = sum(int(summary.get(key, 0) or 0) for key in ("created", "modified", "deleted", "symlink_created"))
+            events.append(
+                {
+                    "thread_id": body.thread_id,
+                    "run_id": run.run_id,
+                    "event_type": "workspace_changes",
+                    "category": "workspace",
+                    "content": f"{changed} file(s) changed",
+                    "metadata": {"workspace_changes": run.workspace_changes},
                     "created_at": run.created_at,
                 }
             )

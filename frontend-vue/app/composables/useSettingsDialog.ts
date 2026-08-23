@@ -22,16 +22,21 @@ export type SettingsSection =
 
 const open = ref(false);
 const section = ref<SettingsSection>("account");
+const returnFocus = ref<HTMLElement | null>(null);
 
 export function useSettingsDialog() {
-  function show(next: SettingsSection = "account") {
+  function show(
+    next: SettingsSection = "account",
+    options?: { returnFocus?: HTMLElement | null },
+  ) {
+    returnFocus.value = options?.returnFocus ?? null;
     section.value = next;
     open.value = true;
   }
 
-  function close() {
+  function close(_options?: { source?: "user" | "route" }) {
     open.value = false;
   }
 
-  return { open, section, show, close };
+  return { open, section, returnFocus, show, close };
 }

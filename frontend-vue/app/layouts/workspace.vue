@@ -7,9 +7,17 @@
   【依赖关系】     ThreadSidebar · SettingsDialog · auth middleware
   【边界与注意】   DeerFlow 路由壳，不属于 L2。
 */
-import ThreadSidebar from "@/components/workspace/ThreadSidebar.vue";
+import { onUnmounted } from "vue";
+
+import CommandPalette from "@/components/workspace/CommandPalette.vue";
 import GatewayStatusBanner from "@/components/workspace/GatewayStatusBanner.vue";
+import ThreadSidebar from "@/components/workspace/ThreadSidebar.vue";
+import WorkspaceToaster from "@/components/workspace/WorkspaceToaster.vue";
 import SettingsDialog from "@/components/workspace/settings/SettingsDialog.vue";
+import { provideWorkspaceToast } from "@/core/workspace-shell/toast";
+
+const toast = provideWorkspaceToast();
+onUnmounted(() => toast.clear());
 </script>
 
 <template>
@@ -21,6 +29,8 @@ import SettingsDialog from "@/components/workspace/settings/SettingsDialog.vue";
         <slot />
       </div>
     </main>
+    <CommandPalette />
     <SettingsDialog />
+    <WorkspaceToaster />
   </div>
 </template>

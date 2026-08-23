@@ -22,6 +22,8 @@ export const HAND_MAINTAINED_COPIED = {
     "WP-10 preserves generated Gateway fact metadata plus forward-compatible import fields.",
   "threads/api.ts":
     "WP-02 preserves Gateway HTTP status/body through the shared Vue error parser.",
+  "workspace-changes/api.ts":
+    "WP-11 forwards TanStack Query AbortSignal and preserves the shared lossless Gateway error contract.",
   "scheduled-tasks/api.ts":
     "WP-07 adds abortable detail and limit/offset runs queries while narrowing create/update payloads to the Gateway contract.",
   "channels/api.ts":

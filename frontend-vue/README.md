@@ -80,11 +80,12 @@ make e2e-m5             # artifacts, sidecar and panel lifecycle contracts
 make e2e-m5-real-backend # real Gateway artifact Range/PUT/conflict contracts
 make e2e-m6             # includes Vue-owned browser DOM/wire contracts
 make e2e-m6-real-backend # real local Gateway + Chromium browser runtime
-make e2e-m7             # full Vue browser contract: 27 files / 156 tests
+make e2e-m7             # full Vue browser contract: 28 files / 160 tests
 make e2e-wp07-real-backend # real Gateway scheduled-task HTTP/UI lifecycle
 make e2e-wp08-real-backend # real Auth/Gateway/SQLite channel lifecycle
 make e2e-wp09-real-backend # real Auth/Gateway/setup_agent/Agent persistence
 make e2e-wp10-real-backend # real Auth/DeerMem/Noop/Skills/MCP settings lifecycle
+make e2e-wp11-real-backend # real Auth/thread/workspace-changes shell lifecycle
 make e2e-m7-auth        # authentication requests and security
 make proxy-security     # Nitro body limits, bodyless/chunked DELETE, SSE and traversal
 make e2e-m7-real-protocol
@@ -237,6 +238,40 @@ files and exposes the run's isolated temporary home long enough to corrupt and
 restore its own manifest. It does not prove Mem0/Honcho/OpenViking, a real
 external MCP process, production SkillScan/LLM/IdP/credentials, DNS/TLS, an
 outer proxy or deployment.
+
+## Workspace shell and workspace changes
+
+The workspace layout owns one command palette, settings host and toast store.
+The palette implements the current cross-platform React shortcut set while
+excluding repeat, IME and editable-target conflicts. Settings are route-owned:
+`?settings=<section>` opens a focus-trapped dialog, close removes only that
+query key, and browser back/forward restores the same deep link and focus
+boundary. Gateway unavailable and authenticated recovery share the single auth
+session Query owner, including the case where route middleware populated the
+unavailable state before the banner mounted.
+
+Each recent-thread menu independently owns rename, pin, share, export and
+delete state. Share is the existing client-only stable URL/clipboard contract;
+it does not invent a Gateway endpoint. Export loads the current thread state
+before calling the existing serializer and always releases its temporary
+anchor and object URL. Thread recency renders from the Gateway `updated_at`
+timestamp.
+
+Workspace-change summary and detail are separate TanStack Query identities that
+include thread, run and both include flags. Switching identity aborts the old
+request and late responses cannot replace the active result. The UI preserves
+summary truncation, all four statuses, all five exact diff-unavailable reasons,
+lossless Gateway errors and explicit retry.
+
+`make e2e-wp11-real-backend` runs a real local Auth/CSRF/FastAPI Gateway,
+thread/checkpoint and run-event stores, production owner checks and the
+workspace-changes response builder through Nuxt and Chromium. Its isolated
+test-only seed writes one controlled workspace event into the Gateway's own
+event store; include filtering, status/reason preservation, authentication,
+cross-user denial, thread state, clipboard and download remain production
+paths. The single injected 503 exists only to prove unavailable-to-real-session
+recovery. This gate is not evidence for a production IdP, DNS/TLS, outer proxy
+or deployment.
 
 ## Streaming behavior
 
