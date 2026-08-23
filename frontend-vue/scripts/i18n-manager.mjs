@@ -12,12 +12,12 @@
 
                    三个子命令各管一件事，别混：
 
-                     diff   —— 当前 key 集 vs 签入基线。**少 key 是错，多 key 只报告。**
-                               少了意味着某次重写把它弄丢了；多了是正常的新增。
-                     unused —— 词典里有、但 app/ 代码里没人引用的 key。
-                               M1 阶段几乎全部「未引用」（组件还没重写），
-                               所以它**只报告不判错**，等 M4b 之后才有意义。
-                     check  —— 进 CI 的那条：diff 不许少 key，且两个 locale 的 key 集必须一致。
+                     diff   —— 当前 key/unused 集 vs 签入基线。新增、删除与 unused 漂移
+                               都必须显式刷新基线，避免词典只增不收。
+                     unused —— 词典里有、但产品/测试/包代码没人引用的 key；已审计集合
+                               签入基线，任何新增或恢复使用都需要 review。
+                     check  —— 进 CI 的那条：key 与 unused 集都必须精确匹配基线，
+                               且两个 locale 的 key 集必须一致。
 
                    为什么还要查两个 locale 一致：`export const zhCN: Translations` 的
                    多余属性检查确实能拦住大部分，但那依赖两个文件都显式标注了类型。
@@ -195,24 +195,50 @@ function compareToBaseline(keys) {
   };
 }
 
+function unusedKeys(keys) {
+  const referenced = referencedLeaves();
+  return [...keys]
+    .filter((key) => !referenced.has(key.split(".").pop()))
+    .sort();
+}
+
+function compareUnusedToBaseline(dead) {
+  const baseline = loadBaseline();
+  if (!baseline || !Array.isArray(baseline.unusedKeys)) {
+    return { newlyUnused: dead, newlyUsed: [], noBaseline: true };
+  }
+  const current = new Set(dead);
+  const known = new Set(baseline.unusedKeys);
+  return {
+    newlyUnused: dead.filter((key) => !known.has(key)),
+    newlyUsed: baseline.unusedKeys.filter((key) => !current.has(key)),
+    noBaseline: false,
+  };
+}
+
 function refresh() {
   const keys = keysOf("en-US");
+  const dead = unusedKeys(keys);
   writeFileSync(
     BASELINE,
     `${JSON.stringify(
       {
         $comment:
           "词典 key 基线。由 `make i18n-refresh` 生成。趁词典还是上游原样时取（06 §M1 1d）——" +
-          "此后组件重写漏掉任何一条，`make i18n-check` 立刻报出来。",
+          "此后 key 新增/删除或 unused 集漂移，`make i18n-check` 立刻报出来。",
         source: LOCALES["en-US"].file,
         total: keys.size,
         keys: [...keys].sort(),
+        unusedTotal: dead.length,
+        unusedKeys: dead,
       },
       null,
       2,
     )}\n`,
   );
-  process.stdout.write(`词典基线已重建：${keys.size} 个 key\n`);
+  process.stdout.write(
+    `词典基线已重建：${keys.size} 个 key，${dead.length} 个已审计未引用 key\n`,
+  );
 }
 
 function diff() {
@@ -227,26 +253,60 @@ function diff() {
   process.stdout.write(`当前 ${en.size} 个 key\n`);
   for (const key of missing) process.stdout.write(`  - ${key}\n`);
   for (const key of added) process.stdout.write(`  + ${key}\n`);
-  if (!missing.length && !added.length) process.stdout.write("  与基线一致\n");
-  return missing.length ? 1 : 0;
+  const dead = unusedKeys(en);
+  const unusedDiff = compareUnusedToBaseline(dead);
+  for (const key of unusedDiff.newlyUnused) {
+    process.stdout.write(`  unused + ${key}\n`);
+  }
+  for (const key of unusedDiff.newlyUsed) {
+    process.stdout.write(`  unused - ${key}\n`);
+  }
+  if (
+    !missing.length &&
+    !added.length &&
+    !unusedDiff.newlyUnused.length &&
+    !unusedDiff.newlyUsed.length
+  ) {
+    process.stdout.write("  key 与 unused 集均与基线一致\n");
+  }
+  return missing.length ||
+    added.length ||
+    unusedDiff.noBaseline ||
+    unusedDiff.newlyUnused.length ||
+    unusedDiff.newlyUsed.length
+    ? 1
+    : 0;
 }
 
 function unused() {
   const en = keysOf("en-US");
-  const referenced = referencedLeaves();
-  const dead = [...en]
-    .filter((key) => !referenced.has(key.split(".").pop()))
-    .sort();
+  const dead = unusedKeys(en);
+  const drift = compareUnusedToBaseline(dead);
   process.stdout.write(
     `${dead.length} / ${en.size} 个 key 在 ${USAGE_ROOTS.join(" / ")} 里找不到引用\n`,
   );
   for (const key of dead.slice(0, 40)) process.stdout.write(`  ${key}\n`);
   if (dead.length > 40)
     process.stdout.write(`  …… 还有 ${dead.length - 40} 个\n`);
-  process.stdout.write(
-    "（M4b 之前组件还没重写，绝大多数「未引用」是正常的；本命令只报告，不判错。）\n",
-  );
-  return 0;
+  for (const key of drift.newlyUnused) {
+    process.stderr.write(`✗ 新增未引用 key：${key}\n`);
+  }
+  for (const key of drift.newlyUsed) {
+    process.stderr.write(`✗ 基线未引用 key 已恢复使用：${key}\n`);
+  }
+  if (drift.noBaseline) {
+    process.stderr.write("✗ 基线没有 unusedKeys，跑 `make i18n-refresh`。\n");
+  }
+  if (
+    !drift.noBaseline &&
+    !drift.newlyUnused.length &&
+    !drift.newlyUsed.length
+  ) {
+    process.stdout.write("unused 集与已审计基线一致\n");
+  }
+  return drift.noBaseline || drift.newlyUnused.length || drift.newlyUsed.length
+    ? 1
+    : 0;
 }
 
 function check() {
@@ -261,19 +321,33 @@ function check() {
     if (!en.has(key)) problems.push(`en-US 缺 key：${key}`);
   }
 
-  const { missing, noBaseline } = compareToBaseline(en);
+  const { missing, added, noBaseline } = compareToBaseline(en);
   if (noBaseline) {
     problems.push("没有签入词典基线，跑 `make i18n-refresh`。");
   }
   for (const key of missing) {
     problems.push(`基线里有、现在没了：${key}`);
   }
+  for (const key of added) {
+    problems.push(`新增 key 尚未进入审计基线：${key}`);
+  }
+  const dead = unusedKeys(en);
+  const unusedDiff = compareUnusedToBaseline(dead);
+  if (unusedDiff.noBaseline) {
+    problems.push("基线没有 unusedKeys，跑 `make i18n-refresh`。 ");
+  }
+  for (const key of unusedDiff.newlyUnused) {
+    problems.push(`新增未引用 key：${key}`);
+  }
+  for (const key of unusedDiff.newlyUsed) {
+    problems.push(`基线未引用 key 已恢复使用：${key}`);
+  }
 
   if (problems.length) {
     for (const problem of problems) process.stderr.write(`✗ ${problem}\n`);
     process.stderr.write(
-      "词典体检不通过。少 key 说明某次改动把它弄丢了；" +
-        "若确实要删，改完两个 locale 后跑 `make i18n-refresh` 并把 diff 交 review。\n",
+      "词典体检不通过。key 或 unused 集发生漂移；" +
+        "确认两份 locale 与引用情况后跑 `make i18n-refresh` 并 review diff。\n",
     );
     return 1;
   }

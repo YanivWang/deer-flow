@@ -73,6 +73,7 @@ export const enUS: Translations = {
     showArtifacts: "Show artifacts of this conversation",
     browser: "Browser",
     showBrowser: "Open browser panel",
+    requestFailed: "Request failed.",
   },
 
   runDuration: {
@@ -254,7 +255,14 @@ export const enUS: Translations = {
     compactSuccess:
       "Earlier context compacted. The full chat remains visible; future model calls will use the summary and recent messages.",
     compactSkipped: "The current context does not need compaction yet.",
+    compactNotPerformed: (reason) => `Context was not compacted: ${reason}`,
     compactFailed: "Context compaction failed.",
+    createPresentationPrompt: "Create a presentation about [topic].",
+    uploadFiles: "Upload files",
+    stop: "Stop",
+    send: "Send",
+    submit: "Submit",
+    explore: "Explore",
     suggestions: [
       {
         suggestion: "Write",
@@ -613,6 +621,7 @@ export const enUS: Translations = {
   conversation: {
     noMessages: "No messages yet",
     startConversation: "Start a conversation to see messages here",
+    newChatNotificationTitle: "New Chat",
     branchCreated: "Conversation branch created",
     branchFailed: "Failed to branch conversation.",
     streamReplayGap:
@@ -639,6 +648,7 @@ export const enUS: Translations = {
     open: "Open side chat",
     close: "Close side chat",
     delete: "Delete side chat",
+    deleting: "Deleting…",
     deleteConfirm:
       "Are you sure you want to delete this side chat? This action cannot be undone. To simply hide it, use the side chat toggle in the header instead.",
     deleteSuccess: "Side chat deleted",
@@ -651,6 +661,7 @@ export const enUS: Translations = {
     clearReferences: "Clear selected references",
     emptyTitle: "Ask a follow-up",
     emptyDescription: "Ask a follow-up grounded in the referenced text.",
+    inputLabel: "Ask a deeper follow-up",
     placeholder: "Ask a deeper follow-up...",
     send: "Send",
     sendFailed: "Failed to send side chat message.",
@@ -785,6 +796,8 @@ export const enUS: Translations = {
     in_progress: "Running subtask",
     completed: "Subtask completed",
     failed: "Subtask failed",
+    loadingSteps: "Loading steps…",
+    retry: "Try again",
   },
 
   // Token Usage
@@ -985,6 +998,10 @@ export const enUS: Translations = {
       connected: "Connected",
       loadFailed: "Failed to load integration status",
       adminRequired: "Admin privileges are required to install integrations.",
+      installFailed: "Installation failed",
+      authorizationFailed: "Authorization failed",
+      connectionFailed: "Connection failed",
+      appSwitchFailed: "App switch failed",
       lark: {
         title: "Lark / Feishu CLI",
         description:
@@ -1224,15 +1241,186 @@ export const enUS: Translations = {
       passwordMismatch: "New passwords do not match",
       passwordTooShort: "Password must be at least 8 characters",
       passwordChangedSuccess: "Password changed successfully",
+      loadFailed: "Failed to load account.",
+      changePasswordFailed: "Failed to change password.",
       networkError: "Network error. Please try again.",
       updating: "Updating...",
       updatePassword: "Update Password",
       signOut: "Sign Out",
+      signOutFailed: "Failed to sign out.",
+    },
+    about: {
+      title: "About DeerFlow",
+      description:
+        "DeerFlow is an open-source super agent harness for research, coding, content generation, and computer use.",
+      safetyTitle: "Safety",
+      safetyDescription:
+        "Agent output can be incorrect. Review important results and inspect tool actions before relying on them.",
+      runtimeTitle: "Runtime",
+      runtimeDescription:
+        "This Vue workspace uses the current DeerFlow Gateway for threads, runs, tools, memory, integrations, channels, and scheduled tasks.",
     },
     acknowledge: {
       emptyTitle: "Acknowledgements",
       emptyDescription: "Credits and acknowledgements will show here.",
     },
+  },
+  browser: {
+    trigger: "Open browser panel",
+    panelTitle: "Browser view",
+    static: "Static",
+    live: "Live",
+    connecting: "Connecting",
+    reconnecting: (attempt, maximum) => `Reconnecting ${attempt}/${maximum}`,
+    back: "Back",
+    forward: "Forward",
+    urlLabel: "Browser URL",
+    urlPlaceholder: "Enter a URL and press Enter",
+    close: "Close browser",
+    retryNavigation: "Retry navigation",
+    retryLive: "Retry live browser",
+    switchToStatic: "Switch to static browser",
+    switchToLive: "Switch to live browser",
+    connectingFrame: "Connecting to live browser…",
+    noFrame: "No browser frame available.",
+    navigationFailed: (detail) => `Browser navigation failed: ${detail}`,
+    navigationFailedFallback: "Browser navigation failed.",
+  },
+  artifacts: {
+    actions: {
+      select: "Select artifact",
+      edit: "Edit artifact",
+      save: "Save artifact",
+      discard: "Discard artifact changes",
+      exit: "Exit artifact edit",
+      copy: "Copy artifact",
+      open: "Open artifact",
+      download: "Download artifact",
+      install: "Install skill",
+      close: "Close artifacts",
+      loadFull: "Load full file",
+      showCode: "Show code",
+      showPreview: "Show preview",
+      removeFile: (filename) => `Remove ${filename}`,
+    },
+    previewTitle: "Artifact preview",
+    loadFailed: "Failed to load artifact",
+    saveFailed: "Save failed",
+    copyFailed: "Unable to copy artifact content.",
+    installFailed: "Install failed",
+    openFailed: "Failed to open artifact.",
+    downloadFailed: "Failed to download artifact.",
+    loading: "Loading artifact…",
+    previewedBytes: (current, total) =>
+      `Previewed ${current} of ${total} bytes`,
+    unknownTotalBytes: "unknown",
+    downloadOnlyDescription:
+      "Download-only file. This type is not loaded as text or opened in the editor.",
+    skillArchiveDescription:
+      "Skill archive. Download it or install it with an administrator account.",
+  },
+  messages: {
+    conversation: "Conversation",
+    clarification: "Clarification",
+    subtask: "Subtask",
+    tool: "Tool",
+    toolResult: (name) => `${name} result`,
+    feedbackFailed: "Failed to update feedback.",
+    copyFailed: "Failed to copy message.",
+    loadEarlierFailed: "Failed to load earlier messages.",
+    loadingConversation: "Loading conversation…",
+    loadEarlier: "Load earlier messages",
+    loadingEarlier: "Loading earlier messages…",
+    tryAgain: "Try again",
+    actions: {
+      copyMessage: "Copy message",
+      editAndRerun: "Edit and rerun",
+      copyResponse: "Copy response",
+      helpful: "Helpful",
+      notHelpful: "Not helpful",
+      branch: "Branch conversation",
+      regenerate: "Regenerate",
+    },
+  },
+  navigation: {
+    workspace: "Workspace navigation",
+    expandSidebar: "Expand sidebar",
+    collapseSidebar: "Collapse sidebar",
+    closeSidebar: "Close sidebar",
+    pinnedChat: "Pinned chat",
+    channel: (label) => `${label} channel`,
+    settingsAndMore: "Settings and more",
+    appearance: "Appearance",
+    light: "Light",
+    dark: "Dark",
+    language: "Language",
+    renameChat: "Rename chat",
+    chatTitle: "Chat title",
+    deleteConversationFailed: "Failed to delete conversation.",
+    renameThreadFailed: "Failed to rename thread.",
+    tryAgain: "Try again",
+  },
+  markdown: {
+    downloadFile: "Download file",
+    copied: "Copied",
+    copyCode: "Copy Code",
+    mermaidChart: "Mermaid chart",
+    unsafeLink: "Unsafe link omitted",
+    unsafeLinkTitle: (url) => `Unsafe link scheme in ${url}`,
+  },
+  setup: {
+    createAdminTitle: "Create admin account",
+    completeAdminTitle: "Complete admin account setup",
+    currentPassword: "Current password",
+    password: "Password",
+    passwordPlaceholder: "Password (min. 8 characters)",
+    confirmPassword: "Confirm password",
+    passwordMismatch: "Passwords do not match",
+    passwordTooShort: "Password must be at least 8 characters",
+    createAdmin: "Create Admin Account",
+    completeSetup: "Complete Setup",
+  },
+  marketing: {
+    badge: "Super Agent, now with public examples",
+    showcaseDescription:
+      "Explore real DeerFlow conversations in a safe, read-only showcase.",
+    caseStudies: "Case Studies",
+    caseStudiesDescription: "See how DeerFlow is used in the wild",
+    caseStudyPreview: (title) => `${title} preview`,
+    caseStudyItems: [
+      {
+        title: "Forecast 2026 Agent Trends and Opportunities",
+        description:
+          "Create a webpage with a Deep Research report forecasting the agent technology trends and opportunities in 2026.",
+      },
+      {
+        title: 'Generate a Video Based On the Novel "Pride and Prejudice"',
+        description:
+          'Search a scene from "Pride and Prejudice", then generate a reference image and video.',
+      },
+      {
+        title: "Doraemon Explains the MOE Architecture",
+        description:
+          "Generate a Doraemon comic strip explaining the MOE architecture to teenagers interested in AI.",
+      },
+      {
+        title: "An Exploratory Data Analysis of the Titanic Dataset",
+        description:
+          "Explore the Titanic dataset and identify factors that influenced survival with visualizations and insights.",
+      },
+      {
+        title: "Watch Y Combinator's Video then Conduct a Deep Research",
+        description:
+          "Watch a Y Combinator video and research its advice for technical startup founders.",
+      },
+      {
+        title: "Collect and Summarize Dr. Fei Fei Li's Podcasts",
+        description:
+          "Collect recent podcast appearances by Dr. Fei Fei Li and summarize them into a report.",
+      },
+    ],
+    aboutPlaceholder: "About placeholder",
+    pricingPlaceholder: "Pricing placeholder",
   },
   login: {
     signInTitle: "Sign in to your account",
@@ -1264,6 +1452,11 @@ export const enUS: Translations = {
       "The Gateway is taking too long to respond. Check that it is running, then try again.",
     retry: "Try again",
     authFailed: "Authentication failed.",
+    callbackSigningIn: "Signing you in...",
+    callbackRedirecting: "Redirecting...",
+    callbackFailedRedirect: "Authentication failed. Redirecting to login...",
+    callbackUnavailableRedirect:
+      "Gateway is temporarily unavailable. Redirecting to recovery...",
     errors: {
       sso_failed: "SSO login failed. Please try again or use email login.",
       sso_cancelled: "SSO login was cancelled.",

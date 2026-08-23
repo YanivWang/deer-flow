@@ -209,7 +209,7 @@ const preview = computed(() => {
         <label v-if="preset !== 'hourly'" class="text-sm">
           <span>{{ $i18n.t.value.scheduledTasks.fields.time }}</span>
           <input
-            aria-label="Schedule hour"
+            :aria-label="$i18n.t.value.scheduledTasks.fields.time"
             type="number"
             min="0"
             max="23"
@@ -221,7 +221,7 @@ const preview = computed(() => {
         <label class="text-sm">
           <span>{{ $i18n.t.value.scheduledTasks.fields.minute }}</span>
           <input
-            aria-label="Schedule minute"
+            :aria-label="$i18n.t.value.scheduledTasks.fields.minute"
             type="number"
             min="0"
             max="59"

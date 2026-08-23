@@ -61,6 +61,7 @@ export interface Translations {
     showArtifacts: string;
     browser: string;
     showBrowser: string;
+    requestFailed: string;
   };
 
   runDuration: {
@@ -213,7 +214,14 @@ export interface Translations {
     goalLengthCounter: string;
     compactSuccess: string;
     compactSkipped: string;
+    compactNotPerformed: (reason: string) => string;
     compactFailed: string;
+    createPresentationPrompt: string;
+    uploadFiles: string;
+    stop: string;
+    send: string;
+    submit: string;
+    explore: string;
     suggestions: {
       suggestion: string;
       prompt: string;
@@ -504,6 +512,7 @@ export interface Translations {
   conversation: {
     noMessages: string;
     startConversation: string;
+    newChatNotificationTitle: string;
     branchCreated: string;
     branchFailed: string;
     streamReplayGap: string;
@@ -529,6 +538,7 @@ export interface Translations {
     open: string;
     close: string;
     delete: string;
+    deleting: string;
     deleteConfirm: string;
     deleteSuccess: string;
     deleteFailed: string;
@@ -540,6 +550,7 @@ export interface Translations {
     clearReferences: string;
     emptyTitle: string;
     emptyDescription: string;
+    inputLabel: string;
     placeholder: string;
     send: string;
     sendFailed: string;
@@ -659,6 +670,8 @@ export interface Translations {
     in_progress: string;
     completed: string;
     failed: string;
+    loadingSteps: string;
+    retry: string;
   };
 
   // Token Usage
@@ -841,6 +854,10 @@ export interface Translations {
       connected: string;
       loadFailed: string;
       adminRequired: string;
+      installFailed: string;
+      authorizationFailed: string;
+      connectionFailed: string;
+      appSwitchFailed: string;
       lark: {
         title: string;
         description: string;
@@ -974,15 +991,158 @@ export interface Translations {
       passwordMismatch: string;
       passwordTooShort: string;
       passwordChangedSuccess: string;
+      loadFailed: string;
+      changePasswordFailed: string;
       networkError: string;
       updating: string;
       updatePassword: string;
       signOut: string;
+      signOutFailed: string;
+    };
+    about: {
+      title: string;
+      description: string;
+      safetyTitle: string;
+      safetyDescription: string;
+      runtimeTitle: string;
+      runtimeDescription: string;
     };
     acknowledge: {
       emptyTitle: string;
       emptyDescription: string;
     };
+  };
+
+  browser: {
+    trigger: string;
+    panelTitle: string;
+    static: string;
+    live: string;
+    connecting: string;
+    reconnecting: (attempt: number, maximum: number) => string;
+    back: string;
+    forward: string;
+    urlLabel: string;
+    urlPlaceholder: string;
+    close: string;
+    retryNavigation: string;
+    retryLive: string;
+    switchToStatic: string;
+    switchToLive: string;
+    connectingFrame: string;
+    noFrame: string;
+    navigationFailed: (detail: string) => string;
+    navigationFailedFallback: string;
+  };
+
+  artifacts: {
+    actions: {
+      select: string;
+      edit: string;
+      save: string;
+      discard: string;
+      exit: string;
+      copy: string;
+      open: string;
+      download: string;
+      install: string;
+      close: string;
+      loadFull: string;
+      showCode: string;
+      showPreview: string;
+      removeFile: (filename: string) => string;
+    };
+    previewTitle: string;
+    loadFailed: string;
+    saveFailed: string;
+    copyFailed: string;
+    installFailed: string;
+    openFailed: string;
+    downloadFailed: string;
+    loading: string;
+    previewedBytes: (current: string, total: string) => string;
+    unknownTotalBytes: string;
+    downloadOnlyDescription: string;
+    skillArchiveDescription: string;
+  };
+
+  messages: {
+    conversation: string;
+    clarification: string;
+    subtask: string;
+    tool: string;
+    toolResult: (name: string) => string;
+    feedbackFailed: string;
+    copyFailed: string;
+    loadEarlierFailed: string;
+    loadingConversation: string;
+    loadEarlier: string;
+    loadingEarlier: string;
+    tryAgain: string;
+    actions: {
+      copyMessage: string;
+      editAndRerun: string;
+      copyResponse: string;
+      helpful: string;
+      notHelpful: string;
+      branch: string;
+      regenerate: string;
+    };
+  };
+
+  navigation: {
+    workspace: string;
+    expandSidebar: string;
+    collapseSidebar: string;
+    closeSidebar: string;
+    pinnedChat: string;
+    channel: (label: string) => string;
+    settingsAndMore: string;
+    appearance: string;
+    light: string;
+    dark: string;
+    language: string;
+    renameChat: string;
+    chatTitle: string;
+    deleteConversationFailed: string;
+    renameThreadFailed: string;
+    tryAgain: string;
+  };
+
+  markdown: {
+    downloadFile: string;
+    copied: string;
+    copyCode: string;
+    mermaidChart: string;
+    unsafeLink: string;
+    unsafeLinkTitle: (url: string) => string;
+  };
+
+  setup: {
+    createAdminTitle: string;
+    completeAdminTitle: string;
+    currentPassword: string;
+    password: string;
+    passwordPlaceholder: string;
+    confirmPassword: string;
+    passwordMismatch: string;
+    passwordTooShort: string;
+    createAdmin: string;
+    completeSetup: string;
+  };
+
+  marketing: {
+    badge: string;
+    showcaseDescription: string;
+    caseStudies: string;
+    caseStudiesDescription: string;
+    caseStudyPreview: (title: string) => string;
+    caseStudyItems: readonly {
+      title: string;
+      description: string;
+    }[];
+    aboutPlaceholder: string;
+    pricingPlaceholder: string;
   };
 
   // Login / Auth
@@ -1012,6 +1172,10 @@ export interface Translations {
     serviceUnavailableDescription: string;
     retry: string;
     authFailed: string;
+    callbackSigningIn: string;
+    callbackRedirecting: string;
+    callbackFailedRedirect: string;
+    callbackUnavailableRedirect: string;
     errors: {
       sso_failed: string;
       sso_cancelled: string;

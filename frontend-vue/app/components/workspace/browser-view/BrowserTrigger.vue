@@ -14,7 +14,7 @@ defineEmits<{ open: [] }>();
   <button
     type="button"
     data-testid="browser-trigger"
-    aria-label="Open browser panel"
+    :aria-label="$i18n.t.value.browser.trigger"
     class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
     @click="$emit('open')"
   >

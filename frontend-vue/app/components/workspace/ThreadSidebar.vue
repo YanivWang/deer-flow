@@ -36,6 +36,7 @@ import {
 
 const route = useRoute();
 const router = useRouter();
+const { $i18n, $theme } = useNuxtApp();
 const threads = useThreads();
 const features = useWorkspaceFeatures();
 const settingsDialog = useSettingsDialog();
@@ -57,6 +58,8 @@ let focusBeforeMobileOpen: HTMLElement | null = null;
 
 const SIDEBAR_COOKIE = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+const displayThreadTitle = (thread: Parameters<typeof titleOfThread>[0]) =>
+  titleOfThread(thread, $i18n.t.value.pages.untitled);
 
 function setCollapsed(value: boolean) {
   collapsed.value = value;
@@ -181,7 +184,7 @@ async function removeThread(threadId: string) {
         ? cause.message
         : cause instanceof Error
           ? cause.message
-          : "Failed to delete conversation.";
+          : $i18n.t.value.navigation.deleteConversationFailed;
   } finally {
     deletingThreadId.value = null;
   }
@@ -190,7 +193,7 @@ async function removeThread(threadId: string) {
 function beginRename(threadId: string) {
   const thread = threads.threads.find((item) => item.thread_id === threadId);
   renameThreadId.value = threadId;
-  renameTitle.value = thread ? titleOfThread(thread) : "";
+  renameTitle.value = thread ? displayThreadTitle(thread) : "";
   renameError.value = null;
 }
 
@@ -202,13 +205,10 @@ async function submitRename() {
     renameThreadId.value = null;
   } catch (cause) {
     renameError.value =
-      cause instanceof Error ? cause.message : "Failed to rename thread.";
+      cause instanceof Error
+        ? cause.message
+        : $i18n.t.value.navigation.renameThreadFailed;
   }
-}
-
-function setTheme(theme: "light" | "dark") {
-  document.documentElement.classList.toggle("dark", theme === "dark");
-  localStorage.setItem("deerflow-theme", theme);
 }
 
 function openSettingsDialog() {
@@ -225,7 +225,7 @@ function openSettingsDialog() {
     :data-mobile="mobileOpen ? 'true' : undefined"
     :role="mobileOpen ? 'dialog' : undefined"
     :aria-modal="mobileOpen ? 'true' : undefined"
-    :aria-label="mobileOpen ? 'Workspace navigation' : undefined"
+    :aria-label="mobileOpen ? $i18n.t.value.navigation.workspace : undefined"
     class="border-sidebar-border bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-50 flex h-screen shrink-0 flex-col border-r transition-[width,transform] duration-200 md:static md:translate-x-0"
     :class="[
       mobileOpen ? 'w-72' : collapsed ? 'w-12' : 'w-64',
@@ -244,7 +244,11 @@ function openSettingsDialog() {
       <button
         type="button"
         class="hover:bg-sidebar-accent hidden size-8 items-center justify-center rounded-md md:flex"
-        :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+        :aria-label="
+          collapsed
+            ? $i18n.t.value.navigation.expandSidebar
+            : $i18n.t.value.navigation.collapseSidebar
+        "
         aria-controls="workspace-sidebar"
         :aria-expanded="!collapsed"
         @click="setCollapsed(!collapsed)"
@@ -292,7 +296,7 @@ function openSettingsDialog() {
       <div v-else class="group relative">
         <button
           type="button"
-          aria-label="Agents"
+          :aria-label="$i18n.t.value.sidebar.agents"
           aria-disabled="true"
           aria-describedby="agents-disabled-description"
           class="text-muted-foreground hover:bg-sidebar-accent flex h-8 w-full items-center gap-2 rounded-md px-2"
@@ -300,13 +304,13 @@ function openSettingsDialog() {
           <Bot :size="16" class="shrink-0" />
           <span v-if="sidebarExpanded">{{ $i18n.t.value.sidebar.agents }}</span>
         </button>
-        <span id="agents-disabled-description" class="sr-only"
-          >Feature not enabled</span
-        >
+        <span id="agents-disabled-description" class="sr-only">{{
+          $i18n.t.value.sidebar.agentsDisabledTooltip
+        }}</span>
         <span
           role="tooltip"
           class="bg-popover text-popover-foreground absolute top-full left-2 z-50 hidden rounded-md border px-2 py-1 text-xs whitespace-nowrap shadow group-focus-within:block group-hover:block"
-          >Feature not enabled</span
+          >{{ $i18n.t.value.sidebar.agentsDisabledTooltip }}</span
         >
       </div>
       <NuxtLink
@@ -314,10 +318,12 @@ function openSettingsDialog() {
         to="/workspace/scheduled-tasks"
         class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent flex h-8 items-center gap-2 rounded-md px-2"
         :data-active="route.path.startsWith('/workspace/scheduled-tasks')"
-        :title="collapsed ? 'Scheduled tasks' : undefined"
+        :title="collapsed ? $i18n.t.value.sidebar.scheduledTasks : undefined"
       >
         <CalendarClock :size="16" class="shrink-0" />
-        <span v-if="sidebarExpanded">Scheduled tasks</span>
+        <span v-if="sidebarExpanded">{{
+          $i18n.t.value.sidebar.scheduledTasks
+        }}</span>
       </NuxtLink>
     </nav>
 
@@ -347,14 +353,18 @@ function openSettingsDialog() {
         >
           <span
             v-if="threads.isPinned(thread)"
-            aria-label="Pinned chat"
+            :aria-label="$i18n.t.value.navigation.pinnedChat"
             class="mr-1 inline-block align-middle"
             ><Pin :size="12"
           /></span>
-          {{ titleOfThread(thread) }}
+          {{ displayThreadTitle(thread) }}
           <span
             v-if="channelSourceOfThread(thread)"
-            :aria-label="`${channelSourceOfThread(thread)?.label} channel`"
+            :aria-label="
+              $i18n.t.value.navigation.channel(
+                channelSourceOfThread(thread)?.label ?? '',
+              )
+            "
             class="ml-1 text-xs"
             >{{ channelSourceOfThread(thread)?.label }}</span
           >
@@ -390,7 +400,7 @@ function openSettingsDialog() {
         :disabled="Boolean(deletingThreadId)"
         @click="removeThread(failedDeleteThreadId)"
       >
-        Try again
+        {{ $i18n.t.value.navigation.tryAgain }}
       </button>
     </div>
     <div class="relative mt-auto p-2">
@@ -405,29 +415,31 @@ function openSettingsDialog() {
           class="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5"
           @click="openSettingsDialog"
         >
-          <Settings :size="14" /> Settings
+          <Settings :size="14" /> {{ $i18n.t.value.common.settings }}
         </button>
-        <div class="text-muted-foreground px-2 py-1 text-xs">Appearance</div>
+        <div class="text-muted-foreground px-2 py-1 text-xs">
+          {{ $i18n.t.value.navigation.appearance }}
+        </div>
         <div class="grid grid-cols-2 gap-1">
           <button
             type="button"
             class="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-1.5"
-            @click="setTheme('light')"
+            @click="$theme.setPreference('light')"
           >
-            <Sun :size="14" /> Light
+            <Sun :size="14" /> {{ $i18n.t.value.navigation.light }}
           </button>
           <button
             type="button"
             class="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-1.5"
-            @click="setTheme('dark')"
+            @click="$theme.setPreference('dark')"
           >
-            <Moon :size="14" /> Dark
+            <Moon :size="14" /> {{ $i18n.t.value.navigation.dark }}
           </button>
         </div>
         <div
           class="text-muted-foreground flex items-center gap-2 px-2 pt-1 text-xs"
         >
-          <Languages :size="13" /> Language
+          <Languages :size="13" /> {{ $i18n.t.value.navigation.language }}
         </div>
         <div class="grid grid-cols-2 gap-1">
           <button
@@ -446,20 +458,24 @@ function openSettingsDialog() {
         ref="settingsTrigger"
         type="button"
         class="text-muted-foreground hover:bg-sidebar-accent flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm"
-        :title="collapsed ? 'Settings & more' : undefined"
-        aria-label="Settings and more"
+        :title="
+          collapsed ? $i18n.t.value.navigation.settingsAndMore : undefined
+        "
+        :aria-label="$i18n.t.value.navigation.settingsAndMore"
         :aria-expanded="settingsOpen"
         @click="settingsOpen = !settingsOpen"
       >
         <Settings :size="16" class="shrink-0" />
-        <span v-if="sidebarExpanded">Settings and more</span>
+        <span v-if="sidebarExpanded">{{
+          $i18n.t.value.navigation.settingsAndMore
+        }}</span>
       </button>
     </div>
   </aside>
   <button
     v-if="mobileOpen"
     type="button"
-    aria-label="Close sidebar"
+    :aria-label="$i18n.t.value.navigation.closeSidebar"
     aria-controls="workspace-sidebar"
     class="fixed inset-0 z-40 bg-black/30 md:hidden"
     @click="closeMobileSidebar"
@@ -470,14 +486,16 @@ function openSettingsDialog() {
   >
     <form
       role="dialog"
-      aria-label="Rename chat"
+      :aria-label="$i18n.t.value.navigation.renameChat"
       class="bg-background border-border w-full max-w-sm rounded-xl border p-5 shadow-xl"
       @submit.prevent="submitRename"
     >
-      <h2 class="text-lg font-semibold">Rename chat</h2>
+      <h2 class="text-lg font-semibold">
+        {{ $i18n.t.value.navigation.renameChat }}
+      </h2>
       <input
         v-model="renameTitle"
-        aria-label="Chat title"
+        :aria-label="$i18n.t.value.navigation.chatTitle"
         class="border-input mt-4 w-full rounded-md border px-3 py-2"
       />
       <p v-if="renameError" role="alert" class="mt-2 text-sm text-red-600">
@@ -489,12 +507,12 @@ function openSettingsDialog() {
           class="rounded-md border px-3 py-2"
           @click="renameThreadId = null"
         >
-          Cancel</button
+          {{ $i18n.t.value.common.cancel }}</button
         ><button
           type="submit"
           class="bg-primary text-primary-foreground rounded-md px-3 py-2"
         >
-          Save
+          {{ $i18n.t.value.common.save }}
         </button>
       </div>
     </form>

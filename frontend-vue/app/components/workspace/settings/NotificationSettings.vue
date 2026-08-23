@@ -17,6 +17,7 @@ import {
 } from "@/core/settings/store";
 
 const notifications = useNotifications();
+const { $i18n } = useNuxtApp();
 const enabled = ref(getBaseSettingsSnapshot().notification.enabled);
 const unsubscribe = subscribe(() => {
   enabled.value = getBaseSettingsSnapshot().notification.enabled;
@@ -34,21 +35,30 @@ function toggle(event: Event) {
     enabled: enabled.value,
   });
 }
+
+function sendTestNotification() {
+  notifications.showNotification(
+    $i18n.t.value.settings.notification.testTitle,
+    { body: $i18n.t.value.settings.notification.testBody },
+  );
+}
 </script>
 
 <template>
   <section class="space-y-4">
     <div>
-      <h2 class="text-lg font-semibold">Notification</h2>
+      <h2 class="text-lg font-semibold">
+        {{ $i18n.t.value.settings.notification.title }}
+      </h2>
       <p class="text-muted-foreground text-sm">
-        Receive a browser notification when an agent task finishes.
+        {{ $i18n.t.value.settings.notification.description }}
       </p>
     </div>
     <p
       v-if="!notifications.supported.value"
       class="text-muted-foreground text-sm"
     >
-      Notifications are not supported in this browser.
+      {{ $i18n.t.value.settings.notification.notSupported }}
     </p>
     <template v-else>
       <button
@@ -57,36 +67,32 @@ function toggle(event: Event) {
         class="bg-primary text-primary-foreground rounded-md px-3 py-2"
         @click="requestPermission"
       >
-        Request notification permission
+        {{ $i18n.t.value.settings.notification.requestPermission }}
       </button>
       <p
         v-else-if="notifications.permission.value === 'denied'"
         class="rounded-md border border-amber-300 p-3 text-sm"
       >
-        Notification permission was denied. Enable it in your browser settings.
+        {{ $i18n.t.value.settings.notification.deniedHint }}
       </p>
       <label class="flex items-center gap-3 text-sm">
         <input
           type="checkbox"
           role="switch"
-          aria-label="Notification"
+          :aria-label="$i18n.t.value.settings.notification.title"
           :checked="notifications.permission.value === 'granted' && enabled"
           :disabled="notifications.permission.value !== 'granted'"
           @change="toggle"
         />
-        Notification
+        {{ $i18n.t.value.settings.notification.title }}
       </label>
       <button
         v-if="notifications.permission.value === 'granted' && enabled"
         type="button"
         class="rounded-md border px-3 py-2"
-        @click="
-          notifications.showNotification('DeerFlow', {
-            body: 'This is a test notification.',
-          })
-        "
+        @click="sendTestNotification"
       >
-        Send test notification
+        {{ $i18n.t.value.settings.notification.testButton }}
       </button>
     </template>
   </section>

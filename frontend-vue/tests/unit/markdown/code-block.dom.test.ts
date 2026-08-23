@@ -15,7 +15,7 @@
 */
 
 import { flushPromises, mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue";
 import { richContentComponents } from "@/components/markdown/components";
@@ -98,7 +98,15 @@ describe("代码块槽位 · 首帧 DOM 与上游一致", () => {
     const wrapper = mount(StreamMarkdown, {
       props: { content: "```ts\nconst x: number = 1;\n```", ...PIPELINE },
     });
-    await settle(wrapper);
+    await vi.waitFor(
+      () => {
+        expect(
+          wrapper.findAll('[data-streamdown="code-block-body"] code span span')
+            .length,
+        ).toBeGreaterThan(1);
+      },
+      { timeout: 5_000 },
+    );
 
     const tokens = wrapper.findAll(
       '[data-streamdown="code-block-body"] code span span',

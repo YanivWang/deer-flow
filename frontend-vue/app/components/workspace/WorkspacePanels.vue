@@ -11,14 +11,11 @@
 import { computed, nextTick, ref, watch } from "vue";
 import { Pane, Splitpanes, type SplitpanesResizedPayload } from "splitpanes";
 
-const props = withDefaults(
-  defineProps<{
-    open: boolean;
-    panelSize: number;
-    panelLabel?: string;
-  }>(),
-  { panelLabel: "Conversation panel" },
-);
+const props = defineProps<{
+  open: boolean;
+  panelSize: number;
+  panelLabel?: string;
+}>();
 const emit = defineEmits<{
   "update:panelSize": [value: number];
   collapse: [];

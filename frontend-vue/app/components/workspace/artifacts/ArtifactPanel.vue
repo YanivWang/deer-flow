@@ -48,6 +48,7 @@ const props = defineProps<{
   isAdmin?: boolean;
   draftOwner: ArtifactDraftOwner;
 }>();
+const { $i18n } = useNuxtApp();
 const emit = defineEmits<{ close: []; select: [path: string] }>();
 
 const content = ref("");
@@ -256,7 +257,9 @@ async function load(full = false) {
       !(reason instanceof DOMException && reason.name === "AbortError")
     ) {
       error.value =
-        reason instanceof Error ? reason.message : "Failed to load artifact";
+        reason instanceof Error
+          ? reason.message
+          : $i18n.t.value.artifacts.loadFailed;
     }
   } finally {
     if (generation === loadGeneration && !disposed) {
@@ -364,7 +367,10 @@ async function save() {
     const status =
       reason instanceof ArtifactRequestError ? reason.status : undefined;
     if (status !== undefined) props.draftOwner.failSave(path, status);
-    error.value = reason instanceof Error ? reason.message : "Save failed";
+    error.value =
+      reason instanceof Error
+        ? reason.message
+        : $i18n.t.value.artifacts.saveFailed;
   } finally {
     if (generation === saveGeneration && !disposed) saving.value = false;
   }
@@ -373,7 +379,7 @@ async function save() {
 async function copyArtifact() {
   error.value = "";
   if ((await writeTextToClipboard(content.value)) === false) {
-    error.value = "Unable to copy artifact content.";
+    error.value = $i18n.t.value.artifacts.copyFailed;
   }
 }
 
@@ -398,7 +404,12 @@ async function runGatewayAction(kind: "open" | "download") {
     }
   } catch (reason) {
     if (generation === actionGeneration && !disposed) {
-      error.value = reason instanceof Error ? reason.message : `${kind} failed`;
+      error.value =
+        reason instanceof Error
+          ? reason.message
+          : kind === "open"
+            ? $i18n.t.value.artifacts.openFailed
+            : $i18n.t.value.artifacts.downloadFailed;
     }
   } finally {
     if (generation === actionGeneration) actionController = null;
@@ -424,7 +435,10 @@ async function installArtifactSkill() {
     notice.value = result.message;
   } catch (reason) {
     if (generation === actionGeneration && !disposed) {
-      error.value = reason instanceof Error ? reason.message : "Install failed";
+      error.value =
+        reason instanceof Error
+          ? reason.message
+          : $i18n.t.value.artifacts.installFailed;
     }
   } finally {
     if (generation === actionGeneration && !disposed) installing.value = false;
@@ -472,7 +486,11 @@ onBeforeUnmount(() => {
           previewAllowed
         "
         type="button"
-        :aria-label="viewMode === 'preview' ? 'Show code' : 'Show preview'"
+        :aria-label="
+          viewMode === 'preview'
+            ? $i18n.t.value.artifacts.actions.showCode
+            : $i18n.t.value.artifacts.actions.showPreview
+        "
         class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
         @click="viewMode = viewMode === 'preview' ? 'code' : 'preview'"
       >
@@ -501,7 +519,7 @@ onBeforeUnmount(() => {
       />
       <button
         type="button"
-        aria-label="Close artifacts"
+        :aria-label="$i18n.t.value.artifacts.actions.close"
         class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
         @click="emit('close')"
       >
@@ -515,7 +533,7 @@ onBeforeUnmount(() => {
     <p v-if="notice" role="status" class="px-4 pt-3 text-sm">{{ notice }}</p>
     <div class="relative min-h-0 flex-1 overflow-auto">
       <p v-if="loading" class="text-muted-foreground p-4 text-sm">
-        Loading artifact…
+        {{ $i18n.t.value.artifacts.loading }}
       </p>
       <ArtifactEditor
         v-else-if="editing && canEdit"
@@ -537,16 +555,23 @@ onBeforeUnmount(() => {
         class="border-border bg-background sticky right-0 bottom-0 left-0 flex items-center justify-between border-t px-4 py-3 text-sm"
       >
         <span class="text-muted-foreground">
-          Previewed {{ previewBytes }} of {{ totalBytes ?? "many" }} bytes
+          {{
+            $i18n.t.value.artifacts.previewedBytes(
+              String(previewBytes),
+              totalBytes === null
+                ? $i18n.t.value.artifacts.unknownTotalBytes
+                : String(totalBytes),
+            )
+          }}
         </span>
         <button
           type="button"
-          aria-label="Load full file"
+          :aria-label="$i18n.t.value.artifacts.actions.loadFull"
           class="rounded border px-3 py-1.5"
           :disabled="loading"
           @click="loadFull"
         >
-          Load full file
+          {{ $i18n.t.value.artifacts.actions.loadFull }}
         </button>
       </div>
     </div>

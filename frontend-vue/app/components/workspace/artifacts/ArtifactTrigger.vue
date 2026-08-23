@@ -18,11 +18,11 @@ const emit = defineEmits<{ open: [] }>();
     v-if="count > 0"
     type="button"
     data-testid="artifact-trigger"
-    aria-label="Show artifacts"
+    :aria-label="$i18n.t.value.common.showArtifacts"
     class="text-muted-foreground hover:bg-accent hover:text-foreground flex h-8 items-center gap-1.5 rounded-md px-2 text-xs"
     @click="emit('open')"
   >
     <Files :size="15" />
-    <span class="hidden sm:inline">Artifacts</span>
+    <span class="hidden sm:inline">{{ $i18n.t.value.common.artifacts }}</span>
   </button>
 </template>

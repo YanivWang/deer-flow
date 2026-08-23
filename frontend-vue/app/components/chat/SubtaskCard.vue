@@ -35,6 +35,7 @@ const props = defineProps<{
   pendingStatus: Subtask["status"];
   isLoading: boolean;
 }>();
+const { $i18n } = useNuxtApp();
 
 const expanded = ref(false);
 const historicalSteps = ref<SubtaskStep[]>([]);
@@ -80,7 +81,7 @@ async function loadHistoricalSteps() {
   } catch (error) {
     if (!disposed && generation === loadGeneration) {
       stepsError.value =
-        error instanceof Error ? error.message : "Failed to load steps.";
+        error instanceof Error ? error.message : $i18n.t.value.subtasks.failed;
     }
   } finally {
     if (!disposed && generation === loadGeneration) {
@@ -172,7 +173,7 @@ onUnmounted(() => {
         role="status"
         class="text-muted-foreground text-xs"
       >
-        Loading steps…
+        {{ $i18n.t.value.subtasks.loadingSteps }}
       </p>
       <div v-else-if="stepsError" role="alert" class="text-destructive text-xs">
         <span>{{ stepsError }}</span>
@@ -182,7 +183,7 @@ onUnmounted(() => {
           class="ml-2 underline"
           @click="retrySteps"
         >
-          Try again
+          {{ $i18n.t.value.subtasks.retry }}
         </button>
       </div>
       <ol v-if="viewModel.steps.length" class="space-y-2">

@@ -50,6 +50,7 @@ const emit = defineEmits<{
   close: [];
   deleted: [];
 }>();
+const { $i18n } = useNuxtApp();
 
 const compositionActive = ref(false);
 const models = ref<Model[]>([]);
@@ -86,10 +87,18 @@ const selectedModel = computed(
     models.value.find((model) => model.name === localContext.model_name) ??
     models.value[0],
 );
-const modeLabel = computed(() => {
-  const mode = String(localContext.mode ?? "pro");
-  return mode.charAt(0).toUpperCase() + mode.slice(1);
-});
+const modeOptions = computed(() => [
+  { id: "flash", label: $i18n.t.value.inputBox.flashMode },
+  { id: "thinking", label: $i18n.t.value.inputBox.reasoningMode },
+  { id: "pro", label: $i18n.t.value.inputBox.proMode },
+  { id: "ultra", label: $i18n.t.value.inputBox.ultraMode },
+]);
+const modeLabel = computed(
+  () =>
+    modeOptions.value.find(
+      (option) => option.id === String(localContext.mode ?? "pro"),
+    )?.label ?? $i18n.t.value.inputBox.proMode,
+);
 
 function updateContext(next: ThreadRunContextInput) {
   for (const key of Object.keys(localContext)) {
@@ -188,13 +197,13 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
     >
       <MessageSquareText :size="16" class="text-muted-foreground" />
       <h2 class="min-w-0 flex-1 truncate text-sm font-semibold">
-        Ask a follow-up
+        {{ $i18n.t.value.sidecar.emptyTitle }}
       </h2>
       <button
         v-if="session.threadId.value"
         type="button"
         data-testid="sidecar-delete-button"
-        aria-label="Delete side chat"
+        :aria-label="$i18n.t.value.sidecar.delete"
         class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
         @click="deleteDialog = true"
       >
@@ -204,7 +213,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
         v-else
         type="button"
         data-testid="sidecar-close-button"
-        aria-label="Close side chat"
+        :aria-label="$i18n.t.value.sidecar.close"
         class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
         @click="emit('close')"
       >
@@ -257,7 +266,9 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
               {{ file.name }}
               <button
                 type="button"
-                :aria-label="`Remove ${file.name}`"
+                :aria-label="
+                  $i18n.t.value.artifacts.actions.removeFile(file.name)
+                "
                 @click="session.removeFile(file)"
               >
                 <X :size="12" />
@@ -267,8 +278,8 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
           <textarea
             v-model="sessionInput"
             name="message"
-            placeholder="Ask a deeper follow-up..."
-            aria-label="Ask a deeper follow-up"
+            :placeholder="$i18n.t.value.sidecar.placeholder"
+            :aria-label="$i18n.t.value.sidecar.inputLabel"
             rows="2"
             class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none"
             @keydown="onKeydown"
@@ -281,7 +292,9 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
               class="text-muted-foreground hover:bg-accent flex size-8 cursor-pointer items-center justify-center rounded-md"
             >
               <Paperclip :size="14" />
-              <span class="sr-only">Upload files</span>
+              <span class="sr-only">{{
+                $i18n.t.value.inputBox.uploadFiles
+              }}</span>
               <input
                 type="file"
                 multiple
@@ -303,14 +316,14 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
                 class="bg-background border-border absolute bottom-full left-0 z-30 mb-1 w-32 rounded-md border p-1 shadow"
               >
                 <button
-                  v-for="mode in ['flash', 'thinking', 'pro', 'ultra']"
-                  :key="mode"
+                  v-for="mode in modeOptions"
+                  :key="mode.id"
                   role="menuitem"
                   type="button"
                   class="hover:bg-accent block w-full rounded px-2 py-1.5 text-left text-xs capitalize"
-                  @click="selectMode(mode)"
+                  @click="selectMode(mode.id)"
                 >
-                  {{ mode }}
+                  {{ mode.label }}
                 </button>
               </div>
             </div>
@@ -342,7 +355,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
             </div>
             <button
               type="submit"
-              aria-label="Submit"
+              :aria-label="$i18n.t.value.inputBox.submit"
               class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full disabled:opacity-50"
               :disabled="
                 (!session.input.value.trim() &&
@@ -364,7 +377,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
         {{ session.fileError.value || session.errorMessage.value }}
       </p>
       <p class="text-muted-foreground/70 px-4 text-center text-xs leading-4">
-        Deerflow is AI and can make mistakes
+        {{ $i18n.t.value.inputBox.disclaimer }}
       </p>
     </div>
   </section>
@@ -386,16 +399,17 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
           v-if="!session.deleting.value"
           data-slot="dialog-close"
           type="button"
-          aria-label="Close"
+          :aria-label="$i18n.t.value.common.close"
           class="absolute top-4 right-4"
           @click="deleteDialog = false"
         >
           <X :size="16" />
         </button>
-        <h2 class="text-base font-semibold">Delete side chat</h2>
+        <h2 class="text-base font-semibold">
+          {{ $i18n.t.value.sidecar.delete }}
+        </h2>
         <p class="text-muted-foreground mt-2 text-sm">
-          This action cannot be undone. The side conversation will be
-          permanently deleted.
+          {{ $i18n.t.value.sidecar.deleteConfirm }}
         </p>
         <div class="mt-5 flex justify-end gap-2">
           <button
@@ -404,7 +418,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
             :disabled="session.deleting.value"
             @click="deleteDialog = false"
           >
-            Cancel
+            {{ $i18n.t.value.common.cancel }}
           </button>
           <button
             type="button"
@@ -413,7 +427,11 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
             :disabled="session.deleting.value"
             @click="confirmDelete"
           >
-            {{ session.deleting.value ? "Deleting…" : "Delete" }}
+            {{
+              session.deleting.value
+                ? $i18n.t.value.sidecar.deleting
+                : $i18n.t.value.common.delete
+            }}
           </button>
         </div>
       </section>

@@ -144,7 +144,11 @@ export function useThreads() {
     );
   }
 
-  function upsertCreated(threadId: string, agentName?: string | null) {
+  function upsertCreated(
+    threadId: string,
+    title: string,
+    agentName?: string | null,
+  ) {
     const now = new Date().toISOString();
     upsert({
       thread_id: threadId,
@@ -152,7 +156,7 @@ export function useThreads() {
       updated_at: now,
       metadata: agentName ? { agent_name: agentName } : {},
       status: "idle",
-      values: { title: "New Chat", messages: [] },
+      values: { title, messages: [] },
       interrupts: {},
       context: agentName
         ? {

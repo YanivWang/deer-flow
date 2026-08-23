@@ -47,7 +47,7 @@ const emit = defineEmits<{
   <button
     v-if="canEdit && !editing"
     type="button"
-    aria-label="Edit artifact"
+    :aria-label="$i18n.t.value.artifacts.actions.edit"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
     @click="emit('edit')"
   >
@@ -56,7 +56,7 @@ const emit = defineEmits<{
   <template v-if="editing">
     <button
       type="button"
-      aria-label="Save artifact"
+      :aria-label="$i18n.t.value.artifacts.actions.save"
       class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
       :disabled="streaming || saving || !dirty || conflict"
       @click="emit('save')"
@@ -66,7 +66,7 @@ const emit = defineEmits<{
     <button
       v-if="dirty"
       type="button"
-      aria-label="Discard artifact changes"
+      :aria-label="$i18n.t.value.artifacts.actions.discard"
       class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
       @click="emit('discard')"
     >
@@ -74,7 +74,7 @@ const emit = defineEmits<{
     </button>
     <button
       type="button"
-      aria-label="Exit artifact edit"
+      :aria-label="$i18n.t.value.artifacts.actions.exit"
       class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
       @click="emit('exit')"
     >
@@ -84,7 +84,7 @@ const emit = defineEmits<{
   <button
     v-if="canCopy"
     type="button"
-    aria-label="Copy artifact"
+    :aria-label="$i18n.t.value.artifacts.actions.copy"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
     @click="emit('copy')"
   >
@@ -93,7 +93,7 @@ const emit = defineEmits<{
   <button
     v-if="canOpen"
     type="button"
-    aria-label="Open artifact"
+    :aria-label="$i18n.t.value.artifacts.actions.open"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
     @click="emit('open')"
   >
@@ -102,7 +102,7 @@ const emit = defineEmits<{
   <button
     v-if="canDownload"
     type="button"
-    aria-label="Download artifact"
+    :aria-label="$i18n.t.value.artifacts.actions.download"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
     @click="emit('download')"
   >
@@ -111,7 +111,7 @@ const emit = defineEmits<{
   <button
     v-if="canInstall"
     type="button"
-    aria-label="Install skill"
+    :aria-label="$i18n.t.value.artifacts.actions.install"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
     :disabled="installing"
     @click="emit('install')"

@@ -112,7 +112,7 @@ function submitForm() {
 <template>
   <section class="border-border bg-muted/30 my-3 rounded-xl border p-4">
     <p class="text-xs font-medium tracking-wide text-gray-500 uppercase">
-      {{ request.title ?? "Clarification" }}
+      {{ request.title ?? $i18n.t.value.messages.clarification }}
     </p>
     <p class="mt-1 font-medium">{{ request.question }}</p>
     <p v-if="request.context" class="mt-1 text-sm text-gray-500">

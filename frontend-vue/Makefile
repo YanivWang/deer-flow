@@ -6,7 +6,7 @@
 	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke \
 	baseline-refresh baseline-check land-copied land-retyped land-retyped-check \
 	codemod-tests codemod-check collected-check migration-check typecheck-raw \
-	typecheck-refresh i18n-check i18n-diff i18n-unused i18n-refresh \
+	typecheck-refresh i18n-check i18n-diff i18n-unused i18n-source-check i18n-refresh \
 	gen-api-types gen-api-types-check consumer-check
 
 PYTHON ?= python3
@@ -47,7 +47,7 @@ help:
 	@echo "  make e2e-m5-real-backend       run M5 write-file/artifact against replay Gateway"
 	@echo "  make e2e-m6-real-backend       run M6 browser panel against browser-enabled replay Gateway"
 	@echo "  make e2e-m6                    run the exact M6 remaining-L3 shared contract gate"
-	@echo "  make e2e-m7-list               verify/list the exact 28-file / 160-test M7 inventory"
+	@echo "  make e2e-m7-list               verify/list the exact 29-file / 165-test M7 inventory"
 	@echo "  make e2e-m7                    verify then run the full M7 shared contract gate"
 	@echo "  make e2e-wp07-real-backend     run scheduled tasks against real FastAPI/SQLite Gateway"
 	@echo "  make e2e-wp08-real-backend     run channel lifecycle against real Auth/FastAPI/SQLite Gateway"
@@ -57,7 +57,7 @@ help:
 	@echo "  make e2e-m7-local              run exact M7 sidebar/IME/keyboard/a11y contracts"
 	@echo "  make e2e-m7-auth               run exact M7 auth request/security contracts"
 	@echo "  make e2e-m7-real-protocol      run real Gateway resume/gap/browser-cancel contract"
-	@echo "  make e2e-m7-visual             compare seven deterministic product-state screenshots"
+	@echo "  make e2e-m7-visual             compare eight deterministic product-state screenshots"
 	@echo "  make asset-budget              build and enforce raw/gzip client asset budgets"
 	@echo "  make e2e-external              G0-6/G0-7 gates needing a browser runtime and an IdP"
 	@echo "  make e2e-list                  list shared React business contract inventory"
@@ -77,7 +77,8 @@ help:
 	@echo "  make header-check              enforce six-part headers, excluding provenance COPIED files"
 	@echo "  make typecheck-refresh         rebuild the known-typecheck-error budget"
 	@echo "  make i18n-check                dictionary health: locales in sync, no key lost"
-	@echo "  make i18n-diff / i18n-unused   key drift against the baseline / unreferenced keys"
+	@echo "  make i18n-diff / i18n-unused   exact key and audited-unused drift against baseline"
+	@echo "  make i18n-source-check         reject core English literals in product Vue SFCs"
 
 install:
 	$(PNPM) install
@@ -155,12 +156,15 @@ i18n-diff:
 i18n-unused:
 	node scripts/i18n-manager.mjs unused
 
+i18n-source-check:
+	node scripts/i18n-source-guard.mjs
+
 i18n-refresh:
 	node scripts/i18n-manager.mjs --refresh
 
 # collected-check 只读签入的台账与 vitest 的收集结果，不碰 git 历史，所以能进 verify。
 # 它防的是「少收集几个测试换全绿」——vitest run 本身报告不了没被收集的东西。
-verify: lint format-check typecheck typecheck-core test collected-check i18n-check gen-api-types-check header-check build
+verify: lint format-check typecheck typecheck-core test collected-check i18n-check i18n-source-check gen-api-types-check header-check build
 
 # The build dependency makes the gate inspect the current checkout rather than stale .output.
 asset-budget: build

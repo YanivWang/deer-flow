@@ -7,4 +7,8 @@
   【边界与注意】   仅为预渲染路由验证。
 -->
 
-<template><h1 class="text-3xl font-semibold">Pricing placeholder</h1></template>
+<template>
+  <h1 class="text-3xl font-semibold">
+    {{ $i18n.t.value.marketing.pricingPlaceholder }}
+  </h1>
+</template>

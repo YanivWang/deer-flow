@@ -163,7 +163,7 @@ function download() {
         <button
           :class="ACTION_CLASS"
           data-streamdown="code-block-download-button"
-          title="Download file"
+          :title="$i18n.t.value.markdown.downloadFile"
           type="button"
           @click="download"
         >
@@ -186,7 +186,11 @@ function download() {
         <button
           :class="ACTION_CLASS"
           data-streamdown="code-block-copy-button"
-          :title="copied ? 'Copied' : 'Copy Code'"
+          :title="
+            copied
+              ? $i18n.t.value.markdown.copied
+              : $i18n.t.value.markdown.copyCode
+          "
           type="button"
           @click="copy"
         >

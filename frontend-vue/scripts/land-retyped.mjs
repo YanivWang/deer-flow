@@ -345,6 +345,15 @@ import type { User } from "./types";`,
   buzz: "Buzz",
   dingtalk: "DingTalk",`,
     },
+    {
+      why: "WP-12 lets Vue UI callers inject the active locale's untitled fallback while exports retain the React default.",
+      find: `export function titleOfThread(thread: AgentThread) {
+  return thread.values?.title ?? "Untitled";
+}`,
+      replace: `export function titleOfThread(thread: AgentThread, fallback = "Untitled") {
+  return thread.values?.title ?? fallback;
+}`,
+    },
   ],
   "i18n/locales/en-US.ts": [
     {
@@ -453,11 +462,11 @@ const HAND_MAINTAINED = {
   "artifacts/loader.ts":
     "WP-06 gates loading behind explicit text policy and preserves Gateway errors and abort semantics.",
   "i18n/locales/en-US.ts":
-    "WP-07 through WP-11 declare Vue-owned scheduled-task, channel, Agent, settings, and workspace-shell dictionary extensions.",
+    "WP-07 through WP-12 declare Vue-owned scheduled-task, channel, Agent, settings, workspace-shell, and full product-surface dictionary extensions.",
   "i18n/locales/types.ts":
-    "WP-07 through WP-11 declare Vue-owned scheduled-task, channel, Agent, settings, and workspace-shell dictionary extensions.",
+    "WP-07 through WP-12 declare Vue-owned scheduled-task, channel, Agent, settings, workspace-shell, and full product-surface dictionary extensions.",
   "i18n/locales/zh-CN.ts":
-    "WP-07 through WP-11 add the matching Chinese scheduled-task, channel, Agent, settings, and workspace-shell dictionary extensions.",
+    "WP-07 through WP-12 add the matching Chinese scheduled-task, channel, Agent, settings, workspace-shell, and full product-surface dictionary extensions.",
   "threads/export.ts":
     "WP-11 keeps the React formatter contract but guarantees object-URL and temporary-anchor cleanup when browser download throws.",
 };
@@ -465,6 +474,8 @@ const HAND_MAINTAINED = {
 const PROVENANCE_NOTES = {
   "models/api.ts":
     "WP-09 uses abortable authenticated fetch and throws the shared lossless Gateway error for non-2xx model discovery.",
+  "threads/utils.ts":
+    "WP-12 allows Vue UI callers to inject the active locale's untitled label while non-UI export consumers retain the React default.",
 };
 
 /** 六段式文件头（04 §6）。COPIED 档不加（04 已裁决），RETYPED 是我们的代码，必须加。 */

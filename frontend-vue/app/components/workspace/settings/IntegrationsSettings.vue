@@ -266,7 +266,7 @@ async function install() {
         ? copy.value.settings.integrations.adminRequired
         : cause instanceof Error
           ? cause.message
-          : "Installation failed";
+          : copy.value.settings.integrations.installFailed;
   } finally {
     busy.value = false;
   }
@@ -321,7 +321,9 @@ async function completeAuth(
       return;
     }
     error.value =
-      cause instanceof Error ? cause.message : "Authorization failed";
+      cause instanceof Error
+        ? cause.message
+        : copy.value.settings.integrations.authorizationFailed;
   }
 }
 
@@ -347,7 +349,10 @@ async function startAuth(
   } catch (cause) {
     if (!active(generation)) return;
     closeBrowser(target);
-    error.value = cause instanceof Error ? cause.message : "Connection failed";
+    error.value =
+      cause instanceof Error
+        ? cause.message
+        : copy.value.settings.integrations.connectionFailed;
   } finally {
     if (active(generation)) busy.value = false;
   }
@@ -368,7 +373,10 @@ async function startRegistration(
   } catch (cause) {
     if (!active(generation)) return;
     closeBrowser(target);
-    error.value = cause instanceof Error ? cause.message : "Connection failed";
+    error.value =
+      cause instanceof Error
+        ? cause.message
+        : copy.value.settings.integrations.connectionFailed;
   } finally {
     if (active(generation)) busy.value = false;
   }
@@ -413,7 +421,9 @@ async function continueConfiguration() {
   } catch (cause) {
     if (active(generation))
       error.value =
-        cause instanceof Error ? cause.message : "Connection failed";
+        cause instanceof Error
+          ? cause.message
+          : copy.value.settings.integrations.connectionFailed;
   } finally {
     if (active(generation)) busy.value = false;
   }
@@ -439,7 +449,10 @@ async function switchApp() {
   } catch (cause) {
     if (!active(generation)) return;
     closeBrowser(target);
-    error.value = cause instanceof Error ? cause.message : "App switch failed";
+    error.value =
+      cause instanceof Error
+        ? cause.message
+        : copy.value.settings.integrations.appSwitchFailed;
   } finally {
     if (active(generation)) busy.value = false;
   }

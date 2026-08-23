@@ -25,7 +25,7 @@ function select(path: string) {
       type="button"
       role="combobox"
       :aria-expanded="open"
-      aria-label="Select artifact"
+      :aria-label="$i18n.t.value.artifacts.actions.select"
       class="hover:bg-accent block h-8 w-full truncate rounded px-2 text-left text-sm font-medium"
       @click="open = !open"
     >

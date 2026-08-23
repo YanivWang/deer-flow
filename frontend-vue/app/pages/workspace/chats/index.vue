@@ -23,11 +23,13 @@ const threads = useThreads();
 const search = ref("");
 const sentinel = ref<HTMLElement | null>(null);
 let observer: IntersectionObserver | null = null;
+const displayThreadTitle = (thread: Parameters<typeof titleOfThread>[0]) =>
+  titleOfThread(thread, $i18n.t.value.pages.untitled);
 const filtered = computed(() => {
   const query = search.value.trim().toLowerCase();
   return query
     ? threads.displayedThreads.filter((thread) =>
-        titleOfThread(thread).toLowerCase().includes(query),
+        displayThreadTitle(thread).toLowerCase().includes(query),
       )
     : threads.displayedThreads;
 });
@@ -54,10 +56,10 @@ onUnmounted(() => observer?.disconnect());
 
 <template>
   <section class="mx-auto max-w-4xl space-y-5 p-8">
-    <h1 class="text-2xl font-semibold">Chats</h1>
+    <h1 class="text-2xl font-semibold">{{ $i18n.t.value.pages.chats }}</h1>
     <input
       v-model="search"
-      placeholder="Search chats"
+      :placeholder="$i18n.t.value.chats.searchChats"
       class="border-input w-full rounded-md border px-3 py-2"
     />
     <div class="grid gap-2">
@@ -68,7 +70,7 @@ onUnmounted(() => observer?.disconnect());
         class="border-border hover:bg-accent flex items-center justify-between rounded-lg border p-4"
       >
         <span class="min-w-0">
-          <span class="block truncate">{{ titleOfThread(thread) }}</span>
+          <span class="block truncate">{{ displayThreadTitle(thread) }}</span>
           <time
             v-if="updatedTime(thread.updated_at)"
             :datetime="thread.updated_at"
@@ -91,7 +93,7 @@ onUnmounted(() => observer?.disconnect());
       class="rounded-md border px-3 py-2"
       @click="threads.loadMore()"
     >
-      Load more
+      {{ $i18n.t.value.common.loadMore }}
     </button>
     <div
       v-else-if="threads.hasMore"

@@ -14,7 +14,22 @@ import { goalContinuation } from "@/core/threads/goal";
 import type { GoalState } from "@/core/threads/types";
 
 const props = defineProps<{ goal: GoalState }>();
+const { $i18n } = useNuxtApp();
 const continuation = computed(() => goalContinuation(props.goal));
+const continuationTitle = computed(() =>
+  continuation.value
+    ? $i18n.t.value.inputBox.goalContinuationTooltip
+        .replace("{count}", String(continuation.value.count))
+        .replace("{max}", String(continuation.value.max))
+    : "",
+);
+const continuationLabel = computed(() =>
+  continuation.value
+    ? $i18n.t.value.inputBox.goalContinuing
+        .replace("{count}", String(continuation.value.count))
+        .replace("{max}", String(continuation.value.max))
+    : "",
+);
 </script>
 
 <template>
@@ -23,16 +38,18 @@ const continuation = computed(() => goalContinuation(props.goal));
   >
     <Target class="text-primary size-4 shrink-0" />
     <div class="min-w-0 flex-1 truncate">
-      <span class="text-muted-foreground mr-2">Goal</span>
+      <span class="text-muted-foreground mr-2">{{
+        $i18n.t.value.inputBox.goalLabel
+      }}</span>
       <span class="font-medium">{{ goal.objective }}</span>
     </div>
     <span
       v-if="continuation"
       class="text-muted-foreground flex shrink-0 items-center gap-1 text-xs tabular-nums"
-      :title="`Auto-continued ${continuation.count}/${continuation.max} times toward the goal; stops at the limit.`"
+      :title="continuationTitle"
     >
       <RefreshCw class="size-3" />
-      Continuing {{ continuation.count }}/{{ continuation.max }}
+      {{ continuationLabel }}
     </span>
   </div>
 </template>

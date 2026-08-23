@@ -72,13 +72,13 @@ const html = computed(() =>
     v-else-if="policy.kind === 'download-only'"
     class="text-muted-foreground p-4 text-sm"
   >
-    Download-only file. This type is not loaded as text or opened in the editor.
+    {{ $i18n.t.value.artifacts.downloadOnlyDescription }}
   </p>
   <p
     v-else-if="policy.kind === 'skill-archive'"
     class="text-muted-foreground p-4 text-sm"
   >
-    Skill archive. Download it or install it with an administrator account.
+    {{ $i18n.t.value.artifacts.skillArchiveDescription }}
   </p>
   <div
     v-else-if="viewMode === 'preview' && policy.language === 'markdown'"
@@ -93,7 +93,7 @@ const html = computed(() =>
     v-else-if="
       viewMode === 'preview' && policy.language === 'html' && htmlPreviewAllowed
     "
-    title="Artifact preview"
+    :title="$i18n.t.value.artifacts.previewTitle"
     class="size-full"
     sandbox="allow-scripts allow-forms"
     :srcdoc="html"

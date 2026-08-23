@@ -33,6 +33,7 @@ const emit = defineEmits<{
   close: [];
   frame: [frame: BrowserViewFrame];
 }>();
+const { $i18n } = useNuxtApp();
 
 const requestedLive = ref(true);
 const threadId = computed(() => props.threadId);
@@ -82,13 +83,15 @@ const liveActive = computed(
   () => requestedLive.value && stream.status.value === "open",
 );
 const modeLabel = computed(() => {
-  if (!requestedLive.value) return "Static";
-  if (stream.status.value === "open") return "Live";
+  if (!requestedLive.value) return $i18n.t.value.browser.static;
+  if (stream.status.value === "open") return $i18n.t.value.browser.live;
   if (stream.status.value === "reconnecting") {
-    return `Reconnecting ${stream.reconnectAttempt.value}/6`;
+    return $i18n.t.value.browser.reconnecting(stream.reconnectAttempt.value, 6);
   }
-  if (stream.status.value === "connecting") return "Connecting";
-  return "Static";
+  if (stream.status.value === "connecting") {
+    return $i18n.t.value.browser.connecting;
+  }
+  return $i18n.t.value.browser.static;
 });
 const authoritativeTitle = computed(
   () =>
@@ -96,7 +99,7 @@ const authoritativeTitle = computed(
     restTitle.value ||
     lastLiveTitle.value ||
     staticFrame.value?.title ||
-    "Browser view",
+    $i18n.t.value.browser.panelTitle,
 );
 const displayFrameUrl = computed(() => {
   if (stream.frameUrl.value) return stream.frameUrl.value;
@@ -159,7 +162,9 @@ async function navigateRest(target: string) {
   } catch (cause) {
     if (controller.signal.aborted || generation !== restGeneration) return;
     restError.value =
-      cause instanceof Error ? cause.message : "Browser navigation failed.";
+      cause instanceof Error
+        ? cause.message
+        : $i18n.t.value.browser.navigationFailedFallback;
   } finally {
     if (generation === restGeneration) restController = null;
   }
@@ -382,7 +387,7 @@ onBeforeUnmount(() => {
       </span>
       <button
         type="button"
-        aria-label="Back"
+        :aria-label="$i18n.t.value.browser.back"
         class="rounded p-1"
         :disabled="!liveActive"
         @click="sendHistory('back')"
@@ -391,7 +396,7 @@ onBeforeUnmount(() => {
       </button>
       <button
         type="button"
-        aria-label="Forward"
+        :aria-label="$i18n.t.value.browser.forward"
         class="rounded p-1"
         :disabled="!liveActive"
         @click="sendHistory('forward')"
@@ -401,8 +406,8 @@ onBeforeUnmount(() => {
       <form class="flex min-w-0 flex-1" @submit.prevent="navigate">
         <input
           v-model="url"
-          aria-label="Browser URL"
-          placeholder="Enter a URL and press Enter"
+          :aria-label="$i18n.t.value.browser.urlLabel"
+          :placeholder="$i18n.t.value.browser.urlPlaceholder"
           class="border-input w-full rounded-md border px-3 py-1.5 text-sm"
           @focus="editingUrl = true"
           @blur="editingUrl = false"
@@ -414,7 +419,9 @@ onBeforeUnmount(() => {
       <button
         type="button"
         :aria-label="
-          requestedLive ? 'Switch to static browser' : 'Switch to live browser'
+          requestedLive
+            ? $i18n.t.value.browser.switchToStatic
+            : $i18n.t.value.browser.switchToLive
         "
         class="rounded px-2 py-1 text-xs"
         @click="toggleLive"
@@ -423,7 +430,7 @@ onBeforeUnmount(() => {
       </button>
       <button
         type="button"
-        aria-label="Close browser"
+        :aria-label="$i18n.t.value.browser.close"
         class="rounded p-1"
         @click="closePanel"
       >
@@ -440,20 +447,20 @@ onBeforeUnmount(() => {
       <button
         v-if="restError && retryTarget"
         type="button"
-        aria-label="Retry navigation"
+        :aria-label="$i18n.t.value.browser.retryNavigation"
         class="ml-2 underline"
         @click="retryNavigation"
       >
-        Retry navigation
+        {{ $i18n.t.value.browser.retryNavigation }}
       </button>
       <button
         v-else-if="stream.canRetry.value"
         type="button"
-        aria-label="Retry live browser"
+        :aria-label="$i18n.t.value.browser.retryLive"
         class="ml-2 inline-flex items-center gap-1 underline"
         @click="retryLive"
       >
-        <RefreshCw :size="12" /> Retry live
+        <RefreshCw :size="12" /> {{ $i18n.t.value.browser.retryLive }}
       </button>
     </p>
 
@@ -479,8 +486,8 @@ onBeforeUnmount(() => {
       >
         {{
           requestedLive
-            ? "Connecting to live browser…"
-            : "No browser frame available."
+            ? $i18n.t.value.browser.connectingFrame
+            : $i18n.t.value.browser.noFrame
         }}
       </div>
     </main>

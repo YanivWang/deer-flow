@@ -21,6 +21,7 @@ import {
 import { parseAuthError, userSchema, type User } from "@/core/auth/types";
 
 definePageMeta({ layout: "auth" });
+const { $i18n } = useNuxtApp();
 type Mode = "loading" | "init_admin" | "change_password" | "unavailable";
 
 const mode = ref<Mode>("loading");
@@ -65,7 +66,7 @@ async function loadMode() {
 async function submitInitialize() {
   error.value = "";
   if (newPassword.value !== confirmPassword.value) {
-    error.value = "Passwords do not match";
+    error.value = $i18n.t.value.setup.passwordMismatch;
     return;
   }
   loading.value = true;
@@ -91,7 +92,7 @@ async function submitInitialize() {
     }
     await navigateTo("/workspace");
   } catch {
-    error.value = "Network error. Please try again.";
+    error.value = $i18n.t.value.login.networkError;
   } finally {
     loading.value = false;
   }
@@ -100,11 +101,11 @@ async function submitInitialize() {
 async function submitPasswordChange() {
   error.value = "";
   if (newPassword.value !== confirmPassword.value) {
-    error.value = "Passwords do not match";
+    error.value = $i18n.t.value.setup.passwordMismatch;
     return;
   }
   if (newPassword.value.length < 8) {
-    error.value = "Password must be at least 8 characters";
+    error.value = $i18n.t.value.setup.passwordTooShort;
     return;
   }
   loading.value = true;
@@ -125,7 +126,7 @@ async function submitPasswordChange() {
     }
     await navigateTo("/workspace");
   } catch {
-    error.value = "Network error. Please try again.";
+    error.value = $i18n.t.value.login.networkError;
   } finally {
     loading.value = false;
   }
@@ -150,16 +151,17 @@ onMounted(() => {
       :flicker-chance="0.25"
     />
     <p v-if="mode === 'loading'" class="text-muted-foreground text-sm">
-      Loading…
+      {{ $i18n.t.value.common.loading }}
     </p>
     <section
       v-else-if="mode === 'unavailable'"
       class="relative z-10 w-full max-w-md space-y-4 text-center"
     >
-      <h1 class="text-xl font-semibold">Service temporarily unavailable</h1>
+      <h1 class="text-xl font-semibold">
+        {{ $i18n.t.value.login.serviceUnavailableTitle }}
+      </h1>
       <p class="text-muted-foreground text-sm">
-        The Gateway is taking too long to respond. Check that it is running,
-        then try again.
+        {{ $i18n.t.value.login.serviceUnavailableDescription }}
       </p>
       <div class="flex justify-center gap-3">
         <button
@@ -167,11 +169,11 @@ onMounted(() => {
           class="bg-primary text-primary-foreground rounded-md px-4 py-2"
           @click="setupAttempt += 1"
         >
-          Try again
+          {{ $i18n.t.value.login.retry }}
         </button>
-        <NuxtLink to="/login" class="rounded-md border px-4 py-2"
-          >Sign In</NuxtLink
-        >
+        <NuxtLink to="/login" class="rounded-md border px-4 py-2">{{
+          $i18n.t.value.login.signIn
+        }}</NuxtLink>
       </div>
     </section>
     <section
@@ -183,8 +185,8 @@ onMounted(() => {
         <p class="text-muted-foreground mt-2">
           {{
             mode === "init_admin"
-              ? "Create admin account"
-              : "Complete admin account setup"
+              ? $i18n.t.value.setup.createAdminTitle
+              : $i18n.t.value.setup.completeAdminTitle
           }}
         </p>
       </header>
@@ -194,7 +196,9 @@ onMounted(() => {
           mode === 'init_admin' ? submitInitialize() : submitPasswordChange()
         "
       >
-        <label class="block text-sm font-medium" for="setup-email">Email</label>
+        <label class="block text-sm font-medium" for="setup-email">{{
+          $i18n.t.value.login.email
+        }}</label>
         <input
           id="setup-email"
           v-model="email"
@@ -202,12 +206,12 @@ onMounted(() => {
           autocomplete="email"
           required
           class="border-input w-full rounded-md border px-3 py-2"
-          placeholder="you@example.com"
+          :placeholder="$i18n.t.value.login.emailPlaceholder"
         />
         <template v-if="mode === 'change_password'">
-          <label class="block text-sm font-medium" for="current-password"
-            >Current password</label
-          >
+          <label class="block text-sm font-medium" for="current-password">{{
+            $i18n.t.value.setup.currentPassword
+          }}</label>
           <input
             id="current-password"
             v-model="currentPassword"
@@ -217,9 +221,9 @@ onMounted(() => {
             class="border-input w-full rounded-md border px-3 py-2"
           />
         </template>
-        <label class="block text-sm font-medium" for="new-password"
-          >Password</label
-        >
+        <label class="block text-sm font-medium" for="new-password">{{
+          $i18n.t.value.setup.password
+        }}</label>
         <input
           id="new-password"
           v-model="newPassword"
@@ -228,11 +232,11 @@ onMounted(() => {
           required
           minlength="8"
           class="border-input w-full rounded-md border px-3 py-2"
-          placeholder="Password (min. 8 characters)"
+          :placeholder="$i18n.t.value.setup.passwordPlaceholder"
         />
-        <label class="block text-sm font-medium" for="confirm-password"
-          >Confirm Password</label
-        >
+        <label class="block text-sm font-medium" for="confirm-password">{{
+          $i18n.t.value.setup.confirmPassword
+        }}</label>
         <input
           id="confirm-password"
           v-model="confirmPassword"
@@ -241,11 +245,11 @@ onMounted(() => {
           required
           minlength="8"
           class="border-input w-full rounded-md border px-3 py-2"
-          placeholder="Confirm password"
+          :placeholder="$i18n.t.value.setup.confirmPassword"
         />
         <label class="flex items-center gap-2 text-sm"
-          ><input v-model="rememberMe" type="checkbox" /> Keep me signed
-          in</label
+          ><input v-model="rememberMe" type="checkbox" />
+          {{ $i18n.t.value.login.rememberMe }}</label
         >
         <p v-if="error" role="alert" class="text-sm text-red-500">
           {{ error }}
@@ -257,10 +261,10 @@ onMounted(() => {
         >
           {{
             loading
-              ? "Please wait..."
+              ? $i18n.t.value.login.pleaseWait
               : mode === "init_admin"
-                ? "Create Admin Account"
-                : "Complete Setup"
+                ? $i18n.t.value.setup.createAdmin
+                : $i18n.t.value.setup.completeSetup
           }}
         </button>
       </form>

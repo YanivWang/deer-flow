@@ -184,8 +184,18 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
 - composer draft 是 `sessionStorage` 的 tab 状态，只持久化文本/skill；user、agent 与逻辑会话
   三维隔离，并在确认 logout/thread delete 后清理。上传文件、语音、follow-up dialog、polish
   和 generation guard 是组件/composable 瞬态状态，不得错误跨 thread 复用。
-- locale 使用 `app/core/i18n/`、`app/plugins/i18n.ts` 与兼容 cookie；字典完整性由
-  `make i18n-check` 守护。
+- locale 的唯一运行期状态归 `app/plugins/i18n.ts`：同一 ref/computed 同步 typed dictionary、
+  兼容 cookie 与 `document.documentElement.lang`，已打开组件和后续 toast 不缓存第二份 locale。
+  `en-US`/`zh-CN` 精确 key 与 audited unused 集合由 `baseline/i18n-keys.json` 固定；
+  `make i18n-source-check` 以 Vue/TypeScript AST 扫描全部产品 SFC。完整范围、动态内容边界与
+  两个精确测试 fixture 排除项见 [`I18N_INVENTORY.md`](I18N_INVENTORY.md)。
+- theme 的唯一运行期 owner 是 `app/plugins/theme.ts` 创建的应用级 controller；它独占
+  `theme` storage、三态 preference/resolved、唯一 `matchMedia` listener、根 `dark` class 与
+  cleanup。`AppearanceSettings` 和 sidebar 只读写该 owner。`nuxt.config.ts` 注入由同一
+  `theme/bootstrap.ts` 生成的首屏脚本，在组件 mount 前应用 class/color-scheme，脚本本身不注册
+  listener，因此不形成第二个生命周期 owner。公开根路由 `/` 临时强制 dark，但不改写
+  用户 preference/storage；离开后立即恢复实际 preference。完整 locale payload 归独立
+  `vendor-i18n` chunk 与显式 asset budget，不占用 `vendor-ui` 预算。
 
 ## 验证入口
 

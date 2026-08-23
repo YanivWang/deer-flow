@@ -42,6 +42,7 @@ const props = defineProps<{
 }>();
 const attrs = useAttrs();
 const slots = useSlots();
+const { $i18n } = useNuxtApp();
 const context = inject(MARKDOWN_LINK_CONTEXT, null);
 const threadId = computed(() => props.threadId ?? context?.threadId.value);
 const isMock = computed(() => props.isMock ?? context?.isMock.value);
@@ -129,8 +130,8 @@ const forwardedAttrs = computed(() => {
     v-if="!safe"
     v-bind="forwardedAttrs"
     data-message-markdown-link="blocked"
-    aria-label="Unsafe link omitted"
-    :title="`Unsafe link scheme in ${href}`"
+    :aria-label="$i18n.t.value.markdown.unsafeLink"
+    :title="$i18n.t.value.markdown.unsafeLinkTitle(href ?? '')"
     :class="[
       'text-muted-foreground cursor-not-allowed underline decoration-dotted underline-offset-2',
       attrs.class,

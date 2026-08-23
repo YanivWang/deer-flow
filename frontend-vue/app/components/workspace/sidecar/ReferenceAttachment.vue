@@ -8,15 +8,23 @@
   【边界与注意】   sidecar 专有引用形状，不进入 L2。
 */
 import { MessageSquareQuote, X } from "lucide-vue-next";
+import { computed } from "vue";
 
 import type { SidecarReference } from "@/composables/useSidecar";
 
-defineProps<{
+const props = defineProps<{
   references: SidecarReference[];
   testId?: string;
   clearable?: boolean;
 }>();
 const emit = defineEmits<{ clear: [] }>();
+const { $i18n } = useNuxtApp();
+const referenceLabel = computed(() =>
+  (props.references.length === 1
+    ? $i18n.t.value.sidecar.selectedTextFragment
+    : $i18n.t.value.sidecar.selectedTextFragments
+  ).replace("{count}", String(props.references.length)),
+);
 </script>
 
 <template>
@@ -28,13 +36,12 @@ const emit = defineEmits<{ clear: [] }>();
   >
     <MessageSquareQuote class="text-muted-foreground size-4 shrink-0" />
     <span class="truncate text-sm font-medium">
-      {{ references.length }} selected text
-      {{ references.length === 1 ? "fragment" : "fragments" }}
+      {{ referenceLabel }}
     </span>
     <button
       v-if="clearable"
       type="button"
-      aria-label="Clear selected references"
+      :aria-label="$i18n.t.value.sidecar.clearReferences"
       class="text-muted-foreground hover:text-foreground flex size-6 items-center justify-center rounded-full"
       @click="emit('clear')"
     >

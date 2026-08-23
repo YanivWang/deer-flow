@@ -77,7 +77,7 @@ describe("ChatComposer /compact", () => {
       modelName: "gpt-5",
     });
     expect((textarea.element as HTMLTextAreaElement).value).toBe("");
-    expect(wrapper.text()).toContain("Conversation context compacted.");
+    expect(wrapper.text()).toContain(enUS.inputBox.compactSuccess);
     expect(invalidate.mock.calls.map(([filters]) => filters.queryKey)).toEqual([
       ["threads", "search"],
       ["threads", "searchInfinite"],

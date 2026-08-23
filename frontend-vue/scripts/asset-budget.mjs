@@ -28,6 +28,11 @@ const budgets = {
     maxRaw: 360_000,
   },
   "vendor-codemirror": { totalRaw: 0, totalGzip: 0, maxRaw: 0 },
+  // Typed dictionaries deliberately retain the React suggestion icon shape,
+  // so their chunk also contains a small lucide subset. Classify i18n before
+  // vendor-ui and budget the complete locale payload instead of hiding it in
+  // the Reka/lucide accessibility bucket.
+  "vendor-i18n": { totalRaw: 120_000, totalGzip: 45_000, maxRaw: 120_000 },
   // WP-11 mounts Reka dialog/dropdown primitives in the workspace shell. Keep
   // measured headroom for that accessibility payload while the independent
   // whole-client and per-chunk ceilings continue to catch broad regressions.

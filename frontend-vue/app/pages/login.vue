@@ -28,6 +28,7 @@ definePageMeta({ layout: "auth" });
 type Provider = { id: string; display_name: string; type: string };
 
 const route = useRoute();
+const { $i18n } = useNuxtApp();
 const email = ref("");
 const password = ref("");
 const rememberMe = ref(true);
@@ -37,7 +38,7 @@ const setupStatus = ref<SetupStatusResponse | null>(null);
 const setupPhase = ref<"checking" | "ready" | "unavailable">("checking");
 const setupAttempt = ref(0);
 const error = ref(
-  typeof route.query.error === "string" ? "Authentication failed." : "",
+  typeof route.query.error === "string" ? $i18n.t.value.login.authFailed : "",
 );
 const showSsoHint = ref(false);
 const loading = ref(false);
@@ -79,8 +80,7 @@ async function submit() {
   error.value = "";
   showSsoHint.value = false;
   if (!isLogin.value && !signupAllowed.value) {
-    error.value =
-      "DeerFlow needs an administrator account before new regular accounts can be created.";
+    error.value = $i18n.t.value.login.adminSetupRequiredDescription;
     return;
   }
 
@@ -120,7 +120,7 @@ async function submit() {
     });
     await navigateTo(redirectPath.value);
   } catch {
-    error.value = "Network error. Please try again.";
+    error.value = $i18n.t.value.login.networkError;
   } finally {
     loading.value = false;
   }
@@ -164,7 +164,11 @@ onMounted(() => {
       <header class="text-center">
         <h1 class="font-serif text-3xl">DeerFlow</h1>
         <p class="text-muted-foreground mt-2">
-          {{ isLogin ? "Sign in to your account" : "Create a new account" }}
+          {{
+            isLogin
+              ? $i18n.t.value.login.signInTitle
+              : $i18n.t.value.login.createAccountTitle
+          }}
         </p>
       </header>
 
@@ -174,10 +178,11 @@ onMounted(() => {
         aria-live="polite"
         class="border-l-2 border-amber-500 ps-3 text-sm"
       >
-        <p class="font-medium">Service temporarily unavailable</p>
+        <p class="font-medium">
+          {{ $i18n.t.value.login.serviceUnavailableTitle }}
+        </p>
         <p class="text-muted-foreground mt-1">
-          The Gateway is taking too long to respond. Check that it is running,
-          then try again.
+          {{ $i18n.t.value.login.serviceUnavailableDescription }}
         </p>
         <button
           type="button"
@@ -185,7 +190,11 @@ onMounted(() => {
           :disabled="setupPhase === 'checking'"
           @click="setupAttempt += 1"
         >
-          {{ setupPhase === "checking" ? "Please wait..." : "Try again" }}
+          {{
+            setupPhase === "checking"
+              ? $i18n.t.value.login.pleaseWait
+              : $i18n.t.value.login.retry
+          }}
         </button>
       </div>
 
@@ -193,20 +202,23 @@ onMounted(() => {
         v-if="setupStatus?.needs_setup"
         class="border-l-2 border-blue-500 ps-3 text-sm"
       >
-        <p class="font-medium">Administrator setup is required</p>
+        <p class="font-medium">
+          {{ $i18n.t.value.login.adminSetupRequiredTitle }}
+        </p>
         <p class="text-muted-foreground mt-1">
-          DeerFlow needs an administrator account before new regular accounts
-          can be created.
+          {{ $i18n.t.value.login.adminSetupRequiredDescription }}
         </p>
         <NuxtLink
           to="/setup"
           class="mt-2 inline-block font-medium text-blue-500 hover:underline"
-          >Create admin account</NuxtLink
+          >{{ $i18n.t.value.login.createAdminAccount }}</NuxtLink
         >
       </div>
 
       <form class="space-y-3" @submit.prevent="submit">
-        <label class="block text-sm font-medium" for="email">Email</label>
+        <label class="block text-sm font-medium" for="email">{{
+          $i18n.t.value.login.email
+        }}</label>
         <input
           id="email"
           v-model="email"
@@ -214,9 +226,11 @@ onMounted(() => {
           autocomplete="email"
           required
           class="border-input bg-background w-full rounded-md border px-3 py-2"
-          placeholder="you@example.com"
+          :placeholder="$i18n.t.value.login.emailPlaceholder"
         />
-        <label class="block text-sm font-medium" for="password">Password</label>
+        <label class="block text-sm font-medium" for="password">{{
+          $i18n.t.value.login.password
+        }}</label>
         <input
           id="password"
           v-model="password"
@@ -225,15 +239,17 @@ onMounted(() => {
           required
           :minlength="isLogin ? 6 : 8"
           class="border-input bg-background w-full rounded-md border px-3 py-2"
-          placeholder="•••••••"
+          :placeholder="$i18n.t.value.login.passwordPlaceholder"
         />
         <label class="flex items-start gap-2 text-sm">
           <input v-model="rememberMe" type="checkbox" class="mt-1" />
           <span
-            ><span class="font-medium">Keep me signed in</span
-            ><span class="text-muted-foreground block text-xs"
-              >DeerFlow stores only your email, never your password.</span
-            ></span
+            ><span class="font-medium">{{
+              $i18n.t.value.login.rememberMe
+            }}</span
+            ><span class="text-muted-foreground block text-xs">{{
+              $i18n.t.value.login.rememberMeDescription
+            }}</span></span
           >
         </label>
         <p v-if="error" role="alert" class="text-sm text-red-500">
@@ -245,14 +261,18 @@ onMounted(() => {
           :disabled="loading"
         >
           {{
-            loading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"
+            loading
+              ? $i18n.t.value.login.pleaseWait
+              : isLogin
+                ? $i18n.t.value.login.signIn
+                : $i18n.t.value.login.createAccount
           }}
         </button>
       </form>
 
       <div v-if="providers.length" class="space-y-2">
         <p v-if="showSsoHint" class="text-muted-foreground text-center text-sm">
-          If your account uses single sign-on, use the option below instead.
+          {{ $i18n.t.value.login.ssoHint }}
         </p>
         <button
           v-for="provider in providers"
@@ -262,7 +282,7 @@ onMounted(() => {
           :disabled="loading"
           @click="startSso(provider)"
         >
-          Continue with {{ provider.display_name }}
+          {{ $i18n.t.value.login.continueWith(provider.display_name) }}
         </button>
       </div>
       <button
@@ -277,14 +297,14 @@ onMounted(() => {
       >
         {{
           isLogin
-            ? "Don't have an account? Sign up"
-            : "Already have an account? Sign in"
+            ? $i18n.t.value.login.noAccountSignUp
+            : $i18n.t.value.login.haveAccountSignIn
         }}
       </button>
       <NuxtLink
         to="/"
         class="text-muted-foreground block text-center text-xs hover:underline"
-        >← Back to home</NuxtLink
+        >{{ $i18n.t.value.login.backToHome }}</NuxtLink
       >
     </section>
   </div>

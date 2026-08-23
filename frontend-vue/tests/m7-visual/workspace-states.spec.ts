@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { expect, test, type Page } from "@playwright/test";
 
 import { mockLangGraphAPI } from "../../../frontend/tests/e2e/utils/mock-api";
+import { zhCN } from "../../app/core/i18n/locales/zh-CN";
 
 const STREAM_THREAD_ID = "00000000-0000-0000-0000-000000007001";
 const REASONING_THREAD_ID = "00000000-0000-0000-0000-000000007002";
@@ -237,9 +238,28 @@ test("mobile workspace", async ({ page }) => {
 });
 
 test("dark mode", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("theme", "dark"));
   await prepare(page);
   await page.goto("/workspace/chats/new");
-  await page.locator("html").evaluate((node) => node.classList.add("dark"));
   await expect(page.locator("html")).toHaveClass(/dark/);
   await snapshot(page, "dark-mode.png");
+});
+
+test("zh-CN dark settings", async ({ page }) => {
+  await page.context().addCookies([
+    {
+      name: "locale",
+      value: "zh-CN",
+      url: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3109",
+    },
+  ]);
+  await page.addInitScript(() => localStorage.setItem("theme", "dark"));
+  await prepare(page);
+  await page.goto("/workspace/chats/new?settings=appearance");
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(
+    page.getByRole("dialog", { name: zhCN.settings.title }),
+  ).toContainText(zhCN.settings.appearance.languageDescription);
+  await snapshot(page, "settings-zh-cn-dark.png");
 });

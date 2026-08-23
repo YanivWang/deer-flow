@@ -14,6 +14,7 @@ import type { User } from "@/core/auth/types";
 import { getSessionComposerDraftStorage } from "@/core/threads/composer-draft";
 import { clearComposerDrafts } from "@/core/threads/composer-draft-lifecycle";
 
+const { $i18n } = useNuxtApp();
 const user = ref<User | null>(null);
 const currentPassword = ref("");
 const newPassword = ref("");
@@ -28,7 +29,9 @@ onMounted(async () => {
     if (response.ok) user.value = (await response.json()) as User;
   } catch (cause) {
     error.value =
-      cause instanceof Error ? cause.message : "Failed to load account";
+      cause instanceof Error
+        ? cause.message
+        : $i18n.t.value.settings.account.loadFailed;
   }
 });
 
@@ -36,11 +39,11 @@ async function changePassword() {
   error.value = "";
   message.value = "";
   if (newPassword.value !== confirmPassword.value) {
-    error.value = "New passwords do not match.";
+    error.value = $i18n.t.value.settings.account.passwordMismatch;
     return;
   }
   if (newPassword.value.length < 8) {
-    error.value = "New password must be at least 8 characters.";
+    error.value = $i18n.t.value.settings.account.passwordTooShort;
     return;
   }
   busy.value = true;
@@ -60,16 +63,19 @@ async function changePassword() {
       throw new Error(
         typeof body.detail === "string"
           ? body.detail
-          : (body.detail?.message ?? "Failed to change password"),
+          : (body.detail?.message ??
+              $i18n.t.value.settings.account.changePasswordFailed),
       );
     }
     currentPassword.value = "";
     newPassword.value = "";
     confirmPassword.value = "";
-    message.value = "Password updated.";
+    message.value = $i18n.t.value.settings.account.passwordChangedSuccess;
   } catch (cause) {
     error.value =
-      cause instanceof Error ? cause.message : "Failed to change password";
+      cause instanceof Error
+        ? cause.message
+        : $i18n.t.value.settings.account.changePasswordFailed;
   } finally {
     busy.value = false;
   }
@@ -80,7 +86,7 @@ async function logout() {
     method: "POST",
   });
   if (!response.ok) {
-    error.value = "Failed to sign out.";
+    error.value = $i18n.t.value.settings.account.signOutFailed;
     return;
   }
   clearComposerDrafts(getSessionComposerDraftStorage() as Storage | null);
@@ -91,14 +97,22 @@ async function logout() {
 <template>
   <section class="space-y-8">
     <div>
-      <h2 class="text-lg font-semibold">Profile</h2>
+      <h2 class="text-lg font-semibold">
+        {{ $i18n.t.value.settings.account.profileTitle }}
+      </h2>
       <dl class="mt-3 grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2 text-sm">
-        <dt class="text-muted-foreground">Email</dt>
+        <dt class="text-muted-foreground">
+          {{ $i18n.t.value.settings.account.email }}
+        </dt>
         <dd>{{ user?.email ?? "—" }}</dd>
-        <dt class="text-muted-foreground">Role</dt>
+        <dt class="text-muted-foreground">
+          {{ $i18n.t.value.settings.account.role }}
+        </dt>
         <dd class="capitalize">{{ user?.system_role ?? "—" }}</dd>
         <template v-if="user?.oauth_provider">
-          <dt class="text-muted-foreground">SSO provider</dt>
+          <dt class="text-muted-foreground">
+            {{ $i18n.t.value.settings.account.ssoProvider }}
+          </dt>
           <dd class="capitalize">{{ user.oauth_provider }}</dd>
         </template>
       </dl>
@@ -108,12 +122,14 @@ async function logout() {
       class="max-w-sm space-y-3"
       @submit.prevent="changePassword"
     >
-      <h2 class="text-lg font-semibold">Change password</h2>
+      <h2 class="text-lg font-semibold">
+        {{ $i18n.t.value.settings.account.changePasswordTitle }}
+      </h2>
       <input
         v-model="currentPassword"
         type="password"
         required
-        placeholder="Current password"
+        :placeholder="$i18n.t.value.settings.account.currentPassword"
         class="border-input w-full rounded-md border px-3 py-2"
       />
       <input
@@ -121,7 +137,7 @@ async function logout() {
         type="password"
         required
         minlength="8"
-        placeholder="New password"
+        :placeholder="$i18n.t.value.settings.account.newPassword"
         class="border-input w-full rounded-md border px-3 py-2"
       />
       <input
@@ -129,7 +145,7 @@ async function logout() {
         type="password"
         required
         minlength="8"
-        placeholder="Confirm new password"
+        :placeholder="$i18n.t.value.settings.account.confirmNewPassword"
         class="border-input w-full rounded-md border px-3 py-2"
       />
       <p v-if="error" role="alert" class="text-sm text-red-600">{{ error }}</p>
@@ -141,18 +157,27 @@ async function logout() {
         class="rounded-md border px-3 py-2"
         :disabled="busy"
       >
-        {{ busy ? "Updating…" : "Update password" }}
+        {{
+          busy
+            ? $i18n.t.value.settings.account.updating
+            : $i18n.t.value.settings.account.updatePassword
+        }}
       </button>
     </form>
     <p v-else class="text-muted-foreground text-sm">
-      Password changes are managed by {{ user.oauth_provider }}.
+      {{
+        $i18n.t.value.settings.account.ssoPasswordMessage.replace(
+          "{provider}",
+          user.oauth_provider,
+        )
+      }}
     </p>
     <button
       type="button"
       class="rounded-md bg-red-600 px-3 py-2 text-white"
       @click="logout"
     >
-      Sign out
+      {{ $i18n.t.value.settings.account.signOut }}
     </button>
   </section>
 </template>

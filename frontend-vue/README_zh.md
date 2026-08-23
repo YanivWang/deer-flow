@@ -4,24 +4,26 @@
 
 `frontend-vue` 是与 React 共存的 DeerFlow Nuxt 4 实现，与 `../frontend` 共用同一套
 Gateway 接口，并已建立聊天工作区、产物、sidecar、浏览器控制、智能体、渠道、集成、
-定时任务、设置、目标/模式、认证、Showcase、移动端布局和生产容器。当前源码审计仍发现
-API 响应消费和产品行为差异，统一维护在 [PARITY_GAPS.md](PARITY_GAPS.md)。
+定时任务、设置、目标/模式、认证、Showcase、移动端布局和生产容器。基于当前源码的 API
+响应消费与产品行为工作包已在本地闭环，执行清单与证据统一维护在
+[PARITY_GAPS.md](PARITY_GAPS.md)。
 
 生产环境目前仍由 React hostname 作为默认入口，只有 `DEER_FLOW_VUE_HOSTNAME` 选择
-Vue。这只是部署拓扑，不能证明 Vue 已具备替换 React 的条件；
-[PARITY_GAPS.md](PARITY_GAPS.md) 中的 P0/P1 项关闭前不能切换默认入口。公网 DNS、TLS、
-外层代理信任和真实 IdP callback 注册仍需在目标环境配置。
+Vue。本地 parity 证据不代表可以直接切换默认入口；公网 DNS、TLS、外层代理信任、
+真实 IdP callback 注册与目标环境验收仍需在生产切流前完成。
 
 ## 文档入口
 
-- [PARITY_GAPS.md](PARITY_GAPS.md)：基于当前源码的 React/Vue 可平替差异、实施顺序、
-  验收标准与完成证据；现有门禁全绿不能作为这些差异已经关闭的证明。
+- [PARITY_GAPS.md](PARITY_GAPS.md)：基于当前源码的 React/Vue 可平替审计、实施顺序、
+  验收标准、完成证据与剩余环境风险；本地门禁全绿不是生产切流证据。
 - [ARCHITECTURE.md](ARCHITECTURE.md)：当前分层、运行数据流、状态所有权、代理与认证边界。
 - [BEHAVIOR_CONTRACTS.md](BEHAVIOR_CONTRACTS.md)：修改时必须保留的产品、流式、顺序、
   缓存、面板与 Vue 语义。
 - [REUSE.md](REUSE.md)：私有 `@deerflow/agent-core` 与可复用 UI 边界。
 - [双前端生产说明](../docs/dual-frontend-production.md)：hostname、OIDC、验证和回滚。
 - [app/core/PROVENANCE.md](app/core/PROVENANCE.md)：`app/core/` 当前源码溯源台账。
+- [I18N_INVENTORY.md](I18N_INVENTORY.md)：实时产品 SFC 文案清单、翻译/动态内容分类与
+  source guard 边界。
 
 ## Docker 运行
 
@@ -67,7 +69,8 @@ make e2e-m5             # artifacts、sidecar 与面板生命周期合同
 make e2e-m5-real-backend # 真实 Gateway artifact Range/PUT/冲突合同
 make e2e-m6             # 包含 Vue 自有 browser DOM/wire 合同
 make e2e-m6-real-backend # 真实本地 Gateway + Chromium browser runtime
-make e2e-m7             # 完整 Vue 浏览器合同：28 files / 160 tests
+make e2e-m7             # 完整 Vue 浏览器合同：29 files / 165 tests
+make i18n-source-check  # 全部产品 Vue SFC 的 AST 文案门禁
 make e2e-wp07-real-backend # 真实 Gateway scheduled-task HTTP/UI 生命周期
 make e2e-wp08-real-backend # 真实 Auth/Gateway/SQLite channel 生命周期
 make e2e-wp09-real-backend # 真实 Auth/Gateway/setup_agent/Agent 持久化

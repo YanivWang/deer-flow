@@ -52,6 +52,7 @@ export default defineConfig({
           // localStorage…）但不碰 React，happy-dom 就够，不必上 Nuxt 环境。
           name: "dom",
           environment: "happy-dom",
+          setupFiles: ["tests/setup/dom.ts"],
           include: ["tests/**/*.dom.test.ts"],
         },
       }),

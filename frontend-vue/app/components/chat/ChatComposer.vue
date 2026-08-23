@@ -18,7 +18,6 @@ import {
 import { useQueryClient } from "@tanstack/vue-query";
 import {
   ArrowUp,
-  FlaskConical,
   Mic,
   Paperclip,
   Sparkles,
@@ -149,11 +148,7 @@ let voiceRestartTimer: ReturnType<typeof setTimeout> | null = null;
 const voiceSupported = computed(
   () => import.meta.client && getSpeechRecognitionConstructor(globalThis),
 );
-const disclaimer = computed(() =>
-  $i18n.locale.value === "zh-CN"
-    ? "内容由AI生成，重要信息请务必核查"
-    : "Deerflow is AI and can make mistakes",
-);
+const disclaimer = computed(() => $i18n.t.value.inputBox.disclaimer);
 const selectedModel = computed(() => {
   if (props.modelSelectionReady === false) return undefined;
   return resolveComposerModel(
@@ -245,12 +240,12 @@ const suggestions = computed(() => {
   const commands = [
     {
       name: "goal",
-      label: "Goal — Set, show, or clear an active goal",
+      label: `${$i18n.t.value.inputBox.goalLabel} — ${$i18n.t.value.inputBox.goalCommandDescription}`,
       kind: "command" as const,
     },
     {
       name: "compact",
-      label: "Compact earlier context",
+      label: $i18n.t.value.inputBox.compactCommandDescription,
       kind: "command" as const,
     },
   ].filter((command) => command.name.includes(query));
@@ -474,7 +469,7 @@ async function submit() {
       clearComposerDraft(getSessionComposerDraftStorage(), draftKey.value);
       input.value = "";
       selectedSkill.value = null;
-      toast.value = "There is no conversation context to compact yet.";
+      toast.value = $i18n.t.value.inputBox.compactSkipped;
       return;
     }
     compactPending.value = true;
@@ -508,10 +503,10 @@ async function submit() {
       historyIndex = -1;
       invalidateThreadCaches(queryClient, targetThreadId);
       toast.value = result.compacted
-        ? "Conversation context compacted."
+        ? $i18n.t.value.inputBox.compactSuccess
         : result.reason
-          ? `Context was not compacted: ${result.reason}`
-          : "Conversation context did not need compaction.";
+          ? $i18n.t.value.inputBox.compactNotPerformed(result.reason)
+          : $i18n.t.value.inputBox.compactSkipped;
     } catch (error) {
       if (
         !controller.signal.aborted &&
@@ -519,7 +514,9 @@ async function submit() {
         targetThreadId === props.targetThreadId
       ) {
         toast.value =
-          error instanceof Error ? error.message : "Failed to compact context.";
+          error instanceof Error
+            ? error.message
+            : $i18n.t.value.inputBox.compactFailed;
       }
     } finally {
       if (compactController === controller) compactController = null;
@@ -535,7 +532,10 @@ async function submit() {
       goalCommand.kind === "set" &&
       goalCommand.objective.length > MAX_GOAL_OBJECTIVE_CHARS
     ) {
-      toast.value = `Goal is too long. Keep it under ${MAX_GOAL_OBJECTIVE_CHARS} characters.`;
+      toast.value = $i18n.t.value.inputBox.goalTooLong.replace(
+        "{max}",
+        String(MAX_GOAL_OBJECTIVE_CHARS),
+      );
       return;
     }
     const scope = `${props.threadKey}\u0000${props.targetThreadId}\u0000${props.agentName ?? "lead-agent"}`;
@@ -589,11 +589,14 @@ async function submit() {
       toast.value =
         goalCommand.kind === "status"
           ? nextGoal
-            ? `Active goal: ${nextGoal.objective}`
-            : "No active goal."
+            ? $i18n.t.value.inputBox.goalActive.replace(
+                "{goal}",
+                nextGoal.objective,
+              )
+            : $i18n.t.value.inputBox.goalNone
           : goalCommand.kind === "clear"
-            ? "Goal cleared."
-            : "Goal set.";
+            ? $i18n.t.value.inputBox.goalCleared
+            : $i18n.t.value.inputBox.goalSet;
       if (goalCommand.kind === "set") {
         const onAccepted = () => {
           draft.clearIfUnchanged(draftSnapshot);
@@ -614,7 +617,9 @@ async function submit() {
         goalGeneration.isCurrent(token, scope)
       ) {
         toast.value =
-          cause instanceof Error ? cause.message : "Goal command failed.";
+          cause instanceof Error
+            ? cause.message
+            : $i18n.t.value.inputBox.goalFailed;
       }
       return;
     } finally {
@@ -698,7 +703,10 @@ async function submit() {
       activeSubmissionDraft = null;
     }
     if (generation === submissionGeneration && scopeKey === draftKey.value) {
-      toast.value = error instanceof Error ? error.message : "Request failed";
+      toast.value =
+        error instanceof Error
+          ? error.message
+          : $i18n.t.value.common.requestFailed;
     }
   } finally {
     if (generation === submissionGeneration) {
@@ -771,7 +779,22 @@ function chooseFiles(event: Event) {
   if (supported.message) toast.value = supported.message;
   if (result.violations.length > 0) {
     const violation = result.violations[0]!;
-    toast.value = `${violation.files.map((file) => file.name).join(", ")} exceeds ${formatUploadSize(violation.limit)}`;
+    const names = violation.files.map((file) => file.name).join(", ");
+    toast.value =
+      violation.code === "max_files"
+        ? $i18n.t.value.uploads.tooManyFiles(
+            violation.files.length,
+            violation.limit,
+          )
+        : violation.code === "max_total_size"
+          ? $i18n.t.value.uploads.totalSizeTooLarge(
+              violation.files.length,
+              formatUploadSize(violation.limit),
+            )
+          : $i18n.t.value.uploads.filesTooLarge(
+              names,
+              formatUploadSize(violation.limit),
+            );
   }
   (event.target as HTMLInputElement).value = "";
 }
@@ -813,7 +836,9 @@ async function polish() {
       polishGeneration.isCurrent(token, scope)
     ) {
       toast.value =
-        error instanceof Error ? error.message : "Failed to polish input";
+        error instanceof Error
+          ? error.message
+          : $i18n.t.value.inputBox.inputPolishFailed;
       polishOriginal.value = null;
     }
   } finally {
@@ -831,8 +856,7 @@ function cancelPolish() {
   polishOriginal.value = null;
 }
 function applyResearchTemplate() {
-  input.value =
-    "Conduct a deep dive research on [topic], and summarize the findings.";
+  input.value = $i18n.t.value.inputBox.suggestions[1]?.prompt ?? "";
   void nextTick(() => textarea.value?.focus());
 }
 function replaceDraft(value: string) {
@@ -958,7 +982,7 @@ defineExpose({ replaceDraft, offerFollowup });
           {{ file.name }}
           <button
             type="button"
-            :aria-label="`Remove ${file.name}`"
+            :aria-label="$i18n.t.value.artifacts.actions.removeFile(file.name)"
             @click="
               selectedFiles = selectedFiles.filter((item) => item !== file)
             "
@@ -978,7 +1002,7 @@ defineExpose({ replaceDraft, offerFollowup });
           <div
             ref="chipInput"
             role="textbox"
-            aria-label="How can I assist you today?"
+            :aria-label="$i18n.t.value.inputBox.placeholder"
             :contenteditable="disabled ? 'false' : 'true'"
             class="min-h-10 flex-1 px-1 py-2 text-sm outline-none"
             @input="onChipInput"
@@ -992,8 +1016,8 @@ defineExpose({ replaceDraft, offerFollowup });
           ref="textarea"
           v-model="input"
           name="message"
-          aria-label="How can I assist you today?"
-          placeholder="How can I assist you today?"
+          :aria-label="$i18n.t.value.inputBox.placeholder"
+          :placeholder="$i18n.t.value.inputBox.placeholder"
           rows="2"
           class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none"
           :disabled="disabled || polishing || compactPending"
@@ -1026,7 +1050,7 @@ defineExpose({ replaceDraft, offerFollowup });
           class="text-primary bg-primary/10 border-primary/20 mx-2 mb-1 flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
         >
           <span class="size-2 animate-pulse rounded-full bg-current" />
-          Polishing input...
+          {{ $i18n.t.value.inputBox.inputPolishing }}
         </div>
         <div class="flex min-w-0 items-center gap-1 pt-1">
           <label
@@ -1034,11 +1058,13 @@ defineExpose({ replaceDraft, offerFollowup });
             class="group hover:bg-accent text-muted-foreground relative flex size-8 cursor-pointer items-center justify-center rounded-md"
           >
             <Paperclip :size="14" aria-hidden="true" />
-            <span class="sr-only">Upload files</span>
+            <span class="sr-only">{{
+              $i18n.t.value.inputBox.uploadFiles
+            }}</span>
             <input
               type="file"
               multiple
-              aria-label="Upload files"
+              :aria-label="$i18n.t.value.inputBox.uploadFiles"
               class="sr-only"
               @change="chooseFiles"
             />
@@ -1046,13 +1072,13 @@ defineExpose({ replaceDraft, offerFollowup });
               role="tooltip"
               class="bg-foreground text-background pointer-events-none absolute bottom-full left-0 mb-2 hidden w-56 rounded px-2 py-1 text-xs group-hover:block"
             >
-              Up to
-              {{ formatUploadSize(limits?.max_file_size ?? 50 * 1024 * 1024) }}
-              each,
               {{
-                formatUploadSize(limits?.max_total_size ?? 100 * 1024 * 1024)
+                $i18n.t.value.uploads.limitsHint(
+                  limits?.max_files ?? 10,
+                  formatUploadSize(limits?.max_file_size ?? 50 * 1024 * 1024),
+                  formatUploadSize(limits?.max_total_size ?? 100 * 1024 * 1024),
+                )
               }}
-              total
             </span>
           </label>
           <button
@@ -1080,22 +1106,14 @@ defineExpose({ replaceDraft, offerFollowup });
             <Mic v-else :size="14" />
           </button>
           <button
-            type="button"
-            class="text-muted-foreground hover:bg-accent hidden h-8 items-center gap-1 rounded-md px-2 text-xs sm:flex"
-            aria-label="Research"
-            @click="applyResearchTemplate"
-          >
-            <FlaskConical :size="14" /> Research
-          </button>
-          <button
             v-if="polishing"
             data-testid="cancel-polish-input-button"
             type="button"
             class="text-muted-foreground hover:bg-accent flex h-8 items-center gap-1 rounded-md px-2 text-xs"
-            aria-label="Cancel polishing"
+            :aria-label="$i18n.t.value.inputBox.inputPolishCancel"
             @click="cancelPolish"
           >
-            <X :size="14" /> Cancel
+            <X :size="14" /> {{ $i18n.t.value.common.cancel }}
           </button>
           <button
             v-else
@@ -1103,13 +1121,17 @@ defineExpose({ replaceDraft, offerFollowup });
             type="button"
             class="text-muted-foreground hover:bg-accent flex h-8 items-center gap-1 rounded-md px-2 text-xs"
             :aria-label="
-              polishOriginal === null ? 'Polish input' : 'Undo polish'
+              polishOriginal === null
+                ? $i18n.t.value.inputBox.inputPolish
+                : $i18n.t.value.inputBox.inputPolishUndo
             "
             @click="polish"
           >
             <WandSparkles :size="14" />
             <span class="hidden sm:inline">{{
-              polishOriginal === null ? "Polish" : "Undo"
+              polishOriginal === null
+                ? $i18n.t.value.inputBox.inputPolish
+                : $i18n.t.value.inputBox.inputPolishUndo
             }}</span>
           </button>
           <span class="flex-1" />
@@ -1171,7 +1193,7 @@ defineExpose({ replaceDraft, offerFollowup });
             v-if="streaming"
             type="button"
             class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full"
-            aria-label="Stop"
+            :aria-label="$i18n.t.value.inputBox.stop"
             @click="stopRun"
           >
             <Square :size="12" class="fill-current" />
@@ -1180,7 +1202,7 @@ defineExpose({ replaceDraft, offerFollowup });
             v-else
             type="submit"
             class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full disabled:opacity-50"
-            aria-label="Send"
+            :aria-label="$i18n.t.value.inputBox.send"
             :disabled="
               disabled ||
               compactPending ||
@@ -1189,7 +1211,9 @@ defineExpose({ replaceDraft, offerFollowup });
             "
           >
             <ArrowUp :size="16" />
-            <span aria-hidden="true" class="sr-only">Submit</span>
+            <span aria-hidden="true" class="sr-only">{{
+              $i18n.t.value.inputBox.submit
+            }}</span>
           </button>
         </div>
       </div>
@@ -1202,27 +1226,23 @@ defineExpose({ replaceDraft, offerFollowup });
         variant="outline"
         size="sm"
         class="text-muted-foreground hover:bg-accent flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs"
-        @click="
-          replaceDraft(
-            'Surprise me with something interesting I can learn today.',
-          )
-        "
+        @click="replaceDraft($i18n.t.value.inputBox.surpriseMePrompt)"
       >
-        <Sparkles :size="14" /> Surprise me
+        <Sparkles :size="14" /> {{ $i18n.t.value.inputBox.surpriseMe }}
       </ConfettiButton>
       <button
         type="button"
         class="text-muted-foreground hover:bg-accent rounded-full border px-4 py-1.5 text-xs"
         @click="applyResearchTemplate"
       >
-        Explore
+        {{ $i18n.t.value.inputBox.explore }}
       </button>
       <button
         type="button"
         class="text-muted-foreground hover:bg-accent rounded-full border px-4 py-1.5 text-xs"
-        @click="replaceDraft('Create a presentation about [topic].')"
+        @click="replaceDraft($i18n.t.value.inputBox.createPresentationPrompt)"
       >
-        Create
+        {{ $i18n.t.value.common.create }}
       </button>
     </div>
     <p class="text-muted-foreground/70 px-4 text-center text-xs leading-4">

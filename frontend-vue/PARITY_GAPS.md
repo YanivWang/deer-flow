@@ -132,8 +132,8 @@
 | SHELL-02    | P1     | DONE | WP-11  | Settings focus/aria/query/history/焦点归还已接通                 |
 | SHELL-03    | P1     | DONE | WP-11  | share/export/updated time 与可见错误已接通                       |
 | CHANGES-01  | P2     | DONE | WP-11  | 完整字段/reason、Query abort/stale、error/retry 已接通           |
-| I18N-01     | P1     | TODO | WP-12  | 大量核心产品界面仍为英文硬编码                                   |
-| THEME-01    | P2     | TODO | WP-12  | system theme 不监听操作系统主题变化                              |
+| I18N-01     | P1     | DONE | WP-12  | 80 个产品 SFC 已接入单一 typed locale owner 与 AST source guard  |
+| THEME-01    | P2     | DONE | WP-12  | system/explicit/forced route 已归单一 theme lifecycle owner      |
 
 ## 6. 详细工作包
 
@@ -579,30 +579,28 @@
 
 包含：`I18N-01`、`THEME-01`。
 
-#### 当前代码事实
+#### 已实现合同
 
-- 当前 Vue 产品 `.vue` 文件中只有少数组件显式接入 i18n；聊天消息、Agent、channels、browser、artifacts、sidecar、多个 settings 页面仍有大量英文硬编码。WP-07 直接触及的 scheduled-task 表单、筛选、详情、run history 与反馈已进入当前 en-US/zh-CN 字典。
-- [`app/components/workspace/settings/AppearanceSettings.vue`](app/components/workspace/settings/AppearanceSettings.vue) 在 system 模式只读取一次 `matchMedia`，没有监听系统主题变化。
-- 词典 key 检查通过只能证明两个 locale key 集合一致，不能证明产品组件使用了词典。
-
-#### 必须实现
-
-1. 所有范围内产品界面文本进入统一 i18n；动态后端文本、代码、文件名和用户内容不得错误翻译。
-2. aria-label、title、empty/error/loading、toast、dialog 文本也必须翻译。
-3. system theme 监听 `prefers-color-scheme` change；切换到显式 light/dark 时解绑或忽略系统变化。
-4. SSR/hydration 不出现主题闪烁或 server/client 不一致。
-
-#### Vue 实现建议
-
-- 按功能域组织 key，但继续使用现有 i18n plugin 和 locale 类型检查。
-- 创建轻量 source guard，阻止新的核心模板直接加入英文产品文本；允许测试 fixture、代码、协议常量。
-- theme listener 封装 composable，并在 `onScopeDispose` 移除监听。
+- 全量 82 个 Vue SFC 由可执行 inventory 固定：80 个产品 SFC 进入扫描，仅精确排除 2 个
+  `app/pages/__m0` 测试 fixture。产品文案、aria/title/placeholder、empty/error/loading、toast
+  与 dialog 均从单一 typed locale owner 消费；backend/user/code/file/URL/protocol 动态值保持原样。
+- `app/plugins/i18n.ts` 独占 locale ref/computed、cookie 与 `document.lang`。`en-US`/`zh-CN`
+  各 978 个精确 leaf key，180 个 audited unused key；key/unused drift 与 Vue/TypeScript AST source
+  guard 共同阻止字典或产品消费回退，只允许精确品牌/技术/快捷键/内部 token。
+- `app/plugins/theme.ts` 创建唯一应用级 controller；它独占 storage、preference/resolved/forced、
+  唯一 `matchMedia` listener、根 class/color-scheme 与幂等 cleanup。system 实时跟随，显式主题
+  忽略 media，切回 system 立即同步，非法 storage 回退。
+- `theme/bootstrap.ts` 在 mount 前使用同一规则设置 class/color-scheme，不注册第二 listener。
+  与 React `ThemeProvider`/root forced behavior 一致，`/` 仅强制当前 dark，不覆写用户已保存的 light。
 
 #### 验收与测试
 
-- zh-CN/en-US 对 chat、agents、scheduled、settings、browser、artifacts 的关键页面 E2E。
-- i18n key/unused/source guard 全绿。
-- system theme change、显式主题不跟随、销毁解绑和 hydration 测试。
+- WP-12 unit/DOM 4 files / 14 tests；真实 Chromium 覆盖 locale 即时切换/刷新/非法 cookie、
+  动态内容不翻译、system light→dark→light、explicit 忽略、切回 system、早期 bootstrap、
+  非法 storage、`/` forced dark 与离开恢复。
+- M7 清单为 29 files / 165 tests；visual 为 8/8，新增 zh-CN dark settings baseline，并更新
+  这次文案改变对应的唯一 mobile baseline。i18n key/unused/source guard、migration、build 与
+  asset budget 同时全绿。
 
 ## 7. 推荐实施顺序
 
@@ -704,12 +702,13 @@ API 对齐：method/path/query/headers/body/response/error/cache
 
 在此追加，不删除历史记录：
 
-| 日期       | 工作包/ID                                                 | 证据                                                                                                                                                                                                                                                                                                                                                                                                                 | 备注                                                                                                                                                     |
-| ---------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-08-21 | 基线审计                                                  | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                                                                                                                                                                                                                                                                | 所有 ID 初始状态为 TODO                                                                                                                                  |
-| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01`           | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过                                                                                                                                                                                                                                    | 本机回环监听环境重跑通过；本地提交、未 push                                                                                                              |
-| 2026-08-21 | WP-02：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05` | `make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 130/130；`make e2e-m7-real-protocol` 1/1；`make migration-check` 通过；`make verify` 1166/1166 且 production build 通过；React `pnpm check` 与 `pnpm test` 1001/1001                                                                                                                                                                                    | 回环门禁在允许本机监听的环境重跑；未 commit、未 push                                                                                                     |
-| 2026-08-22 | WP-08：`CHANNEL-01`～`CHANNEL-03`                         | WP-08 unit/DOM 21/21；聚焦 Vitest 55/55；M7 channels 11/11、全量 144/144；real Gateway 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 159 files / 1358 tests 且 production build 通过                                                                                                                                 | 真实 IM/IdP/DNS/TLS/外层代理未验证；未 commit、未 push                                                                                                   |
-| 2026-08-22 | WP-09：`AGENT-01`～`AGENT-03`                             | WP-09 unit/DOM 8 files / 61 tests；backend focused 56/56；M7 agents 18/18、全量 150/150；real Gateway 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 165 files / 1394 tests 且 production build 通过                                                                                                  | 外部 LLM、生产 provider/凭据、真实 IdP/DNS/TLS/外层代理未验证；未 commit、未 push                                                                        |
-| 2026-08-23 | WP-10：`MEMORY-01`～`MEMORY-03`、`SETTINGS-01`            | WP-10 unit/DOM 5 files / 59 tests；backend focused 210/210；Ruff check/format 通过；M7 settings 6/6、全量 156/156；WP-10 real Gateway 5/5（DeerMem + Noop，400/404/409/422/500/501）；WP-09 real 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 13/13、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 170 files / 1454 tests 且 production build 通过       | Mem0/Honcho/OpenViking、外部 MCP/LLM、生产 IdP/凭据/DNS/TLS/外层代理未验证；未 commit、未 push                                                           |
-| 2026-08-23 | WP-11：`SHELL-01`～`SHELL-03`、`CHANGES-01`               | WP-11 unit/DOM + guard 9 files / 58 tests；M7 workspace shell 4/4、全量 160/160；M7 local 8/8、auth 13/13、real protocol 1/1、visual 7/7（baseline 无差异）；WP-11 real Gateway/Nuxt 1/1；WP-10 real 5/5；M4a 4/4、stream 6/6；`make migration-check` 通过；`make verify` 178 files / 1497 tests 且 production build 通过；asset budget、container smoke、backend 11313 passed / 72 skipped；`git diff --check` 通过 | real gate 保留生产 Auth/CSRF/owner/event-store/changes router；seed event 与恢复 503 为受控 fixture；生产 IdP/DNS/TLS/外层代理未验证；未 commit、未 push |
+| 日期       | 工作包/ID                                                 | 证据                                                                                                                                                                                                                                                                                                                                                                                                                 | 备注                                                                                                                                                               |
+| ---------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-08-21 | 基线审计                                                  | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                                                                                                                                                                                                                                                                | 所有 ID 初始状态为 TODO                                                                                                                                            |
+| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01`           | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过                                                                                                                                                                                                                                    | 本机回环监听环境重跑通过；本地提交、未 push                                                                                                                        |
+| 2026-08-21 | WP-02：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05` | `make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 130/130；`make e2e-m7-real-protocol` 1/1；`make migration-check` 通过；`make verify` 1166/1166 且 production build 通过；React `pnpm check` 与 `pnpm test` 1001/1001                                                                                                                                                                                    | 回环门禁在允许本机监听的环境重跑；未 commit、未 push                                                                                                               |
+| 2026-08-22 | WP-08：`CHANNEL-01`～`CHANNEL-03`                         | WP-08 unit/DOM 21/21；聚焦 Vitest 55/55；M7 channels 11/11、全量 144/144；real Gateway 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 159 files / 1358 tests 且 production build 通过                                                                                                                                 | 真实 IM/IdP/DNS/TLS/外层代理未验证；未 commit、未 push                                                                                                             |
+| 2026-08-22 | WP-09：`AGENT-01`～`AGENT-03`                             | WP-09 unit/DOM 8 files / 61 tests；backend focused 56/56；M7 agents 18/18、全量 150/150；real Gateway 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 165 files / 1394 tests 且 production build 通过                                                                                                  | 外部 LLM、生产 provider/凭据、真实 IdP/DNS/TLS/外层代理未验证；未 commit、未 push                                                                                  |
+| 2026-08-23 | WP-10：`MEMORY-01`～`MEMORY-03`、`SETTINGS-01`            | WP-10 unit/DOM 5 files / 59 tests；backend focused 210/210；Ruff check/format 通过；M7 settings 6/6、全量 156/156；WP-10 real Gateway 5/5（DeerMem + Noop，400/404/409/422/500/501）；WP-09 real 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 13/13、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 170 files / 1454 tests 且 production build 通过       | Mem0/Honcho/OpenViking、外部 MCP/LLM、生产 IdP/凭据/DNS/TLS/外层代理未验证；未 commit、未 push                                                                     |
+| 2026-08-23 | WP-11：`SHELL-01`～`SHELL-03`、`CHANGES-01`               | WP-11 unit/DOM + guard 9 files / 58 tests；M7 workspace shell 4/4、全量 160/160；M7 local 8/8、auth 13/13、real protocol 1/1、visual 7/7（baseline 无差异）；WP-11 real Gateway/Nuxt 1/1；WP-10 real 5/5；M4a 4/4、stream 6/6；`make migration-check` 通过；`make verify` 178 files / 1497 tests 且 production build 通过；asset budget、container smoke、backend 11313 passed / 72 skipped；`git diff --check` 通过 | real gate 保留生产 Auth/CSRF/owner/event-store/changes router；seed event 与恢复 503 为受控 fixture；生产 IdP/DNS/TLS/外层代理未验证；本地提交 `a1ef9a2f`、未 push |
+| 2026-08-23 | WP-12：`I18N-01`、`THEME-01`                              | WP-12 unit/DOM 4 files / 14 tests；i18n 各 978 keys / 180 unused 与 AST guard 通过；M7 i18n/theme 5/5、全量 165/165；M7 local 8/8、auth 13/13、real protocol 1/1、visual 8/8；WP-10 real 5/5、WP-11 real 1/1；M4a 4/4、stream 6/6；`make migration-check`、`make verify`、asset budget、container smoke、React check/test 1001/1001、dual-frontend production check 34/34 通过                                       | 两个视觉 baseline 因预期文案/新增 zh-CN 状态精确更新；生产 IdP/DNS/TLS/外层代理与目标环境切流未验证；未暂存、未提交、未 push                                       |

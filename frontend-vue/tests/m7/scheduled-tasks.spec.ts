@@ -569,9 +569,18 @@ test.describe("Vue scheduled tasks", () => {
       );
     }
     await page.getByTestId("scheduled-task-trigger").click();
-    await expect(page).toHaveURL(
-      /\/login\?next=%2Fworkspace%2Fscheduled-tasks$/,
-    );
+    await expect
+      .poll(() => {
+        const url = new URL(page.url());
+        return {
+          pathname: url.pathname,
+          query: [...url.searchParams.entries()],
+        };
+      })
+      .toEqual({
+        pathname: "/login",
+        query: [["next", "/workspace/scheduled-tasks"]],
+      });
     expect(attempt).toBe(failures.length);
   });
 });

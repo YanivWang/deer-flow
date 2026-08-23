@@ -10,11 +10,9 @@
                    `inject` 在 setup 期间一次性解析，拿到的是当时那个普通对象。
                    这里 `locale` 与 `t` 都是 ref/computed。
 
-                   cookie 读取放在 plugin 顶层同步执行，不是 `onMounted`：
-                   晚一帧就是多一帧默认语言（N4 记的首帧闪烁）。这压缩了窗口，
-                   但**没有消除它**——`ssr:false` 下服务端不参与 locale 派生，
-                   预渲染路由上仍然看得见。要真正消除得走服务端 middleware，
-                   属于 M7 的生产 readiness。
+                   cookie 读取放在 plugin 顶层同步执行，不是 `onMounted`；reactive
+                   head 与手动同步共同防止 Nuxt hydration 把当前 `document.lang`
+                   覆盖回默认值。CSR 产品路由在渲染产品文案前已完成 locale 派生。
 */
 
 import { computed, ref } from "vue";
@@ -30,8 +28,17 @@ export default defineNuxtPlugin(() => {
   );
   const t = computed(() => clientTranslations[locale.value]);
 
+  useHead(() => ({ htmlAttrs: { lang: locale.value } }));
+
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = locale.value;
+  }
+
   const setLocale = (next: Locale) => {
     locale.value = next;
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = next;
+    }
     setLocaleInCookie(next);
   };
 

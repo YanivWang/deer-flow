@@ -7,64 +7,79 @@
   【依赖关系】     i18n · color mode · settings store
   【边界与注意】   应用设置接线，不属于 L2。
 */
-import { onMounted, ref } from "vue";
 import type { Locale } from "@/core/i18n/locale";
+import { enUS } from "@/core/i18n/locales/en-US";
+import { zhCN } from "@/core/i18n/locales/zh-CN";
+import { computed } from "vue";
 
-const { $i18n } = useNuxtApp();
-const theme = ref<"system" | "light" | "dark">("system");
-
-function applyTheme(value: "system" | "light" | "dark") {
-  theme.value = value;
-  const dark =
-    value === "dark" ||
-    (value === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.classList.toggle("dark", dark);
-  localStorage.setItem("deerflow-theme", value);
-}
+const { $i18n, $theme } = useNuxtApp();
+const themeOptions = computed(() => [
+  {
+    value: "system" as const,
+    label: $i18n.t.value.settings.appearance.system,
+    description: $i18n.t.value.settings.appearance.systemDescription,
+  },
+  {
+    value: "light" as const,
+    label: $i18n.t.value.settings.appearance.light,
+    description: $i18n.t.value.settings.appearance.lightDescription,
+  },
+  {
+    value: "dark" as const,
+    label: $i18n.t.value.settings.appearance.dark,
+    description: $i18n.t.value.settings.appearance.darkDescription,
+  },
+]);
 
 function setLocale(event: Event) {
   $i18n.setLocale((event.target as HTMLSelectElement).value as Locale);
 }
-
-onMounted(() =>
-  applyTheme(
-    (localStorage.getItem("deerflow-theme") as typeof theme.value | null) ??
-      "system",
-  ),
-);
 </script>
 
 <template>
   <section class="space-y-8">
     <div>
-      <h2 class="text-lg font-semibold">Theme</h2>
+      <h2 class="text-lg font-semibold">
+        {{ $i18n.t.value.settings.appearance.themeTitle }}
+      </h2>
       <p class="text-muted-foreground text-sm">
-        Choose how DeerFlow appears on this device.
+        {{ $i18n.t.value.settings.appearance.themeDescription }}
       </p>
       <div class="mt-3 grid gap-3 sm:grid-cols-3">
         <button
-          v-for="option in ['system', 'light', 'dark'] as const"
-          :key="option"
+          v-for="option in themeOptions"
+          :key="option.value"
+          :data-theme-preference="option.value"
           type="button"
           class="rounded-lg border p-4 text-left capitalize"
           :class="
-            theme === option ? 'border-primary ring-primary/30 ring-2' : ''
+            $theme.preference.value === option.value
+              ? 'border-primary ring-primary/30 ring-2'
+              : ''
           "
-          @click="applyTheme(option)"
+          @click="$theme.setPreference(option.value)"
         >
-          {{ option }}
+          <span>{{ option.label }}</span>
+          <span class="text-muted-foreground mt-1 block text-xs normal-case">
+            {{ option.description }}
+          </span>
         </button>
       </div>
     </div>
     <div>
-      <h2 class="text-lg font-semibold">Language</h2>
+      <h2 class="text-lg font-semibold">
+        {{ $i18n.t.value.settings.appearance.languageTitle }}
+      </h2>
+      <p class="text-muted-foreground text-sm">
+        {{ $i18n.t.value.settings.appearance.languageDescription }}
+      </p>
       <select
         :value="$i18n.locale.value"
         class="border-input mt-3 rounded-md border px-3 py-2"
         @change="setLocale"
       >
-        <option value="en-US">English</option>
-        <option value="zh-CN">简体中文</option>
+        <option value="en-US">{{ enUS.locale.localName }}</option>
+        <option value="zh-CN">{{ zhCN.locale.localName }}</option>
       </select>
     </div>
   </section>

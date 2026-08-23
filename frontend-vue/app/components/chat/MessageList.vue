@@ -132,6 +132,7 @@ const emit = defineEmits<{
   selectionAdd: [payload: SelectionPayload];
   loadMoreHistory: [];
 }>();
+const { $i18n } = useNuxtApp();
 type SelectionPayload = {
   message: Message;
   selectedText: string;
@@ -410,14 +411,16 @@ async function toggleFeedback(index: number, rating: 1 | -1) {
   } catch (error) {
     setFeedback(runId, previous);
     actionError.value =
-      error instanceof Error ? error.message : "Failed to update feedback.";
+      error instanceof Error
+        ? error.message
+        : $i18n.t.value.messages.feedbackFailed;
   }
 }
 async function copyMessage(key: string, value: string | null) {
   if (!value) return;
   actionError.value = "";
   if (!(await writeTextToClipboard(value))) {
-    actionError.value = "Failed to copy message.";
+    actionError.value = $i18n.t.value.messages.copyFailed;
     return;
   }
   copiedMessage.value = key;
@@ -548,7 +551,7 @@ function historyErrorMessage() {
     ? error.message
     : typeof error === "string"
       ? error
-      : "Failed to load earlier messages.";
+      : $i18n.t.value.messages.loadEarlierFailed;
 }
 function requestHistoryLoad() {
   if (
@@ -606,7 +609,7 @@ const ARTIFACT_TOOL_NAMES = new Set([
   "present_files",
 ]);
 function toolLabel(name: string) {
-  if (name === "write_file") return "Write file";
+  if (name === "write_file") return $i18n.t.value.toolCalls.writeFile;
   return name
     .split("_")
     .filter(Boolean)
@@ -675,13 +678,15 @@ function workspaceChangesRun(index: number) {
   return runId;
 }
 function durationLabel(seconds: number) {
-  return `Completed in ${formatRunDuration(seconds, {
-    lessThanSecond: "less than a second",
-    hours: (value) => `${value}h`,
-    minutes: (value) => `${value}m`,
-    seconds: (value) => `${value}s`,
-    separator: " ",
-  })}`;
+  const copy = $i18n.t.value.runDuration;
+  const duration = formatRunDuration(seconds, {
+    lessThanSecond: copy.lessThanSecond,
+    hours: copy.hours,
+    minutes: copy.minutes,
+    seconds: copy.seconds,
+    separator: copy.separator,
+  });
+  return duration ? copy.completedIn(duration) : "";
 }
 
 watch(
@@ -864,7 +869,7 @@ onUnmounted(() => {
   <div
     :data-testid="testId"
     role="log"
-    aria-label="Conversation"
+    :aria-label="$i18n.t.value.messages.conversation"
     class="min-h-0 flex-1 transition-[padding]"
   >
     <div
@@ -877,7 +882,7 @@ onUnmounted(() => {
       @keydown="onScrollKey"
     >
       <div v-if="loading" class="py-8 text-center text-sm text-gray-500">
-        Loading conversation…
+        {{ $i18n.t.value.messages.loadingConversation }}
       </div>
       <div
         v-if="hasMoreHistory || historyLoadingMore || historyError"
@@ -890,7 +895,7 @@ onUnmounted(() => {
             class="ml-2 underline"
             @click="requestHistoryLoad"
           >
-            Try again
+            {{ $i18n.t.value.messages.tryAgain }}
           </button>
         </span>
         <button
@@ -901,14 +906,14 @@ onUnmounted(() => {
           class="text-muted-foreground hover:text-foreground rounded px-3 py-1 text-xs underline"
           @click="requestHistoryLoad"
         >
-          Load earlier messages
+          {{ $i18n.t.value.messages.loadEarlier }}
         </button>
         <span
           v-else-if="historyLoadingMore"
           role="status"
           class="text-muted-foreground text-xs"
         >
-          Loading earlier messages…
+          {{ $i18n.t.value.messages.loadingEarlier }}
         </span>
       </div>
       <ul
@@ -979,7 +984,7 @@ onUnmounted(() => {
               >
                 <button
                   type="button"
-                  aria-label="Copy message"
+                  :aria-label="$i18n.t.value.messages.actions.copyMessage"
                   @click="
                     copyMessage(
                       message.id ?? `human:${entry.index}`,
@@ -1002,7 +1007,7 @@ onUnmounted(() => {
                   "
                   type="button"
                   class="hover:underline"
-                  aria-label="Edit and rerun"
+                  :aria-label="$i18n.t.value.messages.actions.editAndRerun"
                   @click="
                     emit(
                       'edit',
@@ -1012,7 +1017,7 @@ onUnmounted(() => {
                     )
                   "
                 >
-                  Edit and rerun
+                  {{ $i18n.t.value.messages.actions.editAndRerun }}
                 </button>
               </div>
             </template>
@@ -1024,8 +1029,8 @@ onUnmounted(() => {
                 >
                   {{
                     streaming && entry.index === groups.length - 1
-                      ? "Thinking"
-                      : "Reasoning"
+                      ? $i18n.t.value.common.thinking
+                      : $i18n.t.value.runDuration.reasoning
                   }}
                 </summary>
                 <p class="text-muted-foreground mt-2 text-sm leading-relaxed">
@@ -1093,7 +1098,11 @@ onUnmounted(() => {
                 class="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-2 py-1.5"
               >
                 <CheckCircle2 :size="15" />
-                {{ message.name ?? "Tool result" }} result
+                {{
+                  $i18n.t.value.messages.toolResult(
+                    message.name ?? $i18n.t.value.messages.tool,
+                  )
+                }}
               </summary>
               <pre
                 class="bg-muted text-muted-foreground mt-1 ml-6 max-h-64 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
@@ -1121,7 +1130,7 @@ onUnmounted(() => {
           >
             <button
               type="button"
-              aria-label="Copy response"
+              :aria-label="$i18n.t.value.messages.actions.copyResponse"
               @click="
                 copyMessage(
                   `assistant:${entry.group.id ?? entry.index}`,
@@ -1149,7 +1158,7 @@ onUnmounted(() => {
             >
               <button
                 type="button"
-                aria-label="Helpful"
+                :aria-label="$i18n.t.value.messages.actions.helpful"
                 :disabled="feedbackMutation.isPending.value"
                 @click="toggleFeedback(entry.index, 1)"
               >
@@ -1164,7 +1173,7 @@ onUnmounted(() => {
               </button>
               <button
                 type="button"
-                aria-label="Not helpful"
+                :aria-label="$i18n.t.value.messages.actions.notHelpful"
                 :disabled="feedbackMutation.isPending.value"
                 @click="toggleFeedback(entry.index, -1)"
               >
@@ -1183,7 +1192,7 @@ onUnmounted(() => {
                 interactive !== false && branchable.has(entry.group.id ?? '')
               "
               type="button"
-              aria-label="Branch conversation"
+              :aria-label="$i18n.t.value.messages.actions.branch"
               @click="
                 emit('branch', entry.group.id ?? '', groupIds(entry.index))
               "
@@ -1197,7 +1206,7 @@ onUnmounted(() => {
                 lastAI(entry.index)?.id
               "
               type="button"
-              aria-label="Regenerate"
+              :aria-label="$i18n.t.value.messages.actions.regenerate"
               @click="
                 emit(
                   'regenerate',
@@ -1244,7 +1253,7 @@ onUnmounted(() => {
         class="hover:bg-accent rounded px-3 py-2 text-sm"
         @click="dispatchSelection('add')"
       >
-        Add to conversation
+        {{ $i18n.t.value.sidecar.addToConversation }}
       </button>
       <button
         v-if="selectionMode === 'main'"
@@ -1252,7 +1261,7 @@ onUnmounted(() => {
         class="hover:bg-accent rounded px-3 py-2 text-sm"
         @click="dispatchSelection('ask')"
       >
-        Ask in side chat
+        {{ $i18n.t.value.sidecar.askInSideChat }}
       </button>
     </div>
   </div>

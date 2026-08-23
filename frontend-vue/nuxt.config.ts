@@ -9,6 +9,7 @@
 
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
+import { createThemeBootstrapScript } from "./app/core/theme/bootstrap";
 import { csrRoutes, prerenderRoutes } from "./config/routes";
 
 type ClientChunk = { moduleIds: string[]; name: string };
@@ -24,6 +25,9 @@ function clientChunkFileName(chunk: ClientChunk) {
   }
   if (/(?:codemirror|@codemirror)/.test(ids)) {
     return "_nuxt/vendor-codemirror-[hash].js";
+  }
+  if (/\/app\/core\/i18n\//.test(ids)) {
+    return "_nuxt/vendor-i18n-[hash].js";
   }
   if (
     /node_modules\/.+\/(?:reka-ui|lucide-vue-next|class-variance-authority|clsx|tailwind-merge|splitpanes)/.test(
@@ -44,7 +48,17 @@ function clientChunkFileName(chunk: ClientChunk) {
 
 export default defineNuxtConfig({
   compatibilityDate: "2026-08-03",
-  modules: ["shadcn-nuxt", "@nuxtjs/color-mode", "@nuxt/eslint", "@pinia/nuxt"],
+  modules: ["shadcn-nuxt", "@nuxt/eslint", "@pinia/nuxt"],
+  app: {
+    head: {
+      script: [
+        {
+          key: "deerflow-theme-bootstrap",
+          innerHTML: createThemeBootstrapScript(),
+        },
+      ],
+    },
+  },
   css: ["~/assets/css/main.css", "splitpanes/dist/splitpanes.css"],
   vite: { plugins: [tailwindcss()] },
   hooks: {
@@ -64,7 +78,6 @@ export default defineNuxtConfig({
     },
   },
   components: { dirs: [] },
-  colorMode: { classSuffix: "" },
   shadcn: { prefix: "", componentDir: "./app/components/ui" },
   devServer: { port: 3100 },
   routeRules: {

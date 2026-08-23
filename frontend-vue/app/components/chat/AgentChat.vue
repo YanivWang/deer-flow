@@ -185,6 +185,7 @@ const editState = ref<{
   messageIds: string[];
 } | null>(null);
 let finishAgentCreationRun: (messages: readonly Message[]) => void = () => {};
+let lastStartedThreadId: string | null = null;
 
 const stream = useThreadStream({
   threadId: streamThreadId,
@@ -206,7 +207,12 @@ const stream = useThreadStream({
     error: (message) => warnings.value.push(message),
   },
   onStart(startedThreadId) {
-    threads.upsertCreated(startedThreadId, props.agentName);
+    lastStartedThreadId = startedThreadId;
+    threads.upsertCreated(
+      startedThreadId,
+      $i18n.t.value.pages.newChat,
+      props.agentName,
+    );
     if (routeThreadId.value === null && !props.bootstrap) {
       const path = props.agentName
         ? `/workspace/agents/${encodeURIComponent(props.agentName)}/chats/${startedThreadId}`
@@ -216,8 +222,9 @@ const stream = useThreadStream({
   },
   onFinish(state, completedMessages) {
     finishAgentCreationRun(completedMessages);
-    const id = routeThreadId.value;
+    const id = routeThreadId.value ?? lastStartedThreadId;
     const title = Reflect.get(state, "title");
+    const stateTitle = typeof title === "string" && title.trim() ? title : null;
     if (id && typeof title === "string" && title.trim()) {
       const existing = threads.threads.find((item) => item.thread_id === id);
       if (existing) {
@@ -245,14 +252,29 @@ const stream = useThreadStream({
       const lastAssistant = [...stateMessages, ...visibleMessages.value]
         .reverse()
         .find((message) => message.type === "ai");
-      if (!lastAssistant && remainingAttempts > 0) {
+      const listedTitle = id
+        ? threads.threads.find((thread) => thread.thread_id === id)?.values
+            .title
+        : null;
+      const refreshedTitle =
+        typeof listedTitle === "string" &&
+        listedTitle.trim() &&
+        listedTitle !== $i18n.t.value.pages.newChat
+          ? listedTitle
+          : null;
+      const notificationTitle =
+        stateTitle ??
+        refreshedTitle ??
+        $i18n.t.value.conversation.newChatNotificationTitle;
+      const titleReady = stateTitle !== null || refreshedTitle !== null;
+      if ((!lastAssistant || !titleReady) && remainingAttempts > 0) {
         completionNotificationTimer = setTimeout(
           () => notifyWhenFinalMessageIsVisible(remainingAttempts - 1),
           25,
         );
         return;
       }
-      notifications.showNotification(currentTitle.value, {
+      notifications.showNotification(notificationTitle, {
         body: lastAssistant ? messageText(lastAssistant) : undefined,
       });
     };
@@ -615,10 +637,10 @@ const promptHistory = computed(() =>
 );
 const currentTitle = computed(() => {
   if (isDemo.value && demoTitle.value) return demoTitle.value;
-  if (!routeThreadId.value) return "New Chat";
+  if (!routeThreadId.value) return $i18n.t.value.pages.newChat;
   return (
     threads.threads.find((thread) => thread.thread_id === routeThreadId.value)
-      ?.values.title ?? "New Chat"
+      ?.values.title ?? $i18n.t.value.pages.newChat
   );
 });
 const isWelcomeMode = computed(
@@ -636,9 +658,9 @@ function updateSidebarState(event: Event) {
 async function shareConversation() {
   try {
     await globalThis.navigator.clipboard.writeText(globalThis.location.href);
-    warnings.value.push("Conversation link copied.");
+    warnings.value.push($i18n.t.value.clipboard.linkCopied);
   } catch {
-    warnings.value.push("Unable to copy the conversation link.");
+    warnings.value.push($i18n.t.value.clipboard.failedToCopyToClipboard);
   }
 }
 
@@ -676,7 +698,7 @@ async function refreshPostRun(targetThreadId: string | null) {
     const refreshed = await getAPIClient().threads.get(targetThreadId);
     if (
       controller.signal.aborted ||
-      routeThreadId.value !== targetThreadId ||
+      (routeThreadId.value ?? lastStartedThreadId) !== targetThreadId ||
       !suggestionGeneration.isCurrent(token, scope)
     ) {
       return;
@@ -687,7 +709,7 @@ async function refreshPostRun(targetThreadId: string | null) {
   }
   if (
     controller.signal.aborted ||
-    routeThreadId.value !== targetThreadId ||
+    (routeThreadId.value ?? lastStartedThreadId) !== targetThreadId ||
     !suggestionGeneration.isCurrent(token, scope)
   ) {
     return;
@@ -750,7 +772,8 @@ watch([routeThreadId, () => props.agentName], () => {
 });
 
 async function ensureThread() {
-  if (isDemo.value) throw new Error("Demo conversations are read-only.");
+  if (isDemo.value)
+    throw new Error($i18n.t.value.common.notAvailableInDemoMode);
   if (routeThreadId.value) return routeThreadId.value;
   if (preparedThreadId.value) return preparedThreadId.value;
   const created = await getAPIClient().threads.create({
@@ -812,7 +835,9 @@ async function send(
     if (options?.reportFailure !== false) {
       failedSend.value = { text, files };
       warnings.value.push(
-        error instanceof Error ? error.message : "Request failed.",
+        error instanceof Error
+          ? error.message
+          : $i18n.t.value.common.requestFailed,
       );
     }
     if (options) throw error;
@@ -878,7 +903,7 @@ async function branch(messageId: string, messageIds: string[]) {
     metadata: props.agentName ? { agent_name: props.agentName } : {},
     status: "idle",
     values: {
-      title: original?.values.title ?? "Untitled",
+      title: original?.values.title ?? $i18n.t.value.pages.untitled,
       messages: visibleMessages.value,
     },
     interrupts: {},
@@ -1039,10 +1064,10 @@ onUnmounted(() => {
     :panel-size="artifactPanel.panelSize.value"
     :panel-label="
       activePanel === 'artifacts'
-        ? 'Artifacts'
+        ? $i18n.t.value.common.artifacts
         : activePanel === 'sidecar'
-          ? 'Side chat'
-          : 'Browser'
+          ? $i18n.t.value.sidecar.title
+          : $i18n.t.value.common.browser
     "
     @update:panel-size="artifactPanel.panelSize.value = $event"
     @collapse="
@@ -1067,7 +1092,7 @@ onUnmounted(() => {
             v-if="!isDemo"
             type="button"
             data-sidebar="trigger"
-            aria-label="Toggle sidebar"
+            :aria-label="$i18n.t.value.shortcuts.toggleSidebar"
             aria-controls="workspace-sidebar"
             :aria-expanded="mobileSidebarOpen"
             class="hover:bg-accent flex size-8 items-center justify-center rounded-md md:hidden"
@@ -1129,7 +1154,7 @@ onUnmounted(() => {
           <NuxtLink
             v-if="routeThreadId && !isDemo"
             :to="`/workspace/scheduled-tasks?thread_id=${encodeURIComponent(routeThreadId)}`"
-            aria-label="Scheduled tasks"
+            :aria-label="$i18n.t.value.sidebar.scheduledTasks"
             class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
           >
             <CalendarClock :size="16" />
@@ -1139,7 +1164,9 @@ onUnmounted(() => {
             type="button"
             data-testid="sidecar-header-trigger"
             :aria-label="
-              sidecar.open.value ? 'Close side chat' : 'Open side chat'
+              sidecar.open.value
+                ? $i18n.t.value.sidecar.close
+                : $i18n.t.value.sidecar.open
             "
             class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
             @click="toggleSidecar"
@@ -1149,7 +1176,7 @@ onUnmounted(() => {
           <button
             v-if="!isWelcomeMode && !isDemo"
             type="button"
-            aria-label="Share conversation"
+            :aria-label="$i18n.t.value.common.share"
             class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
             @click="shareConversation"
           >
@@ -1205,14 +1232,14 @@ onUnmounted(() => {
               class="rounded border px-3 py-1"
               @click="editState = null"
             >
-              Cancel
+              {{ $i18n.t.value.common.cancel }}
             </button>
             <button
               type="button"
               class="bg-primary text-primary-foreground rounded px-3 py-1"
               @click="updateAndRerun"
             >
-              Update and rerun
+              {{ $i18n.t.value.common.updateAndRerun }}
             </button>
           </div>
         </div>
@@ -1236,7 +1263,7 @@ onUnmounted(() => {
             class="ml-2 underline"
             @click="retrySend"
           >
-            Try again
+            {{ $i18n.t.value.navigation.tryAgain }}
           </button>
         </p>
         <div
@@ -1343,23 +1370,22 @@ onUnmounted(() => {
                 "
               >
                 <button
-                  v-for="suggestion in [
-                    'Explore a topic',
-                    'Create a presentation',
-                    'Analyze data',
-                  ]"
-                  :key="suggestion"
+                  v-for="suggestion in $i18n.t.value.inputBox.suggestions.slice(
+                    0,
+                    3,
+                  )"
+                  :key="suggestion.suggestion"
                   type="button"
                   class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-3 py-1.5 text-xs"
-                  @click="composer?.offerFollowup(suggestion)"
+                  @click="composer?.offerFollowup(suggestion.prompt)"
                 >
-                  {{ suggestion }}
+                  {{ suggestion.suggestion }}
                 </button>
               </template>
               <button
                 v-if="followups.length"
                 type="button"
-                aria-label="Close"
+                :aria-label="$i18n.t.value.common.close"
                 class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-2.5 py-1.5 text-xs"
                 @click="followups = []"
               >

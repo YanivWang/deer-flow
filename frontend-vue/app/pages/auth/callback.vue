@@ -17,6 +17,7 @@ import { authSessionQueryOptions } from "@/core/auth/session-query";
 definePageMeta({ layout: "auth" });
 
 const route = useRoute();
+const { $i18n } = useNuxtApp();
 const queryClient = useQueryClient();
 const status = ref<"loading" | "success" | "unauthenticated" | "unavailable">(
   "loading",
@@ -51,7 +52,7 @@ onScopeDispose(() => {
           class="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent"
         />
         <p data-auth-callback-status="loading" class="text-muted-foreground">
-          Signing you in...
+          {{ $i18n.t.value.login.callbackSigningIn }}
         </p>
       </template>
       <p
@@ -59,21 +60,21 @@ onScopeDispose(() => {
         data-auth-callback-status="success"
         class="text-muted-foreground"
       >
-        Redirecting...
+        {{ $i18n.t.value.login.callbackRedirecting }}
       </p>
       <p
         v-else-if="status === 'unauthenticated'"
         data-auth-callback-status="unauthenticated"
         class="text-muted-foreground"
       >
-        Authentication failed. Redirecting to login...
+        {{ $i18n.t.value.login.callbackFailedRedirect }}
       </p>
       <p
         v-else
         data-auth-callback-status="unavailable"
         class="text-muted-foreground"
       >
-        Gateway is temporarily unavailable. Redirecting to recovery...
+        {{ $i18n.t.value.login.callbackUnavailableRedirect }}
       </p>
     </div>
   </div>

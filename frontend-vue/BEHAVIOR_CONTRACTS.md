@@ -9,16 +9,9 @@
 框架语义约束，N 是需要跨浏览器或跨层验证的模块。修改相关代码时必须同时更新本合同、
 差异清单和对应测试，不能用单次全绿替代逐项判断。
 
-当前已确认仍违反或未完整覆盖的合同包括：
-
-| 合同                        | 对应差异 ID                |
-| --------------------------- | -------------------------- |
-| E6、E12 的 compact 后续边界 | `THREAD-01`                |
-| G1～G6                      | `STREAM-01`、`STREAM-02`   |
-| K3、K5 的错误/状态消费      | `THREAD-02`、`SETTINGS-01` |
-| N4 的其他产品接入           | `I18N-01`                  |
-
-该映射不是差异清单的替代品；新的未满足合同先加入 `PARITY_GAPS.md`，再补合同和测试。
+当前 `PARITY_GAPS.md` 记录的本地源码差异均已关闭；这不代表生产 IdP、DNS/TLS、
+外层代理、外部 provider 或目标部署环境已经验收。新的未满足合同先加入
+`PARITY_GAPS.md`，再补合同和测试。
 
 ---
 
@@ -336,12 +329,13 @@ raw trace、代理 smoke 和 replay Gateway 浏览器测试覆盖，不能只依
 
 ## N. 上传 / 通知 / 语音 / i18n
 
-| #   | 模块                                                 | 持续合同                                                                                                 |
-| --- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| N1  | `app/core/uploads/`、`app/composables/useUploads.ts` | 上传限制来自 Gateway；附件属于提交前状态，切换 thread 或提交后不得错误复用；前端校验与后端限制要同步验证 |
-| N2  | `app/composables/useNotifications.ts`                | 只在浏览器支持且用户授权时发通知；页面可见性与 run 生命周期变化不得产生重复通知                          |
-| N3  | `app/core/voice-input/speech-recognition.ts`         | 不支持 SpeechRecognition 或权限失败时必须可恢复；语音状态不持久化                                        |
-| N4  | `app/core/i18n/`、`app/plugins/i18n.ts`              | locale cookie 名与期限必须保持兼容；切换语言、首帧解析和字典完整性由 i18n gate 验证                      |
+| #   | 模块                                                 | 持续合同                                                                                                                                                                                                                                                                                                 |
+| --- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| N1  | `app/core/uploads/`、`app/composables/useUploads.ts` | 上传限制来自 Gateway；附件属于提交前状态，切换 thread 或提交后不得错误复用；前端校验与后端限制要同步验证                                                                                                                                                                                                 |
+| N2  | `app/composables/useNotifications.ts`                | 只在浏览器支持且用户授权时发通知；页面可见性与 run 生命周期变化不得产生重复通知                                                                                                                                                                                                                          |
+| N3  | `app/core/voice-input/speech-recognition.ts`         | 不支持 SpeechRecognition 或权限失败时必须可恢复；语音状态不持久化                                                                                                                                                                                                                                        |
+| N4  | `app/core/i18n/`、`app/plugins/i18n.ts`              | plugin 的 ref/computed 是唯一 locale owner；cookie、`document.lang`、已打开 UI 与后续 toast 同步更新。双 locale 精确 key、audited unused 与全部产品 SFC AST guard 必须同时通过；backend/user/code/file/URL/protocol 动态值不得翻译                                                                       |
+| N5  | `app/core/theme/`、`app/plugins/theme.ts`            | 应用级 controller 是唯一 theme lifecycle owner；head bootstrap 只做 mount 前 class/color-scheme。system 实时跟随 media，显式 light/dark 忽略变化，切回 system 立即同步；storage 非法值回退，scope dispose 幂等解绑唯一 listener；`/` 只强制当前 resolved dark，不改写用户 preference/storage，离开后恢复 |
 
 ---
 

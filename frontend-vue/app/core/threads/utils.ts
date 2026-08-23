@@ -5,7 +5,7 @@
   【主要导出】     THREAD_PINNED_METADATA_KEY / ChannelThreadSource / pathOfThread / textOfMessage / titleOfThread / isThreadPinned 等 8 个
   【依赖关系】     见下方 import；改写清单由 scripts/land-retyped.mjs 声明
   【边界与注意】   RETYPED：内容**不是**上游逐字节等同，因此不参与 COPIED hash 护城河。
-                   相对上游的改动只有这些：SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message）
+                   相对上游的改动只有这些：SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message） WP-12 allows Vue UI callers to inject the active locale's untitled label while non-UI export consumers retain the React default.
                    勿手改——`make land-retyped-check` 会红；确需手改就登记进
                    land-retyped.mjs 的 HAND_MAINTAINED 并写明理由。
 */
@@ -74,8 +74,8 @@ export function textOfMessage(message: Message) {
   return null;
 }
 
-export function titleOfThread(thread: AgentThread) {
-  return thread.values?.title ?? "Untitled";
+export function titleOfThread(thread: AgentThread, fallback = "Untitled") {
+  return thread.values?.title ?? fallback;
 }
 
 export function isThreadPinned(thread: Pick<AgentThread, "metadata">) {

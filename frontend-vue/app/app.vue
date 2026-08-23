@@ -7,6 +7,22 @@
   【边界与注意】   根节点不包含业务状态。
 -->
 
+<script setup lang="ts">
+import { onScopeDispose, watch } from "vue";
+
+const { $theme } = useNuxtApp();
+const route = useRoute();
+const stopRouteTheme = watch(
+  () => route.path,
+  (path) => $theme.setForcedTheme(path === "/" ? "dark" : null),
+  { immediate: true },
+);
+onScopeDispose(() => {
+  stopRouteTheme();
+  $theme.dispose();
+});
+</script>
+
 <template>
   <NuxtLayout>
     <NuxtPage />

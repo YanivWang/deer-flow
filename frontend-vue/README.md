@@ -6,22 +6,22 @@ English | [简体中文](README_zh.md)
 application. It uses the same Gateway surface as `../frontend` and has
 implementations for the chat workspace, artifacts, sidecar, browser control,
 agents, channels, integrations, scheduled tasks, settings, goal/mode,
-authentication, Showcase, mobile layouts and the production container. A
-source-level audit found open request/response-consumption and product-behavior
-gaps; their executable checklist is maintained in
+authentication, Showcase, mobile layouts and the production container. The
+source-backed request/response-consumption and product-behavior packages are
+locally closed; their executable checklist and evidence are maintained in
 [PARITY_GAPS.md](PARITY_GAPS.md).
 
 React remains the default production hostname; Vue is selected only by
-`DEER_FLOW_VUE_HOSTNAME`. This is a deployment topology, not proof that Vue is
-ready to replace React. P0/P1 items in [PARITY_GAPS.md](PARITY_GAPS.md) block a
-default cutover. Public DNS, TLS, outer-proxy trust and real IdP callback
-registration must still be configured in the target environment.
+`DEER_FLOW_VUE_HOSTNAME`. Local parity evidence does not authorize a default
+cutover. Public DNS, TLS, outer-proxy trust, real IdP callback registration and
+target-environment acceptance must still be completed before changing production
+traffic.
 
 ## Documentation
 
-- [PARITY_GAPS.md](PARITY_GAPS.md): source-backed React/Vue replacement gaps,
-  execution order, acceptance criteria and completion evidence. Existing green
-  gates must not be treated as proof that these gaps are closed.
+- [PARITY_GAPS.md](PARITY_GAPS.md): source-backed React/Vue replacement audit,
+  execution order, acceptance criteria, completion evidence and remaining
+  environment risks. A green local gate is not production-cutover evidence.
 - [ARCHITECTURE.md](ARCHITECTURE.md): current layers, runtime flow, state
   ownership, proxy and authentication boundaries.
 - [BEHAVIOR_CONTRACTS.md](BEHAVIOR_CONTRACTS.md): product, streaming, ordering,
@@ -31,6 +31,8 @@ registration must still be configured in the target environment.
   OIDC, validation and rollback.
 - [app/core/PROVENANCE.md](app/core/PROVENANCE.md): maintained source-origin
   ledger for files under `app/core/`.
+- [I18N_INVENTORY.md](I18N_INVENTORY.md): live product-SFC copy inventory,
+  translation/dynamic-content classification and source-guard boundaries.
 
 ## Run with Docker
 
@@ -80,7 +82,8 @@ make e2e-m5             # artifacts, sidecar and panel lifecycle contracts
 make e2e-m5-real-backend # real Gateway artifact Range/PUT/conflict contracts
 make e2e-m6             # includes Vue-owned browser DOM/wire contracts
 make e2e-m6-real-backend # real local Gateway + Chromium browser runtime
-make e2e-m7             # full Vue browser contract: 28 files / 160 tests
+make e2e-m7             # full Vue browser contract: 29 files / 165 tests
+make i18n-source-check  # AST guard for every product Vue SFC
 make e2e-wp07-real-backend # real Gateway scheduled-task HTTP/UI lifecycle
 make e2e-wp08-real-backend # real Auth/Gateway/SQLite channel lifecycle
 make e2e-wp09-real-backend # real Auth/Gateway/setup_agent/Agent persistence

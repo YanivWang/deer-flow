@@ -16,7 +16,7 @@ const toast = useWorkspaceToast();
   <ol
     data-testid="workspace-toaster"
     class="pointer-events-none fixed inset-x-0 top-3 z-[120] mx-auto flex w-[min(92vw,420px)] flex-col gap-2"
-    aria-label="Notifications"
+    :aria-label="$i18n.t.value.settings.notification.title"
   >
     <li
       v-for="item in toast.toasts.value"

@@ -192,8 +192,12 @@ function canOpen(file: WorkspaceFileChange) {
               {{ $i18n.t.value.workspaceChanges.title }}
             </h2>
             <p class="text-muted-foreground text-sm">
-              {{ count }} files · +{{ summary.summary.additions }} -{{
-                summary.summary.deletions
+              {{
+                $i18n.t.value.workspaceChanges.badge(
+                  count,
+                  summary.summary.additions,
+                  summary.summary.deletions,
+                )
               }}
             </p>
           </div>

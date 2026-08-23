@@ -201,10 +201,10 @@ describe("M5 artifact inventory", () => {
 });
 
 describe("Vue M7 gate ownership", () => {
-  it("keeps the exact WP-11 28-file / 160-test gate and owns framework-specific specs", () => {
-    expect(m7Inventory.expectedFileCount).toBe(28);
-    expect(m7Inventory.expectedTestCount).toBe(160);
-    expect(m7Inventory.specFiles).toHaveLength(28);
+  it("keeps the exact WP-12 29-file / 165-test gate and owns framework-specific specs", () => {
+    expect(m7Inventory.expectedFileCount).toBe(29);
+    expect(m7Inventory.expectedTestCount).toBe(165);
+    expect(m7Inventory.specFiles).toHaveLength(29);
     expect(m7Inventory.specFiles).toContain(
       "frontend-vue/tests/m5/artifact-batched-stream.spec.ts",
     );
@@ -224,6 +224,7 @@ describe("Vue M7 gate ownership", () => {
       "agent-chat.spec.ts",
       "channels.spec.ts",
       "integrations.spec.ts",
+      "i18n-theme.spec.ts",
       "scheduled-tasks.spec.ts",
       "settings.spec.ts",
       "thread-history.spec.ts",
