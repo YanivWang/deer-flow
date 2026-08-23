@@ -3,7 +3,7 @@
 # Run 'make setup' to reconfigure, or edit this file for advanced options.
 # Full reference: config.example.yaml
 
-config_version: 31
+config_version: 33
 log_level: info
 logging:
   enhance:
@@ -124,6 +124,7 @@ sandbox:
     MINIMAX_API_KEY: $MINIMAX_API_KEY
     IMAGE_GENERATION_PROVIDER: minimax
     MINIMAX_API_HOST: https://api.minimaxi.com
+  allow_host_bash: false
 skills:
   container_path: /mnt/skills
 skill_scan:
@@ -234,3 +235,8 @@ channel_connections:
     enabled: true
   wecom:
     enabled: true
+mcp_tasks:
+  enabled: false
+  poll_interval_seconds: 5
+  lease_seconds: 120
+  max_concurrent_polls: 8

@@ -10,9 +10,11 @@
 <!-- M7 auth setup surface; mirrors the Gateway's initialize/change-password contracts. -->
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
+import { useQueryClient } from "@tanstack/vue-query";
 
 import FlickeringGrid from "@/components/ui/effects/FlickeringGrid.vue";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
+import { clearAuthenticatedClientState } from "@/core/auth/client-state";
 import { loadRememberLoginPreference } from "@/core/auth/remember-login";
 import {
   fetchSetupStatus,
@@ -22,6 +24,7 @@ import { parseAuthError, userSchema, type User } from "@/core/auth/types";
 
 definePageMeta({ layout: "auth" });
 const { $i18n } = useNuxtApp();
+const queryClient = useQueryClient();
 type Mode = "loading" | "init_admin" | "change_password" | "unavailable";
 
 const mode = ref<Mode>("loading");
@@ -90,6 +93,7 @@ async function submitInitialize() {
       error.value = parseAuthError(data).message;
       return;
     }
+    clearAuthenticatedClientState(queryClient);
     await navigateTo("/workspace");
   } catch {
     error.value = $i18n.t.value.login.networkError;
@@ -124,6 +128,7 @@ async function submitPasswordChange() {
       error.value = parseAuthError(await response.json()).message;
       return;
     }
+    clearAuthenticatedClientState(queryClient);
     await navigateTo("/workspace");
   } catch {
     error.value = $i18n.t.value.login.networkError;

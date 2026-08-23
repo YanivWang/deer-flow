@@ -9,8 +9,10 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { useQueryClient } from "@tanstack/vue-query";
 
 import FlickeringGrid from "@/components/ui/effects/FlickeringGrid.vue";
+import { clearAuthenticatedClientState } from "@/core/auth/client-state";
 import { resolveAuthNextPath } from "@/core/auth/next-path";
 import {
   loadRememberLoginPreference,
@@ -29,6 +31,7 @@ type Provider = { id: string; display_name: string; type: string };
 
 const route = useRoute();
 const { $i18n } = useNuxtApp();
+const queryClient = useQueryClient();
 const email = ref("");
 const password = ref("");
 const rememberMe = ref(true);
@@ -114,6 +117,7 @@ async function submit() {
       showSsoHint.value = isLogin.value && providers.value.length > 0;
       return;
     }
+    clearAuthenticatedClientState(queryClient);
     saveRememberLoginPreference({
       email: email.value,
       rememberMe: rememberMe.value,

@@ -24,6 +24,7 @@
 | ------------------------------------- | --------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `auth/decision.ts`                    | `ADDED`   | —                                                              | M0 路由跳转纯函数。上游 `auth/auth-disabled-user.ts` 读 `process.env`，此处改为接收注入值，不是它的复制品。                                                                            |
 | `auth/callback.ts`                    | `ADAPTED` | `app/(auth)/auth/callback/page.tsx`                            | WP-01：把 React callback 的 session 判定与 safe-next 跳转收敛成 Vue 可测纯函数，明确区分成功、401 与 Gateway 不可用。                                                                  |
+| `auth/client-state.ts`                | `ADAPTED` | `core/auth/AuthProvider.tsx`                                   | 认证主体切换的唯一浏览器状态清理边界；整树清空不含 user id 的 Query 缓存与 composer 草稿，防止换账号后短暂显示上一用户数据。                                                           |
 | `auth/session.ts`                     | `ADDED`   | —                                                              | M7 Gateway session 探针；明确区分 401 未登录、合法用户与 Gateway/响应不可用，供 Nuxt middleware 使用。                                                                                 |
 | `auth/session-query.ts`               | `ADAPTED` | `core/auth/AuthProvider.tsx`                                   | WP-01：以 TanStack Vue Query 统一 middleware、callback 和 workspace 的 session server state；不复制 React context。                                                                    |
 | `browser/connection.ts`               | `ADAPTED` | `components/workspace/browser-view/use-browser-stream.ts`      | WP-05：把 React effect 内连接逻辑收敛为可测的唯一 WS owner，补齐 pending navigate、有界退避、generation 清理和 REST fallback 交接。                                                    |
@@ -69,6 +70,7 @@
 | `theme/controller.ts`                 | `ADAPTED` | `components/theme-provider.tsx`                                | WP-12：Nuxt 应用级唯一 theme owner；校验三态 storage，system 实时同步 media，显式主题稳定，并提供幂等 listener cleanup。                                                               |
 | `api/client.ts`                       | `ADDED`   | —                                                              | M2 自写的 7 个 REST 方法，替代 SDK `Client`（02 §249）。上游没有对应文件——那部分职责在 SDK 里。                                                                                        |
 | `api/errors.ts`                       | `ADAPTED` | `api/errors.ts`                                                | WP-02：统一全部 Gateway REST 错误解析，兼容旧导出同时保留 HTTP status、结构化 body 与原始正文。                                                                                        |
+| `api/stream-mode.ts`                  | `ADAPTED` | `api/stream-mode.ts`                                           | 本地 Docker 真实模型验收：保留共享 stream-mode 白名单校验，删除对 SDK run option 的静默剥离；Vue wire 生产者显式跟随 React/backend 的 non-resumable + continue 语义。                  |
 | `api/types.gen.ts`                    | `ADDED`   | —                                                              | **生成物，勿手改。** `make gen-api-types` 从 `baseline/openapi.snapshot.json` 生成（02 §340 / 04 §267）。上游对应物是 SDK 借来的 REST 信封类型。                                       |
 | `api/api-client.ts`                   | `ADAPTED` | `api/api-client.ts`                                            | M2 REWRITE。上游 471 行里大部分是给 SDK 打补丁，没有 SDK 就没有补丁的对象；有意不搬的三样写在文件头。                                                                                  |
 | `agent-deerflow/endpoints.ts`         | `ADDED`   | —                                                              | L3：run 相关 URL 与 `Content-Location` 解析（05 L12）。上游散在 SDK 内部。                                                                                                             |
@@ -132,7 +134,6 @@
 | `api/feedback.ts` | `COPIED` | `api/feedback.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `api/fetcher.ts` | `COPIED` | `api/fetcher.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `api/index.ts` | `COPIED` | `api/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
-| `api/stream-mode.ts` | `COPIED` | `api/stream-mode.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `artifacts/api.ts` | `COPIED` | `artifacts/api.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `artifacts/editing.ts` | `COPIED` | `artifacts/editing.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |
 | `artifacts/index.ts` | `COPIED` | `artifacts/index.ts` | 所有 import 在 frontend-vue 中同形可解析，零改动复制。 |

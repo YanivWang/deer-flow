@@ -19,16 +19,16 @@
 
 > ⚠️ 本组原本由 LangGraph SDK 的 `useStream` 保证。改为**自研 SSE** 后，这些语义的实现方变成了自己——约束一条不减，另见 L 组的补强项。
 
-| #   | 约束                                                                                                                       | 为什么                                                                                                                                                                                |
-| --- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A1  | 同宏任务内的流事件要合并成一次通知，**不要用固定延时防抖**                                                                 | 这是 SDK `throttle: true`（boolean 档）的语义。数字档是尾部防抖，chunk 持续到达时会一直推迟，饿死 UI 更新                                                                             |
-| A2  | 所有生产 run 创建入口必须请求 `values` `messages-tuple` `updates` `custom`；协议白名单还允许 `debug` `tasks` `checkpoints` | 字段缺失时 Gateway 会默认成 `values`-only：连接仍是 SSE，但回答失去文本分片，只能按完整状态成段刷新。含不支持模式时必须**在 HTTP 之前抛错**；`messages` 与 `events` 不被支持          |
-| A3  | `streamResumable` **不得出现在请求里**                                                                                     | Gateway 不接受该选项。它原本是 SDK 侧的重连记账字段、由 `sanitizeRunStreamOptions` 剥离；自研 transport 后不再产生该字段，但剥离逻辑保留作为防御。重放一律走 SSE `Last-Event-ID` 游标 |
-| A4  | SSE `gap` 帧要包住**初始流和 join 流两者**                                                                                 | 上游 SDK 会忽略未知事件名；包装器必须保持惰性 async iterable（SDK 用 `for await` 消费）                                                                                               |
-| A5  | gap 恢复最多 5 次 rejoin（全 gap 路径共 6 次流调用）                                                                       | —                                                                                                                                                                                     |
-| A6  | gap **不得当作正常流结束**，也**不得取消仍在运行的后端 run**                                                               | 会丢失正在进行的任务                                                                                                                                                                  |
-| A7  | gap 发生时要清空乐观 / 瞬态 / subtask 状态、失效持久化历史缓存、显示本地化恢复警告                                         | —                                                                                                                                                                                     |
-| A8  | Stop 后立即失效 4 类缓存（当前 thread、thread history、token usage、侧栏/搜索），并**再安排一次延迟 refetch**              | SDK 的 stop 可能在后端标题定稿提交前就以 abort + fire-and-forget cancel 结束                                                                                                          |
+| #   | 约束                                                                                                                       | 为什么                                                                                                                                                                       |
+| --- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1  | 同宏任务内的流事件要合并成一次通知，**不要用固定延时防抖**                                                                 | 这是 SDK `throttle: true`（boolean 档）的语义。数字档是尾部防抖，chunk 持续到达时会一直推迟，饿死 UI 更新                                                                    |
+| A2  | 所有生产 run 创建入口必须请求 `values` `messages-tuple` `updates` `custom`；协议白名单还允许 `debug` `tasks` `checkpoints` | 字段缺失时 Gateway 会默认成 `values`-only：连接仍是 SSE，但回答失去文本分片，只能按完整状态成段刷新。含不支持模式时必须**在 HTTP 之前抛错**；`messages` 与 `events` 不被支持 |
+| A3  | Vue run transport 原样发送已验证的 wire payload，不做字段剥离或兼容改写                                                    | Vue 不使用 React 的 SDK submit transport；重放只走 SSE `Last-Event-ID` 游标，不能再引入第二套 resumable stream 语义                                                          |
+| A4  | SSE `gap` 帧要包住**初始流和 join 流两者**                                                                                 | 上游 SDK 会忽略未知事件名；包装器必须保持惰性 async iterable（SDK 用 `for await` 消费）                                                                                      |
+| A5  | gap 恢复最多 5 次 rejoin（全 gap 路径共 6 次流调用）                                                                       | —                                                                                                                                                                            |
+| A6  | gap **不得当作正常流结束**，也**不得取消仍在运行的后端 run**                                                               | 会丢失正在进行的任务                                                                                                                                                         |
+| A7  | gap 发生时要清空乐观 / 瞬态 / subtask 状态、失效持久化历史缓存、显示本地化恢复警告                                         | —                                                                                                                                                                            |
+| A8  | Stop 后立即失效 4 类缓存（当前 thread、thread history、token usage、侧栏/搜索），并**再安排一次延迟 refetch**              | SDK 的 stop 可能在后端标题定稿提交前就以 abort + fire-and-forget cancel 结束                                                                                                 |
 
 > 主要代码位置：`packages/agent-core/src/session/`、`packages/agent-core/src/transport/`、
 > `app/core/agent-deerflow/`、`app/core/threads/cache-invalidation.ts` 和
@@ -59,16 +59,20 @@
 协议专有的 `messages-tuple` 泄漏到通用包。不要增加第二条 re-export 路径。
 
 直接把 `sanitizeRunStreamOptions` 套在 wire 请求体上，校验不会生效。
-它认的是 SDK 的 `streamMode` / `streamResumable`（camelCase），而 Gateway 收的是
-`stream_mode` / `stream_resumable`（snake_case）——`"streamMode" in options` 恒为
-false，**一声不响地放行**。适配层必须显式桥接两种命名再调它。这是被测试抓出来的，
-两种命名各有一个回归用例在
-`tests/unit/agent-deerflow/run-protocol.test.ts`。
+它认的是 SDK 的 `streamMode`（camelCase），而 Gateway 收的是 `stream_mode`
+（snake_case）——`"streamMode" in options` 恒为 false，**一声不响地放行**。
+适配层只把 wire 的 `stream_mode` 映射成 validator 输入；验证通过后原样发送
+wire payload。回归用例在 `tests/unit/agent-deerflow/run-protocol.test.ts`。
 
 生产模式定义在 `app/composables/useThreadStream.ts`，普通发送、重新生成和编辑后重跑
 共享同一个常量，不能让某个入口省略后退回 Gateway 的 `values` 默认值。对应黑盒回归在
 `tests/unit/threads/thread-stream.dom.test.ts`：它从 fake runner 的 submission 断言真实 wire
 payload，而不是只测协议层能否转发一个由测试手工构造的 `stream_mode`。
+
+同一处还冻结 React SDK 与 Gateway 已有的断线契约：两个提交入口都发送
+`stream_resumable: false` 与 `on_disconnect: "continue"`。Gateway 保持 run 继续执行，
+Vue 通过 `Content-Location` 与 `Last-Event-ID` 恢复；不得改回 backend 的默认
+`on_disconnect: "cancel"`，也不得请求不受支持的 server-side resumable stream。
 
 ---
 

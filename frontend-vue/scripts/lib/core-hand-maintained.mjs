@@ -12,6 +12,8 @@ export const HAND_MAINTAINED_COPIED = {
     "WP-09 adds abortable Vue Query ownership and the shared authenticated Gateway error contract.",
   "api/errors.ts":
     "WP-02 unifies Gateway response parsing while preserving the legacy export.",
+  "api/stream-mode.ts":
+    "Local Docker acceptance removes silent run-option rewriting while retaining the shared supported stream-mode validator.",
   "i18n/cookies.ts":
     "Existing Vue SSR-free locale cookie adapter is maintained in place.",
   "mcp/api.ts":

@@ -9,9 +9,9 @@
                    没有了，所以契约挪到「适配层构造请求时」——把它固定在一个有
                    测试覆盖的模块里，比指望每个调用点自觉可靠。
                    `sanitizeRunStreamOptions` 仍然落在 `@/core/api/stream-mode`
-                   而不是本目录：它是 COPIED 档，逐字节等同上游，移动会让它退出
-                   hash 护城河并逼一个生成测试转手工维护。位置与所属层不一致，
-                   但"不在内核里"这条已由 architecture.test.ts 守住。
+                   而不是本目录：它与 React 共用白名单语义，但由 Vue 适配层维护
+                   wire 命名桥接，不进入通用内核。"不在内核里"这条已由
+                   architecture.test.ts 守住。
 
                    durable status → 内核 outcome 的映射也在这里。内核不认识
                    `"interrupted"` 这类字符串（L1 禁入清单第 2/3 条），
@@ -51,32 +51,17 @@ export interface DeerFlowRunInput {
 /**
  * 把 wire 请求体桥接成 `sanitizeRunStreamOptions` 认识的形状再校验。
  *
- * ⚠️ **这个桥是必需的，05 §A2 没有算到它。** 那条不变式说「stream-mode.ts
- * 原样保留，校验时机从『SDK 调用前』改为『适配层构造请求时』」——但到了适配层
- * 构造请求的时刻，手里已经不是 SDK 的 options 对象而是 wire 请求体了：
- * SDK 写 `streamMode` / `streamResumable`（camelCase），Gateway 收
- * `stream_mode` / `stream_resumable`（snake_case）。把 COPIED 档直接套在
- * wire 请求体上，`"streamMode" in options` 恒为 false，**校验一声不响地什么
- * 都不做**——这是被本文件的 A2 测试抓出来的，不是推理出来的。
- *
- * 桥而不是改 stream-mode.ts：后者是 COPIED 档，改一个字节就退出 hash 护城河，
- * 而这里要修的本来也不是它的逻辑，是两种命名之间少了一次翻译。
+ * ⚠️ **这个桥是必需的。** 到了适配层构造请求的时刻，手里已经不是 SDK 的
+ * options 对象而是 wire 请求体了：
+ * SDK validator 认 `streamMode`（camelCase），Gateway wire 收
+ * `stream_mode`（snake_case）。把 validator 直接套在 wire 请求体上，
+ * `"streamMode" in options` 恒为 false，**校验一声不响地什么都不做**——
+ * 这是被本文件的 A2 测试抓出来的，不是推理出来的。
  */
 function assertSupportedStreamModes(payload: Record<string, unknown>): void {
-  const streamMode = payload.stream_mode ?? payload.streamMode;
+  const streamMode = payload.stream_mode;
   if (streamMode == null) return;
   sanitizeRunStreamOptions({ streamMode });
-}
-
-/** 05 A3：`streamResumable` 不得出现在请求里，两种命名都挡。 */
-function withoutStreamResumable(
-  payload: Record<string, unknown>,
-): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(payload).filter(
-      ([key]) => key !== "stream_resumable" && key !== "streamResumable",
-    ),
-  );
 }
 
 /**
@@ -122,7 +107,6 @@ export function createDeerFlowRunProtocol(
       // 05 A2：含不支持模式时必须**在 HTTP 之前**抛错，不能部分转发、
       // 也不能静默降级为 values。这两行的位置就是那条不变式。
       assertSupportedStreamModes(input.payload);
-      const payload = withoutStreamResumable(input.payload);
 
       const response = await fetchImpl(runStreamUrl(baseUrl, input.threadId), {
         method: "POST",
@@ -130,7 +114,7 @@ export function createDeerFlowRunProtocol(
           "Content-Type": "application/json",
           Accept: "text/event-stream",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(input.payload),
         signal,
       });
       if (!response.ok) await failFromResponse(response, "Run creation");

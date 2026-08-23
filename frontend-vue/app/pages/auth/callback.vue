@@ -11,6 +11,7 @@
 import { onMounted, onScopeDispose, ref } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
 
+import { clearAuthenticatedClientState } from "@/core/auth/client-state";
 import { resolveAuthCallback } from "@/core/auth/callback";
 import { authSessionQueryOptions } from "@/core/auth/session-query";
 
@@ -31,6 +32,9 @@ onMounted(async () => {
     typeof route.query.next === "string" ? route.query.next : null,
   );
   status.value = resolution.status;
+  if (resolution.status === "success") {
+    clearAuthenticatedClientState(queryClient);
+  }
   redirectTimer = window.setTimeout(
     () => void navigateTo(resolution.location, { replace: true }),
     resolution.status === "success" ? 300 : 1_500,

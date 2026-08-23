@@ -22,10 +22,9 @@ def _reset_extension_process_state():
 def stub_app_config(monkeypatch):
     """Keep ``create_app()`` independent of a real ``config.yaml``.
 
-    The repo-root ``config.yaml`` is gitignored and absent on CI runners, so
-    reading it here would make these tests pass locally and fail on every run
-    in CI. Tests that need a specific plugin list copy this config instead of
-    loading one from disk.
+    The repo-root ``config.yaml`` is operator-owned and intentionally tracked in
+    this checkout, so reading it here would couple the test to mutable runtime
+    settings. Tests that need a specific plugin list provide it explicitly.
     """
     import app.gateway.app as app_module
     from deerflow.config.app_config import AppConfig

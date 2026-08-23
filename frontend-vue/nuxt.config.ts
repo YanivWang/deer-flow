@@ -10,7 +10,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 import { createThemeBootstrapScript } from "./app/core/theme/bootstrap";
-import { csrRoutes, prerenderRoutes } from "./config/routes";
+import { csrRoutes } from "./config/routes";
 
 type ClientChunk = { moduleIds: string[]; name: string };
 
@@ -82,9 +82,6 @@ export default defineNuxtConfig({
   devServer: { port: 3100 },
   routeRules: {
     ...Object.fromEntries(csrRoutes.map((route) => [route, { ssr: false }])),
-    ...Object.fromEntries(
-      prerenderRoutes.map((route) => [route, { prerender: true }]),
-    ),
   },
   runtimeConfig: {
     gatewayInternalBaseUrl:

@@ -56,9 +56,9 @@ def client(monkeypatch):
 
     from deerflow.config.app_config import AppConfig
 
-    # config.yaml is gitignored, so tests cannot rely on it existing. The committed
-    # example is a valid config and gives every other section (database above all)
-    # a real value for the app lifespan.
+    # Do not couple this test to the tracked, operator-owned config.yaml. The
+    # committed example is a stable baseline and gives every other section
+    # (database above all) a real value for the app lifespan.
     baseline = AppConfig.from_file(str(Path(__file__).resolve().parents[2] / "config.example.yaml"))
 
     def _make(*, allow_registration: bool) -> TestClient:

@@ -143,6 +143,16 @@ const THREAD_STREAM_MODES = [
   "custom",
 ] as const;
 
+/**
+ * Match the React SDK boundary exactly: DeerFlow keeps a disconnected run alive,
+ * while the client resumes through Content-Location + Last-Event-ID rather than
+ * requesting an unsupported server-side resumable stream.
+ */
+const THREAD_RUN_TRANSPORT_OPTIONS = {
+  stream_resumable: false,
+  on_disconnect: "continue",
+} as const;
+
 function identitiesOf(messages: Message[]): Set<string> {
   return new Set(messages.map(messageIdentity).filter(isNonEmptyString));
 }
@@ -662,6 +672,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
         payload: {
           assistant_id: "lead_agent",
           stream_mode: THREAD_STREAM_MODES,
+          ...THREAD_RUN_TRANSPORT_OPTIONS,
           input: {
             messages: buildThreadSubmitMessages({
               text,
@@ -787,6 +798,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
         payload: {
           assistant_id: "lead_agent",
           stream_mode: THREAD_STREAM_MODES,
+          ...THREAD_RUN_TRANSPORT_OPTIONS,
           input: prepared.input,
           checkpoint: prepared.checkpoint,
           metadata: prepared.metadata,

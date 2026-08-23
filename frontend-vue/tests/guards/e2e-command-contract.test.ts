@@ -237,7 +237,7 @@ describe("Vue M7 gate ownership", () => {
     expect(m7Config).toContain("retries: 0");
     expect(m7Config).toContain("workers: process.env.CI ? 2 : undefined");
     expect(m7AuthInventory.expectedFileCount).toBe(2);
-    expect(m7AuthInventory.expectedTestCount).toBe(13);
+    expect(m7AuthInventory.expectedTestCount).toBe(14);
     expect(m7AuthInventory.specFiles).toContain(
       "frontend-vue/tests/m7/settings-auth.spec.ts",
     );

@@ -40,24 +40,22 @@ test("keeps payloads without streamMode untouched", () => {
   expect(sanitizeRunStreamOptions(options)).toBe(options);
 });
 
-test("strips streamResumable before sending run options to the API", () => {
-  const sanitized = sanitizeRunStreamOptions({
-    streamResumable: true,
+test("keeps the SDK's supported non-resumable option unchanged", () => {
+  const options = {
+    streamResumable: false,
+    onDisconnect: "continue",
     streamSubgraphs: true,
-  });
+  } as const;
 
-  expect(sanitized).toEqual({
-    streamSubgraphs: true,
-  });
+  expect(sanitizeRunStreamOptions(options)).toBe(options);
 });
 
-test("sanitizes streamResumable while preserving valid stream modes", () => {
-  const sanitized = sanitizeRunStreamOptions({
-    streamResumable: true,
+test("validates stream modes without rewriting other supported options", () => {
+  const options = {
+    streamResumable: false,
+    onDisconnect: "continue",
     streamMode: ["values", "custom"],
-  });
+  } as const;
 
-  expect(sanitized).toEqual({
-    streamMode: ["values", "custom"],
-  });
+  expect(sanitizeRunStreamOptions(options)).toBe(options);
 });

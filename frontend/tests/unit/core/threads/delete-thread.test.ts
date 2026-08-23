@@ -1,6 +1,9 @@
 import { expect, rs, test } from "@rstest/core";
 
-import { findSidecarThreadIdsForParent } from "@/core/threads/hooks";
+import {
+  deleteThreadWithSidecars,
+  findSidecarThreadIdsForParent,
+} from "@/core/threads/hooks";
 import type { AgentThread } from "@/core/threads/types";
 
 function makeThread(
@@ -52,4 +55,30 @@ test("finds only sidecar threads attached to the deleted parent thread", async (
     sortOrder: "desc",
     select: ["thread_id", "metadata"],
   });
+});
+
+test("deletes parent and sidecars exactly once through the canonical thread API", async () => {
+  const search = rs.fn().mockResolvedValueOnce([
+    makeThread("sidecar-1", {
+      deerflow_sidecar: true,
+      parent_thread_id: "parent-1",
+    }),
+  ]);
+  const deleteThread = rs.fn().mockResolvedValue(undefined);
+
+  await expect(
+    deleteThreadWithSidecars(
+      {
+        threads: {
+          search,
+          delete: deleteThread,
+        },
+      },
+      "parent-1",
+    ),
+  ).resolves.toEqual(["sidecar-1"]);
+
+  expect(deleteThread).toHaveBeenCalledTimes(2);
+  expect(deleteThread).toHaveBeenNthCalledWith(1, "sidecar-1");
+  expect(deleteThread).toHaveBeenNthCalledWith(2, "parent-1");
 });

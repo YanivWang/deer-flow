@@ -66,6 +66,8 @@ const VERIFIED_APIS = new Set([
  * collected-check 的期望集来自台账而不是 codemod，少一个文件照样红。
  */
 const HAND_MAINTAINED = {
+  "api/stream-mode.test.ts":
+    "Local Docker acceptance replaces the frozen silent-stripping contract with explicit non-resumable SDK option coverage.",
   "artifacts/utils.test.ts": [
     "上游有 2 个用例测试 React-only static mode，而当前 Vue 产品不支持该运行模式，",
     "artifacts/utils.ts 删除了那两个分支——保留用例会测试一段故意不存在的行为。",

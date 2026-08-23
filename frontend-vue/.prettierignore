@@ -20,7 +20,6 @@ app/core/agents/types.ts
 app/core/api/feedback.ts
 app/core/api/fetcher.ts
 app/core/api/index.ts
-app/core/api/stream-mode.ts
 app/core/artifacts/api.ts
 app/core/artifacts/editing.ts
 app/core/artifacts/index.ts
@@ -84,7 +83,6 @@ app/core/utils/json.ts
 app/core/utils/markdown.ts
 app/core/utils/uuid.ts
 app/core/voice-input/speech-recognition.ts
-app/core/workspace-changes/api.ts
 app/core/workspace-changes/summary.ts
 app/core/workspace-changes/types.ts
 # COPIED:END

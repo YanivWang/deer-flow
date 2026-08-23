@@ -822,10 +822,8 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
         new URL(route.request().url()).pathname.split("/").at(-1) ?? "",
       );
       // Mirror the gateway's `require_existing=True` ownership guard: deleting
-      // an already-removed thread 404s. `useDeleteThread` first deletes via the
-      // LangGraph route (which drops the thread_meta row) and then hits this
-      // route, so this reproduces the real double-delete 404 the frontend must
-      // treat as idempotent success.
+      // an already-removed thread 404s. Production sends one canonical delete
+      // request per thread, so a duplicate remains a real caller error.
       if (!threads.some((thread) => thread.thread_id === threadId)) {
         return route.fulfill({
           status: 404,

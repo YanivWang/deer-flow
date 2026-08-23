@@ -97,6 +97,48 @@ test("locale switch updates an open dialog, product surfaces, future errors and 
   await expect(page.getByPlaceholder(zhCN.inputBox.placeholder)).toBeVisible();
 });
 
+test("persisted locale hydrates SSR and CSR routes without mismatches", async ({
+  page,
+}) => {
+  const runtimeErrors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") runtimeErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: enUS.marketing.badge }),
+  ).toBeVisible();
+  expect(runtimeErrors.filter((message) => /hydrat/i.test(message))).toEqual(
+    [],
+  );
+  runtimeErrors.length = 0;
+
+  await page
+    .context()
+    .addCookies([
+      { name: "locale", value: "zh-CN", url: "http://localhost:3101" },
+    ]);
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(
+    page.getByRole("heading", { name: zhCN.marketing.badge }),
+  ).toBeVisible();
+  expect(runtimeErrors.filter((message) => /hydrat/i.test(message))).toEqual(
+    [],
+  );
+  runtimeErrors.length = 0;
+
+  prepare(page);
+  await page.goto("/workspace/chats/new");
+  await expect(page.getByPlaceholder(zhCN.inputBox.placeholder)).toBeVisible();
+  expect(runtimeErrors.filter((message) => /hydrat/i.test(message))).toEqual(
+    [],
+  );
+});
+
 test("invalid locale cookie safely falls back to the supported browser locale", async ({
   page,
 }) => {

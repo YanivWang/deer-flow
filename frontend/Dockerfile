@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 # Frontend Dockerfile
 # Supports two targets:
 #   --target dev   — install deps only, run `pnpm dev` at container start
@@ -21,16 +23,23 @@ RUN pnpm config set store-dir ${PNPM_STORE_PATH}
 # Optionally override npm registry for restricted networks (e.g. NPM_REGISTRY=https://registry.npmmirror.com)
 RUN if [ -n "${NPM_REGISTRY}" ]; then pnpm config set registry "${NPM_REGISTRY}"; fi
 WORKDIR /app
-COPY frontend ./frontend
+
+# Keep dependency installation independent from application source changes.
+# The cache mount persists downloaded packages across clean BuildKit builds;
+# node_modules itself remains in this image layer for downstream stages.
+FROM base AS dependencies
+COPY frontend/package.json frontend/pnpm-lock.yaml ./frontend/
+RUN --mount=type=cache,id=deer-flow-frontend-pnpm,target=${PNPM_STORE_PATH} \
+    cd /app/frontend && pnpm install --frozen-lockfile
 
 # ── Dev: install only, CMD is overridden by docker-compose ───────────────────
-FROM base AS dev
-RUN cd /app/frontend && pnpm install --frozen-lockfile
+FROM dependencies AS dev
+COPY frontend ./frontend
 EXPOSE 3000
 
 # ── Builder: install + compile Next.js ───────────────────────────────────────
-FROM base AS builder
-RUN cd /app/frontend && pnpm install --frozen-lockfile
+FROM dependencies AS builder
+COPY frontend ./frontend
 # Skip env validation — runtime vars are injected by nginx/container
 # App version stamp for the About page. Nightly CI passes
 # APP_VERSION=<base>-nightly.<date>-<sha>; release/local builds leave it empty

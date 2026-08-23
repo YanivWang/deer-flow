@@ -69,8 +69,9 @@ in both compose files.
 ```
 deer-flow/
 ├── Makefile                        # Root orchestration: drives the full stack (dev/start/stop, docker, setup)
-├── config.example.yaml             # Template → copy to config.yaml (gitignored) at repo root
-├── extensions_config.example.json  # Template → copy to extensions_config.json (gitignored): MCP servers + skills
+├── .env / config.yaml / extensions_config.json  # Intentionally tracked runtime config
+├── config.example.yaml             # Main config template
+├── extensions_config.example.json  # Extensions template
 ├── backend/                        # Python backend — see backend/AGENTS.md
 │   ├── Makefile                    # Per-module backend commands (dev, gateway, test, lint, migrate-rev)
 │   ├── packages/extension-api/     # deerflow-extension-api package (import: deerflow_extension_api.*) — public extension contract
@@ -93,20 +94,14 @@ Third-party extensions are loaded from a top-level `plugins:` list in `config.ya
 kept out of the API-writable `extensions_config.json`). See the Extension System section in
 [backend/AGENTS.md](backend/AGENTS.md).
 
-Runtime config lives at the **repo root**: copy `config.example.yaml` → `config.yaml`
-(main app config) and `extensions_config.example.json` → `extensions_config.json` (MCP
-servers + skills). Both real files are gitignored and may be edited at runtime via the
-Gateway API. Config schema and resolution order are documented in
-[backend/AGENTS.md](backend/AGENTS.md).
+Runtime config lives at the repo root. `.env`, `config.yaml`, and
+`extensions_config.json` are intentionally tracked; preserve that policy. Setup uses the
+examples only when a real file is missing, and Gateway may edit runtime-owned sections.
+Schema and resolution order live in [backend/AGENTS.md](backend/AGENTS.md).
 
-Skill quality review note:
-
-- `skills/public/skill-reviewer/` is the built-in read-only skill quality reviewer.
-  It uses the harness-layer `review_skill_package` tool and contracts in
-  `contracts/skill_review/`. Model-visible review data is compact and
-  tag-neutralized; full raw payloads stay in tool artifacts. See
-  [backend/AGENTS.md](backend/AGENTS.md) for the non-activation, SkillScan, and
-  `skill-creator` ownership boundaries.
+`skills/public/skill-reviewer/` is the built-in read-only reviewer. It uses the harness
+`review_skill_package` tool and `contracts/skill_review/`; full ownership and safety
+boundaries live in [backend/AGENTS.md](backend/AGENTS.md).
 
 Scheduled-task note:
 
@@ -139,6 +134,8 @@ make stop        # Stop all running services
 make up / down   # Build/stop the production Docker stack (browser at localhost:2026)
 make docker-start / docker-stop / docker-logs   # Gateway + React/Vue Docker dev; both frontends use Compose Watch/HMR
 ```
+
+Production `make up` explicitly reconciles both frontend containers after rebuilding.
 
 Docker log and restart commands resolve `DEER_FLOW_ROOT` from the current
 checkout before invoking Compose, matching the start and stop commands.

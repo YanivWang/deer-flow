@@ -94,6 +94,64 @@ class TestCheckPnpm:
 
 
 # ---------------------------------------------------------------------------
+# check_nginx
+# ---------------------------------------------------------------------------
+
+
+class TestCheckNginx:
+    def test_host_nginx_passes(self, monkeypatch):
+        monkeypatch.setattr(doctor.shutil, "which", lambda name: f"/bin/{name}" if name == "nginx" else None)
+        monkeypatch.setattr(doctor, "_run", lambda command: "nginx/1.31.3" if command == ["nginx", "-v"] else None)
+
+        result = doctor.check_nginx()
+
+        assert result.status == "ok"
+        assert result.detail == "1.31.3"
+        assert result.execution_mode == "local"
+
+    def test_docker_compose_nginx_passes_without_host_install(self, monkeypatch):
+        monkeypatch.setattr(doctor.shutil, "which", lambda name: "/bin/docker" if name == "docker" else None)
+        monkeypatch.setattr(
+            doctor,
+            "_run",
+            lambda command: {
+                ("docker", "info", "--format", "{{.ServerVersion}}"): "28.3.3",
+                ("docker", "compose", "version", "--short"): "2.37.1",
+            }.get(tuple(command)),
+        )
+
+        result = doctor.check_nginx()
+
+        assert result.status == "ok"
+        assert result.detail == "Docker Compose nginx (Docker 28.3.3, Compose 2.37.1)"
+        assert result.execution_mode == "docker"
+
+    def test_docker_without_compose_does_not_satisfy_nginx(self, monkeypatch):
+        monkeypatch.setattr(doctor.shutil, "which", lambda name: "/bin/docker" if name == "docker" else None)
+        monkeypatch.setattr(
+            doctor,
+            "_run",
+            lambda command: "28.3.3" if command == ["docker", "info", "--format", "{{.ServerVersion}}"] else None,
+        )
+
+        result = doctor.check_nginx()
+
+        assert result.status == "fail"
+
+    def test_ready_command_follows_the_ingress_owner(self):
+        assert doctor.ready_command(doctor.CheckResult("nginx", "ok", execution_mode="local")) == "make dev"
+        assert doctor.ready_command(doctor.CheckResult("nginx", "ok", execution_mode="docker")) == "make up"
+
+    def test_missing_host_nginx_and_docker_daemon_fails(self, monkeypatch):
+        monkeypatch.setattr(doctor.shutil, "which", lambda _name: None)
+
+        result = doctor.check_nginx()
+
+        assert result.status == "fail"
+        assert result.fix is not None
+
+
+# ---------------------------------------------------------------------------
 # check_config_exists
 # ---------------------------------------------------------------------------
 

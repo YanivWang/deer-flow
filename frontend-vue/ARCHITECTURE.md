@@ -108,8 +108,10 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
 
 ## 路由、渲染与认证
 
-- `config/routes.ts` 是 CSR/prerender 分区、代理常量和转发头策略的单一来源。
-- `/workspace/**`、登录/设置/认证回调使用 CSR；首页、价格和关于页可预渲染。
+- `config/routes.ts` 是 CSR 分区、代理常量和转发头策略的单一来源；公开页面保留 SSR，
+  使请求 cookie 派生的 locale 与首屏 HTML、Nuxt payload 在 hydration 两端一致。
+- `/workspace/**`、登录/设置/认证回调使用 CSR；首页、价格和关于页按请求 SSR，不能把
+  cookie 派生的 locale 固化进静态 HTML。
 - `app/core/auth/session-query.ts` 与 `app/composables/useAuthSession.ts` 是 Gateway session
   的唯一服务端状态来源。全局 middleware 通过同一个 Vue Query key 做路由判定，workspace
   banner 复用该缓存做后台/手动恢复；401 才进入登录，Gateway unavailable 保留当前工作区
@@ -117,6 +119,10 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
 - `/auth/callback` 复用同一 session query，按 `next-path.ts` 的规则拒绝开放重定向，并把
   authenticated、401、Gateway unavailable 收敛为不同状态和 replace 跳转。`/workspace`
   在真实模式固定 replace 到 `/workspace/chats/new`，不恢复 static demo/mock 分支。
+- `app/core/auth/client-state.ts` 是认证主体切换的唯一浏览器状态清理边界。成功登录、注册、
+  SSO callback、首次设置、密码重置设置和退出都会清空整棵 TanStack Query 用户态缓存与
+  composer 草稿；不能只失效 thread key，因为 models、memory、skills、channels 等 key
+  并非全部携带 user id，保留它们会在换账号后短暂暴露上一账号的数据。
 - 密码和 access token 不进入前端存储，CSRF/HttpOnly cookie 由 Gateway 管理。
 - 双 hostname OIDC 依赖请求 Host/Proto 重建回调地址。目标环境仍需配置真实 DNS、TLS、
   外层可信代理和 IdP callback allowlist；本地 fixture 不能替代这些部署配置。
@@ -185,7 +191,8 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
   三维隔离，并在确认 logout/thread delete 后清理。上传文件、语音、follow-up dialog、polish
   和 generation guard 是组件/composable 瞬态状态，不得错误跨 thread 复用。
 - locale 的唯一运行期状态归 `app/plugins/i18n.ts`：同一 ref/computed 同步 typed dictionary、
-  兼容 cookie 与 `document.documentElement.lang`，已打开组件和后续 toast 不缓存第二份 locale。
+  cookie 与 `document.documentElement.lang`，SSR 请求从 cookie 派生首屏状态，CSR shell 在
+  hydration 完成后消费浏览器偏好；已打开组件和后续 toast 不缓存第二份 locale。
   `en-US`/`zh-CN` 精确 key 与 audited unused 集合由 `baseline/i18n-keys.json` 固定；
   `make i18n-source-check` 以 Vue/TypeScript AST 扫描全部产品 SFC。完整范围、动态内容边界与
   两个精确测试 fixture 排除项见 [`I18N_INVENTORY.md`](I18N_INVENTORY.md)。

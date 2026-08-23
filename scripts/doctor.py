@@ -24,6 +24,7 @@ from typing import Literal
 # ---------------------------------------------------------------------------
 
 Status = Literal["ok", "warn", "fail", "skip"]
+ExecutionMode = Literal["local", "docker"]
 PNPM_SCRIPT_PATH = Path(__file__).resolve().with_name("pnpm.py")
 FRONTEND_DIR = PNPM_SCRIPT_PATH.parent.parent / "frontend"
 
@@ -113,11 +114,13 @@ class CheckResult:
         status: Status,
         detail: str = "",
         fix: str | None = None,
+        execution_mode: ExecutionMode | None = None,
     ) -> None:
         self.label = label
         self.status = status
         self.detail = detail
         self.fix = fix
+        self.execution_mode = execution_mode
 
     def print(self) -> None:
         icon = _icon(self.status)
@@ -221,12 +224,28 @@ def check_nginx() -> CheckResult:
     if shutil.which("nginx"):
         out = _run(["nginx", "-v"]) or ""
         version = out.split("/", 1)[-1] if "/" in out else out
-        return CheckResult("nginx", "ok", version)
+        return CheckResult("nginx", "ok", version, execution_mode="local")
+
+    if shutil.which("docker"):
+        docker_version = _run(["docker", "info", "--format", "{{.ServerVersion}}"])
+        compose_version = _run(["docker", "compose", "version", "--short"])
+        if docker_version and compose_version:
+            return CheckResult(
+                "nginx",
+                "ok",
+                f"Docker Compose nginx (Docker {docker_version}, Compose {compose_version})",
+                execution_mode="docker",
+            )
+
     return CheckResult(
         "nginx",
         "fail",
-        fix=("macOS:   brew install nginx\nUbuntu:  sudo apt install nginx\nWindows: use WSL or Docker mode"),
+        fix=("Local mode: install nginx (macOS: brew install nginx; Ubuntu: sudo apt install nginx)\nDocker mode: install/start Docker with the Compose plugin"),
     )
+
+
+def ready_command(nginx_check: CheckResult) -> str:
+    return "make up" if nginx_check.execution_mode == "docker" else "make dev"
 
 
 def check_config_exists(config_path: Path) -> CheckResult:
@@ -728,12 +747,13 @@ def main() -> int:
     sections: list[tuple[str, list[CheckResult]]] = []
 
     # ── System Requirements ────────────────────────────────────────────────────
+    nginx_check = check_nginx()
     sys_checks = [
         check_python(),
         check_node(),
         check_pnpm(),
         check_uv(),
-        check_nginx(),
+        nginx_check,
     ]
     sections.append(("System Requirements", sys_checks))
 
@@ -788,10 +808,10 @@ def main() -> int:
     print("═" * 40)
     if total_fails == 0 and total_warns == 0:
         print(f"Status: {green('Ready')}")
-        print(f"Run {cyan('make dev')} to start DeerFlow")
+        print(f"Run {cyan(ready_command(nginx_check))} to start DeerFlow")
     elif total_fails == 0:
         print(f"Status: {yellow(f'Ready ({total_warns} warning(s))')}")
-        print(f"Run {cyan('make dev')} to start DeerFlow")
+        print(f"Run {cyan(ready_command(nginx_check))} to start DeerFlow")
     else:
         print(f"Status: {red(f'{total_fails} error(s), {total_warns} warning(s)')}")
         print("Fix the errors above, then run 'make doctor' again.")

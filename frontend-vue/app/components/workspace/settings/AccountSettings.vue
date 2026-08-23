@@ -8,13 +8,14 @@
   【边界与注意】   保留 HttpOnly/CSRF 边界，不进入 L2。
 */
 import { onMounted, ref } from "vue";
+import { useQueryClient } from "@tanstack/vue-query";
 
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
+import { clearAuthenticatedClientState } from "@/core/auth/client-state";
 import type { User } from "@/core/auth/types";
-import { getSessionComposerDraftStorage } from "@/core/threads/composer-draft";
-import { clearComposerDrafts } from "@/core/threads/composer-draft-lifecycle";
 
 const { $i18n } = useNuxtApp();
+const queryClient = useQueryClient();
 const user = ref<User | null>(null);
 const currentPassword = ref("");
 const newPassword = ref("");
@@ -89,7 +90,7 @@ async function logout() {
     error.value = $i18n.t.value.settings.account.signOutFailed;
     return;
   }
-  clearComposerDrafts(getSessionComposerDraftStorage() as Storage | null);
+  clearAuthenticatedClientState(queryClient);
   await navigateTo("/login");
 }
 </script>

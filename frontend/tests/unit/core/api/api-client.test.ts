@@ -431,7 +431,7 @@ test("recovers a gap emitted by the initial run stream", async () => {
   for await (const entry of getAPIClient(true).runs.stream(
     "thread-2",
     "lead_agent",
-    { streamResumable: true },
+    { onDisconnect: "continue", streamResumable: false },
   )) {
     received.push(entry);
   }
@@ -500,7 +500,7 @@ test("clears reconnect metadata when an initial stream gap resume is inactive", 
   const stream = getAPIClient(true).runs.stream(
     "thread-inactive-resume",
     "lead_agent",
-    { streamResumable: true },
+    { onDisconnect: "continue", streamResumable: false },
   );
 
   await expect(stream.next()).resolves.toMatchObject({

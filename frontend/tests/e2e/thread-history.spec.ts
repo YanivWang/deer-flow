@@ -619,15 +619,16 @@ test.describe("Thread history", () => {
     page,
   }) => {
     mockLangGraphAPI(page);
-    await page.route(/\/api\/threads\/[^/]+$/, (route) => {
-      if (route.request().method() === "DELETE") {
-        return route.fulfill({
-          status: 500,
-          contentType: "application/json",
-          body: JSON.stringify({ detail: "Local cleanup failed" }),
-        });
+    const deleteRequests: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "DELETE" &&
+        /\/api\/(?:langgraph\/)?threads\/[^/]+$/.test(
+          new URL(request.url()).pathname,
+        )
+      ) {
+        deleteRequests.push(request.url());
       }
-      return route.fallback();
     });
 
     await page.goto("/workspace/chats/new");
@@ -657,6 +658,7 @@ test.describe("Thread history", () => {
     await expect(page.getByText("Previous question")).toHaveCount(0);
     await expect(page.getByText("Hello from DeerFlow!")).toHaveCount(0);
     await expect(page.getByPlaceholder(/how can i assist you/i)).toBeVisible();
+    expect(deleteRequests).toHaveLength(1);
 
     await page.goto(`/workspace/chats/${MOCK_THREAD_ID}`);
     await page.waitForURL("**/workspace/chats/new");

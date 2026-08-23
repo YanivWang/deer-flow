@@ -286,10 +286,16 @@ different cache settings.
 
 **Production** (builds images locally, mounts runtime config and data):
 
+`make doctor` accepts the bundled Compose nginx when Docker and the Compose
+plugin are running; a host nginx install is required only for non-Docker mode.
+
 ```bash
 make up     # Build images and start all production services
 make down   # Stop and remove containers
 ```
+
+Each `make up` explicitly reconciles both the React and Vue frontend containers,
+so a rebuilt image is applied to both hostnames rather than left behind unused.
 
 Access: http://localhost:2026
 

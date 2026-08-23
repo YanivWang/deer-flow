@@ -71,6 +71,72 @@ test("local login uses the Gateway form contract and stores no secret", async ({
   expect(Object.keys(authStorage)).not.toContain("token");
 });
 
+test("logout and a new login never reuse the previous user's query cache", async ({
+  page,
+}) => {
+  mockLangGraphAPI(page);
+  await mockLoginShell(page);
+  const nextUser = {
+    ...USER,
+    id: "user-2",
+    email: "user@example.com",
+    system_role: "user",
+  };
+  let currentUser: typeof USER | typeof nextUser | null = USER;
+  let currentThread = {
+    thread_id: "10000000-0000-0000-0000-000000000001",
+    title: "ADMIN PRIVATE THREAD",
+  };
+
+  await page.route("**/api/v1/auth/me", (route) =>
+    currentUser
+      ? route.fulfill({ json: currentUser })
+      : route.fulfill({ status: 401, json: { detail: "Unauthorized" } }),
+  );
+  await page.route("**/api/v1/auth/logout", (route) => {
+    currentUser = null;
+    return route.fulfill({ status: 200, json: { message: "ok" } });
+  });
+  await page.route("**/api/v1/auth/login/local", (route) => {
+    currentUser = nextUser;
+    currentThread = {
+      thread_id: "20000000-0000-0000-0000-000000000002",
+      title: "USER PRIVATE THREAD",
+    };
+    return route.fulfill({ status: 200, json: { expires_in: 604_800 } });
+  });
+  await page.route("**/api/langgraph/threads/search", (route) =>
+    route.fulfill({
+      json: [
+        {
+          thread_id: currentThread.thread_id,
+          created_at: "2026-08-23T00:00:00Z",
+          updated_at: "2026-08-23T00:00:00Z",
+          metadata: {},
+          status: "idle",
+          values: { title: currentThread.title },
+        },
+      ],
+    }),
+  );
+
+  await page.goto("/workspace/chats/new?settings=account");
+  await expect(page.getByText("ADMIN PRIVATE THREAD")).toBeVisible();
+  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page.getByRole("button", { name: "Sign Out", exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+
+  await page.getByLabel("Email", { exact: true }).fill("user@example.com");
+  await page
+    .getByLabel("Password", { exact: true })
+    .fill("correct-horse-battery-staple");
+  await page.getByRole("button", { name: "Sign In" }).click();
+
+  await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
+  await expect(page.getByText("USER PRIVATE THREAD")).toBeVisible();
+  await expect(page.getByText("ADMIN PRIVATE THREAD")).toHaveCount(0);
+});
+
 test("SSO providers expose the failure hint and preserve safe next/remember parameters", async ({
   page,
 }) => {

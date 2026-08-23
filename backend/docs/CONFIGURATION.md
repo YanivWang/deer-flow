@@ -769,7 +769,9 @@ genuinely reads the full CLI config directory.
 ## Best Practices
 
 1. **Place `config.yaml` in project root** - Set `DEER_FLOW_PROJECT_ROOT` if the runtime starts elsewhere
-2. **Never commit `config.yaml`** - It's already in `.gitignore`
+2. **Follow the checkout's config policy** - This checkout intentionally tracks
+   `config.yaml`; preserve that policy and keep secrets behind environment-variable
+   references rather than embedding them in YAML
 3. **Use environment variables for secrets** - Don't hardcode API keys
 4. **Keep `config.example.yaml` updated** - Document all new options
 5. **Test configuration changes locally** - Before deploying

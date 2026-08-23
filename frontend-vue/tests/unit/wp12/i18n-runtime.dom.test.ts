@@ -17,11 +17,18 @@ import { enUS } from "@/core/i18n/locales/en-US";
 import { zhCN } from "@/core/i18n/locales/zh-CN";
 import type { Locale } from "@/core/i18n/locale";
 
+let mountedHook: (() => void) | undefined;
+
 beforeEach(() => {
+  mountedHook = undefined;
   document.cookie = "locale=; max-age=0; path=/";
   document.documentElement.lang = "";
   vi.stubGlobal("defineNuxtPlugin", (plugin: unknown) => plugin);
   vi.stubGlobal("useHead", vi.fn());
+  vi.stubGlobal("useRequestHeaders", () => ({}));
+  vi.stubGlobal("useState", (_key: string, initial: () => Locale) =>
+    ref(initial()),
+  );
 });
 
 afterEach(() => {
@@ -30,11 +37,13 @@ afterEach(() => {
 });
 
 describe("i18n plugin", () => {
-  it("keeps locale, dictionary, cookie and document lang synchronized", async () => {
-    document.cookie = "locale=en-US; path=/";
+  it("hydrates from one serialized locale before consuming the browser cookie", async () => {
+    document.cookie = "locale=zh-CN; path=/";
     const { default: plugin } = await import("@/plugins/i18n");
     const provided = (
-      plugin as unknown as () => {
+      plugin as unknown as (nuxtApp: {
+        hook: (name: string, callback: () => void) => void;
+      }) => {
         provide: {
           i18n: {
             locale: { value: Locale };
@@ -43,25 +52,38 @@ describe("i18n plugin", () => {
           };
         };
       }
-    )();
+    )({
+      hook(name, callback) {
+        if (name === "app:mounted") mountedHook = callback;
+      },
+    });
     const i18n = provided.provide.i18n;
     expect(i18n.t.value.settings.appearance.themeTitle).toBe(
       enUS.settings.appearance.themeTitle,
     );
-    expect(document.documentElement.lang).toBe("en-US");
+    expect(i18n.locale.value).toBe("en-US");
+    expect(document.documentElement.lang).toBe("");
 
-    i18n.setLocale("zh-CN");
+    mountedHook?.();
     await flushPromises();
     expect(i18n.locale.value).toBe("zh-CN");
     expect(i18n.t.value.settings.appearance.themeTitle).toBe(
       zhCN.settings.appearance.themeTitle,
     );
     expect(document.documentElement.lang).toBe("zh-CN");
-    expect(document.cookie).toContain("locale=zh-CN");
+
+    i18n.setLocale("en-US");
+    await flushPromises();
+    expect(i18n.locale.value).toBe("en-US");
+    expect(i18n.t.value.settings.appearance.themeTitle).toBe(
+      enUS.settings.appearance.themeTitle,
+    );
+    expect(document.documentElement.lang).toBe("en-US");
+    expect(document.cookie).toContain("locale=en-US");
     const headFactory = vi.mocked(useHead).mock.calls[0]?.[0] as () => {
       htmlAttrs: { lang: Locale };
     };
-    expect(headFactory().htmlAttrs.lang).toBe("zh-CN");
+    expect(headFactory().htmlAttrs.lang).toBe("en-US");
   });
 });
 

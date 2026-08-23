@@ -2211,7 +2211,10 @@ export function useThreadStream({
             // No streamSubgraphs: subtask progress arrives via root-namespace
             // custom events, while subgraph frames would leak a delegated
             // subagent's values/messages into the thread view (#4399).
-            streamResumable: true,
+            // DeerFlow keeps the run alive and rejoins through Last-Event-ID;
+            // it does not implement the SDK's server-side resumable stream.
+            onDisconnect: "continue",
+            streamResumable: false,
             config: {
               recursion_limit: 1000,
             },
@@ -2333,7 +2336,10 @@ export function useThreadStream({
           checkpoint: prepared.checkpoint,
           metadata: prepared.metadata,
           // No streamSubgraphs — same contract as the main submit path (#4399).
-          streamResumable: true,
+          // Match the main submit path: keep the run alive, then rejoin through
+          // DeerFlow's Last-Event-ID replay instead of SDK resumable streams.
+          onDisconnect: "continue",
+          streamResumable: false,
           config: {
             recursion_limit: 1000,
           },
@@ -3059,35 +3065,6 @@ export function useRunDetail(threadId: string, runId: string) {
   });
 }
 
-async function deleteLocalThreadData(threadId: string) {
-  const response = await fetch(
-    `${getBackendBaseURL()}/api/threads/${encodeURIComponent(threadId)}`,
-    {
-      method: "DELETE",
-    },
-  );
-
-  // A 404 means the thread is already gone — the desired end state. The prior
-  // `apiClient.threads.delete` call hits the same gateway handler (nginx
-  // rewrites /api/langgraph/threads/* to /api/threads/*) and removes the
-  // thread_meta row, so this second delete's ownership guard 404s. Treat it as
-  // success to keep the delete idempotent.
-  if (!response.ok && response.status !== 404) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: "Failed to delete local thread data." }));
-    throw new Error(error.detail ?? "Failed to delete local thread data.");
-  }
-}
-
-async function deleteThreadEverywhere(
-  apiClient: ThreadDeleteClient,
-  threadId: string,
-) {
-  await apiClient.threads.delete(threadId);
-  await deleteLocalThreadData(threadId);
-}
-
 export async function findSidecarThreadIdsForParent(
   apiClient: ThreadSidecarSearchClient,
   parentThreadId: string,
@@ -3146,9 +3123,7 @@ async function deleteSidecarThreadsForParent(
   }
 
   const results = await Promise.allSettled(
-    sidecarThreadIds.map((threadId) =>
-      deleteThreadEverywhere(apiClient, threadId),
-    ),
+    sidecarThreadIds.map((threadId) => apiClient.threads.delete(threadId)),
   );
 
   const failedDeletions = results
@@ -3173,6 +3148,18 @@ async function deleteSidecarThreadsForParent(
   });
 }
 
+export async function deleteThreadWithSidecars(
+  apiClient: ThreadDeleteClient,
+  threadId: string,
+) {
+  const deletedSidecarThreadIds = await deleteSidecarThreadsForParent(
+    apiClient,
+    threadId,
+  );
+  await apiClient.threads.delete(threadId);
+  return deletedSidecarThreadIds;
+}
+
 export function useDeleteThread() {
   const queryClient = useQueryClient();
   const apiClient = getAPIClient() as ThreadDeleteClient;
@@ -3184,13 +3171,11 @@ export function useDeleteThread() {
       threadId: string;
       onRemoteDeleted?: () => void;
     }) => {
-      const deletedSidecarThreadIds = await deleteSidecarThreadsForParent(
+      const deletedSidecarThreadIds = await deleteThreadWithSidecars(
         apiClient,
         threadId,
       );
-      await apiClient.threads.delete(threadId);
       onRemoteDeleted?.();
-      await deleteLocalThreadData(threadId);
       return deletedSidecarThreadIds;
     },
     onSuccess(deletedSidecarThreadIds, { threadId }) {

@@ -1,7 +1,10 @@
 /*
-  由 scripts/rstest-to-vitest.mjs 从 frontend/tests/unit/core/api/stream-mode.test.ts 机械生成。
-  基线 27a425b0 · 改动仅限 @rstest/core → vitest、rs.* → vi.*。
-  勿手改：make codemod-check 会红。需要为 Vue 侧适配就登记进 HAND_MAINTAINED。
+  【文件职责】     固定 Vue 应用层 run stream-mode 校验与非 resumable 请求语义。
+  【对应 frontend/】 tests/unit/core/api/stream-mode.test.ts
+  【架构位置】     L3 测试
+  【主要导出】     无
+  【依赖关系】     @/core/api/stream-mode
+  【边界与注意】   从冻结生成档转为手工维护；禁止恢复静默删除 run option 的兼容路径。
 */
 
 import { expect, test } from "vitest";
@@ -46,24 +49,22 @@ test("keeps payloads without streamMode untouched", () => {
   expect(sanitizeRunStreamOptions(options)).toBe(options);
 });
 
-test("strips streamResumable before sending run options to the API", () => {
-  const sanitized = sanitizeRunStreamOptions({
-    streamResumable: true,
+test("keeps the SDK's supported non-resumable option unchanged", () => {
+  const options = {
+    streamResumable: false,
+    onDisconnect: "continue",
     streamSubgraphs: true,
-  });
+  } as const;
 
-  expect(sanitized).toEqual({
-    streamSubgraphs: true,
-  });
+  expect(sanitizeRunStreamOptions(options)).toBe(options);
 });
 
-test("sanitizes streamResumable while preserving valid stream modes", () => {
-  const sanitized = sanitizeRunStreamOptions({
-    streamResumable: true,
+test("validates stream modes without rewriting other supported options", () => {
+  const options = {
+    streamResumable: false,
+    onDisconnect: "continue",
     streamMode: ["values", "custom"],
-  });
+  } as const;
 
-  expect(sanitized).toEqual({
-    streamMode: ["values", "custom"],
-  });
+  expect(sanitizeRunStreamOptions(options)).toBe(options);
 });

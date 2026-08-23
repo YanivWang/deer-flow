@@ -241,10 +241,15 @@ Compose Watch 会把两个前端的源码改动同步到各自开发容器；依
 
 **生产模式**（本地构建镜像，并挂载运行期配置与数据）：
 
+Docker 与 Compose 插件运行时，`make doctor` 会使用 Compose 内置的 nginx；只有非 Docker
+模式才要求宿主机安装 nginx。
+
 ```bash
 make up     # 构建镜像并启动全部生产服务
 make down   # 停止并移除容器
 ```
+
+每次 `make up` 都会显式校准 React 与 Vue 两个前端容器，确保两个域名实际使用本次重建的镜像。
 
 > [!NOTE]
 > 当前 Agent 运行时嵌入在 Gateway 中运行，`/api/langgraph/*` 会由 nginx 重写到 Gateway 的 LangGraph-compatible API。

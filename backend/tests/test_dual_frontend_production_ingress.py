@@ -18,6 +18,7 @@ DEV_COMPOSE_PATH = REPO_ROOT / "docker/docker-compose-dev.yaml"
 NGINX_PATH = REPO_ROOT / "docker/nginx/nginx.conf"
 VUE_DOCKERFILE_PATH = REPO_ROOT / "frontend-vue/Dockerfile"
 DOCKER_SCRIPT_PATH = REPO_ROOT / "scripts/docker.sh"
+DEPLOY_SCRIPT_PATH = REPO_ROOT / "scripts/deploy.sh"
 
 
 def _compose() -> dict:
@@ -154,6 +155,14 @@ def test_vue_dockerfile_and_dev_launcher_expose_the_vue_hmr_service() -> None:
         "frontend-vue/coverage",
     ):
         assert ignored_path in dockerignore
+
+
+def test_production_launcher_reconciles_both_frontend_containers() -> None:
+    deploy_script = DEPLOY_SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert 'services="redis frontend frontend-vue gateway nginx"' in deploy_script
+    assert 'services="$services provisioner"' in deploy_script
+    assert '"${COMPOSE_CMD[@]}" up --build -d --remove-orphans $services' in deploy_script
 
 
 def test_all_gateway_proxy_locations_overwrite_forwarded_host_and_proto() -> None:

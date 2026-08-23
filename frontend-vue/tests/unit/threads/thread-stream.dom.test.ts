@@ -171,6 +171,8 @@ describe("useThreadStream · K3 编辑并重跑", () => {
       threadId: "thread-1",
       payload: {
         stream_mode: ["values", "messages-tuple", "updates", "custom"],
+        stream_resumable: false,
+        on_disconnect: "continue",
         input: {
           messages: [
             { id: "human-2", type: "human", content: "Revised prompt" },
@@ -357,6 +359,10 @@ describe("useThreadStream · production stream modes", () => {
       "updates",
       "custom",
     ]);
+    expect(ctx.fake.submissions[0]?.payload).toMatchObject({
+      stream_resumable: false,
+      on_disconnect: "continue",
+    });
     ctx.wrapper.unmount();
   });
 

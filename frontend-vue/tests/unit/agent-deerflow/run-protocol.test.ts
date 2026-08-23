@@ -91,7 +91,10 @@ describe("create（08 硬规则 1 · 05 A2/L10/L12）", () => {
     );
     await expect(
       protocol.create(
-        { threadId: "t-1", payload: { streamMode: ["values", "events"] } },
+        {
+          threadId: "t-1",
+          payload: { stream_mode: ["values", "events"] },
+        },
         signal(),
       ),
     ).rejects.toThrow(/Unsupported LangGraph stream mode/);
@@ -123,18 +126,14 @@ describe("create（08 硬规则 1 · 05 A2/L10/L12）", () => {
     expect(recorded).toHaveLength(0);
   });
 
-  it("A3：streamResumable 不得出现在请求里，两种命名都挡", async () => {
+  it("A3：校验后的 wire payload 原样发送，不做兼容改写", async () => {
     const protocol = protocolWith(
       fakeFetch(() => sseResponse(CONTENT_LOCATION)),
     );
     await protocol.create(
       {
         threadId: "t-1",
-        payload: {
-          ...validPayload,
-          stream_resumable: true,
-          streamResumable: true,
-        },
+        payload: validPayload,
       },
       signal(),
     );
@@ -142,9 +141,7 @@ describe("create（08 硬规则 1 · 05 A2/L10/L12）", () => {
       string,
       unknown
     >;
-    expect(body).not.toHaveProperty("stream_resumable");
-    expect(body).not.toHaveProperty("streamResumable");
-    expect(body).toHaveProperty("assistant_id");
+    expect(body).toEqual(validPayload);
   });
 
   it("非 2xx 归一化成 http 错误", async () => {
