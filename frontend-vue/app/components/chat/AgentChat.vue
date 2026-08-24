@@ -9,7 +9,7 @@
 */
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
-import { CalendarClock, Menu, Share2 } from "lucide-vue-next";
+import { Bot, CalendarClock, Menu, PlusSquare } from "lucide-vue-next";
 
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
@@ -22,6 +22,7 @@ import ArtifactPanel from "@/components/workspace/artifacts/ArtifactPanel.vue";
 import ArtifactTrigger from "@/components/workspace/artifacts/ArtifactTrigger.vue";
 import BrowserPanel from "@/components/workspace/browser-view/BrowserPanel.vue";
 import BrowserTrigger from "@/components/workspace/browser-view/BrowserTrigger.vue";
+import ExportTrigger from "@/components/workspace/ExportTrigger.vue";
 import SidecarPanel from "@/components/workspace/sidecar/SidecarPanel.vue";
 import { useArtifactsPanel } from "@/composables/useArtifactsPanel";
 import { useAgentCreationSession } from "@/composables/useAgentCreationSession";
@@ -30,6 +31,7 @@ import { useSidecarSession } from "@/composables/useSidecarSession";
 import { useThreadStream } from "@/composables/useThreadStream";
 import { useThreads } from "@/composables/useThreads";
 import { useNotifications } from "@/composables/useNotifications";
+import { useSuggestionsConfig } from "@/composables/useSuggestionsConfig";
 import { useWorkspaceFeatures } from "@/composables/useWorkspaceFeatures";
 import { useAuthSession } from "@/composables/useAuthSession";
 import { useModels } from "@/composables/useModels";
@@ -50,16 +52,13 @@ import {
   AUTH_DISABLED_USER,
   isAuthDisabledMode,
 } from "@/core/auth/auth-disabled-user";
-import {
-  DEFAULT_MAX_SUGGESTIONS,
-  loadSuggestionsConfig,
-} from "@/core/suggestions/api";
+import { DEFAULT_MAX_SUGGESTIONS } from "@/core/suggestions/api";
 import type { Message } from "@/core/types/message";
 import {
   selectContextUsage,
   threadTokenUsageToTokenUsage,
 } from "@/core/threads/token-usage";
-import type { GoalState } from "@/core/threads/types";
+import type { AgentThread, GoalState } from "@/core/threads/types";
 import type { Todo } from "@/core/todos";
 import {
   buildReferenceMessageMetadata,
@@ -151,8 +150,14 @@ const agentResolved = ref(!props.agentName || isDemo.value);
 let agentRequest = 0;
 const followups = ref<string[]>([]);
 const followupsLoading = ref(false);
-const suggestionsEnabled = ref(false);
-const maxSuggestions = ref(DEFAULT_MAX_SUGGESTIONS);
+const suggestionsConfigQuery = useSuggestionsConfig({
+  enabled: computed(() => !isDemo.value),
+});
+const maxSuggestions = computed(
+  () =>
+    suggestionsConfigQuery.data.value?.max_suggestions ??
+    DEFAULT_MAX_SUGGESTIONS,
+);
 const composer = ref<InstanceType<typeof ChatComposer> | null>(null);
 const failedSend = ref<{ text: string; files: FileInMessage[] } | null>(null);
 const mainTailRequest = ref(0);
@@ -184,6 +189,8 @@ const editState = ref<{
   text: string;
   messageIds: string[];
 } | null>(null);
+const bootstrapConversationReady = ref(!props.bootstrap);
+const bootstrapConversationFinished = ref(!props.bootstrap);
 let finishAgentCreationRun: (messages: readonly Message[]) => void = () => {};
 let lastStartedThreadId: string | null = null;
 
@@ -222,6 +229,9 @@ const stream = useThreadStream({
   },
   onFinish(state, completedMessages) {
     finishAgentCreationRun(completedMessages);
+    if (props.bootstrap && !bootstrapConversationReady.value) {
+      bootstrapConversationFinished.value = true;
+    }
     const id = routeThreadId.value ?? lastStartedThreadId;
     const title = Reflect.get(state, "title");
     const stateTitle = typeof title === "string" && title.trim() ? title : null;
@@ -234,7 +244,7 @@ const stream = useThreadStream({
         });
       }
     }
-    queueMicrotask(() => void refreshPostRun(id));
+    queueMicrotask(() => void refreshPostRun(id, completedMessages));
     // A new chat adopts its real route id asynchronously in onStart. The final
     // wire message can therefore become visible shortly after `onFinish`.
     // Bound the wait instead of emitting an irreversibly body-less notification.
@@ -485,8 +495,19 @@ function openBrowser() {
   sidecar.close();
   browserOpen.value = true;
 }
+function toggleBrowser() {
+  if (browserOpen.value) {
+    browserOpen.value = false;
+    return;
+  }
+  openBrowser();
+}
 function acceptBrowserFrame(frame: BrowserViewFrame) {
   browserFrame.value = frame;
+}
+function openBrowserFrame(frame: BrowserViewFrame) {
+  acceptBrowserFrame(frame);
+  openBrowser();
 }
 function askInSidecar(payload: {
   message: Message;
@@ -643,6 +664,23 @@ const currentTitle = computed(() => {
       ?.values.title ?? $i18n.t.value.pages.newChat
   );
 });
+const currentThread = computed(() => {
+  const threadId = routeThreadId.value;
+  if (!threadId) return null;
+  const existing = threads.threads.find(
+    (thread) => thread.thread_id === threadId,
+  );
+  if (existing) return existing;
+  return {
+    thread_id: threadId,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    metadata: {},
+    status: "idle",
+    values: { title: currentTitle.value, messages: visibleMessages.value },
+    interrupts: {},
+  } as AgentThread;
+});
 const isWelcomeMode = computed(
   () => visibleMessages.value.length === 0 && !stream.isHistoryLoading.value,
 );
@@ -650,20 +688,17 @@ const isWelcomeMode = computed(
 function toggleSidebar() {
   globalThis.dispatchEvent(new CustomEvent("deerflow:toggle-sidebar"));
 }
+function startAgentChat() {
+  if (!props.agentName) return;
+  void router.push(
+    `/workspace/agents/${encodeURIComponent(props.agentName)}/chats/new`,
+  );
+}
 function updateSidebarState(event: Event) {
   mobileSidebarOpen.value = Boolean(
     (event as CustomEvent<{ open?: boolean }>).detail?.open,
   );
 }
-async function shareConversation() {
-  try {
-    await globalThis.navigator.clipboard.writeText(globalThis.location.href);
-    warnings.value.push($i18n.t.value.clipboard.linkCopied);
-  } catch {
-    warnings.value.push($i18n.t.value.clipboard.failedToCopyToClipboard);
-  }
-}
-
 function messageText(message: Message) {
   if (typeof message.content === "string") return message.content;
   if (!Array.isArray(message.content)) return "";
@@ -676,8 +711,10 @@ function messageText(message: Message) {
     .join("");
 }
 
-function recentConversation() {
-  return visibleMessages.value
+function recentConversation(
+  messages: readonly Message[] = visibleMessages.value,
+) {
+  return messages
     .filter((message) => message.type === "human" || message.type === "ai")
     .map((message) => ({
       role: message.type === "human" ? "user" : "assistant",
@@ -687,8 +724,15 @@ function recentConversation() {
     .slice(-6);
 }
 
-async function refreshPostRun(targetThreadId: string | null) {
+async function refreshPostRun(
+  targetThreadId: string | null,
+  completedMessages: readonly Message[],
+) {
   if (!targetThreadId) return;
+  // The just-completed run is the authoritative suggestion input. Capture it
+  // before metadata/token refreshes can re-read an eventually-consistent
+  // thread snapshot and temporarily replace the visible history.
+  const messages = recentConversation(completedMessages);
   const scope = `${targetThreadId}\u0000${props.agentName ?? "lead-agent"}`;
   const token = suggestionGeneration.begin(scope);
   suggestionController?.abort();
@@ -715,8 +759,16 @@ async function refreshPostRun(targetThreadId: string | null) {
     return;
   }
   await threadTokenUsageQuery.refetch();
-  if (!suggestionsEnabled.value) return;
-  const messages = recentConversation();
+  const config =
+    suggestionsConfigQuery.data.value ??
+    (await suggestionsConfigQuery.refetch({ cancelRefetch: false })).data;
+  if (
+    controller.signal.aborted ||
+    !suggestionGeneration.isCurrent(token, scope) ||
+    !config?.enabled
+  ) {
+    return;
+  }
   if (messages.length === 0) return;
   followupsLoading.value = true;
   followups.value = [];
@@ -738,7 +790,7 @@ async function refreshPostRun(targetThreadId: string | null) {
     const body = (await response.json()) as { suggestions?: unknown[] };
     if (
       controller.signal.aborted ||
-      routeThreadId.value !== targetThreadId ||
+      (routeThreadId.value ?? lastStartedThreadId) !== targetThreadId ||
       !suggestionGeneration.isCurrent(token, scope)
     ) {
       return;
@@ -763,13 +815,25 @@ async function refreshPostRun(targetThreadId: string | null) {
   }
 }
 
-watch([routeThreadId, () => props.agentName], () => {
-  suggestionGeneration.invalidate();
-  suggestionController?.abort();
-  suggestionController = null;
-  followupsLoading.value = false;
-  followups.value = [];
-});
+watch(
+  [routeThreadId, () => props.agentName],
+  ([nextThreadId, nextAgentName], [previousThreadId, previousAgentName]) => {
+    // `new` adopts the same thread id produced by onStart. That URL update is
+    // not a conversation switch and must not abort the post-run suggestion
+    // request already owned by that thread.
+    const adoptingStartedThread =
+      previousThreadId === null &&
+      nextThreadId === lastStartedThreadId &&
+      nextAgentName === previousAgentName;
+    if (adoptingStartedThread) return;
+
+    suggestionGeneration.invalidate();
+    suggestionController?.abort();
+    suggestionController = null;
+    followupsLoading.value = false;
+    followups.value = [];
+  },
+);
 
 async function ensureThread() {
   if (isDemo.value)
@@ -970,26 +1034,31 @@ watch(
       return;
     }
     bootstrapAgentName = agentName;
+    bootstrapConversationReady.value = false;
+    bootstrapConversationFinished.value = false;
     void send(
       $i18n.t.value.agents.nameStepBootstrapMessage.replace(
         "{name}",
         agentName,
       ),
       [],
-    );
+    ).then((accepted) => {
+      // Save may start only after the design conversation has fully released
+      // the stream owner. Enabling it from onFinish is too early because
+      // sendMessage still owns its single-flight guard until submit resolves.
+      if (
+        accepted &&
+        bootstrapConversationFinished.value &&
+        props.bootstrap &&
+        props.agentName === agentName &&
+        bootstrapAgentName === agentName
+      ) {
+        bootstrapConversationReady.value = true;
+      }
+    });
   },
   { immediate: true },
 );
-onMounted(async () => {
-  if (isDemo.value) return;
-  try {
-    const config = await loadSuggestionsConfig();
-    suggestionsEnabled.value = config.enabled;
-    maxSuggestions.value = config.max_suggestions;
-  } catch {
-    suggestionsEnabled.value = false;
-  }
-});
 onMounted(async () => {
   if (!isDemo.value || !routeThreadId.value) return;
   try {
@@ -1100,9 +1169,40 @@ onUnmounted(() => {
           >
             <Menu :size="18" />
           </button>
+          <div
+            v-if="agentName"
+            class="flex min-w-0 shrink-0 items-center gap-1.5 rounded-md border px-2 py-1"
+          >
+            <Bot :size="14" class="text-primary" />
+            <span
+              class="hidden max-w-24 truncate text-xs font-medium sm:inline sm:max-w-none"
+            >
+              {{ agent?.name ?? agentName }}
+            </span>
+          </div>
           <div class="min-w-0 flex-1 truncate text-sm font-medium">
             {{ currentTitle }}
           </div>
+          <button
+            v-if="agentName && !bootstrap"
+            type="button"
+            :aria-label="$i18n.t.value.agents.newChat"
+            class="bg-secondary text-secondary-foreground hover:bg-secondary/80 flex h-8 items-center gap-2 rounded-md px-2 text-xs sm:px-3"
+            @click="startAgentChat"
+          >
+            <PlusSquare :size="16" />
+            <span class="hidden sm:inline">{{
+              $i18n.t.value.agents.newChat
+            }}</span>
+          </button>
+          <NuxtLink
+            v-if="routeThreadId && !agentName && !isDemo"
+            :to="`/workspace/scheduled-tasks?thread_id=${encodeURIComponent(routeThreadId)}`"
+            :aria-label="$i18n.t.value.sidebar.scheduledTasks"
+            class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
+          >
+            <CalendarClock :size="16" />
+          </NuxtLink>
           <TokenUsageIndicator
             v-if="!isDemo && modelCatalog.tokenUsageEnabled.value"
             :thread-id="routeThreadId"
@@ -1118,17 +1218,13 @@ onUnmounted(() => {
             v-else-if="!isDemo"
             :context-usage="contextUsage"
           />
-          <span
-            v-if="agentName"
-            class="bg-secondary text-secondary-foreground rounded-full px-2.5 py-1 text-xs"
-            >{{ agentName }}</span
-          >
           <button
             v-if="bootstrap"
             type="button"
             data-testid="agent-save"
             class="rounded-md border px-3 py-1.5 text-xs"
             :disabled="
+              !bootstrapConversationReady ||
               stream.isStreaming.value ||
               creationBusy ||
               creation.status.value === 'created'
@@ -1146,19 +1242,6 @@ onUnmounted(() => {
                     : $i18n.t.value.agents.save
             }}
           </button>
-          <ArtifactTrigger
-            :count="artifactPanel.artifacts.value.length"
-            @open="showArtifacts"
-          />
-          <BrowserTrigger v-if="browserEnabled" @open="openBrowser" />
-          <NuxtLink
-            v-if="routeThreadId && !isDemo"
-            :to="`/workspace/scheduled-tasks?thread_id=${encodeURIComponent(routeThreadId)}`"
-            :aria-label="$i18n.t.value.sidebar.scheduledTasks"
-            class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
-          >
-            <CalendarClock :size="16" />
-          </NuxtLink>
           <button
             v-if="!isDemo && sidecar.sidecarThreadId.value && sidecarReady"
             type="button"
@@ -1173,15 +1256,21 @@ onUnmounted(() => {
           >
             ◫
           </button>
-          <button
-            v-if="!isWelcomeMode && !isDemo"
-            type="button"
-            :aria-label="$i18n.t.value.common.share"
-            class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
-            @click="shareConversation"
-          >
-            <Share2 :size="16" />
-          </button>
+          <BrowserTrigger
+            v-if="browserEnabled"
+            :open="activePanel === 'browser'"
+            @toggle="toggleBrowser"
+          />
+          <ExportTrigger
+            v-if="routeThreadId && currentThread && !isWelcomeMode && !isDemo"
+            :thread-id="routeThreadId"
+            :thread="currentThread"
+            :messages="visibleMessages"
+          />
+          <ArtifactTrigger
+            :count="artifactPanel.artifacts.value.length"
+            @open="showArtifacts"
+          />
         </header>
         <MessageList
           :class="isWelcomeMode ? '' : 'pt-10'"
@@ -1209,6 +1298,7 @@ onUnmounted(() => {
           selection-mode="main"
           test-id="main-message-list"
           @artifact="openArtifact"
+          @browser="openBrowserFrame"
           @selection-ask="askInSidecar"
           @selection-add="addToConversation"
           @branch="branch"

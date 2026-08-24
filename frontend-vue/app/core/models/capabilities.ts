@@ -4,7 +4,7 @@
   【架构位置】     L3 模型/提交协议适配
   【主要导出】     resolveComposerModel · normalizeComposerContext
   【依赖关系】     models/types
-  【边界与注意】   不支持的 reasoning 字段必须省略，不能伪造后端默认值。
+  【边界与注意】   UI 可见能力仍由模型元数据控制；run context 必须保留与 React 相同的模式 effort。
 */
 
 import type { Model } from "./types";
@@ -18,16 +18,6 @@ const VALID_MODES = new Set<ComposerMode>([
   "pro",
   "ultra",
 ]);
-
-const REASONING_EFFORT_BY_MODE: Record<
-  ComposerMode,
-  ComposerReasoningEffort | undefined
-> = {
-  flash: "minimal",
-  thinking: "low",
-  pro: "medium",
-  ultra: "high",
-};
 
 export function resolveComposerModel(
   models: readonly Model[],
@@ -49,9 +39,11 @@ function resolveMode(value: unknown, supportsThinking: boolean): ComposerMode {
 }
 
 /**
- * Normalize the UI context against the selected backend model. Unsupported
- * options are omitted, matching the Gateway/model factory's undefined
- * semantics instead of sending invented values.
+ * Normalize composer selection against the selected model. Capability flags
+ * control which UI choices are available, while the selected mode/effort is
+ * retained so every frontend submits the same observable run context. The
+ * Gateway model factory remains the authority that strips unsupported model
+ * kwargs before provider construction.
  */
 export function normalizeComposerContext<T extends Record<string, unknown>>(
   context: T,
@@ -72,15 +64,14 @@ export function normalizeComposerContext<T extends Record<string, unknown>>(
     mode,
   };
 
-  if (model.supports_reasoning_effort === true) {
-    const explicitEffort = context.reasoning_effort;
-    normalized.reasoning_effort =
-      explicitEffort === "minimal" ||
-      explicitEffort === "low" ||
-      explicitEffort === "medium" ||
-      explicitEffort === "high"
-        ? explicitEffort
-        : REASONING_EFFORT_BY_MODE[mode];
+  const explicitEffort = context.reasoning_effort;
+  if (
+    explicitEffort === "minimal" ||
+    explicitEffort === "low" ||
+    explicitEffort === "medium" ||
+    explicitEffort === "high"
+  ) {
+    normalized.reasoning_effort = explicitEffort;
   } else {
     delete normalized.reasoning_effort;
   }

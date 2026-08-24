@@ -9,7 +9,19 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { Coins } from "lucide-vue-next";
+import {
+  DropdownMenuContent,
+  DropdownMenuItemIndicator,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuRoot,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "reka-ui";
+import type { AcceptableValue } from "reka-ui";
+import { Check, ChevronDown, Coins } from "lucide-vue-next";
 
 import type { Message } from "@/core/types/message";
 import {
@@ -63,75 +75,121 @@ const percentage = computed(() => {
 });
 const presets: TokenUsageViewPreset[] = ["off", "summary", "per_turn", "debug"];
 
-function updatePreset(event: Event) {
+function updatePreset(value: AcceptableValue) {
+  if (
+    typeof value !== "string" ||
+    !presets.includes(value as TokenUsageViewPreset)
+  ) {
+    return;
+  }
   emit(
     "preferencesChange",
-    tokenUsagePreferencesFromPreset(
-      (event.target as HTMLSelectElement).value as TokenUsageViewPreset,
-    ),
+    tokenUsagePreferencesFromPreset(value as TokenUsageViewPreset),
   );
 }
 function presetLabel(value: TokenUsageViewPreset) {
   const key = value === "per_turn" ? "perTurn" : value;
   return $i18n.t.value.tokenUsage.presets[key];
 }
+function presetDescription(value: TokenUsageViewPreset) {
+  const key = value === "per_turn" ? "perTurn" : value;
+  return $i18n.t.value.tokenUsage.presetDescriptions[key];
+}
 </script>
 
 <template>
-  <details
-    v-if="enabled"
-    class="border-border bg-background/80 text-muted-foreground relative rounded-full border text-xs"
-    data-testid="token-usage-indicator"
-  >
-    <summary
-      class="flex cursor-pointer list-none items-center gap-1.5 px-2 py-1 [&::-webkit-details-marker]:hidden"
-    >
-      <Coins :size="14" />
-      <span>{{ $i18n.t.value.tokenUsage.label }}</span>
-      <span class="font-mono">
-        {{
-          preferences.headerTotal
-            ? usage
-              ? formatTokenCount(usage.totalTokens)
-              : "-"
-            : presetLabel(preset)
-        }}
-      </span>
-      <span v-if="percentage" class="border-l pl-1.5 font-mono"
-        >{{ percentage }}%</span
+  <DropdownMenuRoot v-if="enabled" data-testid="token-usage-indicator">
+    <DropdownMenuTrigger as-child>
+      <button
+        type="button"
+        class="border-border bg-background/70 text-muted-foreground hover:bg-background/90 flex h-auto items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-normal"
       >
-    </summary>
-    <div
-      class="border-border bg-background absolute top-full right-0 mt-1 w-72 rounded-lg border p-3 shadow-lg"
-    >
-      <dl v-if="usage" class="grid grid-cols-[1fr_auto] gap-1 text-xs">
-        <dt>{{ $i18n.t.value.tokenUsage.input }}</dt>
-        <dd class="font-mono">{{ formatTokenCount(usage.inputTokens) }}</dd>
-        <dt>{{ $i18n.t.value.tokenUsage.output }}</dt>
-        <dd class="font-mono">{{ formatTokenCount(usage.outputTokens) }}</dd>
-        <dt class="font-medium">{{ $i18n.t.value.tokenUsage.total }}</dt>
-        <dd class="font-mono font-medium">
-          {{ formatTokenCount(usage.totalTokens) }}
-        </dd>
-      </dl>
-      <p v-else class="text-muted-foreground text-xs">
-        {{ $i18n.t.value.tokenUsage.unavailable }}
-      </p>
-      <label class="mt-3 block text-xs">
-        <span class="mb-1 block">{{ $i18n.t.value.tokenUsage.view }}</span>
-        <select
-          class="border-input w-full rounded-md border px-2 py-1"
-          :value="preset"
-          @change="updatePreset"
+        <Coins :size="14" />
+        <span>{{ $i18n.t.value.tokenUsage.label }}</span>
+        <span class="font-mono">
+          {{
+            preferences.headerTotal
+              ? usage
+                ? formatTokenCount(usage.totalTokens)
+                : "-"
+              : presetLabel(preset)
+          }}
+        </span>
+        <span
+          v-if="percentage"
+          class="text-muted-foreground/80 border-l pl-1.5 font-mono"
+          :aria-label="$i18n.t.value.contextUsage.badgeAriaLabel(percentage)"
         >
-          <option v-for="value in presets" :key="value" :value="value">
-            {{ presetLabel(value) }}
-          </option>
-        </select>
-      </label>
-      <p class="text-muted-foreground mt-2 text-[11px] leading-relaxed">
-        {{ $i18n.t.value.tokenUsage.note }}
-      </p>
-    </div>
-  </details>
+          {{ percentage }}%
+        </span>
+        <ChevronDown :size="12" />
+      </button>
+    </DropdownMenuTrigger>
+    <DropdownMenuPortal>
+      <DropdownMenuContent
+        align="end"
+        side="bottom"
+        :side-offset="4"
+        class="bg-popover text-popover-foreground border-border z-[75] w-80 rounded-md border p-1 text-sm shadow-lg"
+      >
+        <DropdownMenuLabel class="px-2 py-1.5 text-sm font-semibold">
+          {{ $i18n.t.value.tokenUsage.title }}
+        </DropdownMenuLabel>
+        <dl v-if="usage" class="space-y-1 px-2 py-1 text-xs">
+          <div class="flex justify-between gap-4">
+            <dt>{{ $i18n.t.value.tokenUsage.input }}</dt>
+            <dd class="font-mono">{{ formatTokenCount(usage.inputTokens) }}</dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt>{{ $i18n.t.value.tokenUsage.output }}</dt>
+            <dd class="font-mono">
+              {{ formatTokenCount(usage.outputTokens) }}
+            </dd>
+          </div>
+          <div class="border-t pt-1">
+            <div class="flex justify-between gap-4">
+              <dt>{{ $i18n.t.value.tokenUsage.total }}</dt>
+              <dd class="font-mono font-medium">
+                {{ formatTokenCount(usage.totalTokens) }}
+              </dd>
+            </div>
+          </div>
+        </dl>
+        <p v-else class="text-muted-foreground px-2 py-1 text-xs">
+          {{ $i18n.t.value.tokenUsage.unavailable }}
+        </p>
+        <DropdownMenuSeparator class="bg-border my-1 h-px" />
+        <DropdownMenuLabel class="px-2 py-1.5 text-sm font-semibold">
+          {{ $i18n.t.value.tokenUsage.view }}
+        </DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          :model-value="preset"
+          @update:model-value="updatePreset"
+        >
+          <DropdownMenuRadioItem
+            v-for="value in presets"
+            :key="value"
+            :value="value"
+            class="hover:bg-accent focus:bg-accent relative flex cursor-default items-center rounded py-1.5 pr-2 pl-8 outline-none"
+          >
+            <DropdownMenuItemIndicator
+              class="absolute left-2 flex size-4 items-center justify-center"
+            >
+              <Check :size="14" />
+            </DropdownMenuItemIndicator>
+            <div class="grid gap-0.5">
+              <span>{{ presetLabel(value) }}</span>
+              <span class="text-muted-foreground text-xs">
+                {{ presetDescription(value) }}
+              </span>
+            </div>
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator class="bg-border my-1 h-px" />
+        <p class="text-muted-foreground px-2 py-2 text-xs leading-relaxed">
+          {{ $i18n.t.value.tokenUsage.note }}
+        </p>
+      </DropdownMenuContent>
+    </DropdownMenuPortal>
+  </DropdownMenuRoot>
 </template>

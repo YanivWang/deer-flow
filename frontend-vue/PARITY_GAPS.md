@@ -81,59 +81,63 @@
 
 ## 5. 总清单
 
-| ID          | 优先级 | 状态 | 工作包 | 未对齐点                                                         |
-| ----------- | ------ | ---- | ------ | ---------------------------------------------------------------- |
-| API-01      | P0     | DONE | WP-01  | Nuxt 代理会拒绝没有请求体和 `Content-Length` 的 DELETE           |
-| AUTH-01     | P0     | DONE | WP-01  | OIDC callback 没有验证 session 和执行安全跳转                    |
-| AUTH-02     | P0     | DONE | WP-01  | `/workspace` 仍是占位页，没有进入默认聊天页                      |
-| AUTH-03     | P1     | DONE | WP-01  | Gateway 不可用被当成未登录，缺少离线/恢复状态                    |
-| SEC-01      | P0     | DONE | WP-01  | 实际消息 Markdown 链接没有协议 allowlist                         |
-| STREAM-01   | P0     | DONE | WP-02  | Vue 丢弃 task 与 `llm_retry` custom SSE 事件                     |
-| STREAM-02   | P0     | DONE | WP-02  | Subtask 没有实时/历史 steps、模型与 token 展示                   |
-| THREAD-01   | P1     | DONE | WP-02  | `/compact` 只显示建议，没有调用 compact API                      |
-| THREAD-02   | P1     | DONE | WP-02  | prepared replay 丢失后端错误且缓存失效不完整                     |
-| THREAD-03   | P0     | DONE | WP-02  | 主线程搜索结果没有过滤 sidecar 线程                              |
-| THREAD-04   | P0     | DONE | WP-02  | 删除主线程不级联删除 sidecar 线程                                |
-| THREAD-05   | P1     | DONE | WP-02  | 历史记录自动请求所有分页，没有按需加载                           |
-| COMPOSER-01 | P1     | DONE | WP-03  | 草稿按 user/agent/thread 隔离，恢复时重新校验 skill              |
-| COMPOSER-02 | P1     | DONE | WP-03  | agent 默认模型、能力、mode、reasoning 与线程上下文已归一化       |
-| COMPOSER-03 | P1     | DONE | WP-03  | 仅 run accepted 后清理；上传/发送失败保留并复用用户内容          |
-| COMPOSER-04 | P1     | DONE | WP-03  | follow-up 显式决策；polish/goal/suggestion 使用 generation guard |
-| HIL-01      | P1     | DONE | WP-03  | required/checkbox/pending/error/thread 生命周期已接通            |
-| MESSAGE-01  | P1     | DONE | WP-03  | 现代与 legacy 已发送附件均在消息记录中渲染                       |
-| MESSAGE-02  | P1     | DONE | WP-03  | feedback create/update/delete、错误回滚与刷新恢复已接通          |
-| MESSAGE-03  | P1     | DONE | WP-03  | `thread.values.todos` 已按权威状态渲染                           |
-| MESSAGE-04  | P1     | DONE | WP-03  | models/thread token usage、total/per-turn/debug 偏好已消费       |
-| MESSAGE-05  | P1     | DONE | WP-03  | user/assistant copy 与 citation source 详情已补齐                |
-| SIDECAR-01  | P0     | DONE | WP-04  | 单一 session owner 串行 restore/create，拒绝过期结果回写         |
-| SIDECAR-02  | P0     | DONE | WP-04  | sidecar 附件按最终 thread 上传并进入结构化发送请求               |
-| SIDECAR-03  | P0     | DONE | WP-04  | sidecar MessageList 已接入真实 thread/error/HIL 提交             |
-| BROWSER-01  | P0     | DONE | WP-05  | connecting 阶段丢导航，断线没有有界重连                          |
-| BROWSER-02  | P0     | DONE | WP-05  | 缺 REST fallback、live/static 模式和 URL 同步                    |
-| BROWSER-03  | P0     | DONE | WP-05  | 点击坐标、滚轮、键盘和 IME 行为未对齐                            |
-| ARTIFACT-01 | P0     | DONE | WP-06  | 显式类型/来源策略 fail closed；未知二进制不进入文本加载或 PUT    |
-| ARTIFACT-02 | P1     | DONE | WP-06  | 单一 draft owner 统一保护切换、关闭、跨面板、路由与页面离开      |
-| ARTIFACT-03 | P1     | DONE | WP-06  | save/discard/exit/copy/open/download/install 与错误/权限已接通   |
-| ARTIFACT-04 | P1     | DONE | WP-06  | 正式与流式 HTML 仅在完整、未截断且结构闭合时进入 iframe preview  |
-| SCHEDULE-01 | P1     | DONE | WP-07  | once/cron、DST 时区与 fresh/reuse 精确 payload 已接通            |
-| SCHEDULE-02 | P1     | DONE | WP-07  | 编辑、确认删除、recipes、类型与六状态筛选已接通                  |
-| SCHEDULE-03 | P1     | DONE | WP-07  | 分页 run history、完整详情、轮询与错误收敛已接通                 |
-| CHANNEL-01  | P1     | DONE | WP-08  | scoped connections 是状态/多账号唯一真相，provider 只保留能力    |
-| CHANNEL-02  | P1     | DONE | WP-08  | URL/instruction/有限 expires poll 与全生命周期 cleanup 已接通    |
-| CHANNEL-03  | P1     | DONE | WP-08  | 单 connection 与管理员 provider runtime 删除已明确分流并重读     |
-| AGENT-01    | P1     | DONE | WP-09  | setup_agent 结果、有限可见性验证与 created/error/retry 已收敛    |
-| AGENT-02    | P1     | DONE | WP-09  | Agent 设置已按模型能力构造精确 PUT 并清理 stale override         |
-| AGENT-03    | P2     | DONE | WP-09  | Agent 卡片已精确展示 model、skills 与 tool groups                |
-| MEMORY-01   | P1     | DONE | WP-10  | 完整 export runtime schema、storage 校验、warning preview 已接通 |
-| MEMORY-02   | P1     | DONE | WP-10  | 删除、清空与覆盖导入使用 pending-safe alert dialog 二次确认      |
-| MEMORY-03   | P1     | DONE | WP-10  | confidence 0～1 编辑/diff、搜索、筛选与空态已接通                |
-| SETTINGS-01 | P1     | DONE | WP-10  | Skills/MCP 已按共享 session 区分读写权限、403 与通用失败         |
-| SHELL-01    | P1     | DONE | WP-11  | 单例 Gateway banner、command palette、toast 与清理合同已接通     |
-| SHELL-02    | P1     | DONE | WP-11  | Settings focus/aria/query/history/焦点归还已接通                 |
-| SHELL-03    | P1     | DONE | WP-11  | share/export/updated time 与可见错误已接通                       |
-| CHANGES-01  | P2     | DONE | WP-11  | 完整字段/reason、Query abort/stale、error/retry 已接通           |
-| I18N-01     | P1     | DONE | WP-12  | 80 个产品 SFC 已接入单一 typed locale owner 与 AST source guard  |
-| THEME-01    | P2     | DONE | WP-12  | system/explicit/forced route 已归单一 theme lifecycle owner      |
+| ID          | 优先级 | 状态 | 工作包 | 未对齐点                                                              |
+| ----------- | ------ | ---- | ------ | --------------------------------------------------------------------- |
+| API-01      | P0     | DONE | WP-01  | Nuxt 代理会拒绝没有请求体和 `Content-Length` 的 DELETE                |
+| AUTH-01     | P0     | DONE | WP-01  | OIDC callback 没有验证 session 和执行安全跳转                         |
+| AUTH-02     | P0     | DONE | WP-01  | `/workspace` 仍是占位页，没有进入默认聊天页                           |
+| AUTH-03     | P1     | DONE | WP-01  | Gateway 不可用被当成未登录，缺少离线/恢复状态                         |
+| SEC-01      | P0     | DONE | WP-01  | 实际消息 Markdown 链接没有协议 allowlist                              |
+| STREAM-01   | P0     | DONE | WP-02  | Vue 丢弃 task 与 `llm_retry` custom SSE 事件                          |
+| STREAM-02   | P0     | DONE | WP-02  | Subtask 没有实时/历史 steps、模型与 token 展示                        |
+| THREAD-01   | P1     | DONE | WP-02  | `/compact` 只显示建议，没有调用 compact API                           |
+| THREAD-02   | P1     | DONE | WP-02  | prepared replay 丢失后端错误且缓存失效不完整                          |
+| THREAD-03   | P0     | DONE | WP-02  | 主线程搜索结果没有过滤 sidecar 线程                                   |
+| THREAD-04   | P0     | DONE | WP-02  | 删除主线程不级联删除 sidecar 线程                                     |
+| THREAD-05   | P1     | DONE | WP-02  | 历史记录自动请求所有分页，没有按需加载                                |
+| COMPOSER-01 | P1     | DONE | WP-03  | 草稿按 user/agent/thread 隔离，恢复时重新校验 skill                   |
+| COMPOSER-02 | P1     | DONE | WP-03  | agent 默认模型、能力、mode、reasoning 与线程上下文已归一化            |
+| COMPOSER-03 | P1     | DONE | WP-03  | 仅 run accepted 后清理；上传/发送失败保留并复用用户内容               |
+| COMPOSER-04 | P1     | DONE | WP-03  | follow-up 显式决策；polish/goal/suggestion 使用 generation guard      |
+| HIL-01      | P1     | DONE | WP-03  | required/checkbox/pending/error/thread 生命周期已接通                 |
+| MESSAGE-01  | P1     | DONE | WP-03  | 现代与 legacy 已发送附件均在消息记录中渲染                            |
+| MESSAGE-02  | P1     | DONE | WP-03  | 当前 React 未接入 feedback 操作；Vue 不显示点赞/踩，wire 字段无损保留 |
+| MESSAGE-03  | P1     | DONE | WP-03  | `thread.values.todos` 已按权威状态渲染                                |
+| MESSAGE-04  | P1     | DONE | WP-03  | models/thread token usage、total/per-turn/debug 偏好已消费            |
+| MESSAGE-05  | P1     | DONE | WP-03  | user/assistant copy 与 citation source 详情已补齐                     |
+| MESSAGE-06  | P0     | DONE | WP-03  | processing 步骤、工具结果、reasoning、等待态与 Markdown 层级已对齐    |
+| MESSAGE-07  | P1     | DONE | WP-13  | 消息统一插件链，GFM 表格与复制/下载/全屏操作已对齐                    |
+| SIDECAR-01  | P0     | DONE | WP-04  | 单一 session owner 串行 restore/create，拒绝过期结果回写              |
+| SIDECAR-02  | P0     | DONE | WP-04  | sidecar 附件按最终 thread 上传并进入结构化发送请求                    |
+| SIDECAR-03  | P0     | DONE | WP-04  | sidecar MessageList 已接入真实 thread/error/HIL 提交                  |
+| BROWSER-01  | P0     | DONE | WP-05  | connecting 阶段丢导航，断线没有有界重连                               |
+| BROWSER-02  | P0     | DONE | WP-05  | 缺 REST fallback、live/static 模式和 URL 同步                         |
+| BROWSER-03  | P0     | DONE | WP-05  | 点击坐标、滚轮、键盘和 IME 行为未对齐                                 |
+| ARTIFACT-01 | P0     | DONE | WP-06  | 显式类型/来源策略 fail closed；未知二进制不进入文本加载或 PUT         |
+| ARTIFACT-02 | P1     | DONE | WP-06  | 单一 draft owner 统一保护切换、关闭、跨面板、路由与页面离开           |
+| ARTIFACT-03 | P1     | DONE | WP-06  | save/discard/exit/copy/open/download/install 与错误/权限已接通        |
+| ARTIFACT-04 | P1     | DONE | WP-06  | 正式与流式 HTML 仅在完整、未截断且结构闭合时进入 iframe preview       |
+| SCHEDULE-01 | P1     | DONE | WP-07  | once/cron、DST 时区与 fresh/reuse 精确 payload 已接通                 |
+| SCHEDULE-02 | P1     | DONE | WP-07  | 编辑、确认删除、recipes、类型与六状态筛选已接通                       |
+| SCHEDULE-03 | P1     | DONE | WP-07  | 分页 run history、完整详情、轮询与错误收敛已接通                      |
+| CHANNEL-01  | P1     | DONE | WP-08  | scoped connections 是状态/多账号唯一真相，provider 只保留能力         |
+| CHANNEL-02  | P1     | DONE | WP-08  | URL/instruction/有限 expires poll 与全生命周期 cleanup 已接通         |
+| CHANNEL-03  | P1     | DONE | WP-08  | 单 connection 与管理员 provider runtime 删除已明确分流并重读          |
+| AGENT-01    | P1     | DONE | WP-09  | setup_agent 结果、有限可见性验证与 created/error/retry 已收敛         |
+| AGENT-02    | P1     | DONE | WP-09  | Agent 设置已按模型能力构造精确 PUT 并清理 stale override              |
+| AGENT-03    | P2     | DONE | WP-09  | Agent 卡片已精确展示 model、skills 与 tool groups                     |
+| MEMORY-01   | P1     | DONE | WP-10  | 完整 export runtime schema、storage 校验、warning preview 已接通      |
+| MEMORY-02   | P1     | DONE | WP-10  | 删除、清空与覆盖导入使用 pending-safe alert dialog 二次确认           |
+| MEMORY-03   | P1     | DONE | WP-10  | confidence 0～1 编辑/diff、搜索、筛选与空态已接通                     |
+| SETTINGS-01 | P1     | DONE | WP-10  | Skills/MCP 已按共享 session 区分读写权限、403 与通用失败              |
+| SHELL-01    | P1     | DONE | WP-11  | 单例 Gateway banner、command palette、toast 与清理合同已接通          |
+| SHELL-02    | P1     | DONE | WP-11  | Settings focus/aria/query/history/焦点归还已接通                      |
+| SHELL-03    | P1     | DONE | WP-11  | share/export/updated time 与可见错误已接通                            |
+| CHANGES-01  | P2     | DONE | WP-11  | 完整字段/reason、Query abort/stale、error/retry 已接通                |
+| I18N-01     | P1     | DONE | WP-12  | 88 个产品 SFC 已接入单一 typed locale owner 与 AST source guard       |
+| THEME-01    | P2     | DONE | WP-12  | system/explicit/forced route 已归单一 theme lifecycle owner           |
+| SURFACE-01  | P1     | DONE | WP-13  | 聊天 header、侧栏菜单、消息操作与 token/export 入口已按调用点收口     |
+| SURFACE-02  | P1     | DONE | WP-13  | follow-up 配置竞态已收敛为单一 Vue Query owner                        |
 
 ## 6. 详细工作包
 
@@ -217,39 +221,40 @@
 
 ### WP-03：Composer、Human Input 与消息输出
 
-包含：`COMPOSER-01`～`COMPOSER-04`、`HIL-01`、`MESSAGE-01`～`MESSAGE-05`。
+包含：`COMPOSER-01`～`COMPOSER-04`、`HIL-01`、`MESSAGE-01`～`MESSAGE-06`。
 
 #### 当前代码事实
 
 - [`useComposerDraft.ts`](app/composables/useComposerDraft.ts) 以真实 user + agent/lead-agent + 真实 thread 或稳定 `new` scope 持有 tab 草稿；skill catalog ready 后才恢复并降级已禁用 skill。成功登出和确认删除 thread 会按作用域清理草稿。
 - [`ChatComposer.vue`](app/components/chat/ChatComposer.vue) 把 text、skill、files 与上传结果保留到 Gateway run handle 到达；创建失败、4xx、取消、路由切换继续可重试，成功上传文件不会重复上传，重复提交由单一 in-flight guard 丢弃。
-- [`useModels.ts`](app/composables/useModels.ts)、[`models/capabilities.ts`](app/core/models/capabilities.ts) 与 [`useThreadSettings.ts`](app/composables/useThreadSettings.ts) 共同解析 agent 默认模型、thinking/mode/reasoning 能力与 thread/agent-scoped context；不支持的字段不进入最终 payload。
+- [`useModels.ts`](app/composables/useModels.ts)、[`models/capabilities.ts`](app/core/models/capabilities.ts) 与 [`useThreadSettings.ts`](app/composables/useThreadSettings.ts) 共同解析 agent 默认模型、thinking/mode/reasoning 能力与 thread/agent-scoped context；能力控制可见选择，最终 run context 保持 React 的 explicit effort → mode fallback 语义，provider capability 过滤归 Gateway model factory。
 - follow-up 在非空草稿上显式提供 append-and-send、replace-and-send、cancel；[`async/generation.ts`](app/core/async/generation.ts) 统一阻止 polish、goal 与 post-run suggestion 在 stop、unmount 或 route/thread 变化后写回。
 - [`HumanInputCard.vue`](app/components/chat/HumanInputCard.vue) 对 required checkbox=false、select/multi-select 与文本字段统一校验并暴露 aria-invalid；MessageList 在失败、thread error、路由切换与终态收敛 pending HIL。
 - [`MessageAttachments.vue`](app/components/chat/MessageAttachments.vue) 从持久化消息读取现代 files 与 legacy upload tag；刷新后不依赖 composer 本地状态。
-- MessageList 已接入 feedback create/update/delete、失败回滚、复制 user/assistant 消息与 citation source 详情；反馈随 history 行恢复。
+- [`messages/processing.ts`](app/core/messages/processing.ts) 与 `ProcessingMessageGroup.vue` 把 reasoning、assistant text、tool call/result/browser frame 投影为唯一步骤 UI；较早步骤折叠、最新工具和结果只出现一次、trailing reasoning 与其后答案顺序稳定。MessageList 另接入 run activity、一次性 reasoning 自动收起、React 等价 Markdown 基础元素、copy 与 citation。Gateway feedback 字段可随 history 行无损保留，但 React 当前调用点未启用可见 feedback 操作，Vue 同样不显示点赞/踩。
 - AgentChat 渲染权威 `thread.values.todos`；[`useThreadTokenUsage.ts`](app/composables/useThreadTokenUsage.ts) 对响应 `thread_id` 二次校验，header total、per-turn/debug 与 off 偏好由统一 usage model 驱动。
 
 #### 必须实现
 
 1. 草稿按真实 user + thread/agent 隔离；登出、切用户、删除线程时不得泄漏。
 2. 草稿恢复必须验证 skill 当前存在且启用。
-3. 模型选择遵守 agent 默认值和模型 capabilities；不支持的 thinking/reasoning 字段必须归一化为 `null` 或不发送，与 React 请求一致。
+3. 模型选择遵守 agent 默认值和 capabilities；可见选项按能力裁剪，最终 run context 的 explicit effort / mode fallback 与 React 请求一致，provider 不支持字段由 Gateway factory 过滤。
 4. context overrides 是 thread-scoped；切线程、切 agent、创建新聊天时按 React 规则恢复或重置。
 5. 只有发送被后台接受后才清空草稿；上传/发送失败必须恢复文本、skill 和仍可复用的文件。
 6. follow-up 在已有草稿时提供 append/replace/cancel，不得静默覆盖。
 7. polish、goal、follow-up 在 unmount、route change、thread change、用户 stop 后不能写回旧页面。
 8. HIL 的 required、checkbox、提交中、失败、thread error、刷新恢复规则与 React 一致。
 9. 人类消息渲染现代 files 字段和兼容的 legacy upload 内容。
-10. AI 消息提供 feedback、copy、citation source 等等价操作。
+10. AI 消息提供 copy、citation source 等等价操作；feedback 仅在 React 消息列表实际接入后重新纳入 UI 对齐。
 11. 渲染 todos，并消费 models/thread token usage；尊重用户的 token 展示偏好。
+12. processing 只渲染一份步骤投影；等待态、工具结果、reasoning disclosure、最终答案 Markdown 层级与 React 可观察流程一致。
 
 #### Vue 实现建议
 
 - 从 ChatComposer 拆出 `useComposerDraft`、`useModelCapabilities`、`useComposerCommands`、`useComposerSubmission`。
 - 用递增 generation/token 或 effect scope 防止过期异步任务写回；销毁时统一 abort。
 - MessageList 拆成 `HumanMessage`、`AssistantMessage`、`MessageAttachments`、`MessageActions`、`TodoList`、`HumanInputCard`。
-- feedback 和 token usage 使用 Vue Query mutation/query，成功后精确更新或失效对应 key。
+- token usage 使用 Vue Query query；任何未来新增的服务端消息操作也必须使用精确 mutation/invalidation。
 
 #### 验收与测试
 
@@ -257,7 +262,7 @@
 - capability payload 参数快照必须与 React 语义一致。
 - 上传 4xx、发送 4xx、取消、路由切换时输入不丢失且无过期写回。
 - human message 的 image/file/legacy upload DOM 测试。
-- feedback create/update/delete 与后端错误回滚测试。
+- 消息操作区测试必须证明不会出现 React 当前未启用的 feedback 入口。
 - todo、token total、per-turn、隐藏偏好测试。
 - 本工作包实测：`make e2e-m4a` 4/4、`make e2e-m4a-stream` 6/6、`make e2e-m7` 130/130、`make e2e-m7-local` 8/8、`make e2e-m7-auth` 10/10、`make e2e-m7-real-protocol` 1/1、`make e2e-m7-visual` 7/7；视觉 baseline 未更新。
 - `make migration-check` 通过；沙箱外 `make verify` 为 132 个 test files / 1203 tests 全绿并完成 Nuxt 生产构建。React `pnpm check` 通过，沙箱外 `pnpm test` 为 128 个 test files / 1001 tests 全绿。
@@ -581,11 +586,11 @@
 
 #### 已实现合同
 
-- 全量 82 个 Vue SFC 由可执行 inventory 固定：80 个产品 SFC 进入扫描，仅精确排除 2 个
+- 全量 90 个 Vue SFC 由可执行 inventory 固定：88 个产品 SFC 进入扫描，仅精确排除 2 个
   `app/pages/__m0` 测试 fixture。产品文案、aria/title/placeholder、empty/error/loading、toast
   与 dialog 均从单一 typed locale owner 消费；backend/user/code/file/URL/protocol 动态值保持原样。
 - `app/plugins/i18n.ts` 独占 locale ref/computed、cookie 与 `document.lang`。`en-US`/`zh-CN`
-  各 978 个精确 leaf key，180 个 audited unused key；key/unused drift 与 Vue/TypeScript AST source
+  各 976 个精确 leaf key，160 个 audited unused key；key/unused drift 与 Vue/TypeScript AST source
   guard 共同阻止字典或产品消费回退，只允许精确品牌/技术/快捷键/内部 token。
 - `app/plugins/theme.ts` 创建唯一应用级 controller；它独占 storage、preference/resolved/forced、
   唯一 `matchMedia` listener、根 class/color-scheme 与幂等 cleanup。system 实时跟随，显式主题
@@ -598,9 +603,43 @@
 - WP-12 unit/DOM 4 files / 14 tests；真实 Chromium 覆盖 locale 即时切换/刷新/非法 cookie、
   动态内容不翻译、system light→dark→light、explicit 忽略、切回 system、早期 bootstrap、
   非法 storage、`/` forced dark 与离开恢复。
-- M7 清单为 29 files / 165 tests；visual 为 8/8，新增 zh-CN dark settings baseline，并更新
+- M7 清单为 29 files / 166 tests；visual 为 8/8，新增 zh-CN dark settings baseline，并更新
   这次文案改变对应的唯一 mobile baseline。i18n key/unused/source guard、migration、build 与
   asset budget 同时全绿。
+
+### WP-13：工作区可见产品表面收口
+
+包含：`MESSAGE-07`、`SURFACE-01`、`SURFACE-02`。
+
+#### 已实现合同
+
+- 保持第 2 节的明确例外不变；`/`、`/pricing`、`/about`、静态 demo/mock 与 landing 不进入
+  本工作包。Vue 运行时不再从 sibling React 项目挂载静态资源，独立项目所需资产归
+  `frontend-vue/public` 自己所有。
+- 当前 React `MessageList` 没有向 `MessageListItem` 传入 feedback，Vue 因此移除点赞/踩及其
+  独有 mutation；静态 guard 会在 React 调用点仍未接通期间阻止该入口重新出现。
+- `MessageMarkdown.vue` 统一消息、reasoning 与 processing 的 GFM/math/streaming 插件链；表格
+  组件提供 React Streamdown 同等的复制 Markdown/CSV/TSV、下载 CSV/Markdown 和全屏查看。
+- 聊天 header 改为 React 可见顺序，普通 thread 才显示定时任务，自定义 Agent 提供 New chat、
+  不显示 thread 定时任务；browser trigger 同一按钮开/关。header 只提供 export，不额外提供 share。
+- token usage 使用带说明的 radio menu；run duration 恢复时钟图标。侧栏 Settings-and-more 精确
+  保留 Settings、官网、GitHub、Report issue、Contact、About，移除 Vue 独有的快捷主题/语言；
+  非静态工作区品牌文字不再成为 Vue 独有链接，sidebar channel 不额外显示 React 没有的状态行。
+- suggestions config 由 `useSuggestionsConfig.ts` 的 Vue Query 独占；首次 run 完成早于配置返回时，
+  等待同一 query 后再请求 follow-up，不维护组件内第二份配置状态。
+- 主 composer 的附件入口改为 React 等价的真实语义 button；自定义 Agent 的 Save 只在初始
+  design conversation 成功且 send owner 完整释放后启用，不再与 bootstrap run 竞争 runner。
+- `tests/guards/product-surface-parity.test.ts` 固定三条长期边界：Vue 页面不得超出 React 与明确
+  route 例外；React 未启用 feedback 时 Vue 不得显示；Nuxt 不得运行时挂载 sibling React 资产；
+  主 composer 的附件入口必须保持为语义 button。
+
+#### 验收与测试
+
+- unit/DOM 固定 feedback 缺席、MessageMarkdown 默认插件链、表格三项操作、token radio menu、
+  header export 和 suggestions Query owner。
+- Vue-owned M7 固定 settings 菜单、非链接品牌、Agent header/browser 开关和完成后 suggestions。
+- 同一真实天气 thread 必须在两端显示同一处理步骤、reasoning、GFM 表格与消息操作集合；模型
+  输出文案、token 数和耗时不是 UI parity 判据。
 
 ## 7. 推荐实施顺序
 
@@ -613,6 +652,7 @@
 5. **阶段 E：业务页面**：WP-07、WP-08、WP-09；避免同时修改公共 query key。
 6. **阶段 F：设置与壳层**：WP-10、WP-11。
 7. **阶段 G：全局收口**：WP-12、完整视觉/真实后端/双前端验证。
+8. **阶段 H：持续产品表面审计**：WP-13；只覆盖第 2 节以外的可观察入口。
 
 每个工作包完成后，都要重新搜索本文档列出的“已存在但没有消费者”的 API/helper，不能保留新的双轨实现。
 
@@ -702,13 +742,15 @@ API 对齐：method/path/query/headers/body/response/error/cache
 
 在此追加，不删除历史记录：
 
-| 日期       | 工作包/ID                                                 | 证据                                                                                                                                                                                                                                                                                                                                                                                                                 | 备注                                                                                                                                                               |
-| ---------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-08-21 | 基线审计                                                  | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                                                                                                                                                                                                                                                                | 所有 ID 初始状态为 TODO                                                                                                                                            |
-| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01`           | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过                                                                                                                                                                                                                                    | 本机回环监听环境重跑通过；本地提交、未 push                                                                                                                        |
-| 2026-08-21 | WP-02：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05` | `make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 130/130；`make e2e-m7-real-protocol` 1/1；`make migration-check` 通过；`make verify` 1166/1166 且 production build 通过；React `pnpm check` 与 `pnpm test` 1001/1001                                                                                                                                                                                    | 回环门禁在允许本机监听的环境重跑；未 commit、未 push                                                                                                               |
-| 2026-08-22 | WP-08：`CHANNEL-01`～`CHANNEL-03`                         | WP-08 unit/DOM 21/21；聚焦 Vitest 55/55；M7 channels 11/11、全量 144/144；real Gateway 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 159 files / 1358 tests 且 production build 通过                                                                                                                                 | 真实 IM/IdP/DNS/TLS/外层代理未验证；未 commit、未 push                                                                                                             |
-| 2026-08-22 | WP-09：`AGENT-01`～`AGENT-03`                             | WP-09 unit/DOM 8 files / 61 tests；backend focused 56/56；M7 agents 18/18、全量 150/150；real Gateway 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 165 files / 1394 tests 且 production build 通过                                                                                                  | 外部 LLM、生产 provider/凭据、真实 IdP/DNS/TLS/外层代理未验证；未 commit、未 push                                                                                  |
-| 2026-08-23 | WP-10：`MEMORY-01`～`MEMORY-03`、`SETTINGS-01`            | WP-10 unit/DOM 5 files / 59 tests；backend focused 210/210；Ruff check/format 通过；M7 settings 6/6、全量 156/156；WP-10 real Gateway 5/5（DeerMem + Noop，400/404/409/422/500/501）；WP-09 real 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 13/13、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 170 files / 1454 tests 且 production build 通过       | Mem0/Honcho/OpenViking、外部 MCP/LLM、生产 IdP/凭据/DNS/TLS/外层代理未验证；未 commit、未 push                                                                     |
-| 2026-08-23 | WP-11：`SHELL-01`～`SHELL-03`、`CHANGES-01`               | WP-11 unit/DOM + guard 9 files / 58 tests；M7 workspace shell 4/4、全量 160/160；M7 local 8/8、auth 13/13、real protocol 1/1、visual 7/7（baseline 无差异）；WP-11 real Gateway/Nuxt 1/1；WP-10 real 5/5；M4a 4/4、stream 6/6；`make migration-check` 通过；`make verify` 178 files / 1497 tests 且 production build 通过；asset budget、container smoke、backend 11313 passed / 72 skipped；`git diff --check` 通过 | real gate 保留生产 Auth/CSRF/owner/event-store/changes router；seed event 与恢复 503 为受控 fixture；生产 IdP/DNS/TLS/外层代理未验证；本地提交 `a1ef9a2f`、未 push |
-| 2026-08-23 | WP-12：`I18N-01`、`THEME-01`                              | WP-12 unit/DOM 4 files / 14 tests；i18n 各 978 keys / 180 unused 与 AST guard 通过；M7 i18n/theme 5/5、全量 165/165；M7 local 8/8、auth 13/13、real protocol 1/1、visual 8/8；WP-10 real 5/5、WP-11 real 1/1；M4a 4/4、stream 6/6；`make migration-check`、`make verify`、asset budget、container smoke、React check/test 1001/1001、dual-frontend production check 34/34 通过                                       | 两个视觉 baseline 因预期文案/新增 zh-CN 状态精确更新；生产 IdP/DNS/TLS/外层代理与目标环境切流未验证；未暂存、未提交、未 push                                       |
+| 日期       | 工作包/ID                                                     | 证据                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 备注                                                                                                                                                                                                                                                          |
+| ---------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | 基线审计                                                      | React tests 1001/1001；Vue tests 1100/1100；Vue production build 通过                                                                                                                                                                                                                                                                                                                                                                                            | 所有 ID 初始状态为 TODO                                                                                                                                                                                                                                       |
+| 2026-08-21 | WP-01：`API-01`、`AUTH-01`～`AUTH-03`、`SEC-01`               | 定向 Vitest 62/62；`make proxy-security`：Nitro 12/12、options 2/2、unit 36/36；`make e2e-m7-auth` 10/10；`make oidc-smoke` 2/2；`make verify` 1138/1138 且 production build 通过                                                                                                                                                                                                                                                                                | 本机回环监听环境重跑通过；本地提交、未 push                                                                                                                                                                                                                   |
+| 2026-08-21 | WP-02：`STREAM-01`、`STREAM-02`、`THREAD-01`～`THREAD-05`     | `make e2e-m4a` 4/4；`make e2e-m4a-stream` 6/6；`make e2e-m7` 130/130；`make e2e-m7-real-protocol` 1/1；`make migration-check` 通过；`make verify` 1166/1166 且 production build 通过；React `pnpm check` 与 `pnpm test` 1001/1001                                                                                                                                                                                                                                | 回环门禁在允许本机监听的环境重跑；未 commit、未 push                                                                                                                                                                                                          |
+| 2026-08-22 | WP-08：`CHANNEL-01`～`CHANNEL-03`                             | WP-08 unit/DOM 21/21；聚焦 Vitest 55/55；M7 channels 11/11、全量 144/144；real Gateway 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 159 files / 1358 tests 且 production build 通过                                                                                                                                                                             | 真实 IM/IdP/DNS/TLS/外层代理未验证；未 commit、未 push                                                                                                                                                                                                        |
+| 2026-08-22 | WP-09：`AGENT-01`～`AGENT-03`                                 | WP-09 unit/DOM 8 files / 61 tests；backend focused 56/56；M7 agents 18/18、全量 150/150；real Gateway 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 10/10、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 165 files / 1394 tests 且 production build 通过                                                                                                                                              | 外部 LLM、生产 provider/凭据、真实 IdP/DNS/TLS/外层代理未验证；未 commit、未 push                                                                                                                                                                             |
+| 2026-08-23 | WP-10：`MEMORY-01`～`MEMORY-03`、`SETTINGS-01`                | WP-10 unit/DOM 5 files / 59 tests；backend focused 210/210；Ruff check/format 通过；M7 settings 6/6、全量 156/156；WP-10 real Gateway 5/5（DeerMem + Noop，400/404/409/422/500/501）；WP-09 real 3/3；WP-08 real 3/3；WP-07 real 2/2；M4a 4/4、stream 6/6；M7 local 8/8、auth 13/13、real protocol 1/1、visual 7/7；`make migration-check` 通过；`make verify` 170 files / 1454 tests 且 production build 通过                                                   | Mem0/Honcho/OpenViking、外部 MCP/LLM、生产 IdP/凭据/DNS/TLS/外层代理未验证；未 commit、未 push                                                                                                                                                                |
+| 2026-08-23 | WP-11：`SHELL-01`～`SHELL-03`、`CHANGES-01`                   | WP-11 unit/DOM + guard 9 files / 58 tests；M7 workspace shell 4/4、全量 160/160；M7 local 8/8、auth 13/13、real protocol 1/1、visual 7/7（baseline 无差异）；WP-11 real Gateway/Nuxt 1/1；WP-10 real 5/5；M4a 4/4、stream 6/6；`make migration-check` 通过；`make verify` 178 files / 1497 tests 且 production build 通过；asset budget、container smoke、backend 11313 passed / 72 skipped；`git diff --check` 通过                                             | real gate 保留生产 Auth/CSRF/owner/event-store/changes router；seed event 与恢复 503 为受控 fixture；生产 IdP/DNS/TLS/外层代理未验证；本地提交 `a1ef9a2f`、未 push                                                                                            |
+| 2026-08-23 | WP-12：`I18N-01`、`THEME-01`                                  | WP-12 unit/DOM 4 files / 14 tests；i18n 各 978 keys / 180 unused 与 AST guard 通过；M7 i18n/theme 5/5、全量 165/165；M7 local 8/8、auth 13/13、real protocol 1/1、visual 8/8；WP-10 real 5/5、WP-11 real 1/1；M4a 4/4、stream 6/6；`make migration-check`、`make verify`、asset budget、container smoke、React check/test 1001/1001、dual-frontend production check 34/34 通过                                                                                   | 两个视觉 baseline 因预期文案/新增 zh-CN 状态精确更新；生产 IdP/DNS/TLS/外层代理与目标环境切流未验证；未暂存、未提交、未 push                                                                                                                                  |
+| 2026-08-24 | WP-03：`MESSAGE-06`                                           | 天气流程定向 Vitest 5 files / 31 tests；`make verify` 186 files / 1528 tests 且 production build 通过；`make migration-check`；`make e2e-m4a` 4/4、真实分片 stream 6/6；`make e2e-m7` 29 files / 166/166；M7 visual 中本轮相关 streaming 与 reasoning/tool 2/2；`git diff --check` 通过；真实双端分别提交“今天的天气”，完成态均为单次 web search、reasoning 收起、无 raw `<think`、无重复工具结果、列表标记恢复；Vue 交叉渲染 React 已完成线程保持同一结构与正文 | 外部模型两次独立采样的搜索词、token 和最终文案不要求逐字相同；wire context 由 production stream test 固定为同 mode/effort。M7 visual 全量 6/8，失败的 mobile/dark 是本轮未改的欢迎页快捷按钮旧 baseline，未刷新；仅改 `frontend-vue`，未暂存、未提交、未 push |
+| 2026-08-24 | WP-13：`MESSAGE-02`、`MESSAGE-07`、`SURFACE-01`、`SURFACE-02` | `make verify` 190 files / 1537 tests 且 production build 通过；`make migration-check`；`make e2e-m4a` 4/4、真实分片 stream 6/6；`make e2e-m7` 29 files / 168/168；product-surface guard 固定 route 例外、feedback 缺席、独立资产与附件语义入口；同一真实天气 thread 双端均显示处理步骤、reasoning、GFM 表格及复制/下载/全屏，Vue 不再显示点赞/踩，header/sidebar/message/composer 操作集合按 React 调用点收口                                                    | 第 2 节明确排除的 landing、docs/blog、静态 demo/mock 与框架内部实现仍不要求同构；模型文案、token 与耗时不作为 UI parity 判据；仅改 `frontend-vue`，未暂存、未提交、未 push                                                                                    |

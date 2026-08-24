@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 
@@ -52,7 +52,17 @@ describe("WP-03 token usage surfaces", () => {
         preferences: { headerTotal: true, inlineMode: "per_turn" },
       },
     });
-    expect(wrapper.get("summary").text()).toContain("125");
+    expect(wrapper.get("button").text()).toContain("125");
+    expect(wrapper.find("select").exists()).toBe(false);
+
+    await wrapper.get("button").trigger("click");
+    await flushPromises();
+    expect(
+      document.body.querySelectorAll('[role="menuitemradio"]'),
+    ).toHaveLength(4);
+    expect(document.body.textContent).toContain(
+      enUS.tokenUsage.presetDescriptions.perTurn,
+    );
 
     await wrapper.setProps({
       pendingMessages: [],
@@ -62,7 +72,7 @@ describe("WP-03 token usage surfaces", () => {
         totalTokens: 125,
       },
     });
-    expect(wrapper.get("summary").text()).toContain("125");
+    expect(wrapper.get("button").text()).toContain("125");
   });
 
   it("hides every token surface when the backend feature or inline preference is off", () => {

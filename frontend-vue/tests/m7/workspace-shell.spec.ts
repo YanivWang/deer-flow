@@ -122,6 +122,37 @@ test("settings deep link traps focus and back/forward replays only settings quer
   await expect(dialog).toHaveCount(0);
 });
 
+test("settings-and-more exposes exactly the React product actions", async ({
+  page,
+}) => {
+  mockThreads(page);
+  await page.goto(`/workspace/chats/${THREAD_ID}`);
+  await expect(page.getByRole("link", { name: "DeerFlow" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Settings and more" }).click();
+  const menu = page.getByRole("menu");
+
+  await expect(menu.getByRole("menuitem", { name: "Settings" })).toBeVisible();
+  await expect(
+    menu.getByRole("menuitem", { name: "DeerFlow's official website" }),
+  ).toHaveAttribute("href", "https://deerflow.tech/");
+  await expect(
+    menu.getByRole("menuitem", { name: "DeerFlow on GitHub" }),
+  ).toHaveAttribute("href", "https://github.com/bytedance/deer-flow");
+  await expect(
+    menu.getByRole("menuitem", { name: "Report an issue" }),
+  ).toHaveAttribute("href", "https://github.com/bytedance/deer-flow/issues");
+  await expect(
+    menu.getByRole("menuitem", { name: "Contact us" }),
+  ).toHaveAttribute("href", "mailto:support@deerflow.tech");
+  await expect(
+    menu.getByRole("menuitem", { name: "About DeerFlow" }),
+  ).toBeVisible();
+  await expect(menu.getByText("Light", { exact: true })).toHaveCount(0);
+  await expect(menu.getByText("Dark", { exact: true })).toHaveCount(0);
+  await expect(menu.getByText("EN", { exact: true })).toHaveCount(0);
+  await expect(menu.getByText("简", { exact: true })).toHaveCount(0);
+});
+
 test("sidebar share/export and chats updated time use the real browser boundaries", async ({
   page,
 }) => {

@@ -97,6 +97,57 @@ function setupAgentStream(
 }
 
 test.describe("Agent chat", () => {
+  test("generates enabled follow-up suggestions after the completed stream", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page);
+    let suggestionRequest:
+      { messages?: unknown[]; n?: number; model_name?: string } | undefined;
+    await page.route("**/api/suggestions/config", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ enabled: true, max_suggestions: 3 }),
+      }),
+    );
+    await page.route("**/api/threads/*/suggestions", (route) => {
+      suggestionRequest = route
+        .request()
+        .postDataJSON() as typeof suggestionRequest;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          suggestions: [
+            "Check tomorrow's forecast",
+            "Compare nearby cities",
+            "Show the hourly weather",
+          ],
+        }),
+      });
+    });
+    await page.route("**/api/langgraph/threads/*/runs/stream", (route) =>
+      handleRunStream(route),
+    );
+
+    await page.goto("/workspace/chats/new");
+    const textarea = page.getByPlaceholder(/how can i assist you/i);
+    await textarea.fill("Today's weather");
+    await textarea.press("Enter");
+
+    await expect(page.getByText("Hello from DeerFlow!")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Check tomorrow's forecast" }),
+    ).toBeVisible();
+    expect(suggestionRequest).toMatchObject({ n: 3 });
+    expect(suggestionRequest?.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ role: "user", content: "Today's weather" }),
+        expect.objectContaining({ role: "assistant" }),
+      ]),
+    );
+  });
+
   test("agent gallery page loads and shows agents", async ({ page }) => {
     mockLangGraphAPI(page, { agents: MOCK_AGENTS });
 
@@ -572,10 +623,27 @@ test.describe("Agent chat", () => {
       const browserTrigger = page.getByTestId("browser-trigger");
       if (expectedVisible) {
         await expect(browserTrigger).toBeVisible();
+        await expect(
+          page.getByRole("button", { name: "New chat", exact: true }),
+        ).toBeVisible();
+        const chatHeader = page.locator("#chat > header");
+        await expect(
+          chatHeader.getByRole("link", { name: "Scheduled tasks" }),
+        ).toHaveCount(0);
         await browserTrigger.click();
         await expect(
           page.getByPlaceholder("Enter a URL and press Enter"),
         ).toBeVisible();
+        await expect(browserTrigger).toHaveAttribute(
+          "aria-label",
+          "Close browser",
+        );
+        await browserTrigger.click();
+        await expect(page.getByTestId("browser-panel")).toHaveCount(0);
+        await expect(browserTrigger).toHaveAttribute(
+          "aria-label",
+          "Open browser panel",
+        );
       } else {
         await expect(browserTrigger).toHaveCount(0);
       }

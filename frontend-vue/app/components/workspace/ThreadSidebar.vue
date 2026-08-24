@@ -10,16 +10,20 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   Bot,
+  Bug,
   CalendarClock,
   ChevronsLeft,
   ChevronsRight,
-  Languages,
+  ChevronsUpDown,
+  Github,
+  Globe,
+  Info,
+  Mail,
   MessageSquarePlus,
   MessagesSquare,
-  Moon,
   Pin,
   Settings,
-  Sun,
+  Settings2,
 } from "lucide-vue-next";
 
 import ChannelConnections from "@/components/workspace/channels/ChannelConnections.vue";
@@ -36,7 +40,7 @@ import {
 
 const route = useRoute();
 const router = useRouter();
-const { $i18n, $theme } = useNuxtApp();
+const { $i18n } = useNuxtApp();
 const threads = useThreads();
 const features = useWorkspaceFeatures();
 const settingsDialog = useSettingsDialog();
@@ -211,9 +215,9 @@ async function submitRename() {
   }
 }
 
-function openSettingsDialog() {
+function openSettingsDialog(section: "appearance" | "about") {
   settingsOpen.value = false;
-  settingsDialog.show("account", { returnFocus: settingsTrigger.value });
+  settingsDialog.show(section, { returnFocus: settingsTrigger.value });
 }
 </script>
 
@@ -234,12 +238,12 @@ function openSettingsDialog() {
     @keydown="keepMobileFocus"
   >
     <div class="flex h-12 shrink-0 items-center justify-between px-2">
-      <NuxtLink
+      <div
         v-if="sidebarExpanded"
-        class="text-primary px-2 font-serif text-base"
-        to="/workspace"
-        >DeerFlow</NuxtLink
+        class="text-primary cursor-default px-2 font-serif text-base"
       >
+        DeerFlow
+      </div>
       <span v-else class="text-primary mx-auto font-serif">DF</span>
       <button
         type="button"
@@ -413,62 +417,74 @@ function openSettingsDialog() {
           role="menuitem"
           type="button"
           class="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5"
-          @click="openSettingsDialog"
+          @click="openSettingsDialog('appearance')"
         >
-          <Settings :size="14" /> {{ $i18n.t.value.common.settings }}
+          <Settings2 :size="14" /> {{ $i18n.t.value.common.settings }}
         </button>
-        <div class="text-muted-foreground px-2 py-1 text-xs">
-          {{ $i18n.t.value.navigation.appearance }}
-        </div>
-        <div class="grid grid-cols-2 gap-1">
-          <button
-            type="button"
-            class="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-1.5"
-            @click="$theme.setPreference('light')"
-          >
-            <Sun :size="14" /> {{ $i18n.t.value.navigation.light }}
-          </button>
-          <button
-            type="button"
-            class="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-1.5"
-            @click="$theme.setPreference('dark')"
-          >
-            <Moon :size="14" /> {{ $i18n.t.value.navigation.dark }}
-          </button>
-        </div>
-        <div
-          class="text-muted-foreground flex items-center gap-2 px-2 pt-1 text-xs"
+        <div role="separator" class="bg-border my-1 h-px" />
+        <a
+          role="menuitem"
+          href="https://deerflow.tech/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-1.5"
+          @click="settingsOpen = false"
         >
-          <Languages :size="13" /> {{ $i18n.t.value.navigation.language }}
-        </div>
-        <div class="grid grid-cols-2 gap-1">
-          <button
-            v-for="locale in ['en-US', 'zh-CN'] as const"
-            :key="locale"
-            type="button"
-            class="hover:bg-accent rounded-md px-1 py-1.5"
-            :class="{ 'bg-accent': $i18n.locale.value === locale }"
-            @click="$i18n.setLocale(locale)"
-          >
-            {{ locale === "en-US" ? "EN" : "简" }}
-          </button>
-        </div>
+          <Globe :size="14" /> {{ $i18n.t.value.workspace.officialWebsite }}
+        </a>
+        <a
+          role="menuitem"
+          href="https://github.com/bytedance/deer-flow"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-1.5"
+          @click="settingsOpen = false"
+        >
+          <Github :size="14" /> {{ $i18n.t.value.workspace.visitGithub }}
+        </a>
+        <div role="separator" class="bg-border my-1 h-px" />
+        <a
+          role="menuitem"
+          href="https://github.com/bytedance/deer-flow/issues"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-1.5"
+          @click="settingsOpen = false"
+        >
+          <Bug :size="14" /> {{ $i18n.t.value.workspace.reportIssue }}
+        </a>
+        <a
+          role="menuitem"
+          href="mailto:support@deerflow.tech"
+          class="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-1.5"
+          @click="settingsOpen = false"
+        >
+          <Mail :size="14" /> {{ $i18n.t.value.workspace.contactUs }}
+        </a>
+        <div role="separator" class="bg-border my-1 h-px" />
+        <button
+          role="menuitem"
+          type="button"
+          class="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5"
+          @click="openSettingsDialog('about')"
+        >
+          <Info :size="14" /> {{ $i18n.t.value.workspace.about }}
+        </button>
       </div>
       <button
         ref="settingsTrigger"
         type="button"
         class="text-muted-foreground hover:bg-sidebar-accent flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm"
-        :title="
-          collapsed ? $i18n.t.value.navigation.settingsAndMore : undefined
-        "
-        :aria-label="$i18n.t.value.navigation.settingsAndMore"
+        :title="collapsed ? $i18n.t.value.workspace.settingsAndMore : undefined"
+        :aria-label="$i18n.t.value.workspace.settingsAndMore"
         :aria-expanded="settingsOpen"
         @click="settingsOpen = !settingsOpen"
       >
         <Settings :size="16" class="shrink-0" />
         <span v-if="sidebarExpanded">{{
-          $i18n.t.value.navigation.settingsAndMore
+          $i18n.t.value.workspace.settingsAndMore
         }}</span>
+        <ChevronsUpDown v-if="sidebarExpanded" :size="16" class="ml-auto" />
       </button>
     </div>
   </aside>

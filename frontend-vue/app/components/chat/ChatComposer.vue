@@ -198,6 +198,7 @@ const availableModes = computed(() =>
 );
 const textarea = ref<HTMLTextAreaElement | null>(null);
 const chipInput = ref<HTMLElement | null>(null);
+const fileInput = ref<HTMLInputElement | null>(null);
 let historyIndex = -1;
 const skillCommandNames = new Set([...RESERVED_SLASH_SKILL_NAMES, "compact"]);
 const enabledSkillNames = computed(
@@ -780,6 +781,9 @@ function onKeydown(event: KeyboardEvent) {
 function onChipInput(event: Event) {
   input.value = (event.target as HTMLElement).innerText;
 }
+function openFileDialog() {
+  fileInput.value?.click();
+}
 function chooseFiles(event: Event) {
   const files = (event.target as HTMLInputElement).files;
   if (!files) return;
@@ -1074,15 +1078,19 @@ defineExpose({ replaceDraft, offerFollowup });
           {{ $i18n.t.value.inputBox.inputPolishing }}
         </div>
         <div class="flex min-w-0 items-center gap-1 pt-1">
-          <label
-            data-testid="add-attachments-button"
-            class="group hover:bg-accent text-muted-foreground relative flex size-8 cursor-pointer items-center justify-center rounded-md"
-          >
-            <Paperclip :size="14" aria-hidden="true" />
-            <span class="sr-only">{{
-              $i18n.t.value.inputBox.uploadFiles
-            }}</span>
+          <div class="group relative">
+            <button
+              type="button"
+              data-testid="add-attachments-button"
+              :aria-label="$i18n.t.value.inputBox.addAttachments"
+              class="text-muted-foreground hover:bg-accent flex size-8 cursor-pointer items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-50"
+              :disabled="disabled || polishing"
+              @click="openFileDialog"
+            >
+              <Paperclip :size="14" aria-hidden="true" />
+            </button>
             <input
+              ref="fileInput"
               type="file"
               multiple
               :aria-label="$i18n.t.value.inputBox.uploadFiles"
@@ -1101,7 +1109,7 @@ defineExpose({ replaceDraft, offerFollowup });
                 )
               }}
             </span>
-          </label>
+          </div>
           <button
             data-testid="voice-input-button"
             type="button"

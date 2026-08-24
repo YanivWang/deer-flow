@@ -11,11 +11,13 @@ import { computed } from "vue";
 import type { PluggableList } from "unified";
 
 import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue";
+import { richContentComponents } from "@/components/markdown/components";
 import type { ArtifactPolicy } from "@/core/artifacts/policy";
 import { rewriteHtmlPreviewResourceUrls } from "@/core/artifacts/preview";
 import {
   rawHtmlRehypePlugins,
   rehypeHeadingSlugs,
+  appRemarkPlugins,
 } from "@/core/markdown/plugins";
 
 const props = defineProps<{
@@ -86,6 +88,8 @@ const html = computed(() =>
   >
     <StreamMarkdown
       :content="content"
+      :components="richContentComponents"
+      :remark-plugins="appRemarkPlugins"
       :rehype-plugins="artifactRehypePlugins"
     />
   </div>

@@ -1,0 +1,340 @@
+<script setup lang="ts">
+/*
+  【文件职责】     渲染 processing 视图模型中的单个 DeerFlow 工具步骤。
+  【对应 frontend/】 components/workspace/messages/message-group.tsx::ToolCall
+  【架构位置】     L3 UI adapter
+  【主要导出】     默认 ProcessingToolStep 组件
+  【依赖关系】     core/messages/processing · artifacts · markdown CodeBlock
+  【边界与注意】   只消费已关联好的 result/browserView；不得回扫原始消息寻找工具结果。
+*/
+import { computed } from "vue";
+import {
+  BookOpenText,
+  FolderOpen,
+  Globe2,
+  ListTodo,
+  MessageCircleQuestionMark,
+  Monitor,
+  NotebookPen,
+  Search,
+  SquareTerminal,
+  Wrench,
+} from "lucide-vue-next";
+
+import CodeBlock from "@/components/markdown/CodeBlock.vue";
+import {
+  buildWriteFileArtifactURL,
+  resolveArtifactURL,
+} from "@/core/artifacts/utils";
+import type {
+  BrowserViewMeta,
+  ProcessingToolCallStep,
+} from "@/core/messages/processing";
+import { extractTitleFromMarkdown } from "@/core/utils/markdown";
+
+const props = defineProps<{
+  step: ProcessingToolCallStep;
+  threadId?: string | null;
+  isMock?: boolean;
+}>();
+const emit = defineEmits<{
+  artifact: [path: string];
+  browser: [frame: BrowserViewMeta];
+}>();
+const { $i18n } = useNuxtApp();
+
+const name = computed(() => props.step.name);
+const args = computed(() => props.step.args);
+const result = computed(() => props.step.result);
+
+function textArg(key: string): string | undefined {
+  const value = args.value[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+const icon = computed(() => {
+  if (name.value.startsWith("browser_")) return Monitor;
+  if (name.value === "web_search" || name.value === "image_search")
+    return Search;
+  if (name.value === "web_fetch") return Globe2;
+  if (name.value === "ls") return FolderOpen;
+  if (name.value === "read_file") return BookOpenText;
+  if (
+    name.value === "write_file" ||
+    name.value === "str_replace" ||
+    name.value === "begin_artifact_write" ||
+    name.value === "append_artifact_chunk" ||
+    name.value === "finalize_artifact_write"
+  )
+    return NotebookPen;
+  if (name.value === "bash") return SquareTerminal;
+  if (name.value === "ask_clarification") return MessageCircleQuestionMark;
+  if (name.value === "write_todos") return ListTodo;
+  return Wrench;
+});
+
+function browserLabel() {
+  switch (name.value) {
+    case "browser_navigate":
+      return textArg("url")
+        ? $i18n.t.value.toolCalls.browserNavigate(textArg("url")!)
+        : $i18n.t.value.toolCalls.browserNavigateGeneric;
+    case "browser_click":
+      return $i18n.t.value.toolCalls.browserClick;
+    case "browser_type":
+      return $i18n.t.value.toolCalls.browserType;
+    case "browser_snapshot":
+      return $i18n.t.value.toolCalls.browserSnapshot;
+    case "browser_get_text":
+      return $i18n.t.value.toolCalls.browserGetText;
+    case "browser_back":
+      return $i18n.t.value.toolCalls.browserBack;
+    case "browser_screenshot":
+      return $i18n.t.value.toolCalls.browserScreenshot;
+    case "browser_close":
+      return $i18n.t.value.toolCalls.browserClose;
+    default:
+      return $i18n.t.value.toolCalls.useTool(name.value);
+  }
+}
+
+const label = computed(() => {
+  const description = textArg("description");
+  if (name.value.startsWith("browser_")) return browserLabel();
+  if (name.value === "web_search") {
+    const query = textArg("query");
+    return query
+      ? $i18n.t.value.toolCalls.searchOnWebFor(query)
+      : $i18n.t.value.toolCalls.searchForRelatedInfo;
+  }
+  if (name.value === "image_search") {
+    const query = textArg("query");
+    return query
+      ? $i18n.t.value.toolCalls.searchForRelatedImagesFor(query)
+      : $i18n.t.value.toolCalls.searchForRelatedImages;
+  }
+  if (name.value === "web_fetch") return $i18n.t.value.toolCalls.viewWebPage;
+  if (name.value === "ls")
+    return description ?? $i18n.t.value.toolCalls.listFolder;
+  if (name.value === "read_file")
+    return description ?? $i18n.t.value.toolCalls.readFile;
+  if (
+    name.value === "write_file" ||
+    name.value === "str_replace" ||
+    name.value === "begin_artifact_write" ||
+    name.value === "append_artifact_chunk" ||
+    name.value === "finalize_artifact_write"
+  )
+    return description ?? $i18n.t.value.toolCalls.writeFile;
+  if (name.value === "bash")
+    return description ?? $i18n.t.value.toolCalls.executeCommand;
+  if (name.value === "ask_clarification")
+    return $i18n.t.value.toolCalls.needYourHelp;
+  if (name.value === "write_todos") return $i18n.t.value.toolCalls.writeTodos;
+  return description ?? $i18n.t.value.toolCalls.useTool(name.value);
+});
+
+function safeExternalURL(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.href
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const webSearchResults = computed(() =>
+  Array.isArray(result.value)
+    ? result.value.flatMap((item) => {
+        if (!item || typeof item !== "object") return [];
+        const url = safeExternalURL(Reflect.get(item, "url"));
+        const title = Reflect.get(item, "title");
+        return url && typeof title === "string" ? [{ url, title }] : [];
+      })
+    : [],
+);
+
+const imageSearchResults = computed(() => {
+  if (!result.value || typeof result.value !== "object") return [];
+  const items = Reflect.get(result.value, "results");
+  if (!Array.isArray(items)) return [];
+  return items.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const sourceURL = safeExternalURL(Reflect.get(item, "source_url"));
+    const thumbnailURL = safeExternalURL(Reflect.get(item, "thumbnail_url"));
+    const title = Reflect.get(item, "title");
+    return sourceURL && thumbnailURL && typeof title === "string"
+      ? [{ sourceURL, thumbnailURL, title }]
+      : [];
+  });
+});
+
+const webFetchTarget = computed(() => {
+  const url = safeExternalURL(textArg("url"));
+  if (!url) return undefined;
+  const title =
+    typeof result.value === "string"
+      ? extractTitleFromMarkdown(result.value)
+      : undefined;
+  return {
+    url,
+    title: title && title.toLowerCase() !== "untitled" ? title : url,
+  };
+});
+
+const filePath = computed(() =>
+  typeof args.value.path === "string" ? args.value.path : undefined,
+);
+const successfulResult = computed(
+  () =>
+    typeof result.value === "string" &&
+    result.value.trimStart().startsWith("OK"),
+);
+const artifactTarget = computed(() => {
+  if (!filePath.value) return undefined;
+  if (name.value === "write_file" || name.value === "str_replace") {
+    return buildWriteFileArtifactURL({
+      filepath: filePath.value,
+      messageId: props.step.messageId,
+      toolCallId: props.step.id,
+    });
+  }
+  if (name.value === "finalize_artifact_write" && successfulResult.value) {
+    return filePath.value;
+  }
+  return undefined;
+});
+const browserPreviewURL = computed(() => {
+  const screenshot = props.step.browserView?.screenshot;
+  return screenshot && props.threadId
+    ? resolveArtifactURL(screenshot, props.threadId, { isMock: props.isMock })
+    : undefined;
+});
+</script>
+
+<template>
+  <div
+    class="text-muted-foreground fade-in-0 slide-in-from-top-2 flex gap-2 text-sm"
+    :data-tool-name="name"
+  >
+    <div class="relative mt-0.5 shrink-0">
+      <component :is="icon" :size="16" />
+      <div class="bg-border absolute top-7 bottom-0 left-1/2 -mx-px w-px" />
+    </div>
+    <div class="min-w-0 flex-1 space-y-2 overflow-hidden">
+      <button
+        v-if="artifactTarget"
+        type="button"
+        class="hover:text-foreground text-left"
+        @click="emit('artifact', artifactTarget)"
+      >
+        {{ label }}
+      </button>
+      <div v-else>{{ label }}</div>
+
+      <div
+        v-if="name === 'web_search' && webSearchResults.length"
+        class="flex flex-wrap items-center gap-2 overflow-x-hidden"
+      >
+        <a
+          v-for="item in webSearchResults"
+          :key="item.url"
+          :href="item.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="bg-secondary text-secondary-foreground rounded-md px-2 py-0.5 text-xs font-normal"
+        >
+          {{ item.title }}
+        </a>
+      </div>
+
+      <div
+        v-else-if="name === 'image_search' && imageSearchResults.length"
+        class="flex flex-wrap items-center gap-2 overflow-x-hidden"
+      >
+        <a
+          v-for="item in imageSearchResults"
+          :key="item.sourceURL"
+          :href="item.sourceURL"
+          :title="item.title"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="bg-accent size-24 overflow-hidden rounded-lg"
+        >
+          <img
+            :src="item.thumbnailURL"
+            :alt="item.title"
+            class="size-full object-cover"
+            width="100"
+            height="100"
+          />
+        </a>
+      </div>
+
+      <a
+        v-else-if="name === 'web_fetch' && webFetchTarget"
+        :href="webFetchTarget.url"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="bg-secondary text-secondary-foreground inline-flex rounded-md px-2 py-0.5 text-xs font-normal"
+      >
+        {{ webFetchTarget.title }}
+      </a>
+
+      <span
+        v-else-if="(name === 'ls' || name === 'read_file') && filePath"
+        class="bg-secondary text-secondary-foreground inline-flex rounded-md px-2 py-0.5 text-xs font-normal"
+      >
+        {{ filePath }}
+      </span>
+
+      <button
+        v-else-if="filePath && artifactTarget"
+        type="button"
+        class="bg-secondary text-secondary-foreground inline-flex max-w-full rounded-md px-2 py-0.5 text-left text-xs font-normal break-all"
+        @click="emit('artifact', artifactTarget)"
+      >
+        {{ filePath }}
+      </button>
+      <span
+        v-else-if="filePath && icon === NotebookPen"
+        class="bg-secondary text-secondary-foreground inline-flex max-w-full rounded-md px-2 py-0.5 text-xs font-normal break-all"
+      >
+        {{ filePath }}
+      </span>
+
+      <CodeBlock
+        v-else-if="name === 'bash' && textArg('command')"
+        :code="textArg('command')!"
+        language="bash"
+        class="mx-0 border-none px-0"
+      />
+
+      <button
+        v-if="browserPreviewURL && step.browserView"
+        type="button"
+        class="border-border mt-1 block w-full max-w-md cursor-pointer overflow-hidden rounded-lg border"
+        @click="emit('browser', step.browserView)"
+      >
+        <img
+          :src="browserPreviewURL"
+          :alt="
+            step.browserView.title ?? $i18n.t.value.toolCalls.browserSnapshot
+          "
+          class="w-full object-contain"
+          loading="lazy"
+          decoding="async"
+        />
+        <div
+          v-if="step.browserView.url"
+          class="text-muted-foreground bg-muted/40 truncate px-2 py-1 text-left text-[11px]"
+        >
+          {{ step.browserView.url }}
+        </div>
+      </button>
+    </div>
+  </div>
+</template>

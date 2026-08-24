@@ -9,9 +9,9 @@
 */
 import {
   computed,
-  defineAsyncComponent,
   defineComponent,
   h,
+  markRaw,
   nextTick,
   onMounted,
   onUnmounted,
@@ -23,20 +23,22 @@ import {
 import {
   Check,
   CheckCircle2,
+  Clock3,
   Copy,
   GitBranch,
   RefreshCw,
-  ThumbsDown,
-  ThumbsUp,
   Wrench,
 } from "lucide-vue-next";
-import { useMutation, useQueryClient } from "@tanstack/vue-query";
 
 import HumanInputCard from "@/components/chat/HumanInputCard.vue";
 import CitationSourcesPanel from "@/components/chat/CitationSourcesPanel.vue";
 import MessageAttachments from "@/components/chat/MessageAttachments.vue";
+import MessageMarkdown from "@/components/chat/MessageMarkdown.vue";
 import MessageTokenUsage from "@/components/chat/MessageTokenUsage.vue";
 import MarkdownLink from "@/components/chat/MarkdownLink.vue";
+import ProcessingMessageGroup from "@/components/chat/ProcessingMessageGroup.vue";
+import ReasoningDisclosure from "@/components/chat/ReasoningDisclosure.vue";
+import RunActivity from "@/components/chat/RunActivity.vue";
 import SubtaskCard from "@/components/chat/SubtaskCard.vue";
 import { MARKDOWN_LINK_CONTEXT } from "@/components/chat/markdown-link-context";
 import WorkspaceChangesBadge from "@/components/workspace/changes/WorkspaceChangesBadge.vue";
@@ -55,6 +57,7 @@ import {
   type HumanInputResponse,
 } from "@/core/messages/human-input";
 import { deriveAssistantTurnUsageState } from "@/core/messages/derived-state";
+import type { BrowserViewMeta } from "@/core/messages/processing";
 import {
   extractContentFromMessage,
   extractReasoningContentFromMessage,
@@ -65,7 +68,6 @@ import {
   getMessageGroups,
   stripUploadedFilesTag,
 } from "@/core/messages/utils";
-import { getSafeMarkdown } from "@/core/markdown/safe-markdown";
 import {
   formatRunDuration,
   getRunDurationDisplaysByGroupIndex,
@@ -78,17 +80,7 @@ import {
 import type { Subtask } from "@/core/tasks/types";
 import type { Message } from "@/core/types/message";
 import { readReferenceMessageContexts } from "@/core/sidecar";
-import {
-  deleteFeedback,
-  upsertFeedback,
-  type FeedbackData,
-} from "@/core/api/feedback";
 import { writeTextToClipboard } from "@/core/clipboard";
-import { threadHistoryQueryKey } from "@/core/threads/history";
-
-const StreamMarkdown = defineAsyncComponent(
-  () => import("@/components/markdown/StreamMarkdown.vue"),
-);
 
 const props = withDefaults(
   defineProps<{
@@ -128,6 +120,7 @@ const emit = defineEmits<{
   edit: [messageId: string, text: string, messageIds: string[]];
   humanInput: [request: HumanInputRequest, response: HumanInputResponse];
   artifact: [path: string];
+  browser: [frame: BrowserViewMeta];
   selectionAsk: [payload: SelectionPayload];
   selectionAdd: [payload: SelectionPayload];
   loadMoreHistory: [];
@@ -139,28 +132,8 @@ type SelectionPayload = {
   displayIndex: number;
 };
 const pendingHumanInputs = ref(new Set<string>());
-const queryClient = useQueryClient();
-const feedbackState = ref(new Map<string, FeedbackData | null>());
 const copiedMessage = ref<string | null>(null);
 const actionError = ref("");
-const feedbackMutation = useMutation({
-  mutationFn: async (variables: {
-    threadId: string;
-    runId: string;
-    rating: number;
-    remove: boolean;
-  }) => {
-    if (variables.remove) {
-      await deleteFeedback(variables.threadId, variables.runId);
-      return null;
-    }
-    return upsertFeedback(
-      variables.threadId,
-      variables.runId,
-      variables.rating,
-    );
-  },
-});
 let previousHumanInputThreadError: unknown = props.threadError;
 provide(MARKDOWN_LINK_CONTEXT, {
   threadId: computed(() => props.threadId),
@@ -210,11 +183,11 @@ const MarkdownMessageImage = defineComponent({
     };
   },
 });
-const messageMarkdownComponents = {
+const messageMarkdownComponents = markRaw({
   ...richContentComponents,
   a: MarkdownLink,
   img: MarkdownMessageImage,
-};
+});
 
 const groups = computed(() =>
   getMessageGroups(props.messages, {
@@ -236,6 +209,22 @@ const durations = computed(() =>
 const humanInputState = computed(() =>
   deriveHumanInputThreadState(props.rawMessages ?? props.messages),
 );
+const hasActiveAssistantText = computed(() => {
+  let lastHumanIndex = -1;
+  for (let index = groups.value.length - 1; index >= 0; index -= 1) {
+    if (groups.value[index]?.type === "human") {
+      lastHumanIndex = index;
+      break;
+    }
+  }
+  return (
+    lastHumanIndex >= 0 &&
+    groups.value
+      .slice(lastHumanIndex)
+      .some((group) => group.type === "assistant")
+  );
+});
+const turnStartTime = ref<number | null>(props.streaming ? Date.now() : null);
 const scroller = ref<HTMLElement | null>(null);
 const historySentinel = ref<HTMLElement | null>(null);
 const windowStart = ref<number | null>(null);
@@ -350,71 +339,6 @@ function lastAI(index: number) {
   return [...(groups.value[index]?.messages ?? [])]
     .reverse()
     .find((message) => message.type === "ai");
-}
-function readFeedback(message: Message | undefined): FeedbackData | null {
-  const raw = message ? Reflect.get(message, "feedback") : null;
-  if (!raw || typeof raw !== "object") return null;
-  const rating = Reflect.get(raw, "rating");
-  const feedbackId = Reflect.get(raw, "feedback_id");
-  if ((rating !== 1 && rating !== -1) || typeof feedbackId !== "string") {
-    return null;
-  }
-  const comment = Reflect.get(raw, "comment");
-  return {
-    feedback_id: feedbackId,
-    rating,
-    comment: typeof comment === "string" ? comment : null,
-  };
-}
-function feedbackForGroup(index: number) {
-  const runId = runIdOfGroup(index);
-  if (!runId) return null;
-  if (feedbackState.value.has(runId)) {
-    return feedbackState.value.get(runId) ?? null;
-  }
-  return readFeedback(lastAI(index));
-}
-function setFeedback(runId: string, feedback: FeedbackData | null) {
-  const next = new Map(feedbackState.value);
-  next.set(runId, feedback);
-  feedbackState.value = next;
-}
-async function toggleFeedback(index: number, rating: 1 | -1) {
-  if (!props.threadId) return;
-  const runId = runIdOfGroup(index);
-  if (!runId || feedbackMutation.isPending.value) return;
-  actionError.value = "";
-  const previous = feedbackForGroup(index);
-  const remove = previous?.rating === rating;
-  setFeedback(
-    runId,
-    remove
-      ? null
-      : {
-          feedback_id: previous?.feedback_id ?? `optimistic:${runId}`,
-          rating,
-          comment: previous?.comment ?? null,
-        },
-  );
-  try {
-    const result = await feedbackMutation.mutateAsync({
-      threadId: props.threadId,
-      runId,
-      rating,
-      remove,
-    });
-    setFeedback(runId, result);
-    await queryClient.invalidateQueries({
-      queryKey: threadHistoryQueryKey(props.threadId),
-      exact: true,
-    });
-  } catch (error) {
-    setFeedback(runId, previous);
-    actionError.value =
-      error instanceof Error
-        ? error.message
-        : $i18n.t.value.messages.feedbackFailed;
-  }
 }
 async function copyMessage(key: string, value: string | null) {
   if (!value) return;
@@ -729,6 +653,13 @@ watch(
   { flush: "post" },
 );
 watch(
+  () => props.streaming,
+  (streaming, previous) => {
+    if (streaming && !previous) turnStartTime.value = Date.now();
+    if (!streaming && previous) turnStartTime.value = null;
+  },
+);
+watch(
   () => props.active,
   async (active) => {
     if (!active) return;
@@ -798,22 +729,8 @@ watch(
   () => {
     pendingHumanInputs.value = new Set();
     previousHumanInputThreadError = props.threadError;
-    feedbackState.value = new Map();
     actionError.value = "";
   },
-);
-watch(
-  () => props.messages,
-  () => {
-    if (feedbackMutation.isPending.value) return;
-    const next = new Map(feedbackState.value);
-    groups.value.forEach((_, index) => {
-      const runId = runIdOfGroup(index);
-      if (runId) next.set(runId, readFeedback(lastAI(index)));
-    });
-    feedbackState.value = next;
-  },
-  { immediate: true },
 );
 watch(
   () => props.historyLoadingMore,
@@ -941,7 +858,21 @@ onUnmounted(() => {
           "
           @mouseup="onSelection(entry.index)"
         >
-          <template v-for="message in entry.group.messages" :key="message.id">
+          <ProcessingMessageGroup
+            v-if="entry.group.type === 'assistant:processing'"
+            :messages="entry.group.messages"
+            :streaming="streaming && entry.index === groups.length - 1"
+            :thread-id="threadId"
+            :is-mock="isMock"
+            :markdown-components="messageMarkdownComponents"
+            @artifact="emit('artifact', $event)"
+            @browser="emit('browser', $event)"
+          />
+          <template
+            v-for="message in entry.group.messages"
+            v-else
+            :key="message.id"
+          >
             <HumanInputCard
               v-if="extractHumanInputRequest(message)"
               :request="extractHumanInputRequest(message)!"
@@ -1022,26 +953,17 @@ onUnmounted(() => {
               </div>
             </template>
             <template v-else-if="message.type === 'ai'">
-              <details v-if="reasoning(message)" class="mb-3" open>
-                <summary
-                  role="button"
-                  class="text-muted-foreground cursor-pointer text-sm font-medium"
-                >
-                  {{
-                    streaming && entry.index === groups.length - 1
-                      ? $i18n.t.value.common.thinking
-                      : $i18n.t.value.runDuration.reasoning
-                  }}
-                </summary>
-                <p class="text-muted-foreground mt-2 text-sm leading-relaxed">
-                  {{ reasoning(message) }}
-                </p>
-              </details>
-              <StreamMarkdown
+              <ReasoningDisclosure
+                v-if="reasoning(message)"
+                :content="reasoning(message) ?? ''"
+                :streaming="streaming && entry.index === groups.length - 1"
+                :markdown-components="messageMarkdownComponents"
+              />
+              <MessageMarkdown
                 v-if="text(message)"
-                :content="getSafeMarkdown(text(message))"
+                :content="text(message)"
                 :components="messageMarkdownComponents"
-                :parse-incomplete-markdown="streaming"
+                :streaming="streaming && entry.index === groups.length - 1"
               />
               <CitationSourcesPanel :sources="citations(message)" />
               <button
@@ -1148,45 +1070,6 @@ onUnmounted(() => {
               />
               <Copy v-else :size="14" />
             </button>
-            <template
-              v-if="
-                interactive !== false &&
-                threadId &&
-                workspaceChangesRun(entry.index) &&
-                !streaming
-              "
-            >
-              <button
-                type="button"
-                :aria-label="$i18n.t.value.messages.actions.helpful"
-                :disabled="feedbackMutation.isPending.value"
-                @click="toggleFeedback(entry.index, 1)"
-              >
-                <ThumbsUp
-                  :size="14"
-                  :class="
-                    feedbackForGroup(entry.index)?.rating === 1
-                      ? 'text-foreground fill-current'
-                      : ''
-                  "
-                />
-              </button>
-              <button
-                type="button"
-                :aria-label="$i18n.t.value.messages.actions.notHelpful"
-                :disabled="feedbackMutation.isPending.value"
-                @click="toggleFeedback(entry.index, -1)"
-              >
-                <ThumbsDown
-                  :size="14"
-                  :class="
-                    feedbackForGroup(entry.index)?.rating === -1
-                      ? 'text-foreground fill-current'
-                      : ''
-                  "
-                />
-              </button>
-            </template>
             <button
               v-if="
                 interactive !== false && branchable.has(entry.group.id ?? '')
@@ -1220,20 +1103,25 @@ onUnmounted(() => {
               <RefreshCw :size="14" />
             </button>
           </div>
-          <p
+          <div
             v-for="duration in durations[entry.index] ?? []"
             :key="duration.runId"
             data-testid="run-duration"
-            class="text-muted-foreground mt-2 text-xs"
+            :title="$i18n.t.value.runDuration.description"
+            class="text-muted-foreground mt-2 flex items-center gap-2 text-sm"
           >
-            {{ durationLabel(duration.durationSeconds) }}
-          </p>
+            <Clock3 :size="16" />
+            <span>{{ durationLabel(duration.durationSeconds) }}</span>
+          </div>
         </li>
         <div
           v-if="virtualBottomHeight"
           aria-hidden="true"
           :style="{ height: `${virtualBottomHeight}px` }"
         />
+        <li v-if="streaming && !hasActiveAssistantText" class="w-full">
+          <RunActivity :start-time="turnStartTime" />
+        </li>
       </ul>
       <p
         v-if="actionError"

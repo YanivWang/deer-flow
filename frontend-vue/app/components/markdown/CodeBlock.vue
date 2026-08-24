@@ -25,8 +25,9 @@
 -->
 
 <script setup lang="ts">
-import { computed, ref, shallowRef, watch } from "vue";
+import { computed, inject, ref, shallowRef, watch } from "vue";
 
+import { markdownStreamingKey } from "@/core/markdown/rendering-context";
 import { cn } from "@/lib/utils";
 
 const props = withDefaults(
@@ -59,6 +60,10 @@ const lines = computed(() => {
 /** 高亮结果；`null` 表示还没回来（或失败），走未高亮回退。 */
 const highlighted = shallowRef<HighlightedToken[][] | null>(null);
 const copied = ref(false);
+const streaming = inject(
+  markdownStreamingKey,
+  computed(() => false),
+);
 
 watch(
   // ⚠️ `immediate: true`（05 M5）：watch 默认惰性，首帧不跑就永远等不到第一次高亮，
@@ -112,6 +117,7 @@ function tokenStyle(token: HighlightedToken): string {
 }
 
 async function copy() {
+  if (streaming.value) return;
   try {
     await navigator.clipboard.writeText(props.code);
     copied.value = true;
@@ -124,6 +130,7 @@ async function copy() {
 }
 
 function download() {
+  if (streaming.value) return;
   const blob = new Blob([props.code], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -163,6 +170,7 @@ function download() {
         <button
           :class="ACTION_CLASS"
           data-streamdown="code-block-download-button"
+          :disabled="streaming"
           :title="$i18n.t.value.markdown.downloadFile"
           type="button"
           @click="download"
@@ -186,6 +194,7 @@ function download() {
         <button
           :class="ACTION_CLASS"
           data-streamdown="code-block-copy-button"
+          :disabled="streaming"
           :title="
             copied
               ? $i18n.t.value.markdown.copied

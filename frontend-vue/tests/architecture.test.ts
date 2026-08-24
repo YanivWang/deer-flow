@@ -228,6 +228,7 @@ const l2Files = [
   "app/core/markdown/pipeline.ts",
   "app/core/markdown/plugins.ts",
   "app/core/markdown/render.ts",
+  "app/core/markdown/rendering-context.ts",
   "app/core/markdown/safe-markdown.ts",
   "app/components/markdown/CodeBlock.vue",
   "app/components/markdown/MarkdownBlock.vue",

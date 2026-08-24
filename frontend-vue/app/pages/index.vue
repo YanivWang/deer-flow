@@ -3,8 +3,8 @@
   【对应 frontend/】 frontend/src/app/page.tsx
   【架构位置】     L3
   【主要导出】     / 页面
-  【依赖关系】     shared/showcase · React-owned static demo assets
-  【边界与注意】   只迁移当前 React merge 新增的公开案例入口，不复制 React DOM。
+  【依赖关系】     shared/showcase · Vue-owned static demo assets
+  【边界与注意】   营销落地页属于明确豁免范围，不复制 React DOM。
 -->
 
 <script setup lang="ts">

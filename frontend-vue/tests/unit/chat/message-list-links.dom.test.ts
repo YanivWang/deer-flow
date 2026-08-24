@@ -120,6 +120,49 @@ describe("MessageList MarkdownLink integration", () => {
 
     wrapper.unmount();
   });
+
+  it("keeps React-equivalent list markers and inline emphasis in final answers", async () => {
+    const wrapper = mount(MessageList, {
+      props: {
+        messages: [
+          {
+            id: "assistant-weather",
+            type: "ai",
+            content: [
+              "**Today's weather**",
+              "",
+              "- Temperature: 29°C",
+              "- Conditions: Cloudy",
+            ].join("\n"),
+          },
+        ],
+        streaming: false,
+        loading: false,
+        threadId: "thread-1",
+        interactive: false,
+      },
+      global: {
+        plugins: [[VueQueryPlugin, { queryClient: new QueryClient() }]],
+      },
+    });
+
+    await flushPromises();
+    await vi.waitFor(() =>
+      expect(
+        wrapper.find("ul[data-streamdown='unordered-list']").exists(),
+      ).toBe(true),
+    );
+    expect(
+      wrapper.get("ul[data-streamdown='unordered-list']").classes(),
+    ).toEqual(expect.arrayContaining(["list-inside", "list-disc"]));
+    expect(wrapper.get("li[data-streamdown='list-item']").classes()).toContain(
+      "py-1",
+    );
+    expect(wrapper.get("[data-streamdown='strong']").classes()).toContain(
+      "font-semibold",
+    );
+    wrapper.unmount();
+  });
 });
 
 describe("MessageList on-demand history", () => {

@@ -1,6 +1,6 @@
 {
   "expectedFileCount": 29,
-  "expectedTestCount": 165,
+  "expectedTestCount": 168,
   "specFiles": [
     "frontend-vue/tests/m7/agent-chat.spec.ts",
     "frontend/tests/e2e/agents-feature-disabled.spec.ts",

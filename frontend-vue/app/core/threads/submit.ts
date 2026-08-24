@@ -4,8 +4,8 @@
   【架构位置】     L3（纯 TS）
   【主要导出】     hasToolResult · buildThreadSubmitMessages · buildRunContext
   【依赖关系】     ../types/message · ../settings（LocalSettings 的 context 形状）
-  【边界与注意】   上游两处 run-context 字面量在此收敛为唯一构造器；有模型元数据时
-                   再执行 capability 归一化，无元数据时保留旧提交语义。
+  【边界与注意】   上游两处 run-context 字面量在此收敛为唯一构造器；模型能力约束 UI，
+                   wire context 则严格保持 React 的 explicit effort → mode fallback 语义。
 */
 
 import type { Message } from "../types/message";
@@ -99,8 +99,5 @@ export function buildRunContext(
       (mode === undefined ? undefined : REASONING_EFFORT_BY_MODE[mode]),
     thread_id: threadId,
   };
-  if (model && model.supports_reasoning_effort !== true) {
-    delete result.reasoning_effort;
-  }
   return result;
 }

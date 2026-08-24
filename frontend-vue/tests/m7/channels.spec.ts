@@ -548,13 +548,10 @@ test.describe("IM channels", () => {
 
     await page.goto("/workspace/chats/new");
     const sidebar = page.locator("[data-sidebar='sidebar']");
-    await expect(sidebar.getByTestId("channel-status-slack")).toHaveText(
-      "Not connected",
-      { timeout: 15_000 },
-    );
-    await expect(
-      sidebar.getByRole("button", { name: "Connect" }),
-    ).toBeVisible();
+    await expect(sidebar.getByTestId("channel-status-slack")).toHaveCount(0);
+    await expect(sidebar.getByRole("button", { name: "Connect" })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test("multi-account polling and the two deletion targets stay distinct", async ({

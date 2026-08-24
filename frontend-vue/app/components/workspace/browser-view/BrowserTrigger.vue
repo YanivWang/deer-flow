@@ -8,15 +8,19 @@
   【边界与注意】   browser_control 专有入口，不属于 L2。
 */
 import { Monitor } from "lucide-vue-next";
-defineEmits<{ open: [] }>();
+defineProps<{ open: boolean }>();
+defineEmits<{ toggle: [] }>();
 </script>
 <template>
   <button
     type="button"
     data-testid="browser-trigger"
-    :aria-label="$i18n.t.value.browser.trigger"
+    :aria-label="
+      open ? $i18n.t.value.browser.close : $i18n.t.value.common.showBrowser
+    "
     class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
-    @click="$emit('open')"
+    :class="{ 'bg-secondary': open }"
+    @click="$emit('toggle')"
   >
     <Monitor :size="16" />
   </button>

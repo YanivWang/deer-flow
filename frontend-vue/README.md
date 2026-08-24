@@ -195,7 +195,8 @@ hidden human instruction, then correlates an `AIMessage.tool_calls` entry named
 `status: "success"` starts a finite visibility check; tool errors, run errors
 and exhausted 404 retries remain visible and retryable. Duplicate clicks share
 the same in-flight owner, and route/scope disposal aborts both the run and the
-bounded `GET /api/agents/{name}` verification.
+bounded `GET /api/agents/{name}` verification. Save remains disabled until the
+initial design conversation succeeds and its send owner has fully released.
 
 `useAgents` and `useModels` are the only server-state owners for the gallery
 and model catalog. Settings select from the real model response and send the
@@ -294,3 +295,8 @@ conversations initially request only the newest history page, with explicit or
 upward-scroll loading for older pages. `/compact` is a real Gateway command for
 established conversations and keeps the draft intact when the Gateway rejects
 the request.
+
+Messages, reasoning and processing text share one product Markdown adapter, so
+GFM weather tables and streaming partials cannot diverge by call site. Table
+copy/download/fullscreen controls and the visible message actions follow the
+current React call sites; Vue does not expose a feedback action until React does.

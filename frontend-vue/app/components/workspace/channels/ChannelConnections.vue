@@ -250,6 +250,7 @@ const dialogTitle = computed(() => {
             }}
           </p>
           <span
+            v-if="variant === 'settings'"
             class="text-muted-foreground text-xs"
             :data-testid="`channel-status-${view.provider.provider}`"
           >
@@ -259,15 +260,9 @@ const dialogTitle = computed(() => {
         <div class="flex shrink-0 flex-wrap justify-end gap-1">
           <button
             type="button"
-            class="rounded-md border px-2 py-1 text-xs"
-            :disabled="
-              channels.isProviderPending(view.provider.provider) ||
-              (!(
-                view.provider.connectable ??
-                (view.provider.enabled && view.provider.configured)
-              ) &&
-                !providerNeedsRuntimeConfig(view.provider))
-            "
+            class="h-8 w-24 rounded-md border px-2 text-xs"
+            :disabled="channels.isProviderPending(view.provider.provider)"
+            :title="view.provider.unavailable_reason || undefined"
             @click="connectProvider(view.provider)"
           >
             {{ connectLabel(view) }}

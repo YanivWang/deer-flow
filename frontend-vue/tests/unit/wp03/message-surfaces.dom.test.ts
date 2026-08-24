@@ -8,15 +8,6 @@ import TodoList from "@/components/workspace/TodoList.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
 import type { Message } from "@/core/types/message";
 
-const feedback = vi.hoisted(() => ({
-  upsert: vi.fn(),
-  remove: vi.fn(),
-}));
-vi.mock("@/core/api/feedback", () => ({
-  upsertFeedback: feedback.upsert,
-  deleteFeedback: feedback.remove,
-}));
-
 function mountMessages(messages: Message[]) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -54,12 +45,6 @@ describe("WP-03 persisted message surfaces", () => {
       configurable: true,
       value: { writeText: vi.fn(async () => undefined) },
     });
-    feedback.upsert.mockReset().mockResolvedValue({
-      feedback_id: "fb-new",
-      rating: -1,
-      comment: null,
-    });
-    feedback.remove.mockReset().mockResolvedValue(undefined);
   });
 
   it("renders modern and legacy files, image previews, source details, copy, and per-turn usage", async () => {
@@ -101,6 +86,7 @@ describe("WP-03 persisted message surfaces", () => {
           output_tokens: 25,
           total_tokens: 125,
         },
+        additional_kwargs: { turn_duration: 19 },
         feedback: null,
       },
     ] as unknown as Message[];
@@ -126,67 +112,15 @@ describe("WP-03 persisted message surfaces", () => {
     expect(wrapper.get("[data-testid='message-token-usage']").text()).toContain(
       "125",
     );
+    expect(wrapper.find("button[aria-label='Helpful']").exists()).toBe(false);
+    expect(wrapper.find("button[aria-label='Not helpful']").exists()).toBe(
+      false,
+    );
+    expect(wrapper.get("[data-testid='run-duration'] svg").exists()).toBe(true);
 
     await wrapper.get("button[aria-label='Copy response']").trigger("click");
     expect(globalThis.navigator.clipboard.writeText).toHaveBeenCalledWith(
       expect.stringContaining("Answer"),
-    );
-  });
-
-  it("optimistically creates, updates, deletes feedback and rolls back errors", async () => {
-    const messages = [
-      { id: "human-1", type: "human", content: "Question" },
-      {
-        id: "ai-1",
-        type: "ai",
-        run_id: "run-1",
-        content: "Answer",
-        feedback: { feedback_id: "fb-1", rating: 1, comment: null },
-      },
-    ] as unknown as Message[];
-    const { wrapper, invalidate } = mountMessages(messages);
-    await flushPromises();
-    const helpful = wrapper.get("button[aria-label='Helpful']");
-    expect(helpful.get("svg").classes()).toContain("fill-current");
-
-    await helpful.trigger("click");
-    expect(helpful.get("svg").classes()).not.toContain("fill-current");
-    await flushPromises();
-    expect(feedback.remove).toHaveBeenCalledWith("thread-1", "run-1");
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: ["thread-messages", "thread-1"],
-      exact: true,
-    });
-
-    await wrapper.get("button[aria-label='Not helpful']").trigger("click");
-    await flushPromises();
-    expect(feedback.upsert).toHaveBeenLastCalledWith("thread-1", "run-1", -1);
-    expect(
-      wrapper.get("button[aria-label='Not helpful'] svg").classes(),
-    ).toContain("fill-current");
-
-    feedback.upsert.mockResolvedValueOnce({
-      feedback_id: "fb-new",
-      rating: 1,
-      comment: null,
-    });
-    await wrapper.get("button[aria-label='Helpful']").trigger("click");
-    await flushPromises();
-    expect(feedback.upsert).toHaveBeenLastCalledWith("thread-1", "run-1", 1);
-    expect(helpful.get("svg").classes()).toContain("fill-current");
-
-    feedback.upsert.mockRejectedValueOnce(new Error("Feedback unavailable"));
-    await wrapper.get("button[aria-label='Not helpful']").trigger("click");
-    expect(
-      wrapper.get("button[aria-label='Not helpful'] svg").classes(),
-    ).toContain("fill-current");
-    await flushPromises();
-    expect(
-      wrapper.get("button[aria-label='Not helpful'] svg").classes(),
-    ).not.toContain("fill-current");
-    expect(helpful.get("svg").classes()).toContain("fill-current");
-    expect(wrapper.get("[role='alert']").text()).toContain(
-      "Feedback unavailable",
     );
   });
 

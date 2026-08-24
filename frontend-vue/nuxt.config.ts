@@ -8,7 +8,6 @@
 */
 
 import tailwindcss from "@tailwindcss/vite";
-import { fileURLToPath } from "node:url";
 import { createThemeBootstrapScript } from "./app/core/theme/bootstrap";
 import { csrRoutes } from "./config/routes";
 
@@ -94,20 +93,6 @@ export default defineNuxtConfig({
       m0TestPages: "",
     },
   },
-  nitro: {
-    compressPublicAssets: true,
-    publicAssets: [
-      {
-        dir: fileURLToPath(new URL("../frontend/public/demo", import.meta.url)),
-        baseURL: "/demo",
-      },
-      {
-        dir: fileURLToPath(
-          new URL("../frontend/public/images", import.meta.url),
-        ),
-        baseURL: "/images",
-      },
-    ],
-  },
+  nitro: { compressPublicAssets: true },
   typescript: { typeCheck: false },
 });

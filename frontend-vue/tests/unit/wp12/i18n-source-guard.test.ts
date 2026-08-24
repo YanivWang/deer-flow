@@ -75,7 +75,7 @@ const errorCode = "permission_denied"
 
   it("keeps the full product Vue surface free of untranslated core English", () => {
     const inventory = productVueInventory();
-    expect(inventory.checked).toHaveLength(84);
+    expect(inventory.checked).toHaveLength(91);
     expect(inventory.checked).toContain("app/app.vue");
     expect(inventory.checked).toContain(
       "app/components/chat/ComposerAttachmentChip.vue",
@@ -85,6 +85,14 @@ const errorCode = "permission_denied"
     );
     expect(inventory.checked).toContain(
       "app/components/chat/ComposerSurface.vue",
+    );
+    expect(inventory.checked).toEqual(
+      expect.arrayContaining([
+        "app/components/chat/ProcessingMessageGroup.vue",
+        "app/components/chat/ProcessingToolStep.vue",
+        "app/components/chat/ReasoningDisclosure.vue",
+        "app/components/chat/RunActivity.vue",
+      ]),
     );
     expect(inventory.excludedTestFixtures).toEqual([
       "app/pages/__m0/splitpanes.vue",

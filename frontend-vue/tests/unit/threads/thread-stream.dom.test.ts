@@ -31,6 +31,7 @@ import type {
   ThreadRunnerOptions,
 } from "@/core/agent-deerflow/thread-runner";
 import type { Message } from "@/core/types/message";
+import type { Model } from "@/core/models/types";
 
 import { enUS } from "@/core/i18n/locales/en-US";
 import { zhCN } from "@/core/i18n/locales/zh-CN";
@@ -267,6 +268,10 @@ function mountStream(
     messages: readonly Message[],
   ) => void,
   displayThreadId?: Ref<string | null>,
+  runOptions?: {
+    context?: Ref<Record<string, unknown>>;
+    model?: Ref<Model | null | undefined>;
+  },
 ) {
   let fake: FakeRunner | undefined;
   let api: ReturnType<typeof useThreadStream> | undefined;
@@ -286,7 +291,8 @@ function mountStream(
       api = useThreadStream({
         threadId,
         ...(displayThreadId ? { displayThreadId } : {}),
-        context: ref({ mode: "flash" }),
+        context: runOptions?.context ?? ref({ mode: "flash" }),
+        ...(runOptions?.model ? { model: runOptions.model } : {}),
         notify: {
           warn: (key) => warnings.push(key),
           error: (message) => errors.push(message),
@@ -362,6 +368,38 @@ describe("useThreadStream · production stream modes", () => {
     expect(ctx.fake.submissions[0]?.payload).toMatchObject({
       stream_resumable: false,
       on_disconnect: "continue",
+    });
+    ctx.wrapper.unmount();
+  });
+
+  it("sends the same mode-derived reasoning context as React for a thinking-only model", async () => {
+    const context = ref<Record<string, unknown>>({
+      model_name: "minimax-m3",
+      mode: "pro",
+    });
+    const model = ref<Model>({
+      id: "minimax-m3",
+      name: "minimax-m3",
+      model: "MiniMax-M3",
+      display_name: "MiniMax M3",
+      supports_thinking: true,
+      supports_reasoning_effort: false,
+    });
+    const ctx = mountStream(ref("thread-1"), {}, undefined, undefined, {
+      context,
+      model,
+    });
+
+    await ctx.api.sendMessage("thread-1", { text: "today's weather" });
+
+    expect(ctx.fake.submissions[0]?.payload.context).toMatchObject({
+      model_name: "minimax-m3",
+      mode: "pro",
+      thinking_enabled: true,
+      is_plan_mode: true,
+      subagent_enabled: false,
+      reasoning_effort: "medium",
+      thread_id: "thread-1",
     });
     ctx.wrapper.unmount();
   });

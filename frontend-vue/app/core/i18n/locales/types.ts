@@ -1070,7 +1070,6 @@ export interface Translations {
     subtask: string;
     tool: string;
     toolResult: (name: string) => string;
-    feedbackFailed: string;
     copyFailed: string;
     loadEarlierFailed: string;
     loadingConversation: string;
@@ -1081,8 +1080,6 @@ export interface Translations {
       copyMessage: string;
       editAndRerun: string;
       copyResponse: string;
-      helpful: string;
-      notHelpful: string;
       branch: string;
       regenerate: string;
     };
@@ -1111,6 +1108,18 @@ export interface Translations {
     downloadFile: string;
     copied: string;
     copyCode: string;
+    copyTable: string;
+    copyTableAsMarkdown: string;
+    copyTableAsCsv: string;
+    copyTableAsTsv: string;
+    downloadTable: string;
+    downloadTableAsCsv: string;
+    downloadTableAsMarkdown: string;
+    viewFullscreen: string;
+    exitFullscreen: string;
+    tableFormatMarkdown: string;
+    tableFormatCsv: string;
+    tableFormatTsv: string;
     mermaidChart: string;
     unsafeLink: string;
     unsafeLinkTitle: (url: string) => string;
@@ -1130,6 +1139,8 @@ export interface Translations {
   };
 
   marketing: {
+    aboutPlaceholder: string;
+    pricingPlaceholder: string;
     badge: string;
     showcaseDescription: string;
     caseStudies: string;
@@ -1139,8 +1150,6 @@ export interface Translations {
       title: string;
       description: string;
     }[];
-    aboutPlaceholder: string;
-    pricingPlaceholder: string;
   };
 
   // Login / Auth

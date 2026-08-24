@@ -52,14 +52,18 @@ Compose Watch 同步源码并在依赖清单变化时重建对应镜像；Nginx 
    排序、sidecar 过滤与身份规则集中在 `app/core/threads/`。
 5. custom 帧由 `tasks/custom-event.ts` 统一折叠 task 生命周期、步骤、累计 token、模型和
    `llm_retry`；`SubtaskCard.vue` 展开历史 run 时才回填持久化步骤。
-6. `MessageList.vue`、composer、产物/sidecar/browser 面板消费同一线程状态；产物面板等扩展
-   通过事件和 panel state 接入，不改变 L1 session 状态机。
+6. `messages/processing.ts` 在每个 processing 组内一次性关联 tool result/browser frame，并投影
+   React 可观察的步骤顺序、折叠边界和 trailing reasoning；`ProcessingMessageGroup.vue` 与
+   `MessageList.vue` 只消费该视图模型，不再逐条渲染原始 ToolMessage。composer、产物/
+   sidecar/browser 面板仍消费同一线程状态，扩展通过事件和 panel state 接入，不改变 L1 session 状态机。
 
 Composer 的 tab 草稿由 `useComposerDraft.ts` 集中管理，key 是 user + agent/lead-agent +
 真实 thread 或稳定 `new` 草稿 scope；新会话实际 run target 仍使用本次 runtime UUID。
 技能目录 ready 后才恢复，后台 run `onStart` 前不清草稿。
 本地 `File` 与已上传 descriptor 留在 composer 内存中，失败可重试但不进入服务端缓存。
-模型/模式经 `models/capabilities.ts` 归一化后才进入 `threads/submit.ts` 的最终 context。
+模型/模式经 `models/capabilities.ts` 归一化后才进入 `threads/submit.ts` 的最终 context。模型能力
+控制 composer 可见选项；wire context 保留 explicit effort 或按 mode 推导的 React 等价 fallback，
+Gateway model factory 再负责在创建 provider 前剥离模型不支持的 kwargs。
 
 Agent 创建沿用同一个 thread runner，没有第二条保存 transport。`AgentChat` 创建真实 prepared
 thread 后，在 bootstrap 页面通过 `displayThreadId` 消费该 thread 的 live snapshot；Save 的隐藏
@@ -67,10 +71,22 @@ human 指令由 `useAgentCreationSession` 独占生命周期。纯 `agents/creat
 `AIMessage.tool_calls[].name === "setup_agent"` 与匹配 `ToolMessage.tool_call_id`、显式
 `status` 关联，assistant 文本不参与成功判定。成功结果进入有界 `getAgent` 验证；generation、
 AbortController、timer cleanup 和 effect-scope dispose 共同拒绝旧 run/验证结果回写。
+初始 design conversation 成功且同一 send owner 完整释放后，Save 才进入 ready；这是一条显式
+状态边界，不通过 timeout 或并行提交来规避 runner 所有权。
 
-MessageList 直接消费持久化消息：现代/legacy 附件、Gateway 历史行 feedback、隐藏 HIL 回复、
-citation 和 per-turn usage 都不依赖提交前 UI 状态。`thread.values.todos` 与最终 token usage
-仍由 thread snapshot/API 提供；反馈写入是 Vue Query mutation，只精确失效当前历史 key。
+MessageList 直接消费持久化消息：现代/legacy 附件、隐藏 HIL 回复、
+citation 和 per-turn usage 都不依赖提交前 UI 状态。processing 只走一份步骤投影；终态 reasoning
+流式时展开、settle 后只自动收起一次，尚无终态 assistant 时显示 live run activity。
+`MessageMarkdown.vue` 是消息、reasoning 与 processing 文本的唯一产品适配器，集中提供安全预处理、
+GFM/math/streaming 插件和 Streamdown 等价组件，防止调用点漏传插件后把表格静默退化成纯文本。
+`thread.values.todos` 与最终 token usage 仍由 thread snapshot/API 提供。Gateway feedback 字段和 core
+API 可继续无损存在，但当前 React 消息调用点没有启用该入口，因此 Vue 不显示点赞/踩，也不建立
+只由 Vue 触发的 feedback mutation。
+
+follow-up 配置是 Vue Query 持有的服务端状态，由 `useSuggestionsConfig.ts` 独占缓存和重取；run 完成
+时若配置尚未返回，先等待同一 query，再决定是否请求 suggestions，组件不维护第二份布尔配置。
+主 composer 的附件入口是唯一可见、可聚焦的语义 button；隐藏 file input 只承担文件选择，避免
+用 label 点击偶然实现鼠标可用、键盘与可访问性却偏离 React。
 
 流式重连、消息顺序、缓存失效和面板行为的硬合同见
 [`BEHAVIOR_CONTRACTS.md`](BEHAVIOR_CONTRACTS.md)。

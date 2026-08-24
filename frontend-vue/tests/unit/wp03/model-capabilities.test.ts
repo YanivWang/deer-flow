@@ -47,7 +47,7 @@ describe("WP-03 model defaults and capabilities", () => {
     );
   });
 
-  it("forces flash and omits unsupported reasoning fields", () => {
+  it("forces flash while preserving the React submission context", () => {
     const normalized = normalizeComposerContext(
       {
         model_name: "basic",
@@ -56,7 +56,11 @@ describe("WP-03 model defaults and capabilities", () => {
       },
       models[0],
     );
-    expect(normalized).toEqual({ model_name: "basic", mode: "flash" });
+    expect(normalized).toEqual({
+      model_name: "basic",
+      mode: "flash",
+      reasoning_effort: "high",
+    });
 
     const payload = buildRunContext(
       normalized,
@@ -70,12 +74,12 @@ describe("WP-03 model defaults and capabilities", () => {
       thinking_enabled: false,
       is_plan_mode: false,
       subagent_enabled: false,
+      reasoning_effort: "high",
       thread_id: "thread-1",
     });
-    expect(payload).not.toHaveProperty("reasoning_effort");
   });
 
-  it("keeps plan semantics but omits effort for a thinking-only model", () => {
+  it("keeps the explicit effort in the wire context for a thinking-only model", () => {
     expect(
       buildRunContext(
         { model_name: "think-only", mode: "pro", reasoning_effort: "high" },
@@ -90,11 +94,12 @@ describe("WP-03 model defaults and capabilities", () => {
       thinking_enabled: true,
       is_plan_mode: true,
       subagent_enabled: false,
+      reasoning_effort: "high",
       thread_id: "thread-2",
     });
   });
 
-  it("derives the React-equivalent effort only when the model supports it", () => {
+  it("derives the React-equivalent effort from mode for every model", () => {
     expect(
       buildRunContext(
         { model_name: "reasoner", mode: "ultra" },
@@ -110,6 +115,23 @@ describe("WP-03 model defaults and capabilities", () => {
       subagent_enabled: true,
       reasoning_effort: "high",
       thread_id: "thread-3",
+    });
+
+    expect(
+      buildRunContext(
+        { model_name: "think-only", mode: "pro" },
+        "thread-4",
+        undefined,
+        models[2],
+      ),
+    ).toEqual({
+      model_name: "think-only",
+      mode: "pro",
+      thinking_enabled: true,
+      is_plan_mode: true,
+      subagent_enabled: false,
+      reasoning_effort: "medium",
+      thread_id: "thread-4",
     });
   });
 });

@@ -160,7 +160,8 @@ scope。Save 只发送一条隐藏 human 指令，再将名为 `setup_agent` 的
 `AIMessage.tool_calls` 与相同 `ToolMessage.tool_call_id` 关联；只有明确的
 `status: "success"` 才进入有限可见性验证。tool/run 错误和耗尽 404 重试都会保持可见且可重试；
 重复点击复用同一个在途 owner，路由或 scope 销毁会同时中止 run 和有界的
-`GET /api/agents/{name}` 验证。
+`GET /api/agents/{name}` 验证。初始 design conversation 成功且 send owner 完整释放前，
+Save 始终保持禁用。
 
 Gallery 和模型目录的服务端状态分别只归 `useAgents`、`useModels`。设置从真实模型响应选择，
 精确提交 `model`、`model_settings`、`thinking_enabled`、`reasoning_effort`，包括显式
@@ -225,3 +226,7 @@ thread/checkpoint、run-event store、production owner check 和 workspace-chang
 token 和实时步骤，刷新后展开卡片可回填持久化步骤。长会话初次只请求最新一页历史，只有
 显式按钮或用户向上滚动后才加载更早页面。已建立会话的 `/compact` 会调用真实 Gateway
 接口；Gateway 拒绝时保留草稿并展示原始错误。
+
+消息、reasoning 与 processing 文本统一经过一个产品 Markdown 适配器，真实天气 GFM 表格和
+流式半成品不会因调用点不同而退化。表格复制/下载/全屏与消息操作按 React 当前调用点对齐；
+React 未启用反馈入口时，Vue 也不显示点赞/踩。

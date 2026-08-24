@@ -94,13 +94,18 @@ Vue 通过 `Content-Location` 与 `Last-Event-ID` 恢复；不得改回 backend 
 | B12 | 消息视口贴底时，流式内容的每次尺寸增长都继续跟随底部；用户主动上滚后立即释放，回到底部时恢复                                                                                                                            | AI token 会持续追加在同一个消息组内，不能只监听组数量；语义与 React `use-stick-to-bottom` 的 resize/follow 行为一致          |
 | B13 | 实际 `MessageList → StreamMarkdown` 的全部链接必须经过统一 MarkdownLink；协议 allowlist 先于 citation/artifact 分支，危险 href 降级为不可点击文本；HTTP(S) 外链与 artifact/citation 使用 `target="_blank"` 和安全 `rel` | 只在默认 Markdown pipeline 加 sanitizer 不能保护消息实际覆盖的 `components.a` 路径                                           |
 | B14 | HumanMessage 附件以持久化 `additional_kwargs.files` 为主，并兼容 `current_uploads` / `uploaded_files` 标签；图片走 thread artifact 预览，普通文件走安全新窗口下载                                                       | 刷新后的 UI 不能依赖 composer 本地 `File` 状态                                                                               |
-| B15 | feedback 只绑定 Gateway `run_id`：create/update/delete 使用 Vue Query mutation，先乐观更新；失败回滚并显示错误，成功只失效当前 thread history key                                                                       | feedback 属于服务端状态；全局清缓存会污染无关会话                                                                            |
+| B15 | 当前 React `MessageList` 调用点未向 `MessageListItem` 传入 `feedback`，因此 Vue 消息操作区也不得显示点赞/踩或触发 feedback mutation；历史消息仍可无损携带 Gateway feedback 字段                                         | core API/data contract 不等于已启用的产品入口；React 日后接通调用点时必须重新审计两端 UI                                     |
 | B16 | human 与 assistant turn 都提供复制；citation sources 展开后显示去重 URL、domain、引用次数和单条 reference copy，且只接受 core 已归一化的 HTTP(S) URL                                                                    | 保持 WP-02 Markdown 安全合同，同时补齐消息操作                                                                               |
 | B17 | `thread.values.todos` 从 live snapshot 或持久化 thread state 读取，只渲染真实 `pending` / `in_progress` / `completed` 状态                                                                                              | stream `values` 是 todos 的权威生产链，不在消息文本中反推                                                                    |
 | B18 | token usage feature 由完整 models 响应的 `token_usage.enabled` 控制；线程最终 snapshot 为总量基线，只追加当前 active run 的 SSE usage，settled 后以最终 snapshot 替换；inline off 不渲染局部 usage                      | 避免刷新丢失、跨线程闪回和增量/最终值重复累计                                                                                |
+| B19 | processing 组必须先投影为唯一步骤视图：较早的非文本步骤折叠、最新 tool call/关联结果只显示一次、trailing reasoning 单独披露、其后答案保持在下方；不得逐条渲染 raw ToolMessage                                           | 同一组同时画 AI tool call 与 ToolMessage 会重复工具名称、参数和结果，并让流式/settled 布局跳变                               |
+| B20 | 当前 run 尚无终态 assistant 气泡时显示 live run activity；终态 reasoning 流式时展开，settle 后延迟 1 秒只自动收起一次，用户之后的手动开关不再被 timer 覆盖                                                              | 对齐 React 的等待态与 disclosure 生命周期，避免页面空白或历史 reasoning 永久展开                                             |
+| B21 | 实际 MessageList Markdown 的标题、强调、行内代码、列表、引用、分隔线与表格元素必须携带 React Streamdown 等价基础 class；列表标记不得被 Tailwind preflight 清除                                                          | 结构化回答在两端必须有相同的信息层级，不能把项目符号列表退化成无标记段落                                                     |
+| B22 | 消息、reasoning 与 processing 文本必须统一经过 `MessageMarkdown`：默认启用 React 消息路径等价的 GFM/math/streaming 插件；GFM 表格必须渲染为 table，并提供复制、下载、全屏三项 Streamdown 等价操作                       | 只实现 `MarkdownTable` 而漏传 `remark-gfm` 会让真实天气回复仍显示为管道文本；插件链必须由单一产品适配器拥有                  |
 
-> 主要代码位置：`app/core/messages/utils.ts`、`app/core/messages/run-duration.ts`、
-> `app/core/messages/workspace-change-anchor.ts`、`app/components/chat/MessageList.vue`。
+> 主要代码位置：`app/core/messages/utils.ts`、`app/core/messages/processing.ts`、
+> `app/core/messages/run-duration.ts`、`app/core/messages/workspace-change-anchor.ts`、
+> `app/components/chat/ProcessingMessageGroup.vue`、`app/components/chat/MessageList.vue`。
 
 B12 由 `MessageList.vue` 的内容 `ResizeObserver` 驱动。主会话按 React 默认值平滑跟随，
 sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
@@ -149,23 +154,25 @@ sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
 
 ## E. Composer / 输入框
 
-| #   | 约束                                                                                                                                                                                                               |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| E1  | Composer 草稿是 **tab 作用域**：只把文本 + 选中的 slash 技能名存 `sessionStorage`，按 user / agent / 逻辑会话作用域分键                                                                                            |
-| E2  | 新会话草稿使用稳定 `new` scope，实际 run/context target 使用本次 runtime UUID；已建立会话两者都用真实 thread ID。新建/删除后返回 `/new` 必须重置 runtime UUID，但同一 tab 的未发送草稿仍可恢复                     |
-| E3  | 附件、sidecar 引用、语音状态、polish 撤销状态**不持久化**                                                                                                                                                          |
-| E4  | `InputBox` 要等技能列表就绪后再恢复技能 chip；技能缺失或被禁用时**降级为可编辑的斜杠文本**                                                                                                                         |
-| E5  | 草稿与附件只有在 Gateway 已创建 run、runner 发出 `onStart` 后，才通过 `onAccepted` 清除；调用提交函数或写入乐观消息都不算后台接受                                                                                  |
-| E6  | `/goal` 与 `/compact` 是**内置命令，不是技能激活**；在正常聊天提交前拦截                                                                                                                                           |
-| E7  | `/goal <condition>` 除设置目标外还要把条件文本作为下一个用户任务提交（立即开跑）；查询状态与 clear 不启动 run                                                                                                      |
-| E8  | goal / compact / polish / post-run suggestion 绑定 thread、route、agent 与 generation，并尽量带 `AbortController`；切换、stop、替代请求或卸载后旧结果不得回写                                                      |
-| E9  | 选中技能 chip 后，在旁边的可编辑文本里输入 `/` 要能**重新打开**技能列表；选中条目是**替换 chip 而非追加**（wire 格式只允许一个前导 `/skill`）                                                                      |
-| E10 | 已选中 chip 时**不提供内置命令**（`/goal` 会被当作聊天文本提交）                                                                                                                                                   |
-| E11 | 斜杠**只在输入起始位置**打开列表（`getLeadingSlashSkillQuery`）—— 由 `tests/e2e/chat.spec.ts` 固定                                                                                                                 |
-| E12 | established thread 的 `/compact` 只允许一个在途请求；成功清草稿并失效 thread/history/search/token 六个 key，4xx/409 保留输入并显示 Gateway 原始 `detail`；新会话不调用 API                                         |
-| E13 | models 与 skills catalog 是 Vue Query 服务端状态；默认模型按 requested → agent default → Gateway 顺序选择。最终 run payload 按 capability 归一化 mode，unsupported reasoning effort 必须省略                       |
-| E14 | 主 composer 与 sidecar 上传/发送前保留 text、skill、files 与 context；失败、取消、断网、同步异常、路由切换均不清草稿。已成功上传的同一 `File` 在最终 thread 重试时复用，双击/上传中重复提交被 in-flight guard 丢弃 |
-| E15 | follow-up 在空草稿时直接发送；已有 text/skill/file 时必须提供 append-and-send、replace-and-send、cancel。所有按钮使用现有 i18n 字典，不静默覆盖                                                                    |
+| #   | 约束                                                                                                                                                                                                                                                                             |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E1  | Composer 草稿是 **tab 作用域**：只把文本 + 选中的 slash 技能名存 `sessionStorage`，按 user / agent / 逻辑会话作用域分键                                                                                                                                                          |
+| E2  | 新会话草稿使用稳定 `new` scope，实际 run/context target 使用本次 runtime UUID；已建立会话两者都用真实 thread ID。新建/删除后返回 `/new` 必须重置 runtime UUID，但同一 tab 的未发送草稿仍可恢复                                                                                   |
+| E3  | 附件、sidecar 引用、语音状态、polish 撤销状态**不持久化**                                                                                                                                                                                                                        |
+| E4  | `InputBox` 要等技能列表就绪后再恢复技能 chip；技能缺失或被禁用时**降级为可编辑的斜杠文本**                                                                                                                                                                                       |
+| E5  | 草稿与附件只有在 Gateway 已创建 run、runner 发出 `onStart` 后，才通过 `onAccepted` 清除；调用提交函数或写入乐观消息都不算后台接受                                                                                                                                                |
+| E6  | `/goal` 与 `/compact` 是**内置命令，不是技能激活**；在正常聊天提交前拦截                                                                                                                                                                                                         |
+| E7  | `/goal <condition>` 除设置目标外还要把条件文本作为下一个用户任务提交（立即开跑）；查询状态与 clear 不启动 run                                                                                                                                                                    |
+| E8  | goal / compact / polish / post-run suggestion 绑定 thread、route、agent 与 generation，并尽量带 `AbortController`；切换、stop、替代请求或卸载后旧结果不得回写                                                                                                                    |
+| E9  | 选中技能 chip 后，在旁边的可编辑文本里输入 `/` 要能**重新打开**技能列表；选中条目是**替换 chip 而非追加**（wire 格式只允许一个前导 `/skill`）                                                                                                                                    |
+| E10 | 已选中 chip 时**不提供内置命令**（`/goal` 会被当作聊天文本提交）                                                                                                                                                                                                                 |
+| E11 | 斜杠**只在输入起始位置**打开列表（`getLeadingSlashSkillQuery`）—— 由 `tests/e2e/chat.spec.ts` 固定                                                                                                                                                                               |
+| E12 | established thread 的 `/compact` 只允许一个在途请求；成功清草稿并失效 thread/history/search/token 六个 key，4xx/409 保留输入并显示 Gateway 原始 `detail`；新会话不调用 API                                                                                                       |
+| E13 | models 与 skills catalog 是 Vue Query 服务端状态；默认模型按 requested → agent default → Gateway 顺序选择。capability 控制可选 mode/effort UI，最终 run context 与 React 一样优先 explicit effort、否则按 mode fallback；Gateway model factory 负责剥离 provider 不支持的 kwargs |
+| E14 | 主 composer 与 sidecar 上传/发送前保留 text、skill、files 与 context；失败、取消、断网、同步异常、路由切换均不清草稿。已成功上传的同一 `File` 在最终 thread 重试时复用，双击/上传中重复提交被 in-flight guard 丢弃                                                               |
+| E15 | follow-up 在空草稿时直接发送；已有 text/skill/file 时必须提供 append-and-send、replace-and-send、cancel。所有按钮使用现有 i18n 字典，不静默覆盖                                                                                                                                  |
+| E16 | suggestions config 由 `useSuggestionsConfig` 的 Vue Query 独占；run 完成时配置若仍在途，必须等待/重取同一 query 后再决定是否请求 follow-up，禁止以组件 `onMounted` 布尔值造成首次回合竞态                                                                                        |
+| E17 | 主 composer 的附件入口必须是可聚焦、可键盘触发并具有 React 同名 accessible label 的真实 `button`；隐藏 file input 只负责文件选择 transport，不能代替产品操作入口                                                                                                                 |
 
 ---
 
@@ -270,18 +277,20 @@ Vue 前端使用 `splitpanes`。它通过响应式 `:size` 和 `@resize` / `@res
 
 ## K. 路由与其他
 
-| #   | 约束                                                                                                                                                                                      |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| K1  | Web UI 会话路径必须通过 `app/core/threads/utils.ts::pathOfThread()` 构造 —— 它会对自定义 agent 名和 thread ID 做百分号编码后再插入路由段                                                  |
-| K2  | 编辑并重跑**只限最新回合**：仅当记录空闲且最近的可见回合以终态 assistant 消息结尾时才暴露（`getLatestEditableTurn()`）                                                                    |
-| K3  | 编辑并重跑走 `POST /api/threads/{id}/runs/edit-regenerate/prepare`，用与 regenerate 相同的流路径提交返回的替换消息/checkpoint/元数据，乐观隐藏被取代的消息 id，持久化替换到达后清除乐观态 |
-| K4  | 重命名走同一条序列化状态写入路由；活动 run 返回 409 时对话框保持打开并显示服务端错误                                                                                                      |
-| K5  | 设置 > 工具的 MCP 开关调用定向的 `PATCH /api/mcp/config`；在该 mutation 的成功 refetch 完成前禁用开关；通过 toast 显示后端错误 `detail`；**成功后才**失效 `["mcpConfig"]`                 |
-| K6  | 定时后台运行是**非交互**的：`context.non_interactive=true` 时 lead-agent 工具集排除 `ask_clarification`。该键只对内部认证的调用方生效，客户端提交的会被丢弃（后端行为，前端不要伪造）     |
-| K7  | prepared replay 的 prepare 与 stream 共用 generation/AbortController；重复提交、切路由、stop、error、cancel 和成功都必须清掉 guard、乐观态与 superseded masks                             |
-| K8  | Gateway 非成功响应统一保留 HTTP status、FastAPI `detail`、结构化 body 与原始正文，不能在 prepared replay 或 compact 路径换成通用错误                                                      |
-| K9  | 所有主 thread 列表按**原始后端行数**推进 offset，再过滤 sidecar；Pinia 不保存第二份 server-state 列表                                                                                     |
-| K10 | 删除主 thread 时先全量搜索并并发删除 sidecar，sidecar 全成功后才删主 thread；部分失败保留主 thread、清掉已成功缓存并暴露失败 ID 的可见重试                                                |
+| #   | 约束                                                                                                                                                                                                         |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| K1  | Web UI 会话路径必须通过 `app/core/threads/utils.ts::pathOfThread()` 构造 —— 它会对自定义 agent 名和 thread ID 做百分号编码后再插入路由段                                                                     |
+| K2  | 编辑并重跑**只限最新回合**：仅当记录空闲且最近的可见回合以终态 assistant 消息结尾时才暴露（`getLatestEditableTurn()`）                                                                                       |
+| K3  | 编辑并重跑走 `POST /api/threads/{id}/runs/edit-regenerate/prepare`，用与 regenerate 相同的流路径提交返回的替换消息/checkpoint/元数据，乐观隐藏被取代的消息 id，持久化替换到达后清除乐观态                    |
+| K4  | 重命名走同一条序列化状态写入路由；活动 run 返回 409 时对话框保持打开并显示服务端错误                                                                                                                         |
+| K5  | 设置 > 工具的 MCP 开关调用定向的 `PATCH /api/mcp/config`；在该 mutation 的成功 refetch 完成前禁用开关；通过 toast 显示后端错误 `detail`；**成功后才**失效 `["mcpConfig"]`                                    |
+| K6  | 定时后台运行是**非交互**的：`context.non_interactive=true` 时 lead-agent 工具集排除 `ask_clarification`。该键只对内部认证的调用方生效，客户端提交的会被丢弃（后端行为，前端不要伪造）                        |
+| K7  | prepared replay 的 prepare 与 stream 共用 generation/AbortController；重复提交、切路由、stop、error、cancel 和成功都必须清掉 guard、乐观态与 superseded masks                                                |
+| K8  | Gateway 非成功响应统一保留 HTTP status、FastAPI `detail`、结构化 body 与原始正文，不能在 prepared replay 或 compact 路径换成通用错误                                                                         |
+| K9  | 所有主 thread 列表按**原始后端行数**推进 offset，再过滤 sidecar；Pinia 不保存第二份 server-state 列表                                                                                                        |
+| K10 | 删除主 thread 时先全量搜索并并发删除 sidecar，sidecar 全成功后才删主 thread；部分失败保留主 thread、清掉已成功缓存并暴露失败 ID 的可见重试                                                                   |
+| K11 | Workspace 可见入口以 React 当前调用点为准：聊天 header 是定时任务 → token/context → sidecar → browser → export → artifacts；侧栏底部菜单只含 React 六项操作，品牌文字在非静态工作区不得成为 Vue 独有导航链接 |
+| K12 | 自定义 Agent bootstrap 的 Save 在初始 design conversation 成功完成且 send owner 完整释放前保持禁用；不能让保存操作与 bootstrap run 竞争同一 runner，也不能用定时延迟掩盖竞态                                 |
 
 > K6 是后端合同。前端只验证请求中不会伪造 `context.non_interactive`；后端的工具集裁剪
 > 由后端测试负责。
