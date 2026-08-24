@@ -982,8 +982,12 @@ test.describe("Chat workspace", () => {
     await expect(addAttachments).toBeVisible({ timeout: 15_000 });
     await addAttachments.hover();
 
-    await expect(page.getByRole("tooltip")).toContainText("50 MiB");
-    await expect(page.getByRole("tooltip")).toContainText("100 MiB");
+    await expect(page.locator('[data-slot="tooltip-content"]')).toContainText(
+      "50 MiB",
+    );
+    await expect(page.locator('[data-slot="tooltip-content"]')).toContainText(
+      "100 MiB",
+    );
   });
 
   test("rejects an oversized attachment before upload", async ({ page }) => {
@@ -1009,7 +1013,9 @@ test.describe("Chat workspace", () => {
     await page.goto("/workspace/chats/new");
     const addAttachments = page.getByTestId("add-attachments-button");
     await addAttachments.hover();
-    await expect(page.getByRole("tooltip")).toContainText("5 B");
+    await expect(page.locator('[data-slot="tooltip-content"]')).toContainText(
+      "5 B",
+    );
 
     await page.getByLabel("Upload files").setInputFiles({
       name: "too-large.txt",
@@ -1049,7 +1055,9 @@ test.describe("Chat workspace", () => {
     await page.goto("/workspace/chats/new");
     const addAttachments = page.getByTestId("add-attachments-button");
     await addAttachments.hover();
-    await expect(page.getByRole("tooltip")).toContainText("5 B");
+    await expect(page.locator('[data-slot="tooltip-content"]')).toContainText(
+      "5 B",
+    );
 
     await page.getByLabel("Upload files").setInputFiles([
       {

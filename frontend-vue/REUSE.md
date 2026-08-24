@@ -122,15 +122,20 @@ The independently reusable source set is intentionally small:
 
 - `app/core/markdown/**`;
 - `app/components/markdown/**`;
-- `app/components/ui/button/**`;
-- `app/lib/utils.ts`, which the Button variants use.
+- `app/components/ui/**`, the Reka-based primitive layer (Dialog, AlertDialog,
+  Sheet, Popover, DropdownMenu, Select, Tabs, Switch, Tooltip, HoverCard,
+  ScrollArea, Command, Button);
+- `app/lib/utils.ts`, which the variants use, and `app/lib/focusable.ts`, the one
+  definition of "currently visible and focusable".
 
 `tests/architecture.test.ts` freezes this exact set, requires final `L2` file
 headers and rejects imports from DeerFlow protocol, API, artifact, auth, channel,
 config, model, settings, sidecar, skill, task, thread, upload, store and workspace
 modules. Existing Markdown DOM-equivalence, streaming, error-boundary, Shiki and
 Mermaid tests support the component behavior; the Button contract has its own
-unit test.
+unit test, and the primitive layer is covered by `tests/unit/ui/**` (roles, aria
+state, keyboard exits) plus `tests/e2e/ui-primitives-a11y.spec.ts` (real focus
+trapping, Escape and focus restoration in a browser).
 
 Current public component seams are:
 

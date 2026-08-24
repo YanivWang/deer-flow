@@ -74,14 +74,20 @@ describe("markdown table controls", () => {
     expect(wrapper.get('[title="Download table"]').exists()).toBe(true);
     expect(wrapper.get('[title="View fullscreen"]').exists()).toBe(true);
 
+    // 复制/下载现在是 DropdownMenu：菜单项 portal 到 body，且只响应 select，
+    // 所以断言从 wrapper 子树移到 document。
     await wrapper.get('[title="Copy table"]').trigger("click");
-    await wrapper.get('[title="Copy table as Markdown"]').trigger("click");
+    await flushPromises();
+    document
+      .querySelector<HTMLElement>('[title="Copy table as Markdown"]')!
+      .click();
     await flushPromises();
     expect(writeText).toHaveBeenCalledWith(
       "| City | Weather |\n| --- | --- |\n| Shanghai | Sunny |",
     );
 
     await wrapper.get('[title="View fullscreen"]').trigger("click");
+    await flushPromises();
     expect(document.body.querySelector('[role="dialog"]')).not.toBeNull();
     expect(document.body.textContent).toContain("Shanghai");
     wrapper.unmount();

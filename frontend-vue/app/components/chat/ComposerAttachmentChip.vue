@@ -2,19 +2,19 @@
   【文件职责】     渲染输入区待发送附件，包含图片缩略图、移除入口与悬停详情。
   【架构位置】     L3
   【主要导出】     默认 ComposerAttachmentChip 组件
-  【依赖关系】     File · object URL · Reka HoverCard
+  【依赖关系】     File · object URL · ui/hover-card
   【边界与注意】   object URL 仅用于本地预览，文件离开组件时必须立即回收。
 -->
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Paperclip, X } from "lucide-vue-next";
+
 import {
+  HoverCard,
   HoverCardContent,
-  HoverCardPortal,
-  HoverCardRoot,
   HoverCardTrigger,
-} from "reka-ui";
+} from "@/components/ui/hover-card";
 
 const props = defineProps<{ file: File }>();
 const emit = defineEmits<{ remove: [] }>();
@@ -43,8 +43,8 @@ onBeforeUnmount(releasePreview);
 </script>
 
 <template>
-  <HoverCardRoot :open-delay="0" :close-delay="0">
-    <HoverCardTrigger as-child>
+  <HoverCard :open-delay="0" :close-delay="0">
+    <HoverCardTrigger>
       <div
         data-testid="composer-attachment"
         class="group border-border hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 relative flex h-8 max-w-60 cursor-pointer items-center gap-1.5 rounded-md border px-1.5 text-sm font-medium transition-all select-none"
@@ -80,40 +80,34 @@ onBeforeUnmount(releasePreview);
         <span class="min-w-0 flex-1 truncate">{{ file.name }}</span>
       </div>
     </HoverCardTrigger>
-    <HoverCardPortal>
-      <HoverCardContent
-        align="start"
-        :side-offset="4"
-        class="bg-popover text-popover-foreground z-50 w-auto rounded-md border p-2 shadow-md"
-      >
-        <div class="w-auto space-y-3">
-          <div
-            v-if="previewUrl"
-            class="flex max-h-96 w-96 items-center justify-center overflow-hidden rounded-md border"
-          >
-            <img
-              :src="previewUrl"
-              :alt="file.name"
-              class="max-h-full max-w-full object-contain"
-              width="448"
-              height="384"
-            />
-          </div>
-          <div class="flex items-center gap-2.5">
-            <div class="min-w-0 flex-1 space-y-1 px-0.5">
-              <h4 class="truncate text-sm leading-none font-semibold">
-                {{ file.name }}
-              </h4>
-              <p
-                v-if="file.type"
-                class="text-muted-foreground truncate font-mono text-xs"
-              >
-                {{ file.type }}
-              </p>
-            </div>
+    <HoverCardContent align="start" class="w-auto p-2">
+      <div class="w-auto space-y-3">
+        <div
+          v-if="previewUrl"
+          class="flex max-h-96 w-96 items-center justify-center overflow-hidden rounded-md border"
+        >
+          <img
+            :src="previewUrl"
+            :alt="file.name"
+            class="max-h-full max-w-full object-contain"
+            width="448"
+            height="384"
+          />
+        </div>
+        <div class="flex items-center gap-2.5">
+          <div class="min-w-0 flex-1 space-y-1 px-0.5">
+            <h4 class="truncate text-sm leading-none font-semibold">
+              {{ file.name }}
+            </h4>
+            <p
+              v-if="file.type"
+              class="text-muted-foreground truncate font-mono text-xs"
+            >
+              {{ file.type }}
+            </p>
           </div>
         </div>
-      </HoverCardContent>
-    </HoverCardPortal>
-  </HoverCardRoot>
+      </div>
+    </HoverCardContent>
+  </HoverCard>
 </template>

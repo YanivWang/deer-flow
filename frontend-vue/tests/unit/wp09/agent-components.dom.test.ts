@@ -6,7 +6,7 @@
   【边界与注意】   badges 保序不去重；unsupported capability 提交 null 清除，不保留 stale override。
 */
 
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -50,7 +50,10 @@ beforeEach(() => {
   vi.stubGlobal("useNuxtApp", () => ({ $i18n: { t: ref(enUS) } }));
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  document.body.innerHTML = "";
+});
 
 describe("AgentCard", () => {
   it("renders the exact model, ordered duplicate skills, and ordered duplicate groups", () => {
@@ -86,11 +89,50 @@ describe("AgentCard", () => {
   });
 });
 
+/**
+ * 对话框内容 portal 到 body，模型/思考/推理三个下拉是 ui/select 而不是原生
+ * `<select>`，所以这里既不能用 wrapper 子树查询，也不能用 setValue。
+ * Reka 的 SelectItem 只在 pointerup 上提交，happy-dom 的 `.click()` 不会派发它。
+ */
+function inDialog<T extends HTMLElement>(selector: string): T {
+  const element = document.querySelector<T>(selector);
+  expect(element, `${selector} not found in the document`).not.toBeNull();
+  return element!;
+}
+
+async function chooseOption(testId: string, label: string) {
+  // Reka 的 combobox trigger 走 pointerdown 打开，happy-dom 不派发指针事件，
+  // 所以用它同样支持的键盘入口（OPEN_KEYS）。
+  inDialog(`[data-testid="${testId}"]`).dispatchEvent(
+    new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+  );
+  await flushPromises();
+  const option = [
+    ...document.querySelectorAll<HTMLElement>('[data-slot="select-item"]'),
+  ].find((candidate) => candidate.textContent?.trim().startsWith(label));
+  expect(option, `no select option matching ${label}`).toBeTruthy();
+  option!.dispatchEvent(new Event("pointerup", { bubbles: true }));
+  await flushPromises();
+}
+
+async function mountSettings(props: Record<string, unknown>) {
+  const wrapper = mount(AgentSettingsDialog, {
+    attachTo: document.body,
+    props,
+  });
+  // portal 的内容要等一次 flush 才进 body。
+  await flushPromises();
+  return wrapper;
+}
+
 describe("AgentSettingsDialog", () => {
   it("emits false, zero, reasoning effort, and max tokens without truthy fallback", async () => {
-    const wrapper = mount(AgentSettingsDialog, { props: { agent, models } });
+    const wrapper = await mountSettings({ agent, models });
 
-    await wrapper.get("form").trigger("submit");
+    inDialog<HTMLFormElement>('[role="dialog"] form').dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+    await flushPromises();
     expect(wrapper.emitted("save")?.[0]?.[0]).toEqual({
       model: "reasoning",
       model_settings: { temperature: 0, max_tokens: 200_000 },
@@ -100,16 +142,19 @@ describe("AgentSettingsDialog", () => {
   });
 
   it("hides unsupported controls and emits null to clear their stale values", async () => {
-    const wrapper = mount(AgentSettingsDialog, { props: { agent, models } });
-    await wrapper.get('[data-testid="agent-settings-model"]').setValue("basic");
+    const wrapper = await mountSettings({ agent, models });
+    await chooseOption("agent-settings-model", "Basic");
 
     expect(
-      wrapper.find('[data-testid="agent-settings-thinking"]').exists(),
-    ).toBe(false);
+      document.querySelector('[data-testid="agent-settings-thinking"]'),
+    ).toBeNull();
     expect(
-      wrapper.find('[data-testid="agent-settings-reasoning"]').exists(),
-    ).toBe(false);
-    await wrapper.get("form").trigger("submit");
+      document.querySelector('[data-testid="agent-settings-reasoning"]'),
+    ).toBeNull();
+    inDialog<HTMLFormElement>('[role="dialog"] form').dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+    await flushPromises();
     expect(wrapper.emitted("save")?.[0]?.[0]).toMatchObject({
       model: "basic",
       thinking_enabled: null,
@@ -118,13 +163,21 @@ describe("AgentSettingsDialog", () => {
   });
 
   it("submits number-input values through the actual save button", async () => {
-    const wrapper = mount(AgentSettingsDialog, { props: { agent, models } });
-    await wrapper.get('[data-testid="agent-settings-model"]').setValue("basic");
-    await wrapper.get('[data-testid="agent-settings-temperature"]').setValue(0);
-    await wrapper
-      .get('[data-testid="agent-settings-max-tokens"]')
-      .setValue(200000);
-    await wrapper.get('[data-testid="agent-settings-save"]').trigger("click");
+    const wrapper = await mountSettings({ agent, models });
+    await chooseOption("agent-settings-model", "Basic");
+    const temperature = inDialog<HTMLInputElement>(
+      '[data-testid="agent-settings-temperature"]',
+    );
+    temperature.value = "0";
+    temperature.dispatchEvent(new Event("input", { bubbles: true }));
+    const maxTokens = inDialog<HTMLInputElement>(
+      '[data-testid="agent-settings-max-tokens"]',
+    );
+    maxTokens.value = "200000";
+    maxTokens.dispatchEvent(new Event("input", { bubbles: true }));
+    await flushPromises();
+    inDialog('[data-testid="agent-settings-save"]').click();
+    await flushPromises();
 
     expect(wrapper.emitted("save")?.[0]?.[0]).toEqual({
       model: "basic",
@@ -134,21 +187,22 @@ describe("AgentSettingsDialog", () => {
     });
   });
 
-  it("keeps model/save failures visible and locks conflicting actions while pending", () => {
-    const wrapper = mount(AgentSettingsDialog, {
-      props: {
-        agent,
-        models,
-        pending: true,
-        modelError: "Failed to load model capabilities: Forbidden",
-        submitError: "Failed to save model settings: Conflict",
-      },
+  it("keeps model/save failures visible and locks conflicting actions while pending", async () => {
+    await mountSettings({
+      agent,
+      models,
+      pending: true,
+      modelError: "Failed to load model capabilities: Forbidden",
+      submitError: "Failed to save model settings: Conflict",
     });
-    expect(wrapper.get('[role="alert"]').text()).toContain("Forbidden");
-    expect(
-      wrapper
-        .findAll("button")
-        .every((button) => (button.element as HTMLButtonElement).disabled),
-    ).toBe(true);
+    expect(inDialog('[role="alert"]').textContent).toContain("Forbidden");
+    // 关闭按钮是唯一不该被锁的出口：pending 期间用户仍然要能退出对话框。
+    const locked = [
+      ...inDialog('[role="dialog"]').querySelectorAll<HTMLButtonElement>(
+        "button",
+      ),
+    ].filter((button) => button.dataset.slot !== "dialog-close");
+    expect(locked.length).toBeGreaterThan(0);
+    expect(locked.every((button) => button.disabled)).toBe(true);
   });
 });

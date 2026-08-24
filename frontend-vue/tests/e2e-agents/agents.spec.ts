@@ -11,11 +11,29 @@ import {
   test,
   type APIRequestContext,
   type BrowserContext,
+  type Page,
 } from "@playwright/test";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3112";
 const PASSWORD = "very-strong-password-123";
 const AGENT_NAME = "wp09-reviewer";
+
+/**
+ * 打开一个 ui/select 并按 value 选中某一项。
+ *
+ * Reka 的 combobox trigger 靠 pointerdown 打开、选项 portal 到 body，所以既不能
+ * 再用 selectOption，也不该按可见文案匹配——文案会被翻译，value 不会。
+ */
+async function chooseSelectOption(
+  page: Page,
+  testId: string,
+  value: string,
+): Promise<void> {
+  await page.getByTestId(testId).click();
+  await page
+    .locator(`[data-slot="select-item"][data-value="${value}"]`)
+    .click();
+}
 
 async function initializeAdmin(request: APIRequestContext) {
   const response = await request.post(`${APP}/api/v1/auth/initialize`, {
@@ -204,13 +222,13 @@ test.describe.serial("WP-09 real Gateway Agent lifecycle", () => {
     await card
       .getByRole("button", { name: `Model settings: ${AGENT_NAME}` })
       .click();
-    await page
-      .getByTestId("agent-settings-model")
-      .selectOption("reasoning-model");
+    // 三个下拉从原生 <select> 换成了 ui/select：触发器是 combobox，选项 portal 到
+    // body。按 data-value 选，而不是按可见文案——文案是会被翻译的。
+    await chooseSelectOption(page, "agent-settings-model", "reasoning-model");
     await page.getByTestId("agent-settings-temperature").fill("0");
     await page.getByTestId("agent-settings-max-tokens").fill("200000");
-    await page.getByTestId("agent-settings-thinking").selectOption("off");
-    await page.getByTestId("agent-settings-reasoning").selectOption("high");
+    await chooseSelectOption(page, "agent-settings-thinking", "off");
+    await chooseSelectOption(page, "agent-settings-reasoning", "high");
     const updateResponse = page.waitForResponse(
       (response) =>
         response.request().method() === "PUT" &&

@@ -74,7 +74,7 @@ const errorCode = "permission_denied"
 
   it("keeps the full product Vue surface free of untranslated core English", () => {
     const inventory = productVueInventory();
-    expect(inventory.checked).toHaveLength(92);
+    expect(inventory.checked).toHaveLength(154);
     expect(inventory.checked).toContain("app/app.vue");
     expect(inventory.checked).toContain(
       "app/components/chat/AssistantTurnActions.vue",
@@ -94,6 +94,23 @@ const errorCode = "permission_denied"
         "app/components/chat/ProcessingToolStep.vue",
         "app/components/chat/ReasoningDisclosure.vue",
         "app/components/chat/RunActivity.vue",
+      ]),
+    );
+    // UI primitive 层同样在扫描面内。primitive 不持有产品文案——关闭按钮、
+    // placeholder 之类的可访问名字一律由调用方传入——所以它们必须是被检查的，
+    // 而不是被豁免的。
+    expect(inventory.checked).toEqual(
+      expect.arrayContaining([
+        "app/components/ui/alert-dialog/AlertDialogContent.vue",
+        "app/components/ui/command/CommandInput.vue",
+        "app/components/ui/dialog/DialogContent.vue",
+        "app/components/ui/dropdown-menu/DropdownMenuContent.vue",
+        "app/components/ui/popover/PopoverContent.vue",
+        "app/components/ui/select/SelectTrigger.vue",
+        "app/components/ui/sheet/SheetContent.vue",
+        "app/components/ui/switch/Switch.vue",
+        "app/components/ui/tabs/TabsTrigger.vue",
+        "app/components/ui/tooltip/TooltipContent.vue",
       ]),
     );
     expect(inventory.excludedTestFixtures).toEqual([

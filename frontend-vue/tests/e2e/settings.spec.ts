@@ -211,7 +211,7 @@ test.describe("Vue settings", () => {
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(imported)),
     });
-    const preview = page.getByRole("alertdialog", { name: "Import memory?" });
+    const preview = page.getByRole("dialog", { name: "Import memory?" });
     await expect(preview).toContainText("memory.json");
     await expect(preview).toContainText("2.0");
     await expect(preview).toContainText("2");
@@ -241,7 +241,7 @@ test.describe("Vue settings", () => {
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(memoryDocument())),
     });
-    const preview = page.getByRole("alertdialog", { name: "Import memory?" });
+    const preview = page.getByRole("dialog", { name: "Import memory?" });
     await preview
       .getByRole("button", { name: "Import", exact: true })
       .dblclick();
@@ -265,7 +265,7 @@ test.describe("Vue settings", () => {
     await page.getByTestId("memory-fact-content").fill("Created with zero");
     await page.getByTestId("memory-fact-confidence").fill("0");
     await page
-      .getByRole("alertdialog", { name: "Add memory fact" })
+      .getByRole("dialog", { name: "Add memory fact" })
       .getByRole("button", { name: "Save fact" })
       .click();
     await expect(page.getByTestId("memory-fact-fact-created")).toContainText(
@@ -287,7 +287,7 @@ test.describe("Vue settings", () => {
       .click();
     await page.getByTestId("memory-fact-confidence").fill("0");
     await page
-      .getByRole("alertdialog", { name: "Edit memory fact" })
+      .getByRole("dialog", { name: "Edit memory fact" })
       .getByRole("button", { name: "Save fact" })
       .click();
     expect(

@@ -3,12 +3,14 @@
   【文件职责】     复用 composer skill catalog，并按 session role 管理全局 skill 开关。
   【架构位置】     L3 product UI
   【主要导出】     默认 SkillSettings 组件
-  【依赖关系】     useSettingsPermissions · useSkillSettings
+  【依赖关系】     useSettingsPermissions · useSkillSettings · ui/tabs · ui/switch
   【边界与注意】   普通用户可读 catalog 但不能 PUT；create-skill 对话入口不是全局启停权限。
 */
 
 import { computed, ref } from "vue";
 
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSettingsDialog } from "@/composables/useSettingsDialog";
 import { useSettingsPermissions } from "@/composables/useSettingsPermissions";
 import { useSkillSettings } from "@/composables/useSkillSettings";
@@ -39,10 +41,8 @@ function errorMessage(cause: unknown) {
     : t.value.settings.skills.description;
 }
 
-async function toggle(skill: Skill, event: Event) {
-  const input = event.target as HTMLInputElement;
-  const enabled = input.checked;
-  input.checked = skill.enabled;
+async function toggle(skill: Skill, enabled: boolean) {
+  // 受控开关：视觉状态只跟随服务端真相，请求失败时不会停在一个假的 on。
   if (!access.canManageSkills.value || skills.pending.value) return;
   actionError.value = "";
   pendingName.value = skill.name;
@@ -102,18 +102,17 @@ async function createSkill() {
       >
         {{ t.settings.skills.adminRequired }}
       </p>
-      <div class="flex gap-2">
-        <button
-          v-for="kind in ['public', 'custom'] as const"
-          :key="kind"
-          type="button"
-          class="rounded-md border px-3 py-1.5 text-sm"
-          :class="filter === kind ? 'bg-accent' : ''"
-          @click="filter = kind"
-        >
-          {{ kind === "public" ? t.common.public : t.common.custom }}
-        </button>
-      </div>
+      <Tabs v-model="filter">
+        <TabsList :aria-label="t.settings.skills.title">
+          <TabsTrigger
+            v-for="kind in ['public', 'custom'] as const"
+            :key="kind"
+            :value="kind"
+          >
+            {{ kind === "public" ? t.common.public : t.common.custom }}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       <p v-if="skills.loading.value" class="text-muted-foreground text-sm">
         {{ t.common.loading }}
       </p>
@@ -146,14 +145,12 @@ async function createSkill() {
           <div class="font-medium">{{ skill.name }}</div>
           <p class="text-muted-foreground text-sm">{{ skill.description }}</p>
         </div>
-        <input
-          type="checkbox"
-          role="switch"
+        <Switch
           :aria-label="skill.name"
-          :checked="skill.enabled"
+          :model-value="skill.enabled"
           :disabled="!access.canManageSkills.value || skills.pending.value"
           :data-pending="pendingName === skill.name || undefined"
-          @change="toggle(skill, $event)"
+          @update:model-value="toggle(skill, $event)"
         />
       </div>
     </template>

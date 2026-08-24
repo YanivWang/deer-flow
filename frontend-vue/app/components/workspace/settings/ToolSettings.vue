@@ -3,12 +3,13 @@
   【文件职责】     按 session role 读取和更新 admin-only MCP server config。
   【架构位置】     L3 product UI
   【主要导出】     默认 ToolSettings 组件
-  【依赖关系】     useSettingsPermissions · useMCPConfig
+  【依赖关系】     useSettingsPermissions · useMCPConfig · ui/switch
   【边界与注意】   已知普通用户不发 GET/PATCH；真实 403 单独显示 admin-required，其他错误保留 detail。
 */
 
 import { computed, ref } from "vue";
 
+import { Switch } from "@/components/ui/switch";
 import { useMCPConfig } from "@/composables/useMCPConfig";
 import { useSettingsPermissions } from "@/composables/useSettingsPermissions";
 import { MCPConfigRequestError } from "@/core/mcp/api";
@@ -36,10 +37,8 @@ function errorMessage(cause: unknown) {
     : t.value.settings.tools.description;
 }
 
-async function toggle(name: string, current: boolean, event: Event) {
-  const input = event.target as HTMLInputElement;
-  const enabled = input.checked;
-  input.checked = current;
+async function toggle(name: string, enabled: boolean) {
+  // 受控开关：视觉状态只跟随服务端真相，请求失败时不会停在一个假的 on。
   if (!access.canManageMcp.value || mcp.pending.value) return;
   actionError.value = "";
   pendingName.value = name;
@@ -124,14 +123,12 @@ async function toggle(name: string, current: boolean, event: Event) {
             {{ server.description }}
           </div>
         </div>
-        <input
-          type="checkbox"
-          role="switch"
+        <Switch
           :aria-label="String(name)"
-          :checked="server.enabled"
+          :model-value="server.enabled"
           :disabled="!access.canManageMcp.value || mcp.pending.value"
           :data-pending="pendingName === name || undefined"
-          @change="toggle(String(name), server.enabled, $event)"
+          @update:model-value="toggle(String(name), $event)"
         />
       </div>
     </template>

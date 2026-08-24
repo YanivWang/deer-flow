@@ -3,20 +3,19 @@
   【文件职责】     渲染欢迎态完整快捷建议，并提供创建类型下拉菜单。
   【架构位置】     L3
   【主要导出】     默认 WelcomeSuggestionList 组件
-  【依赖关系】     i18n suggestions · Reka DropdownMenu · Button · ConfettiButton
+  【依赖关系】     i18n suggestions · ui/dropdown-menu · Button · ConfettiButton
   【边界与注意】   只回传 prompt；填草稿、占位符选择与发送策略由 ChatComposer 持有。
 */
 import { Plus, Sparkles } from "lucide-vue-next";
-import {
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuRoot,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "reka-ui";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import ConfettiButton from "@/components/ui/effects/ConfettiButton.vue";
 
 defineProps<{ disabled?: boolean }>();
@@ -58,8 +57,8 @@ const suggestionClass =
       {{ suggestion.suggestion }}
     </Button>
 
-    <DropdownMenuRoot>
-      <DropdownMenuTrigger as-child :disabled="disabled">
+    <DropdownMenu>
+      <DropdownMenuTrigger :disabled="disabled">
         <Button
           data-testid="welcome-create-trigger"
           type="button"
@@ -72,38 +71,26 @@ const suggestionClass =
           {{ $i18n.t.value.common.create }}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuPortal>
-        <DropdownMenuContent
-          align="start"
-          :side-offset="4"
-          class="bg-popover text-popover-foreground border-border z-[75] min-w-40 rounded-md border p-1 text-sm shadow-lg"
+      <DropdownMenuContent align="start" class="min-w-40">
+        <template
+          v-for="(suggestion, index) in $i18n.t.value.inputBox
+            .suggestionsCreate"
+          :key="
+            'type' in suggestion ? `separator-${index}` : suggestion.suggestion
+          "
         >
-          <template
-            v-for="(suggestion, index) in $i18n.t.value.inputBox
-              .suggestionsCreate"
-            :key="
-              'type' in suggestion
-                ? `separator-${index}`
-                : suggestion.suggestion
-            "
+          <DropdownMenuSeparator v-if="'type' in suggestion" />
+          <DropdownMenuItem
+            v-else
+            as="button"
+            :data-testid="index === 0 ? 'welcome-create-webpage' : undefined"
+            @select="emit('select', suggestion.prompt)"
           >
-            <DropdownMenuSeparator
-              v-if="'type' in suggestion"
-              class="bg-border my-1 h-px"
-            />
-            <DropdownMenuItem
-              v-else
-              as="button"
-              :data-testid="index === 0 ? 'welcome-create-webpage' : undefined"
-              class="hover:bg-accent focus:bg-accent flex w-full cursor-default items-center gap-2 rounded px-2 py-1.5 outline-none"
-              @select="emit('select', suggestion.prompt)"
-            >
-              <component :is="suggestion.icon" class="size-4" />
-              {{ suggestion.suggestion }}
-            </DropdownMenuItem>
-          </template>
-        </DropdownMenuContent>
-      </DropdownMenuPortal>
-    </DropdownMenuRoot>
+            <component :is="suggestion.icon" class="size-4" />
+            {{ suggestion.suggestion }}
+          </DropdownMenuItem>
+        </template>
+      </DropdownMenuContent>
+    </DropdownMenu>
   </div>
 </template>

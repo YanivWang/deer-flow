@@ -801,7 +801,7 @@ test.describe("Side chat", () => {
     await sidecarInputForm
       .getByRole("button", { name: "Pro", exact: true })
       .click();
-    await page.getByRole("menuitem").filter({ hasText: "Flash" }).click();
+    await page.getByRole("menuitemradio").filter({ hasText: "Flash" }).click();
     await expect(
       sidecarInputForm.getByRole("button", { name: "Flash", exact: true }),
     ).toBeVisible();
@@ -1689,12 +1689,16 @@ test.describe("Side chat", () => {
     await expect(page.getByTestId("sidecar-panel")).toBeVisible();
 
     await page.getByTestId("sidecar-delete-button").click();
-    const dialogTitle = page.getByRole("heading", { name: "Delete side chat" });
-    await expect(dialogTitle).toBeVisible();
-    // The built-in Radix close (X) is present before the delete starts.
+    // 删除确认是 alertdialog：只有取消与确认两个出口，没有第三个「X」——
+    // 一个中途会消失的关闭按钮反而会让人以为点它等于取消。
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("Delete side chat");
     await expect(
-      page.locator('[data-slot="dialog-content"] [data-slot="dialog-close"]'),
-    ).toHaveCount(1);
+      page.locator(
+        '[data-slot="alert-dialog-content"] [data-slot="dialog-close"]',
+      ),
+    ).toHaveCount(0);
 
     await page.getByTestId("sidecar-delete-confirm-button").click();
 
@@ -1703,22 +1707,18 @@ test.describe("Side chat", () => {
       page.getByTestId("sidecar-delete-confirm-button"),
     ).toBeDisabled();
     await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
-    // The built-in close (X) is removed so it can't imply a cancel.
-    await expect(
-      page.locator('[data-slot="dialog-content"] [data-slot="dialog-close"]'),
-    ).toHaveCount(0);
 
     // Esc and overlay clicks must not dismiss the dialog mid-delete.
     await page.keyboard.press("Escape");
-    await expect(dialogTitle).toBeVisible();
+    await expect(dialog).toBeVisible();
     await page
-      .locator('[data-slot="dialog-overlay"]')
+      .locator('[data-slot="alert-dialog-overlay"]')
       .click({ position: { x: 5, y: 5 } });
-    await expect(dialogTitle).toBeVisible();
+    await expect(dialog).toBeVisible();
 
     // Once the delete resolves the dialog closes and the panel goes away.
     releaseDelete?.();
-    await expect(dialogTitle).toBeHidden({ timeout: 10_000 });
+    await expect(dialog).toBeHidden({ timeout: 10_000 });
     await expect(page.getByTestId("sidecar-panel")).toBeHidden();
   });
 

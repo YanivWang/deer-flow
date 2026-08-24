@@ -3,11 +3,12 @@
   【文件职责】     管理浏览器通知权限与本地偏好。
   【架构位置】     L3
   【主要导出】     默认 NotificationSettings 组件
-  【依赖关系】     useNotifications · settings store
+  【依赖关系】     useNotifications · settings store · ui/switch
   【边界与注意】   N2 产品接线，不属于 L2。
 */
 import { onBeforeUnmount, ref } from "vue";
 
+import { Switch } from "@/components/ui/switch";
 import { useNotifications } from "@/composables/useNotifications";
 import {
   getBaseSettingsSnapshot,
@@ -28,8 +29,8 @@ async function requestPermission() {
   await notifications.requestPermission();
 }
 
-function toggle(event: Event) {
-  enabled.value = (event.target as HTMLInputElement).checked;
+function toggle(next: boolean) {
+  enabled.value = next;
   updateLocalSettings("notification", {
     enabled: enabled.value,
   });
@@ -74,17 +75,15 @@ function sendTestNotification() {
       >
         {{ $i18n.t.value.settings.notification.deniedHint }}
       </p>
-      <label class="flex items-center gap-3 text-sm">
-        <input
-          type="checkbox"
-          role="switch"
+      <div class="flex items-center gap-3 text-sm">
+        <Switch
           :aria-label="$i18n.t.value.settings.notification.title"
-          :checked="notifications.permission.value === 'granted' && enabled"
+          :model-value="notifications.permission.value === 'granted' && enabled"
           :disabled="notifications.permission.value !== 'granted'"
-          @change="toggle"
+          @update:model-value="toggle"
         />
         {{ $i18n.t.value.settings.notification.title }}
-      </label>
+      </div>
       <button
         v-if="notifications.permission.value === 'granted' && enabled"
         type="button"

@@ -230,7 +230,7 @@ test("admin completes real scoped multi-account lifecycle through the Vue UI", a
       name: "Remove provider configuration: Slack",
     })
     .click();
-  const removalDialog = page.getByRole("dialog", {
+  const removalDialog = page.getByRole("alertdialog", {
     name: "Remove Slack provider configuration?",
   });
   const providerDeleteResponse = page.waitForResponse(

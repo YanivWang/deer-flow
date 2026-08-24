@@ -1,5 +1,5 @@
-import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { flushPromises, mount } from "@vue/test-utils";
+import { afterEach, describe, expect, it } from "vitest";
 
 import ComposerModelSelector from "@/components/chat/ComposerModelSelector.vue";
 import type { Model } from "@/core/models/types";
@@ -23,6 +23,10 @@ const models: Model[] = [
   },
 ];
 
+afterEach(() => {
+  document.body.innerHTML = "";
+});
+
 describe("composer model selector", () => {
   it("uses the React responsive width contract and keeps truncation on the text only", () => {
     const wrapper = mount(ComposerModelSelector, {
@@ -39,19 +43,33 @@ describe("composer model selector", () => {
 
   it("owns the shared menu lifecycle and emits the selected model", async () => {
     const wrapper = mount(ComposerModelSelector, {
+      attachTo: document.body,
       props: { models, selectedModel: models[0] },
     });
     const trigger = wrapper.get("button[aria-label='MiniMax CN / MiniMax-M3']");
 
+    // 菜单内容 portal 到 body：开合、方向键、Escape 与焦点归还都归 primitive，
+    // 所以断言走 document 而不是 wrapper 子树。
     expect(trigger.attributes("aria-expanded")).toBe("false");
+    expect(trigger.attributes("aria-haspopup")).toBe("menu");
     await trigger.trigger("click");
+    await flushPromises();
     expect(trigger.attributes("aria-expanded")).toBe("true");
-    await wrapper
-      .findAll("button")
-      .find((button) => button.text() === "Fast Model")!
-      .trigger("click");
+
+    const items = [
+      ...document.querySelectorAll<HTMLElement>(
+        '[data-slot="dropdown-menu-radio-item"]',
+      ),
+    ];
+    expect(items.map((item) => item.getAttribute("aria-checked"))).toEqual([
+      "true",
+      "false",
+    ]);
+    items.find((item) => item.textContent?.trim() === "Fast Model")!.click();
+    await flushPromises();
 
     expect(wrapper.emitted("select")).toEqual([[models[1]]]);
     expect(trigger.attributes("aria-expanded")).toBe("false");
+    wrapper.unmount();
   });
 });

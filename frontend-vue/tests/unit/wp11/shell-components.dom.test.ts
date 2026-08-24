@@ -85,9 +85,31 @@ describe("CommandPalette", () => {
       '[aria-label="Search actions"]',
     )!;
     expect(document.activeElement).toBe(input);
+
+    // 焦点留在搜索框，当前项通过 aria-activedescendant 宣告——这是 combobox
+    // 该有的形状，也是它和「一排 button 自己记 index」的区别。首项默认高亮，
+    // 所以直接回车就执行第一条命令。
+    const items = [
+      ...document.querySelectorAll<HTMLElement>('[data-slot="command-item"]'),
+    ];
+    expect(items.map((item) => item.textContent?.trim())).toEqual([
+      expect.stringContaining("New chat"),
+      expect.stringContaining("Settings"),
+      expect.stringContaining("Keyboard Shortcuts"),
+    ]);
+    expect(input.getAttribute("aria-activedescendant")).toBe(items[0]!.id);
+
     input.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
     );
+    await flushPromises();
+    expect(input.getAttribute("aria-activedescendant")).toBe(items[1]!.id);
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }),
+    );
+    await flushPromises();
+    expect(input.getAttribute("aria-activedescendant")).toBe(items[0]!.id);
+
     input.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
     );

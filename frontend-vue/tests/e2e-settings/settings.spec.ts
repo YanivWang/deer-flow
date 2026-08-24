@@ -138,7 +138,7 @@ test.describe.serial("WP-10 real Gateway settings", () => {
         new URL(response.url()).pathname === "/api/memory/facts",
     );
     await page
-      .getByRole("alertdialog", { name: "Add memory fact" })
+      .getByRole("dialog", { name: "Add memory fact" })
       .getByRole("button", { name: "Save fact" })
       .click();
     const created = await createdPromise;
@@ -161,7 +161,7 @@ test.describe.serial("WP-10 real Gateway settings", () => {
         /\/api\/memory\/facts\//.test(new URL(response.url()).pathname),
     );
     await page
-      .getByRole("alertdialog", { name: "Edit memory fact" })
+      .getByRole("dialog", { name: "Edit memory fact" })
       .getByRole("button", { name: "Save fact" })
       .click();
     const patched = await patchedPromise;
@@ -172,16 +172,14 @@ test.describe.serial("WP-10 real Gateway settings", () => {
     await page.getByTestId("memory-add-fact").click();
     await page.getByTestId("memory-fact-content").fill("Real manager fact");
     await page
-      .getByRole("alertdialog", { name: "Add memory fact" })
+      .getByRole("dialog", { name: "Add memory fact" })
       .getByRole("button", { name: "Save fact" })
       .click();
     await expect(
-      page
-        .getByRole("alertdialog", { name: "Add memory fact" })
-        .getByRole("alert"),
+      page.getByRole("dialog", { name: "Add memory fact" }).getByRole("alert"),
     ).toContainText("same content already exists");
     await page
-      .getByRole("alertdialog", { name: "Add memory fact" })
+      .getByRole("dialog", { name: "Add memory fact" })
       .getByRole("button", { name: "Cancel" })
       .click();
 
@@ -207,7 +205,7 @@ test.describe.serial("WP-10 real Gateway settings", () => {
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(incoming)),
     });
-    const preview = page.getByRole("alertdialog", { name: "Import memory?" });
+    const preview = page.getByRole("dialog", { name: "Import memory?" });
     await expect(preview).toContainText("real-import.json");
     await expect(page.getByTestId("memory-import-extra-warning")).toBeVisible();
     await expect(

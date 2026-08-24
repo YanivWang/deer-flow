@@ -8,19 +8,18 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { ChevronDown, Coins } from "lucide-vue-next";
+
 import {
+  DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItemIndicator,
   DropdownMenuLabel,
-  DropdownMenuPortal,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuRoot,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "reka-ui";
-import type { AcceptableValue } from "reka-ui";
-import { Check, ChevronDown, Coins } from "lucide-vue-next";
+  type DropdownMenuValue,
+} from "@/components/ui/dropdown-menu";
 
 import type { Message } from "@/core/types/message";
 import {
@@ -74,7 +73,7 @@ const percentage = computed(() => {
 });
 const presets: TokenUsageViewPreset[] = ["off", "summary", "per_turn", "debug"];
 
-function updatePreset(value: AcceptableValue) {
+function updatePreset(value: DropdownMenuValue) {
   if (
     typeof value !== "string" ||
     !presets.includes(value as TokenUsageViewPreset)
@@ -97,8 +96,8 @@ function presetDescription(value: TokenUsageViewPreset) {
 </script>
 
 <template>
-  <DropdownMenuRoot v-if="enabled" data-testid="token-usage-indicator">
-    <DropdownMenuTrigger as-child>
+  <DropdownMenu v-if="enabled" data-testid="token-usage-indicator">
+    <DropdownMenuTrigger>
       <button
         type="button"
         class="border-border bg-background/70 text-muted-foreground hover:bg-background/90 flex h-auto items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-normal"
@@ -124,71 +123,58 @@ function presetDescription(value: TokenUsageViewPreset) {
         <ChevronDown :size="12" />
       </button>
     </DropdownMenuTrigger>
-    <DropdownMenuPortal>
-      <DropdownMenuContent
-        align="end"
-        side="bottom"
-        :side-offset="4"
-        class="bg-popover text-popover-foreground border-border z-[75] w-80 rounded-md border p-1 text-sm shadow-lg"
-      >
-        <DropdownMenuLabel class="px-2 py-1.5 text-sm font-semibold">
-          {{ $i18n.t.value.tokenUsage.title }}
-        </DropdownMenuLabel>
-        <dl v-if="usage" class="space-y-1 px-2 py-1 text-xs">
+    <DropdownMenuContent align="end" side="bottom" class="w-80">
+      <DropdownMenuLabel class="text-foreground text-sm font-semibold">
+        {{ $i18n.t.value.tokenUsage.title }}
+      </DropdownMenuLabel>
+      <dl v-if="usage" class="space-y-1 px-2 py-1 text-xs">
+        <div class="flex justify-between gap-4">
+          <dt>{{ $i18n.t.value.tokenUsage.input }}</dt>
+          <dd class="font-mono">{{ formatTokenCount(usage.inputTokens) }}</dd>
+        </div>
+        <div class="flex justify-between gap-4">
+          <dt>{{ $i18n.t.value.tokenUsage.output }}</dt>
+          <dd class="font-mono">
+            {{ formatTokenCount(usage.outputTokens) }}
+          </dd>
+        </div>
+        <div class="border-t pt-1">
           <div class="flex justify-between gap-4">
-            <dt>{{ $i18n.t.value.tokenUsage.input }}</dt>
-            <dd class="font-mono">{{ formatTokenCount(usage.inputTokens) }}</dd>
-          </div>
-          <div class="flex justify-between gap-4">
-            <dt>{{ $i18n.t.value.tokenUsage.output }}</dt>
-            <dd class="font-mono">
-              {{ formatTokenCount(usage.outputTokens) }}
+            <dt>{{ $i18n.t.value.tokenUsage.total }}</dt>
+            <dd class="font-mono font-medium">
+              {{ formatTokenCount(usage.totalTokens) }}
             </dd>
           </div>
-          <div class="border-t pt-1">
-            <div class="flex justify-between gap-4">
-              <dt>{{ $i18n.t.value.tokenUsage.total }}</dt>
-              <dd class="font-mono font-medium">
-                {{ formatTokenCount(usage.totalTokens) }}
-              </dd>
-            </div>
-          </div>
-        </dl>
-        <p v-else class="text-muted-foreground px-2 py-1 text-xs">
-          {{ $i18n.t.value.tokenUsage.unavailable }}
-        </p>
-        <DropdownMenuSeparator class="bg-border my-1 h-px" />
-        <DropdownMenuLabel class="px-2 py-1.5 text-sm font-semibold">
-          {{ $i18n.t.value.tokenUsage.view }}
-        </DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          :model-value="preset"
-          @update:model-value="updatePreset"
+        </div>
+      </dl>
+      <p v-else class="text-muted-foreground px-2 py-1 text-xs">
+        {{ $i18n.t.value.tokenUsage.unavailable }}
+      </p>
+      <DropdownMenuSeparator />
+      <DropdownMenuLabel class="text-foreground text-sm font-semibold">
+        {{ $i18n.t.value.tokenUsage.view }}
+      </DropdownMenuLabel>
+      <DropdownMenuRadioGroup
+        :model-value="preset"
+        @update:model-value="updatePreset"
+      >
+        <DropdownMenuRadioItem
+          v-for="value in presets"
+          :key="value"
+          :value="value"
         >
-          <DropdownMenuRadioItem
-            v-for="value in presets"
-            :key="value"
-            :value="value"
-            class="hover:bg-accent focus:bg-accent relative flex cursor-default items-center rounded py-1.5 pr-2 pl-8 outline-none"
-          >
-            <DropdownMenuItemIndicator
-              class="absolute left-2 flex size-4 items-center justify-center"
-            >
-              <Check :size="14" />
-            </DropdownMenuItemIndicator>
-            <div class="grid gap-0.5">
-              <span>{{ presetLabel(value) }}</span>
-              <span class="text-muted-foreground text-xs">
-                {{ presetDescription(value) }}
-              </span>
-            </div>
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator class="bg-border my-1 h-px" />
-        <p class="text-muted-foreground px-2 py-2 text-xs leading-relaxed">
-          {{ $i18n.t.value.tokenUsage.note }}
-        </p>
-      </DropdownMenuContent>
-    </DropdownMenuPortal>
-  </DropdownMenuRoot>
+          <div class="grid gap-0.5">
+            <span>{{ presetLabel(value) }}</span>
+            <span class="text-muted-foreground text-xs">
+              {{ presetDescription(value) }}
+            </span>
+          </div>
+        </DropdownMenuRadioItem>
+      </DropdownMenuRadioGroup>
+      <DropdownMenuSeparator />
+      <p class="text-muted-foreground px-2 py-2 text-xs leading-relaxed">
+        {{ $i18n.t.value.tokenUsage.note }}
+      </p>
+    </DropdownMenuContent>
+  </DropdownMenu>
 </template>

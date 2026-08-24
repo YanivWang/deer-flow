@@ -120,13 +120,41 @@ beforeEach(() => {
 afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
+  document.body.innerHTML = "";
 });
+
+/**
+ * SettingsActionDialog 现在建在 ui/dialog · ui/alert-dialog 上：内容 portal 到 body，
+ * 破坏性确认是 alertdialog、带表单的是 dialog（alertdialog 只该用于「确认/取消」两个
+ * 出口的中断，装表单会让读屏器把整张表单读成一条警告）。
+ */
+function portalDialog(role: "dialog" | "alertdialog" = "dialog") {
+  const element = document.querySelector<HTMLElement>(`[role="${role}"]`);
+  expect(element, `no [role="${role}"] in the document`).not.toBeNull();
+  return element!;
+}
+
+function dialogButtons(role: "dialog" | "alertdialog" = "dialog") {
+  return [...portalDialog(role).querySelectorAll<HTMLButtonElement>("button")];
+}
+
+function inPortal<T extends HTMLElement>(selector: string): T {
+  const element = document.querySelector<T>(selector);
+  expect(element, `${selector} not found in the document`).not.toBeNull();
+  return element!;
+}
+
+function setPortalValue(selector: string, value: string) {
+  const field = inPortal<HTMLInputElement | HTMLTextAreaElement>(selector);
+  field.value = value;
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+}
 
 describe("MemorySettings", () => {
   it("rejects malformed and structurally invalid imports without a network request", async () => {
     const owner = memoryOwner();
     memoryFactory.mockReturnValue(owner);
-    const wrapper = mount(MemorySettings);
+    const wrapper = mount(MemorySettings, { attachTo: document.body });
 
     await selectFile(wrapper, {
       name: "malformed.json",
@@ -148,7 +176,7 @@ describe("MemorySettings", () => {
   it("shows complete import preview and warnings before one confirmed request", async () => {
     const owner = memoryOwner();
     memoryFactory.mockReturnValue(owner);
-    const wrapper = mount(MemorySettings);
+    const wrapper = mount(MemorySettings, { attachTo: document.body });
     const imported = {
       ...memory,
       futureRoot: true,
@@ -160,21 +188,20 @@ describe("MemorySettings", () => {
     });
     await flushPromises();
 
-    const dialog = wrapper.get('[role="alertdialog"]');
-    expect(dialog.text()).toContain("memory.json");
-    expect(dialog.text()).toContain("2.0");
-    expect(dialog.text()).toContain("2026-08-22T00:00:00Z");
+    const dialog = portalDialog();
+    expect(dialog.textContent).toContain("memory.json");
+    expect(dialog.textContent).toContain("2.0");
+    expect(dialog.textContent).toContain("2026-08-22T00:00:00Z");
     expect(
-      wrapper.get('[data-testid="memory-import-extra-warning"]').text(),
+      inPortal('[data-testid="memory-import-extra-warning"]').textContent,
     ).toContain("Gateway");
     expect(
-      wrapper.get('[data-testid="memory-import-duplicate-warning"]').text(),
+      inPortal('[data-testid="memory-import-duplicate-warning"]').textContent,
     ).toContain("different");
     expect(owner.importDocument.mutateAsync).not.toHaveBeenCalled();
-    await dialog
-      .findAll("button")
-      .find((button) => button.text() === "Import")!
-      .trigger("click");
+    dialogButtons()
+      .find((button) => button.textContent?.trim() === "Import")!
+      .click();
     await flushPromises();
     expect(owner.importDocument.mutateAsync).toHaveBeenCalledTimes(1);
     expect(owner.importDocument.mutateAsync).toHaveBeenCalledWith(imported);
@@ -184,29 +211,24 @@ describe("MemorySettings", () => {
     const owner = memoryOwner();
     owner.clear.mutateAsync.mockRejectedValue(new Error("Conflict detail"));
     memoryFactory.mockReturnValue(owner);
-    const wrapper = mount(MemorySettings);
+    const wrapper = mount(MemorySettings, { attachTo: document.body });
 
     await wrapper.get('[data-testid="memory-clear-open"]').trigger("click");
-    await wrapper
-      .get('[role="alertdialog"]')
-      .findAll("button")[1]!
-      .trigger("click");
     await flushPromises();
-    expect(wrapper.get('[role="alertdialog"]').text()).toContain(
+    dialogButtons("alertdialog")[1]!.click();
+    await flushPromises();
+    expect(portalDialog("alertdialog").textContent).toContain(
       "Conflict detail",
     );
 
-    await wrapper
-      .get('[role="alertdialog"]')
-      .findAll("button")[0]!
-      .trigger("click");
+    dialogButtons("alertdialog")[0]!.click();
+    await flushPromises();
     await wrapper.get('[data-testid="memory-add-fact"]').trigger("click");
-    await wrapper.get('[data-testid="memory-fact-content"]').setValue("Zero");
-    await wrapper.get('[data-testid="memory-fact-confidence"]').setValue("0");
-    await wrapper
-      .get('[role="alertdialog"]')
-      .findAll("button")[1]!
-      .trigger("click");
+    await flushPromises();
+    setPortalValue('[data-testid="memory-fact-content"]', "Zero");
+    setPortalValue('[data-testid="memory-fact-confidence"]', "0");
+    await flushPromises();
+    dialogButtons()[1]!.click();
     await flushPromises();
     expect(owner.create.mutateAsync).toHaveBeenCalledWith({
       content: "Zero",
@@ -215,11 +237,10 @@ describe("MemorySettings", () => {
     });
 
     await wrapper.get('button[aria-label^="Edit:"]').trigger("click");
-    await wrapper.get('[data-testid="memory-fact-confidence"]').setValue("0");
-    await wrapper
-      .get('[role="alertdialog"]')
-      .findAll("button")[1]!
-      .trigger("click");
+    await flushPromises();
+    setPortalValue('[data-testid="memory-fact-confidence"]', "0");
+    await flushPromises();
+    dialogButtons()[1]!.click();
     await flushPromises();
     expect(owner.update.mutateAsync).toHaveBeenCalledWith({
       factId: "fact-a",
@@ -230,7 +251,7 @@ describe("MemorySettings", () => {
   it("distinguishes a non-empty no-match search from fully empty memory", async () => {
     const owner = memoryOwner();
     memoryFactory.mockReturnValue(owner);
-    const wrapper = mount(MemorySettings);
+    const wrapper = mount(MemorySettings, { attachTo: document.body });
     await wrapper.get('[data-testid="memory-search"]').setValue("absent");
     expect(wrapper.find('[data-testid="memory-no-matches"]').exists()).toBe(
       true,
@@ -307,11 +328,12 @@ describe("role-aware skill and MCP settings", () => {
       pending: ref(false),
       toggle: mcpToggle,
     });
+    // Switch 是受控的：视觉状态只跟随服务端真相，点击只发出请求。
     const skill = mount(SkillSettings);
-    await skill.get('[role="switch"]').setValue(false);
+    await skill.get('[role="switch"]').trigger("click");
     expect(skillToggle).toHaveBeenCalledWith("review", false);
     const tool = mount(ToolSettings);
-    await tool.get('[role="switch"]').setValue(false);
+    await tool.get('[role="switch"]').trigger("click");
     expect(mcpToggle).toHaveBeenCalledWith("docs", false);
   });
 });

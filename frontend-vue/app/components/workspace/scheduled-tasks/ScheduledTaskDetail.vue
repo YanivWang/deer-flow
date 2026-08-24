@@ -3,12 +3,22 @@
   【文件职责】     Scheduled-task 详情、完整动作入口和删除二次确认。
   【架构位置】     L3 presentational component
   【主要导出】     默认 ScheduledTaskDetail
-  【依赖关系】     scheduled-tasks cron/types · ScheduledTaskRunList · app i18n
+  【依赖关系】     scheduled-tasks cron/types · ScheduledTaskRunList · ui/alert-dialog · app i18n
   【边界与注意】   running 时禁用冲突动作；实际 mutation 与 Gateway 错误由页面/composable 持有。
 */
 import { computed, ref } from "vue";
 
 import ScheduledTaskRunList from "./ScheduledTaskRunList.vue";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { describeSchedule, parseCron } from "@/core/scheduled-tasks/cron";
 import type {
   ScheduledTask,
@@ -209,42 +219,32 @@ function confirmDelete() {
     />
   </article>
 
-  <Teleport to="body">
-    <div
-      v-if="confirmingDelete"
-      class="fixed inset-0 z-[70] flex items-center justify-center bg-black/45"
-      @click.self="confirmingDelete = false"
+  <AlertDialog v-model:open="confirmingDelete">
+    <AlertDialogContent
+      data-testid="scheduled-task-delete-dialog"
+      class="w-[min(92vw,28rem)]"
     >
-      <section
-        role="dialog"
-        aria-modal="true"
-        data-testid="scheduled-task-delete-dialog"
-        class="bg-background w-[min(92vw,28rem)] rounded-xl border p-5 shadow-2xl"
-      >
-        <h2 class="font-semibold">
+      <AlertDialogHeader>
+        <AlertDialogTitle class="text-base">
           {{ $i18n.t.value.scheduledTasks.actions.delete }}
-        </h2>
-        <p class="text-muted-foreground mt-2 text-sm">
+        </AlertDialogTitle>
+        <AlertDialogDescription>
           {{ $i18n.t.value.scheduledTasks.deleteConfirm }}
-        </p>
-        <div class="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            class="rounded-md border px-3 py-2 text-sm"
-            @click="confirmingDelete = false"
-          >
-            {{ $i18n.t.value.common.cancel }}
-          </button>
-          <button
-            type="button"
-            data-testid="scheduled-task-delete-confirm"
-            class="bg-destructive text-destructive-foreground rounded-md px-3 py-2 text-sm"
-            @click="confirmDelete"
-          >
-            {{ $i18n.t.value.scheduledTasks.actions.delete }}
-          </button>
-        </div>
-      </section>
-    </div>
-  </Teleport>
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel size="sm">
+          {{ $i18n.t.value.common.cancel }}
+        </AlertDialogCancel>
+        <Button
+          data-testid="scheduled-task-delete-confirm"
+          variant="destructive"
+          size="sm"
+          @click="confirmDelete"
+        >
+          {{ $i18n.t.value.scheduledTasks.actions.delete }}
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>

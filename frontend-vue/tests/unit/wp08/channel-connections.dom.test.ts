@@ -113,6 +113,7 @@ function createOwner(
 function mountSettings(owner = createOwner()) {
   ownerFactory.mockReturnValue(owner);
   const wrapper = mount(ChannelConnections, {
+    attachTo: document.body,
     props: { variant: "settings" },
     global: {
       stubs: { ChannelProviderIcon: true },
@@ -130,7 +131,18 @@ beforeEach(() => {
 afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
+  document.body.innerHTML = "";
 });
+
+/**
+ * 对话框现在由 ui/dialog · ui/alert-dialog 提供，内容 portal 到 body，
+ * 所以断言从 wrapper 子树移到 document。破坏性确认是 alertdialog，其余是 dialog。
+ */
+function openDialog(role: "dialog" | "alertdialog" = "dialog") {
+  const element = document.querySelector<HTMLElement>(`[role="${role}"]`);
+  expect(element, `no [role="${role}"] in the document`).not.toBeNull();
+  return element!;
+}
 
 describe("ChannelConnections settings UI", () => {
   it("renders every account and keeps instance/provider deletion explicit", async () => {
@@ -157,14 +169,17 @@ describe("ChannelConnections settings UI", () => {
     await wrapper
       .get('button[aria-label="Remove provider configuration: Slack"]')
       .trigger("click");
-    expect(wrapper.get('[role="dialog"]').text()).toContain(
+    await nextTick();
+    const removalDialog = openDialog("alertdialog");
+    expect(removalDialog.textContent).toContain(
       "revokes every active connection",
     );
-    const removalButtons = wrapper
-      .get('[role="dialog"]')
-      .findAll("button")
-      .filter((button) => button.text() === "Remove provider configuration");
-    await removalButtons[0]!.trigger("click");
+    [...removalDialog.querySelectorAll<HTMLElement>("button")]
+      .find(
+        (button) =>
+          button.textContent?.trim() === "Remove provider configuration",
+      )!
+      .click();
     expect(owner.disconnectProvider).toHaveBeenCalledWith("slack");
   });
 
@@ -199,12 +214,12 @@ describe("ChannelConnections settings UI", () => {
       response.url,
       expect.any(Object),
     );
-    expect(wrapper.get('[role="dialog"]').text()).toContain(
-      response.instruction,
-    );
-    expect(wrapper.get('[data-testid="channel-connect-state"]').text()).toBe(
-      "Waiting for the channel account to connect…",
-    );
+    expect(openDialog().textContent).toContain(response.instruction);
+    expect(
+      document
+        .querySelector('[data-testid="channel-connect-state"]')
+        ?.textContent?.trim(),
+    ).toBe("Waiting for the channel account to connect…");
   });
 
   it.each([
@@ -248,7 +263,7 @@ describe("ChannelConnections settings UI", () => {
 
       await wrapper.get("button").trigger("click");
       await nextTick();
-      expect(wrapper.get('[role="dialog"]').text()).toContain(visible);
+      expect(openDialog().textContent).toContain(visible);
       if (url)
         expect(connectWindow.open).toHaveBeenCalledWith(
           url,

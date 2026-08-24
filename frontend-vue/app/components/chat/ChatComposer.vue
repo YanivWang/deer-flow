@@ -142,7 +142,6 @@ const skillCatalog = useSkillsCatalog({
 const modelCatalog = useModels({ enabled: computed(() => !props.disabled) });
 const skills = skillCatalog.skills;
 const models = modelCatalog.models;
-const modeMenu = ref(false);
 const voiceListening = ref(false);
 const voiceRecognition = ref<BrowserSpeechRecognition | null>(null);
 let voiceBaseText = "";
@@ -348,7 +347,9 @@ function selectModel(model: Model) {
     ),
   );
 }
-function selectMode(mode: (typeof modes.value)[number]) {
+function selectModeById(id: string) {
+  const mode = availableModes.value.find((candidate) => candidate.id === id);
+  if (!mode) return;
   const next = normalizeComposerContext(
     {
       ...props.context,
@@ -358,7 +359,6 @@ function selectMode(mode: (typeof modes.value)[number]) {
     selectedModel.value,
   );
   emit("contextChange", next);
-  modeMenu.value = false;
 }
 onBeforeUnmount(() => {
   compactGeneration += 1;
@@ -1081,17 +1081,32 @@ defineExpose({ replaceDraft, offerFollowup });
           </button>
         </div>
         <div data-slot="input-group-footer">
-          <div class="group relative">
-            <button
-              type="button"
-              data-testid="add-attachments-button"
-              :aria-label="$i18n.t.value.inputBox.addAttachments"
-              class="text-muted-foreground hover:bg-accent flex size-8 cursor-pointer items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-50"
-              :disabled="disabled || polishing"
-              @click="openFileDialog"
-            >
-              <Paperclip :size="14" aria-hidden="true" />
-            </button>
+          <div class="relative">
+            <Tooltip>
+              <TooltipTrigger>
+                <button
+                  type="button"
+                  data-testid="add-attachments-button"
+                  :aria-label="$i18n.t.value.inputBox.addAttachments"
+                  class="text-muted-foreground hover:bg-accent flex size-8 cursor-pointer items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-50"
+                  :disabled="disabled || polishing"
+                  @click="openFileDialog"
+                >
+                  <Paperclip :size="14" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="start" class="w-56">
+                {{
+                  $i18n.t.value.uploads.limitsHint(
+                    limits?.max_files ?? 10,
+                    formatUploadSize(limits?.max_file_size ?? 50 * 1024 * 1024),
+                    formatUploadSize(
+                      limits?.max_total_size ?? 100 * 1024 * 1024,
+                    ),
+                  )
+                }}
+              </TooltipContent>
+            </Tooltip>
             <input
               ref="fileInput"
               type="file"
@@ -1100,18 +1115,6 @@ defineExpose({ replaceDraft, offerFollowup });
               class="sr-only"
               @change="chooseFiles"
             />
-            <span
-              role="tooltip"
-              class="bg-foreground text-background pointer-events-none absolute bottom-full left-0 mb-2 hidden w-56 rounded px-2 py-1 text-xs group-hover:block"
-            >
-              {{
-                $i18n.t.value.uploads.limitsHint(
-                  limits?.max_files ?? 10,
-                  formatUploadSize(limits?.max_file_size ?? 50 * 1024 * 1024),
-                  formatUploadSize(limits?.max_total_size ?? 100 * 1024 * 1024),
-                )
-              }}
-            </span>
           </div>
           <button
             data-testid="voice-input-button"
@@ -1167,35 +1170,41 @@ defineExpose({ replaceDraft, offerFollowup });
             }}</span>
           </button>
           <span class="flex-1" />
-          <div class="relative">
-            <button
-              type="button"
-              class="hover:bg-accent h-8 rounded-md px-2 text-xs"
-              :title="`${availableModes.find((mode) => mode.id === selectedMode)?.label}: ${availableModes.find((mode) => mode.id === selectedMode)?.description}`"
-              @click="modeMenu = !modeMenu"
-            >
-              {{
-                availableModes.find((mode) => mode.id === selectedMode)?.label
-              }}
-            </button>
-            <div
-              v-if="modeMenu"
-              class="bg-background border-border absolute right-0 bottom-full z-30 mb-1 w-72 rounded-md border p-1 shadow"
-            >
+          <DropdownMenu>
+            <DropdownMenuTrigger>
               <button
-                v-for="mode in availableModes"
-                :key="mode.id"
                 type="button"
-                class="hover:bg-accent block w-full rounded px-2 py-2 text-left"
-                @click="selectMode(mode)"
+                class="hover:bg-accent h-8 rounded-md px-2 text-xs"
+                :title="`${availableModes.find((mode) => mode.id === selectedMode)?.label}: ${availableModes.find((mode) => mode.id === selectedMode)?.description}`"
               >
-                <span class="block text-sm font-medium">{{ mode.label }}</span>
-                <span class="text-muted-foreground block text-xs">{{
-                  mode.description
-                }}</span>
+                {{
+                  availableModes.find((mode) => mode.id === selectedMode)?.label
+                }}
               </button>
-            </div>
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="top" class="w-72">
+              <DropdownMenuRadioGroup
+                :model-value="selectedMode"
+                @update:model-value="selectModeById(String($event))"
+              >
+                <DropdownMenuRadioItem
+                  v-for="mode in availableModes"
+                  :key="mode.id"
+                  :value="mode.id"
+                  class="py-2"
+                >
+                  <span class="block">
+                    <span class="block text-sm font-medium">{{
+                      mode.label
+                    }}</span>
+                    <span class="text-muted-foreground block text-xs">{{
+                      mode.description
+                    }}</span>
+                  </span>
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <ComposerModelSelector
             :models="models"
             :selected-model="selectedModel"

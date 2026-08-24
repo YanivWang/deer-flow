@@ -246,7 +246,10 @@ test.describe("Agent chat", () => {
     await page
       .getByRole("button", { name: "Model settings: test-agent" })
       .click();
-    await page.getByTestId("agent-settings-model").selectOption("basic");
+    // 模型选择器从原生 <select> 换成了 ui/select：触发器是 combobox，
+    // 选项是 portal 出去的 option。
+    await page.getByTestId("agent-settings-model").click();
+    await page.locator('[data-slot="select-item"][data-value="basic"]').click();
     await expect(page.getByTestId("agent-settings-thinking")).toHaveCount(0);
     await expect(page.getByTestId("agent-settings-reasoning")).toHaveCount(0);
     await page.getByTestId("agent-settings-temperature").fill("0");

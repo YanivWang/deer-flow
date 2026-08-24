@@ -3,18 +3,10 @@
   【文件职责】     单个 recent thread 的 rename/pin/share/export/delete menu owner。
   【架构位置】     L3 workspace navigation
   【主要导出】     默认 ThreadActionsMenu 组件
-  【依赖关系】     Reka DropdownMenu · thread API/export · clipboard · toast
+  【依赖关系】     ui/dropdown-menu · thread API/export · clipboard · toast
   【边界与注意】   不复制 thread list；export 临时状态仅属于这一菜单实例。
 */
 import { ref } from "vue";
-import {
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuRoot,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "reka-ui";
 import {
   FileJson,
   FileText,
@@ -25,6 +17,13 @@ import {
   Trash2,
 } from "lucide-vue-next";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getAPIClient } from "@/core/api/api-client";
 import { writeTextToClipboard } from "@/core/clipboard";
 import { exportThread, type ThreadExportFormat } from "@/core/threads/export";
@@ -97,8 +96,8 @@ async function exportConversation(format: ThreadExportFormat) {
 </script>
 
 <template>
-  <DropdownMenuRoot>
-    <DropdownMenuTrigger as-child>
+  <DropdownMenu>
+    <DropdownMenuTrigger>
       <button
         type="button"
         :aria-label="$i18n.t.value.common.more"
@@ -107,66 +106,51 @@ async function exportConversation(format: ThreadExportFormat) {
         <MoreHorizontal :size="16" />
       </button>
     </DropdownMenuTrigger>
-    <DropdownMenuPortal>
-      <DropdownMenuContent
-        align="end"
-        :side-offset="4"
-        class="bg-popover text-popover-foreground border-border z-[75] min-w-48 rounded-md border p-1 text-sm shadow-lg"
+    <DropdownMenuContent align="end" class="min-w-48">
+      <DropdownMenuItem @select="emit('rename')">
+        <Pencil :size="14" /> {{ $i18n.t.value.common.rename }}
+      </DropdownMenuItem>
+      <DropdownMenuItem @select="emit('togglePin')">
+        <Pin :size="14" />
+        {{
+          pinned ? $i18n.t.value.chats.unpinChat : $i18n.t.value.chats.pinChat
+        }}
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        as="button"
+        data-testid="thread-share"
+        :disabled="sharing"
+        @select="shareThread"
       >
-        <DropdownMenuItem
-          class="hover:bg-accent focus:bg-accent flex cursor-default items-center gap-2 rounded px-2 py-1.5 outline-none"
-          @select="emit('rename')"
-        >
-          <Pencil :size="14" /> {{ $i18n.t.value.common.rename }}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          class="hover:bg-accent focus:bg-accent flex cursor-default items-center gap-2 rounded px-2 py-1.5 outline-none"
-          @select="emit('togglePin')"
-        >
-          <Pin :size="14" />
-          {{
-            pinned ? $i18n.t.value.chats.unpinChat : $i18n.t.value.chats.pinChat
-          }}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator class="bg-border my-1 h-px" />
-        <DropdownMenuItem
-          data-testid="thread-share"
-          as="button"
-          class="hover:bg-accent focus:bg-accent flex w-full cursor-default items-center gap-2 rounded px-2 py-1.5 outline-none"
-          :disabled="sharing"
-          @select="shareThread"
-        >
-          <Share2 :size="14" /> {{ $i18n.t.value.common.share }}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          data-testid="thread-export-markdown"
-          as="button"
-          class="hover:bg-accent focus:bg-accent flex w-full cursor-default items-center gap-2 rounded px-2 py-1.5 outline-none"
-          :disabled="Boolean(exporting)"
-          @select="exportConversation('markdown')"
-        >
-          <FileText :size="14" />
-          {{ $i18n.t.value.common.exportAsMarkdown }}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          data-testid="thread-export-json"
-          as="button"
-          class="hover:bg-accent focus:bg-accent flex w-full cursor-default items-center gap-2 rounded px-2 py-1.5 outline-none"
-          :disabled="Boolean(exporting)"
-          @select="exportConversation('json')"
-        >
-          <FileJson :size="14" /> {{ $i18n.t.value.common.exportAsJSON }}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator class="bg-border my-1 h-px" />
-        <DropdownMenuItem
-          as="button"
-          class="text-destructive hover:bg-accent focus:bg-accent flex w-full cursor-default items-center gap-2 rounded px-2 py-1.5 outline-none"
-          :disabled="deleting"
-          @select="emit('delete')"
-        >
-          <Trash2 :size="14" /> {{ $i18n.t.value.common.delete }}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenuPortal>
-  </DropdownMenuRoot>
+        <Share2 :size="14" /> {{ $i18n.t.value.common.share }}
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        as="button"
+        data-testid="thread-export-markdown"
+        :disabled="Boolean(exporting)"
+        @select="exportConversation('markdown')"
+      >
+        <FileText :size="14" />
+        {{ $i18n.t.value.common.exportAsMarkdown }}
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        as="button"
+        data-testid="thread-export-json"
+        :disabled="Boolean(exporting)"
+        @select="exportConversation('json')"
+      >
+        <FileJson :size="14" /> {{ $i18n.t.value.common.exportAsJSON }}
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        as="button"
+        variant="destructive"
+        :disabled="deleting"
+        @select="emit('delete')"
+      >
+        <Trash2 :size="14" /> {{ $i18n.t.value.common.delete }}
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
 </template>

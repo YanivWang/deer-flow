@@ -3,12 +3,19 @@
   【文件职责】     在 run 最终 assistant 气泡显示完整 workspace-change summary/detail。
   【架构位置】     L3 extension reference
   【主要导出】     默认 WorkspaceChangesBadge 组件
-  【依赖关系】     useWorkspaceChanges · presentation/summary · artifact URL
+  【依赖关系】     useWorkspaceChanges · presentation/summary · artifact URL · ui/sheet
   【边界与注意】   server state 仅由 useWorkspaceChanges/TanStack Query 持有。
 */
 import { computed, ref, watch } from "vue";
-import { ArrowUpRight, ExternalLink, FileDiff, X } from "lucide-vue-next";
+import { ArrowUpRight, ExternalLink, FileDiff } from "lucide-vue-next";
 
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useWorkspaceChanges } from "@/composables/useWorkspaceChanges";
 import { resolveArtifactURL } from "@/core/artifacts/utils";
 import {
@@ -174,116 +181,104 @@ function canOpen(file: WorkspaceFileChange) {
     </div>
   </div>
 
-  <Teleport to="body">
-    <div
-      v-if="open && summary"
-      class="fixed inset-0 z-50 flex justify-end bg-black/35"
-      @click.self="open = false"
+  <Sheet v-model:open="open">
+    <SheetContent
+      v-if="summary"
+      class="w-[min(92vw,900px)] gap-0 p-0 sm:max-w-none"
+      :close-label="$i18n.t.value.common.close"
     >
-      <section
-        class="bg-background flex h-full w-[min(92vw,900px)] flex-col shadow-2xl"
-        :aria-label="$i18n.t.value.workspaceChanges.title"
+      <SheetHeader
+        class="border-border flex-row items-start gap-3 border-b px-5 py-4 pr-14"
       >
-        <header class="border-border flex items-start gap-3 border-b px-5 py-4">
-          <FileDiff class="text-muted-foreground mt-1 size-4" />
-          <div class="min-w-0 flex-1">
-            <h2 class="font-semibold">
-              {{ $i18n.t.value.workspaceChanges.title }}
-            </h2>
-            <p class="text-muted-foreground text-sm">
-              {{
-                $i18n.t.value.workspaceChanges.badge(
-                  count,
-                  summary.summary.additions,
-                  summary.summary.deletions,
-                )
-              }}
-            </p>
-          </div>
+        <FileDiff class="text-muted-foreground mt-1 size-4 shrink-0" />
+        <div class="min-w-0 flex-1">
+          <SheetTitle>{{ $i18n.t.value.workspaceChanges.title }}</SheetTitle>
+          <SheetDescription>
+            {{
+              $i18n.t.value.workspaceChanges.badge(
+                count,
+                summary.summary.additions,
+                summary.summary.deletions,
+              )
+            }}
+          </SheetDescription>
+        </div>
+      </SheetHeader>
+      <div class="min-h-0 flex-1 overflow-y-auto p-5">
+        <p
+          v-if="detailOwner.loading.value"
+          class="text-muted-foreground text-sm"
+        >
+          {{ $i18n.t.value.workspaceChanges.loading }}
+        </p>
+        <div
+          v-if="detailError"
+          role="alert"
+          class="border-destructive/30 bg-destructive/5 text-destructive mb-4 rounded-lg border p-3 text-sm"
+        >
+          <p>{{ detailError }}</p>
           <button
+            data-testid="workspace-changes-retry"
             type="button"
-            :aria-label="$i18n.t.value.common.close"
-            @click="open = false"
+            class="mt-2 underline"
+            :disabled="detailOwner.fetching.value"
+            @click="detailOwner.refetch()"
           >
-            <X :size="18" />
+            {{ $i18n.t.value.workspaceChanges.retry }}
           </button>
-        </header>
-        <div class="min-h-0 flex-1 overflow-y-auto p-5">
-          <p
-            v-if="detailOwner.loading.value"
-            class="text-muted-foreground text-sm"
+        </div>
+        <p
+          v-if="!detailOwner.loading.value && !files.length"
+          class="text-muted-foreground text-sm"
+        >
+          {{ $i18n.t.value.workspaceChanges.noChanges }}
+        </p>
+        <div v-else class="flex flex-col gap-3">
+          <details
+            v-for="file in files"
+            :key="`${file.status}:${file.path}`"
+            class="border-border rounded-lg border"
+            :open="Boolean(file.diff)"
           >
-            {{ $i18n.t.value.workspaceChanges.loading }}
-          </p>
-          <div
-            v-if="detailError"
-            role="alert"
-            class="border-destructive/30 bg-destructive/5 text-destructive mb-4 rounded-lg border p-3 text-sm"
-          >
-            <p>{{ detailError }}</p>
-            <button
-              data-testid="workspace-changes-retry"
-              type="button"
-              class="mt-2 underline"
-              :disabled="detailOwner.fetching.value"
-              @click="detailOwner.refetch()"
+            <summary
+              role="button"
+              class="flex cursor-pointer list-none items-start gap-2 px-3 py-2"
             >
-              {{ $i18n.t.value.workspaceChanges.retry }}
-            </button>
-          </div>
-          <p
-            v-if="!detailOwner.loading.value && !files.length"
-            class="text-muted-foreground text-sm"
-          >
-            {{ $i18n.t.value.workspaceChanges.noChanges }}
-          </p>
-          <div v-else class="flex flex-col gap-3">
-            <details
-              v-for="file in files"
-              :key="`${file.status}:${file.path}`"
-              class="border-border rounded-lg border"
-              :open="Boolean(file.diff)"
-            >
-              <summary
-                role="button"
-                class="flex cursor-pointer list-none items-start gap-2 px-3 py-2"
-              >
-                <span class="min-w-0 flex-1">
-                  <span class="block font-mono text-xs">{{ file.path }}</span>
-                  <span
-                    v-if="!file.diff"
-                    class="text-muted-foreground mt-1 block text-xs"
-                  >
-                    {{ reasonText(file) }}
-                  </span>
-                </span>
-                <span class="text-muted-foreground shrink-0 text-xs">
-                  {{ statusText(file) }}
-                </span>
-                <a
-                  v-if="canOpen(file)"
-                  :href="resolveArtifactURL(file.path, threadId)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  :aria-label="$i18n.t.value.workspaceChanges.openFile"
-                  @click.stop
+              <span class="min-w-0 flex-1">
+                <span class="block font-mono text-xs">{{ file.path }}</span>
+                <span
+                  v-if="!file.diff"
+                  class="text-muted-foreground mt-1 block text-xs"
                 >
-                  <ExternalLink :size="14" />
-                </a>
-              </summary>
-              <pre
-                v-if="file.diff"
-                class="border-border max-h-[520px] overflow-auto border-t py-2 font-mono text-xs leading-5"
-              ><span
+                  {{ reasonText(file) }}
+                </span>
+              </span>
+              <span class="text-muted-foreground shrink-0 text-xs">
+                {{ statusText(file) }}
+              </span>
+              <a
+                v-if="canOpen(file)"
+                :href="resolveArtifactURL(file.path, threadId)"
+                target="_blank"
+                rel="noopener noreferrer"
+                :aria-label="$i18n.t.value.workspaceChanges.openFile"
+                @click.stop
+              >
+                <ExternalLink :size="14" />
+              </a>
+            </summary>
+            <pre
+              v-if="file.diff"
+              class="border-border max-h-[520px] overflow-auto border-t py-2 font-mono text-xs leading-5"
+            ><span
                   v-for="(line, index) in file.diff.split('\n')"
                   :key="`${index}:${line}`"
                   :class="['block min-w-max px-3 whitespace-pre', lineClass(line)]"
                   >{{ line || " " }}</span
                 ></pre>
-            </details>
-          </div>
+          </details>
         </div>
-      </section>
-    </div>
-  </Teleport>
+      </div>
+    </SheetContent>
+  </Sheet>
 </template>

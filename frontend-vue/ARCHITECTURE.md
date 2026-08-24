@@ -28,11 +28,33 @@ Compose Watch 同步源码并在依赖清单变化时重建对应镜像；Nginx 
 
 ## 三层边界
 
-| 层                 | 当前目录                                                                                          | 职责                                                                   | 禁止依赖                                             |
-| ------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------- |
-| L1 通用 Agent 内核 | `packages/agent-core/`                                                                            | SSE 分帧、session 状态机、退避、watchdog、external store、通用消息合同 | Vue/Nuxt、Pinia、TanStack Query、DeerFlow URL/事件名 |
-| L2 可复用 UI       | `app/core/markdown/`、`app/components/markdown/`、`app/components/ui/button/`、`app/lib/utils.ts` | Markdown 流式渲染、代码块、Mermaid、Button                             | DeerFlow API、线程、认证、产物和业务 store           |
-| L3 DeerFlow 应用   | `app/core/agent-deerflow/`、`app/core/api/`、`app/composables/`、`app/stores/`、页面和业务组件    | Gateway 协议适配、缓存、线程生命周期、认证和产品功能                   | 不得把协议专有知识反向写入 L1/L2                     |
+| 层                 | 当前目录                                                                                                           | 职责                                                                   | 禁止依赖                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------- |
+| L1 通用 Agent 内核 | `packages/agent-core/`                                                                                             | SSE 分帧、session 状态机、退避、watchdog、external store、通用消息合同 | Vue/Nuxt、Pinia、TanStack Query、DeerFlow URL/事件名 |
+| L2 可复用 UI       | `app/core/markdown/`、`app/components/markdown/`、`app/components/ui/`、`app/lib/utils.ts`、`app/lib/focusable.ts` | Markdown 流式渲染、代码块、Mermaid、UI primitive 层                    | DeerFlow API、线程、认证、产物和业务 store           |
+| L3 DeerFlow 应用   | `app/core/agent-deerflow/`、`app/core/api/`、`app/composables/`、`app/stores/`、页面和业务组件                     | Gateway 协议适配、缓存、线程生命周期、认证和产品功能                   | 不得把协议专有知识反向写入 L1/L2                     |
+
+## UI primitive 层
+
+`app/components/ui/` 是唯一的交互控件底座，建在 Reka UI 之上：Dialog、AlertDialog、
+Sheet、Popover、DropdownMenu、Select、Tabs、Switch、Tooltip、HoverCard、ScrollArea、
+Command、Button。产品组件不再直接 import `reka-ui`——焦点陷阱、Escape、外点关闭、
+方向键与 aria 状态属于这一层，散在调用点就会各写一份、各错一处。
+
+三条硬约束，都是实测踩出来的：
+
+- **primitive 不持有产品文案。** 关闭按钮只在调用方传入 `closeLabel` 时渲染，
+  placeholder、aria-label 一律由调用方给。i18n 源码门禁把 `app/components/**` 全部
+  纳入扫描，primitive 也不例外。
+- **转发 props 用 Reka 的 `useForwardProps`，不要展开 `{ ...props }`。** `defineProps`
+  会把没传的 prop 也变成存在的键（Boolean 甚至是 `false`），整份展开等于对底座的每个
+  默认值显式赋值，且不报任何错。
+- **内容 portal 到 body 的 primitive 必须 `inheritAttrs: false` 并把 `$attrs` 绑到内容
+  元素上**，否则调用方的 `data-testid` / `aria-label` 会落在不渲染 DOM 的 Portal 上。
+
+模态语义与层级：Reka 不写 `aria-modal`，本层显式补上（Popover 这类非模态浮层绝不加）。
+所有 portal 浮层共用 `z-80` 一层，谁后打开谁在上；只有 tooltip 用 `z-90`。
+「当前可见且可聚焦」的判据只有一份，住在 `app/lib/focusable.ts`，抽屉与 primitive 共用。
 
 `@deerflow/agent-core` 只允许从包根导入。`package.json#exports` 和
 `packages/agent-core/tests/architecture.test.ts` 同时阻止深路径依赖。包仍是私有源码包，

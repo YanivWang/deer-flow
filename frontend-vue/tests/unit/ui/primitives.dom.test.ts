@@ -1,0 +1,377 @@
+/*
+  【文件职责】     钉住 UI primitive 层的可观察语义：角色、aria 状态与键盘出口。
+  【架构位置】     L2 单元测试
+  【主要导出】     无；Vitest cases
+  【依赖关系】     app/components/ui/**
+  【边界与注意】   这里钉的是**可观察行为**，不是 DOM 结构，也不是 React 的 class。
+                   真实焦点陷阱与 Escape 归 tests/e2e/ui-primitives-a11y.spec.ts：
+                   happy-dom 不做布局，焦点行为在这里没有可信度。
+*/
+
+import { flushPromises, mount } from "@vue/test-utils";
+import { defineComponent, h, ref } from "vue";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+afterEach(() => {
+  document.body.innerHTML = "";
+});
+
+function query<T extends HTMLElement>(selector: string): T | null {
+  return document.querySelector<T>(selector);
+}
+
+function get<T extends HTMLElement>(selector: string): T {
+  const element = query<T>(selector);
+  expect(element, `${selector} is not in the document`).not.toBeNull();
+  return element!;
+}
+
+async function mountPortal(render: () => unknown) {
+  const wrapper = mount(defineComponent({ setup: () => render }), {
+    attachTo: document.body,
+  });
+  await flushPromises();
+  return wrapper;
+}
+
+describe("Dialog", () => {
+  it("is a labelled, described modal that reports open state", async () => {
+    await mountPortal(() =>
+      h(Dialog, { open: true }, () => [
+        h(DialogContent, { closeLabel: "Close panel" }, () => [
+          h(DialogTitle, () => "Panel title"),
+          h(DialogDescription, () => "Panel description"),
+        ]),
+      ]),
+    );
+
+    const content = get('[role="dialog"]');
+    expect(content.getAttribute("data-state")).toBe("open");
+    // Reka 全库不写 aria-modal（Radix 写），所以由本层显式补上。
+    expect(content.getAttribute("aria-modal")).toBe("true");
+    expect(
+      document.getElementById(content.getAttribute("aria-labelledby")!)
+        ?.textContent,
+    ).toBe("Panel title");
+    expect(
+      document.getElementById(content.getAttribute("aria-describedby")!)
+        ?.textContent,
+    ).toBe("Panel description");
+  });
+
+  it("renders the close button only when the caller supplies its name", async () => {
+    await mountPortal(() =>
+      h(Dialog, { open: true }, () => [
+        h(DialogContent, null, () => [
+          h(DialogTitle, () => "No close"),
+          h(DialogDescription, () => "No close description"),
+        ]),
+      ]),
+    );
+
+    // primitive 不持有产品文案：没有可访问名字就不渲染关闭按钮，
+    // 而不是塞一个写死的英文 "Close"。
+    expect(query('[data-slot="dialog-close"]')).toBeNull();
+  });
+
+  it("routes every close affordance through one update:open", async () => {
+    const onOpen = vi.fn();
+    await mountPortal(() =>
+      h(Dialog, { open: true, "onUpdate:open": onOpen }, () => [
+        h(DialogContent, { closeLabel: "Close panel" }, () => [
+          h(DialogTitle, () => "Panel title"),
+          h(DialogDescription, () => "Panel description"),
+        ]),
+      ]),
+    );
+
+    get('[data-slot="dialog-close"]').click();
+    await flushPromises();
+    expect(onOpen).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("AlertDialog", () => {
+  it("uses the alertdialog role and offers a cancel plus an action", async () => {
+    await mountPortal(() =>
+      h(AlertDialog, { open: true }, () => [
+        h(AlertDialogContent, null, () => [
+          h(AlertDialogTitle, () => "Delete it?"),
+          h(AlertDialogDescription, () => "This cannot be undone."),
+          h(AlertDialogCancel, () => "Keep"),
+          h(AlertDialogAction, { variant: "destructive" }, () => "Delete"),
+        ]),
+      ]),
+    );
+
+    const content = get('[role="alertdialog"]');
+    expect(content.getAttribute("data-state")).toBe("open");
+    expect(content.getAttribute("aria-modal")).toBe("true");
+    expect(query('[data-slot="alert-dialog-cancel"]')?.textContent).toBe(
+      "Keep",
+    );
+    expect(query('[data-slot="alert-dialog-action"]')?.textContent).toBe(
+      "Delete",
+    );
+  });
+});
+
+describe("Sheet", () => {
+  it("keeps dialog semantics and records the edge it slides from", async () => {
+    await mountPortal(() =>
+      h(Sheet, { open: true }, () => [
+        h(SheetContent, { side: "right" }, () => [
+          h(SheetTitle, () => "Changes"),
+          h(SheetDescription, () => "Two files changed"),
+        ]),
+      ]),
+    );
+
+    const content = get('[role="dialog"]');
+    expect(content.dataset.slot).toBe("sheet-content");
+    expect(content.dataset.side).toBe("right");
+    expect(content.getAttribute("aria-modal")).toBe("true");
+    expect(
+      document.getElementById(content.getAttribute("aria-labelledby")!)
+        ?.textContent,
+    ).toBe("Changes");
+  });
+});
+
+describe("DropdownMenu", () => {
+  it("wires trigger and menu with haspopup/expanded and menuitem children", async () => {
+    await mountPortal(() =>
+      h(DropdownMenu, null, () => [
+        h(DropdownMenuTrigger, null, () => [
+          h("button", { type: "button", "aria-label": "More" }, "More"),
+        ]),
+        h(DropdownMenuContent, null, () => [
+          h(DropdownMenuItem, null, () => "Rename"),
+          h(DropdownMenuSeparator),
+          h(DropdownMenuItem, { variant: "destructive" }, () => "Delete"),
+        ]),
+      ]),
+    );
+
+    const trigger = get<HTMLButtonElement>('[aria-label="More"]');
+    expect(trigger.getAttribute("aria-haspopup")).toBe("menu");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(query('[role="menu"]')).toBeNull();
+
+    trigger.click();
+    await flushPromises();
+
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    const items = [...document.querySelectorAll('[role="menuitem"]')];
+    expect(items.map((item) => item.textContent?.trim())).toEqual([
+      "Rename",
+      "Delete",
+    ]);
+    expect(
+      get<HTMLElement>('[data-slot="dropdown-menu-item"][data-variant]').dataset
+        .variant,
+    ).toBe("destructive");
+  });
+
+  it("fires select for keyboard activation, not only for clicks", async () => {
+    const selected = vi.fn();
+    await mountPortal(() =>
+      h(DropdownMenu, { open: true }, () => [
+        h(DropdownMenuTrigger, null, () => [
+          h("button", { type: "button", "aria-label": "More" }, "More"),
+        ]),
+        h(DropdownMenuContent, null, () => [
+          h(DropdownMenuItem, { onSelect: selected }, () => "Rename"),
+        ]),
+      ]),
+    );
+
+    get('[role="menuitem"]').dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+    );
+    await flushPromises();
+    expect(selected).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Popover", () => {
+  it("is a dialog that never claims to be modal", async () => {
+    await mountPortal(() =>
+      h(Popover, { open: true }, () => [
+        h(PopoverAnchor, null, () => [h("span", "anchor")]),
+        h(PopoverContent, { "aria-label": "Send suggestion?" }, () => [
+          h("p", "Append or replace?"),
+        ]),
+      ]),
+    );
+
+    const content = get('[data-slot="popover-content"]');
+    expect(content.getAttribute("role")).toBe("dialog");
+    // 锚定浮层不锁背景，声明 aria-modal 就是对读屏器撒谎。
+    expect(content.getAttribute("aria-modal")).toBeNull();
+    expect(content.getAttribute("aria-label")).toBe("Send suggestion?");
+  });
+});
+
+describe("Select", () => {
+  it("is a combobox whose options carry aria-selected", async () => {
+    const Host = defineComponent({
+      setup() {
+        const value = ref("basic");
+        return () =>
+          h(Select, { modelValue: value.value }, () => [
+            h(SelectTrigger, { "aria-label": "Model" }, () => [h(SelectValue)]),
+            h(SelectContent, null, () => [
+              h(SelectItem, { value: "basic" }, () => "Basic"),
+              h(SelectItem, { value: "reasoning" }, () => "Reasoning"),
+            ]),
+          ]);
+      },
+    });
+    mount(Host, { attachTo: document.body });
+    await flushPromises();
+
+    const trigger = get('[aria-label="Model"]');
+    expect(trigger.getAttribute("role")).toBe("combobox");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(trigger.textContent).toContain("Basic");
+
+    // Reka 的 combobox 用 pointerdown 打开，happy-dom 不派发指针事件，
+    // 所以走它同样支持的键盘入口。
+    trigger.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+    );
+    await flushPromises();
+
+    const options = [...document.querySelectorAll('[role="option"]')];
+    expect(
+      options.map((option) => option.getAttribute("aria-selected")),
+    ).toEqual(["true", "false"]);
+    // 原生 <option value> 暴露过的信息在自定义 listbox 上要留一条等价出口，
+    // 否则「选中值为 X 的那一项」只能靠会被翻译的可见文案去猜。
+    expect(options.map((option) => option.getAttribute("data-value"))).toEqual([
+      "basic",
+      "reasoning",
+    ]);
+  });
+});
+
+describe("Switch", () => {
+  it("is a switch whose checked state follows the caller, not the click", async () => {
+    const changed = vi.fn();
+    await mountPortal(() =>
+      h(Switch, {
+        "aria-label": "review",
+        modelValue: true,
+        "onUpdate:modelValue": changed,
+      }),
+    );
+
+    const control = get<HTMLButtonElement>('[role="switch"]');
+    expect(control.getAttribute("aria-checked")).toBe("true");
+    expect(control.getAttribute("aria-label")).toBe("review");
+
+    control.click();
+    await flushPromises();
+
+    // 受控开关：点击只发出请求，视觉状态等服务端真相回来才动。
+    expect(changed).toHaveBeenCalledWith(false);
+    expect(control.getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("exposes disabled through the native attribute", async () => {
+    await mountPortal(() =>
+      h(Switch, { "aria-label": "review", modelValue: false, disabled: true }),
+    );
+    expect(get<HTMLButtonElement>('[role="switch"]').disabled).toBe(true);
+  });
+});
+
+describe("Tabs", () => {
+  it("links each tab to its panel and moves selection with the arrow keys", async () => {
+    const Host = defineComponent({
+      setup() {
+        const active = ref("public");
+        return () =>
+          h(
+            Tabs,
+            {
+              modelValue: active.value,
+              "onUpdate:modelValue": (next: string) => (active.value = next),
+            },
+            () => [
+              h(TabsList, { "aria-label": "Skill source" }, () => [
+                h(TabsTrigger, { value: "public" }, () => "Public"),
+                h(TabsTrigger, { value: "custom" }, () => "Custom"),
+              ]),
+              h(TabsContent, { value: "public" }, () => "Public skills"),
+              h(TabsContent, { value: "custom" }, () => "Custom skills"),
+            ],
+          );
+      },
+    });
+    mount(Host, { attachTo: document.body });
+    await flushPromises();
+
+    const list = get('[role="tablist"]');
+    expect(list.getAttribute("aria-label")).toBe("Skill source");
+    const [first, second] = [
+      ...document.querySelectorAll<HTMLElement>('[role="tab"]'),
+    ];
+    expect(first!.getAttribute("aria-selected")).toBe("true");
+    expect(second!.getAttribute("aria-selected")).toBe("false");
+    expect(
+      document.getElementById(first!.getAttribute("aria-controls")!)
+        ?.textContent,
+    ).toBe("Public skills");
+
+    first!.focus();
+    first!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    );
+    await flushPromises();
+    expect(second!.getAttribute("aria-selected")).toBe("true");
+  });
+});

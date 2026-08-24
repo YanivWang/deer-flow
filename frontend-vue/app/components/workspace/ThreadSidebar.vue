@@ -3,7 +3,7 @@
   【文件职责】     DeerFlow thread 导航、搜索、分页、重命名与移动端侧栏。
   【架构位置】     L3
   【主要导出】     默认 ThreadSidebar 组件
-  【依赖关系】     threads store/API · workspace routes
+  【依赖关系】     threads store/API · workspace routes · ui/dialog · ui/dropdown-menu
   【边界与注意】   业务导航壳，不属于通用 agent UI 契约。
 */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
@@ -27,6 +27,22 @@ import {
 
 import ChannelConnections from "@/components/workspace/channels/ChannelConnections.vue";
 import ThreadActionsMenu from "@/components/workspace/ThreadActionsMenu.vue";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useSettingsDialog } from "@/composables/useSettingsDialog";
 import { useThreads } from "@/composables/useThreads";
 import { useWorkspaceFeatures } from "@/composables/useWorkspaceFeatures";
@@ -36,6 +52,7 @@ import {
   pathOfThread,
   titleOfThread,
 } from "@/core/threads/utils";
+import { visibleFocusableWithin } from "@/lib/focusable";
 
 const route = useRoute();
 const router = useRouter();
@@ -91,23 +108,13 @@ function onWindowKeydown(event: KeyboardEvent) {
 /**
  * 抽屉里当前**可见且可聚焦**的元素，按文档序。
  *
- * 可见性过滤不能省：抽屉在窄屏下仍然渲染着若干只在 `md:` 断点显示的控件，
- * 它们在 DOM 里排在导航链接前面。对隐藏元素调 `focus()` 是静默无效的，
- * 于是「打开抽屉后焦点进入抽屉」会失败而不报错——这正是它被漏掉的原因。
- * 打开时的初始聚焦与 Tab 循环必须共用这一份定义，否则两者会对
- * 「第一个可聚焦元素是谁」给出不同答案。
+ * 判据本身住在 `@/lib/focusable`，和 UI primitive 共用同一份定义——
+ * 抽屉自己再写一遍，就会出现「primitive 认为第一个可聚焦元素是 A、
+ * 抽屉认为是 B」这种只在窄屏才暴露的分叉。为什么必须过滤可见性，
+ * 见那个文件里的说明。
  */
 function focusableInDrawer(): HTMLElement[] {
-  return [
-    ...(sidebarElement.value?.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    ) ?? []),
-  ].filter(
-    (element) =>
-      !element.hidden &&
-      globalThis.getComputedStyle(element).visibility !== "hidden" &&
-      element.getClientRects().length > 0,
-  );
+  return visibleFocusableWithin(sidebarElement.value);
 }
 
 function keepMobileFocus(event: KeyboardEvent) {
@@ -321,8 +328,14 @@ function openSettingsDialog(section: "appearance" | "about") {
         <span id="agents-disabled-description" class="sr-only">{{
           $i18n.t.value.sidebar.agentsDisabledTooltip
         }}</span>
+        <!--
+          这里刻意**不**换成 Tooltip primitive。禁用入口的原因必须对键盘和读屏器
+          恒定可见，所以它挂在一个常驻的 aria-describedby 上；Reka 的 tooltip 只在
+          打开时才写 aria-describedby，as-child 合并会把这条常驻关联覆盖成 undefined。
+          悬停浮层在这里只是视觉补充，用 CSS 就够。
+        -->
         <span
-          role="tooltip"
+          aria-hidden="true"
           class="bg-popover text-popover-foreground absolute top-full left-2 z-50 hidden rounded-md border px-2 py-1 text-xs whitespace-nowrap shadow group-focus-within:block group-hover:block"
           >{{ $i18n.t.value.sidebar.agentsDisabledTooltip }}</span
         >
@@ -417,85 +430,79 @@ function openSettingsDialog(section: "appearance" | "about") {
         {{ $i18n.t.value.navigation.tryAgain }}
       </button>
     </div>
-    <div class="relative mt-auto p-2">
-      <div
-        v-if="settingsOpen"
-        role="menu"
-        class="bg-popover text-popover-foreground border-border absolute right-2 bottom-12 left-2 z-30 space-y-1 rounded-lg border p-2 text-sm shadow-lg"
-      >
-        <button
-          role="menuitem"
-          type="button"
-          class="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5"
-          @click="openSettingsDialog('appearance')"
+    <div class="mt-auto p-2">
+      <DropdownMenu v-model:open="settingsOpen">
+        <DropdownMenuTrigger>
+          <button
+            ref="settingsTrigger"
+            type="button"
+            class="text-muted-foreground hover:bg-sidebar-accent flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm"
+            :title="
+              collapsed ? $i18n.t.value.workspace.settingsAndMore : undefined
+            "
+            :aria-label="$i18n.t.value.workspace.settingsAndMore"
+          >
+            <Settings :size="16" class="shrink-0" />
+            <span v-if="sidebarExpanded">{{
+              $i18n.t.value.workspace.settingsAndMore
+            }}</span>
+            <ChevronsUpDown v-if="sidebarExpanded" :size="16" class="ml-auto" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          side="top"
+          class="w-[calc(var(--reka-dropdown-menu-trigger-width))] min-w-56"
         >
-          <Settings2 :size="14" /> {{ $i18n.t.value.common.settings }}
-        </button>
-        <div role="separator" class="bg-border my-1 h-px" />
-        <a
-          role="menuitem"
-          href="https://deerflow.tech/"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-1.5"
-          @click="settingsOpen = false"
-        >
-          <Globe :size="14" /> {{ $i18n.t.value.workspace.officialWebsite }}
-        </a>
-        <a
-          role="menuitem"
-          href="https://github.com/bytedance/deer-flow"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-1.5"
-          @click="settingsOpen = false"
-        >
-          <Github :size="14" /> {{ $i18n.t.value.workspace.visitGithub }}
-        </a>
-        <div role="separator" class="bg-border my-1 h-px" />
-        <a
-          role="menuitem"
-          href="https://github.com/bytedance/deer-flow/issues"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-1.5"
-          @click="settingsOpen = false"
-        >
-          <Bug :size="14" /> {{ $i18n.t.value.workspace.reportIssue }}
-        </a>
-        <a
-          role="menuitem"
-          href="mailto:support@deerflow.tech"
-          class="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-1.5"
-          @click="settingsOpen = false"
-        >
-          <Mail :size="14" /> {{ $i18n.t.value.workspace.contactUs }}
-        </a>
-        <div role="separator" class="bg-border my-1 h-px" />
-        <button
-          role="menuitem"
-          type="button"
-          class="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5"
-          @click="openSettingsDialog('about')"
-        >
-          <Info :size="14" /> {{ $i18n.t.value.workspace.about }}
-        </button>
-      </div>
-      <button
-        ref="settingsTrigger"
-        type="button"
-        class="text-muted-foreground hover:bg-sidebar-accent flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm"
-        :title="collapsed ? $i18n.t.value.workspace.settingsAndMore : undefined"
-        :aria-label="$i18n.t.value.workspace.settingsAndMore"
-        :aria-expanded="settingsOpen"
-        @click="settingsOpen = !settingsOpen"
-      >
-        <Settings :size="16" class="shrink-0" />
-        <span v-if="sidebarExpanded">{{
-          $i18n.t.value.workspace.settingsAndMore
-        }}</span>
-        <ChevronsUpDown v-if="sidebarExpanded" :size="16" class="ml-auto" />
-      </button>
+          <DropdownMenuItem @select="openSettingsDialog('appearance')">
+            <Settings2 :size="14" /> {{ $i18n.t.value.common.settings }}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem as-child>
+            <a
+              href="https://deerflow.tech/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex w-full items-center gap-2"
+            >
+              <Globe :size="14" /> {{ $i18n.t.value.workspace.officialWebsite }}
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem as-child>
+            <a
+              href="https://github.com/bytedance/deer-flow"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex w-full items-center gap-2"
+            >
+              <Github :size="14" /> {{ $i18n.t.value.workspace.visitGithub }}
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem as-child>
+            <a
+              href="https://github.com/bytedance/deer-flow/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex w-full items-center gap-2"
+            >
+              <Bug :size="14" /> {{ $i18n.t.value.workspace.reportIssue }}
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem as-child>
+            <a
+              href="mailto:support@deerflow.tech"
+              class="flex w-full items-center gap-2"
+            >
+              <Mail :size="14" /> {{ $i18n.t.value.workspace.contactUs }}
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem @select="openSettingsDialog('about')">
+            <Info :size="14" /> {{ $i18n.t.value.workspace.about }}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   </aside>
   <button
@@ -506,41 +513,33 @@ function openSettingsDialog(section: "appearance" | "about") {
     class="fixed inset-0 z-40 bg-black/30 md:hidden"
     @click="closeMobileSidebar"
   />
-  <div
-    v-if="renameThreadId"
-    class="fixed inset-0 z-[70] grid place-items-center bg-black/40 p-4"
+  <Dialog
+    :open="renameThreadId !== null"
+    @update:open="!$event && (renameThreadId = null)"
   >
-    <form
-      role="dialog"
-      :aria-label="$i18n.t.value.navigation.renameChat"
-      class="bg-background border-border w-full max-w-sm rounded-xl border p-5 shadow-xl"
-      @submit.prevent="submitRename"
-    >
-      <h2 class="text-lg font-semibold">
-        {{ $i18n.t.value.navigation.renameChat }}
-      </h2>
-      <input
-        v-model="renameTitle"
-        :aria-label="$i18n.t.value.navigation.chatTitle"
-        class="border-input mt-4 w-full rounded-md border px-3 py-2"
-      />
-      <p v-if="renameError" role="alert" class="mt-2 text-sm text-red-600">
-        {{ renameError }}
-      </p>
-      <div class="mt-4 flex justify-end gap-2">
-        <button
-          type="button"
-          class="rounded-md border px-3 py-2"
-          @click="renameThreadId = null"
-        >
-          {{ $i18n.t.value.common.cancel }}</button
-        ><button
-          type="submit"
-          class="bg-primary text-primary-foreground rounded-md px-3 py-2"
-        >
-          {{ $i18n.t.value.common.save }}
-        </button>
-      </div>
-    </form>
-  </div>
+    <DialogContent class="sm:max-w-sm">
+      <form class="grid gap-4" @submit.prevent="submitRename">
+        <DialogHeader>
+          <DialogTitle>{{ $i18n.t.value.navigation.renameChat }}</DialogTitle>
+          <DialogDescription class="sr-only">
+            {{ $i18n.t.value.navigation.chatTitle }}
+          </DialogDescription>
+        </DialogHeader>
+        <input
+          v-model="renameTitle"
+          :aria-label="$i18n.t.value.navigation.chatTitle"
+          class="border-input w-full rounded-md border px-3 py-2"
+        />
+        <p v-if="renameError" role="alert" class="text-sm text-red-600">
+          {{ renameError }}
+        </p>
+        <DialogFooter>
+          <Button variant="outline" @click="renameThreadId = null">
+            {{ $i18n.t.value.common.cancel }}
+          </Button>
+          <Button type="submit">{{ $i18n.t.value.common.save }}</Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
 </template>

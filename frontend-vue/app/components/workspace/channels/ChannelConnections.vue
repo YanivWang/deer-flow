@@ -3,13 +3,32 @@
   【文件职责】     展示用户 channel instances，并编排连接、配置、单连接与管理员 provider 删除。
   【架构位置】     L3 product UI
   【主要导出】     默认 ChannelConnections 组件
-  【依赖关系】     useChannelConnections · auth session · channels helpers
+  【依赖关系】     useChannelConnections · auth session · channels helpers · ui/dialog · ui/alert-dialog
   【边界与注意】   connections 是状态真相；provider 删除是全局管理员动作，不能伪装成用户断开。
 */
 
 import { computed, ref } from "vue";
 
 import ChannelProviderIcon from "./ChannelProviderIcon.vue";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuthSession } from "@/composables/useAuthSession";
 import { useChannelConnections } from "@/composables/useChannelConnections";
 import {
@@ -331,138 +350,115 @@ const dialogTitle = computed(() => {
     </article>
   </section>
 
-  <div
-    v-if="editing"
-    role="dialog"
-    :aria-label="dialogTitle"
-    aria-modal="true"
-    class="fixed inset-0 z-[90] grid place-items-center bg-black/40 p-4"
+  <Dialog :open="editing !== null" @update:open="!$event && (editing = null)">
+    <DialogContent v-if="editing" :close-label="text.cancel">
+      <form class="grid gap-4" @submit.prevent="saveRuntimeConfig">
+        <DialogHeader>
+          <DialogTitle>{{ dialogTitle }}</DialogTitle>
+          <DialogDescription>
+            {{ editing.unavailable_reason || text.setupDescription }}
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-3">
+          <label
+            v-for="field in editing.credential_fields"
+            :key="field.name"
+            class="block text-sm"
+          >
+            <span class="mb-1 block">{{ field.label }}</span>
+            <input
+              v-model="values[field.name]"
+              type="text"
+              :required="field.required"
+              :aria-label="field.label"
+              autocomplete="off"
+              data-lpignore="true"
+              data-1p-ignore="true"
+              class="border-input w-full rounded-md border px-3 py-2"
+              :class="field.type === 'password' ? 'channel-secret-input' : ''"
+            />
+          </label>
+        </div>
+        <DialogFooter>
+          <DialogClose>
+            <Button type="button" variant="outline">{{ text.cancel }}</Button>
+          </DialogClose>
+          <Button
+            type="submit"
+            :disabled="channels.isProviderPending(editing.provider)"
+          >
+            {{
+              channels.connections.value.some(
+                (connection) =>
+                  connection.provider === editing?.provider &&
+                  (connection.status === "connected" ||
+                    connection.status === "pending"),
+              )
+                ? text.saveChanges
+                : text.saveAndConnect
+            }}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
+
+  <Dialog
+    :open="Boolean(activeConnectProvider && activeFlow)"
+    @update:open="!$event && closeConnectDialog()"
   >
-    <form
-      class="bg-background border-border w-full max-w-md rounded-xl border p-5 shadow-xl"
-      @submit.prevent="saveRuntimeConfig"
-    >
-      <h2 class="text-lg font-semibold">{{ dialogTitle }}</h2>
-      <p class="text-muted-foreground mt-1 text-sm">
-        {{ editing.unavailable_reason || text.setupDescription }}
-      </p>
-      <div class="mt-4 space-y-3">
-        <label
-          v-for="field in editing.credential_fields"
-          :key="field.name"
-          class="block text-sm"
-        >
-          <span class="mb-1 block">{{ field.label }}</span>
-          <input
-            v-model="values[field.name]"
-            type="text"
-            :required="field.required"
-            :aria-label="field.label"
-            autocomplete="off"
-            data-lpignore="true"
-            data-1p-ignore="true"
-            class="border-input w-full rounded-md border px-3 py-2"
-            :class="field.type === 'password' ? 'channel-secret-input' : ''"
-          />
-        </label>
-      </div>
-      <div class="mt-5 flex justify-end gap-2">
-        <button
-          type="button"
-          class="rounded-md border px-3 py-2"
-          @click="editing = null"
-        >
-          {{ text.cancel }}
-        </button>
-        <button
-          type="submit"
-          class="bg-primary text-primary-foreground rounded-md px-3 py-2"
-          :disabled="channels.isProviderPending(editing.provider)"
-        >
+    <DialogContent v-if="activeFlow">
+      <DialogHeader>
+        <DialogTitle>{{ text.connectTitle }}</DialogTitle>
+        <DialogDescription data-testid="channel-connect-state">
           {{
-            channels.connections.value.some(
-              (connection) =>
-                connection.provider === editing?.provider &&
-                (connection.status === "connected" ||
-                  connection.status === "pending"),
-            )
-              ? text.saveChanges
-              : text.saveAndConnect
+            activeFlow.status === "expired"
+              ? text.connectionExpired
+              : activeFlow.status === "connected"
+                ? text.connected
+                : text.waitingForConnection
           }}
-        </button>
+        </DialogDescription>
+      </DialogHeader>
+      <div class="space-y-2 text-sm">
+        <p v-if="activeFlow.response.instruction">
+          {{ activeFlow.response.instruction }}
+        </p>
+        <p v-if="activeFlow.response.url">{{ text.connectLinkOpened }}</p>
       </div>
-    </form>
-  </div>
+      <DialogFooter>
+        <Button variant="outline" @click="closeConnectDialog">
+          {{ activeFlow.status === "waiting" ? text.cancel : text.close }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 
-  <div
-    v-if="activeConnectProvider && activeFlow"
-    role="dialog"
-    :aria-label="text.connectTitle"
-    aria-modal="true"
-    class="fixed inset-0 z-[90] grid place-items-center bg-black/40 p-4"
+  <AlertDialog
+    :open="removingProvider !== null"
+    @update:open="!$event && (removingProvider = null)"
   >
-    <div
-      class="bg-background border-border w-full max-w-md rounded-xl border p-5 shadow-xl"
-    >
-      <h2 class="text-lg font-semibold">{{ text.connectTitle }}</h2>
-      <p v-if="activeFlow.response.instruction" class="mt-3 text-sm">
-        {{ activeFlow.response.instruction }}
-      </p>
-      <p v-if="activeFlow.response.url" class="mt-2 text-sm">
-        {{ text.connectLinkOpened }}
-      </p>
-      <p class="mt-2 text-sm" data-testid="channel-connect-state">
-        {{
-          activeFlow.status === "expired"
-            ? text.connectionExpired
-            : activeFlow.status === "connected"
-              ? text.connected
-              : text.waitingForConnection
-        }}
-      </p>
-      <button
-        type="button"
-        class="mt-5 rounded-md border px-3 py-2"
-        @click="closeConnectDialog"
-      >
-        {{ activeFlow.status === "waiting" ? text.cancel : text.close }}
-      </button>
-    </div>
-  </div>
-
-  <div
-    v-if="removingProvider"
-    role="dialog"
-    :aria-label="text.removeProviderTitle(removingProvider.display_name)"
-    aria-modal="true"
-    class="fixed inset-0 z-[90] grid place-items-center bg-black/40 p-4"
-  >
-    <div
-      class="bg-background border-border w-full max-w-md rounded-xl border p-5 shadow-xl"
-    >
-      <h2 class="text-lg font-semibold">
-        {{ text.removeProviderTitle(removingProvider.display_name) }}
-      </h2>
-      <p class="mt-3 text-sm">{{ text.removeProviderDescription }}</p>
-      <div class="mt-5 flex justify-end gap-2">
-        <button
-          type="button"
-          class="rounded-md border px-3 py-2"
-          @click="removingProvider = null"
-        >
-          {{ text.cancel }}
-        </button>
-        <button
-          type="button"
-          class="rounded-md border px-3 py-2 text-red-600"
+    <AlertDialogContent v-if="removingProvider">
+      <AlertDialogHeader>
+        <AlertDialogTitle>
+          {{ text.removeProviderTitle(removingProvider.display_name) }}
+        </AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ text.removeProviderDescription }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>{{ text.cancel }}</AlertDialogCancel>
+        <Button
+          variant="destructive"
           :disabled="channels.isProviderPending(removingProvider.provider)"
           @click="confirmProviderRemoval"
         >
           {{ text.removeProviderConfig }}
-        </button>
-      </div>
-    </div>
-  </div>
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
 
 <style scoped>

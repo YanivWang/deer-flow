@@ -2,7 +2,7 @@
   【文件职责】     统一渲染消息 Markdown 的安全、外部、artifact 与 citation 链接。
   【架构位置】     L3 message UI adapter
   【主要导出】     默认组件
-  【依赖关系】     Reka HoverCard · core/markdown/links · core/artifacts/utils
+  【依赖关系】     ui/hover-card · core/markdown/links · core/artifacts/utils
   【边界与注意】   协议 allowlist 必须先于 citation/artifact 分支，危险 href 永不进入 anchor。
 -->
 
@@ -16,13 +16,12 @@ import {
   type VNodeChild,
 } from "vue";
 import { ExternalLink } from "lucide-vue-next";
-import {
-  HoverCardContent,
-  HoverCardPortal,
-  HoverCardRoot,
-  HoverCardTrigger,
-} from "reka-ui";
 
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { resolveMarkdownArtifactURL } from "@/core/artifacts/utils";
 import {
   isExternalMarkdownHref,
@@ -139,8 +138,8 @@ const forwardedAttrs = computed(() => {
     <slot />
   </span>
 
-  <HoverCardRoot v-else-if="citationLabel" :open-delay="0" :close-delay="0">
-    <HoverCardTrigger as-child>
+  <HoverCard v-else-if="citationLabel" :open-delay="0" :close-delay="0">
+    <HoverCardTrigger>
       <a
         v-bind="forwardedAttrs"
         :href="resolvedHref"
@@ -158,20 +157,15 @@ const forwardedAttrs = computed(() => {
         </span>
       </a>
     </HoverCardTrigger>
-    <HoverCardPortal>
-      <HoverCardContent
-        :side-offset="4"
-        class="bg-popover text-popover-foreground z-50 w-80 rounded-md border p-3 shadow-md"
-      >
-        <h4 class="truncate text-sm leading-tight font-medium">
-          {{ citationLabel }}
-        </h4>
-        <p class="text-muted-foreground mt-1 truncate text-xs break-all">
-          {{ resolvedHref }}
-        </p>
-      </HoverCardContent>
-    </HoverCardPortal>
-  </HoverCardRoot>
+    <HoverCardContent>
+      <h4 class="truncate text-sm leading-tight font-medium">
+        {{ citationLabel }}
+      </h4>
+      <p class="text-muted-foreground mt-1 truncate text-xs break-all">
+        {{ resolvedHref }}
+      </p>
+    </HoverCardContent>
+  </HoverCard>
 
   <a
     v-else

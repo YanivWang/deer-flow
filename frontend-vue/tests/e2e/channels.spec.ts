@@ -674,8 +674,12 @@ test.describe("IM channels", () => {
     await expect(connectDialog).toContainText(
       "Send /connect multi123 to the DeerFlow Slack bot.",
     );
+    // connect 对话框是叠在 settings 之上的模态层，Reka 会把背景（含 settings 内容）
+    // 标成 aria-hidden，所以这条断言不能再走 role 查询。
     await expect(
-      settings.getByRole("button", { name: "Add account" }),
+      page.locator('[data-testid="settings-dialog"] button', {
+        hasText: "Add account",
+      }),
     ).toBeDisabled();
     await expect(connectDialog.getByTestId("channel-connect-state")).toHaveText(
       "Connected",
@@ -702,7 +706,8 @@ test.describe("IM channels", () => {
         name: "Remove provider configuration: Slack",
       })
       .click();
-    const removalDialog = page.getByRole("dialog", {
+    // 移除 provider 配置是破坏性动作，语义上是 alertdialog。
+    const removalDialog = page.getByRole("alertdialog", {
       name: "Remove Slack provider configuration?",
     });
     await expect(removalDialog).toContainText(

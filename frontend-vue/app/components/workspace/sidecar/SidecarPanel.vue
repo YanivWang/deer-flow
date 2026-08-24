@@ -3,17 +3,10 @@
   【文件职责】     渲染与父 thread 隔离的 DeerFlow sidecar 会话。
   【架构位置】     L3 extension reference
   【主要导出】     默认 SidecarPanel 组件
-  【依赖关系】     useSidecarSession · MessageList · ReferenceAttachment
+  【依赖关系】     useSidecarSession · MessageList · ReferenceAttachment · ui/alert-dialog · ui/dropdown-menu
   【边界与注意】   只做 UI 适配；restore/create/run/files/HIL 由唯一 session 拥有。
 */
-import {
-  computed,
-  onBeforeUnmount,
-  onMounted,
-  reactive,
-  ref,
-  watch,
-} from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import {
   ArrowUp,
   MessageSquareText,
@@ -23,6 +16,23 @@ import {
 } from "lucide-vue-next";
 
 import MessageList from "@/components/chat/MessageList.vue";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import ComposerAttachmentChip from "@/components/chat/ComposerAttachmentChip.vue";
 import ComposerModelSelector from "@/components/chat/ComposerModelSelector.vue";
 import ComposerSurface from "@/components/chat/ComposerSurface.vue";
@@ -56,7 +66,6 @@ const { $i18n } = useNuxtApp();
 
 const compositionActive = ref(false);
 const models = ref<Model[]>([]);
-const modeMenu = ref(false);
 const deleteDialog = ref(false);
 const localContext = reactive<ThreadRunContextInput>({ ...props.context });
 const sessionInput = computed({
@@ -123,7 +132,6 @@ function selectMode(mode: string) {
     mode: next,
     reasoning_effort: reasoningEffort(next),
   });
-  modeMenu.value = false;
 }
 function selectModel(model: Model) {
   const mode = resolvedMode(
@@ -179,17 +187,6 @@ async function confirmDelete() {
     deleteDialog.value = false;
   }
 }
-function onEscape(event: KeyboardEvent) {
-  if (
-    event.key === "Escape" &&
-    deleteDialog.value &&
-    !props.session.deleting.value
-  ) {
-    deleteDialog.value = false;
-  }
-}
-onMounted(() => globalThis.addEventListener("keydown", onEscape));
-onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
 </script>
 
 <template>
@@ -299,31 +296,31 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
                 @change="chooseFiles"
               />
             </label>
-            <div class="relative">
-              <button
-                type="button"
-                class="hover:bg-accent h-8 rounded-md px-2 text-xs"
-                @click="modeMenu = !modeMenu"
-              >
-                {{ modeLabel }}
-              </button>
-              <div
-                v-if="modeMenu"
-                role="menu"
-                class="bg-background border-border absolute bottom-full left-0 z-30 mb-1 w-32 rounded-md border p-1 shadow"
-              >
+            <DropdownMenu>
+              <DropdownMenuTrigger>
                 <button
-                  v-for="mode in modeOptions"
-                  :key="mode.id"
-                  role="menuitem"
                   type="button"
-                  class="hover:bg-accent block w-full rounded px-2 py-1.5 text-left text-xs capitalize"
-                  @click="selectMode(mode.id)"
+                  class="hover:bg-accent h-8 rounded-md px-2 text-xs"
                 >
-                  {{ mode.label }}
+                  {{ modeLabel }}
                 </button>
-              </div>
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="top" class="w-32">
+                <DropdownMenuRadioGroup
+                  :model-value="String(localContext.mode ?? 'pro')"
+                  @update:model-value="selectMode(String($event))"
+                >
+                  <DropdownMenuRadioItem
+                    v-for="mode in modeOptions"
+                    :key="mode.id"
+                    :value="mode.id"
+                    class="text-xs capitalize"
+                  >
+                    {{ mode.label }}
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <span class="flex-1" />
             <ComposerModelSelector
               class="sidecar-model-control"
@@ -363,61 +360,42 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
     </div>
   </section>
 
-  <Teleport to="body">
-    <div
-      v-if="deleteDialog"
-      data-slot="dialog-overlay"
-      class="fixed inset-0 z-[70] flex items-center justify-center bg-black/45"
-      @click.self="!session.deleting.value && (deleteDialog = false)"
+  <AlertDialog
+    :open="deleteDialog"
+    @update:open="!$event && !session.deleting.value && (deleteDialog = false)"
+  >
+    <AlertDialogContent
+      class="w-[min(92vw,28rem)]"
+      @escape-key-down="session.deleting.value && $event.preventDefault()"
     >
-      <section
-        data-slot="dialog-content"
-        role="dialog"
-        aria-modal="true"
-        class="bg-background relative w-[min(92vw,28rem)] rounded-xl border p-5 shadow-2xl"
-      >
-        <button
-          v-if="!session.deleting.value"
-          data-slot="dialog-close"
-          type="button"
-          :aria-label="$i18n.t.value.common.close"
-          class="absolute top-4 right-4"
-          @click="deleteDialog = false"
-        >
-          <X :size="16" />
-        </button>
-        <h2 class="text-base font-semibold">
+      <AlertDialogHeader>
+        <AlertDialogTitle class="text-base">
           {{ $i18n.t.value.sidecar.delete }}
-        </h2>
-        <p class="text-muted-foreground mt-2 text-sm">
+        </AlertDialogTitle>
+        <AlertDialogDescription>
           {{ $i18n.t.value.sidecar.deleteConfirm }}
-        </p>
-        <div class="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            class="rounded-md border px-3 py-2 text-sm"
-            :disabled="session.deleting.value"
-            @click="deleteDialog = false"
-          >
-            {{ $i18n.t.value.common.cancel }}
-          </button>
-          <button
-            type="button"
-            data-testid="sidecar-delete-confirm-button"
-            class="bg-destructive text-destructive-foreground rounded-md px-3 py-2 text-sm"
-            :disabled="session.deleting.value"
-            @click="confirmDelete"
-          >
-            {{
-              session.deleting.value
-                ? $i18n.t.value.sidecar.deleting
-                : $i18n.t.value.common.delete
-            }}
-          </button>
-        </div>
-      </section>
-    </div>
-  </Teleport>
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel size="sm" :disabled="session.deleting.value">
+          {{ $i18n.t.value.common.cancel }}
+        </AlertDialogCancel>
+        <Button
+          data-testid="sidecar-delete-confirm-button"
+          variant="destructive"
+          size="sm"
+          :disabled="session.deleting.value"
+          @click="confirmDelete"
+        >
+          {{
+            session.deleting.value
+              ? $i18n.t.value.sidecar.deleting
+              : $i18n.t.value.common.delete
+          }}
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
 
 <style scoped>
