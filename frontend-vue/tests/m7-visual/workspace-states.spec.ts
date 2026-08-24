@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { expect, test, type Page } from "@playwright/test";
 
 import { mockLangGraphAPI } from "../../../frontend/tests/e2e/utils/mock-api";
+import { enUS } from "../../app/core/i18n/locales/en-US";
 import { zhCN } from "../../app/core/i18n/locales/zh-CN";
 
 const STREAM_THREAD_ID = "00000000-0000-0000-0000-000000007001";
@@ -104,7 +105,66 @@ test("empty chat", async ({ page }) => {
   await expect(page.getByPlaceholder(/how can i assist you/i)).toBeVisible();
   await expect(page.locator('[data-effect="aurora-text"]')).toBeVisible();
   await expect(page.locator('[data-effect="confetti-button"]')).toBeVisible();
+  const suggestions = page.getByTestId("welcome-suggestions");
+  await expect(suggestions.getByRole("button")).toHaveText([
+    "Surprise",
+    "Write",
+    "Research",
+    "Collect",
+    "Learn",
+    "Create",
+  ]);
+  await expect(page.locator('[data-slot="suggestions-list"]')).toHaveCount(1);
+  const suggestionTops = await suggestions
+    .getByRole("button")
+    .evaluateAll((buttons) =>
+      buttons.map((button) => button.getBoundingClientRect().top),
+    );
+  expect(
+    Math.max(...suggestionTops) - Math.min(...suggestionTops),
+  ).toBeLessThan(2);
+  const suggestionCenterOffset = await suggestions.evaluate((element) => {
+    const row = element.getBoundingClientRect();
+    const composerRoot = element.parentElement!.getBoundingClientRect();
+    return Math.abs(
+      row.left + row.width / 2 - (composerRoot.left + composerRoot.width / 2),
+    );
+  });
+  expect(suggestionCenterOffset).toBeLessThan(1);
   await snapshot(page, "empty-chat.png");
+
+  const composer = page.getByPlaceholder(/how can i assist you/i);
+  await page.getByRole("button", { name: "Research", exact: true }).click();
+  await expect(composer).toHaveValue(enUS.inputBox.suggestions[1]!.prompt);
+  await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
+  await expect
+    .poll(() =>
+      composer.evaluate((element: HTMLTextAreaElement) =>
+        element.value.slice(element.selectionStart, element.selectionEnd),
+      ),
+    )
+    .toBe("[topic]");
+
+  await composer.fill("");
+  await page.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(page.getByRole("menuitem")).toHaveText([
+    "Webpage",
+    "Image",
+    "Video",
+    "Skill",
+  ]);
+  await page.getByRole("menuitem", { name: "Webpage", exact: true }).click();
+  await expect(composer).toHaveValue(
+    (enUS.inputBox.suggestionsCreate[0] as { prompt: string }).prompt,
+  );
+  await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
+  await expect
+    .poll(() =>
+      composer.evaluate((element: HTMLTextAreaElement) =>
+        element.value.slice(element.selectionStart, element.selectionEnd),
+      ),
+    )
+    .toBe("[topic]");
 });
 
 test("streaming message", async ({ page }) => {
