@@ -4,7 +4,7 @@
                    install / build / test / e2e。本脚本静态证明「没有任何跨应用引用」。
   【架构位置】     构建脚本
   【主要导出】     CLI：默认 --check；--json 输出机器可读记分牌
-  【依赖关系】     git ls-files；无运行时依赖
+  【依赖关系】     git（已跟踪 + 未忽略的未跟踪文件）；无运行时依赖
   【边界与注意】   BLOCKING 计数必须归零才算平替达成。COMMENT 计数是 P7 的清理目标，
                    不阻断构建，但会一起打印，避免「注释里还写着对应哪个 React 文件」
                    被当成已经解耦。
@@ -40,6 +40,10 @@ const CROSS_APP_BY_DESIGN = {
     "签入的 golden 夹具，命中的只是 $comment 里的出处说明。",
   "tests/architecture.test.ts":
     "**禁止**跨应用 import 的守卫本身，命中的是它的 forbidden 正则。",
+  "scripts/upstream-drift.mjs":
+    "上游漂移报告；缺席时打印一行后退出 0，不进任何门禁。",
+  "baseline/upstream-marker.json":
+    "漂移报告的已审阅位置，命中的是它声明的监视路径（纯数据）。",
 };
 
 const COMMENT_STYLES = {
@@ -134,8 +138,18 @@ function stripComments(source, styles) {
   return out.join("");
 }
 
-function trackedFiles() {
-  return execFileSync("git", ["ls-files"], { cwd: ROOT, encoding: "utf8" })
+/**
+ * 已跟踪的文件**加上**未跟踪且未被忽略的文件。
+ *
+ * 只看 `git ls-files` 会留下一个盲区：新写的文件在提交前是不可见的，于是
+ * 「这次改动引入了跨应用引用」要等提交之后才暴露——本脚本自己就踩过一次。
+ */
+function scannedFiles() {
+  return execFileSync(
+    "git",
+    ["ls-files", "--cached", "--others", "--exclude-standard"],
+    { cwd: ROOT, encoding: "utf8" },
+  )
     .split("\n")
     .filter(Boolean);
 }
@@ -155,7 +169,7 @@ const comments = [];
 const docs = [];
 const declared = [];
 
-for (const file of trackedFiles()) {
+for (const file of scannedFiles()) {
   if (GENERATED.has(file)) continue;
   const source = readSafe(join(ROOT, file));
   if (source === null || !SIBLING.test(source)) continue;
