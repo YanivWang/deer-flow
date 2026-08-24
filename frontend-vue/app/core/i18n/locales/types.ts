@@ -1143,6 +1143,7 @@ export interface Translations {
     pricingPlaceholder: string;
     badge: string;
     showcaseDescription: string;
+    enterWorkspace: string;
     caseStudies: string;
     caseStudiesDescription: string;
     caseStudyPreview: (title: string) => string;

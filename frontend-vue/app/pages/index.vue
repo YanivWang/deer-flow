@@ -10,6 +10,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+import { buttonVariants } from "@/components/ui/button";
 import { pathOfPublicDemoThread } from "#shared/showcase";
 
 const caseStudyIds = [
@@ -39,6 +40,14 @@ const caseStudies = computed(() =>
       <p class="text-muted-foreground mx-auto max-w-2xl">
         {{ $i18n.t.value.marketing.showcaseDescription }}
       </p>
+      <NuxtLink
+        to="/workspace"
+        data-testid="landing-workspace-cta"
+        class="mt-4"
+        :class="buttonVariants({ size: 'lg' })"
+      >
+        {{ $i18n.t.value.marketing.enterWorkspace }}
+      </NuxtLink>
     </section>
 
     <section class="mx-auto max-w-6xl px-5">

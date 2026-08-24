@@ -1332,6 +1332,7 @@ export const zhCN: Translations = {
     pricingPlaceholder: "价格页面占位内容",
     badge: "超级智能体，现已提供公开示例",
     showcaseDescription: "在安全的只读展示中探索真实的 DeerFlow 会话。",
+    enterWorkspace: "进入工作区",
     caseStudies: "案例研究",
     caseStudiesDescription: "了解 DeerFlow 在真实场景中的使用方式",
     caseStudyPreview: (title) => `${title}预览图`,

@@ -1393,6 +1393,7 @@ export const enUS: Translations = {
     badge: "Super Agent, now with public examples",
     showcaseDescription:
       "Explore real DeerFlow conversations in a safe, read-only showcase.",
+    enterWorkspace: "Enter workspace",
     caseStudies: "Case Studies",
     caseStudiesDescription: "See how DeerFlow is used in the wild",
     caseStudyPreview: (title) => `${title} preview`,

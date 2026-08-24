@@ -48,6 +48,10 @@ inside containers. Compose Watch syncs source changes for HMR and rebuilds the
 affected image when dependency manifests change. The command remains in the
 foreground; use `Ctrl+C` to stop it.
 
+The Vue landing page's **Enter workspace** action routes through `/workspace`,
+so the existing authentication, setup and new-chat routing remains the single
+owner of workspace admission.
+
 ## Run locally
 
 From the repository root:

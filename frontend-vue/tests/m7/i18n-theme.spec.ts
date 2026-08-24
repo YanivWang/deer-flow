@@ -100,6 +100,7 @@ test("locale switch updates an open dialog, product surfaces, future errors and 
 test("persisted locale hydrates SSR and CSR routes without mismatches", async ({
   page,
 }) => {
+  prepare(page);
   const runtimeErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") runtimeErrors.push(message.text());
@@ -110,6 +111,14 @@ test("persisted locale hydrates SSR and CSR routes without mismatches", async ({
   await expect(
     page.getByRole("heading", { name: enUS.marketing.badge }),
   ).toBeVisible();
+  const workspaceCta = page.getByRole("link", {
+    name: enUS.marketing.enterWorkspace,
+  });
+  await expect(workspaceCta).toHaveAttribute("href", "/workspace");
+  await workspaceCta.click();
+  await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
+  await expect(page.getByPlaceholder(enUS.inputBox.placeholder)).toBeVisible();
+  await page.goto("/");
   expect(runtimeErrors.filter((message) => /hydrat/i.test(message))).toEqual(
     [],
   );
