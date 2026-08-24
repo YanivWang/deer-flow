@@ -30,6 +30,80 @@ test.describe("Landing page", () => {
     });
   }
 
+  test("centers width-constrained sections on wide screens", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.goto("/");
+
+    for (const title of ["Case Studies", "Agent Runtime Environment"]) {
+      const section = page
+        .locator("section")
+        .filter({ has: page.getByText(title, { exact: true }) });
+      const content = section.locator(":scope > main > div");
+      const [sectionBox, contentBox] = await Promise.all([
+        section.boundingBox(),
+        content.boundingBox(),
+      ]);
+
+      expect(sectionBox).not.toBeNull();
+      expect(contentBox).not.toBeNull();
+      expect(
+        Math.abs(
+          sectionBox!.x +
+            sectionBox!.width / 2 -
+            (contentBox!.x + contentBox!.width / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test("keeps the centered skills playback control below the animation", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto("/");
+
+    const section = page
+      .locator("section")
+      .filter({ has: page.getByText("Agent Skills", { exact: true }) });
+    await section.scrollIntoViewIfNeeded();
+
+    const control = section
+      .getByText(/Click to (pause|play)/, { exact: true })
+      .last()
+      .locator("..");
+    const animation = section.locator(".max-w-6xl");
+    await expect(control).toBeVisible();
+
+    const [sectionBox, controlBox, animationBox] = await Promise.all([
+      section.boundingBox(),
+      control.boundingBox(),
+      animation.boundingBox(),
+    ]);
+
+    expect(sectionBox).not.toBeNull();
+    expect(controlBox).not.toBeNull();
+    expect(animationBox).not.toBeNull();
+    expect(
+      Math.abs(
+        sectionBox!.x +
+          sectionBox!.width / 2 -
+          (controlBox!.x + controlBox!.width / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      controlBox!.y - (animationBox!.y + animationBox!.height),
+    ).toBeGreaterThanOrEqual(15);
+
+    await page.setViewportSize({ width: 3930, height: 1650 });
+    await section.scrollIntoViewIfNeeded();
+
+    const ultraWideAnimationBox = await animation.boundingBox();
+    expect(ultraWideAnimationBox).not.toBeNull();
+    expect(ultraWideAnimationBox!.height).toBeLessThanOrEqual(700);
+  });
+
   test("Get Started link navigates to workspace", async ({ page }) => {
     mockLangGraphAPI(page);
 

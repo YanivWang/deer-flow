@@ -23,7 +23,7 @@ export async function Header({ className, homeURL, locale }: HeaderProps) {
   return (
     <header
       className={cn(
-        "container-md fixed top-0 right-0 left-0 z-20 mx-auto flex h-16 items-center justify-between gap-3 px-4 backdrop-blur-xs",
+        "container-md fixed top-0 right-0 left-0 z-20 flex h-16 items-center justify-between gap-3 px-4 backdrop-blur-xs",
         className,
       )}
     >

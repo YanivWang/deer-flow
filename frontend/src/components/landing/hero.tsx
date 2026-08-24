@@ -65,7 +65,7 @@ export function Hero({ className }: { className?: string }) {
         maxOpacity={0.3}
         flickerChance={0.25}
       />
-      <div className="container-md relative z-10 mx-auto flex min-h-[92svh] flex-col items-center justify-center px-4 pt-20 pb-14">
+      <div className="container-md relative z-10 flex min-h-[92svh] flex-col items-center justify-center px-4 pt-20 pb-14">
         <h1 className="text-center text-5xl leading-tight font-bold break-words md:text-6xl">
           DeerFlow
         </h1>

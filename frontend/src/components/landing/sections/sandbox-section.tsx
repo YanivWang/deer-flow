@@ -21,7 +21,7 @@ export function SandboxSection({ className }: { className?: string }) {
         </p>
       }
     >
-      <div className="mt-8 flex w-full max-w-6xl flex-col items-center gap-12 lg:flex-row lg:gap-16">
+      <div className="mx-auto mt-8 flex w-full max-w-6xl flex-col items-center gap-12 lg:flex-row lg:gap-16">
         {/* Left: Terminal */}
         <div className="w-full flex-1">
           <Terminal className="h-[360px] w-full">

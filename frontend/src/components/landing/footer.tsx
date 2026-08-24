@@ -11,7 +11,7 @@ export function Footer({ className }: FooterProps) {
   return (
     <footer
       className={cn(
-        "container-md mx-auto mt-32 flex flex-col items-center justify-center",
+        "container-md mt-32 flex flex-col items-center justify-center",
         className,
       )}
     >
