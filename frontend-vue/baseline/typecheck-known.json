@@ -1,5 +1,0 @@
-{
-  "$comment": "分窗口推进期间的已知类型报错豁免。由 `make typecheck-refresh` 生成。RETYPED 全部落地后已归零，此后**任何非空都是回退**：要么修掉，要么在 review 里说清为什么必须留着。",
-  "total": 0,
-  "errors": {}
-}

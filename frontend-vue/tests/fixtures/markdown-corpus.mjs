@@ -1,6 +1,5 @@
 /*
   【文件职责】     M3 归一化 DOM 等价 gate 的语料。React 侧与 Vue 侧读同一份，避免各写各的。
-  【对应 frontend/】 无（gate 资产）
   【架构位置】     测试夹具
   【主要导出】     CORPUS、PRESETS
   【依赖关系】     被 scripts/record-react-markdown.mjs（在 frontend/ 里跑 React）与

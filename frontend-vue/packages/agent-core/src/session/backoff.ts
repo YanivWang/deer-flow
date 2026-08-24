@@ -1,6 +1,5 @@
 /*
   【文件职责】     重连退避的纯计算（05 L4）与重试总量上限的判据（05 L5）。
-  【对应 frontend/】 无
   【架构位置】     L1
   【主要导出】     BackoffOptions · DEFAULT_BACKOFF · computeBackoffDelay
   【依赖关系】     无

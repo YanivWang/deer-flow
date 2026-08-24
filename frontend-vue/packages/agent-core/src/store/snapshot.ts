@@ -1,6 +1,5 @@
 /*
   【文件职责】     可观察快照与归约动作的形状（08 §事件与完整状态归约）。
-  【对应 frontend/】 无；上游把这些散在 hooks 与组件生命周期里
   【架构位置】     L1
   【主要导出】     AgentSnapshot · ReduceAction · EventReducer
   【依赖关系】     ../message · ../errors · ../session/state

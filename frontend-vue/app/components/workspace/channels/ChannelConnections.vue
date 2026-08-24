@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     展示用户 channel instances，并编排连接、配置、单连接与管理员 provider 删除。
-  【对应 frontend/】 src/components/workspace/channels/* · settings/channels-settings-page.tsx
   【架构位置】     L3 product UI
   【主要导出】     默认 ChannelConnections 组件
   【依赖关系】     useChannelConnections · auth session · channels helpers

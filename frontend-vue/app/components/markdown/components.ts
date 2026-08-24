@@ -1,6 +1,5 @@
 /*
   【文件职责】     StreamMarkdown 的 React-equivalent 基础元素覆盖与代码块 / mermaid UI。
-  【对应 frontend/】 streamdown default components · frontend/src/core/streamdown/components.tsx
   【架构位置】     L2 —— 通用渲染层组件
   【主要导出】     richContentComponents
   【依赖关系】     vue · @/lib/utils · ./MarkdownPre.vue

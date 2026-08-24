@@ -36,9 +36,7 @@ export function splitUnsupportedUploadFiles(fileList: File[] | FileList) {
 }
 
 export type UploadLimitViolationCode =
-  | "max_file_size"
-  | "max_files"
-  | "max_total_size";
+  "max_file_size" | "max_files" | "max_total_size";
 
 export interface UploadLimitViolation {
   code: UploadLimitViolationCode;

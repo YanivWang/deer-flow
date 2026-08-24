@@ -1,6 +1,5 @@
 /*
   【文件职责】     05 的 Vue 移植陷阱 M3 / M4 / M5 / M6 在本里程碑的验收。
-  【对应 frontend/】 无（Vue 专有陷阱，React 侧没有对应物）
   【架构位置】     门禁测试
   【主要导出】     无
   【依赖关系】     app/components/markdown/* · app/core/markdown/*

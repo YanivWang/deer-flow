@@ -1,6 +1,5 @@
 /*
   【文件职责】     将 browser 二进制帧合并到每动画帧最多一次并回收 URL。
-  【对应 frontend/】 src/components/workspace/browser-view/frame-buffer.ts
   【架构位置】     L3
   【主要导出】     createFrameBuffer
   【依赖关系】     browser requestAnimationFrame · object URL

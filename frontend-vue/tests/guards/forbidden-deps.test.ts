@@ -1,12 +1,11 @@
 /*
   【文件职责】     守住「计划明确点名不装的包」不许出现在 frontend-vue 的依赖里。
-  【对应 frontend/】 无（本仓自写的护栏）
   【架构位置】     门禁测试
   【主要导出】     无
-  【依赖关系】     package.json、baseline/core-manifest.json
+  【依赖关系】     package.json
   【边界与注意】   这条门禁是**被现实逼出来的，不是预防性洁癖**：同一个坑连着踩了两次。
 
-                     - `058836aa`（M1 窗口 2）为了让 COPIED 的
+                     - `058836aa`（M1 窗口 2）为了让
                        `uploads/prompt-input-files.ts` 能解析，悄悄装了 `ai`，
                        提交说明一个字没提；而 02 §321 写着「决策：内联定义，不装这个包」。
                      - `d682f048`（M1 窗口 3）为了让 `api/api-client.ts` 能落地，
@@ -55,15 +54,6 @@ const pkg = JSON.parse(
   devDependencies?: Record<string, string>;
 };
 
-const manifest = JSON.parse(
-  readFileSync(
-    fileURLToPath(
-      new URL("../../baseline/core-manifest.json", import.meta.url),
-    ),
-    "utf8",
-  ),
-) as { files: { source: string; class: string; needsDeps?: string[] }[] };
-
 describe("计划点名不装的包", () => {
   it("不在 dependencies / devDependencies 里", () => {
     const declared = {
@@ -73,20 +63,6 @@ describe("计划点名不装的包", () => {
     const violations = Object.keys(FORBIDDEN)
       .filter((name) => name in declared)
       .map((name) => `${name} —— ${FORBIDDEN[name]}`);
-    expect(violations).toEqual([]);
-  });
-
-  it("台账不会要求装这些包（分类规则必须把它们判成改写而不是装包）", () => {
-    // needsDeps 是「落地前置条件：得先装这个包」。禁装的包出现在这里，
-    // 说明 core-provenance.mjs 的 REMOVED_DEPS 漏了一条，
-    // 下一个人照着台账做就会把它装回来。
-    const violations = manifest.files
-      .filter((entry) => entry.class === "COPIED" || entry.class === "RETYPED")
-      .flatMap((entry) =>
-        (entry.needsDeps ?? [])
-          .filter((dep) => dep in FORBIDDEN)
-          .map((dep) => `${entry.source}(${entry.class}) 要求装 ${dep}`),
-      );
     expect(violations).toEqual([]);
   });
 });

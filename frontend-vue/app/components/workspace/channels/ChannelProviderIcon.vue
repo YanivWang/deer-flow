@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     按 channel provider 渲染稳定的品牌图标或通用回退。
-  【对应 frontend/】 src/components/workspace/channels/channel-provider-icon.tsx
   【架构位置】     L3
   【主要导出】     默认 ChannelProviderIcon 组件
   【依赖关系】     BuzzProviderIcon · lucide-vue-next

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     导出当前可见会话为 Markdown 或 JSON。
-  【对应 frontend/】 src/components/workspace/export-trigger.tsx
   【架构位置】     L3 workspace chat header
   【主要导出】     默认 ExportTrigger 组件
   【依赖关系】     Reka DropdownMenu · core/threads/export · workspace toast

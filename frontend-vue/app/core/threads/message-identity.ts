@@ -1,6 +1,5 @@
 /*
   【文件职责】     消息的「UI 身份」与按身份去重——C 组每一条的公共底座。
-  【对应 frontend/】 core/threads/hooks.ts（3,169 行 REWRITE 的前 300 行）
   【架构位置】     L3（纯 TS，不认识 Vue）
   【主要导出】     messageIdentity · dedupeMessagesByIdentity
                    dedupeRunMessagesByIdentity · buildVisibleHistoryMessages

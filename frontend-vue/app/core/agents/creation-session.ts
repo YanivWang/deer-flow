@@ -1,6 +1,5 @@
 /*
   【文件职责】     解释 setup_agent 的结构化 ToolMessage，并构造隐藏保存提交。
-  【对应 frontend/】 app/workspace/agents/new/page.tsx · core/threads/hooks.ts
   【架构位置】     L3 Agent 创建协议
   【主要导出】     classifySetupAgentResult · buildAgentSaveSubmission
   【依赖关系】     core/types/message

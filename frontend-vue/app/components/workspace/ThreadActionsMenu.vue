@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     单个 recent thread 的 rename/pin/share/export/delete menu owner。
-  【对应 frontend/】 recent-chat-list.tsx · export-trigger.tsx
   【架构位置】     L3 workspace navigation
   【主要导出】     默认 ThreadActionsMenu 组件
   【依赖关系】     Reka DropdownMenu · thread API/export · clipboard · toast

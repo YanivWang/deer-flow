@@ -1,6 +1,5 @@
 /*
   【文件职责】     08 §54 的可移植性验收：临时 consumer workspace 的 clean install + typecheck + 最小 session 测试。
-  【对应 frontend/】 无
   【架构位置】     构建脚本
   【主要导出】     无（CLI）
   【依赖关系】     scripts/pnpm.py · packages/agent-core

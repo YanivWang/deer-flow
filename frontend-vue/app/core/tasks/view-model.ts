@@ -1,6 +1,5 @@
 /*
   【文件职责】     合并子任务实时/历史/终态数据并生成稳定展示模型。
-  【对应 frontend/】 components/workspace/messages/subtask-card.tsx
   【架构位置】     L3
   【主要导出】     buildSubtaskCardViewModel
   【依赖关系】     tasks/presentation · steps · subtask-result

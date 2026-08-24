@@ -1,6 +1,5 @@
 /*
   【文件职责】     把宿主指针与 wheel 事件映射到 object-contain 的真实远端内容区域。
-  【对应 frontend/】 src/components/workspace/browser-view/browser-view-panel.tsx
   【架构位置】     L3
   【主要导出】     mapBrowserPoint · normalizeBrowserWheel
   【依赖关系】     无

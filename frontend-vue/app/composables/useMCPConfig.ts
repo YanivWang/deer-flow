@@ -1,6 +1,5 @@
 /*
   【文件职责】     作为 admin-only MCP config query 与 PATCH mutation 的唯一 Vue Query owner。
-  【对应 frontend/】 core/mcp/hooks.ts
   【架构位置】     L3 Vue server-state adapter
   【主要导出】     useMCPConfig
   【依赖关系】     @tanstack/vue-query · MCP api/query key

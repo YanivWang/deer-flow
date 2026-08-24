@@ -1,6 +1,5 @@
 /*
   【文件职责】     框架无关的 external store：快照 + 订阅 + 派发。
-  【对应 frontend/】 无；上游对应的是 SDK 内部状态加 React 的 useSyncExternalStore
   【架构位置】     L1
   【主要导出】     AgentExternalStore · createAgentExternalStore · applyReduceActions
   【依赖关系】     ./snapshot · ../message

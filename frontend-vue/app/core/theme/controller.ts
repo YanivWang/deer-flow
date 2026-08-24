@@ -1,6 +1,5 @@
 /*
   【文件职责】     独占 system/light/dark、media listener、storage 与 html class 生命周期。
-  【对应 frontend/】 components/theme-provider.tsx + next-themes
   【架构位置】     L3
   【主要导出】     createThemeController · ThemeController
   【依赖关系】     Vue refs · theme/bootstrap.ts

@@ -1,6 +1,5 @@
 /*
   【文件职责】     「这条流是不是真的卡住了」的纯判据（05 L7 / 08 §错误与 watchdog）。
-  【对应 frontend/】 无
   【架构位置】     L1
   【主要导出】     WatchdogInput · WatchdogVerdict · evaluateWatchdog
   【依赖关系】     ./session/state

@@ -1,6 +1,5 @@
 /*
   【文件职责】     对生产 Gateway proxy 统一执行路径、body 与流式策略。
-  【对应 frontend/】 frontend/next.config.js 与 docker/nginx/nginx.local.conf
   【架构位置】     L3
   【主要导出】     assertSafeGatewayRequest、proxyGatewayRequest
   【依赖关系】     消费 h3 proxyRequest 与 config/routes.ts 安全常量

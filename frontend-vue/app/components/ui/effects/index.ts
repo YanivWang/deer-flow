@@ -1,6 +1,5 @@
 /*
   【文件职责】     汇总 DeerFlow 产品视觉特效组件。
-  【对应 frontend/】 src/components/ui/effects exports
   【架构位置】     L3 product UI
   【主要导出】     AuroraText · ConfettiButton · FlickeringGrid · ShineBorder
   【依赖关系】     本目录 Vue 组件

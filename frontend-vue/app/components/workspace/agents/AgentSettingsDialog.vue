@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     用真实 /api/models capability 编辑 Agent 模型与生成参数。
-  【对应 frontend/】 components/workspace/agents/agent-settings-dialog.tsx
   【架构位置】     L3 Agent settings component
   【主要导出】     默认 AgentSettingsDialog
   【依赖关系】     agents/settings · agents/types · models/types · i18n

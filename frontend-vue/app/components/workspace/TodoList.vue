@@ -1,6 +1,5 @@
 <!--
   【文件职责】     折叠展示 thread.values.todos 的真实任务状态。
-  【对应 frontend/】 components/workspace/todo-list.tsx
   【架构位置】     L3 workspace UI adapter
   【主要导出】     默认 TodoList 组件
   【依赖关系】     core/todos

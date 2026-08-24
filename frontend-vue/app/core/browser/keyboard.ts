@@ -1,6 +1,5 @@
 /*
   【文件职责】     决定 browser panel keydown 是否进入远端 wire，并保留宿主快捷键与 IME。
-  【对应 frontend/】 src/components/workspace/browser-view/keyboard.ts
   【架构位置】     L3
   【主要导出】     decideBrowserKeyInput · FORWARDED_BROWSER_NAMED_KEYS
   【依赖关系】     browser/protocol.ts

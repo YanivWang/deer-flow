@@ -1,6 +1,5 @@
 /*
   【文件职责】     DeerFlow wire 事件名 → 流走向；内核唯一的协议知识入口的实现方。
-  【对应 frontend/】 SDK 的 StreamManager（没有可搬的对应文件）
   【架构位置】     L3
   【主要导出】     DEERFLOW_WIRE_EVENTS · parseWireEventName · classifyDeerFlowEvent
   【依赖关系】     @deerflow/agent-core · ./gap

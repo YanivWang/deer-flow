@@ -1,40 +1,33 @@
 /*
-  【文件职责】     在 production Preview 中关闭代理流选项，提供开启态的反事实对照。
-  【对应 frontend/】 frontend/next.config.js
-  【架构位置】     测试
-  【主要导出】     Playwright proxy-options config
-  【依赖关系】     启动 proxy probe 与 DEER_FLOW_PROXY_STREAMING=0 Preview
-  【边界与注意】   只验证 flag 影响，不是生产配置；生产默认始终开启。
+  【文件职责】     代理关闭流式转发（DEER_FLOW_PROXY_STREAMING=0）时的行为合同。
+  【架构位置】     E2E 套件配置
+  【主要导出】     Playwright config
+  【依赖关系】     tests/support/playwright-factory.ts · tests/support/proxy-probe.mjs（8012）· tests/e2e-proxy-options/**
+  【边界与注意】   独立成套的唯一原因就是这个构建期开关：它必须与默认流式代理分开验证。
 */
 
-import { defineConfig, devices } from "@playwright/test";
+import { defineSuite, nuxtPreview } from "./tests/support/playwright-factory";
 
-const baseURL = "http://localhost:3102";
+const port = process.env.E2E_PROXY_OPTIONS_PORT ?? "3102";
+const probePort = "8012";
 
-export default defineConfig({
-  testDir: "./tests/proxy-options",
-  fullyParallel: false,
-  workers: 1,
-  reporter: process.env.CI ? "github" : "list",
-  timeout: 30_000,
-  outputDir: "test-results/proxy-options",
-  use: { baseURL, trace: "retain-on-failure" },
-  projects: [
-    { name: "chromium-proxy-options", use: devices["Desktop Chrome"] },
-  ],
-  webServer: [
+export default defineSuite({
+  name: "e2e-proxy-options",
+  testDir: "./tests/e2e-proxy-options",
+  port,
+  serial: true,
+  servers: [
     {
       command: "node tests/support/proxy-probe.mjs",
-      url: "http://127.0.0.1:8012/health",
+      url: `http://127.0.0.1:${probePort}/health`,
       reuseExistingServer: false,
       timeout: 30_000,
     },
-    {
-      command:
-        "DEER_FLOW_INTERNAL_GATEWAY_BASE_URL=http://127.0.0.1:8012 DEER_FLOW_PROXY_STREAMING=0 ./node_modules/.bin/nuxt build && PORT=3102 HOST=127.0.0.1 DEER_FLOW_PROXY_STREAMING=0 ./node_modules/.bin/nuxt preview",
-      url: baseURL,
-      reuseExistingServer: false,
-      timeout: 240_000,
-    },
+    nuxtPreview({
+      port,
+      authDisabled: true,
+      gatewayPort: probePort,
+      publicEnv: { DEER_FLOW_PROXY_STREAMING: "0" },
+    }),
   ],
 });

@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-08 Vue Query owner 的 scope、poll、mutation、刷新与 cleanup。
-  【对应 frontend/】 core/channels/hooks.ts
   【架构位置】     WP-08 Vue DOM/composable test
   【主要导出】     无；Vitest cases
   【依赖关系】     @tanstack/vue-query · composables/useChannelConnections

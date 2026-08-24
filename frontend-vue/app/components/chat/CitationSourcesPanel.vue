@@ -1,6 +1,5 @@
 <!--
   【文件职责】     展开引用来源详情并复制单条 Markdown reference。
-  【对应 frontend/】 components/workspace/citations/citation-sources-panel.tsx
   【架构位置】     L3 消息 UI adapter
   【主要导出】     默认 CitationSourcesPanel 组件
   【依赖关系】     core/citations · core/clipboard · i18n

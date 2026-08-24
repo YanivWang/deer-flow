@@ -1,6 +1,5 @@
 /*
   【文件职责】     Thread share URL 与 export state-load 的无 UI 契约。
-  【对应 frontend/】 recent-chat-list.tsx · export-trigger.tsx
   【架构位置】     L3 thread actions
   【主要导出】     buildThreadShareUrl · loadThreadExportMessages
   【依赖关系】     thread path · API client-shaped contract

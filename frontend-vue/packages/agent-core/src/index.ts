@@ -1,6 +1,5 @@
 /*
   【文件职责】     agent-core 的公共导出面——包外唯一可见的东西。
-  【对应 frontend/】 无；M0 新增边界
   【架构位置】     L1
   【主要导出】     transport · session · store · message · errors · watchdog
   【依赖关系】     不依赖任何宿主框架

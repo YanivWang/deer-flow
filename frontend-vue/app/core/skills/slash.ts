@@ -1,25 +1,22 @@
+import {
+  RESERVED_SLASH_SKILL_NAMES as CONTRACT_RESERVED_NAMES,
+  SLASH_SKILL_PATTERN_SOURCE,
+} from "../contracts/backend.gen";
+
 import type { Skill } from "./type";
 
 /**
  * Composer control commands that own the leading slash. They must never be
- * shown as skill activations. These values plus {@link SLASH_SKILL_RE} mirror
- * the backend gate in `deerflow/skills/slash.py`; both sides are pinned to the
- * shared fixture at `contracts/slash_skill_contract.json` by contract tests
- * (`tests/unit/core/skills/slash-contract.test.ts` here,
- * `tests/test_slash_skill_contract.py` on the backend), so adding a reserved
- * command or changing the name grammar in only one language fails CI.
+ * shown as skill activations. Both this set and {@link SLASH_SKILL_RE} come from
+ * `contracts/slash_skill_contract.json`, which the backend gate in
+ * `deerflow/skills/slash.py` is pinned to as well — so the reserved list and the
+ * name grammar have exactly one source of truth across both languages.
  */
-export const RESERVED_SLASH_SKILL_NAMES = new Set([
-  "bootstrap",
-  "goal",
-  "help",
-  "memory",
-  "models",
-  "new",
-  "status",
-]);
+export const RESERVED_SLASH_SKILL_NAMES: ReadonlySet<string> = new Set(
+  CONTRACT_RESERVED_NAMES,
+);
 
-export const SLASH_SKILL_RE = /^\/([a-z0-9]+(?:-[a-z0-9]+)*)(?:\s+|$)/;
+export const SLASH_SKILL_RE = new RegExp(SLASH_SKILL_PATTERN_SOURCE);
 
 export type SlashSkillReference = {
   name: string;

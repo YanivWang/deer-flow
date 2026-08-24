@@ -1,6 +1,5 @@
 /*
   【文件职责】     Thread token、branch、metadata 与 context compact Gateway API。
-  【对应 frontend/】 core/threads/api.ts
   【架构位置】     L3
   【主要导出】     fetchThreadTokenUsage · branch/patch/compact thread helpers
   【依赖关系】     core/api/fetcher · core/api/errors · core/config

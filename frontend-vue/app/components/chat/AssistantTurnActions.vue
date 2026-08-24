@@ -1,6 +1,5 @@
 <!--
   【文件职责】     统一助手消息尾部的复制、分支与重新生成操作规格。
-  【对应 frontend/】 src/components/workspace/messages/message-list.tsx::AssistantTurn
   【架构位置】     L3 UI adapter
   【主要导出】     默认 AssistantTurnActions 组件
   【依赖关系】     Button L2 · lucide-vue-next

@@ -1,6 +1,5 @@
 /*
   【文件职责】     把一个 SSE 帧文本解析成事件帧或心跳注释帧。
-  【对应 frontend/】 无；起点是 44309ae7 的 app/core/api/stream/transport/parse-sse-event.ts
   【架构位置】     L1
   【主要导出】     parseSseFrame
   【依赖关系】     ./sse-event

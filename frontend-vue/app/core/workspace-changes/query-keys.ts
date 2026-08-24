@@ -1,6 +1,5 @@
 /*
   【文件职责】     声明 workspace changes 的唯一 Query identity。
-  【对应 frontend/】 frontend/src/core/workspace-changes/hooks.ts
   【架构位置】     L3 server-state identity
   【主要导出】     workspaceChangesKeys
   【依赖关系】     无

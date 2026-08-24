@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-09 Agent 卡片的 model/skills/tool-groups 纯展示模型。
-  【对应 frontend/】 components/workspace/agents/agent-card.tsx
   【架构位置】     WP-09 纯逻辑测试
   【主要导出】     无；Vitest cases
   【依赖关系】     core/agents/presentation · core/agents/types

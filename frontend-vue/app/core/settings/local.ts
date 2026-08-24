@@ -157,7 +157,9 @@ export function getLocalSettings(): LocalSettings {
       const settings = JSON.parse(json) as Partial<LocalSettings>;
       return mergeLocalSettings(settings);
     }
-  } catch {}
+  } catch {
+    // 存量 JSON 损坏时退回默认设置，而不是让整个设置读取抛出。
+  }
   return DEFAULT_LOCAL_SETTINGS;
 }
 

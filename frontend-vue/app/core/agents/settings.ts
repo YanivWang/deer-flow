@@ -1,6 +1,5 @@
 /*
   【文件职责】     将 Agent 设置草稿按真实模型 capability 归一化为精确 PUT body。
-  【对应 frontend/】 components/workspace/agents/agent-settings-dialog-helpers.ts
   【架构位置】     L3 Agent 设置协议
   【主要导出】     buildAgentSettingsUpdatePayload · resolveAgentSettingsModel
   【依赖关系】     agents/types · models/types

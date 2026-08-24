@@ -1,6 +1,5 @@
 /*
   【文件职责】     把 React 同源的 base settings/thread model store 暴露为 Vue 响应式状态。
-  【对应 frontend/】 core/settings/hooks.ts
   【架构位置】     L3 Vue 状态适配
   【主要导出】     useThreadSettings
   【依赖关系】     core/settings/local · store

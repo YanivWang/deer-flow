@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 Vue 应用层 run stream-mode 校验与非 resumable 请求语义。
-  【对应 frontend/】 tests/unit/core/api/stream-mode.test.ts
   【架构位置】     L3 测试
   【主要导出】     无
   【依赖关系】     @/core/api/stream-mode

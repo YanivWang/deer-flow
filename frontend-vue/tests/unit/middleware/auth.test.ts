@@ -1,6 +1,5 @@
 /*
   【文件职责】     锁定 workspace auth-disabled 的纯决策。
-  【对应 frontend/】 frontend/src/core/auth/auth-disabled-user.ts
   【架构位置】     测试
   【主要导出】     无
   【依赖关系】     消费 decideAuthNavigation
@@ -82,7 +81,7 @@ describe("buildLoginLocation（回跳目标的安全校验）", () => {
     expect(buildLoginLocation(candidate)).toBe("/login");
   });
 
-  it("与 COPIED 档的 validateAuthNextPath 共用一套规则，不另写一份", async () => {
+  it("与 validateAuthNextPath 共用一套规则，不另写一份", async () => {
     const { validateAuthNextPath } =
       await import("../../../app/core/auth/next-path");
     for (const candidate of ["/a", "//b", "/c\\d", "/e:f", "/ok/path"]) {

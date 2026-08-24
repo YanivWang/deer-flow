@@ -1,6 +1,5 @@
 /*
   【文件职责】     `createThreadRunner`：M2 内核的**第一个真实调用方**。
-  【对应 frontend/】 无——上游这一层是 SDK 内部的 StreamManager
   【架构位置】     L3 测试
   【主要导出】     无
   【依赖关系】     app/core/agent-deerflow/thread-runner.ts

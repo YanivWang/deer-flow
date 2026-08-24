@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     按显式 ArtifactPolicy 渲染 media/document/text/download-only 内容。
-  【对应 frontend/】 frontend/src/components/workspace/artifacts/artifact-file-detail.tsx
   【架构位置】     L3 extension reference
   【主要导出】     默认 ArtifactPreview 组件
   【依赖关系】     ArtifactPolicy · StreamMarkdown · HTML URL rewrite

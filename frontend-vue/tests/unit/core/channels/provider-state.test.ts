@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 provider capability/runtime-config 纯函数合同。
-  【对应 frontend/】 tests/unit/core/channels/provider-state.test.ts
   【架构位置】     L1 core unit test
   【主要导出】     Vitest cases
   【依赖关系】     core/channels/provider-state

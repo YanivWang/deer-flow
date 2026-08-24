@@ -1,6 +1,5 @@
 /*
   【文件职责】     wire 消息 ⇄ 内核归一化消息的双向适配（08 §消息契约）。
-  【对应 frontend/】 无；上游直接把 SDK 的 wire 类型当内存模型，不存在这一层
   【架构位置】     L3
   【主要导出】     WireMessageLike · toAgentMessage · toAgentMessages
                    toWireMessage · toWireMessages · toRenderableMessage

@@ -1,6 +1,5 @@
 /*
   【文件职责】     协调单个主 thread 的 sidecar restore-before-create 生命周期。
-  【对应 frontend/】 src/components/workspace/sidecar/context.tsx
   【架构位置】     L3 纯状态机
   【主要导出】     createSidecarSessionLifecycle · SidecarSessionPhase
   【依赖关系】     sidecar/context；通过注入调用 Gateway API

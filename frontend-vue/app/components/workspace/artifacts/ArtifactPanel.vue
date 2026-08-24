@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     编排 artifact 分类、有限加载、预览、编辑、动作与 stale 结果隔离。
-  【对应 frontend/】 src/components/workspace/artifacts/artifact-panel.tsx
   【架构位置】     L3 extension reference
   【主要导出】     默认 ArtifactPanel 组件
   【依赖关系】     ArtifactPolicy · useArtifactDraft · ArtifactFileList/Editor/Preview/Actions

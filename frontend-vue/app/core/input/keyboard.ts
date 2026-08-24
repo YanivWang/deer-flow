@@ -1,6 +1,5 @@
 /*
   【文件职责】     判断全局快捷键是否来自拥有文本输入的控件。
-  【对应 frontend/】 无；M7 keyboard guard
   【架构位置】     L3 input adapter
   【主要导出】     isEditableEventTarget
   【依赖关系】     DOM Element

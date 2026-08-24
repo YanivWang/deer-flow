@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     渲染终态 assistant reasoning，并复刻流式自动展开、settle 后一次性收起。
-  【对应 frontend/】 components/ai-elements/reasoning.tsx
   【架构位置】     L3 chat UI adapter
   【主要导出】     默认 ReasoningDisclosure 组件
   【依赖关系】     StreamMarkdown · core/markdown/safe-markdown

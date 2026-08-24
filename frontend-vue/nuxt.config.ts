@@ -1,6 +1,5 @@
 /*
   【文件职责】     装配 Nuxt M0 工程、主题、路由和生产安全配置。
-  【对应 frontend/】 frontend/next.config.js
   【架构位置】     L3
   【主要导出】     Nuxt 配置
   【依赖关系】     消费 config/routes.ts

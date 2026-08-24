@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 object-contain letterbox 坐标与 wheel delta 归一化合同。
-  【对应 frontend/】 frontend/src/components/workspace/browser-view/browser-view-panel.tsx
   【架构位置】     测试
   【主要导出】     browser geometry 回归用例
   【依赖关系】     app/core/browser/geometry.ts

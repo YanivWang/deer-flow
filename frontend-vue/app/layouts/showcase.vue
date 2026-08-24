@@ -1,6 +1,5 @@
 <!--
   【文件职责】     为公开只读案例提供无 workspace 控件的全屏外壳。
-  【对应 frontend/】 src/app/showcase/[thread_id]/layout.tsx
   【架构位置】     L3
   【主要导出】     showcase layout
   【依赖关系】     Nuxt layout slot

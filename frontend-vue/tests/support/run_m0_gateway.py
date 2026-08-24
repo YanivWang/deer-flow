@@ -1,6 +1,5 @@
 """
 【文件职责】     启动带受控事件保留窗口的真实 replay Gateway 供 M0 协议测试。
-【对应 frontend/】 frontend/playwright.real-backend.config.ts
 【架构位置】     测试
 【主要导出】     main
 【依赖关系】     复用 backend replay fixture/config builder 与 Gateway app

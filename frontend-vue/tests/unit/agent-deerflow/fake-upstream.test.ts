@@ -1,6 +1,5 @@
 /*
   【文件职责】     06 §M2 B 的**第 3 类证据**：对着一个真的 HTTP 后端跑完整会话。
-  【对应 frontend/】 无
   【架构位置】     L3 集成测试
   【主要导出】     无
   【依赖关系】     node:http · @deerflow/agent-core · @/core/agent-deerflow/*

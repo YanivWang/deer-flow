@@ -1,6 +1,5 @@
 /*
   【文件职责】     保留 React baseline poll cases，并固定 Vue WP-08 的到期即停语义。
-  【对应 frontend/】 tests/unit/core/channels/connect-poll.test.ts
   【架构位置】     L3 hand-maintained baseline adaptation
   【主要导出】     无；Vitest cases
   【依赖关系】     core/channels/connect-poll

@@ -1,6 +1,5 @@
 /*
   【文件职责】     解析 Gateway 的重放缺口载荷，并映射到内核的 replay_gap 错误。
-  【对应 frontend/】 frontend/src/core/api/api-client.ts 的 parseStreamReplayGap
   【架构位置】     L3
   【主要导出】     StreamReplayGapData · parseStreamReplayGap · replayGapError
   【依赖关系】     @deerflow/agent-core

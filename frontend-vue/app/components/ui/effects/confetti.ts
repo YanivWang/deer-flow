@@ -1,6 +1,5 @@
 /*
   【文件职责】     计算 confetti 是否启用及其发射参数。
-  【对应 frontend/】 src/components/ui/confetti-button.tsx
   【架构位置】     L3 product UI helper
   【主要导出】     shouldEmitConfetti · confettiOrigin
   【依赖关系】     无

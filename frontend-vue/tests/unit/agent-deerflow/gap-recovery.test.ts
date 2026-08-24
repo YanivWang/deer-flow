@@ -1,6 +1,5 @@
 /*
   【文件职责】     05 A4/A5/A6 的回归：gap 恢复的 rejoin 预算、不当结束、不取消 run。
-  【对应 frontend/】 无（上游的对应逻辑在 api-client.ts，但记账方式不同，见 gap-recovery.ts 文件头）
   【架构位置】     L3 测试
   【主要导出】     无
   【依赖关系】     app/core/agent-deerflow/gap-recovery.ts · ./event-map · @deerflow/agent-core

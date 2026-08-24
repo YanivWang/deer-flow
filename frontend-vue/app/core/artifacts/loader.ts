@@ -1,9 +1,8 @@
 /*
   【文件职责】     WP-06 有界加载正式 UTF-8 artifact，并保留 Gateway 错误与 revision。
-  【对应 frontend/】 frontend/src/core/artifacts/loader.ts
   【架构位置】     L3
   【主要导出】     ARTIFACT_PREVIEW_MAX_BYTES / loadArtifactContent / loadArtifactContentFromToolCall
-  【依赖关系】     见下方 import；改写清单由 scripts/land-retyped.mjs 声明
+  【依赖关系】     见下方 import。
   【边界与注意】   ADAPTED：只有显式 text policy 可调用；.skill/未知/二进制没有兼容分支。
 */
 

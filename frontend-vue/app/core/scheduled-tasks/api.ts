@@ -1,6 +1,5 @@
 /*
   【文件职责】     Scheduled-task list/detail/runs 与 mutation 的 Gateway HTTP adapter。
-  【对应 frontend/】 core/scheduled-tasks/api.ts
   【架构位置】     L3 scheduled-task API boundary
   【主要导出】     ScheduledTaskCreatePayload · ScheduledTaskUpdatePayload · scheduled-task API functions
   【依赖关系】     core api fetcher/errors/config · scheduled-task types

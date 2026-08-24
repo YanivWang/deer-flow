@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 browser remote keyboard、IME 与 host shortcut preventDefault 策略。
-  【对应 frontend/】 frontend/tests/unit/components/workspace/browser-view/keyboard.test.ts
   【架构位置】     测试
   【主要导出】     decideBrowserKeyInput 回归用例
   【依赖关系】     app/core/browser/keyboard.ts

@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-06 artifact 显式文件策略、文本加载/保存和 skill 行为边界。
-  【对应 frontend/】 frontend/src/core/utils/files.tsx
   【架构位置】     测试
   【主要导出】     classifyArtifact 策略矩阵回归
   【依赖关系】     app/core/artifacts/policy.ts

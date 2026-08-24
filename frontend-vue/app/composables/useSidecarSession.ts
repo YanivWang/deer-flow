@@ -1,6 +1,5 @@
 /*
   【文件职责】     持有 sidecar 的恢复/创建、run、草稿附件、HIL 与删除生命周期。
-  【对应 frontend/】 src/components/workspace/sidecar/context.tsx · sidecar-panel.tsx
   【架构位置】     L3 Vue session owner
   【主要导出】     useSidecarSession · SidecarSession
   【依赖关系】     useThreadStream · sidecar/session-lifecycle · uploads

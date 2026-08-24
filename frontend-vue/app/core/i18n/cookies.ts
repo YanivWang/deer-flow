@@ -1,6 +1,5 @@
 /*
   【文件职责】     locale cookie 的统一解析与写入（05 N4）。
-  【对应 frontend/】 core/i18n/cookies.ts
   【架构位置】     L3
   【主要导出】     LOCALE_COOKIE_NAME · LOCALE_COOKIE_MAX_AGE_SECONDS
                    parseLocaleCookie · serializeLocaleCookie · setLocaleInCookie

@@ -1,6 +1,5 @@
 <!--
   【文件职责】     以一个 splitpanes 组承载聊天区与 artifacts/sidecar/browser 共用右侧面板。
-  【对应 frontend/】 frontend/src/components/workspace/chats/chat-box.tsx
   【架构位置】     L3 workspace layout
   【主要导出】     WorkspacePanels
   【依赖关系】     splitpanes；面板业务开关仍由 AgentChat 的唯一状态路径拥有

@@ -1,6 +1,5 @@
 /*
   【文件职责】     Scheduled-task Vue Query key 与 mutation cache 目标的唯一注册表。
-  【对应 frontend/】 core/scheduled-tasks/hooks.ts
   【架构位置】     L3 server-state contract
   【主要导出】     scheduledTaskKeys · scheduledTaskMutationTargets
   【依赖关系】     scheduled-tasks/types

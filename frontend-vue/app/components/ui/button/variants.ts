@@ -1,6 +1,5 @@
 /*
   【文件职责】     定义 Button 的可复用 cva 样式合同。
-  【对应 frontend/】 frontend/src/components/ui/button.tsx
   【架构位置】     L2
   【主要导出】     buttonVariants、ButtonVariants
   【依赖关系】     被 Button.vue 与视觉测试引用

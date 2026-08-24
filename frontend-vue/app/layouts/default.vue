@@ -1,6 +1,5 @@
 <!--
   【文件职责】     提供营销占位页的公共布局。
-  【对应 frontend/】 frontend/src/app/layout.tsx
   【架构位置】     L3
   【主要导出】     default layout
   【依赖关系】     被三个营销页使用

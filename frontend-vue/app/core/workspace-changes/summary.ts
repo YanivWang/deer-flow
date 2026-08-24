@@ -1,11 +1,7 @@
 import type { WorkspaceChangeSummary, WorkspaceFileChange } from "./types";
 
 export type WorkspaceChangeLineClass =
-  | "addition"
-  | "context"
-  | "deletion"
-  | "hunk"
-  | "meta";
+  "addition" | "context" | "deletion" | "hunk" | "meta";
 
 export function getChangedFileCount(summary: WorkspaceChangeSummary) {
   return (

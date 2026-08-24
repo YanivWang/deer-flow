@@ -1,15 +1,8 @@
 export type WorkspaceChangeStatus =
-  | "created"
-  | "modified"
-  | "deleted"
-  | "symlink_created";
+  "created" | "modified" | "deleted" | "symlink_created";
 
 export type DiffUnavailableReason =
-  | "binary"
-  | "large"
-  | "sensitive"
-  | "truncated"
-  | "symlink";
+  "binary" | "large" | "sensitive" | "truncated" | "symlink";
 
 export interface WorkspaceChangeSummary {
   created: number;

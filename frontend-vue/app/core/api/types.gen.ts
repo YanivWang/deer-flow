@@ -1,6 +1,5 @@
 /*
   【文件职责】     Gateway REST 信封类型。**生成物，勿手改。**
-  【对应 frontend/】 无；上游这些类型是从 @langchain/langgraph-sdk 借的（02 §106 决定移除）
   【架构位置】     L3 类型
   【主要导出】     paths · components · operations（openapi-typescript 的固定三件套）
   【依赖关系】     baseline/openapi.snapshot.json

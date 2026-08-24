@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     展示子任务状态、模型、token、实时步骤与按需历史 backfill。
-  【对应 frontend/】 src/components/workspace/messages/subtask-card.tsx
   【架构位置】     L3 UI adapter
   【主要导出】     默认 SubtaskCard 组件
   【依赖关系】     core/tasks/api · core/tasks/view-model

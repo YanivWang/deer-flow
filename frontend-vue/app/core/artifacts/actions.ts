@@ -1,6 +1,5 @@
 /*
   【文件职责】     WP-06 open/download 前的 Gateway 可访问性预检与错误保真。
-  【对应 frontend/】 frontend/src/components/workspace/artifacts/artifact-file-detail.tsx
   【架构位置】     L3
   【主要导出】     ArtifactActionError / probeArtifactAction
   【依赖关系】     core/api/fetcher

@@ -1,6 +1,5 @@
 /*
   【文件职责】     为 route/thread 作用域异步任务提供 generation stale guard。
-  【对应 frontend/】 无独立文件；React input-box/chat-page 内为分散 request ref。
   【架构位置】     L3 纯状态机
   【主要导出】     createAsyncGeneration · AsyncGeneration
   【依赖关系】     无

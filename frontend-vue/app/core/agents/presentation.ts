@@ -1,6 +1,5 @@
 /*
   【文件职责】     将真实 Agent 响应转换为确定性的卡片展示模型。
-  【对应 frontend/】 components/workspace/agents/agent-card.tsx
   【架构位置】     L3 Agent presentation
   【主要导出】     buildAgentCardViewModel
   【依赖关系】     agents/types

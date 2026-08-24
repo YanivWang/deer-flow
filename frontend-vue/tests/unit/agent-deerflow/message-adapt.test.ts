@@ -1,10 +1,9 @@
 /*
   【文件职责】     08 §111 点名的 round-trip 测试：text / image / tool-call 内容不会丢失。
-  【对应 frontend/】 无；上游不需要证明等价，它直接用 SDK 的 wire 类型当内存模型
   【架构位置】     L3 测试
   【主要导出】     无
   【依赖关系】     app/core/agent-deerflow/message-adapt.ts
-                   ../frontend/public/demo/threads 下的 13 个 thread.json（516 条）
+                   public/demo/threads 下的 13 个 thread.json（516 条）
                    tests/fixtures/streams/deerflow-create.sse（golden trace）
   【边界与注意】   **这份测试与 tests/guards/message-content-contract.test.ts 不能互相顶替。**
                    后者是**类型层**护栏，钉的是 `AgentMessageContent` 联合本身
@@ -13,10 +12,8 @@
                    一次实测结论：`content[0]` + `"thinking" in part` 这类写法在
                    content 塌成 string 之后**编得过**，分支变死代码。
 
-                   夹具直接读 `../frontend/`，不再复制一份进 tests/fixtures：
-                   516 条消息序列化后 1.2MB，签一份进来只是把同一个仓库里的数据
-                   抄第二遍，而抄本会过期。代价是这份测试依赖同仓的 `frontend/`
-                   目录存在——所以**先断言 13 / 516 两个数**：夹具读空时必须当场红，
+                   夹具直接读本仓 `public/demo/`，与 Showcase 页面消费的是同一份数据，
+                   所以断言的是真实产品输入而不是另抄一份会过期的样本。
                    而不是安静地跑 0 条断言全绿。
 
                    流式那一半用的是 M0 真实录制（golden trace）而不是手写载荷。
@@ -41,7 +38,7 @@ import type { WireMessageLike } from "@/core/agent-deerflow/message-adapt";
 import type { AgentContentPart, Message } from "@/core/types/message";
 
 const THREADS_DIR = fileURLToPath(
-  new URL("../../../../frontend/public/demo/threads/", import.meta.url),
+  new URL("../../../public/demo/threads/", import.meta.url),
 );
 
 const GOLDEN_TRACE = fileURLToPath(

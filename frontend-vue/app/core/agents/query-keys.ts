@@ -1,6 +1,5 @@
 /*
   【文件职责】     集中声明 Agent Vue Query keys。
-  【对应 frontend/】 core/agents/hooks.ts
   【架构位置】     L3 server-state identity
   【主要导出】     agentKeys
   【依赖关系】     无

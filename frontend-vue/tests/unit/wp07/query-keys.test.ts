@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-07 query key 与 mutation invalidation 的唯一所有权。
-  【对应 frontend/】 core/scheduled-tasks/hooks.ts
   【架构位置】     WP-07 cache contract test
   【主要导出】     无；Vitest cases
   【依赖关系】     core/scheduled-tasks/query-keys

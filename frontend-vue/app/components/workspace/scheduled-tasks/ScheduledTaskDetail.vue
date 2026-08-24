@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     Scheduled-task 详情、完整动作入口和删除二次确认。
-  【对应 frontend/】 app/workspace/scheduled-tasks/page.tsx detail panel
   【架构位置】     L3 presentational component
   【主要导出】     默认 ScheduledTaskDetail
   【依赖关系】     scheduled-tasks cron/types · ScheduledTaskRunList · app i18n

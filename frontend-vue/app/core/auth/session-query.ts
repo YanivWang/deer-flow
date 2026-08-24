@@ -1,6 +1,5 @@
 /*
   【文件职责】     定义 Gateway session 的唯一 Vue Query key、queryFn 与缓存策略。
-  【对应 frontend/】 frontend/src/core/auth/AuthProvider.tsx
   【架构位置】     L3 authentication/server state
   【主要导出】     AUTH_SESSION_QUERY_KEY · authSessionQueryOptions
   【依赖关系】     @tanstack/vue-query · ./session

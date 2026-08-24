@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-12 Vue SFC 用户可见英文 source guard 与精确豁免边界。
-  【对应 frontend/】 无；Vue-owned maintenance gate
   【架构位置】     WP-12 tooling unit test
   【主要导出】     无；Vitest cases
   【依赖关系】     scripts/lib/i18n-source-guard.mjs

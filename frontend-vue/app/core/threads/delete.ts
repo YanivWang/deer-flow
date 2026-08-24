@@ -1,6 +1,5 @@
 /*
   【文件职责】     搜索并级联删除主 thread 的全部 sidecar，暴露部分失败重试信息。
-  【对应 frontend/】 core/threads/hooks.ts 的 deleteThread
   【架构位置】     L3
   【主要导出】     deleteThreadCascade · findSidecarThreadIdsForParent · error
   【依赖关系】     sidecar/thread · api/errors

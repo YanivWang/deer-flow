@@ -1,6 +1,5 @@
 /*
   【文件职责】     渲染合帧的调度判定（前沿 flush + 至多一次尾部 flush）。
-  【对应 frontend/】 core/threads/hooks.ts
   【架构位置】     L3（纯 TS）
   【主要导出】     STREAM_RENDER_COALESCE_MS · CoalesceDecision · decideCoalesce
   【依赖关系】     无

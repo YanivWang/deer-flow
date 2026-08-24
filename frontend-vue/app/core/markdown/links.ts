@@ -1,6 +1,5 @@
 /*
   【文件职责】     定义 Markdown href 协议 allowlist 与外链判定纯规则。
-  【对应 frontend/】 frontend/src/components/workspace/messages/markdown-link.tsx
   【架构位置】     L2 markdown
   【主要导出】     isSafeMarkdownHref · isExternalMarkdownHref
   【依赖关系】     Web URL 标准

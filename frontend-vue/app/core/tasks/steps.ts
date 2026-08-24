@@ -129,8 +129,7 @@ export function eventsToSteps(
       continue;
     }
     const content = event.content as
-      | (SubtaskStep & { task_id?: string })
-      | undefined;
+      (SubtaskStep & { task_id?: string }) | undefined;
     const eventTaskId = content?.task_id ?? event.metadata?.task_id;
     if (!content || eventTaskId !== taskId) {
       continue;

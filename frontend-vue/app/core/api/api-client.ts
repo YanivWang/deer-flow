@@ -1,6 +1,5 @@
 /*
   【文件职责】     `getAPIClient()` 的落点：把自写 REST client 装配好并缓存。
-  【对应 frontend/】 frontend/src/core/api/api-client.ts
   【架构位置】     L3
   【主要导出】     getAPIClient · resetAPIClients · gap 相关类型与 helper
   【依赖关系】     ./client · @/core/config · @/core/agent-deerflow/gap

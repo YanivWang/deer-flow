@@ -1,6 +1,5 @@
 /*
   【文件职责】     SSE 帧的形状：事件帧与心跳注释帧。
-  【对应 frontend/】 无；起点是 44309ae7 的 app/core/api/stream/transport/sse-event.ts
   【架构位置】     L1
   【主要导出】     SseEvent · SseFrame
   【依赖关系】     无

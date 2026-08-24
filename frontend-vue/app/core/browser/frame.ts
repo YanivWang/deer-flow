@@ -1,6 +1,5 @@
 /*
   【文件职责】     从 Gateway ToolMessage 元数据提取当前线程最新的 browser_view 静态帧。
-  【对应 frontend/】 src/components/workspace/messages/message-list.tsx
   【架构位置】     L3
   【主要导出】     BrowserViewFrame · latestBrowserViewFrame · reconcileBrowserMessageFrame
   【依赖关系】     core/types/message.ts

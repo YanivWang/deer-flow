@@ -1,6 +1,5 @@
 /*
   【文件职责】     穷举 Nitro proxy 请求体声明判定与大小边界。
-  【对应 frontend/】 Next/Nginx 请求转发边界
   【架构位置】     测试
   【主要导出】     无
   【依赖关系】     server/utils/gateway-proxy · config/routes

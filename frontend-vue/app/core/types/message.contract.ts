@@ -1,6 +1,5 @@
 /*
   【文件职责】     在类型层钉住 message.ts 的联合语义，塌陷时让 `make typecheck` 直接红。
-  【对应 frontend/】 无（本仓自写）
   【架构位置】     L3 类型断言（纯 type-only，编译后不产出任何运行时代码）
   【主要导出】     只有类型别名，运行时为空模块
   【依赖关系】     app/core/types/message.ts

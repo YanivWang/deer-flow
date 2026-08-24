@@ -1,5 +1,0 @@
-{
-  "expectedFileCount": 1,
-  "expectedTestCount": 8,
-  "specFiles": ["frontend-vue/tests/m7/sidebar-ime-a11y.spec.ts"]
-}

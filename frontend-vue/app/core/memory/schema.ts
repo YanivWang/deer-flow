@@ -1,6 +1,5 @@
 /*
   【文件职责】     解析并运行时校验 Memory export，明确 extra 与 duplicate import 合同。
-  【对应 frontend/】 components/workspace/settings/memory-settings-page.tsx
   【架构位置】     L3 framework-neutral Memory contract
   【主要导出】     validateImportedMemory · parseMemoryImportText
   【依赖关系】     memory types

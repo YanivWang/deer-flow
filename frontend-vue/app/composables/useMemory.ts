@@ -1,6 +1,5 @@
 /*
   【文件职责】     作为 Memory document 与 CRUD/import mutations 的唯一 Vue Query owner。
-  【对应 frontend/】 core/memory/hooks.ts
   【架构位置】     L3 Vue server-state adapter
   【主要导出】     useMemory
   【依赖关系】     @tanstack/vue-query · memory api/query key

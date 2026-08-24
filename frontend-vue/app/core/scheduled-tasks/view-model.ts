@@ -1,6 +1,5 @@
 /*
   【文件职责】     Scheduled-task 全状态/类型筛选与 selection 恢复纯逻辑。
-  【对应 frontend/】 app/workspace/scheduled-tasks/page.tsx
   【架构位置】     L3 view model
   【主要导出】     filterScheduledTasks · resolveScheduledTaskSelection
   【依赖关系】     scheduled-tasks/types

@@ -1,6 +1,5 @@
 /*
   【文件职责】     在消息 Markdown 渲染树内传递流式动画状态。
-  【对应 frontend/】 streamdown 内部 animation context
   【架构位置】     L2 markdown rendering contract
   【主要导出】     markdownStreamingKey
   【依赖关系】     Vue dependency injection

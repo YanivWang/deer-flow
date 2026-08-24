@@ -1,6 +1,5 @@
 <!--
   【文件职责】     按用户偏好渲染 assistant turn 总量或 step-debug token usage。
-  【对应 frontend/】 components/workspace/messages/message-token-usage.tsx
   【架构位置】     L3 消息 UI adapter
   【主要导出】     默认 MessageTokenUsage 组件
   【依赖关系】     core/messages/usage · usage-model · i18n

@@ -1,6 +1,5 @@
 /*
   【文件职责】     将 auth 纯决策接到 Nuxt 路由边界。
-  【对应 frontend/】 frontend/src/app/workspace/layout.tsx
   【架构位置】     L3
   【主要导出】     全局路由 middleware
   【依赖关系】     消费 runtimeConfig 与 decideAuthNavigation

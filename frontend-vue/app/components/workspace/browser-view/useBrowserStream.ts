@@ -1,6 +1,5 @@
 /*
   【文件职责】     把 browser 连接状态机适配为 Vue refs，并唯一管理帧缓冲与 scope 生命周期。
-  【对应 frontend/】 src/components/workspace/browser-view/use-browser-stream.ts
   【架构位置】     L3
   【主要导出】     useBrowserStream
   【依赖关系】     browser connection core · browser-api · frame-buffer · Vue scope

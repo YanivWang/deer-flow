@@ -1,6 +1,5 @@
 /*
   【文件职责】     提供 Memory fact 表单、PATCH diff 与 search/filter 纯规则。
-  【对应 frontend/】 components/workspace/settings/memory-settings-page.tsx
   【架构位置】     L3 framework-neutral Memory view model
   【主要导出】     validate/build fact input · filterMemory
   【依赖关系】     memory types

@@ -1,6 +1,5 @@
 /*
   【文件职责】     Vue Query 的 thread 列表唯一 server-state 所有者与写操作镜像。
-  【对应 frontend/】 core/threads/hooks.ts 的 useInfiniteThreads / useThreads
   【架构位置】     L3 Vue adapter
   【主要导出】     useThreads
   【依赖关系】     core/threads/infinite · delete · cache-invalidation

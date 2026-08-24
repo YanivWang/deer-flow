@@ -1,6 +1,5 @@
 /*
   【文件职责】     locale cookie 的解析与序列化（05 N4）。
-  【对应 frontend/】 无对应单测——上游 `cookies.ts` 没有测试
   【架构位置】     L3 测试
   【主要导出】     无
   【依赖关系】     app/core/i18n/cookies.ts

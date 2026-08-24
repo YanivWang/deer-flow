@@ -1,6 +1,5 @@
 /*
   【文件职责】     按 user/agent/thread 选择器批量清理 tab 级 composer 草稿。
-  【对应 frontend/】 core/threads/composer-draft.ts 的生命周期扩展
   【架构位置】     L3 草稿持久化
   【主要导出】     clearComposerDrafts · ComposerDraftSelector
   【依赖关系】     threads/composer-draft

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     按 React 的可观察顺序渲染 processing 消息组，收敛推理、工具与结果 UI。
-  【对应 frontend/】 components/workspace/messages/message-group.tsx
   【架构位置】     L3 UI adapter
   【主要导出】     默认 ProcessingMessageGroup 组件
   【依赖关系】     core/messages/processing · StreamMarkdown · ProcessingToolStep

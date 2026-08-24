@@ -1,6 +1,5 @@
 /*
   【文件职责】     代码块槽位的首帧 DOM 对照与高亮行为验收。
-  【对应 frontend/】 streamdown 的 `code-block` 槽位（录在夹具的 styledHtml 里）
   【架构位置】     门禁测试
   【主要导出】     无
   【依赖关系】     tests/fixtures/react-markdown-dom.json · app/components/markdown/*

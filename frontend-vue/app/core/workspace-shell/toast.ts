@@ -1,6 +1,5 @@
 /*
   【文件职责】     Workspace 全局 toast 的唯一 client-state owner 与注入契约。
-  【对应 frontend/】 workspace-content.tsx 的 Sonner Toaster
   【架构位置】     L3 workspace shell
   【主要导出】     create/provide/useWorkspaceToast
   【依赖关系】     Vue ref/provide/inject

@@ -1,6 +1,5 @@
 /*
   【文件职责】     管线装配的两处顺序敏感点、处理器缓存、以及切词的纯函数语义。
-  【对应 frontend/】 无
   【架构位置】     单元测试
   【主要导出】     无
   【依赖关系】     app/core/markdown/{pipeline,plugins,animate,safe-markdown}

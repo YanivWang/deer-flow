@@ -1,6 +1,5 @@
 <!--
   【文件职责】     渲染持久化 HumanMessage 的图片预览与普通文件下载卡。
-  【对应 frontend/】 components/workspace/messages/message-list-item.tsx
   【架构位置】     L3 消息 UI adapter
   【主要导出】     默认 MessageAttachments 组件
   【依赖关系】     core/messages/attachments · core/artifacts

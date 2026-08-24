@@ -1,6 +1,5 @@
 /*
   【文件职责】     `useThreadStream` 的生产流模式与生命周期：C8/C9 顺序锚点、A7 清空、A8 失效。
-  【对应 frontend/】 tests/unit/core/threads/local-turn-order.dom.test.tsx（110 行）
   【架构位置】     L3 测试（dom project）
   【主要导出】     无
   【依赖关系】     app/composables/useThreadStream.ts · @tanstack/vue-query

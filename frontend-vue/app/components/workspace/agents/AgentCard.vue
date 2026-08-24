@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     精确展示 Agent 的 model、skills 与 tool-group filter，并提供 lifecycle actions。
-  【对应 frontend/】 components/workspace/agents/agent-card.tsx
   【架构位置】     L3 Agent gallery component
   【主要导出】     默认 AgentCard
   【依赖关系】     agents/presentation · i18n · workspace routes

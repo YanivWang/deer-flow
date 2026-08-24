@@ -1,14 +1,12 @@
 #!/usr/bin/env node
 /*
   【文件职责】     词典体检：check / diff / unused（06 §M1 1d、03 §scripts）。
-  【对应 frontend/】 无（工具链）
   【架构位置】     构建脚本
   【主要导出】     CLI：check（门禁）/ diff（对基线）/ unused（无人引用的 key）/ --refresh
   【依赖关系】     app/core/i18n/locales/{en-US,zh-CN}.ts；产物 baseline/i18n-keys.json
-  【边界与注意】   **基线必须趁词典还是原样的时候取。** 06 §1d 把这条写在 M1 而不是 M4b，
-                   理由是：等组件重写完再补，基线就已经是「被改过的词典」，
-                   「这次重写漏了哪个 key」从此无从判断。词典是本窗口随 RETYPED
-                   一起落地的，所以现在正是取基线的时刻。
+  【边界与注意】   基线钉的是「当前词典有哪些 key」。它的用途是让一次改动里
+                   **丢 key** 这件事必须被显式承认：删 key 要连同刷新基线一起进 review，
+                   而不是悄悄少一条翻译。
 
                    三个子命令各管一件事，别混：
 

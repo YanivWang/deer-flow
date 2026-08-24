@@ -1,6 +1,5 @@
 /*
   【文件职责】     为纯 happy-dom 组件测试提供 Nuxt 在真实应用里注入的默认 i18n 上下文。
-  【对应 frontend/】 无；React 测试由自身 provider 包装。
   【架构位置】     测试基础设施
   【主要导出】     无；由 vitest.config.ts 的 dom project 在每个测试前执行
   【依赖关系】     @vue/test-utils 全局 mocks · Vitest globals · en-US 词典

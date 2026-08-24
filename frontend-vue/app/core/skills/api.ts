@@ -1,6 +1,5 @@
 /*
   【文件职责】     读取 skill catalog，并调用全局启停与安装 HTTP 合同。
-  【对应 frontend/】 core/skills/api.ts
   【架构位置】     L3 Gateway adapter
   【主要导出】     SkillRequestError · loadSkills · enableSkill · installSkill
   【依赖关系】     authenticated fetch · shared Gateway error parser

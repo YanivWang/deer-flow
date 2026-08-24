@@ -1,6 +1,5 @@
 /*
   【文件职责】     隔离 consumer 的最小可运行 session 验证。
-  【对应 frontend/】 无；M8 consumer 示例
   【架构位置】     consumer composition root
   【主要导出】     无（CLI）
   【依赖关系】     RunProtocol + EventReducer + message adapter + external store

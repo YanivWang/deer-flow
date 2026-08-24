@@ -1,6 +1,5 @@
 /*
   【文件职责】     M3 的 gate：Vue 渲染层与 React 版对同一语料做归一化 DOM 等价比对。
-  【对应 frontend/】 frontend/ 的 streamdown@2.5.0（录制成夹具）
   【架构位置】     门禁测试
   【主要导出】     无
   【依赖关系】     tests/fixtures/{markdown-corpus.mjs,react-markdown-dom.json} ·

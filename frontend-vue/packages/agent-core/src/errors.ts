@@ -1,6 +1,5 @@
 /*
   【文件职责】     内核统一的错误类型与「能不能退避重连」的唯一判据。
-  【对应 frontend/】 无；上游把这些情况散在 SDK 与 hooks 里
   【架构位置】     L1
   【主要导出】     AgentErrorKind · AgentStreamError · isRetryableKind
   【依赖关系】     无

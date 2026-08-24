@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     渲染 processing 视图模型中的单个 DeerFlow 工具步骤。
-  【对应 frontend/】 components/workspace/messages/message-group.tsx::ToolCall
   【架构位置】     L3 UI adapter
   【主要导出】     默认 ProcessingToolStep 组件
   【依赖关系】     core/messages/processing · artifacts · markdown CodeBlock

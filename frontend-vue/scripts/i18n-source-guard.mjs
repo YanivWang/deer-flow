@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /*
   【文件职责】     执行 WP-12 产品 Vue SFC 英文硬编码阻断门禁。
-  【对应 frontend/】 无；Vue-owned maintenance gate
   【架构位置】     构建脚本
   【主要导出】     CLI
   【依赖关系】     scripts/lib/i18n-source-guard.mjs

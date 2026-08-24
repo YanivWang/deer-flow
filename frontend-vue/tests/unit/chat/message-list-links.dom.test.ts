@@ -1,6 +1,5 @@
 /*
   【文件职责】     从真实 MessageList → StreamMarkdown components 路径验证链接安全与业务解析。
-  【对应 frontend/】 frontend/src/components/workspace/messages/markdown-link.tsx
   【架构位置】     测试
   【主要导出】     无
   【依赖关系】     MessageList.vue · StreamMarkdown.vue · MarkdownLink.vue

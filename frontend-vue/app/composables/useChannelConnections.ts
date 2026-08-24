@@ -1,6 +1,5 @@
 /*
   【文件职责】     作为 channel providers/connections、mutations 与 connect poll 的唯一 Vue Query owner。
-  【对应 frontend/】 src/core/channels/hooks.ts
   【架构位置】     L3 Vue server-state adapter
   【主要导出】     useChannelConnections · ChannelConnectFlow
   【依赖关系】     @tanstack/vue-query · core/channels

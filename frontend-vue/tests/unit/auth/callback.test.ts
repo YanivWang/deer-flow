@@ -1,6 +1,5 @@
 /*
   【文件职责】     锁定 OIDC callback 的 session 分类与安全回跳决策。
-  【对应 frontend/】 frontend/src/app/(auth)/auth/callback/page.tsx
   【架构位置】     测试
   【主要导出】     无
   【依赖关系】     app/core/auth/callback · next-path

@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-10 Memory/Skills/MCP 设置页的预览确认、权限与 exact mutation DOM 行为。
-  【对应 frontend/】 memory/skill/tool settings pages
   【架构位置】     WP-10 Vue DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     Settings components · mocked query owners · i18n

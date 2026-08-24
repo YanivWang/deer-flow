@@ -1,6 +1,5 @@
 /*
   【文件职责】     将 allowlisted demo artifact 请求重定向到构建内静态资源。
-  【对应 frontend/】 static-mode artifact URL branch
   【架构位置】     Nitro server route
   【主要导出】     GET /mock/api/threads/:thread_id/artifacts/**
   【依赖关系】     shared/showcase · h3

@@ -1,6 +1,5 @@
 /*
   【文件职责】     侧栏无限列表的分页取数、游标推导与缓存镜像写入。
-  【对应 frontend/】 core/threads/hooks.ts
   【架构位置】     L3
   【主要导出】     INFINITE_THREADS_PAGE_SIZE · INFINITE_THREADS_QUERY_KEY_PREFIX
                    fetchInfiniteThreadsPage · getInfiniteThreadsNextPageParam

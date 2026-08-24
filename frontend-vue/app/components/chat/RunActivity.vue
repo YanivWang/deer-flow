@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     在 run 尚无终态 assistant 气泡时显示实时工作状态与墙钟时长。
-  【对应 frontend/】 components/workspace/messages/run-duration.tsx::RunActivity
   【架构位置】     L3 chat UI adapter
   【主要导出】     默认 RunActivity 组件
   【依赖关系】     core/messages/run-duration

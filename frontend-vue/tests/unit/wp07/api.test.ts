@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-07 scheduled-task HTTP method/path/query/body/error 合同。
-  【对应 frontend/】 tests/unit/core/scheduled-tasks/hooks.test.ts
   【架构位置】     WP-07 API contract test
   【主要导出】     无；Vitest cases
   【依赖关系】     core/scheduled-tasks/api · mocked fetcher

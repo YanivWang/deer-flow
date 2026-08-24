@@ -1,6 +1,5 @@
 /*
   【文件职责】     在 Playwright 用例前预热 Nuxt preview。
-  【对应 frontend/】 frontend/playwright.config.ts
   【架构位置】     测试
   【主要导出】     globalSetup
   【依赖关系】     读取 PLAYWRIGHT_BASE_URL

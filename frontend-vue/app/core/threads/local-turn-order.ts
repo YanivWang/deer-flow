@@ -1,6 +1,5 @@
 /*
   【文件职责】     05 C8 / C9：本地提交回合的顺序锚点。
-  【对应 frontend/】 core/threads/hooks.ts
   【架构位置】     L3（纯 TS）
   【主要导出】     restoreLocalTurnMessageOrder
   【依赖关系】     ./message-identity · ../messages/utils · ../types/message

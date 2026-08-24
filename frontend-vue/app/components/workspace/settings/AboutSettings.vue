@@ -1,6 +1,5 @@
 <!--
   【文件职责】     展示 DeerFlow 版本与项目说明。
-  【对应 frontend/】 src/components/workspace/settings/about-settings.tsx
   【架构位置】     L3
   【主要导出】     默认 AboutSettings 组件
   【依赖关系】     settings dialog

@@ -1,6 +1,5 @@
 /*
   【文件职责】     解析 composer 默认模型并按模型能力规范化运行上下文。
-  【对应 frontend/】 components/workspace/input-box.tsx
   【架构位置】     L3 模型/提交协议适配
   【主要导出】     resolveComposerModel · normalizeComposerContext
   【依赖关系】     models/types

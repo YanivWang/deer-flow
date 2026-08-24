@@ -1,6 +1,5 @@
 /*
   【文件职责】     06 §M2 验收清单的「接缝」一条：gap-recovery → reducer → store 的组合路径。
-  【对应 frontend/】 无
   【架构位置】     L3 测试
   【主要导出】     无
   【依赖关系】     agent-deerflow/{gap-recovery,reducer,message-adapt,event-map} · @deerflow/agent-core

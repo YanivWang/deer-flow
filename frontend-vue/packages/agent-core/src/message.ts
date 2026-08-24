@@ -1,6 +1,5 @@
 /*
   【文件职责】     内核归一化后的消息形状（08 §消息契约逐字实现）。
-  【对应 frontend/】 无；上游直接用 SDK 的 wire 类型当内存模型
   【架构位置】     L1
   【主要导出】     AgentMessageRole · AgentContentPart · AgentMessageContent
                    AgentToolCall · AgentMessage · createAgentMessage

@@ -1,6 +1,5 @@
 <!--
   【文件职责】     在工作区持续显示 Gateway unavailable，并提供同页重试/恢复路径。
-  【对应 frontend/】 frontend/src/components/workspace/gateway-offline-banner.tsx
   【架构位置】     L3 workspace authentication surface
   【主要导出】     默认组件
   【依赖关系】     useAuthSession · auth decision · workspace layout

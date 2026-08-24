@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     渲染 workspace 唯一的可访问 toast viewport。
-  【对应 frontend/】 workspace-content.tsx 的 Sonner Toaster
   【架构位置】     L3 workspace shell
   【主要导出】     默认 WorkspaceToaster 组件
   【依赖关系】     workspace-shell/toast · i18n

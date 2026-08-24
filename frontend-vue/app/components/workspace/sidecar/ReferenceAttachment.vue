@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     显示 sidecar 消息选区引用附件。
-  【对应 frontend/】 src/components/workspace/sidecar/reference-attachment.tsx
   【架构位置】     L3 extension reference
   【主要导出】     默认 ReferenceAttachment 组件
   【依赖关系】     useSidecar SidecarReference

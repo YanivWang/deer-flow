@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     管理当前用户账号资料与密码。
-  【对应 frontend/】 src/components/workspace/settings/account-settings.tsx
   【架构位置】     L3
   【主要导出】     默认 AccountSettings 组件
   【依赖关系】     Gateway auth/account APIs

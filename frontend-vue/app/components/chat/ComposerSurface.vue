@@ -1,6 +1,5 @@
 <!--
   【文件职责】     提供主会话与 sidecar 共用的输入框视觉边界和统一焦点环。
-  【对应 frontend/】 src/components/ui/input-group.tsx::InputGroup
   【架构位置】     L3
   【主要导出】     默认 ComposerSurface 组件
   【依赖关系】     Tailwind :has() · data-slot=input-group-control

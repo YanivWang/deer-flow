@@ -1,6 +1,5 @@
 /*
   【文件职责】     以 Vue Query 持有线程最终 token usage snapshot。
-  【对应 frontend/】 core/threads/hooks.ts 的 useThreadTokenUsage
   【架构位置】     L3 Vue Query adapter
   【主要导出】     useThreadTokenUsage
   【依赖关系】     core/threads/api · token-usage

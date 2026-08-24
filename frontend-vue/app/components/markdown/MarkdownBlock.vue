@@ -1,7 +1,6 @@
 <script lang="ts">
 /*
   【文件职责】     渲染一个 markdown 块：管线 → hast →（可选切词）→ vnode。
-  【对应 frontend/】 streamdown 内部的 `Block` 组件
   【架构位置】     L2 —— 通用渲染层组件
   【主要导出】     默认组件
   【依赖关系】     @/core/markdown/{pipeline,render}

@@ -1,6 +1,5 @@
 /*
   【文件职责】     05 A7 / A8：停止与 gap 之后的缓存失效与延迟补刀。
-  【对应 frontend/】 core/threads/hooks.ts
   【架构位置】     L3
   【主要导出】     THREAD_CACHE_KEYS · invalidateStoppedThreadCaches
                    STOP_THREAD_FINALIZATION_REFETCH_DELAY_MS

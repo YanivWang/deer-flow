@@ -1,6 +1,5 @@
 /*
   【文件职责】     把 M0 录到的 Gateway 协议事实钉成可执行断言（06 §M2 的"先写 L3 测试"）。
-  【对应 frontend/】 frontend/src/core/api/api-client.ts（被替代的对象）
   【架构位置】     L3 测试
   【主要导出】     无
   【依赖关系】     @/core/agent-deerflow/* · tests/fixtures/streams/*.sse
@@ -10,8 +9,7 @@
                    Location，两个 header 被当成等价的——而实测 Gateway 只发前者。
 
                    测试放 tests/unit/agent-deerflow/ 而不是 tests/unit/core/：
-                   后者是 codemod 的生成区，手写文件进去会让 collected-check 红
-                   （"收集到台账里没有的迁移测试"）。
+                   它断言的是本仓自有的 DeerFlow 协议适配层，不是 core 里的纯业务函数。
 */
 
 import { readFileSync } from "node:fs";

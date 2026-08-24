@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     Scheduled-task 列表、选择态、加载态与空态。
-  【对应 frontend/】 app/workspace/scheduled-tasks/page.tsx task cards
   【架构位置】     L3 presentational component
   【主要导出】     默认 ScheduledTaskList
   【依赖关系】     scheduled-tasks/types · app i18n

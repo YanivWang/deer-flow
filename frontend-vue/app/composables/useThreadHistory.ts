@@ -1,6 +1,5 @@
 /*
   【文件职责】     thread 历史的 vue-query 无限查询与跨刷新对账（05 C1 / C6）。
-  【对应 frontend/】 core/threads/hooks.ts 的 useThreadHistory
   【架构位置】     L3（Vue 适配）
   【主要导出】     useThreadHistory
   【依赖关系】     @tanstack/vue-query · @/core/threads/history · message-identity

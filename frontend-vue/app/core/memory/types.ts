@@ -1,6 +1,5 @@
 /*
   【文件职责】     描述 Gateway Memory document、fact metadata 与 CRUD payload。
-  【对应 frontend/】 core/memory/types.ts
   【架构位置】     L3 HTTP contract types
   【主要导出】     UserMemory · MemoryFact · create/PATCH inputs
   【依赖关系】     generated OpenAPI components

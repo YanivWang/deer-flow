@@ -1,6 +1,5 @@
 /*
   【文件职责】     Scheduled-task 表单状态、Gateway payload 与 DST 严格转换的纯逻辑。
-  【对应 frontend/】 app/workspace/scheduled-tasks/page.tsx + scheduled-task-schedule-input.tsx
   【架构位置】     L3 scheduled-task application core
   【主要导出】     ScheduledTaskDraft 与 create/edit/recipe/payload 转换函数
   【依赖关系】     cron · recipes · schedule · types · api payload types

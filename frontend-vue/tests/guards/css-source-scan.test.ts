@@ -1,6 +1,5 @@
 /*
   【文件职责】     守住 `main.css` 不去扫一个不存在的 streamdown dist。
-  【对应 frontend/】 frontend/src/styles/globals.css:4-6
   【架构位置】     门禁测试
   【主要导出】     无
   【依赖关系】     app/assets/css/main.css

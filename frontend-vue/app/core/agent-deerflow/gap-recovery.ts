@@ -1,6 +1,5 @@
 /*
   【文件职责】     05 A4–A6：把 gap 恢复的「L3 决定」那一半补上，含 5 次 rejoin 预算。
-  【对应 frontend/】 frontend/src/core/api/api-client.ts 的 recoverStreamReplayGaps
   【架构位置】     L3
   【主要导出】     MAX_STREAM_GAP_RECOVERIES · GapRecoveryOptions · createGapAwareRun
   【依赖关系】     @deerflow/agent-core · ./endpoints · ./gap · ./run-protocol

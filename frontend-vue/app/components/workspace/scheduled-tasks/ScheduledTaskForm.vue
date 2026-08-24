@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     Scheduled-task create/edit 表单与 recipe 应用 UI。
-  【对应 frontend/】 app/workspace/scheduled-tasks/page.tsx
   【架构位置】     L3 scheduled-task form component
   【主要导出】     默认 ScheduledTaskForm
   【依赖关系】     ScheduledTaskScheduleInput · form pure logic · recipes

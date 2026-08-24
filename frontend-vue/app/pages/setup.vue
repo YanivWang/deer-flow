@@ -1,6 +1,5 @@
 <!--
   【文件职责】     提供 Gateway 首次初始化与管理员密码设置页面。
-  【对应 frontend/】 src/app/setup/page.tsx
   【架构位置】     L3 application page
   【主要导出】     默认 setup page
   【依赖关系】     Gateway auth setup API

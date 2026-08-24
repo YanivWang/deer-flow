@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-09 Agent Vue Query 的 feature gate、single owner 与 mutation cache sync。
-  【对应 frontend/】 core/agents/hooks.ts
   【架构位置】     WP-09 Vue composable DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     useAgents · QueryClient · mocked Agent API

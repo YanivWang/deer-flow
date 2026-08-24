@@ -1,6 +1,5 @@
 /*
   【文件职责】     把示例后端事件归约成完整 consumer state 与规范化消息。
-  【对应 frontend/】 无；M8 consumer 示例
   【架构位置】     consumer L3 adapter
   【主要导出】     ExampleEvent · ExampleState · reduceExampleEvent
   【依赖关系】     @deerflow/agent-core EventReducer · ./message-adapter

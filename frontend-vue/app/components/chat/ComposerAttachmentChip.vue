@@ -1,6 +1,5 @@
 <!--
   【文件职责】     渲染输入区待发送附件，包含图片缩略图、移除入口与悬停详情。
-  【对应 frontend/】 src/components/ai-elements/prompt-input.tsx::PromptInputAttachment
   【架构位置】     L3
   【主要导出】     默认 ComposerAttachmentChip 组件
   【依赖关系】     File · object URL · Reka HoverCard

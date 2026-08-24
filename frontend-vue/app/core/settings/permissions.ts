@@ -1,6 +1,5 @@
 /*
   【文件职责】     从单一 session/auth-disabled 事实派生 Settings 权限视图。
-  【对应 frontend/】 core/auth/AuthProvider.tsx · settings skill/tool pages
   【架构位置】     L3 permission view model
   【主要导出】     deriveSettingsPermissions · SettingsPermissionError
   【依赖关系】     auth session types

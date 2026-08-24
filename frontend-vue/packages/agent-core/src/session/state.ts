@@ -1,6 +1,5 @@
 /*
   【文件职责】     run session 的状态枚举（08 §Run session 逐字实现）。
-  【对应 frontend/】 无；上游只有 `isLoading` 一个布尔
   【架构位置】     L1
   【主要导出】     RunSessionState · SessionOutput
   【依赖关系】     ../errors · ../transport/sse-event

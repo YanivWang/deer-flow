@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     编辑 once/cron 两种 Gateway schedule，并提供五种 cron preset、时区和预览。
-  【对应 frontend/】 components/workspace/scheduled-task-schedule-input.tsx
   【架构位置】     L3 scheduled-task form component
   【主要导出】     默认 ScheduledTaskScheduleInput
   【依赖关系】     scheduled-tasks cron/schedule · app i18n

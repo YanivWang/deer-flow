@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     编排 DeerFlow settings 的导航、路由深链与可访问 modal 生命周期。
-  【对应 frontend/】 settings-dialog.tsx · workspace-settings-deep-link.tsx
   【架构位置】     L3 workspace settings shell
   【主要导出】     默认 SettingsDialog 组件
   【依赖关系】     Reka Dialog · useSettingsDialog · vue-router · settings panels

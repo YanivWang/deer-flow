@@ -1,6 +1,5 @@
 /*
   【文件职责】     持有单个 thread 的 artifact 面板、选择、草稿与恢复状态。
-  【对应 frontend/】 frontend/src/components/workspace/artifacts/context.tsx
   【架构位置】     L3（DeerFlow artifacts）
   【主要导出】     useArtifactsPanel
   【依赖关系】     core/artifacts · sessionStorage · AgentChat/ArtifactPanel

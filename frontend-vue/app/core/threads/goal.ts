@@ -1,6 +1,5 @@
 /*
   【文件职责】     解析 /goal 命令、限制目标长度并读取 Gateway 错误。
-  【对应 frontend/】 src/components/workspace/input-box-helpers.ts
   【架构位置】     L3
   【主要导出】     goal command helpers
   【依赖关系】     DeerFlow GoalState

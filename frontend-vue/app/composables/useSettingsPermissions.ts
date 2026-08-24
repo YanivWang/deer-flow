@@ -1,6 +1,5 @@
 /*
   【文件职责】     将唯一 auth session 与 auth-disabled synthetic admin 映射为 Settings 权限。
-  【对应 frontend/】 core/auth/AuthProvider.tsx · settings pages
   【架构位置】     L3 permission adapter
   【主要导出】     useSettingsPermissions
   【依赖关系】     useAuthSession · settings/permissions

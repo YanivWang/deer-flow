@@ -1,6 +1,5 @@
 """
 【文件职责】     为 G0-7 提供仓库内可控的最小 OIDC provider。
-【对应 frontend/】 无；测试基础设施
 【架构位置】     测试
 【主要导出】     main
 【依赖关系】     只用 stdlib + backend venv 已有的 PyJWT/cryptography

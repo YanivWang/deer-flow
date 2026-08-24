@@ -1,13 +1,9 @@
 /*
-  【文件职责】     见下方源码；本文件由 frontend/src/core/config/index.ts retype 而来。
-  【对应 frontend/】 frontend/src/core/config/index.ts
+  【文件职责】     见下方导出与 JSDoc。
   【架构位置】     L3
   【主要导出】     getBackendBaseURL / getLangGraphBaseURL
-  【依赖关系】     见下方 import；改写清单由 scripts/land-retyped.mjs 声明
-  【边界与注意】   RETYPED：内容**不是**上游逐字节等同，因此不参与 COPIED hash 护城河。
-                   相对上游的改动只有这些：改为接收普通 runtime options，纯 core 不调用 useRuntimeConfig()。（@/env → runtime options）
-                   勿手改——`make land-retyped-check` 会红；确需手改就登记进
-                   land-retyped.mjs 的 HAND_MAINTAINED 并写明理由。
+  【依赖关系】     见下方 import。
+  【边界与注意】   本文件由本仓维护；行为由 tests/ 下的用例约束。
 */
 
 /**

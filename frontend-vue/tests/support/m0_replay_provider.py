@@ -1,6 +1,5 @@
 """
 【文件职责】     为 M0 run 协议测试给仓库 ReplayChatModel 注入一次可控空闲窗口。
-【对应 frontend/】 无；测试基础设施
 【架构位置】     测试
 【主要导出】     M0ReplayChatModel
 【依赖关系】     继承 backend/tests/replay_provider.py 的真实录制回放模型

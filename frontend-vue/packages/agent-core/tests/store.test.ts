@@ -1,6 +1,5 @@
 /*
   【文件职责】     归约动作与 external store 的行为（08 §事件与完整状态归约）。
-  【对应 frontend/】 无
   【架构位置】     L1 测试
   【主要导出】     无
   【依赖关系】     ../src/store/* · ../src/message

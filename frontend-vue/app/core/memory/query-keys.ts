@@ -1,6 +1,5 @@
 /*
   【文件职责】     声明 Memory server-state 的唯一 Vue Query identity。
-  【对应 frontend/】 core/memory/hooks.ts
   【架构位置】     L3 server-state identity
   【主要导出】     MEMORY_QUERY_KEY
   【依赖关系】     无

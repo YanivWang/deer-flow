@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     DeerFlow 输入区，接线技能、上传、模型、模式、目标、语音和发送状态。
-  【对应 frontend/】 src/components/workspace/input-box.tsx
   【架构位置】     L3
   【主要导出】     默认 ChatComposer 组件
   【依赖关系】     skills/uploads/models/goal APIs · composer draft · AgentChat

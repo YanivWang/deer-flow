@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /*
   【文件职责】     把 React 版 Streamdown 对 M3 语料的渲染结果录成夹具，供归一化 DOM 等价 gate 比对。
-  【对应 frontend/】 无（工具链）
   【架构位置】     构建脚本
   【主要导出】     CLI：默认重录；`--check` 只校验夹具与当前 React 版一致
   【依赖关系】     tests/fixtures/markdown-corpus.mjs；frontend/ 的 react-dom/server 与 streamdown
@@ -20,12 +19,22 @@
 */
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FRONTEND = resolve(ROOT, "../frontend");
+
+// 录制需要兄弟应用装好的 React/streamdown。本仓的 install/build/test/e2e 都不依赖
+// 它（夹具是签入的），所以缺席时安静退出而不是失败——否则这个工具会把
+// 「另一个应用在不在」变成本仓能不能跑的前提。
+if (!existsSync(join(FRONTEND, "node_modules"))) {
+  process.stdout.write(
+    "兄弟应用 ../frontend 未安装依赖，跳过录制；签入的夹具保持不变。\n",
+  );
+  process.exit(0);
+}
 const CORPUS_URL = pathToFileURL(
   join(ROOT, "tests/fixtures/markdown-corpus.mjs"),
 ).href;

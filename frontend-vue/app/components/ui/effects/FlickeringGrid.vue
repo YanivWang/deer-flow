@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     渲染按帧更新的闪烁网格背景。
-  【对应 frontend/】 src/components/ui/flickering-grid.tsx
   【架构位置】     L3 product UI
   【主要导出】     默认 FlickeringGrid 组件
   【依赖关系】     Vue lifecycle · ./flickering-grid

@@ -1,6 +1,5 @@
 /*
   【文件职责】     DeerFlow RunProtocol 的四个方法对上 M0 录到的请求/响应约定。
-  【对应 frontend/】 frontend/src/core/api/api-client.ts
   【架构位置】     L3 测试
   【主要导出】     无
   【依赖关系】     @/core/agent-deerflow/run-protocol
@@ -112,7 +111,7 @@ describe("create（08 硬规则 1 · 05 A2/L10/L12）", () => {
   });
 
   it("A2：wire 的 snake_case `stream_mode` 也要被校验到", async () => {
-    // 回归用例：桥接之前，COPIED 的 sanitizeRunStreamOptions 只认 camelCase
+    // 回归用例：桥接之前，sanitizeRunStreamOptions 只认 camelCase
     // `streamMode`，套在 wire 请求体上恒为 no-op——校验一声不响地什么都不做。
     const protocol = protocolWith(
       fakeFetch(() => sseResponse(CONTENT_LOCATION)),

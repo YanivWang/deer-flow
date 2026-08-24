@@ -1,6 +1,5 @@
 /*
   【文件职责】     在认证主体边界清空所有浏览器内用户态。
-  【对应 frontend/】 AuthProvider 的整页/路由切换清理语义
   【架构位置】     L3 authentication/client state boundary
   【主要导出】     clearAuthenticatedClientState
   【依赖关系】     TanStack Query · composer draft lifecycle

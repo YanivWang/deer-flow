@@ -1,6 +1,5 @@
 /*
   【文件职责】     替代 `@langchain/langgraph-sdk` 的消息/线程 wire 类型，供 core 内 16 个文件引用。
-  【对应 frontend/】 无单一对应物；替换的是上游从 SDK 借来的 8 个符号
                    （Message / AIMessage / Thread / ThreadsClient / BaseStream / ToolCall …）
   【架构位置】     L3 类型（DeerFlow 协议形状）；08 的 L1 名字在此同源定义，M2 抽 L1 时原样搬走
   【主要导出】     AgentMessageContent / AgentContentPart / Message / AIMessage / Thread / ToolCall
@@ -45,7 +44,7 @@ export interface AgentContentPart {
   [key: string]: unknown;
 }
 
-/** 联合类型本身就是护城河：任何一侧被去掉，消费方都会立刻编不过。 */
+/** 联合类型本身就是护栏：任何一侧被去掉，消费方都会立刻编不过。 */
 export type AgentMessageContent = string | AgentContentPart[];
 
 /** SDK 兼容别名。上游按这个名字理解 `BaseMessage["content"]`。 */

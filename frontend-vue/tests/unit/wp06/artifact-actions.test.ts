@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-06 open/download 预检与 Gateway 错误保真合同。
-  【对应 frontend/】 frontend/src/components/workspace/artifacts/artifact-file-detail.tsx
   【架构位置】     测试
   【主要导出】     probeArtifactAction 回归
   【依赖关系】     app/core/artifacts/actions.ts

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     按 session role 读取和更新 admin-only MCP server config。
-  【对应 frontend/】 src/components/workspace/settings/tool-settings.tsx
   【架构位置】     L3 product UI
   【主要导出】     默认 ToolSettings 组件
   【依赖关系】     useSettingsPermissions · useMCPConfig

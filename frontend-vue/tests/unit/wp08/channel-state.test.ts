@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 provider capability 与用户 connection instance 分离后的展示模型。
-  【对应 frontend/】 core/channels/provider-state.ts · settings/channels-settings-page.tsx
   【架构位置】     WP-08 纯逻辑测试
   【主要导出】     无；Vitest cases
   【依赖关系】     core/channels/state · query-keys

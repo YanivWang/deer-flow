@@ -1,6 +1,5 @@
 /*
   【文件职责】     在 Nuxt 应用级创建唯一 theme controller，并为 SSR 提供无副作用快照。
-  【对应 frontend/】 components/theme-provider.tsx
   【架构位置】     L3
   【主要导出】     Nuxt universal plugin
   【依赖关系】     core/theme/controller.ts · app.vue cleanup

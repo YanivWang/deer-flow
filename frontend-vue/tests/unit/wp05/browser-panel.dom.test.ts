@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-05 BrowserPanel 的 live/static、REST、geometry、keyboard 与 IME 接线。
-  【对应 frontend/】 frontend/src/components/workspace/browser-view/browser-view-panel.tsx
   【架构位置】     测试
   【主要导出】     BrowserPanel DOM 回归用例
   【依赖关系】     BrowserPanel.vue · Vue Query · fake WebSocket/Gateway fetch

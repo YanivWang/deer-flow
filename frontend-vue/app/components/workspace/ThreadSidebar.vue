@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     DeerFlow thread 导航、搜索、分页、重命名与移动端侧栏。
-  【对应 frontend/】 src/components/workspace/sidebar.tsx
   【架构位置】     L3
   【主要导出】     默认 ThreadSidebar 组件
   【依赖关系】     threads store/API · workspace routes
@@ -89,9 +88,17 @@ function onWindowKeydown(event: KeyboardEvent) {
   }
 }
 
-function keepMobileFocus(event: KeyboardEvent) {
-  if (event.key !== "Tab" || !mobileOpen.value) return;
-  const focusable = [
+/**
+ * 抽屉里当前**可见且可聚焦**的元素，按文档序。
+ *
+ * 可见性过滤不能省：抽屉在窄屏下仍然渲染着若干只在 `md:` 断点显示的控件，
+ * 它们在 DOM 里排在导航链接前面。对隐藏元素调 `focus()` 是静默无效的，
+ * 于是「打开抽屉后焦点进入抽屉」会失败而不报错——这正是它被漏掉的原因。
+ * 打开时的初始聚焦与 Tab 循环必须共用这一份定义，否则两者会对
+ * 「第一个可聚焦元素是谁」给出不同答案。
+ */
+function focusableInDrawer(): HTMLElement[] {
+  return [
     ...(sidebarElement.value?.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
     ) ?? []),
@@ -101,6 +108,11 @@ function keepMobileFocus(event: KeyboardEvent) {
       globalThis.getComputedStyle(element).visibility !== "hidden" &&
       element.getClientRects().length > 0,
   );
+}
+
+function keepMobileFocus(event: KeyboardEvent) {
+  if (event.key !== "Tab" || !mobileOpen.value) return;
+  const focusable = focusableInDrawer();
   if (!focusable.length) return;
   const first = focusable[0]!;
   const last = focusable.at(-1)!;
@@ -152,9 +164,7 @@ watch(mobileOpen, async (open) => {
         ? document.activeElement
         : null;
     await nextTick();
-    sidebarElement.value
-      ?.querySelector<HTMLElement>("a[href], button:not([disabled])")
-      ?.focus();
+    focusableInDrawer()[0]?.focus();
   } else {
     focusBeforeMobileOpen?.focus({ preventScroll: true });
     focusBeforeMobileOpen = null;

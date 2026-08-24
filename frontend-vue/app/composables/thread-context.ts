@@ -1,6 +1,5 @@
 /*
   【文件职责】     7 个业务 Context 的 provide/inject 底座（05 M1 / M2）。
-  【对应 frontend/】 components/workspace/{artifacts,browser-view,messages,sidecar}/context.tsx
                    core/tasks/context.tsx · core/auth/AuthProvider.tsx · core/i18n/context.tsx
   【架构位置】     L3（Vue 适配）
   【主要导出】     defineThreadContext

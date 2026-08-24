@@ -1,6 +1,5 @@
 /*
   【文件职责】     穷举代理环境组合并锁定前缀、流式选项与安全规则。
-  【对应 frontend/】 frontend/next.config.js
   【架构位置】     测试
   【主要导出】     无
   【依赖关系】     消费 config/routes.ts

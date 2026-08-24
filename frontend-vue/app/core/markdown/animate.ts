@@ -1,6 +1,5 @@
 /*
   【文件职责】     逐词动画的纯计算：把文本切成词段，并给每段一个跨 chunk 稳定的 key。
-  【对应 frontend/】 无——上游把这件事交给 Streamdown 的 `animated` prop
   【架构位置】     L2 —— 通用渲染层
   【主要导出】     splitAnimatedWords · type AnimatedWord
   【依赖关系】     无

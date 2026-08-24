@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     渲染欢迎态完整快捷建议，并提供创建类型下拉菜单。
-  【对应 frontend/】 src/components/workspace/input-box.tsx::SuggestionList
   【架构位置】     L3
   【主要导出】     默认 WelcomeSuggestionList 组件
   【依赖关系】     i18n suggestions · Reka DropdownMenu · Button · ConfettiButton

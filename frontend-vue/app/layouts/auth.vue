@@ -1,6 +1,5 @@
 <!--
   【文件职责】     提供认证页面的全屏布局；页面自己拥有卡片与恢复状态。
-  【对应 frontend/】 frontend/src/app/(auth)/layout.tsx
   【架构位置】     L3
   【主要导出】     auth layout
   【依赖关系】     被 login/setup/callback 使用

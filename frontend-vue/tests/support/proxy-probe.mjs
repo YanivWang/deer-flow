@@ -1,6 +1,5 @@
 /*
   【文件职责】     提供可观测的 HTTP/SSE 请求流探针，不冒充真实 Gateway。
-  【对应 frontend/】 无；M0 代理测试夹具
   【架构位置】     测试夹具
   【主要导出】     本地 8012 HTTP server
   【依赖关系】     被 playwright.m0.config.ts 启动

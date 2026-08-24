@@ -1,6 +1,5 @@
 /*
   【文件职责】     提供 Agent CRUD、名称检查与 feature API 的认证 Gateway transport。
-  【对应 frontend/】 core/agents/api.ts
   【架构位置】     L3 Agent HTTP contract
   【主要导出】     list/get/create/update/delete/check Agent · typed errors
   【依赖关系】     shared authenticated fetch · Gateway response error · config

@@ -21,7 +21,9 @@ export function readCachedAgentsApiEnabled(): boolean | undefined {
     const raw = window.localStorage.getItem(AGENTS_API_ENABLED_KEY);
     if (raw === "true") return true;
     if (raw === "false") return false;
-  } catch {}
+  } catch {
+    // localStorage 在无痕模式/被策略禁用时会抛；读不到就当作没有缓存。
+  }
   return undefined;
 }
 
@@ -31,7 +33,9 @@ export function writeCachedAgentsApiEnabled(value: boolean): void {
   }
   try {
     window.localStorage.setItem(AGENTS_API_ENABLED_KEY, String(value));
-  } catch {}
+  } catch {
+    // 写入失败（配额/无痕模式）不影响功能，下次仍会走实时查询。
+  }
 }
 
 /**

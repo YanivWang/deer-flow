@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-07 scheduled-task 表单、payload、context、recipe 与时区转换合同。
-  【对应 frontend/】 tests/unit/core/scheduled-tasks/cron.test.ts + page payload behavior
   【架构位置】     WP-07 纯逻辑测试
   【主要导出】     无；Vitest cases
   【依赖关系】     core/scheduled-tasks/form · recipes · types

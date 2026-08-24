@@ -1,6 +1,5 @@
 /*
   【文件职责】     将 Gateway updated_at 转成 locale-aware 相对时间。
-  【对应 frontend/】 frontend/src/core/utils/datetime.ts
   【架构位置】     L3 thread presentation
   【主要导出】     formatThreadUpdatedTime
   【依赖关系】     Intl.RelativeTimeFormat

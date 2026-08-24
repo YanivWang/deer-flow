@@ -1,6 +1,5 @@
 <!--
   【文件职责】     展示线程总 token、当前 context 占比并编辑 usage 视图偏好。
-  【对应 frontend/】 components/workspace/token-usage-indicator.tsx
   【架构位置】     L3 workspace UI adapter
   【主要导出】     默认 TokenUsageIndicator 组件
   【依赖关系】     core/messages/usage · usage-model · core/threads/token-usage

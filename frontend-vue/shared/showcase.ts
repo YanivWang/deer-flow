@@ -1,6 +1,5 @@
 /*
   【文件职责】     定义公开 demo thread 与静态 artifact 的唯一 allowlist。
-  【对应 frontend/】 src/core/threads/static-demo.ts 与 public/demo 清单
   【架构位置】     shared server/client contract
   【主要导出】     demo ID/route/artifact 解析 helpers
   【依赖关系】     无

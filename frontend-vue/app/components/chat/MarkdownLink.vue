@@ -1,6 +1,5 @@
 <!--
   【文件职责】     统一渲染消息 Markdown 的安全、外部、artifact 与 citation 链接。
-  【对应 frontend/】 frontend/src/components/workspace/messages/markdown-link.tsx
   【架构位置】     L3 message UI adapter
   【主要导出】     默认组件
   【依赖关系】     Reka HoverCard · core/markdown/links · core/artifacts/utils

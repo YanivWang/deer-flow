@@ -1,6 +1,5 @@
 /*
   【文件职责】     将 task_*、llm_retry 与 replay-gap custom 事件归约为 thread UI 状态。
-  【对应 frontend/】 core/threads/hooks.ts 的 onCustomEvent
   【架构位置】     L3
   【主要导出】     reduceThreadCustomEvent · create/clear helpers
   【依赖关系】     tasks/lifecycle · steps · subtask-update

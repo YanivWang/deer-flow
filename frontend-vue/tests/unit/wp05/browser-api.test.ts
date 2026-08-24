@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 Vue browser REST fallback 的真实 Gateway path/body/response/error 合同。
-  【对应 frontend/】 frontend/src/components/workspace/browser-view/api.ts
   【架构位置】     测试
   【主要导出】     navigateBrowser 回归用例
   【依赖关系】     browser-api.ts · GatewayResponseError

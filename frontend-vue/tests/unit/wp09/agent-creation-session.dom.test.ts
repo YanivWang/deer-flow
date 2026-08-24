@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-09 Agent 创建状态机、有限验证、去重与 effect-scope cleanup。
-  【对应 frontend/】 app/workspace/agents/new/page.tsx
   【架构位置】     WP-09 Vue composable DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     useAgentCreationSession · GatewayResponseError · Vue effectScope

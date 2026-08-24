@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     展示并切换当前 thread 的 artifact 文件列表。
-  【对应 frontend/】 frontend/src/components/workspace/artifacts/artifact-file-detail.tsx
   【架构位置】     L3
   【主要导出】     默认 ArtifactFileList 组件
   【依赖关系】     ArtifactPanel

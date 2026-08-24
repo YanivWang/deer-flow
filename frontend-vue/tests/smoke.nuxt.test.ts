@@ -1,6 +1,5 @@
 /*
   【文件职责】     证明 Vitest Nuxt project 真正加载 Nuxt 环境。
-  【对应 frontend/】 无；M0 新增测试入口
   【架构位置】     测试
   【主要导出】     无
   【依赖关系】     使用 @nuxt/test-utils runtime

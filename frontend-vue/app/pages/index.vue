@@ -1,6 +1,5 @@
 <!--
   【文件职责】     展示 Vue 入口与可公开访问的只读案例。
-  【对应 frontend/】 frontend/src/app/page.tsx
   【架构位置】     L3
   【主要导出】     / 页面
   【依赖关系】     shared/showcase · Vue-owned static demo assets

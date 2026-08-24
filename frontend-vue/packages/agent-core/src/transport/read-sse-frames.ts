@@ -1,6 +1,5 @@
 /*
   【文件职责】     把一个字节流读成 SSE 帧序列：解码、分帧、上限保护、abort、尾帧。
-  【对应 frontend/】 无；上游这一层在 SDK 内部
   【架构位置】     L1
   【主要导出】     FrameReaderOptions · readSseFrames
   【依赖关系】     ./sse-buffer · ./parse-sse-event · ../errors

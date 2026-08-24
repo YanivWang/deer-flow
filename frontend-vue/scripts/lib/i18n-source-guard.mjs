@@ -1,6 +1,5 @@
 /*
   【文件职责】     以 Vue/TypeScript AST 扫描会进入产品 UI 的英文 SFC 字面量。
-  【对应 frontend/】 无；Vue-owned maintenance gate
   【架构位置】     构建脚本共享库
   【主要导出】     productVueInventory · scanVueSource · scanProductVueFiles
   【依赖关系】     vue/compiler-sfc · TypeScript · app product SFCs

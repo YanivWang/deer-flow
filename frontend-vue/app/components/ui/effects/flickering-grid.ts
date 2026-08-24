@@ -1,6 +1,5 @@
 /*
   【文件职责】     提供 flickering grid 的初始透明度与帧更新纯函数。
-  【对应 frontend/】 src/components/ui/flickering-grid.tsx
   【架构位置】     L3 product UI helper
   【主要导出】     createInitialOpacities · updateFlickeringOpacities
   【依赖关系】     无

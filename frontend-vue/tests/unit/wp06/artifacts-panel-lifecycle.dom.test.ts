@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 useArtifactsPanel 将切文件和关面板交给唯一 draft owner。
-  【对应 frontend/】 frontend/src/components/workspace/artifacts/context.tsx
   【架构位置】     测试
   【主要导出】     useArtifactsPanel dirty 集成回归
   【依赖关系】     useArtifactsPanel · useArtifactDraft

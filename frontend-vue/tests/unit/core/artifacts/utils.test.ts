@@ -1,11 +1,9 @@
 /*
   【文件职责】     artifact URL 组装的行为测试。
-  【对应 frontend/】 frontend/tests/unit/core/artifacts/utils.test.ts
   【架构位置】     单元测试
   【主要导出】     无
   【依赖关系】     app/core/artifacts/utils.ts
-  【边界与注意】   **手工维护，不再由 codemod 生成**（登记在 rstest-to-vitest.mjs 的
-                   HAND_MAINTAINED）。相对上游有两处删减与一处 Vue-owned 增补：
+  【边界与注意】   本仓维护。与 React 侧同名用例相比有两处删减与一处 Vue-owned 增补：
 
                    1. 删掉 2 个 static demo 用例
                       （"maps static demo artifact paths…" / "encodes reserved characters

@@ -1,6 +1,5 @@
 <!--
   【文件职责】     提供隔离的 M0 Button light/dark 视觉夹具。
-  【对应 frontend/】 frontend/src/components/ui/button.tsx
   【架构位置】     测试夹具
   【主要导出】     /__m0/visual 测试页
   【依赖关系】     消费 Vue Button；仅在 NUXT_PUBLIC_M0_TEST_PAGES=1 可用

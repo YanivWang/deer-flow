@@ -1,6 +1,5 @@
 <!--
   【文件职责】     提供 M0 的 Button 视觉与交互基线。
-  【对应 frontend/】 frontend/src/components/ui/button.tsx
   【架构位置】     L2
   【主要导出】     Button 组件
   【依赖关系】     消费 buttonVariants 与 cn

@@ -1,6 +1,5 @@
 /*
   【文件职责】     将本地 File 上传到最终 thread 并映射为消息附件描述符。
-  【对应 frontend/】 components/workspace/input-box.tsx
   【架构位置】     L3 纯提交协作层
   【主要导出】     createSubmissionFileCache · prepareSubmissionFiles
   【依赖关系】     uploads/api · messages/utils

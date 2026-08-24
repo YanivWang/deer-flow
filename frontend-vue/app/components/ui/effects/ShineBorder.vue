@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     渲染消息卡片使用的流光边框。
-  【对应 frontend/】 src/components/ui/shine-border.tsx
   【架构位置】     L3 product UI
   【主要导出】     默认 ShineBorder 组件
   【依赖关系】     Vue computed · CSS 动画

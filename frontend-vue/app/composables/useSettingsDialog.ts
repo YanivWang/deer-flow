@@ -1,6 +1,5 @@
 /*
   【文件职责】     持有 settings dialog 的全局打开状态与目标分区。
-  【对应 frontend/】 src/components/workspace/settings/context.tsx
   【架构位置】     L3 Vue adapter
   【主要导出】     useSettingsDialog
   【依赖关系】     Vue refs · SettingsDialog

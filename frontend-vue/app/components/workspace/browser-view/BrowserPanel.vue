@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     组合 live WebSocket 与 static REST 的唯一 browser 控制面板，并映射远端输入。
-  【对应 frontend/】 src/components/workspace/browser-view/browser-view-panel.tsx
   【架构位置】     L3
   【主要导出】     默认 BrowserPanel 组件
   【依赖关系】     useBrowserStream · browser core · browser API · artifact URL · Vue Query

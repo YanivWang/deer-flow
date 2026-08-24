@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     在按钮交互上附加受控 confetti 效果。
-  【对应 frontend/】 src/components/ui/confetti-button.tsx
   【架构位置】     L3 product UI
   【主要导出】     默认 ConfettiButton 组件
   【依赖关系】     canvas-confetti · ./confetti

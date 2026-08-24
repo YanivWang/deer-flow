@@ -1,6 +1,5 @@
 /*
   【文件职责】     markdown 渲染层的公共导出面。
-  【对应 frontend/】 frontend/src/core/streamdown/index.ts
   【架构位置】     L2 —— 通用渲染层
   【主要导出】     见下
   【依赖关系】     本目录各模块
@@ -8,8 +7,9 @@
                    的 hook。Vue 侧组件不进 core，记忆化归组件的 `computed`，
                    所以这里只导出纯 TS 那一层。
 
-                   `preprocess` 与 `mermaid` 仍在 `../streamdown/`：它们是 `COPIED` 档，
-                   路径由 `land-copied` 从上游路径机械映射，挪动会让 hash 守护失去对标。
+                   `preprocess` 与 `mermaid` 仍在 `../streamdown/`，与消费它们的
+                   Markdown 管线分开：它们处理的是 Streamdown 的输入预处理与图表识别，
+                   不属于渲染管线本身。
                    从这里重新导出，好让调用方只认一个入口。
 */
 

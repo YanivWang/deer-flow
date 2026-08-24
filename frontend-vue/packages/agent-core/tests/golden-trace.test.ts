@@ -1,6 +1,5 @@
 /*
   【文件职责】     用真实录制的 raw SSE 跑通分帧层（06 §M2 B 的第 2 类证据）。
-  【对应 frontend/】 无
   【架构位置】     L1 测试
   【主要导出】     无
   【依赖关系】     ../../../tests/fixtures/streams/*.sse

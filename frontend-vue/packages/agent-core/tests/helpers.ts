@@ -1,6 +1,5 @@
 /*
   【文件职责】     L1 测试共用的流构造与收集工具。
-  【对应 frontend/】 无
   【架构位置】     L1 测试
   【主要导出】     streamOf · bytesOf · collect
   【依赖关系】     无

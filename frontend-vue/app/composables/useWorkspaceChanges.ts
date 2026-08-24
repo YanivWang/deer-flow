@@ -1,6 +1,5 @@
 /*
   【文件职责】     Workspace Changes summary/detail 的唯一 TanStack Query server-state owner。
-  【对应 frontend/】 core/workspace-changes/hooks.ts
   【架构位置】     L3 Vue server-state adapter
   【主要导出】     useWorkspaceChanges
   【依赖关系】     TanStack Vue Query · workspace changes API/query keys

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     创建 DeerFlow custom agent。
-  【对应 frontend/】 src/app/workspace/agents/new/page.tsx
   【架构位置】     L3 application page
   【主要导出】     默认 new agent page
   【依赖关系】     agents API · workspace routing

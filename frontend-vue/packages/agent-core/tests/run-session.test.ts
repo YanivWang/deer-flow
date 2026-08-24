@@ -1,6 +1,5 @@
 /*
   【文件职责】     run session 状态机：08 §硬规则 1–8 与 05 L10–L16 的可执行版本。
-  【对应 frontend/】 无；上游这一层是 SDK 的 StreamManager 加 hooks 里的补丁
   【架构位置】     L1 测试
   【主要导出】     无
   【依赖关系】     ../src/session/* · ./helpers

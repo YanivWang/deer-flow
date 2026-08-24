@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     编排 scheduled-task route 默认值、表单、筛选、selection 与 Vue Query owners。
-  【对应 frontend/】 src/app/workspace/scheduled-tasks/page.tsx
   【架构位置】     L3 application page
   【主要导出】     默认 scheduled tasks page
   【依赖关系】     useScheduledTasks · scheduled-task components · form/view-model pure logic

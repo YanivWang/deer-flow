@@ -1,6 +1,5 @@
 /*
   【文件职责】     统一持有 follow-up suggestions 的服务端配置查询。
-  【对应 frontend/】 src/core/suggestions/hooks.ts
   【架构位置】     L3 Vue Query adapter
   【主要导出】     useSuggestionsConfig
   【依赖关系】     @tanstack/vue-query · core/suggestions/api

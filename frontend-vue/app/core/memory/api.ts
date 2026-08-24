@@ -1,6 +1,5 @@
 /*
   【文件职责】     调用 Gateway Memory document、CRUD、import/export HTTP 合同。
-  【对应 frontend/】 core/memory/api.ts
   【架构位置】     L3 Gateway adapter
   【主要导出】     load/clear/create/update/delete/import/export Memory
   【依赖关系】     authenticated fetch · shared Gateway error parser

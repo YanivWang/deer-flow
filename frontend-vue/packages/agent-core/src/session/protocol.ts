@@ -1,6 +1,5 @@
 /*
   【文件职责】     会话与协议之间的接口：怎么开流、怎么续、怎么停、怎么查终态。
-  【对应 frontend/】 无；上游这一层被 SDK 的 `runs.stream/joinStream/cancel` 吞掉了
   【架构位置】     L1
   【主要导出】     StreamRequest · OpenedStream · CancelResult · InspectedRun
                    RunProtocol · StreamSignal · ClassifyEvent

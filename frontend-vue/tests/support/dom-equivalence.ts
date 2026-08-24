@@ -1,6 +1,5 @@
 /*
   【文件职责】     把一段 HTML / 一棵 DOM 子树归一化成可逐节点比对的结构。
-  【对应 frontend/】 无（gate 资产）
   【架构位置】     测试支撑
   【主要导出】     normalizeHtml · normalizeElement · type NormalizedNode
   【依赖关系】     运行在 happy-dom 环境（`*.dom.test.ts`）

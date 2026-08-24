@@ -1,17 +1,17 @@
 /*
-  【文件职责】     见下方源码；本文件由 frontend/src/core/tasks/subtask-result.ts retype 而来。
-  【对应 frontend/】 frontend/src/core/tasks/subtask-result.ts
+  【文件职责】     见下方导出与 JSDoc。
   【架构位置】     L3
   【主要导出】     SubtaskStatus / SubtaskResultUpdate / SUBAGENT_STATUS_KEY / SUBAGENT_STOP_REASON_KEY / SUBAGENT_ERROR_KEY / SUBAGENT_RESULT_BRIEF_KEY 等 12 个
-  【依赖关系】     见下方 import；改写清单由 scripts/land-retyped.mjs 声明
-  【边界与注意】   RETYPED：内容**不是**上游逐字节等同，因此不参与 COPIED hash 护城河。
-                   相对上游的改动只有这些：SDK 类型改指向自写 @/core/types/message（06 §M1 1b 的 17 个）。（@langchain/langgraph-sdk → @/core/types/message）
-                   勿手改——`make land-retyped-check` 会红；确需手改就登记进
-                   land-retyped.mjs 的 HAND_MAINTAINED 并写明理由。
+  【依赖关系】     见下方 import。
+  【边界与注意】   本文件由本仓维护；行为由 tests/ 下的用例约束。
 */
 
 import type { Message } from "@/core/types/message";
 
+import {
+  SUBAGENT_STOP_REASON_VALUES,
+  type BackendSubagentStatus,
+} from "../contracts/backend.gen";
 import { normalizeTokenUsage } from "../messages/usage";
 
 import type { Subtask } from "./types";
@@ -56,17 +56,6 @@ export const SUBAGENT_RESULT_BRIEF_KEY = "subagent_result_brief";
 export const SUBAGENT_RESULT_SHA256_KEY = "subagent_result_sha256";
 export const SUBAGENT_MODEL_NAME_KEY = "subagent_model_name";
 export const SUBAGENT_TOKEN_USAGE_KEY = "subagent_token_usage";
-/**
- * Why a guardrail cap ended a subagent run early (#3875 Phase 2). Mirrors the
- * Python ``SUBAGENT_STOP_REASON_VALUES`` and the shared fixture's
- * ``valid_stop_reason_values``. The field is optional/additive — older
- * frontends that only read ``subagent_status`` simply never see it.
- */
-const SUBAGENT_STOP_REASON_VALUES = [
-  "token_capped",
-  "turn_capped",
-  "loop_capped",
-] as const;
 const STRUCTURED_SUBAGENT_KEYS = [
   SUBAGENT_STATUS_KEY,
   SUBAGENT_STOP_REASON_KEY,
@@ -102,7 +91,15 @@ const ERROR_WRAPPER_PATTERN = /^Error\b/i;
  * it to ``failed`` keeps them terminal, matching how Phase 1 itself rendered it.
  * No code path produces this value anymore; it is read-side tolerance only.
  */
-const STRUCTURED_STATUS_TO_SUBTASK: Record<string, SubtaskStatus> = {
+/** 已退出契约、但仍存在于历史 checkpoint 里的只读值（见上）。 */
+type LegacySubagentStatus = "max_turns_reached";
+
+type KnownSubagentStatus = BackendSubagentStatus | LegacySubagentStatus;
+
+const STRUCTURED_STATUS_TO_SUBTASK: Record<
+  BackendSubagentStatus | LegacySubagentStatus,
+  SubtaskStatus
+> = {
   completed: "completed",
   failed: "failed",
   cancelled: "failed",
@@ -223,16 +220,24 @@ interface StructuredStatus {
   error?: string;
 }
 
+/**
+ * wire 上来的 ``subagent_status`` 是任意字符串。映射表的键由契约（加一条历史
+ * 别名）穷尽，所以这里既收窄了类型，也保留了「不认识就返回 null」的既有语义。
+ */
+function isKnownSubagentStatus(value: string): value is KnownSubagentStatus {
+  return Object.hasOwn(STRUCTURED_STATUS_TO_SUBTASK, value);
+}
+
 function readStructuredStatus(
   additionalKwargs: Record<string, unknown> | null | undefined,
 ): StructuredStatus | null {
   if (!additionalKwargs) return null;
   const rawStatus = additionalKwargs[SUBAGENT_STATUS_KEY];
   if (typeof rawStatus !== "string") return null;
-  const mapped = STRUCTURED_STATUS_TO_SUBTASK[rawStatus];
-  if (mapped === undefined) {
+  if (!isKnownSubagentStatus(rawStatus)) {
     return null;
   }
+  const mapped = STRUCTURED_STATUS_TO_SUBTASK[rawStatus];
   const rawError = additionalKwargs[SUBAGENT_ERROR_KEY];
   const result: StructuredStatus = { status: mapped };
   if (typeof rawError === "string" && rawError.trim()) {

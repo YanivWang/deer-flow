@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     将主 chat thread 路由接入 AgentChat。
-  【对应 frontend/】 src/app/workspace/chats/[thread_id]/page.tsx
   【架构位置】     L3 application page
   【主要导出】     默认 chat thread page
   【依赖关系】     AgentChat · workspace routing

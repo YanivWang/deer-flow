@@ -1,6 +1,5 @@
 /*
   【文件职责】     自写 REST client 的 8 个方法：URL、方法、body、错误归一化。
-  【对应 frontend/】 无；上游这些调用由 SDK `Client` 承担
   【架构位置】     L3 测试
   【主要导出】     无
   【依赖关系】     @/core/api/client

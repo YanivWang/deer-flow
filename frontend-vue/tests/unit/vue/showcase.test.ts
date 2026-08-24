@@ -65,7 +65,7 @@ describe("public showcase contracts", () => {
   test("keeps the Vue allowlist in sync with the shared React fixtures", () => {
     const threadsRoot = join(
       import.meta.dirname,
-      "../../../../frontend/public/demo/threads",
+      "../../../public/demo/threads",
     );
     const fixtureThreadIds = readdirSync(threadsRoot, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())

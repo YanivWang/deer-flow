@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-10 fact 表单、PATCH omitted/显式值与搜索筛选合同。
-  【对应 frontend/】 components/workspace/settings/memory-settings-page.tsx
   【架构位置】     WP-10 pure view-model test
   【主要导出】     无；Vitest cases
   【依赖关系】     core/memory/view-model

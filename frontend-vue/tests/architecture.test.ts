@@ -1,6 +1,5 @@
 /*
   【文件职责】     守护 agent-core 的 L1 禁入边界（08 §L1 禁入清单的全部 7 条）。
-  【对应 frontend/】 无；M0 新增架构门禁
   【架构位置】     测试
   【主要导出】     无
   【依赖关系】     扫描 packages/agent-core/src

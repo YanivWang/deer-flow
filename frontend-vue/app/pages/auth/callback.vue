@@ -1,6 +1,5 @@
 <!--
   【文件职责】     验证 OIDC callback session、显示明确状态并执行安全 replace 跳转。
-  【对应 frontend/】 frontend/src/app/(auth)/auth/callback/page.tsx
   【架构位置】     L3
   【主要导出】     /auth/callback 页面
   【依赖关系】     auth session Vue Query · callback pure decision · auth layout

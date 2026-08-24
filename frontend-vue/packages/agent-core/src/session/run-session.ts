@@ -1,6 +1,5 @@
 /*
   【文件职责】     create → stream → reconnect / gap / stop 的状态机，08 §硬规则 1–8。
-  【对应 frontend/】 无；上游这一层是 SDK 的 StreamManager 加 hooks 里的补丁
   【架构位置】     L1
   【主要导出】     RunSessionOptions · RunSession · createRunSession
   【依赖关系】     ./protocol · ./state · ./backoff · ../transport · ../errors

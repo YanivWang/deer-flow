@@ -1,6 +1,5 @@
 /*
   【文件职责】     用 Vue Query 暴露单一 Gateway session 状态与不可用恢复探测。
-  【对应 frontend/】 frontend/src/core/auth/AuthProvider.tsx · gateway-offline-banner.tsx
   【架构位置】     L3 composable
   【主要导出】     useAuthSession
   【依赖关系】     @tanstack/vue-query · core/auth/session-query

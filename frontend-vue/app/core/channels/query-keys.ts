@@ -1,6 +1,5 @@
 /*
   【文件职责】     定义 channel providers/connections 的用户隔离 Vue Query key。
-  【对应 frontend/】 src/core/channels/hooks.ts
   【架构位置】     L3 server-state contract
   【主要导出】     channelKeys
   【依赖关系】     无

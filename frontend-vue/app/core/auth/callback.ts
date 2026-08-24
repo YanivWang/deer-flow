@@ -1,6 +1,5 @@
 /*
   【文件职责】     将 OIDC callback 的 session 结果收敛为可渲染状态和安全跳转。
-  【对应 frontend/】 frontend/src/app/(auth)/auth/callback/page.tsx
   【架构位置】     L3 authentication
   【主要导出】     resolveAuthCallback · AuthCallbackResolution
   【依赖关系】     ./next-path · ./session

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     统一主聊天与 Sidecar 的模型选择器尺寸、截断和菜单交互。
-  【对应 frontend/】 src/components/ai-elements/model-selector.tsx
   【架构位置】     L3
   【主要导出】     默认 ComposerModelSelector 组件
   【依赖关系】     Model 展示契约 · composer controls

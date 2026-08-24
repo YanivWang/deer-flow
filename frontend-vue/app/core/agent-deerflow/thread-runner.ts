@@ -1,7 +1,6 @@
 /*
   【文件职责】     把 L1 内核（store + session）与 L3 的 DeerFlow 协议装配成
                    一个「一个 thread 的运行器」，并把流事件分派给上层钩子。
-  【对应 frontend/】 core/threads/hooks.ts 里 `useStream({...})` 那个大对象字面量
   【架构位置】     L3（框架无关）
   【主要导出】     ThreadRunner · createThreadRunner
   【依赖关系】     @deerflow/agent-core · ./run-protocol · ./gap-recovery

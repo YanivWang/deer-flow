@@ -1,6 +1,5 @@
 /*
   【文件职责】     上传的 vue-query 绑定（05 N1）。
-  【对应 frontend/】 core/uploads/hooks.ts（REWRITE，94 行 React hooks）
   【架构位置】     L3（Vue 适配）
   【主要导出】     UPLOAD_QUERY_KEYS · useUploadLimits · useUploadedFiles
                    useUploadFiles · useDeleteUploadedFile
@@ -12,7 +11,7 @@
                       `retry: false` + `staleTime 60s` 与上游一致——**这两个不能改**：
                       限额拿不到时的既定降级是「交给服务端校验」，重试只会让
                       composer 在网络差时卡住而不是放行。
-                   2. **超限的降级路径是服务端**。`file-validation.ts`（COPIED）
+                   2. **超限的降级路径是服务端**。`file-validation.ts`
                       是同一套规则的前端副本，用于即时反馈；它与后端不一致时
                       **以后端为准**，前端那份只负责别让用户白等一次上传。
                    3. **pre-submit 上传状态归 `threads` 而不是这里**

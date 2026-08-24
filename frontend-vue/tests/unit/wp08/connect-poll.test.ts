@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 channel connect poll 的成功、过期、异常 expires 与取消清理。
-  【对应 frontend/】 core/channels/connect-poll.ts
   【架构位置】     WP-08 纯生命周期测试
   【主要导出】     无；Vitest cases
   【依赖关系】     core/channels/connect-poll

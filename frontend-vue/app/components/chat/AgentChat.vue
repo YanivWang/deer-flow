@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     编排 DeerFlow 主会话、消息、composer 与右侧业务面板。
-  【对应 frontend/】 src/components/workspace/chats/chat-box.tsx
   【架构位置】     L3
   【主要导出】     默认 AgentChat 组件
   【依赖关系】     useThreadStream · MessageList · ChatComposer · workspace panels

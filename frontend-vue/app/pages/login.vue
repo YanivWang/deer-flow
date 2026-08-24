@@ -1,6 +1,5 @@
 <!--
   【文件职责】     完整本地登录/注册、SSO 入口与 setup-status fail-closed 恢复。
-  【对应 frontend/】 frontend/src/app/(auth)/login/page.tsx
   【架构位置】     L3 auth surface
   【主要导出】     默认 login page
   【依赖关系】     Gateway auth/setup APIs · auth layout

@@ -49,16 +49,14 @@ export function buildSidecarThreadMetadata(
 
 export function isSidecarThread(
   thread:
-    | Pick<AgentThread, "metadata">
-    | { metadata?: Record<string, unknown> },
+    Pick<AgentThread, "metadata"> | { metadata?: Record<string, unknown> },
 ) {
   return thread.metadata?.[SIDECAR_METADATA_KEY] === true;
 }
 
 export function shouldShowInPrimaryThreadLists(
   thread:
-    | Pick<AgentThread, "metadata">
-    | { metadata?: Record<string, unknown> },
+    Pick<AgentThread, "metadata"> | { metadata?: Record<string, unknown> },
 ) {
   return !isSidecarThread(thread);
 }

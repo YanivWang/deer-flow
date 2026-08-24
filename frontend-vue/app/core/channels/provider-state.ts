@@ -1,6 +1,5 @@
 /*
   【文件职责】     计算 channel provider 的连接与运行时配置 capability。
-  【对应 frontend/】 src/core/channels/provider-state.ts
   【架构位置】     L1 framework-neutral channel policy
   【主要导出】     providerSupportsConnect · providerNeedsRuntimeConfig · providerCanEditRuntimeConfig
   【依赖关系】     core/channels/types

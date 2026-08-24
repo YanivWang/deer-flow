@@ -1,6 +1,5 @@
 /*
   【文件职责】     生成可见 thread transcript 并安全触发浏览器下载。
-  【对应 frontend/】 frontend/src/core/threads/export.ts
   【架构位置】     L3
   【主要导出】     ExportOptions / ThreadExportFormat / formatThreadAsMarkdown / formatThreadAsJSON / downloadAsFile / exportThreadAsMarkdown 等 8 个
   【依赖关系】     message utils · thread utils · browser Blob/URL

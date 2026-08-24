@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     渲染与父 thread 隔离的 DeerFlow sidecar 会话。
-  【对应 frontend/】 src/components/workspace/sidecar/sidecar-panel.tsx
   【架构位置】     L3 extension reference
   【主要导出】     默认 SidecarPanel 组件
   【依赖关系】     useSidecarSession · MessageList · ReferenceAttachment

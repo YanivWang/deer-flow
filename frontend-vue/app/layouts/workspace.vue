@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     组合 workspace 侧栏、主内容与全局设置面板。
-  【对应 frontend/】 src/app/workspace/layout.tsx
   【架构位置】     L3 application shell
   【主要导出】     默认 workspace layout
   【依赖关系】     ThreadSidebar · SettingsDialog · auth middleware

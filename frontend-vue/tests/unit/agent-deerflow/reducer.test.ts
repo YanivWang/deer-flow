@@ -1,6 +1,5 @@
 /*
   【文件职责】     DeerFlow 事件 reducer 的行为，重点是 08 点名最易做错的两条。
-  【对应 frontend/】 无
   【架构位置】     L3 测试
   【主要导出】     无
   【依赖关系】     app/core/agent-deerflow/reducer.ts · @deerflow/agent-core

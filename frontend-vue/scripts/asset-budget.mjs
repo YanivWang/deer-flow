@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /*
   【文件职责】     统计生产客户端 JS 的 raw/gzip 体积，并钉住 M7 运行时安全分包预算。
-  【对应 frontend/】 无（构建产物门禁）
   【架构位置】     构建脚本
   【主要导出】     CLI：读取 .output/public/_nuxt，超预算退出 1
   【依赖关系】     Nuxt production build；Node zlib

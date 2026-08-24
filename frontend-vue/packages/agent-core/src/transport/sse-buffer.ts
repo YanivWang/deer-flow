@@ -1,6 +1,5 @@
 /*
   【文件职责】     从字符缓冲里切出一个完整 SSE 帧，并在流末交回残留。
-  【对应 frontend/】 无；起点是 44309ae7 的 app/core/api/stream/transport/sse-buffer.ts
   【架构位置】     L1
   【主要导出】     readNextSseFrame · flushSseRemainder
   【依赖关系】     无

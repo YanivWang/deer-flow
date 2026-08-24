@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-12 双 locale key、代表性产品域与 formatter 动态内容合同。
-  【对应 frontend/】 core/i18n/locales/{types,en-US,zh-CN}.ts
   【架构位置】     WP-12 Vue unit test
   【主要导出】     无；Vitest cases
   【依赖关系】     两份 typed dictionaries

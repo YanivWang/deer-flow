@@ -1,6 +1,5 @@
 /*
   【文件职责】     作为 Agent list/detail 与 lifecycle mutations 的唯一 Vue Query owner。
-  【对应 frontend/】 core/agents/hooks.ts · app/workspace/agents/page.tsx
   【架构位置】     L3 Vue server-state adapter
   【主要导出】     useAgents
   【依赖关系】     @tanstack/vue-query · core/agents API/query keys

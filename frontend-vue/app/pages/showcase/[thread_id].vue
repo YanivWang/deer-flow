@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     校验 allowlist 后展示公开、只读的静态线程案例。
-  【对应 frontend/】 src/app/showcase/[thread_id]/page.tsx
   【架构位置】     L3
   【主要导出】     /showcase/:thread_id 页面
   【依赖关系】     AgentChat · shared/showcase

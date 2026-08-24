@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-10 memory import 的运行时 schema、extra 与 duplicate 合同。
-  【对应 frontend/】 components/workspace/settings/memory-settings-page.tsx
   【架构位置】     WP-10 pure contract test
   【主要导出】     无；Vitest cases
   【依赖关系】     core/memory/schema

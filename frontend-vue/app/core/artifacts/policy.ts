@@ -1,6 +1,5 @@
 /*
   【文件职责】     WP-06 artifact 显式文件分类与能力策略。
-  【对应 frontend/】 frontend/src/core/utils/files.tsx
   【架构位置】     L3
   【主要导出】     classifyArtifact / canLoadArtifactText / canSaveArtifactText / canInstallSkillArtifact
   【依赖关系】     无

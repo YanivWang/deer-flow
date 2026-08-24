@@ -1,6 +1,5 @@
 /*
   【文件职责】     在 Nuxt DOM 环境验证 callback 页的真实状态渲染和 replace 跳转。
-  【对应 frontend/】 frontend/src/app/(auth)/auth/callback/page.tsx
   【架构位置】     测试
   【主要导出】     无
   【依赖关系】     @nuxt/test-utils/runtime · app/pages/auth/callback.vue

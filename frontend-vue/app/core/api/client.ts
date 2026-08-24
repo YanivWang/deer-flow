@@ -1,6 +1,5 @@
 /*
   【文件职责】     替代 LangGraph SDK `Client` 的 8 个 REST 方法（02 §249）。
-  【对应 frontend/】 frontend/src/core/api/api-client.ts 里被 SDK 承担的那部分
   【架构位置】     L3
   【主要导出】     DeerFlowApiClient · createDeerFlowApiClient
   【依赖关系】     @/core/api/fetcher · @/core/api/errors · @/core/threads/types

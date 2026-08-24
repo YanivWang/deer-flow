@@ -1,9 +1,3 @@
-/*
-  由 scripts/rstest-to-vitest.mjs 从 frontend/tests/unit/core/tasks/subtask-update.test.ts 机械生成。
-  基线 27a425b0 · 改动仅限 @rstest/core → vitest、rs.* → vi.*。
-  勿手改：make codemod-check 会红。需要为 Vue 侧适配就登记进 HAND_MAINTAINED。
-*/
-
 import { describe, expect, it } from "vitest";
 
 import type { SubtaskStep } from "@/core/tasks/steps";

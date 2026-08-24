@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     切换当前 thread 的 artifact 面板。
-  【对应 frontend/】 src/components/workspace/artifacts/artifact-trigger.tsx
   【架构位置】     L3 extension reference
   【主要导出】     默认 ArtifactTrigger 组件
   【依赖关系】     useArtifactsPanel · AgentChat

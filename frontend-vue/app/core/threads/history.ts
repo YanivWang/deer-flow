@@ -1,6 +1,5 @@
 /*
   【文件职责】     thread 历史的分页协议：解析、游标、扁平化、跨刷新对账。
-  【对应 frontend/】 core/threads/hooks.ts（同一批模块级函数）
   【架构位置】     L3（纯 TS）
   【主要导出】     parseThreadMessagesPageResponse · getThreadHistoryNextPageParam
                    buildThreadMessagesPageUrl · flattenThreadHistoryPages

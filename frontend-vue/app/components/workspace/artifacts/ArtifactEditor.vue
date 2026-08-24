@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     编辑已经完整加载且可按 revision 保存的 UTF-8 output artifact。
-  【对应 frontend/】 frontend/src/components/workspace/code-editor.tsx
   【架构位置】     L3
   【主要导出】     默认 ArtifactEditor 组件
   【依赖关系】     ArtifactPanel · useArtifactDraft

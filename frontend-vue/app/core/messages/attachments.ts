@@ -1,6 +1,5 @@
 /*
   【文件职责】     从持久化 HumanMessage 提取并校验现代/legacy 附件。
-  【对应 frontend/】 components/workspace/messages/message-list-item.tsx
   【架构位置】     L3 消息协议适配
   【主要导出】     extractMessageAttachments · isImageAttachment
   【依赖关系】     messages/utils · types/message

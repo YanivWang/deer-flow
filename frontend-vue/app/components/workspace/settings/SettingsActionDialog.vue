@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     为 Settings 的 destructive/preview/form 动作提供受控确认对话框。
-  【对应 frontend/】 components/ui/alert-dialog.tsx · dialog.tsx
   【架构位置】     L3 Settings UI primitive
   【主要导出】     默认 SettingsActionDialog 组件
   【依赖关系】     Vue slots/emits

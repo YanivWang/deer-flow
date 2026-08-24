@@ -1,6 +1,5 @@
 /*
   【文件职责】     提交回合的请求体构造，以及工具结果探测。
-  【对应 frontend/】 core/threads/hooks.ts
   【架构位置】     L3（纯 TS）
   【主要导出】     hasToolResult · buildThreadSubmitMessages · buildRunContext
   【依赖关系】     ../types/message · ../settings（LocalSettings 的 context 形状）

@@ -1,6 +1,5 @@
 /*
   【文件职责】     历史 / 实时 / 乐观三路消息的归并，以及上下文压缩的瞬态桥。
-  【对应 frontend/】 core/threads/hooks.ts（同一批模块级函数）
   【架构位置】     L3（纯 TS）
   【主要导出】     mergeMessages · mergeRenderedMessageLedger
                    computeSummarizationTransientMessages

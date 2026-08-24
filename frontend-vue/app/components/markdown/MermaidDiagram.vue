@@ -1,6 +1,5 @@
 <!--
   【文件职责】     mermaid 图渲染：解析成功换成 SVG，未成功/失败时保持代码块。
-  【对应 frontend/】 无源文件可搬——`@streamdown/mermaid` 的 dist 只有 489 字节，
                     真正的 UI 与代码块 UI 同在 streamdown 那个 67,773 字节的 chunk 里
   【架构位置】     L2 —— 通用渲染层组件
   【主要导出】     默认组件

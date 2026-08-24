@@ -1,6 +1,5 @@
 /*
   【文件职责】     把 assistant processing 消息组投影成稳定的推理、文本、工具步骤视图。
-  【对应 frontend/】 components/workspace/messages/message-group.tsx
   【架构位置】     L3 DeerFlow 消息展示模型（纯 TS）
   【主要导出】     deriveProcessingMessageView 及 ProcessingStep 类型
   【依赖关系】     core/messages/utils · core/types/message

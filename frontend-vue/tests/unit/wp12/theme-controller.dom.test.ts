@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-12 唯一 theme owner、system media 生命周期与首屏初始化合同。
-  【对应 frontend/】 components/theme-provider.tsx + next-themes
   【架构位置】     WP-12 Vue DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     app/core/theme/controller.ts · bootstrap.ts

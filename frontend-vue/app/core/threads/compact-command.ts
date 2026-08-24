@@ -1,6 +1,5 @@
 /*
   【文件职责】     识别与 React 一致的 context compact 内建命令拼写。
-  【对应 frontend/】 components/workspace/input-box.tsx
   【架构位置】     L3
   【主要导出】     isCompactCommand
   【依赖关系】     无

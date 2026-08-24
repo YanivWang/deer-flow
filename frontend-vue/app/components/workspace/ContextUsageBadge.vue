@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     展示当前 thread 的上下文窗口占用与常驻占位。
-  【对应 frontend/】 src/components/workspace/context-usage-badge.tsx
   【架构位置】     L3
   【主要导出】     默认 ContextUsageBadge 组件
   【依赖关系】     thread token usage 派生值 · AgentChat

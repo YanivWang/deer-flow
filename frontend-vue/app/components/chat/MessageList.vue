@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     DeerFlow 消息分组、reasoning/tool/human-input 渲染与消息操作编排。
-  【对应 frontend/】 src/components/workspace/messages/message-list.tsx
   【架构位置】     L3 UI adapter
   【主要导出】     默认 MessageList 组件
   【依赖关系】     core/messages · markdown L2 · artifacts/changes/sidecar 扩展消费者

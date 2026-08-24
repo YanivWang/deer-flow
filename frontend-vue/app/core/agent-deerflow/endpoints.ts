@@ -1,6 +1,5 @@
 /*
   【文件职责】     DeerFlow Gateway 的 run 相关 URL 与 run handle 解析。
-  【对应 frontend/】 frontend/src/core/api/api-client.ts（SDK 内部拼的那部分）
   【架构位置】     L3
   【主要导出】     DeerFlowRunHandle · parseRunHandle · runStreamUrl
                    runResumeUrl · runCancelUrl · runResourceUrl

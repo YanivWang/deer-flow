@@ -8,12 +8,7 @@ export type ScheduledTask = {
   schedule_spec: Record<string, unknown>;
   timezone: string;
   status:
-    | "enabled"
-    | "paused"
-    | "running"
-    | "completed"
-    | "failed"
-    | "cancelled";
+    "enabled" | "paused" | "running" | "completed" | "failed" | "cancelled";
   next_run_at: string | null;
   last_run_at: string | null;
   last_run_id: string | null;
@@ -32,12 +27,7 @@ export type ScheduledTaskRun = {
   scheduled_for: string;
   trigger: "scheduled" | "manual";
   status:
-    | "queued"
-    | "running"
-    | "success"
-    | "failed"
-    | "skipped"
-    | "interrupted";
+    "queued" | "running" | "success" | "failed" | "skipped" | "interrupted";
   error: string | null;
   started_at: string | null;
   finished_at: string | null;

@@ -1,6 +1,5 @@
 /*
   【文件职责】     校验 settings 深链并构造只移除 settings 的关闭路由。
-  【对应 frontend/】 workspace-settings-deep-link.tsx
   【架构位置】     L3 workspace shell
   【主要导出】     SETTINGS_SECTIONS · readSettingsSection · buildSettingsCloseLocation
   【依赖关系】     SettingsSection · vue-router types

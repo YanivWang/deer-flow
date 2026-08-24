@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     聊天消息 Markdown 的唯一产品适配器：安全预处理、插件链、流式状态与组件覆盖。
-  【对应 frontend/】 components/workspace/messages/markdown-content.tsx
   【架构位置】     L3 chat UI adapter
   【主要导出】     默认 MessageMarkdown 组件
   【依赖关系】     StreamMarkdown · core/markdown/{safe-markdown,plugins}

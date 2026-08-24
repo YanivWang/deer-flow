@@ -1,6 +1,5 @@
 /*
   【文件职责】     加载 Gateway feature flags 并提供 fail-closed 只读状态。
-  【对应 frontend/】 src/core/features/hooks.ts
   【架构位置】     L3 Vue adapter
   【主要导出】     useWorkspaceFeatures
   【依赖关系】     core/features API · Vue lifecycle

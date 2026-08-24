@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     展示 artifact 的编辑、复制、打开、下载和 skill install 动作。
-  【对应 frontend/】 frontend/src/components/workspace/artifacts/artifact-file-detail.tsx
   【架构位置】     L3
   【主要导出】     默认 ArtifactActions 组件
   【依赖关系】     ArtifactPanel

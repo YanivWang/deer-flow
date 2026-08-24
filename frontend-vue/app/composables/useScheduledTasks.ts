@@ -1,6 +1,5 @@
 /*
   【文件职责】     Scheduled-task 列表、详情、runs 分页与 mutations 的唯一 Vue Query owner。
-  【对应 frontend/】 core/scheduled-tasks/hooks.ts
   【架构位置】     L3 Vue server-state adapter
   【主要导出】     useScheduledTasks · useScheduledTaskDetail · useScheduledTaskRuns · useScheduledTaskMutations
   【依赖关系】     @tanstack/vue-query · scheduled-tasks api/query-keys/types

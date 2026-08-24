@@ -21,13 +21,13 @@ function copyTextWithExecCommand(text: string): boolean {
   textarea.style.top = "-9999px";
   textarea.style.left = "-9999px";
 
-  let copied = false;
   let appended = false;
   try {
     document.body.appendChild(textarea);
     appended = true;
     textarea.select();
-    copied = document.execCommand("copy");
+    // finally 会在这次 return 生效前跑完清理。
+    return document.execCommand("copy");
   } finally {
     if (appended) {
       const parentNode = textarea.parentNode;
@@ -38,8 +38,6 @@ function copyTextWithExecCommand(text: string): boolean {
       }
     }
   }
-
-  return copied;
 }
 
 export async function writeTextToClipboard(text: string): Promise<boolean> {

@@ -1,6 +1,5 @@
 /*
   【文件职责】     单次解析 Gateway 非成功响应并保留 status、结构化 body 与原文。
-  【对应 frontend/】 core/api/errors.ts
   【架构位置】     L3
   【主要导出】     GatewayResponseError · read/throw helpers
   【依赖关系】     Web Response

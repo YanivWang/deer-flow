@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     Markdown 表格容器及复制、下载、全屏控制。
-  【对应 frontend/】 streamdown MarkdownTable/TableCopyDropdown/TableDownloadDropdown
   【架构位置】     L2 markdown rendering
   【主要导出】     默认 MarkdownTable 组件
   【依赖关系】     DOM table extraction · Clipboard API · Blob download

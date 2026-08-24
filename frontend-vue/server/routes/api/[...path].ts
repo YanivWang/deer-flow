@@ -1,6 +1,5 @@
 /*
   【文件职责】     处理通用 /api/** Gateway proxy。
-  【对应 frontend/】 frontend/next.config.js
   【架构位置】     L3
   【主要导出】     Nitro API route
   【依赖关系】     委托 proxyGatewayRequest

@@ -1,6 +1,5 @@
 /*
   【文件职责】     识别 Gateway unavailable 到 authenticated 的恢复边沿。
-  【对应 frontend/】 gateway-offline-banner.tsx
   【架构位置】     L3 workspace shell
   【主要导出】     createGatewayRecoveryTracker
   【依赖关系】     无

@@ -1,6 +1,5 @@
 /*
   【文件职责】     把 Gateway workspace change status/reason 映射为 i18n key。
-  【对应 frontend/】 workspace-change-panel.tsx
   【架构位置】     L3 presentation
   【主要导出】     workspaceChangeStatusKey · workspaceChangeReasonKey
   【依赖关系】     workspace changes wire types

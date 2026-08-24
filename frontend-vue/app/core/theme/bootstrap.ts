@@ -1,6 +1,5 @@
 /*
   【文件职责】     生成首屏 theme class 初始化脚本并声明唯一持久化格式。
-  【对应 frontend/】 components/theme-provider.tsx + next-themes bootstrap
   【架构位置】     L3
   【主要导出】     THEME_STORAGE_KEY · createThemeBootstrapScript
   【依赖关系】     nuxt.config.ts · theme/controller.ts

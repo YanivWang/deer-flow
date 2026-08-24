@@ -1,6 +1,5 @@
 /*
   【文件职责】     纯匹配 workspace 全局快捷键与 editable target。
-  【对应 frontend/】 frontend/src/hooks/use-global-shortcuts.ts
   【架构位置】     L3 workspace shell
   【主要导出】     commandForWorkspaceShortcut · isWorkspaceShortcutEditableTarget
   【依赖关系】     DOM KeyboardEvent

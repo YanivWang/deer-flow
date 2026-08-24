@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     管理 Lark/飞书集成的安装、App 配置、授权与凭证切换流程。
-  【对应 frontend/】 src/components/workspace/settings/integrations-settings-page.tsx
   【架构位置】     L3
   【主要导出】     默认 IntegrationsSettings 组件
   【依赖关系】     Vue-owned Lark flow API · i18n · clipboard

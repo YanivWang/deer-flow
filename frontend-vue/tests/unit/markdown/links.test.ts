@@ -1,6 +1,5 @@
 /*
   【文件职责】     穷举 Markdown href 协议 allowlist。
-  【对应 frontend/】 frontend/src/components/workspace/messages/markdown-link.tsx
   【架构位置】     测试
   【主要导出】     无
   【依赖关系】     app/core/markdown/links

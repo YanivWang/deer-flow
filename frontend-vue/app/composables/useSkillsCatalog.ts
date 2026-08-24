@@ -1,6 +1,5 @@
 /*
   【文件职责】     以 Vue Query 持有 composer 的 skills catalog 与 ready 状态。
-  【对应 frontend/】 core/skills/hooks.ts
   【架构位置】     L3 Vue Query adapter
   【主要导出】     useSkillsCatalog · SKILLS_CATALOG_QUERY_KEY
   【依赖关系】     core/skills/api

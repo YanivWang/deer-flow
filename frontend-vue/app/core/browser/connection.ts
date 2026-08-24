@@ -1,6 +1,5 @@
 /*
   【文件职责】     以唯一 owner 管理 browser WebSocket、pending navigate、重连预算与过期事件隔离。
-  【对应 frontend/】 src/components/workspace/browser-view/use-browser-stream.ts
   【架构位置】     L3
   【主要导出】     BrowserConnectionController · reconnect constants
   【依赖关系】     browser/protocol.ts · 注入的 socket/timer

@@ -1,6 +1,5 @@
 /*
   【文件职责】     以 Vue Query 持有完整 /api/models 服务端响应。
-  【对应 frontend/】 core/models/hooks.ts
   【架构位置】     L3 Vue Query adapter
   【主要导出】     useModels · MODELS_QUERY_KEY
   【依赖关系】     core/models/api

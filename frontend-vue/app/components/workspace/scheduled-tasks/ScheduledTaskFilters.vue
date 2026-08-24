@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     Scheduled-task 六状态与 once/cron 类型筛选控件。
-  【对应 frontend/】 app/workspace/scheduled-tasks/page.tsx filters
   【架构位置】     L3 presentational component
   【主要导出】     默认 ScheduledTaskFilters
   【依赖关系】     scheduled-tasks/view-model · app i18n

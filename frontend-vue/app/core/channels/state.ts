@@ -1,6 +1,5 @@
 /*
   【文件职责】     把 provider capability 与用户 connection instances 合成为展示模型。
-  【对应 frontend/】 src/core/channels/provider-state.ts · settings/channels-settings-page.tsx
   【架构位置】     L3 pure channel state
   【主要导出】     ChannelProviderView · buildChannelProviderViews · getChannelConnectionLabel
   【依赖关系】     ./types

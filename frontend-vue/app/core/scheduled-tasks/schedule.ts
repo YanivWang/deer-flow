@@ -1,6 +1,5 @@
 /*
   【文件职责】     承载定时任务的 schedule 取值类型，供 recipes.ts 与将来的 Vue 组件共用。
-  【对应 frontend/】 frontend/src/components/workspace/scheduled-task-schedule-input.tsx（只搬类型）
   【架构位置】     L3 类型
   【主要导出】     ScheduleValue
   【依赖关系】     零依赖；被 app/core/scheduled-tasks/recipes.ts 引用

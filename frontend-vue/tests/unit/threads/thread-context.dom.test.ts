@@ -1,6 +1,5 @@
 /*
   【文件职责】     05 M1 / M2 的机器化：provide 必须传响应式载体，inject 必须在 setup。
-  【对应 frontend/】 无——这两条是 React→Vue 的语义差异，上游没有对应物
   【架构位置】     L3 测试（dom project）
   【主要导出】     无
   【依赖关系】     app/composables/thread-context.ts

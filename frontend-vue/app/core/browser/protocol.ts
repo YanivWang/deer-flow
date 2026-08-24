@@ -1,6 +1,5 @@
 /*
   【文件职责】     定义 Gateway browser-control 的客户端 wire 事件与权威状态载荷。
-  【对应 frontend/】 src/components/workspace/browser-view/use-browser-stream.ts
   【架构位置】     L3
   【主要导出】     BrowserInputEvent · BrowserTab · BrowserStreamStatus
   【依赖关系】     无

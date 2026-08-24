@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     渲染 Buzz provider 品牌标记。
-  【对应 frontend/】 src/components/workspace/channels/buzz-provider-icon.tsx
   【架构位置】     L3
   【主要导出】     默认 BuzzProviderIcon 组件
   【依赖关系】     Vue useId

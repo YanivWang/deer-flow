@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     展示 Memory document，并编排严格导入、搜索筛选与事实 CRUD。
-  【对应 frontend/】 src/components/workspace/settings/memory-settings-page.tsx
   【架构位置】     L3 product UI
   【主要导出】     默认 MemorySettings 组件
   【依赖关系】     useMemory · memory schema/view-model · SettingsActionDialog

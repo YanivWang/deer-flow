@@ -1,6 +1,5 @@
 /*
   【文件职责】     从签入的 openapi.snapshot.json 生成 app/core/api/types.gen.ts，并提供 --check。
-  【对应 frontend/】 无（上游的 REST 信封类型是从 @langchain/langgraph-sdk 借的）
   【架构位置】     构建脚本
   【主要导出】     无（CLI）
   【依赖关系】     openapi-typescript（02 §340 / 04 §267 点名的生成器）
@@ -33,7 +32,6 @@ const target = join(root, "app/core/api/types.gen.ts");
 
 const HEADER = `/*
   【文件职责】     Gateway REST 信封类型。**生成物，勿手改。**
-  【对应 frontend/】 无；上游这些类型是从 @langchain/langgraph-sdk 借的（02 §106 决定移除）
   【架构位置】     L3 类型
   【主要导出】     paths · components · operations（openapi-typescript 的固定三件套）
   【依赖关系】     baseline/openapi.snapshot.json

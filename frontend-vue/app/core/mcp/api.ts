@@ -1,6 +1,5 @@
 /*
   【文件职责】     读取或写入 Gateway MCP config，并保留 admin-required HTTP 错误。
-  【对应 frontend/】 core/mcp/api.ts
   【架构位置】     L3 Gateway adapter
   【主要导出】     MCPConfigRequestError · load/update MCP config
   【依赖关系】     authenticated fetch · Gateway error parser

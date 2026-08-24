@@ -1,9 +1,8 @@
 /*
   【文件职责】     以纯函数决定路由是否需要登录跳转。
-  【对应 frontend/】 frontend/src/core/auth/auth-disabled-user.ts
   【架构位置】     L3
   【主要导出】     decideAuthNavigation · buildLoginLocation · isEnabledRuntimeFlag
-  【依赖关系】     ./next-path（COPIED 档的回跳校验）；被全局 middleware 与 node 单测调用
+  【依赖关系】     ./next-path（回跳校验）；被全局 middleware 与 node 单测调用
   【边界与注意】   M0 只验证 auth-disabled；真实 session 接线属于后续里程碑。
 */
 
@@ -19,7 +18,7 @@ export function isEnabledRuntimeFlag(value: unknown): boolean {
  * 登录跳转的目标位置（06 §鉴权中间件切成纯函数）。
  *
  * `redirect` query 天然是「不可信输入 → 安全校验」：它会被写进 URL、再被登录后
- * 的回跳直接消费，是一个 open-redirect 的经典入口。校验复用 COPIED 档的
+ * 的回跳直接消费，是一个 open-redirect 的经典入口。校验复用
  * `validateAuthNextPath`——**不要在这里另写一套**，两套规则迟早分叉，而分叉的
  * 那一侧就是漏洞。校验不过时**不带 query**，落回默认工作区，不是原样透传。
  *

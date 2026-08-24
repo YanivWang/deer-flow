@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-12 locale 即时更新、cookie/lang 与已打开 Appearance UI 合同。
-  【对应 frontend/】 core/i18n/context.tsx + hooks.ts
   【架构位置】     WP-12 Vue DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     app/plugins/i18n.ts · AppearanceSettings.vue

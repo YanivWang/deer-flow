@@ -1,6 +1,5 @@
 /*
   【文件职责】     定义渲染分区与 Gateway 代理规则的单一来源。
-  【对应 frontend/】 frontend/next.config.js
   【架构位置】     L3
   【主要导出】     buildProxyRules、csrRoutes
   【依赖关系】     渲染分区供 nuxt.config.ts 使用；代理契约供 handler 与单测校验

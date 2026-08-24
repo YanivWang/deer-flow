@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-06 ArtifactPanel 的文件策略、完整加载、动作、错误与 stale DOM 合同。
-  【对应 frontend/】 frontend/src/components/workspace/artifacts/artifact-file-detail.tsx
   【架构位置】     测试
   【主要导出】     ArtifactPanel DOM 回归
   【依赖关系】     ArtifactPanel · useArtifactDraft

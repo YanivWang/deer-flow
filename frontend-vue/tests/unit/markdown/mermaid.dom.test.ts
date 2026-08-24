@@ -1,6 +1,5 @@
 /*
   【文件职责】     mermaid 槽位的行为验收：成功出图、失败保持代码块、晚到结果不覆盖新内容。
-  【对应 frontend/】 streamdown 的 `mermaid` 槽位（**没有可对照的夹具**，见下）
   【架构位置】     门禁测试
   【主要导出】     无
   【依赖关系】     app/components/markdown/*（mermaid 包在模块级被 mock）

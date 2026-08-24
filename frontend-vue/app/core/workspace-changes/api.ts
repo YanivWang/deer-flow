@@ -1,6 +1,5 @@
 /*
   【文件职责】     请求 Gateway workspace-changes summary/detail 协议。
-  【对应 frontend/】 frontend/src/core/workspace-changes/api.ts
   【架构位置】     L3 Gateway API
   【主要导出】     fetchWorkspaceChanges
   【依赖关系】     runtime config · shared Gateway error parser

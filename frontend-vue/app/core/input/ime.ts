@@ -1,6 +1,5 @@
 /*
   【文件职责】     归一化 composition、isComposing 与 Safari keyCode 229 判定。
-  【对应 frontend/】 src/lib/ime.ts
   【架构位置】     L3 input adapter
   【主要导出】     ImeKeyboardEvent · isImeComposing
   【依赖关系】     browser KeyboardEvent shape

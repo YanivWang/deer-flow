@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-10 Memory/Skills/MCP 的唯一 Vue Query owner、权限与精确 mutation。
-  【对应 frontend/】 core memory/skills/mcp hooks
   【架构位置】     WP-10 Vue composable DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     useMemory · useSkillSettings · useMCPConfig · Vue Query

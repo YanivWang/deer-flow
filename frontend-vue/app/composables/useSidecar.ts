@@ -1,6 +1,5 @@
 /*
   【文件职责】     单个主 thread 的 sidecar 面板开关、引用与共享 thread id。
-  【对应 frontend/】 frontend/src/components/workspace/sidecar/context.tsx
   【架构位置】     L3（DeerFlow sidecar）
   【主要导出】     useSidecar
   【依赖关系】     core/sidecar · thread submit context · AgentChat

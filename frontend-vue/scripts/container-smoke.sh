@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 # 【文件职责】验证生产镜像非 root、health、Showcase 资源、最小产物与 SIGTERM 生命周期。
-# 【对应 frontend/】frontend/Dockerfile
 # 【架构位置】工程底座
 # 【主要导出】container-smoke 命令
 # 【依赖关系】Docker daemon

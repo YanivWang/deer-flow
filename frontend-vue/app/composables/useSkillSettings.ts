@@ -1,6 +1,5 @@
 /*
   【文件职责】     复用 skills catalog query，并拥有设置页唯一 toggle mutation。
-  【对应 frontend/】 core/skills/hooks.ts
   【架构位置】     L3 Vue server-state adapter
   【主要导出】     useSkillSettings
   【依赖关系】     useSkillsCatalog · skills api · Vue Query

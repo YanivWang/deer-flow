@@ -1,6 +1,5 @@
 /*
   【文件职责】     应用级 locale：统一 SSR/CSR 首屏状态与运行期切换（05 N4）。
-  【对应 frontend/】 core/i18n/context.tsx + core/i18n/hooks.ts
   【架构位置】     L3
   【主要导出】     Nuxt plugin，provide `$i18n`
   【依赖关系】     core/i18n locale/cookie/translations · Nuxt provide

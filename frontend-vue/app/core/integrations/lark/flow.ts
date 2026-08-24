@@ -1,6 +1,5 @@
 /*
   【文件职责】     封装当前 Gateway 的 Lark 配置、授权和凭证切换 HTTP 契约。
-  【对应 frontend/】 src/core/integrations/lark/api.ts
   【架构位置】     L3
   【主要导出】     Lark flow request types 与 status/config/auth API
   【依赖关系】     core/api/fetcher · core/config · frozen Lark status types

@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-10 session role 到 Skill/MCP 权限视图的单一映射。
-  【对应 frontend/】 core/auth/AuthProvider.tsx · settings skill/tool pages
   【架构位置】     WP-10 pure permission test
   【主要导出】     无；Vitest cases
   【依赖关系】     core/settings/permissions

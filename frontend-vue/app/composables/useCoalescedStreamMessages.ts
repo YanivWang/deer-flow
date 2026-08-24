@@ -1,6 +1,5 @@
 /*
   【文件职责】     把流式消息数组降频成「每 80ms 至多一帧」的渲染快照。
-  【对应 frontend/】 core/threads/hooks.ts 的 useCoalescedStreamMessages
   【架构位置】     L3（Vue 适配）
   【主要导出】     useCoalescedStreamMessages
   【依赖关系】     @/core/threads/coalesce · vue

@@ -1,81 +1,68 @@
 # frontend-vue M0 developer entrypoint. package.json intentionally contains only postinstall.
 
-.PHONY: help install dev build preview lint format format-check typecheck typecheck-core test verify asset-budget header-check \
-	e2e-install e2e-list e2e-m0 e2e-m4a e2e-m4a-stream e2e-m4b-list e2e-m4b e2e-m5-list e2e-m5 e2e-m5-real-backend e2e-m6-list e2e-m6 e2e-m6-real-backend e2e-m7-list e2e-m7 e2e-wp07-real-backend e2e-wp08-real-backend e2e-wp09-real-backend e2e-wp10-real-backend e2e-wp11-real-backend e2e-m7-local-list e2e-m7-local e2e-m7-auth-list e2e-m7-auth e2e-m7-real-protocol e2e-m7-visual e2e-external e2e e2e-auth e2e-real-backend e2e-visual \
-	proxy-smoke auth-disabled-smoke auth-cookie-smoke visual-baseline-smoke splitpanes-smoke \
-	ws-smoke oidc-smoke run-protocol-smoke proxy-security audit docker-build container-smoke \
-	baseline-refresh baseline-check land-copied land-retyped land-retyped-check \
-	codemod-tests codemod-check collected-check migration-check typecheck-raw \
-	typecheck-refresh i18n-check i18n-diff i18n-unused i18n-source-check i18n-refresh \
-	gen-api-types gen-api-types-check consumer-check
+.PHONY: help install dev build preview lint format format-check typecheck typecheck-core test verify asset-budget \
+	e2e-install e2e-preflight e2e e2e-auth e2e-visual e2e-infra e2e-proxy-options e2e-stream \
+	e2e-protocol e2e-real e2e-scheduled e2e-channels e2e-agents e2e-settings e2e-shell \
+	e2e-browser e2e-external e2e-mock e2e-backend e2e-list \
+	proxy-security audit docker-build container-smoke \
+	upstream-drift upstream-accept \
+	i18n-check i18n-diff i18n-unused i18n-source-check i18n-refresh \
+	gen-api-types gen-api-types-check gen-contract-constants gen-contract-constants-check \
+	consumer-check standalone-check
 
 PYTHON ?= python3
 PNPM = $(PYTHON) ../scripts/pnpm.py --dir frontend-vue
 EXEC = $(PNPM) exec
 E2E_EXEC = node scripts/with-loopback-no-proxy.mjs -- $(EXEC)
 DEV_PORT ?= 3100
+# 每个 e2e 套件一个前端端口 + 需要真实后端的再加一个 Gateway 端口，
+# 这样多个套件可以并行跑而不抢端口。默认值同时写在各自的 config 里。
 E2E_PORT ?= 3101
-E2E_M4B_PORT ?= 3102
-E2E_M5_PORT ?= 3105
-E2E_M6_PORT ?= 3106
-E2E_M7_LOCAL_PORT ?= 3107
-E2E_M7_AUTH_PORT ?= 3108
-E2E_M7_VISUAL_PORT ?= 3109
-E2E_WP07_FRONTEND_PORT ?= 3110
-E2E_WP07_GATEWAY_PORT ?= 8013
-E2E_WP08_FRONTEND_PORT ?= 3111
-E2E_WP08_GATEWAY_PORT ?= 8014
-E2E_WP09_FRONTEND_PORT ?= 3112
-E2E_WP09_GATEWAY_PORT ?= 8015
-E2E_WP10_FRONTEND_PORT ?= 3113
-E2E_WP10_GATEWAY_PORT ?= 8016
-E2E_WP10_UNSUPPORTED_GATEWAY_PORT ?= 8017
-E2E_WP11_FRONTEND_PORT ?= 3114
-E2E_WP11_GATEWAY_PORT ?= 8018
+E2E_PROXY_OPTIONS_PORT ?= 3102
+E2E_STREAM_PORT ?= 3104
+E2E_AUTH_PORT ?= 3108
+E2E_VISUAL_PORT ?= 3109
+E2E_SCHEDULED_PORT ?= 3110
+E2E_CHANNELS_PORT ?= 3111
+E2E_AGENTS_PORT ?= 3112
+E2E_SETTINGS_PORT ?= 3113
+E2E_SHELL_PORT ?= 3114
 IMAGE ?= deer-flow-frontend-vue:ci
 
 help:
 	@echo "frontend-vue M0 commands:"
 	@echo "  make dev / build / preview     Nuxt lifecycle (dev port $(DEV_PORT))"
 	@echo "  make verify                    lint + format-check + typecheck + unit + build"
-	@echo "  make e2e-m0                    runnable M0 proxy/auth/visual/replay suite"
-	@echo "  make e2e-m4a                   M4a data-flow gate (send/stream/stop/reload ordering)"
-	@echo "  make e2e-m4a-stream            M4a real chunked-SSE gate (heartbeat/resume cursor/gap)"
-	@echo "  make e2e-m4b-list              verify/list the exact M4b 11-file contract inventory"
-	@echo "  make e2e-m4b                   run the exact M4b shared contract gate"
-	@echo "  make e2e-m5                    run the exact M5 artifacts/sidecar/changes gate"
-	@echo "  make e2e-m5-real-backend       run M5 write-file/artifact against replay Gateway"
-	@echo "  make e2e-m6-real-backend       run M6 browser panel against browser-enabled replay Gateway"
-	@echo "  make e2e-m6                    run the exact M6 remaining-L3 shared contract gate"
-	@echo "  make e2e-m7-list               verify/list the exact 29-file / 169-test M7 inventory"
-	@echo "  make e2e-m7                    verify then run the full M7 shared contract gate"
-	@echo "  make e2e-wp07-real-backend     run scheduled tasks against real FastAPI/SQLite Gateway"
-	@echo "  make e2e-wp08-real-backend     run channel lifecycle against real Auth/FastAPI/SQLite Gateway"
-	@echo "  make e2e-wp09-real-backend     run Agent lifecycle/settings against real Auth/FastAPI/SQLite Gateway"
-	@echo "  make e2e-wp10-real-backend     run DeerMem/Noop/Skills/MCP settings against real Auth/FastAPI Gateway"
-	@echo "  make e2e-wp11-real-backend     run workspace shell/changes against real Auth/FastAPI Gateway"
-	@echo "  make e2e-m7-local              run exact M7 sidebar/IME/keyboard/a11y contracts"
-	@echo "  make e2e-m7-auth               run exact M7 auth request/security contracts"
-	@echo "  make e2e-m7-real-protocol      run real Gateway resume/gap/browser-cancel contract"
-	@echo "  make e2e-m7-visual             compare eight deterministic product-state screenshots"
+	@echo ""
+	@echo "  E2E 套件（一个套件 = 一种后端拓扑，名字说的是测什么）:"
+	@echo "  make e2e                       product contracts on a mocked Gateway (default gate)"
+	@echo "  make e2e-auth                  auth UI contracts (frontend built with auth on)"
+	@echo "  make e2e-visual                product visual snapshots"
+	@echo "  make e2e-infra                 same-origin proxy and __m0 test pages"
+	@echo "  make e2e-proxy-options         proxy with streaming forwarding disabled"
+	@echo "  make e2e-stream                real chunked SSE: heartbeat, resume cursor, gap"
+	@echo "  make e2e-protocol              run-protocol state machine on a real Gateway"
+	@echo "  make e2e-real                  render, multi-run order, artifact write"
+	@echo "  make e2e-scheduled             scheduled tasks against real Gateway/SQLite"
+	@echo "  make e2e-channels              channel connection lifecycle (auth on)"
+	@echo "  make e2e-agents                custom agent creation and settings (auth on)"
+	@echo "  make e2e-settings              settings with a supported and a degraded Gateway"
+	@echo "  make e2e-shell                 workspace shell and workspace-changes (auth on)"
+	@echo "  make e2e-browser               browser panel against a real Chromium backend"
+	@echo "  make e2e-external              WebSocket and OIDC; needs the backend browser extra"
+	@echo "  make e2e-mock                  every suite that needs no backend process"
+	@echo "  make e2e-backend               every suite that needs a real Gateway"
+	@echo "  make e2e-list                  collect every suite and print its test count"
+	@echo ""
 	@echo "  make asset-budget              build and enforce raw/gzip client asset budgets"
-	@echo "  make e2e-external              G0-6/G0-7 gates needing a browser runtime and an IdP"
-	@echo "  make e2e-list                  list shared React business contract inventory"
-	@echo "  make e2e                       run full shared business contracts (M1+ delivery)"
 	@echo "  make container-smoke           non-root /health / SIGTERM production image smoke"
-	@echo "  make baseline-refresh          rebuild core provenance + test manifests (needs full clone)"
-	@echo "  make baseline-check            fail if the checked-in manifests are stale"
-	@echo "  make land-copied               copy the COPIED set into app/core byte-for-byte"
-	@echo "  make land-retyped              apply the declared retypes into app/core"
-	@echo "  make codemod-tests             regenerate tests/unit/core from rstest sources"
-	@echo "  make collected-check           fail if vitest collects a different set than the manifest"
-	@echo "  make migration-check           baseline-check + codemod-check (needs full clone)"
-	@echo "  make typecheck-raw             unfiltered vue-tsc output"
+	@echo "  make upstream-drift            report what ../frontend changed since the marker"
+	@echo "  make upstream-accept           advance the reviewed-upstream marker to HEAD"
 	@echo "  make typecheck-core            standalone tsc for packages/agent-core"
 	@echo "  make gen-api-types             regenerate app/core/api/types.gen.ts from the snapshot"
+	@echo "  make gen-contract-constants    regenerate backend contract constants from contracts/*.json"
 	@echo "  make consumer-check            clean-install packages/agent-core into a temp consumer"
-	@echo "  make header-check              enforce six-part headers, excluding provenance COPIED files"
-	@echo "  make typecheck-refresh         rebuild the known-typecheck-error budget"
+	@echo "  make standalone-check          P0 gate: no cross-app reference to ../frontend"
 	@echo "  make i18n-check                dictionary health: locales in sync, no key lost"
 	@echo "  make i18n-diff / i18n-unused   exact key and audited-unused drift against baseline"
 	@echo "  make i18n-source-check         reject core English literals in product Vue SFCs"
@@ -101,12 +88,7 @@ format:
 format-check:
 	$(EXEC) prettier --check .
 
-# 预算门禁而不是裸 vue-tsc：M1 分窗口推进期间，COPIED 引用尚未落地的 RETYPED
-# 必然报错。把 typecheck 移出 verify 会连带放过真正的类型错误，所以改成钉预算。
 typecheck:
-	node scripts/typecheck-budget.mjs
-
-typecheck-raw:
 	$(EXEC) vue-tsc --noEmit
 
 # packages/agent-core 走**自己的** tsconfig，不走 vue-tsc。
@@ -120,9 +102,6 @@ typecheck-core:
 	$(EXEC) tsc --noEmit -p packages/agent-core
 	$(EXEC) tsc --noEmit -p packages/agent-core/tsconfig.test.json
 
-typecheck-refresh:
-	node scripts/typecheck-budget.mjs --refresh
-
 # REST 信封类型（02 §340 / 04 §267）。生成源是**签入的**快照，不是活着的 Gateway：
 # 让 CI 去 curl 一个跑着的后端，门禁就会随部署状态变色。
 # check 检的是幂等性——同一份快照生成两次必须一致。刷新快照的命令见
@@ -133,14 +112,24 @@ gen-api-types:
 gen-api-types-check:
 	node scripts/gen-api-types.mjs --check
 
+# 上游同步 L1：后端契约（contracts/*.json）在 Vue 侧只有一份真相。
+gen-contract-constants:
+	node scripts/gen-contract-constants.mjs
+
+gen-contract-constants-check:
+	node scripts/gen-contract-constants.mjs --check
+
 # 08 §54 的可移植性验收。打真包 → 临时目录 clean install → typecheck → 跑一次最小
 # session。**不进 verify**：它要联网装 typescript/esbuild，而 verify 必须能离线跑。
 # 里程碑收口与改动 packages/agent-core/package.json 时必须跑一次。
 consumer-check:
 	node scripts/consumer-check.mjs
 
-header-check:
-	node scripts/check-file-headers.mjs
+# 平替验收判据。frontend-vue 必须能在 ../frontend 不存在时完成
+# install / build / test / e2e，否则「用 Vue 替换 React」这件事不成立。
+# BLOCKING 已归零并接进 verify：任何新的跨应用引用都会当场变红。
+standalone-check:
+	node scripts/standalone-check.mjs
 
 test:
 	$(EXEC) vitest run
@@ -162,9 +151,9 @@ i18n-source-check:
 i18n-refresh:
 	node scripts/i18n-manager.mjs --refresh
 
-# collected-check 只读签入的台账与 vitest 的收集结果，不碰 git 历史，所以能进 verify。
-# 它防的是「少收集几个测试换全绿」——vitest run 本身报告不了没被收集的东西。
-verify: lint format-check typecheck typecheck-core test collected-check i18n-check i18n-source-check gen-api-types-check header-check build
+# gen-contract-constants-check 是上游同步 L1：后端 contracts/*.json 变了就红。
+# 它是三层同步方案里唯一阻断的一层——那是上游变更能直接让 Vue 功能损坏的路径。
+verify: lint format-check typecheck typecheck-core test i18n-check i18n-source-check gen-api-types-check gen-contract-constants-check standalone-check build
 
 # The build dependency makes the gate inspect the current checkout rather than stale .output.
 asset-budget: build
@@ -173,207 +162,101 @@ asset-budget: build
 e2e-install:
 	$(EXEC) playwright install --with-deps chromium
 
-e2e-list:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	$(E2E_EXEC) playwright test --list
+# 每个 e2e 目标的前置检查。@playwright/test 是本工作区的正常 devDependency，
+# 前置检查也只看自己。
+e2e-preflight:
+	@test -f node_modules/@playwright/test/package.json \
+		|| { echo "@playwright/test 未安装：先运行 make install"; exit 1; }
 
-e2e-m0: proxy-smoke auth-disabled-smoke visual-baseline-smoke splitpanes-smoke auth-cookie-smoke run-protocol-smoke
+# 一个套件 = 一份 config = 一种后端拓扑。名字说的是**测什么**，
+# 不是迁移阶段——套件之间不能合并的原因写在各自 config 的文件头里。
+define run_suite
+	@$(MAKE) --no-print-directory e2e-preflight
+	$(E2E_EXEC) playwright test -c playwright.$(1).config.ts
+endef
 
-# M4a 的数据流 gate。与 e2e-m0 / verify **不能并发**：三者都会起 nuxt build。
-e2e-m4a:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	PLAYWRIGHT_BASE_URL=http://localhost:3103 $(E2E_EXEC) playwright test -c playwright.m4a.config.ts
-
-# 真流 gate：浏览器从 socket 上一片一片读，覆盖 route.fulfill 到不了的四件事
-# （分帧边界、心跳、Last-Event-ID 续传、gap→A7）。同样不能与其他 build 并发。
-e2e-m4a-stream:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	PLAYWRIGHT_BASE_URL=http://localhost:3104 $(E2E_EXEC) playwright test -c playwright.m4a-stream.config.ts
-
-e2e-m4b-list:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_M4B_PORT=$(E2E_M4B_PORT) node scripts/m4b-inventory.mjs --list
-
-e2e-m4b:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_M4B_PORT=$(E2E_M4B_PORT) node scripts/m4b-inventory.mjs
-	E2E_M4B_PORT=$(E2E_M4B_PORT) PLAYWRIGHT_BASE_URL=http://localhost:$(E2E_M4B_PORT) $(E2E_EXEC) playwright test -c playwright.m4b.config.ts
-
-e2e-m5-list:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_M5_PORT=$(E2E_M5_PORT) node scripts/m5-inventory.mjs --list
-
-e2e-m5:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_M5_PORT=$(E2E_M5_PORT) node scripts/m5-inventory.mjs
-	E2E_M5_PORT=$(E2E_M5_PORT) PLAYWRIGHT_BASE_URL=http://localhost:$(E2E_M5_PORT) $(E2E_EXEC) playwright test -c playwright.m5.config.ts
-
-e2e-m5-real-backend:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_FRONTEND_PORT=$(E2E_PORT) $(E2E_EXEC) playwright test -c playwright.m5-real-backend.config.ts
-
-e2e-m6-list:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_M6_PORT=$(E2E_M6_PORT) node scripts/m6-inventory.mjs --list
-
-e2e-m6:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_M6_PORT=$(E2E_M6_PORT) node scripts/m6-inventory.mjs
-	E2E_M6_PORT=$(E2E_M6_PORT) PLAYWRIGHT_BASE_URL=http://localhost:$(E2E_M6_PORT) $(E2E_EXEC) playwright test -c playwright.m6.config.ts
-
-e2e-m6-real-backend:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_FRONTEND_PORT=$(E2E_PORT) $(E2E_EXEC) playwright test -c playwright.m6-real-backend.config.ts
-
-e2e-m7-list:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	node scripts/m7-inventory.mjs --list
-
-e2e-m7:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	node scripts/m7-inventory.mjs
-	$(E2E_EXEC) playwright test -c playwright.m7.config.ts
-
-e2e-wp07-real-backend:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_WP07_FRONTEND_PORT=$(E2E_WP07_FRONTEND_PORT) E2E_WP07_GATEWAY_PORT=$(E2E_WP07_GATEWAY_PORT) $(E2E_EXEC) playwright test -c playwright.wp07-real-backend.config.ts
-
-e2e-wp08-real-backend:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_WP08_FRONTEND_PORT=$(E2E_WP08_FRONTEND_PORT) E2E_WP08_GATEWAY_PORT=$(E2E_WP08_GATEWAY_PORT) $(E2E_EXEC) playwright test -c playwright.wp08-real-backend.config.ts
-
-e2e-wp09-real-backend:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_WP09_FRONTEND_PORT=$(E2E_WP09_FRONTEND_PORT) E2E_WP09_GATEWAY_PORT=$(E2E_WP09_GATEWAY_PORT) $(E2E_EXEC) playwright test -c playwright.wp09-real-backend.config.ts
-
-e2e-wp10-real-backend:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_WP10_FRONTEND_PORT=$(E2E_WP10_FRONTEND_PORT) E2E_WP10_GATEWAY_PORT=$(E2E_WP10_GATEWAY_PORT) E2E_WP10_UNSUPPORTED_GATEWAY_PORT=$(E2E_WP10_UNSUPPORTED_GATEWAY_PORT) $(E2E_EXEC) playwright test -c playwright.wp10-real-backend.config.ts
-
-e2e-wp11-real-backend:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_WP11_FRONTEND_PORT=$(E2E_WP11_FRONTEND_PORT) E2E_WP11_GATEWAY_PORT=$(E2E_WP11_GATEWAY_PORT) $(E2E_EXEC) playwright test -c playwright.wp11-real-backend.config.ts
-
-e2e-m7-local-list:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_M7_LOCAL_PORT=$(E2E_M7_LOCAL_PORT) node scripts/m7-local-inventory.mjs --list
-
-e2e-m7-local:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_M7_LOCAL_PORT=$(E2E_M7_LOCAL_PORT) node scripts/m7-local-inventory.mjs
-	E2E_M7_LOCAL_PORT=$(E2E_M7_LOCAL_PORT) PLAYWRIGHT_BASE_URL=http://localhost:$(E2E_M7_LOCAL_PORT) $(E2E_EXEC) playwright test -c playwright.m7-local.config.ts
-
-e2e-m7-auth-list:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_M7_AUTH_PORT=$(E2E_M7_AUTH_PORT) node scripts/m7-auth-inventory.mjs --list
-
-e2e-m7-auth:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_M7_AUTH_PORT=$(E2E_M7_AUTH_PORT) node scripts/m7-auth-inventory.mjs
-	E2E_M7_AUTH_PORT=$(E2E_M7_AUTH_PORT) PLAYWRIGHT_BASE_URL=http://localhost:$(E2E_M7_AUTH_PORT) $(E2E_EXEC) playwright test -c playwright.m7-auth.config.ts
-
-# M7 owns the browser evidence, while the stronger replay-Gateway state machine
-# remains single-sourced in tests/m0-real-backend/run-protocol.spec.ts.
-e2e-m7-real-protocol: run-protocol-smoke
-
-e2e-m7-visual:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_M7_VISUAL_PORT=$(E2E_M7_VISUAL_PORT) PLAYWRIGHT_BASE_URL=http://localhost:$(E2E_M7_VISUAL_PORT) $(E2E_EXEC) playwright test -c playwright.m7-visual.config.ts
-
-# G0-6 and G0-7. Separate from e2e-m0 only because they need the backend browser
-# extra (uv sync --extra browser && playwright install chromium) and a Gateway
-# whose toolset includes browser_navigate — enabling that changes the system
-# prompt and would break the run-protocol replay fixture's hash. Both gates are
-# otherwise hermetic: the IdP is tests/support/run_m0_idp.py, no external service.
-e2e-external: ws-smoke oidc-smoke
-
+# ── 只需要 Nuxt preview 的套件（page.route() mock Gateway）────────────────
+# 主 config 用 Playwright 的默认文件名，所以不走 run_suite 的 playwright.<id>.config.ts 规则。
 e2e:
-	test -f ../frontend/node_modules/@playwright/test/package.json
+	@$(MAKE) --no-print-directory e2e-preflight
 	$(E2E_EXEC) playwright test
 
 e2e-auth:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	$(E2E_EXEC) playwright test -c playwright.auth.config.ts
-
-e2e-real-backend:
-	test -f ../frontend/node_modules/@playwright/test/package.json
-	E2E_FRONTEND_PORT=$(E2E_PORT) $(E2E_EXEC) playwright test -c playwright.real-backend.config.ts
+	$(call run_suite,auth)
 
 e2e-visual:
-	$(E2E_EXEC) playwright test -c playwright.visual.config.ts
+	$(call run_suite,visual)
 
-proxy-smoke:
-	$(E2E_EXEC) playwright test -c playwright.m0.config.ts --grep @proxy
-	$(E2E_EXEC) playwright test -c playwright.proxy-options.config.ts
+# ── 需要本地 stub server 的基础设施套件 ────────────────────────────────
+e2e-infra:
+	$(call run_suite,infra)
 
-auth-disabled-smoke:
-	$(E2E_EXEC) playwright test -c playwright.m0.config.ts --grep @auth-disabled
+e2e-proxy-options:
+	$(call run_suite,proxy-options)
 
-auth-cookie-smoke:
-	$(E2E_EXEC) playwright test -c playwright.m0-real-backend.config.ts --grep @auth-cookie
+e2e-stream:
+	$(call run_suite,stream)
 
-visual-baseline-smoke:
-	$(E2E_EXEC) playwright test -c playwright.visual.config.ts
+# ── 需要真实 Gateway 的套件（各自的 seed 与 auth 模式见 config）──────────
+e2e-protocol:
+	$(call run_suite,protocol)
 
-splitpanes-smoke:
-	$(E2E_EXEC) playwright test -c playwright.m0.config.ts --grep @splitpanes
+e2e-real:
+	$(call run_suite,real)
 
-ws-smoke:
-	$(E2E_EXEC) playwright test -c playwright.m0-external.config.ts --grep @ws
+e2e-scheduled:
+	$(call run_suite,scheduled)
 
-oidc-smoke:
-	$(E2E_EXEC) playwright test -c playwright.m0-external.config.ts --grep @oidc
+e2e-channels:
+	$(call run_suite,channels)
 
-run-protocol-smoke:
-	$(E2E_EXEC) playwright test -c playwright.m0-real-backend.config.ts --grep @run-protocol
+e2e-agents:
+	$(call run_suite,agents)
 
-proxy-security: proxy-smoke
+e2e-settings:
+	$(call run_suite,settings)
+
+e2e-shell:
+	$(call run_suite,shell)
+
+e2e-browser:
+	$(call run_suite,browser)
+
+# 需要后端的 browser extra 与自带 IdP。
+e2e-external:
+	$(call run_suite,external)
+
+# ── 聚合入口 ────────────────────────────────────────────────────────────
+# 不需要任何后端进程，CI 的主门禁。
+#
+# e2e-visual **不在**这里：截图基线目前只有 `-darwin` 一份，而 CI 跑 Linux，
+# 两边的字体栅格化不同。要把它接进 CI，得先在 Linux 容器里生成 `-linux` 基线
+# 并签入。在那之前它是本机门禁——这也正是它悄悄红了三个提交没人发现的原因
+# （旧 CI 只跑 @visual-seed，从没跑过产品截图）。
+e2e-mock: e2e e2e-auth e2e-infra e2e-proxy-options e2e-stream
+
+# 需要 backend 的 uv 环境。
+e2e-backend: e2e-protocol e2e-real e2e-scheduled e2e-channels e2e-agents e2e-settings e2e-shell e2e-browser
+
+e2e-list:
+	@$(MAKE) --no-print-directory e2e-preflight
+	@for c in playwright*.config.ts; do \
+		printf '%-38s ' "$$c"; \
+		$(E2E_EXEC) playwright test -c "$$c" --list --reporter=line 2>&1 | grep -oE 'Total: [0-9]+ test' || echo '收集失败'; \
+	done
+
+proxy-security: e2e-infra e2e-proxy-options
 	$(EXEC) vitest run tests/unit/config/routes.test.ts tests/unit/server/gateway-proxy.test.ts
 
-# 迁移台账维护命令。读 git 对象重建 baseline，因此必须在完整 clone 中运行，
-# 且 diff 要交 review（06 §1e）。普通 CI 跑 make test 即可，不碰 git 历史。
-#
-# 锚必须是**固定 commit**，不能是 HEAD。两个理由：
-#   1. 对标对象就是冻结基线 27a425b0（06 §冻结基线与上游同步策略，README 同）。
-#      里程碑进行中完全不看上游，台账自然要锚在那一份树上。
-#   2. HEAD 会自我作废：台账把 baselineCommit 写进产物，一提交 HEAD 就变，
-#      baseline-check 逐字节比对必红。上一窗口正是这样——提交前绿、提交后红。
-# 换基线是一次显式动作：改这里 + make baseline-refresh + diff 交 review。
-BASELINE ?= 27a425b0f1078baf8b2a361103a2b136ee342ab5
+# 上游同步 L2：报告 ../frontend 自 marker 以来改了什么，供人工决定是否在 Vue 跟进。
+# 顾问性质，不阻断构建；frontend/ 不在 checkout 里时安静跳过。
+# 取代了原来的 SHA-256 文件护城河——那套机制比对的是「Vue 副本 vs 冻结基线」，
+# 因此 React 前进时结构上看不见，实测已让两个 lark 文件在 CI 全绿时过期。
+upstream-drift:
+	node scripts/upstream-drift.mjs
 
-baseline-refresh:
-	node scripts/core-provenance.mjs --refresh --baseline=$(BASELINE)
-	node scripts/core-test-manifest.mjs --refresh --baseline=$(BASELINE)
-
-baseline-check:
-	node scripts/core-provenance.mjs --baseline=$(BASELINE)
-	node scripts/core-test-manifest.mjs --baseline=$(BASELINE)
-
-# 已落地的分类。codemod 与对账脚本按这个值重算期望集。
-# BLOCKED 档永远不进这里：那 8 个文件内容零改动但 import 指向 M4 才存在的 REWRITE 模块，
-# 它们随被依赖方一起落地，不是靠这里放行。
-LANDED ?= COPIED,RETYPED
-
-land-copied:
-	node scripts/land-copied.mjs --write
-
-land-retyped:
-	node scripts/land-retyped.mjs --write
-
-land-retyped-check:
-	node scripts/land-retyped.mjs
-
-codemod-tests:
-	node scripts/rstest-to-vitest.mjs --write --landed=$(LANDED)
-
-codemod-check:
-	node scripts/rstest-to-vitest.mjs --landed=$(LANDED)
-
-collected-check:
-	node scripts/collected-vs-manifest.mjs --landed=$(LANDED)
-
-# 需要完整 clone（要读 baseline commit 的 git 对象），因此不进 verify。
-migration-check: baseline-check codemod-check land-retyped-check
+upstream-accept:
+	node scripts/upstream-drift.mjs --accept
 
 audit:
 	$(PNPM) audit --audit-level moderate --registry https://registry.npmjs.org

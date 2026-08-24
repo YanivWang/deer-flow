@@ -1,6 +1,5 @@
 /*
   【文件职责】     示例后端消息与 agent-core AgentMessage 的适配器。
-  【对应 frontend/】 无；M8 consumer 示例
   【架构位置】     consumer L3 adapter
   【主要导出】     ExampleWireMessage · toAgentMessage
   【依赖关系】     只从 @deerflow/agent-core 根入口消费

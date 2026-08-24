@@ -1,6 +1,5 @@
 /*
   【文件职责】     安装 @tanstack/vue-query，并把默认查询策略钉在一处。
-  【对应 frontend/】 frontend/src/app/providers.tsx 的 QueryClientProvider
   【架构位置】     L3
   【主要导出】     Nuxt plugin
   【依赖关系】     @tanstack/vue-query

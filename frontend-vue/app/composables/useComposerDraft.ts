@@ -1,6 +1,5 @@
 /*
   【文件职责】     集中管理 composer 草稿 key、延迟恢复、保存与 accepted 清理。
-  【对应 frontend/】 components/workspace/input-box.tsx 的 useComposerDraft 接线
   【架构位置】     L3 Vue 状态适配
   【主要导出】     useComposerDraft
   【依赖关系】     core/threads/composer-draft

@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 Gateway ToolMessage browser_view 静态帧提取与线程隔离合同。
-  【对应 frontend/】 frontend/src/components/workspace/messages/message-list.tsx
   【架构位置】     测试
   【主要导出】     latestBrowserViewFrame 回归用例
   【依赖关系】     app/core/browser/frame.ts

@@ -1,6 +1,5 @@
 /*
   【文件职责】     分块器的四条合并规则与 key 语义。
-  【对应 frontend/】 无（上游这段在 streamdown 包内部，没有可搬的单测）
   【架构位置】     单元测试
   【主要导出】     无
   【依赖关系】     app/core/markdown/blocks

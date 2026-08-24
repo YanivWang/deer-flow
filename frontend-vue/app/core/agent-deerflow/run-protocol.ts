@@ -1,6 +1,5 @@
 /*
   【文件职责】     用 DeerFlow Gateway 实现内核的 RunProtocol 四个方法。
-  【对应 frontend/】 frontend/src/core/api/api-client.ts（被替代的对象）
   【架构位置】     L3
   【主要导出】     DeerFlowRunInput · DEERFLOW_DURABLE_STATUS · createDeerFlowRunProtocol
   【依赖关系】     @deerflow/agent-core · ./endpoints · @/core/api/stream-mode · @/core/api/fetcher

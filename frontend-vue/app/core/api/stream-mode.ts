@@ -1,6 +1,5 @@
 /*
   【文件职责】     校验发往 DeerFlow Gateway 的 LangGraph stream mode 白名单。
-  【对应 frontend/】 frontend/src/core/api/stream-mode.ts
   【架构位置】     L3 DeerFlow 应用适配层
   【主要导出】     warnUnsupportedStreamModes · sanitizeRunStreamOptions
   【依赖关系】     无

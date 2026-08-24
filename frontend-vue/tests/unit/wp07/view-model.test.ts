@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-07 全状态筛选、类型筛选与确定性 selection 恢复。
-  【对应 frontend/】 app/workspace/scheduled-tasks/page.tsx filters
   【架构位置】     WP-07 view-model test
   【主要导出】     无；Vitest cases
   【依赖关系】     core/scheduled-tasks/view-model

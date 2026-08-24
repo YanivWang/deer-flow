@@ -1,6 +1,5 @@
 /*
   【文件职责】     独占 Agent 保存、setup_agent 结果、有限可见性验证与 cleanup 状态机。
-  【对应 frontend/】 app/workspace/agents/new/page.tsx
   【架构位置】     L3 Vue lifecycle owner
   【主要导出】     useAgentCreationSession
   【依赖关系】     core/agents/creation-session · Gateway errors · Vue scope

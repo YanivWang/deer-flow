@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     Workspace command palette 与全局快捷操作的唯一 window-listener owner。
-  【对应 frontend/】 command-palette.tsx · use-global-shortcuts.ts
   【架构位置】     L3 workspace shell
   【主要导出】     默认 CommandPalette 组件
   【依赖关系】     Reka Dialog · settings owner · shortcut matcher · Vue Router

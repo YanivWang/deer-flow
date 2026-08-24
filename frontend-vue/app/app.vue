@@ -1,6 +1,5 @@
 <!--
   【文件职责】     提供 Nuxt 应用根节点与布局出口。
-  【对应 frontend/】 frontend/src/app/layout.tsx
   【架构位置】     L3
   【主要导出】     根应用组件
   【依赖关系】     挂载 layouts 与 pages

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     Scheduled-task run 全字段列表与 limit/offset 继续加载控件。
-  【对应 frontend/】 app/workspace/scheduled-tasks/page.tsx run history
   【架构位置】     L3 presentational component
   【主要导出】     默认 ScheduledTaskRunList
   【依赖关系】     scheduled-tasks/types · app i18n

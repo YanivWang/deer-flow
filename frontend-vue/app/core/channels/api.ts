@@ -1,6 +1,5 @@
 /*
   【文件职责】     访问 Gateway channel provider/configuration/connection lifecycle endpoints。
-  【对应 frontend/】 core/channels/api.ts
   【架构位置】     L3 Gateway HTTP contract
   【主要导出】     list/connect/configure/disconnect channel APIs
   【依赖关系】     core/api/fetcher · errors · config

@@ -1,6 +1,5 @@
 /*
   【文件职责】     一个会**真正分块吐帧**的假 Gateway，供 M4a 的流式 gate 使用。
-  【对应 frontend/】 无；M4a 测试夹具
   【架构位置】     测试夹具
   【主要导出】     本地 8014 HTTP server
   【依赖关系】     被 playwright.m4a-stream.config.ts 当 webServer 启动，

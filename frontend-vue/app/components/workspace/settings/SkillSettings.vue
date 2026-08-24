@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     复用 composer skill catalog，并按 session role 管理全局 skill 开关。
-  【对应 frontend/】 src/components/workspace/settings/skill-settings.tsx
   【架构位置】     L3 product UI
   【主要导出】     默认 SkillSettings 组件
   【依赖关系】     useSettingsPermissions · useSkillSettings

@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-09 setup_agent ToolMessage 识别与隐藏保存请求合同。
-  【对应 frontend/】 app/workspace/agents/new/page.tsx · core/threads/hooks.ts
   【架构位置】     WP-09 纯逻辑测试
   【主要导出】     无；Vitest cases
   【依赖关系】     core/agents/creation-session · core/types/message

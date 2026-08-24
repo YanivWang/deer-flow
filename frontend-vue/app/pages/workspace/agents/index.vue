@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     通过 Vue Query 列出、编辑和删除 DeerFlow custom agents。
-  【对应 frontend/】 src/app/workspace/agents/page.tsx
   【架构位置】     L3 application page
   【主要导出】     默认 agents page
   【依赖关系】     useAgents · useModels · workspace features · Agent components

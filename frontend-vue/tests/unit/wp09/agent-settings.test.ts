@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-09 模型目录、capability 与 Agent update exact payload。
-  【对应 frontend/】 components/workspace/agents/agent-settings-dialog-helpers.ts
   【架构位置】     WP-09 纯逻辑测试
   【主要导出】     无；Vitest cases
   【依赖关系】     core/agents/settings · core/models/types

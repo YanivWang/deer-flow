@@ -1,6 +1,5 @@
 /*
   【文件职责】     在有限 bind window 内观察用户 connections，直到新 instance 成功或到期。
-  【对应 frontend/】 core/channels/connect-poll.ts
   【架构位置】     L3 channel lifecycle
   【主要导出】     startConnectionPoll · normalizeConnectExpiresSeconds
   【依赖关系】     ./types · AbortController · timers

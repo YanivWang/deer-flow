@@ -1,6 +1,5 @@
 /*
   【文件职责】     用一个非 LangGraph 的 sessions API 实现 RunProtocol。
-  【对应 frontend/】 无；M8 consumer 示例
   【架构位置】     consumer L3 adapter
   【主要导出】     ExampleRunHandle · createExampleRunProtocol
   【依赖关系】     @deerflow/agent-core RunProtocol

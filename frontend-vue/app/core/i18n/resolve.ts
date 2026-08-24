@@ -1,6 +1,5 @@
 /*
   【文件职责】     按点分路径从词典里取一条文案。
-  【对应 frontend/】 无——上游用 `t.conversation.streamReplayGap` 直接取属性
   【架构位置】     L3（纯 TS）
   【主要导出】     resolveTranslation
   【依赖关系】     无

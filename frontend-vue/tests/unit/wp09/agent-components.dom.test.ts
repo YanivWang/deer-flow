@@ -1,6 +1,5 @@
 /*
   【文件职责】     固定 WP-09 Agent card 与 capability settings 的用户可见 DOM/exact payload。
-  【对应 frontend/】 components/workspace/agents/agent-card.tsx · agent-settings-dialog.tsx
   【架构位置】     WP-09 Vue DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     AgentCard · AgentSettingsDialog · i18n

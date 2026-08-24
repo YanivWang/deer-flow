@@ -1,6 +1,5 @@
 /*
   【文件职责】     提交请求体的构造：run context 的档位推导与附件透传。
-  【对应 frontend/】 tests/unit/core/threads/send-message.test.ts（部分）
   【架构位置】     L3 测试
   【主要导出】     无
   【依赖关系】     app/core/threads/submit.ts

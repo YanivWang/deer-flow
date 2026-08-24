@@ -1,6 +1,5 @@
 /*
   【文件职责】     一个 thread 的完整数据流：历史 + 实时 + 乐观三路的归并与生命周期。
-  【对应 frontend/】 core/threads/hooks.ts 的 useThreadStream（1,408–2,489 行）
   【架构位置】     L3（Vue 适配）
   【主要导出】     useThreadStream
   【依赖关系】     @/core/agent-deerflow/thread-runner · @/core/threads/*

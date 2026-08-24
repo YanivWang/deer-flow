@@ -1,10 +1,4 @@
-/*
-  由 scripts/rstest-to-vitest.mjs 从 frontend/tests/unit/core/messages/derived-state.test.ts 机械生成。
-  基线 27a425b0 · 改动仅限 @rstest/core → vitest、rs.* → vi.*。
-  勿手改：make codemod-check 会红。需要为 Vue 侧适配就登记进 HAND_MAINTAINED。
-*/
-
-import type { Message } from "@langchain/langgraph-sdk";
+import type { Message } from "@/core/types/message";
 import { describe, expect, it } from "vitest";
 
 import {

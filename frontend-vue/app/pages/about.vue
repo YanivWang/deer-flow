@@ -1,6 +1,5 @@
 <!--
   【文件职责】     展示 about 营销占位页。
-  【对应 frontend/】 无；明确豁免的自定义占位页
   【架构位置】     L3
   【主要导出】     /about 页面
   【依赖关系】     使用 default layout

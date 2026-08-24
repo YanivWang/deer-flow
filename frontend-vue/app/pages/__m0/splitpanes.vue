@@ -1,6 +1,5 @@
 <!--
   【文件职责】     以真实 splitpanes 组件验证 H1/H2/H6。
-  【对应 frontend/】 frontend/src/components/workspace/chats/chat-box.tsx
   【架构位置】     测试夹具
   【主要导出】     /__m0/splitpanes 测试页
   【依赖关系】     消费 splitpanes；仅在 M0 测试开关开启时可用

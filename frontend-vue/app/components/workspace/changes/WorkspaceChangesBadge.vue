@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /*
   【文件职责】     在 run 最终 assistant 气泡显示完整 workspace-change summary/detail。
-  【对应 frontend/】 workspace-changes-badge.tsx · workspace-changes-panel.tsx
   【架构位置】     L3 extension reference
   【主要导出】     默认 WorkspaceChangesBadge 组件
   【依赖关系】     useWorkspaceChanges · presentation/summary · artifact URL

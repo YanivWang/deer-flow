@@ -1,6 +1,5 @@
 /*
   【文件职责】     钉住 `AgentMessageContent` 的联合语义：string 与 AgentContentPart[] 两侧都必须无损往返。
-  【对应 frontend/】 无（本仓自写的护栏，上游没有对应物——上游直接用 SDK 类型，不需要证明等价）
   【架构位置】     门禁测试
   【主要导出】     无
   【依赖关系】     app/core/types/message.ts；tests/fixtures/message-content-shapes.json

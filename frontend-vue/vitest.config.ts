@@ -1,17 +1,16 @@
 /*
   【文件职责】     将纯 TS、需要 DOM 全局、需要 Nuxt 上下文的测试分为三个真实 project。
-  【对应 frontend/】 frontend/rstest.config.ts
   【架构位置】     工程底座
   【主要导出】     Vitest workspace 配置
-  【依赖关系】     被 make test/verify 消费；分桶口径与 baseline/core-test-manifest.json 对账
+  【依赖关系】     被 make test/verify 消费
   【边界与注意】   三个 project 的 include 互斥，靠文件名后缀区分，不靠目录：
                    *.nuxt.test.ts → nuxt，*.dom.test.ts → dom，其余 *.test.ts → node。
-                   后缀是 codemod 按 manifest 的 bucket 写上去的，
-                   由 scripts/collected-vs-manifest.mjs 校验「收集到的 project」与
-                   「manifest 期望的 bucket」一致——三者任意两个漂移就红。
+                   写测试时按它需要的运行环境选后缀：要 document 的用 .dom，
+                   要 Nuxt 运行时（useRuntimeConfig、路由、插件）的用 .nuxt，
+                   其余一律 node——node 最快，DOM 环境约贵 3 倍。
                    加 project 时必须同步 node 的 exclude，否则一个文件会被跑两遍。
                    node/dom 两个 project 不经过 Nuxt，拿不到 Nuxt 注入的路径别名，
-                   所以 `@` 要在这里显式补上——迁移过来的 core 测试全都写 `@/core/…`。
+                   所以 `@` 要在这里显式补上。
 
                    dom project 额外挂 `@vitejs/plugin-vue`：M3 起有组件测试要 mount `.vue`，
                    而不经过 Nuxt 就没人编译 SFC（表现是 vite 报「invalid JS syntax」）。
