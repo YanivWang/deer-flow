@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-vue-next";
 import ComposerAttachmentChip from "@/components/chat/ComposerAttachmentChip.vue";
+import ComposerModelSelector from "@/components/chat/ComposerModelSelector.vue";
 import ComposerSurface from "@/components/chat/ComposerSurface.vue";
 import WelcomeSuggestionList from "@/components/chat/WelcomeSuggestionList.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
@@ -142,7 +143,6 @@ const skillCatalog = useSkillsCatalog({
 const modelCatalog = useModels({ enabled: computed(() => !props.disabled) });
 const skills = skillCatalog.skills;
 const models = modelCatalog.models;
-const modelMenu = ref(false);
 const modeMenu = ref(false);
 const voiceListening = ref(false);
 const voiceRecognition = ref<BrowserSpeechRecognition | null>(null);
@@ -347,7 +347,6 @@ function selectModel(model: Model) {
       model,
     ),
   );
-  modelMenu.value = false;
 }
 function selectMode(mode: (typeof modes.value)[number]) {
   const next = normalizeComposerContext(
@@ -1186,31 +1185,11 @@ defineExpose({ replaceDraft, offerFollowup });
               </button>
             </div>
           </div>
-          <div class="relative">
-            <button
-              v-if="selectedModel"
-              type="button"
-              class="hover:bg-accent h-8 max-w-40 truncate rounded-md px-2 text-xs"
-              :aria-label="selectedModel.display_name"
-              @click="modelMenu = !modelMenu"
-            >
-              {{ selectedModel.display_name }}
-            </button>
-            <div
-              v-if="modelMenu"
-              class="bg-background border-border absolute right-0 bottom-full z-30 mb-1 w-56 rounded-md border p-1 shadow"
-            >
-              <button
-                v-for="model in models"
-                :key="model.id"
-                type="button"
-                class="hover:bg-accent block w-full rounded px-2 py-2 text-left text-sm"
-                @click="selectModel(model)"
-              >
-                {{ model.display_name }}
-              </button>
-            </div>
-          </div>
+          <ComposerModelSelector
+            :models="models"
+            :selected-model="selectedModel"
+            @select="selectModel"
+          />
           <button
             v-if="streaming"
             type="button"

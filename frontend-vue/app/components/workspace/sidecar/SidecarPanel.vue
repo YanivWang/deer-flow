@@ -25,6 +25,7 @@ import {
 
 import MessageList from "@/components/chat/MessageList.vue";
 import ComposerAttachmentChip from "@/components/chat/ComposerAttachmentChip.vue";
+import ComposerModelSelector from "@/components/chat/ComposerModelSelector.vue";
 import ComposerSurface from "@/components/chat/ComposerSurface.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import type { SidecarSession } from "@/composables/useSidecarSession";
@@ -57,7 +58,6 @@ const { $i18n } = useNuxtApp();
 const compositionActive = ref(false);
 const models = ref<Model[]>([]);
 const modeMenu = ref(false);
-const modelMenu = ref(false);
 const deleteDialog = ref(false);
 const localContext = reactive<ThreadRunContextInput>({ ...props.context });
 const sessionInput = computed({
@@ -132,7 +132,6 @@ function selectModel(model: Model) {
     mode,
     reasoning_effort: reasoningEffort(mode),
   });
-  modelMenu.value = false;
 }
 
 onMounted(async () => {
@@ -319,31 +318,13 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
               </div>
             </div>
             <span class="flex-1" />
-            <div class="sidecar-model-control relative">
-              <button
-                v-if="selectedModel"
-                type="button"
-                class="hover:bg-accent h-8 max-w-40 truncate rounded-md px-2 text-xs"
-                :aria-label="selectedModel.display_name"
-                @click="modelMenu = !modelMenu"
-              >
-                {{ selectedModel.display_name }}
-              </button>
-              <div
-                v-if="modelMenu"
-                class="bg-background border-border absolute right-0 bottom-full z-30 mb-1 w-56 rounded-md border p-1 shadow"
-              >
-                <button
-                  v-for="model in models"
-                  :key="model.id"
-                  type="button"
-                  class="hover:bg-accent block w-full rounded px-2 py-2 text-left text-sm"
-                  @click="selectModel(model)"
-                >
-                  {{ model.display_name }}
-                </button>
-              </div>
-            </div>
+            <ComposerModelSelector
+              class="sidecar-model-control"
+              test-id="sidecar-model-selector"
+              :models="models"
+              :selected-model="selectedModel"
+              @select="selectModel"
+            />
             <button
               type="submit"
               :aria-label="$i18n.t.value.inputBox.submit"

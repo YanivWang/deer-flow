@@ -107,6 +107,26 @@ async function startHeldStream() {
 
 test("empty chat", async ({ page }) => {
   await prepare(page);
+  await page.route("**/api/models", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        models: [
+          {
+            id: "minimax-m3",
+            name: "minimax-m3",
+            model: "MiniMax-M3",
+            display_name: "MiniMax CN / MiniMax-M3",
+            supports_thinking: true,
+            supports_reasoning_effort: true,
+          },
+        ],
+        token_usage: { enabled: false },
+      }),
+    });
+  });
   await page.goto("/workspace/chats/new");
   await expect(page.getByPlaceholder(/how can i assist you/i)).toBeVisible();
   await expect(page.locator('[data-effect="aurora-text"]')).toBeVisible();
@@ -137,6 +157,20 @@ test("empty chat", async ({ page }) => {
     );
   });
   expect(suggestionCenterOffset).toBeLessThan(1);
+  const modelButton = page.getByRole("button", {
+    name: "MiniMax CN / MiniMax-M3",
+  });
+  await expect(modelButton).toBeVisible();
+  const modelGeometry = await modelButton.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    maxWidth: getComputedStyle(element).maxWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(modelGeometry.maxWidth).toBe("224px");
+  expect(modelGeometry.clientWidth).toBeGreaterThan(160);
+  expect(modelGeometry.scrollWidth).toBeLessThanOrEqual(
+    modelGeometry.clientWidth,
+  );
   await snapshot(page, "empty-chat.png");
 
   const composer = page.getByPlaceholder(/how can i assist you/i);
