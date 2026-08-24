@@ -239,7 +239,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
       @selection-add="addSelectedReference"
     />
 
-    <div class="flex shrink-0 flex-col gap-2 px-3 pb-4">
+    <div class="relative flex shrink-0 flex-col gap-2 px-3 pb-4">
       <form
         class="mx-auto w-full"
         :aria-busy="session.submissionPending.value"
@@ -255,7 +255,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
         <ComposerSurface test-id="sidecar-composer-surface">
           <div
             v-if="session.selectedFiles.value.length"
-            class="flex flex-wrap items-center gap-1 px-1 pt-1 pb-0"
+            data-slot="input-group-header"
           >
             <ComposerAttachmentChip
               v-for="file in session.selectedFiles.value"
@@ -264,19 +264,21 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
               @remove="session.removeFile(file)"
             />
           </div>
-          <textarea
-            v-model="sessionInput"
-            name="message"
-            data-slot="input-group-control"
-            :placeholder="$i18n.t.value.sidecar.placeholder"
-            :aria-label="$i18n.t.value.sidecar.inputLabel"
-            rows="2"
-            class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none focus-visible:ring-0 focus-visible:outline-none"
-            @keydown="onKeydown"
-            @compositionstart="compositionActive = true"
-            @compositionend="compositionActive = false"
-          />
-          <div class="flex min-w-0 items-center gap-1 pt-1">
+          <div data-slot="input-group-body">
+            <textarea
+              v-model="sessionInput"
+              name="message"
+              data-slot="input-group-control"
+              :placeholder="$i18n.t.value.sidecar.placeholder"
+              :aria-label="$i18n.t.value.sidecar.inputLabel"
+              rows="1"
+              class="field-sizing-content max-h-48 min-h-6! w-full min-w-0 resize-none bg-transparent p-0! text-sm leading-6! outline-none focus-visible:ring-0 focus-visible:outline-none"
+              @keydown="onKeydown"
+              @compositionstart="compositionActive = true"
+              @compositionend="compositionActive = false"
+            />
+          </div>
+          <div data-slot="input-group-footer">
             <label
               data-testid="sidecar-add-attachments-button"
               class="text-muted-foreground hover:bg-accent flex size-8 cursor-pointer items-center justify-center rounded-md"
@@ -348,7 +350,10 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
       >
         {{ session.fileError.value || session.errorMessage.value }}
       </p>
-      <p class="text-muted-foreground/70 px-4 text-center text-xs leading-4">
+      <p
+        data-testid="sidecar-composer-disclaimer"
+        class="text-muted-foreground/70 absolute right-3 bottom-0 left-3 px-4 text-center text-xs leading-4"
+      >
         {{ $i18n.t.value.inputBox.disclaimer }}
       </p>
     </div>

@@ -117,6 +117,23 @@ describe("WP-03 persisted message surfaces", () => {
       false,
     );
     expect(wrapper.get("[data-testid='run-duration'] svg").exists()).toBe(true);
+    const actions = wrapper.get("[data-testid='assistant-turn-actions']");
+    expect(actions.classes()).toContain("gap-1");
+    expect(actions.findAll("button")).toHaveLength(3);
+    for (const button of actions.findAll("button")) {
+      expect(button.attributes("data-variant")).toBe("ghost");
+      expect(button.attributes("data-size")).toBe("icon-sm");
+    }
+    expect(wrapper.get("[data-testid='message-list']").classes()).toEqual(
+      expect.arrayContaining(["px-4", "pb-4"]),
+    );
+    expect(
+      wrapper.get("[data-testid='message-list']").element.parentElement
+        ?.classList,
+    ).toContain("[scrollbar-gutter:stable_both-edges]");
+    expect(
+      wrapper.get("[data-testid='message-list-bottom-spacer']").classes(),
+    ).toEqual(expect.arrayContaining(["h-6", "shrink-0"]));
 
     await wrapper.get("button[aria-label='Copy response']").trigger("click");
     expect(globalThis.navigator.clipboard.writeText).toHaveBeenCalledWith(

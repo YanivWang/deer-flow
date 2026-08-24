@@ -341,6 +341,7 @@ test.describe("Thread history", () => {
   test("shows a completed run duration once after multi-step history", async ({
     page,
   }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
     mockLangGraphAPI(page, {
       threads: [
         {
@@ -384,6 +385,82 @@ test.describe("Thread history", () => {
       page.getByRole("button", { name: "Reasoning", exact: true }),
     ).toBeVisible();
     await expect(page.getByText("Thought for 114 seconds")).toHaveCount(0);
+
+    const assistantTurn = page.locator("[data-assistant-turn]").last();
+    await assistantTurn.hover();
+    const geometry = await page.evaluate(() => {
+      const duration = document.querySelector<HTMLElement>(
+        "[data-testid='run-duration']",
+      );
+      const completedTurn = duration?.closest<HTMLElement>(
+        "[data-assistant-turn]",
+      );
+      const actions = completedTurn?.querySelector<HTMLElement>(
+        "[data-testid='assistant-turn-actions']",
+      );
+      const buttons = actions
+        ? [...actions.querySelectorAll<HTMLElement>(":scope > button")]
+        : [];
+      const composer = document.querySelector<HTMLElement>(
+        "[data-testid='composer-surface']",
+      );
+      const messageList = document.querySelector<HTMLElement>(
+        "[data-testid='message-list']",
+      );
+      const scroller = messageList?.parentElement;
+      if (
+        !actions ||
+        buttons.length !== 3 ||
+        !duration ||
+        !composer ||
+        !messageList ||
+        !scroller
+      ) {
+        throw new Error("Missing completed-turn geometry anchors");
+      }
+      const actionsRect = actions.getBoundingClientRect();
+      const durationRect = duration.getBoundingClientRect();
+      const composerRect = composer.getBoundingClientRect();
+      const messageListRect = messageList.getBoundingClientRect();
+      const scrollerRect = scroller.getBoundingClientRect();
+      return {
+        buttons: buttons.map((button) => {
+          const rect = button.getBoundingClientRect();
+          return {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+          };
+        }),
+        actionGap: Number.parseFloat(getComputedStyle(actions).gap),
+        actionsToDuration: durationRect.top - actionsRect.bottom,
+        durationToComposer: composerRect.top - durationRect.bottom,
+        durationToMessageListEnd: messageListRect.bottom - durationRect.bottom,
+        messageListRemainder: scrollerRect.bottom - messageListRect.bottom,
+        scrollerToComposer: composerRect.top - scrollerRect.bottom,
+        composerBottomInset: window.innerHeight - composerRect.bottom,
+      };
+    });
+
+    expect(geometry.buttons).toHaveLength(3);
+    for (const button of geometry.buttons) {
+      expect(button.width).toBe(32);
+      expect(button.height).toBe(32);
+      expect(button.y).toBe(geometry.buttons[0]?.y);
+    }
+    expect(geometry.buttons[1]!.x - geometry.buttons[0]!.x).toBe(36);
+    expect(geometry.buttons[2]!.x - geometry.buttons[1]!.x).toBe(36);
+    expect(geometry.actionGap).toBe(4);
+    expect(geometry.actionsToDuration).toBe(8);
+    expect(geometry.durationToMessageListEnd).toBe(72);
+    expect(geometry.messageListRemainder).toBeGreaterThanOrEqual(0);
+    expect(geometry.scrollerToComposer).toBe(0);
+    expect(geometry.durationToComposer).toBeCloseTo(
+      geometry.durationToMessageListEnd + geometry.messageListRemainder,
+      5,
+    );
+    expect(geometry.composerBottomInset).toBe(16);
   });
 
   test("input box recalls previous prompts with arrow keys", async ({

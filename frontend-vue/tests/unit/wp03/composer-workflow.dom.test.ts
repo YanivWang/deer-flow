@@ -214,9 +214,19 @@ describe("WP-03 composer submission and stale lifecycle", () => {
     expect(surface.classes()).toContain(
       "has-[[data-slot=input-group-control]:focus-visible]:ring-[3px]",
     );
+    expect(
+      wrapper.get("[data-testid='composer-bottom-background']").classes(),
+    ).toEqual(expect.arrayContaining(["absolute", "-bottom-[17px]", "h-4"]));
+    expect(
+      wrapper.get("[data-testid='composer-disclaimer']").classes(),
+    ).toEqual(
+      expect.arrayContaining(["absolute", "top-full", "right-0", "left-0"]),
+    );
     expect(wrapper.get("textarea").attributes("data-slot")).toBe(
       "input-group-control",
     );
+    expect(surface.get("[data-slot='input-group-body']").exists()).toBe(true);
+    expect(surface.get("[data-slot='input-group-footer']").exists()).toBe(true);
     const attachment = surface.get("[data-testid='composer-attachment']");
     expect(attachment.text()).toContain("cat.png");
     expect(attachment.get("img").attributes("src")).toBe("blob:cat.png");

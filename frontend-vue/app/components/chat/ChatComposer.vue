@@ -1005,9 +1005,11 @@ defineExpose({ replaceDraft, offerFollowup });
         :class="polishing ? 'ring-primary/25 shadow-lg ring-1' : ''"
       >
         <div
-          v-if="selectedFiles.length"
-          data-testid="composer-attachments"
-          class="flex flex-wrap items-center gap-1 px-1 pt-1 pb-0"
+          v-if="selectedFiles.length || polishing"
+          data-slot="input-group-header"
+          :data-testid="
+            selectedFiles.length ? 'composer-attachments' : undefined
+          "
         >
           <ComposerAttachmentChip
             v-for="file in selectedFiles"
@@ -1017,39 +1019,48 @@ defineExpose({ replaceDraft, offerFollowup });
               selectedFiles = selectedFiles.filter((item) => item !== file)
             "
           />
-        </div>
-        <div v-if="selectedSkill" class="mb-1 flex items-start gap-2">
-          <span class="bg-secondary rounded px-2 py-1 text-xs"
-            >/{{ selectedSkill }}</span
-          >
           <div
-            ref="chipInput"
-            role="textbox"
+            v-if="polishing"
+            class="text-primary bg-primary/10 border-primary/20 relative z-30 flex h-7 items-center gap-1.5 rounded-full border py-0 pr-1 pl-2.5 text-xs font-medium"
+          >
+            <span class="size-2 animate-pulse rounded-full bg-current" />
+            {{ $i18n.t.value.inputBox.inputPolishing }}
+          </div>
+        </div>
+        <div data-slot="input-group-body">
+          <div v-if="selectedSkill" class="flex items-start gap-2">
+            <span class="bg-secondary rounded px-2 py-1 text-xs"
+              >/{{ selectedSkill }}</span
+            >
+            <div
+              ref="chipInput"
+              role="textbox"
+              data-slot="input-group-control"
+              :aria-label="$i18n.t.value.inputBox.placeholder"
+              :contenteditable="disabled ? 'false' : 'true'"
+              class="min-h-10 flex-1 text-sm outline-none focus-visible:ring-0 focus-visible:outline-none"
+              @input="onChipInput"
+              @keydown="onKeydown"
+              @compositionstart="compositionActive = true"
+              @compositionend="compositionActive = false"
+            />
+          </div>
+          <textarea
+            v-else
+            ref="textarea"
+            v-model="input"
+            name="message"
             data-slot="input-group-control"
             :aria-label="$i18n.t.value.inputBox.placeholder"
-            :contenteditable="disabled ? 'false' : 'true'"
-            class="min-h-10 flex-1 px-1 py-2 text-sm outline-none focus-visible:ring-0 focus-visible:outline-none"
-            @input="onChipInput"
+            :placeholder="$i18n.t.value.inputBox.placeholder"
+            rows="1"
+            class="field-sizing-content max-h-48 min-h-6! w-full min-w-0 resize-none bg-transparent p-0! text-sm leading-6! outline-none focus-visible:ring-0 focus-visible:outline-none"
+            :disabled="disabled || polishing || compactPending"
             @keydown="onKeydown"
             @compositionstart="compositionActive = true"
             @compositionend="compositionActive = false"
           />
         </div>
-        <textarea
-          v-else
-          ref="textarea"
-          v-model="input"
-          name="message"
-          data-slot="input-group-control"
-          :aria-label="$i18n.t.value.inputBox.placeholder"
-          :placeholder="$i18n.t.value.inputBox.placeholder"
-          rows="2"
-          class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none focus-visible:ring-0 focus-visible:outline-none"
-          :disabled="disabled || polishing || compactPending"
-          @keydown="onKeydown"
-          @compositionstart="compositionActive = true"
-          @compositionend="compositionActive = false"
-        />
         <div
           v-if="suggestions.length"
           role="listbox"
@@ -1070,14 +1081,7 @@ defineExpose({ replaceDraft, offerFollowup });
             {{ suggestion.label }}
           </button>
         </div>
-        <div
-          v-if="polishing"
-          class="text-primary bg-primary/10 border-primary/20 mx-2 mb-1 flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
-        >
-          <span class="size-2 animate-pulse rounded-full bg-current" />
-          {{ $i18n.t.value.inputBox.inputPolishing }}
-        </div>
-        <div class="flex min-w-0 items-center gap-1 pt-1">
+        <div data-slot="input-group-footer">
           <div class="group relative">
             <button
               type="button"
@@ -1237,7 +1241,17 @@ defineExpose({ replaceDraft, offerFollowup });
       :disabled="disabled"
       @select="selectWelcomeSuggestion"
     />
-    <p class="text-muted-foreground/70 px-4 text-center text-xs leading-4">
+    <div
+      v-if="!isWelcome"
+      data-testid="composer-bottom-background"
+      aria-hidden="true"
+      class="bg-background absolute right-0 -bottom-[17px] left-0 z-0 h-4"
+    />
+    <p
+      data-testid="composer-disclaimer"
+      class="text-muted-foreground/70 px-4 text-center text-xs leading-4"
+      :class="!isWelcome && 'absolute top-full right-0 left-0'"
+    >
       {{ disclaimer }}
     </p>
     <div

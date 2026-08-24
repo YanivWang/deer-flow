@@ -20,16 +20,9 @@ import {
   watch,
   type ComponentPublicInstance,
 } from "vue";
-import {
-  Check,
-  CheckCircle2,
-  Clock3,
-  Copy,
-  GitBranch,
-  RefreshCw,
-  Wrench,
-} from "lucide-vue-next";
+import { Check, CheckCircle2, Clock3, Copy, Wrench } from "lucide-vue-next";
 
+import AssistantTurnActions from "@/components/chat/AssistantTurnActions.vue";
 import HumanInputCard from "@/components/chat/HumanInputCard.vue";
 import CitationSourcesPanel from "@/components/chat/CitationSourcesPanel.vue";
 import MessageAttachments from "@/components/chat/MessageAttachments.vue";
@@ -791,7 +784,7 @@ onUnmounted(() => {
   >
     <div
       ref="scroller"
-      class="h-full overflow-y-auto px-3 sm:px-4"
+      class="h-full overflow-y-auto [scrollbar-gutter:stable_both-edges]"
       @scroll="onScroll"
       @wheel="onWheel"
       @touchstart="onScrollIntent"
@@ -836,7 +829,7 @@ onUnmounted(() => {
       <ul
         :ref="setContentElement"
         data-testid="message-list"
-        class="mx-auto flex w-full max-w-[var(--container-width-md)] list-none flex-col gap-8 pt-8 pb-6"
+        class="mx-auto flex w-full max-w-[var(--container-width-md)] list-none flex-col gap-8 px-4 pt-8 pb-4"
       >
         <div
           v-if="virtualTopHeight"
@@ -1046,63 +1039,43 @@ onUnmounted(() => {
             :loading="streaming"
           />
 
-          <div
+          <AssistantTurnActions
             v-if="entry.group.type === 'assistant'"
-            class="text-muted-foreground mt-2 flex gap-1 text-xs opacity-0 transition-opacity group-hover:opacity-100"
-          >
-            <button
-              type="button"
-              :aria-label="$i18n.t.value.messages.actions.copyResponse"
-              @click="
-                copyMessage(
-                  `assistant:${entry.group.id ?? entry.index}`,
-                  getAssistantTurnCopyData(entry.group.messages, {
-                    isStreaming: streaming && entry.index === groups.length - 1,
-                  }),
-                )
-              "
-            >
-              <Check
-                v-if="
-                  copiedMessage === `assistant:${entry.group.id ?? entry.index}`
-                "
-                :size="14"
-              />
-              <Copy v-else :size="14" />
-            </button>
-            <button
-              v-if="
-                interactive !== false && branchable.has(entry.group.id ?? '')
-              "
-              type="button"
-              :aria-label="$i18n.t.value.messages.actions.branch"
-              @click="
-                emit('branch', entry.group.id ?? '', groupIds(entry.index))
-              "
-            >
-              <GitBranch :size="14" />
-            </button>
-            <button
-              v-if="
-                interactive !== false &&
-                entry.index === groups.length - 1 &&
-                lastAI(entry.index)?.id
-              "
-              type="button"
-              :aria-label="$i18n.t.value.messages.actions.regenerate"
-              @click="
-                emit(
-                  'regenerate',
-                  lastAI(entry.index)?.id ?? '',
-                  entry.group.messages.flatMap((message) =>
-                    message.id ? [message.id] : [],
-                  ),
-                )
-              "
-            >
-              <RefreshCw :size="14" />
-            </button>
-          </div>
+            :copied="
+              copiedMessage === `assistant:${entry.group.id ?? entry.index}`
+            "
+            :copy-label="$i18n.t.value.messages.actions.copyResponse"
+            :branch-label="$i18n.t.value.messages.actions.branch"
+            :regenerate-label="$i18n.t.value.messages.actions.regenerate"
+            :show-branch="
+              interactive !== false && branchable.has(entry.group.id ?? '')
+            "
+            :show-regenerate="
+              interactive !== false &&
+              entry.index === groups.length - 1 &&
+              Boolean(lastAI(entry.index)?.id)
+            "
+            @copy="
+              copyMessage(
+                `assistant:${entry.group.id ?? entry.index}`,
+                getAssistantTurnCopyData(entry.group.messages, {
+                  isStreaming: streaming && entry.index === groups.length - 1,
+                }),
+              )
+            "
+            @branch="
+              emit('branch', entry.group.id ?? '', groupIds(entry.index))
+            "
+            @regenerate="
+              emit(
+                'regenerate',
+                lastAI(entry.index)?.id ?? '',
+                entry.group.messages.flatMap((message) =>
+                  message.id ? [message.id] : [],
+                ),
+              )
+            "
+          />
           <div
             v-for="duration in durations[entry.index] ?? []"
             :key="duration.runId"
@@ -1122,6 +1095,11 @@ onUnmounted(() => {
         <li v-if="streaming && !hasActiveAssistantText" class="w-full">
           <RunActivity :start-time="turnStartTime" />
         </li>
+        <li
+          data-testid="message-list-bottom-spacer"
+          aria-hidden="true"
+          class="h-6 shrink-0"
+        />
       </ul>
       <p
         v-if="actionError"

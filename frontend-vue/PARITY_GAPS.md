@@ -134,10 +134,11 @@
 | SHELL-02    | P1     | DONE | WP-11  | Settings focus/aria/query/history/焦点归还已接通                      |
 | SHELL-03    | P1     | DONE | WP-11  | share/export/updated time 与可见错误已接通                            |
 | CHANGES-01  | P2     | DONE | WP-11  | 完整字段/reason、Query abort/stale、error/retry 已接通                |
-| I18N-01     | P1     | DONE | WP-12  | 88 个产品 SFC 已接入单一 typed locale owner 与 AST source guard       |
+| I18N-01     | P1     | DONE | WP-12  | 92 个产品 SFC 已接入单一 typed locale owner 与 AST source guard       |
 | THEME-01    | P2     | DONE | WP-12  | system/explicit/forced route 已归单一 theme lifecycle owner           |
 | SURFACE-01  | P1     | DONE | WP-13  | 聊天 header、侧栏菜单、消息操作与 token/export 入口已按调用点收口     |
 | SURFACE-02  | P1     | DONE | WP-13  | follow-up 配置竞态已收敛为单一 Vue Query owner                        |
+| SURFACE-03  | P1     | DONE | WP-13  | 消息尾部操作、耗时、底部留白与 composer 几何结构已对齐                |
 
 ## 6. 详细工作包
 
@@ -609,7 +610,7 @@
 
 ### WP-13：工作区可见产品表面收口
 
-包含：`MESSAGE-07`、`SURFACE-01`、`SURFACE-02`。
+包含：`MESSAGE-07`、`SURFACE-01`、`SURFACE-02`、`SURFACE-03`。
 
 #### 已实现合同
 
@@ -629,6 +630,14 @@
   等待同一 query 后再请求 follow-up，不维护组件内第二份配置状态。
 - 主 composer 的附件入口改为 React 等价的真实语义 button；自定义 Agent 的 Save 只在初始
   design conversation 成功且 send owner 完整释放后启用，不再与 bootstrap run 竞争 runner。
+- `AssistantTurnActions.vue` 独占 assistant 尾部操作的视觉规格：所有可用动作复用共享
+  `Button` 的 `ghost/icon-sm` 合同，按钮为 32 px、间距 4 px；不再由 `MessageList` 直接画裸图标。
+  消息滚动区采用 React `use-stick-to-bottom` 同款双侧稳定 scrollbar gutter，内容内边距、动作到
+  耗时的 8 px、32 px 行间距、24 px 显式底部 spacer 与 16 px 底部 padding 共同形成可解释的
+  72 px 消息尾部结构。
+- `ComposerSurface` 不再提供隐式 padding 或 padded 双轨，而以 `input-group-header/body/footer`
+  data-slot 作为主会话和 sidecar 的统一几何合同：单行 body 最小 64 px，footer 50 px，边框后空态
+  surface 为 116 px；主会话与 sidecar disclaimer 绝对定位，不再额外占据 24 px 布局高度。
 - `tests/guards/product-surface-parity.test.ts` 固定三条长期边界：Vue 页面不得超出 React 与明确
   route 例外；React 未启用 feedback 时 Vue 不得显示；Nuxt 不得运行时挂载 sibling React 资产；
   主 composer 的附件入口必须保持为语义 button。
@@ -636,8 +645,11 @@
 #### 验收与测试
 
 - unit/DOM 固定 feedback 缺席、MessageMarkdown 默认插件链、表格三项操作、token radio menu、
-  header export 和 suggestions Query owner。
+  header export、suggestions Query owner、操作按钮规格、滚动条 gutter、显式底部 spacer 与
+  composer disclaimer 脱离布局流。
 - Vue-owned M7 固定 settings 菜单、非链接品牌、Agent header/browser 开关和完成后 suggestions。
+- thread-history 浏览器合同直接测量 assistant 操作按钮、横向步进、动作到耗时、消息尾部结构、
+  滚动视口到 composer 与 viewport bottom inset；真实双端天气长对话另做同 viewport 几何比对。
 - 同一真实天气 thread 必须在两端显示同一处理步骤、reasoning、GFM 表格与消息操作集合；模型
   输出文案、token 数和耗时不是 UI parity 判据。
 
@@ -754,3 +766,4 @@ API 对齐：method/path/query/headers/body/response/error/cache
 | 2026-08-23 | WP-12：`I18N-01`、`THEME-01`                                  | WP-12 unit/DOM 4 files / 14 tests；i18n 各 978 keys / 180 unused 与 AST guard 通过；M7 i18n/theme 5/5、全量 165/165；M7 local 8/8、auth 13/13、real protocol 1/1、visual 8/8；WP-10 real 5/5、WP-11 real 1/1；M4a 4/4、stream 6/6；`make migration-check`、`make verify`、asset budget、container smoke、React check/test 1001/1001、dual-frontend production check 34/34 通过                                                                                   | 两个视觉 baseline 因预期文案/新增 zh-CN 状态精确更新；生产 IdP/DNS/TLS/外层代理与目标环境切流未验证；未暂存、未提交、未 push                                                                                                                                  |
 | 2026-08-24 | WP-03：`MESSAGE-06`                                           | 天气流程定向 Vitest 5 files / 31 tests；`make verify` 186 files / 1528 tests 且 production build 通过；`make migration-check`；`make e2e-m4a` 4/4、真实分片 stream 6/6；`make e2e-m7` 29 files / 166/166；M7 visual 中本轮相关 streaming 与 reasoning/tool 2/2；`git diff --check` 通过；真实双端分别提交“今天的天气”，完成态均为单次 web search、reasoning 收起、无 raw `<think`、无重复工具结果、列表标记恢复；Vue 交叉渲染 React 已完成线程保持同一结构与正文 | 外部模型两次独立采样的搜索词、token 和最终文案不要求逐字相同；wire context 由 production stream test 固定为同 mode/effort。M7 visual 全量 6/8，失败的 mobile/dark 是本轮未改的欢迎页快捷按钮旧 baseline，未刷新；仅改 `frontend-vue`，未暂存、未提交、未 push |
 | 2026-08-24 | WP-13：`MESSAGE-02`、`MESSAGE-07`、`SURFACE-01`、`SURFACE-02` | `make verify` 190 files / 1537 tests 且 production build 通过；`make migration-check`；`make e2e-m4a` 4/4、真实分片 stream 6/6；`make e2e-m7` 29 files / 168/168；product-surface guard 固定 route 例外、feedback 缺席、独立资产与附件语义入口；同一真实天气 thread 双端均显示处理步骤、reasoning、GFM 表格及复制/下载/全屏，Vue 不再显示点赞/踩，header/sidebar/message/composer 操作集合按 React 调用点收口                                                    | 第 2 节明确排除的 landing、docs/blog、静态 demo/mock 与框架内部实现仍不要求同构；模型文案、token 与耗时不作为 UI parity 判据；仅改 `frontend-vue`，未暂存、未提交、未 push                                                                                    |
+| 2026-08-24 | WP-13 follow-up：`SURFACE-03`                                 | 定向 unit/DOM 4 files / 25 tests；thread-history 几何合同通过；`make e2e-m7` 29 files / 168/168；`make verify` 190 files / 1537 tests 且 production build 通过；1280×720 真实双端测量：操作按钮均 32×32 px、横向步进 36 px、图标 16/16/12 px、操作到耗时 8 px、composer 均 816×116 px 且距 viewport 底部 16 px，React/Vue 耗时到 composer 分别为 71.5/72 px                                                                                                      | 使用共享 `Button`、独立 `AssistantTurnActions`、显式消息尾部 spacer、双侧稳定 scrollbar gutter 与统一 `ComposerSurface` slot 合同完成结构收口；main/sidecar 共用同一几何 owner；仅改 `frontend-vue`，未暂存、未提交、未 push                                  |

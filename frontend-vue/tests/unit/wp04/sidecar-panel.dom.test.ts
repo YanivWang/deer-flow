@@ -151,6 +151,11 @@ describe("WP-04 SidecarPanel session adapter", () => {
     expect(
       wrapper.get("textarea[name='message']").attributes("data-slot"),
     ).toBe("input-group-control");
+    expect(surface.get("[data-slot='input-group-body']").exists()).toBe(true);
+    expect(surface.get("[data-slot='input-group-footer']").exists()).toBe(true);
+    expect(
+      wrapper.get("[data-testid='sidecar-composer-disclaimer']").classes(),
+    ).toEqual(expect.arrayContaining(["absolute", "bottom-0"]));
   });
 
   it("keeps a stable accessible name while the panel is hidden and reopened", async () => {
