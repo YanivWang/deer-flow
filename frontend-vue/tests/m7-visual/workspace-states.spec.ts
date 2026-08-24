@@ -28,11 +28,17 @@ async function prepare(
     .catch(() => undefined);
 }
 
-async function snapshot(page: Page, name: string) {
+async function snapshot(
+  page: Page,
+  name: string,
+  options: { preserveFocus?: boolean } = {},
+) {
   await page.addStyleTag({ content: FREEZE_DYNAMIC_REGIONS });
-  await page.evaluate(() =>
-    (document.activeElement as HTMLElement | null)?.blur(),
-  );
+  if (!options.preserveFocus) {
+    await page.evaluate(() =>
+      (document.activeElement as HTMLElement | null)?.blur(),
+    );
+  }
   await expect(page).toHaveScreenshot(name, {
     animations: "disabled",
     fullPage: true,
@@ -165,6 +171,59 @@ test("empty chat", async ({ page }) => {
       ),
     )
     .toBe("[topic]");
+
+  await composer.fill("");
+  await page.getByLabel(enUS.inputBox.uploadFiles).setInputFiles({
+    name: "cat.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2n0AAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  });
+  const composerSurface = page.getByTestId("composer-surface");
+  const attachment = composerSurface.getByTestId("composer-attachment");
+  await expect(attachment).toContainText("cat.png");
+  await expect(attachment.getByRole("img", { name: "cat.png" })).toBeVisible();
+  const attachmentGeometry = await attachment.evaluate((element) => {
+    const item = element.getBoundingClientRect();
+    const surface = element
+      .closest<HTMLElement>("[data-testid='composer-surface']")!
+      .getBoundingClientRect();
+    return {
+      height: item.height,
+      inside:
+        item.top >= surface.top &&
+        item.right <= surface.right &&
+        item.bottom <= surface.bottom &&
+        item.left >= surface.left,
+    };
+  });
+  expect(attachmentGeometry).toEqual({ height: 32, inside: true });
+  await composer.focus();
+  await expect
+    .poll(() =>
+      composer.evaluate((element) => {
+        const surface = element.closest<HTMLElement>(
+          "[data-testid='composer-surface']",
+        )!;
+        return getComputedStyle(surface).boxShadow;
+      }),
+    )
+    .toMatch(/0px 0px 0px 3px/);
+  await expect
+    .poll(() =>
+      composer.evaluate((element) => getComputedStyle(element).outlineStyle),
+    )
+    .toBe("none");
+  await snapshot(page, "empty-chat-attachment.png", {
+    preserveFocus: true,
+  });
+
+  await attachment.hover();
+  await expect(page.getByText("image/png", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Remove cat.png" }).click();
+  await expect(attachment).toHaveCount(0);
 });
 
 test("streaming message", async ({ page }) => {

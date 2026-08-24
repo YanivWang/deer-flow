@@ -1,6 +1,6 @@
 import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query";
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 
 import ChatComposer from "@/components/chat/ChatComposer.vue";
@@ -19,6 +19,10 @@ const mocks = vi.hoisted(() => ({
   polishInputDraft: vi.fn(),
   fetchWithAuth: vi.fn(),
 }));
+
+const NativeURL = URL;
+const createObjectURL = vi.fn((file: File) => `blob:${file.name}`);
+const revokeObjectURL = vi.fn();
 
 vi.mock("@/core/skills/api", () => ({ loadSkills: mocks.loadSkills }));
 vi.mock("@/core/models/api", () => ({ loadModels: mocks.loadModels }));
@@ -107,6 +111,19 @@ describe("WP-03 composer submission and stale lifecycle", () => {
     mocks.uploadFiles.mockReset();
     mocks.polishInputDraft.mockReset();
     mocks.fetchWithAuth.mockReset();
+    createObjectURL.mockClear();
+    revokeObjectURL.mockClear();
+    vi.stubGlobal(
+      "URL",
+      class extends NativeURL {
+        static createObjectURL = createObjectURL;
+        static revokeObjectURL = revokeObjectURL;
+      },
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("renders the complete React welcome suggestion row in source order", async () => {
@@ -182,6 +199,35 @@ describe("WP-03 composer submission and stale lifecycle", () => {
     );
     expect(wrapper.text()).toContain("notes.txt");
     expect(wrapper.text()).toContain("Upload rejected");
+  });
+
+  it("renders an image attachment inside the composer surface with a thumbnail and removable state", async () => {
+    const { wrapper } = mountComposer();
+    await flushPromises();
+    await selectFile(
+      wrapper,
+      new File(["image"], "cat.png", { type: "image/png" }),
+    );
+    await flushPromises();
+
+    const surface = wrapper.get("[data-testid='composer-surface']");
+    expect(surface.classes()).toContain(
+      "has-[[data-slot=input-group-control]:focus-visible]:ring-[3px]",
+    );
+    expect(wrapper.get("textarea").attributes("data-slot")).toBe(
+      "input-group-control",
+    );
+    const attachment = surface.get("[data-testid='composer-attachment']");
+    expect(attachment.text()).toContain("cat.png");
+    expect(attachment.get("img").attributes("src")).toBe("blob:cat.png");
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+
+    await attachment.get("button").trigger("click");
+    await flushPromises();
+    expect(surface.find("[data-testid='composer-attachment']").exists()).toBe(
+      false,
+    );
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:cat.png");
   });
 
   it("reuses an uploaded file after send failure and clears only on run acceptance", async () => {

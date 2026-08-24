@@ -142,6 +142,17 @@ describe("WP-04 SidecarPanel session adapter", () => {
     expect(session.addFiles).toHaveBeenCalledWith([file]);
   });
 
+  it("uses the shared composer surface as the single focus-ring owner", () => {
+    const { wrapper } = mountPanel();
+    const surface = wrapper.get("[data-testid='sidecar-composer-surface']");
+    expect(surface.classes()).toContain(
+      "has-[[data-slot=input-group-control]:focus-visible]:ring-[3px]",
+    );
+    expect(
+      wrapper.get("textarea[name='message']").attributes("data-slot"),
+    ).toBe("input-group-control");
+  });
+
   it("keeps a stable accessible name while the panel is hidden and reopened", async () => {
     const { wrapper } = mountPanel();
     const textarea = wrapper.get("textarea[name='message']");
