@@ -102,10 +102,15 @@ test("persisted locale hydrates SSR and CSR routes without mismatches", async ({
 }) => {
   prepare(page);
   const runtimeErrors: string[] = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") runtimeErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+  const captureRuntimeErrors = (target: Page) => {
+    target.on("console", (message) => {
+      if (message.type() === "error" || /hydrat/i.test(message.text())) {
+        runtimeErrors.push(`[${message.type()}] ${message.text()}`);
+      }
+    });
+    target.on("pageerror", (error) => runtimeErrors.push(error.message));
+  };
+  captureRuntimeErrors(page);
 
   await page.goto("/");
   await expect(
@@ -124,25 +129,33 @@ test("persisted locale hydrates SSR and CSR routes without mismatches", async ({
   );
   runtimeErrors.length = 0;
 
-  await page
-    .context()
-    .addCookies([
-      { name: "locale", value: "zh-CN", url: "http://localhost:3101" },
-    ]);
+  // A persisted preference exists before the next document request starts.
+  // Injecting a cookie into an already-running renderer and immediately
+  // reloading races Chromium's cross-process cookie propagation under load;
+  // the separate UI-switch scenario above owns same-page mutation + reload.
+  const context = page.context();
+  await page.close();
+  await context.addCookies([
+    { name: "locale", value: "zh-CN", url: "http://localhost:3101" },
+  ]);
+  const localizedPage = await context.newPage();
+  prepare(localizedPage);
+  captureRuntimeErrors(localizedPage);
 
-  await page.reload();
-  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await localizedPage.goto("/");
+  await expect(localizedPage.locator("html")).toHaveAttribute("lang", "zh-CN");
   await expect(
-    page.getByRole("heading", { name: zhCN.marketing.badge }),
+    localizedPage.getByRole("heading", { name: zhCN.marketing.badge }),
   ).toBeVisible();
   expect(runtimeErrors.filter((message) => /hydrat/i.test(message))).toEqual(
     [],
   );
   runtimeErrors.length = 0;
 
-  prepare(page);
-  await page.goto("/workspace/chats/new");
-  await expect(page.getByPlaceholder(zhCN.inputBox.placeholder)).toBeVisible();
+  await localizedPage.goto("/workspace/chats/new");
+  await expect(
+    localizedPage.getByPlaceholder(zhCN.inputBox.placeholder),
+  ).toBeVisible();
   expect(runtimeErrors.filter((message) => /hydrat/i.test(message))).toEqual(
     [],
   );

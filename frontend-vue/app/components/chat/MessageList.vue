@@ -826,281 +826,279 @@ onUnmounted(() => {
           {{ $i18n.t.value.messages.loadingEarlier }}
         </span>
       </div>
-      <ul
+      <div
         :ref="setContentElement"
-        data-testid="message-list"
-        class="mx-auto flex w-full max-w-[var(--container-width-md)] list-none flex-col gap-8 px-4 pt-8 pb-4"
+        data-testid="message-list-content"
+        class="mx-auto w-full max-w-[var(--container-width-md)] px-4 pt-8 pb-[72px]"
       >
-        <div
-          v-if="virtualTopHeight"
-          aria-hidden="true"
-          :style="{ height: `${virtualTopHeight}px` }"
-        />
-        <li
-          v-for="entry in renderedGroups"
-          :key="entry.group.id ?? entry.index"
-          :data-index="entry.index"
-          :data-assistant-turn="
-            entry.group.type === 'assistant' ? '' : undefined
-          "
-          :data-role="entry.group.type === 'human' ? 'human' : 'ai'"
-          :class="
-            entry.group.type === 'human'
-              ? 'is-user group bg-secondary ml-auto w-fit max-w-full rounded-lg px-4 py-3 whitespace-pre-wrap'
-              : 'group relative w-full'
-          "
-          @mouseup="onSelection(entry.index)"
+        <ul
+          data-testid="message-list"
+          :style="{
+            paddingTop: `${virtualTopHeight}px`,
+            paddingBottom: `${virtualBottomHeight}px`,
+          }"
+          class="flex w-full list-none flex-col gap-8"
         >
-          <ProcessingMessageGroup
-            v-if="entry.group.type === 'assistant:processing'"
-            :messages="entry.group.messages"
-            :streaming="streaming && entry.index === groups.length - 1"
-            :thread-id="threadId"
-            :is-mock="isMock"
-            :markdown-components="messageMarkdownComponents"
-            @artifact="emit('artifact', $event)"
-            @browser="emit('browser', $event)"
-          />
-          <template
-            v-for="message in entry.group.messages"
-            v-else
-            :key="message.id"
+          <li
+            v-for="entry in renderedGroups"
+            :key="entry.group.id ?? entry.index"
+            :data-index="entry.index"
+            :data-assistant-turn="
+              entry.group.type === 'assistant' ? '' : undefined
+            "
+            :data-role="entry.group.type === 'human' ? 'human' : 'ai'"
+            :class="
+              entry.group.type === 'human'
+                ? 'is-user group bg-secondary ml-auto w-fit max-w-full rounded-lg px-4 py-3 whitespace-pre-wrap'
+                : 'group relative w-full'
+            "
+            @mouseup="onSelection(entry.index)"
           >
-            <HumanInputCard
-              v-if="extractHumanInputRequest(message)"
-              :request="extractHumanInputRequest(message)!"
-              :answered="
-                humanInputState.answeredResponses.get(
-                  extractHumanInputRequest(message)!.request_id,
-                )
+            <ProcessingMessageGroup
+              v-if="entry.group.type === 'assistant:processing'"
+              :messages="entry.group.messages"
+              :streaming="streaming && entry.index === groups.length - 1"
+              :thread-id="threadId"
+              :is-mock="isMock"
+              :markdown-components="messageMarkdownComponents"
+              @artifact="emit('artifact', $event)"
+              @browser="emit('browser', $event)"
+            />
+            <template
+              v-for="message in entry.group.messages"
+              v-else
+              :key="message.id"
+            >
+              <HumanInputCard
+                v-if="extractHumanInputRequest(message)"
+                :request="extractHumanInputRequest(message)!"
+                :answered="
+                  humanInputState.answeredResponses.get(
+                    extractHumanInputRequest(message)!.request_id,
+                  )
+                "
+                :active="
+                  interactive !== false &&
+                  humanInputState.latestOpenRequestId ===
+                    extractHumanInputRequest(message)!.request_id
+                "
+                :pending="
+                  pendingHumanInputs.has(
+                    extractHumanInputRequest(message)!.request_id,
+                  )
+                "
+                @submit="
+                  handleHumanInputSubmit(
+                    extractHumanInputRequest(message)!,
+                    $event,
+                  )
+                "
+              />
+              <template v-if="message.type === 'human'">
+                <MessageAttachments
+                  :message="message"
+                  :thread-id="threadId"
+                  :is-mock="isMock"
+                />
+                <p>{{ stripUploadedFilesTag(text(message)) }}</p>
+                <ReferenceAttachment
+                  :references="messageReferences(message)"
+                  test-id="message-reference-attachment"
+                  class="mt-2"
+                />
+                <div
+                  class="text-muted-foreground absolute right-0 -bottom-7 flex gap-2 text-xs opacity-0 transition-opacity group-hover:opacity-100"
+                >
+                  <button
+                    type="button"
+                    :aria-label="$i18n.t.value.messages.actions.copyMessage"
+                    @click="
+                      copyMessage(
+                        message.id ?? `human:${entry.index}`,
+                        getMessageCopyData(message),
+                      )
+                    "
+                  >
+                    <Check
+                      v-if="
+                        copiedMessage === (message.id ?? `human:${entry.index}`)
+                      "
+                      :size="14"
+                    />
+                    <Copy v-else :size="14" />
+                  </button>
+                  <button
+                    v-if="
+                      interactive !== false &&
+                      editable?.humanMessage.id === message.id
+                    "
+                    type="button"
+                    class="hover:underline"
+                    :aria-label="$i18n.t.value.messages.actions.editAndRerun"
+                    @click="
+                      emit(
+                        'edit',
+                        message.id ?? '',
+                        text(message),
+                        groupIds(entry.index),
+                      )
+                    "
+                  >
+                    {{ $i18n.t.value.messages.actions.editAndRerun }}
+                  </button>
+                </div>
+              </template>
+              <template v-else-if="message.type === 'ai'">
+                <ReasoningDisclosure
+                  v-if="reasoning(message)"
+                  :content="reasoning(message) ?? ''"
+                  :streaming="streaming && entry.index === groups.length - 1"
+                  :markdown-components="messageMarkdownComponents"
+                />
+                <MessageMarkdown
+                  v-if="text(message)"
+                  :content="text(message)"
+                  :components="messageMarkdownComponents"
+                  :streaming="streaming && entry.index === groups.length - 1"
+                />
+                <CitationSourcesPanel :sources="citations(message)" />
+                <button
+                  v-for="artifact in artifactTargets(message)"
+                  :key="artifact.path"
+                  type="button"
+                  class="border-border bg-muted/30 hover:bg-muted my-2 block max-w-full rounded-lg border px-3 py-2 text-left text-sm break-all"
+                  @click="emit('artifact', artifact.path)"
+                >
+                  {{ artifact.label }}
+                </button>
+                <div
+                  v-for="(call, callIndex) in message.tool_calls ?? []"
+                  :key="subtaskId(call.id, entry.index, callIndex)"
+                  class="my-2 text-sm"
+                >
+                  <template v-if="call.name === 'task'">
+                    <SubtaskCard
+                      :task-id="subtaskId(call.id, entry.index, callIndex)"
+                      :thread-id="threadId"
+                      :run-id="runIdOfGroup(entry.index) ?? activeRunId"
+                      :description="subtaskDescription(call.args)"
+                      :prompt="subtaskPrompt(call.args)"
+                      :live-task="
+                        subtasks?.[subtaskId(call.id, entry.index, callIndex)]
+                      "
+                      :terminal="subtaskTerminal(call.id)"
+                      :pending-status="subtaskPendingStatus(call.id)"
+                      :is-loading="streaming"
+                    />
+                  </template>
+                  <template v-else>
+                    <details class="group/tool">
+                      <summary
+                        class="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-2 py-1.5 transition-colors"
+                      >
+                        <Wrench :size="15" />
+                        <span>{{ toolLabel(call.name) }}</span>
+                      </summary>
+                      <pre
+                        v-if="
+                          call.args &&
+                          Object.keys(call.args).length &&
+                          !ARTIFACT_TOOL_NAMES.has(call.name)
+                        "
+                        class="bg-muted text-muted-foreground mt-1 ml-6 max-h-64 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
+                        >{{ JSON.stringify(call.args, null, 2) }}</pre>
+                    </details>
+                  </template>
+                </div>
+              </template>
+              <details v-else-if="message.type === 'tool'" class="my-2 text-sm">
+                <summary
+                  class="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-2 py-1.5"
+                >
+                  <CheckCircle2 :size="15" />
+                  {{
+                    $i18n.t.value.messages.toolResult(
+                      message.name ?? $i18n.t.value.messages.tool,
+                    )
+                  }}
+                </summary>
+                <pre
+                  class="bg-muted text-muted-foreground mt-1 ml-6 max-h-64 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
+                  >{{ text(message) }}</pre>
+              </details>
+            </template>
+
+            <WorkspaceChangesBadge
+              v-if="threadId && workspaceChangesRun(entry.index)"
+              :thread-id="threadId"
+              :run-id="workspaceChangesRun(entry.index)"
+              :disabled="streaming"
+            />
+
+            <MessageTokenUsage
+              v-if="turnUsageMessagesByGroupIndex[entry.index]"
+              :messages="turnUsageMessagesByGroupIndex[entry.index] ?? []"
+              :mode="tokenUsageInlineMode ?? 'off'"
+              :loading="streaming"
+            />
+
+            <AssistantTurnActions
+              v-if="entry.group.type === 'assistant'"
+              :copied="
+                copiedMessage === `assistant:${entry.group.id ?? entry.index}`
               "
-              :active="
+              :copy-label="$i18n.t.value.messages.actions.copyResponse"
+              :branch-label="$i18n.t.value.messages.actions.branch"
+              :regenerate-label="$i18n.t.value.messages.actions.regenerate"
+              :show-branch="
+                interactive !== false && branchable.has(entry.group.id ?? '')
+              "
+              :show-regenerate="
                 interactive !== false &&
-                humanInputState.latestOpenRequestId ===
-                  extractHumanInputRequest(message)!.request_id
+                entry.index === groups.length - 1 &&
+                Boolean(lastAI(entry.index)?.id)
               "
-              :pending="
-                pendingHumanInputs.has(
-                  extractHumanInputRequest(message)!.request_id,
+              @copy="
+                copyMessage(
+                  `assistant:${entry.group.id ?? entry.index}`,
+                  getAssistantTurnCopyData(entry.group.messages, {
+                    isStreaming: streaming && entry.index === groups.length - 1,
+                  }),
                 )
               "
-              @submit="
-                handleHumanInputSubmit(
-                  extractHumanInputRequest(message)!,
-                  $event,
+              @branch="
+                emit('branch', entry.group.id ?? '', groupIds(entry.index))
+              "
+              @regenerate="
+                emit(
+                  'regenerate',
+                  lastAI(entry.index)?.id ?? '',
+                  entry.group.messages.flatMap((message) =>
+                    message.id ? [message.id] : [],
+                  ),
                 )
               "
             />
-            <template v-if="message.type === 'human'">
-              <MessageAttachments
-                :message="message"
-                :thread-id="threadId"
-                :is-mock="isMock"
-              />
-              <p>{{ stripUploadedFilesTag(text(message)) }}</p>
-              <ReferenceAttachment
-                :references="messageReferences(message)"
-                test-id="message-reference-attachment"
-                class="mt-2"
-              />
-              <div
-                class="text-muted-foreground absolute right-0 -bottom-7 flex gap-2 text-xs opacity-0 transition-opacity group-hover:opacity-100"
-              >
-                <button
-                  type="button"
-                  :aria-label="$i18n.t.value.messages.actions.copyMessage"
-                  @click="
-                    copyMessage(
-                      message.id ?? `human:${entry.index}`,
-                      getMessageCopyData(message),
-                    )
-                  "
-                >
-                  <Check
-                    v-if="
-                      copiedMessage === (message.id ?? `human:${entry.index}`)
-                    "
-                    :size="14"
-                  />
-                  <Copy v-else :size="14" />
-                </button>
-                <button
-                  v-if="
-                    interactive !== false &&
-                    editable?.humanMessage.id === message.id
-                  "
-                  type="button"
-                  class="hover:underline"
-                  :aria-label="$i18n.t.value.messages.actions.editAndRerun"
-                  @click="
-                    emit(
-                      'edit',
-                      message.id ?? '',
-                      text(message),
-                      groupIds(entry.index),
-                    )
-                  "
-                >
-                  {{ $i18n.t.value.messages.actions.editAndRerun }}
-                </button>
-              </div>
-            </template>
-            <template v-else-if="message.type === 'ai'">
-              <ReasoningDisclosure
-                v-if="reasoning(message)"
-                :content="reasoning(message) ?? ''"
-                :streaming="streaming && entry.index === groups.length - 1"
-                :markdown-components="messageMarkdownComponents"
-              />
-              <MessageMarkdown
-                v-if="text(message)"
-                :content="text(message)"
-                :components="messageMarkdownComponents"
-                :streaming="streaming && entry.index === groups.length - 1"
-              />
-              <CitationSourcesPanel :sources="citations(message)" />
-              <button
-                v-for="artifact in artifactTargets(message)"
-                :key="artifact.path"
-                type="button"
-                class="border-border bg-muted/30 hover:bg-muted my-2 block max-w-full rounded-lg border px-3 py-2 text-left text-sm break-all"
-                @click="emit('artifact', artifact.path)"
-              >
-                {{ artifact.label }}
-              </button>
-              <div
-                v-for="(call, callIndex) in message.tool_calls ?? []"
-                :key="subtaskId(call.id, entry.index, callIndex)"
-                class="my-2 text-sm"
-              >
-                <template v-if="call.name === 'task'">
-                  <SubtaskCard
-                    :task-id="subtaskId(call.id, entry.index, callIndex)"
-                    :thread-id="threadId"
-                    :run-id="runIdOfGroup(entry.index) ?? activeRunId"
-                    :description="subtaskDescription(call.args)"
-                    :prompt="subtaskPrompt(call.args)"
-                    :live-task="
-                      subtasks?.[subtaskId(call.id, entry.index, callIndex)]
-                    "
-                    :terminal="subtaskTerminal(call.id)"
-                    :pending-status="subtaskPendingStatus(call.id)"
-                    :is-loading="streaming"
-                  />
-                </template>
-                <template v-else>
-                  <details class="group/tool">
-                    <summary
-                      class="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-2 py-1.5 transition-colors"
-                    >
-                      <Wrench :size="15" />
-                      <span>{{ toolLabel(call.name) }}</span>
-                    </summary>
-                    <pre
-                      v-if="
-                        call.args &&
-                        Object.keys(call.args).length &&
-                        !ARTIFACT_TOOL_NAMES.has(call.name)
-                      "
-                      class="bg-muted text-muted-foreground mt-1 ml-6 max-h-64 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
-                      >{{ JSON.stringify(call.args, null, 2) }}</pre>
-                  </details>
-                </template>
-              </div>
-            </template>
-            <details v-else-if="message.type === 'tool'" class="my-2 text-sm">
-              <summary
-                class="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-2 py-1.5"
-              >
-                <CheckCircle2 :size="15" />
-                {{
-                  $i18n.t.value.messages.toolResult(
-                    message.name ?? $i18n.t.value.messages.tool,
-                  )
-                }}
-              </summary>
-              <pre
-                class="bg-muted text-muted-foreground mt-1 ml-6 max-h-64 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
-                >{{ text(message) }}</pre>
-            </details>
-          </template>
-
-          <WorkspaceChangesBadge
-            v-if="threadId && workspaceChangesRun(entry.index)"
-            :thread-id="threadId"
-            :run-id="workspaceChangesRun(entry.index)"
-            :disabled="streaming"
-          />
-
-          <MessageTokenUsage
-            v-if="turnUsageMessagesByGroupIndex[entry.index]"
-            :messages="turnUsageMessagesByGroupIndex[entry.index] ?? []"
-            :mode="tokenUsageInlineMode ?? 'off'"
-            :loading="streaming"
-          />
-
-          <AssistantTurnActions
-            v-if="entry.group.type === 'assistant'"
-            :copied="
-              copiedMessage === `assistant:${entry.group.id ?? entry.index}`
-            "
-            :copy-label="$i18n.t.value.messages.actions.copyResponse"
-            :branch-label="$i18n.t.value.messages.actions.branch"
-            :regenerate-label="$i18n.t.value.messages.actions.regenerate"
-            :show-branch="
-              interactive !== false && branchable.has(entry.group.id ?? '')
-            "
-            :show-regenerate="
-              interactive !== false &&
-              entry.index === groups.length - 1 &&
-              Boolean(lastAI(entry.index)?.id)
-            "
-            @copy="
-              copyMessage(
-                `assistant:${entry.group.id ?? entry.index}`,
-                getAssistantTurnCopyData(entry.group.messages, {
-                  isStreaming: streaming && entry.index === groups.length - 1,
-                }),
-              )
-            "
-            @branch="
-              emit('branch', entry.group.id ?? '', groupIds(entry.index))
-            "
-            @regenerate="
-              emit(
-                'regenerate',
-                lastAI(entry.index)?.id ?? '',
-                entry.group.messages.flatMap((message) =>
-                  message.id ? [message.id] : [],
-                ),
-              )
-            "
-          />
-          <div
-            v-for="duration in durations[entry.index] ?? []"
-            :key="duration.runId"
-            data-testid="run-duration"
-            :title="$i18n.t.value.runDuration.description"
-            class="text-muted-foreground mt-2 flex items-center gap-2 text-sm"
-          >
-            <Clock3 :size="16" />
-            <span>{{ durationLabel(duration.durationSeconds) }}</span>
-          </div>
-        </li>
+            <div
+              v-for="duration in durations[entry.index] ?? []"
+              :key="duration.runId"
+              data-testid="run-duration"
+              :title="$i18n.t.value.runDuration.description"
+              class="text-muted-foreground mt-2 flex items-center gap-2 text-sm"
+            >
+              <Clock3 :size="16" />
+              <span>{{ durationLabel(duration.durationSeconds) }}</span>
+            </div>
+          </li>
+        </ul>
         <div
-          v-if="virtualBottomHeight"
-          aria-hidden="true"
-          :style="{ height: `${virtualBottomHeight}px` }"
-        />
-        <li v-if="streaming && !hasActiveAssistantText" class="w-full">
+          v-if="streaming && !hasActiveAssistantText"
+          role="status"
+          :class="['w-full', renderedGroups.length ? 'mt-8' : '']"
+        >
           <RunActivity :start-time="turnStartTime" />
-        </li>
-        <li
-          data-testid="message-list-bottom-spacer"
-          aria-hidden="true"
-          class="h-6 shrink-0"
-        />
-      </ul>
+        </div>
+      </div>
       <p
         v-if="actionError"
         role="alert"

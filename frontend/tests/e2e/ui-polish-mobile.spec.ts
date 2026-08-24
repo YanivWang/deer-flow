@@ -59,14 +59,30 @@ test.describe("UI polish mobile regressions", () => {
           .trim(),
       );
 
-    await page.evaluate(() =>
-      document.documentElement.classList.remove("dark"),
-    );
+    const selectPersistedTheme = async (theme: "light" | "dark") => {
+      await page.evaluate(
+        (nextTheme) => localStorage.setItem("theme", nextTheme),
+        theme,
+      );
+      await page.reload();
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            document.documentElement.classList.contains("dark"),
+          ),
+        )
+        .toBe(theme === "dark");
+    };
+
+    // Theme class ownership belongs to next-themes / Vue's theme controller.
+    // Persist and reload through that public contract instead of mutating the
+    // class behind the owner's back while hydration is still settling.
+    await selectPersistedTheme("light");
     const lightRing = await readRing();
     expect(lightRing).not.toBe("transparent");
     expect(lightRing).not.toBe("");
 
-    await page.evaluate(() => document.documentElement.classList.add("dark"));
+    await selectPersistedTheme("dark");
     const darkRing = await readRing();
     expect(darkRing).not.toBe("transparent");
     expect(darkRing).not.toBe("");

@@ -37,7 +37,7 @@ export default defineConfig({
     : {
         command: `pnpm build && pnpm exec next start -p ${frontendPort}`,
         url: frontendURL,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
         timeout: 240_000,
         env: {
           SKIP_ENV_VALIDATION: "1",

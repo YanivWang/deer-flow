@@ -16,6 +16,7 @@ const inventory = JSON.parse(
 ) as { specFiles: string[] };
 const port = process.env.E2E_M7_PORT ?? "3101";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
+const skipWebServer = process.env.PLAYWRIGHT_SKIP_WEB_SERVER === "1";
 process.env.PLAYWRIGHT_BASE_URL ??= baseURL;
 
 export default defineConfig({
@@ -37,10 +38,12 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   projects: [{ name: "chromium-m7", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: `NUXT_PUBLIC_AUTH_DISABLED=1 NUXT_PUBLIC_M0_TEST_PAGES=0 ./node_modules/.bin/nuxt build && PORT=${port} HOST=127.0.0.1 NUXT_PUBLIC_AUTH_DISABLED=1 ./node_modules/.bin/nuxt preview`,
-    url: baseURL,
-    reuseExistingServer: false,
-    timeout: 240_000,
-  },
+  webServer: skipWebServer
+    ? undefined
+    : {
+        command: `NUXT_PUBLIC_AUTH_DISABLED=1 NUXT_PUBLIC_M0_TEST_PAGES=0 ./node_modules/.bin/nuxt build && PORT=${port} HOST=127.0.0.1 NUXT_PUBLIC_AUTH_DISABLED=1 ./node_modules/.bin/nuxt preview`,
+        url: baseURL,
+        reuseExistingServer: false,
+        timeout: 240_000,
+      },
 });

@@ -404,16 +404,16 @@ test.describe("Thread history", () => {
       const composer = document.querySelector<HTMLElement>(
         "[data-testid='composer-surface']",
       );
-      const messageList = document.querySelector<HTMLElement>(
-        "[data-testid='message-list']",
+      const messageContent = document.querySelector<HTMLElement>(
+        "[data-testid='message-list-content']",
       );
-      const scroller = messageList?.parentElement;
+      const scroller = messageContent?.parentElement;
       if (
         !actions ||
         buttons.length !== 3 ||
         !duration ||
         !composer ||
-        !messageList ||
+        !messageContent ||
         !scroller
       ) {
         throw new Error("Missing completed-turn geometry anchors");
@@ -421,7 +421,7 @@ test.describe("Thread history", () => {
       const actionsRect = actions.getBoundingClientRect();
       const durationRect = duration.getBoundingClientRect();
       const composerRect = composer.getBoundingClientRect();
-      const messageListRect = messageList.getBoundingClientRect();
+      const messageContentRect = messageContent.getBoundingClientRect();
       const scrollerRect = scroller.getBoundingClientRect();
       return {
         buttons: buttons.map((button) => {
@@ -436,8 +436,10 @@ test.describe("Thread history", () => {
         actionGap: Number.parseFloat(getComputedStyle(actions).gap),
         actionsToDuration: durationRect.top - actionsRect.bottom,
         durationToComposer: composerRect.top - durationRect.bottom,
-        durationToMessageListEnd: messageListRect.bottom - durationRect.bottom,
-        messageListRemainder: scrollerRect.bottom - messageListRect.bottom,
+        durationToMessageContentEnd:
+          messageContentRect.bottom - durationRect.bottom,
+        messageContentRemainder:
+          scrollerRect.bottom - messageContentRect.bottom,
         scrollerToComposer: composerRect.top - scrollerRect.bottom,
         composerBottomInset: window.innerHeight - composerRect.bottom,
       };
@@ -453,11 +455,11 @@ test.describe("Thread history", () => {
     expect(geometry.buttons[2]!.x - geometry.buttons[1]!.x).toBe(36);
     expect(geometry.actionGap).toBe(4);
     expect(geometry.actionsToDuration).toBe(8);
-    expect(geometry.durationToMessageListEnd).toBe(72);
-    expect(geometry.messageListRemainder).toBeGreaterThanOrEqual(0);
+    expect(geometry.durationToMessageContentEnd).toBe(72);
+    expect(geometry.messageContentRemainder).toBeGreaterThanOrEqual(0);
     expect(geometry.scrollerToComposer).toBe(0);
     expect(geometry.durationToComposer).toBeCloseTo(
-      geometry.durationToMessageListEnd + geometry.messageListRemainder,
+      geometry.durationToMessageContentEnd + geometry.messageContentRemainder,
       5,
     );
     expect(geometry.composerBottomInset).toBe(16);

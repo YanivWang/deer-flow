@@ -47,7 +47,7 @@ help:
 	@echo "  make e2e-m5-real-backend       run M5 write-file/artifact against replay Gateway"
 	@echo "  make e2e-m6-real-backend       run M6 browser panel against browser-enabled replay Gateway"
 	@echo "  make e2e-m6                    run the exact M6 remaining-L3 shared contract gate"
-	@echo "  make e2e-m7-list               verify/list the exact 29-file / 168-test M7 inventory"
+	@echo "  make e2e-m7-list               verify/list the exact 29-file / 169-test M7 inventory"
 	@echo "  make e2e-m7                    verify then run the full M7 shared contract gate"
 	@echo "  make e2e-wp07-real-backend     run scheduled tasks against real FastAPI/SQLite Gateway"
 	@echo "  make e2e-wp08-real-backend     run channel lifecycle against real Auth/FastAPI/SQLite Gateway"

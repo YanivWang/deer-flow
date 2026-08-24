@@ -38,7 +38,7 @@ export default defineConfig({
       command: `uv run python scripts/run_replay_gateway.py --port ${gatewayPort} --cors ${frontendUrl}`,
       cwd: "../backend",
       url: `${gatewayUrl}/health`,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 180_000,
       stdout: "pipe",
       stderr: "pipe",
@@ -53,7 +53,7 @@ export default defineConfig({
     {
       command: "pnpm build && pnpm start",
       url: frontendUrl,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 240_000,
       env: {
         PORT: frontendPort,

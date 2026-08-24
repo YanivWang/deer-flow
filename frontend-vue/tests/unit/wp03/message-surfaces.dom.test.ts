@@ -8,7 +8,7 @@ import TodoList from "@/components/workspace/TodoList.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
 import type { Message } from "@/core/types/message";
 
-function mountMessages(messages: Message[]) {
+function mountMessages(messages: Message[], streaming = false) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -17,7 +17,7 @@ function mountMessages(messages: Message[]) {
     props: {
       messages,
       rawMessages: messages,
-      streaming: false,
+      streaming,
       loading: false,
       threadId: "thread-1",
       interactive: true,
@@ -124,21 +124,66 @@ describe("WP-03 persisted message surfaces", () => {
       expect(button.attributes("data-variant")).toBe("ghost");
       expect(button.attributes("data-size")).toBe("icon-sm");
     }
-    expect(wrapper.get("[data-testid='message-list']").classes()).toEqual(
-      expect.arrayContaining(["px-4", "pb-4"]),
+    expect(
+      wrapper.get("[data-testid='message-list-content']").classes(),
+    ).toEqual(expect.arrayContaining(["px-4", "pt-8", "pb-[72px]"]));
+    expect(wrapper.get("[data-testid='message-list']").classes()).toContain(
+      "gap-8",
     );
     expect(
+      wrapper.get("[data-testid='message-list']").attributes("style"),
+    ).toBe("padding-top: 0px; padding-bottom: 0px;");
+    expect(
       wrapper.get("[data-testid='message-list']").element.parentElement
-        ?.classList,
+        ?.parentElement?.classList,
     ).toContain("[scrollbar-gutter:stable_both-edges]");
     expect(
-      wrapper.get("[data-testid='message-list-bottom-spacer']").classes(),
-    ).toEqual(expect.arrayContaining(["h-6", "shrink-0"]));
+      wrapper.find("[data-testid='message-list-bottom-spacer']").exists(),
+    ).toBe(false);
+    expect(
+      wrapper
+        .get("[data-testid='message-list']")
+        .findAll(":scope > li")
+        .every((item) => item.attributes("data-role")),
+    ).toBe(true);
 
     await wrapper.get("button[aria-label='Copy response']").trigger("click");
     expect(globalThis.navigator.clipboard.writeText).toHaveBeenCalledWith(
       expect.stringContaining("Answer"),
     );
+  });
+
+  it("keeps virtual offsets on the list owner without adding non-message children", async () => {
+    const messages = Array.from({ length: 81 }, (_, index) => ({
+      id: `human-${index}`,
+      type: "human",
+      content: `Message ${index}`,
+    })) as Message[];
+    const { wrapper } = mountMessages(messages);
+    await flushPromises();
+
+    const list = wrapper.get("[data-testid='message-list']");
+    expect(list.attributes("style")).toBe(
+      "padding-top: 2480px; padding-bottom: 0px;",
+    );
+    expect(list.element.children).toHaveLength(50);
+    expect(
+      [...list.element.children].every(
+        (item) => item.tagName === "LI" && item.getAttribute("data-role"),
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps active run status outside the semantic message list", async () => {
+    const { wrapper } = mountMessages([], true);
+    await flushPromises();
+
+    expect(
+      wrapper.get("[data-testid='message-list']").element.children,
+    ).toHaveLength(0);
+    expect(
+      wrapper.get("[role='status'] [data-testid='run-activity']").exists(),
+    ).toBe(true);
   });
 
   it("renders pending, in-progress, and completed todos from authoritative state", async () => {

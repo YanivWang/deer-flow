@@ -72,7 +72,12 @@ export type MockAPIOptions = {
     schedule_spec: Record<string, unknown>;
     timezone: string;
     status:
-      "enabled" | "paused" | "running" | "completed" | "failed" | "cancelled";
+      | "enabled"
+      | "paused"
+      | "running"
+      | "completed"
+      | "failed"
+      | "cancelled";
     next_run_at: string | null;
     last_run_at: string | null;
     last_run_id: string | null;
@@ -284,11 +289,14 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
       verified: false,
     },
     sandbox_runtime_mode: "init-container" as
-      "none" | "gateway-download" | "init-container",
+      | "none"
+      | "gateway-download"
+      | "init-container",
     sandbox_runtime_ready: false,
     sandbox_runtime_detail:
       "The provisioner has no lark-cli init image configured (LARK_CLI_INIT_IMAGE)." as
-        string | null,
+        | string
+        | null,
   };
   const featureFlags = {
     agentsApiEnabled: options?.features?.agentsApiEnabled ?? true,
@@ -959,6 +967,60 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
       });
     }
     return route.fallback();
+  });
+
+  // These queries are mounted by the shared workspace shell. Own them in the
+  // standard mock harness so an isolated frontend E2E run never falls through
+  // to a real Gateway merely because a test does not exercise these surfaces.
+  // Scenario-specific routes are registered after this helper and therefore
+  // still take precedence.
+  void page.route("**/api/threads/*/token-usage", (route) => {
+    if (route.request().method() !== "GET") {
+      return route.fallback();
+    }
+    const parts = new URL(route.request().url()).pathname.split("/");
+    const threadId = decodeURIComponent(
+      parts[parts.indexOf("threads") + 1] ?? "",
+    );
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        thread_id: threadId,
+        total_tokens: 0,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        total_runs: 0,
+        by_model: {},
+        by_caller: { lead_agent: 0, subagent: 0, middleware: 0 },
+        context_usage: null,
+      }),
+    });
+  });
+
+  void page.route("**/api/threads/*/runs/*/workspace-changes?*", (route) => {
+    if (route.request().method() !== "GET") {
+      return route.fallback();
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        available: false,
+        version: 1,
+        summary: {
+          created: 0,
+          modified: 0,
+          deleted: 0,
+          symlink_created: 0,
+          additions: 0,
+          deletions: 0,
+          truncated: false,
+        },
+        files: [],
+        limits: {},
+      }),
+    });
   });
 
   // Thread history — useStream fetches state history on mount

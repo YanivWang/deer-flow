@@ -403,14 +403,6 @@ test.describe("Side chat", () => {
           context?: Record<string, unknown>;
         }
       | undefined;
-    const streamBodies: NonNullable<typeof streamBody>[] = [];
-    const streamThreadURLs: string[] = [];
-    const uploadThreadIDs: string[] = [];
-    let hiddenRunStarted = false;
-    let releaseHiddenRun!: () => void;
-    const hiddenRunGate = new Promise<void>((resolve) => {
-      releaseHiddenRun = resolve;
-    });
     let sidecarThreadMessages: Array<{
       type?: string;
       id?: string;
@@ -480,47 +472,6 @@ test.describe("Side chat", () => {
         metadata?: Record<string, unknown>;
       };
       return route.fallback();
-    });
-    await page.route("**/api/threads/*/uploads/limits", (route) => {
-      if (route.request().method() !== "GET") {
-        return route.fallback();
-      }
-      return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          max_files: 10,
-          max_file_size: 10 * 1024 * 1024,
-          max_total_size: 20 * 1024 * 1024,
-        }),
-      });
-    });
-    await page.route("**/api/threads/*/uploads", (route) => {
-      if (route.request().method() !== "POST") {
-        return route.fallback();
-      }
-      const pathname = new URL(route.request().url()).pathname;
-      uploadThreadIDs.push(
-        pathname.split("/threads/")[1]?.split("/uploads")[0] ?? "",
-      );
-      return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          files: [
-            {
-              filename: "sidecar-notes.txt",
-              size: 5,
-              path: "/tmp/sidecar-notes.txt",
-              virtual_path: "/mnt/user-data/uploads/sidecar-notes.txt",
-              artifact_url: "/artifact/sidecar-notes.txt",
-            },
-          ],
-          message: "ok",
-          skipped_files: [],
-        }),
-      });
     });
     await page.route(
       `**/api/langgraph/threads/${MOCK_THREAD_ID}/state`,
@@ -720,52 +671,11 @@ test.describe("Side chat", () => {
       const body = route.request().postDataJSON() as typeof streamBody;
       if (body?.input?.messages) {
         streamBody = body;
-        streamBodies.push(body);
-        streamThreadURLs.push(route.request().url());
-        const submittedText = textFromContent(
-          body.input.messages.at(-1)?.content,
-        );
-        if (submittedText === "Keep running while hidden") {
-          hiddenRunStarted = true;
-          await hiddenRunGate;
-        }
-        const responseMessage =
-          submittedText === "Request sidecar approval"
-            ? {
-                type: "tool",
-                id: "sidecar-human-input-request",
-                name: "ask_clarification",
-                content: "Waiting for clarification",
-                artifact: {
-                  human_input: {
-                    version: 2,
-                    kind: "human_input_request",
-                    source: "ask_clarification",
-                    request_id: "sidecar-request-1",
-                    question: "Confirm sidecar delivery",
-                    input_mode: "form",
-                    fields: [
-                      {
-                        name: "owner",
-                        label: "Owner",
-                        type: "text",
-                        required: true,
-                      },
-                      {
-                        name: "approved",
-                        label: "Approved",
-                        type: "checkbox",
-                        required: false,
-                      },
-                    ],
-                  },
-                },
-              }
-            : {
-                type: "ai",
-                id: `msg-ai-sidecar-${sidecarThreadMessages.length}`,
-                content: "Hello from DeerFlow!",
-              };
+        const responseMessage = {
+          type: "ai",
+          id: `msg-ai-sidecar-${sidecarThreadMessages.length}`,
+          content: "Hello from DeerFlow!",
+        };
         sidecarThreadMessages = [
           ...sidecarThreadMessages,
           ...body.input.messages,
@@ -943,6 +853,7 @@ test.describe("Side chat", () => {
         referenced_message_ids: ["parent-ai-1", "parent-ai-1"],
         referenced_message_roles: ["assistant", "assistant"],
       });
+    expect(sidecarThreadCreateCount).toBe(1);
 
     await expect
       .poll(() => streamBody?.input?.messages?.length, { timeout: 10_000 })
@@ -1103,6 +1014,210 @@ test.describe("Side chat", () => {
     expect(textFromContent(followUpMessages[0]?.content)).not.toContain(
       "<referenced_message",
     );
+  });
+
+  test("keeps sidecar uploads and human input on the sidecar thread", async ({
+    page,
+  }) => {
+    const parentMessages = [
+      {
+        type: "human",
+        id: "parent-human-1",
+        content: [{ type: "text", text: "Plan the feature." }],
+      },
+      {
+        type: "ai",
+        id: "parent-ai-1",
+        content: "Build it as a side conversation.",
+      },
+    ];
+    const sidecarMessages: Array<Record<string, unknown>> = [
+      {
+        type: "human",
+        id: "side-human-1",
+        content: "What tradeoffs should we consider?",
+      },
+      {
+        type: "ai",
+        id: "side-ai-1",
+        content: "Hello from DeerFlow!",
+      },
+    ];
+    const sidecarRuntimeMessages = sidecarMessages;
+    const streamBodies: Array<{
+      input?: {
+        messages?: Array<{
+          content?: unknown;
+          additional_kwargs?: Record<string, unknown>;
+        }>;
+      };
+    }> = [];
+    const streamThreadURLs: string[] = [];
+    const uploadThreadIDs: string[] = [];
+    let sidecarThreadCreateCount = 0;
+    let hiddenRunStarted = false;
+    let releaseHiddenRun!: () => void;
+    const hiddenRunGate = new Promise<void>((resolve) => {
+      releaseHiddenRun = resolve;
+    });
+
+    mockLangGraphAPI(page, {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Main conversation",
+          messages: parentMessages,
+        },
+        {
+          thread_id: MOCK_SIDECAR_THREAD_ID,
+          title: "Restored side chat",
+          updated_at: "2025-01-01T00:00:01Z",
+          metadata: {
+            deerflow_sidecar: true,
+            parent_thread_id: MOCK_THREAD_ID,
+            sidecar_context_type: "referenced_message",
+            sidecar_context_label: "Selected assistant text #2",
+            sidecar_context_count: 1,
+            referenced_message_id: "parent-ai-1",
+            referenced_message_ids: ["parent-ai-1"],
+            referenced_message_role: "assistant",
+            referenced_message_roles: ["assistant"],
+          },
+          messages: sidecarMessages,
+        },
+        {
+          thread_id: MOCK_THREAD_ID_2,
+          title: "Second conversation",
+          messages: [
+            {
+              type: "human",
+              id: "second-human-1",
+              content: "Switch target.",
+            },
+          ],
+        },
+      ],
+    });
+    await page.route("**/api/threads", (route) => {
+      if (route.request().method() !== "POST") {
+        return route.fallback();
+      }
+      sidecarThreadCreateCount += 1;
+      return route.fallback();
+    });
+    await page.route("**/api/threads/*/uploads", (route) => {
+      if (route.request().method() !== "POST") {
+        return route.fallback();
+      }
+      const pathname = new URL(route.request().url()).pathname;
+      uploadThreadIDs.push(
+        pathname.split("/threads/")[1]?.split("/uploads")[0] ?? "",
+      );
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          files: [
+            {
+              filename: "sidecar-notes.txt",
+              size: 5,
+              path: "/tmp/sidecar-notes.txt",
+              virtual_path: "/mnt/user-data/uploads/sidecar-notes.txt",
+              artifact_url: "/artifact/sidecar-notes.txt",
+            },
+          ],
+          message: "ok",
+          skipped_files: [],
+        }),
+      });
+    });
+    await page.route("**/runs/stream", async (route) => {
+      const body = route
+        .request()
+        .postDataJSON() as (typeof streamBodies)[number];
+      streamBodies.push(body);
+      streamThreadURLs.push(route.request().url());
+      const submittedText = textFromContent(
+        body.input?.messages?.at(-1)?.content,
+      );
+      if (submittedText === "Keep running while hidden") {
+        hiddenRunStarted = true;
+        await hiddenRunGate;
+      }
+      const responseMessage =
+        submittedText === "Request sidecar approval"
+          ? {
+              type: "tool",
+              id: "sidecar-human-input-request",
+              name: "ask_clarification",
+              tool_call_id: "sidecar-clarification-call",
+              content: "Waiting for clarification",
+              artifact: {
+                human_input: {
+                  version: 2,
+                  kind: "human_input_request",
+                  source: "ask_clarification",
+                  request_id: "sidecar-request-1",
+                  question: "Confirm sidecar delivery",
+                  input_mode: "form",
+                  fields: [
+                    {
+                      name: "owner",
+                      label: "Owner",
+                      type: "text",
+                      required: true,
+                    },
+                    {
+                      name: "approved",
+                      label: "Approved",
+                      type: "checkbox",
+                      required: false,
+                    },
+                  ],
+                },
+              },
+            }
+          : {
+              type: "ai",
+              id: `sidecar-response-${streamBodies.length}`,
+              content: "Hello from DeerFlow!",
+            };
+      sidecarRuntimeMessages.push(
+        ...(body.input?.messages ?? []),
+        responseMessage,
+      );
+      const events = [
+        {
+          event: "metadata",
+          data: {
+            run_id: `run-${MOCK_SIDECAR_THREAD_ID}`,
+            thread_id: MOCK_SIDECAR_THREAD_ID,
+          },
+        },
+        {
+          event: "values",
+          data: {
+            messages: sidecarRuntimeMessages,
+          },
+        },
+        { event: "end", data: {} },
+      ];
+      return route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        headers: {
+          "Content-Location": `/api/threads/${MOCK_SIDECAR_THREAD_ID}/runs/run-${MOCK_SIDECAR_THREAD_ID}`,
+          "Access-Control-Expose-Headers": "Content-Location",
+        },
+        body: events
+          .map(
+            (event) =>
+              `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
+          )
+          .join(""),
+      });
+    });
 
     await page.goto(`/workspace/chats/${MOCK_THREAD_ID_2}`);
     await expect(page.getByText("Switch target.")).toBeVisible({
@@ -1111,43 +1226,36 @@ test.describe("Side chat", () => {
     await expect(page.getByTestId("sidecar-header-trigger")).toBeHidden();
 
     await page.goto(`/workspace/chats/${MOCK_THREAD_ID}`);
-    await expect(
-      page.getByText("Build it as a side conversation."),
-    ).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("sidecar-header-trigger")).toBeVisible({
       timeout: 10_000,
     });
+    await page.getByTestId("sidecar-header-trigger").click();
+    await expect(page.getByTestId("sidecar-panel")).toBeVisible();
 
-    await selectTextAndClickToolbarButton(
-      page,
-      "Build it as a side conversation.",
-      "Ask in side chat",
-    );
-    await expect(sidecarReference).toContainText("1 selected text fragment");
-    await expect(
-      page
-        .getByTestId("sidecar-message-list")
-        .getByText("Hello from DeerFlow!")
-        .first(),
-    ).toBeVisible();
-
-    await sidecarInput.fill("How does this change the same side chat?");
-    await sidecarInput.press("Enter");
-    await expect
-      .poll(() => sidecarThreadCreateCount, { timeout: 10_000 })
-      .toBe(1);
+    const sidecarInput = page.getByPlaceholder(/deeper follow-up/i);
+    const sidecarInputForm = page.locator("form").filter({
+      has: sidecarInput,
+    });
 
     await sidecarInput.fill("Keep running while hidden");
     await sidecarInput.press("Enter");
     await expect.poll(() => hiddenRunStarted).toBe(true);
+    await expect(sidecarInput).toBeDisabled();
     await page.getByTestId("sidecar-header-trigger").click();
     await expect(page.getByTestId("sidecar-panel")).toBeHidden();
     await page.getByTestId("sidecar-header-trigger").click();
     await expect(page.getByTestId("sidecar-panel")).toBeVisible();
     releaseHiddenRun();
     await expect(sidecarInput).toBeEnabled();
+    expect(sidecarThreadCreateCount).toBe(0);
 
-    const sidecarFileInput = sidecarInputForm.locator("input[type='file']");
+    // PromptInput intentionally owns its file input as a sibling of the form,
+    // so scope it to the sidecar surface rather than inventing a form-child
+    // relationship that does not exist in the product DOM.
+    const sidecarFileInput = page
+      .getByTestId("sidecar-panel")
+      .locator("input[type='file']");
+    await expect(sidecarFileInput).toHaveCount(1);
     await sidecarFileInput.setInputFiles({
       name: "sidecar-notes.txt",
       mimeType: "text/plain",
@@ -1156,15 +1264,12 @@ test.describe("Side chat", () => {
     await expect(sidecarInputForm.getByText("sidecar-notes.txt")).toBeVisible();
     await sidecarInput.fill("Review the attached sidecar notes");
     await sidecarInput.press("Enter");
-    await expect.poll(() => uploadThreadIDs).toEqual([
-      MOCK_SIDECAR_THREAD_ID,
-    ]);
+    await expect.poll(() => uploadThreadIDs).toEqual([MOCK_SIDECAR_THREAD_ID]);
     await expect
       .poll(
         () =>
-          streamBodies
-            .at(-1)
-            ?.input?.messages?.at(-1)?.additional_kwargs?.files,
+          streamBodies.at(-1)?.input?.messages?.at(-1)?.additional_kwargs
+            ?.files,
       )
       .toEqual([
         {
@@ -1178,9 +1283,15 @@ test.describe("Side chat", () => {
       `/threads/${MOCK_SIDECAR_THREAD_ID}/runs/stream`,
     );
     await expect(sidecarInputForm.getByText("sidecar-notes.txt")).toBeHidden();
+    await expect(sidecarInput).toBeEnabled();
 
     await sidecarInput.fill("Request sidecar approval");
     await sidecarInput.press("Enter");
+    await expect
+      .poll(() =>
+        textFromContent(streamBodies.at(-1)?.input?.messages?.at(-1)?.content),
+      )
+      .toBe("Request sidecar approval");
     const humanInputCard = page
       .getByTestId("sidecar-message-list")
       .locator("section")
@@ -1193,9 +1304,7 @@ test.describe("Side chat", () => {
     await expect
       .poll(
         () =>
-          streamBodies
-            .at(-1)
-            ?.input?.messages?.at(-1)?.additional_kwargs
+          streamBodies.at(-1)?.input?.messages?.at(-1)?.additional_kwargs
             ?.human_input_response,
       )
       .toMatchObject({
@@ -1560,7 +1669,7 @@ test.describe("Side chat", () => {
     const deleteGate = new Promise<void>((resolve) => {
       releaseDelete = resolve;
     });
-    await page.route(/\/api\/threads\/[^/]+$/, async (route) => {
+    await page.route(`**/threads/${MOCK_SIDECAR_THREAD_ID}`, async (route) => {
       if (route.request().method() !== "DELETE") {
         return route.fallback();
       }

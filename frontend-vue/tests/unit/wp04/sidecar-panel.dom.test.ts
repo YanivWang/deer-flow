@@ -129,6 +129,12 @@ describe("WP-04 SidecarPanel session adapter", () => {
     const { wrapper } = mountPanel(session);
 
     expect(wrapper.get("form").attributes("aria-busy")).toBe("true");
+    expect(wrapper.get("textarea[name='message']").attributes("disabled")).toBe(
+      "",
+    );
+    expect(wrapper.get("button[type='submit']").attributes("disabled")).toBe(
+      "",
+    );
     expect(wrapper.text()).toContain("notes.txt");
     await wrapper.get("button[aria-label='Remove notes.txt']").trigger("click");
     expect(session.removeFile).toHaveBeenCalledWith(file);
@@ -140,6 +146,14 @@ describe("WP-04 SidecarPanel session adapter", () => {
     });
     await input.trigger("change");
     expect(session.addFiles).toHaveBeenCalledWith([file]);
+
+    session.submissionPending.value = false;
+    session.stream.isStreaming.value = true;
+    await nextTick();
+    expect(wrapper.get("form").attributes("aria-busy")).toBe("true");
+    expect(wrapper.get("textarea[name='message']").attributes("disabled")).toBe(
+      "",
+    );
   });
 
   it("uses the shared composer surface as the single focus-ring owner", () => {

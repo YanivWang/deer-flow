@@ -1,6 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+const defaultFrontendPort = process.env.E2E_FRONTEND_PORT ?? "3002";
+const baseURL =
+  process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${defaultFrontendPort}`;
+const frontendPort = new URL(baseURL).port || defaultFrontendPort;
 const skipWebServer = process.env.PLAYWRIGHT_SKIP_WEB_SERVER === "1";
 
 export default defineConfig({
@@ -31,9 +34,10 @@ export default defineConfig({
         command:
           "./node_modules/.bin/next build && ./node_modules/.bin/next start",
         url: baseURL,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
         timeout: 120_000,
         env: {
+          PORT: frontendPort,
           SKIP_ENV_VALIDATION: "1",
           DEER_FLOW_AUTH_DISABLED: "1",
         },

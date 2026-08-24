@@ -78,7 +78,9 @@ MessageList 直接消费持久化消息：现代/legacy 附件、隐藏 HIL 回�
 citation 和 per-turn usage 都不依赖提交前 UI 状态。processing 只走一份步骤投影；终态 reasoning
 流式时展开、settle 后只自动收起一次，尚无终态 assistant 时显示 live run activity。
 `AssistantTurnActions.vue` 独占 assistant 尾部按钮的共享 Button 规格，`MessageList.vue` 只决定
-哪些动作可用并拥有滚动 gutter、内容 padding、组间 gap 和显式 bottom spacer；因此按钮命中区、
+哪些动作可用并拥有滚动 gutter、内容 padding 和组间 gap；72 px 尾部空间属于内容 wrapper，
+长历史虚拟窗口偏移属于语义 `<ul>` 的 padding，二者都不插入 spacer DOM 或伪装成消息列表项，
+因此按钮命中区、
 横向起点和消息尾部留白都能从结构推导，而不由调用页添加位置偏移。
 `MessageMarkdown.vue` 是消息、reasoning 与 processing 文本的唯一产品适配器，集中提供安全预处理、
 GFM/math/streaming 插件和 Streamdown 等价组件，防止调用点漏传插件后把表格静默退化成纯文本。
@@ -94,6 +96,8 @@ follow-up 配置是 Vue Query 持有的服务端状态，由 `useSuggestionsConf
 `input-group-header/body/footer` data-slot 统一拥有输入组边界、焦点环与分区几何；主
 `ChatComposer.vue` 和 sidecar 都消费同一套 64 px body / 50 px footer 合同，调用方只提供功能
 控件。主会话与 sidecar disclaimer 都由各自底部容器脱离文档流呈现，不改变 surface 高度。
+sidecar 的 `composerBusy` 是提交/流式期间唯一的交互锁 owner，同时驱动 form busy 语义、textarea
+与 submit 禁用；面板隐藏再打开不会提前解锁同一条仍在运行的会话。
 
 流式重连、消息顺序、缓存失效和面板行为的硬合同见
 [`BEHAVIOR_CONTRACTS.md`](BEHAVIOR_CONTRACTS.md)。

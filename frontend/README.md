@@ -66,6 +66,11 @@ pnpm build
 pnpm start
 ```
 
+The default E2E suite owns its production server on `localhost:3002` and does
+not reuse an existing process. Set `E2E_FRONTEND_PORT` to choose another
+isolated port. Use `PLAYWRIGHT_SKIP_WEB_SERVER=1` only when intentionally
+providing the target server yourself.
+
 ## Site Map
 
 ```

@@ -67,7 +67,13 @@ test.describe("Landing page", () => {
     const section = page
       .locator("section")
       .filter({ has: page.getByText("Agent Skills", { exact: true }) });
-    await section.scrollIntoViewIfNeeded();
+    // This section contains a deliberately continuous animation. Scrolling is
+    // setup for a geometry assertion, so invoke the DOM scroll primitive
+    // directly instead of asking an actionability check to wait for the
+    // animated subtree to become stable.
+    await section.evaluate((element) =>
+      element.scrollIntoView({ block: "center" }),
+    );
 
     const control = section
       .getByText(/Click to (pause|play)/, { exact: true })
@@ -97,7 +103,9 @@ test.describe("Landing page", () => {
     ).toBeGreaterThanOrEqual(15);
 
     await page.setViewportSize({ width: 3930, height: 1650 });
-    await section.scrollIntoViewIfNeeded();
+    await section.evaluate((element) =>
+      element.scrollIntoView({ block: "center" }),
+    );
 
     const ultraWideAnimationBox = await animation.boundingBox();
     expect(ultraWideAnimationBox).not.toBeNull();

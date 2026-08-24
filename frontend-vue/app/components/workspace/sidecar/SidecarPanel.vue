@@ -64,6 +64,11 @@ const sessionInput = computed({
   get: () => props.session.input.value,
   set: (value: string) => props.session.setInput(value),
 });
+const composerBusy = computed(
+  () =>
+    props.session.submissionPending.value ||
+    props.session.stream.isStreaming.value,
+);
 
 watch(
   () => props.context,
@@ -242,7 +247,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
     <div class="relative flex shrink-0 flex-col gap-2 px-3 pb-4">
       <form
         class="mx-auto w-full"
-        :aria-busy="session.submissionPending.value"
+        :aria-busy="composerBusy"
         @submit.prevent="session.submit()"
       >
         <ReferenceAttachment
@@ -271,6 +276,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
               data-slot="input-group-control"
               :placeholder="$i18n.t.value.sidecar.placeholder"
               :aria-label="$i18n.t.value.sidecar.inputLabel"
+              :disabled="composerBusy"
               rows="1"
               class="field-sizing-content max-h-48 min-h-6! w-full min-w-0 resize-none bg-transparent p-0! text-sm leading-6! outline-none focus-visible:ring-0 focus-visible:outline-none"
               @keydown="onKeydown"
@@ -334,8 +340,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
               :disabled="
                 (!session.input.value.trim() &&
                   session.selectedFiles.value.length === 0) ||
-                session.stream.isStreaming.value ||
-                session.submissionPending.value
+                composerBusy
               "
             >
               <ArrowUp :size="16" />

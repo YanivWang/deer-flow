@@ -277,6 +277,7 @@
 - [`app/composables/useSidecarSession.ts`](app/composables/useSidecarSession.ts) 是每个 `AgentChat` 唯一的 sidecar session owner：恢复完成且确认不存在后才创建，并在 main thread/context/scope 变化时拒绝旧结果回写。
 - 主 composer 与 sidecar 共用 [`app/core/uploads/submission-files.ts`](app/core/uploads/submission-files.ts)，附件上传到最终 sidecar thread，完整成功的同一 `File` 可在 run 失败后复用。
 - [`app/components/workspace/sidecar/SidecarPanel.vue`](app/components/workspace/sidecar/SidecarPanel.vue) 只渲染 session，并把真实 thread、stream error 与 HIL callback 传给共享 MessageList/HumanInputCard。
+- SidecarPanel 只从 session 的 submission/stream 状态派生一个 `composerBusy`；form、textarea 与 submit 不得各自维护运行锁，面板隐藏/重开也不能提前恢复输入。
 - session 位于面板组件之外；关闭或切换右侧面板不会销毁流，真实删除才清空 thread、草稿、附件与上传缓存。
 - React [`src/components/workspace/sidecar/sidecar-panel.tsx`](../frontend/src/components/workspace/sidecar/sidecar-panel.tsx) 先 restore，再决定是否 create，并把附件/HIL 接入 sidecar run。
 
@@ -287,6 +288,7 @@
 3. selected files 按与主 Composer 相同的验证、上传、payload 和失败恢复规则发送。
 4. sidecar 可回答 HIL，pending/error/刷新恢复规则与主聊天一致。
 5. 关闭/重开面板不能丢失正在执行的 sidecar run。
+6. 提交接受后到 run settle 前 sidecar textarea 与 submit 必须保持禁用，form 同步暴露 busy 语义。
 
 #### Vue 实现建议
 
@@ -633,8 +635,8 @@
 - `AssistantTurnActions.vue` 独占 assistant 尾部操作的视觉规格：所有可用动作复用共享
   `Button` 的 `ghost/icon-sm` 合同，按钮为 32 px、间距 4 px；不再由 `MessageList` 直接画裸图标。
   消息滚动区采用 React `use-stick-to-bottom` 同款双侧稳定 scrollbar gutter，内容内边距、动作到
-  耗时的 8 px、32 px 行间距、24 px 显式底部 spacer 与 16 px 底部 padding 共同形成可解释的
-  72 px 消息尾部结构。
+  耗时的 8 px 与 32 px 行间距保持可解释；72 px 消息尾部空间归内容 wrapper 的 padding，长历史
+  虚拟窗口偏移归语义 `<ul>` 的 padding，布局留白不再通过 spacer DOM 伪装成消息列表项。
 - `ComposerSurface` 不再提供隐式 padding 或 padded 双轨，而以 `input-group-header/body/footer`
   data-slot 作为主会话和 sidecar 的统一几何合同：单行 body 最小 64 px，footer 50 px，边框后空态
   surface 为 116 px；主会话与 sidecar disclaimer 绝对定位，不再额外占据 24 px 布局高度。
@@ -645,7 +647,7 @@
 #### 验收与测试
 
 - unit/DOM 固定 feedback 缺席、MessageMarkdown 默认插件链、表格三项操作、token radio menu、
-  header export、suggestions Query owner、操作按钮规格、滚动条 gutter、显式底部 spacer 与
+  header export、suggestions Query owner、操作按钮规格、滚动条 gutter、语义纯净的尾部 padding 与
   composer disclaimer 脱离布局流。
 - Vue-owned M7 固定 settings 菜单、非链接品牌、Agent header/browser 开关和完成后 suggestions。
 - thread-history 浏览器合同直接测量 assistant 操作按钮、横向步进、动作到耗时、消息尾部结构、
@@ -767,3 +769,4 @@ API 对齐：method/path/query/headers/body/response/error/cache
 | 2026-08-24 | WP-03：`MESSAGE-06`                                           | 天气流程定向 Vitest 5 files / 31 tests；`make verify` 186 files / 1528 tests 且 production build 通过；`make migration-check`；`make e2e-m4a` 4/4、真实分片 stream 6/6；`make e2e-m7` 29 files / 166/166；M7 visual 中本轮相关 streaming 与 reasoning/tool 2/2；`git diff --check` 通过；真实双端分别提交“今天的天气”，完成态均为单次 web search、reasoning 收起、无 raw `<think`、无重复工具结果、列表标记恢复；Vue 交叉渲染 React 已完成线程保持同一结构与正文 | 外部模型两次独立采样的搜索词、token 和最终文案不要求逐字相同；wire context 由 production stream test 固定为同 mode/effort。M7 visual 全量 6/8，失败的 mobile/dark 是本轮未改的欢迎页快捷按钮旧 baseline，未刷新；仅改 `frontend-vue`，未暂存、未提交、未 push |
 | 2026-08-24 | WP-13：`MESSAGE-02`、`MESSAGE-07`、`SURFACE-01`、`SURFACE-02` | `make verify` 190 files / 1537 tests 且 production build 通过；`make migration-check`；`make e2e-m4a` 4/4、真实分片 stream 6/6；`make e2e-m7` 29 files / 168/168；product-surface guard 固定 route 例外、feedback 缺席、独立资产与附件语义入口；同一真实天气 thread 双端均显示处理步骤、reasoning、GFM 表格及复制/下载/全屏，Vue 不再显示点赞/踩，header/sidebar/message/composer 操作集合按 React 调用点收口                                                    | 第 2 节明确排除的 landing、docs/blog、静态 demo/mock 与框架内部实现仍不要求同构；模型文案、token 与耗时不作为 UI parity 判据；仅改 `frontend-vue`，未暂存、未提交、未 push                                                                                    |
 | 2026-08-24 | WP-13 follow-up：`SURFACE-03`                                 | 定向 unit/DOM 4 files / 25 tests；thread-history 几何合同通过；`make e2e-m7` 29 files / 168/168；`make verify` 190 files / 1537 tests 且 production build 通过；1280×720 真实双端测量：操作按钮均 32×32 px、横向步进 36 px、图标 16/16/12 px、操作到耗时 8 px、composer 均 816×116 px 且距 viewport 底部 16 px，React/Vue 耗时到 composer 分别为 71.5/72 px                                                                                                      | 使用共享 `Button`、独立 `AssistantTurnActions`、显式消息尾部 spacer、双侧稳定 scrollbar gutter 与统一 `ComposerSurface` slot 合同完成结构收口；main/sidecar 共用同一几何 owner；仅改 `frontend-vue`，未暂存、未提交、未 push                                  |
+| 2026-08-24 | React/Vue 对话流程根因收口                                    | Vue 定向 unit/DOM 2 files / 10 tests；locale production hydration 压测 10/10；`make e2e-m4a` 4/4、真实分片 stream 6/6、`make e2e-m7` 29 files / 169/169、`make migration-check`、`make verify` 190 files / 1540 tests 与 production build 通过；React `pnpm check`、130 files / 1006 unit、全量 E2E 143/143 通过；真实 Gateway 同一 thread 完成 React→Vue 读取、Vue 流式续聊与 React 回读                                                                        | 消息尾部/虚拟高度由结构 padding owner 持有，run activity 独立于语义 list；sidecar 用单一 `composerBusy` 锁定提交；React streaming 按钮暴露 Stop；Playwright 固定独占端口且不复用未知服务；locale/theme 测试只经产品 owner；当前修复未暂存、未提交、未 push    |
