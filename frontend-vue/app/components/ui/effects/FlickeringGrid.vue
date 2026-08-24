@@ -42,8 +42,22 @@ let resizeObserver: ResizeObserver | undefined;
 let intersectionObserver: IntersectionObserver | undefined;
 let visible = true;
 let lastTime = 0;
+let colorReadContext: CanvasRenderingContext2D | null | undefined;
 
-function colorPrefix(context: CanvasRenderingContext2D) {
+function getColorReadContext() {
+  if (colorReadContext !== undefined) return colorReadContext;
+  const sampleCanvas = document.createElement("canvas");
+  sampleCanvas.width = 1;
+  sampleCanvas.height = 1;
+  colorReadContext = sampleCanvas.getContext("2d", {
+    willReadFrequently: true,
+  });
+  return colorReadContext;
+}
+
+function colorPrefix() {
+  const context = getColorReadContext();
+  if (!context) return "rgba(0, 0, 0,";
   context.fillStyle =
     props.color === "currentColor" && container.value
       ? getComputedStyle(container.value).color
@@ -72,7 +86,7 @@ function paint() {
   const columns = Math.floor(width / step);
   const rows = Math.floor(height / step);
   const squares = createInitialOpacities(columns * rows, props.maxOpacity);
-  const prefix = colorPrefix(context);
+  const prefix = colorPrefix();
   const reduced = prefersReducedMotion();
 
   const draw = () => {

@@ -1,7 +1,9 @@
 import { mount } from "@vue/test-utils";
+import { nextTick } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import AuroraText from "@/components/ui/effects/AuroraText.vue";
+import FlickeringGrid from "@/components/ui/effects/FlickeringGrid.vue";
 import ShineBorder from "@/components/ui/effects/ShineBorder.vue";
 import {
   emitConfettiFrom,
@@ -11,6 +13,7 @@ import { createInitialOpacities } from "@/components/ui/effects/flickering-grid"
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
   document
     .querySelectorAll("[data-confetti-layer]")
     .forEach((node) => node.remove());
@@ -51,6 +54,42 @@ describe("M7 named effects", () => {
 
     expect(first).toEqual(second);
     expect(first.every((value) => value >= 0 && value <= 0.3)).toBe(true);
+  });
+
+  it("isolates color readback in a read-optimized scratch canvas", async () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    const context = {
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      fillStyle: "",
+      getImageData: vi.fn(() => ({
+        data: new Uint8ClampedArray([12, 34, 56, 255]),
+      })),
+    } as unknown as CanvasRenderingContext2D;
+    const calls: Array<{
+      canvas: HTMLCanvasElement;
+      options: CanvasRenderingContext2DSettings | undefined;
+    }> = [];
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
+      function (_type, options) {
+        calls.push({ canvas: this, options });
+        return context;
+      } as typeof HTMLCanvasElement.prototype.getContext,
+    );
+
+    const wrapper = mount(FlickeringGrid, {
+      props: { color: "rgb(12, 34, 56)", height: 10, width: 10 },
+    });
+    await nextTick();
+    await nextTick();
+
+    const displayCanvas = wrapper.get("canvas").element as HTMLCanvasElement;
+    expect(calls).toContainEqual({ canvas: displayCanvas, options: undefined });
+    const colorReadCall = calls.find(
+      ({ canvas: requestedCanvas }) => requestedCanvas !== displayCanvas,
+    );
+    expect(colorReadCall?.options).toEqual({ willReadFrequently: true });
+    wrapper.unmount();
   });
 
   it("suppresses confetti for reduced motion", () => {
