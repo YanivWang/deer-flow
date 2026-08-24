@@ -24,6 +24,8 @@ import {
 } from "lucide-vue-next";
 
 import MessageList from "@/components/chat/MessageList.vue";
+import ComposerAttachmentChip from "@/components/chat/ComposerAttachmentChip.vue";
+import ComposerSurface from "@/components/chat/ComposerSurface.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import type { SidecarSession } from "@/composables/useSidecarSession";
 import type { SidecarReference } from "@/composables/useSidecar";
@@ -251,37 +253,26 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
           class="mb-2"
           @clear="emit('clearReferences')"
         />
-        <div
-          class="border-input bg-background rounded-2xl border p-2 shadow-sm"
-        >
+        <ComposerSurface test-id="sidecar-composer-surface">
           <div
             v-if="session.selectedFiles.value.length"
-            class="mb-2 flex flex-wrap gap-2 text-xs"
+            class="flex flex-wrap items-center gap-1 px-1 pt-1 pb-0"
           >
-            <span
+            <ComposerAttachmentChip
               v-for="file in session.selectedFiles.value"
               :key="`${file.name}:${file.size}:${file.lastModified}`"
-              class="bg-secondary border-border flex items-center gap-1 rounded-lg border px-2 py-1"
-            >
-              {{ file.name }}
-              <button
-                type="button"
-                :aria-label="
-                  $i18n.t.value.artifacts.actions.removeFile(file.name)
-                "
-                @click="session.removeFile(file)"
-              >
-                <X :size="12" />
-              </button>
-            </span>
+              :file="file"
+              @remove="session.removeFile(file)"
+            />
           </div>
           <textarea
             v-model="sessionInput"
             name="message"
+            data-slot="input-group-control"
             :placeholder="$i18n.t.value.sidecar.placeholder"
             :aria-label="$i18n.t.value.sidecar.inputLabel"
             rows="2"
-            class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none"
+            class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none focus-visible:ring-0 focus-visible:outline-none"
             @keydown="onKeydown"
             @compositionstart="compositionActive = true"
             @compositionend="compositionActive = false"
@@ -367,7 +358,7 @@ onBeforeUnmount(() => globalThis.removeEventListener("keydown", onEscape));
               <ArrowUp :size="16" />
             </button>
           </div>
-        </div>
+        </ComposerSurface>
       </form>
       <p
         v-if="session.fileError.value || session.errorMessage.value"

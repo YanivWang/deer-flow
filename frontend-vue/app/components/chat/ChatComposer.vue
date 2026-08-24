@@ -24,6 +24,8 @@ import {
   WandSparkles,
   X,
 } from "lucide-vue-next";
+import ComposerAttachmentChip from "@/components/chat/ComposerAttachmentChip.vue";
+import ComposerSurface from "@/components/chat/ComposerSurface.vue";
 import WelcomeSuggestionList from "@/components/chat/WelcomeSuggestionList.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import GoalStatus from "@/components/workspace/GoalStatus.vue";
@@ -215,6 +217,8 @@ const draft = useComposerDraft({
 });
 const draftKey = draft.key;
 const filesByDraftKey = new Map<string, File[]>();
+const attachmentKeys = new WeakMap<File, number>();
+let nextAttachmentKey = 0;
 const uploadedByThread = createSubmissionFileCache();
 const pendingFollowup = ref<string | null>(null);
 let activeSubmissionDraft: {
@@ -254,6 +258,14 @@ const suggestions = computed(() => {
   ].filter((command) => command.name.includes(query));
   return [...skillOptions, ...commands];
 });
+
+function attachmentKey(file: File) {
+  const current = attachmentKeys.get(file);
+  if (current !== undefined) return current;
+  const key = nextAttachmentKey++;
+  attachmentKeys.set(file, key);
+  return key;
+}
 
 watch(draftKey, (next, previous) => {
   filesByDraftKey.set(previous, [...selectedFiles.value]);
@@ -778,7 +790,7 @@ function chooseFiles(event: Event) {
     supported.accepted,
     limits.value,
   );
-  selectedFiles.value.push(...result.accepted);
+  selectedFiles.value = [...selectedFiles.value, ...result.accepted];
   if (supported.message) toast.value = supported.message;
   if (result.violations.length > 0) {
     const violation = result.violations[0]!;
@@ -986,31 +998,23 @@ defineExpose({ replaceDraft, offerFollowup });
         class="mb-2"
         @clear="emit('clearReferences')"
       />
-      <div
-        v-if="selectedFiles.length"
-        class="mb-2 flex flex-wrap gap-2 text-xs"
-      >
-        <span
-          v-for="file in selectedFiles"
-          :key="file.name"
-          class="bg-secondary border-border flex items-center gap-1 rounded-lg border px-2 py-1"
-        >
-          {{ file.name }}
-          <button
-            type="button"
-            :aria-label="$i18n.t.value.artifacts.actions.removeFile(file.name)"
-            @click="
-              selectedFiles = selectedFiles.filter((item) => item !== file)
-            "
-          >
-            <X :size="12" />
-          </button>
-        </span>
-      </div>
-      <div
-        class="border-input bg-background/85 relative z-10 rounded-2xl border p-2 shadow-sm backdrop-blur-sm transition-all duration-300"
+      <ComposerSurface
         :class="polishing ? 'ring-primary/25 shadow-lg ring-1' : ''"
       >
+        <div
+          v-if="selectedFiles.length"
+          data-testid="composer-attachments"
+          class="flex flex-wrap items-center gap-1 px-1 pt-1 pb-0"
+        >
+          <ComposerAttachmentChip
+            v-for="file in selectedFiles"
+            :key="attachmentKey(file)"
+            :file="file"
+            @remove="
+              selectedFiles = selectedFiles.filter((item) => item !== file)
+            "
+          />
+        </div>
         <div v-if="selectedSkill" class="mb-1 flex items-start gap-2">
           <span class="bg-secondary rounded px-2 py-1 text-xs"
             >/{{ selectedSkill }}</span
@@ -1018,9 +1022,10 @@ defineExpose({ replaceDraft, offerFollowup });
           <div
             ref="chipInput"
             role="textbox"
+            data-slot="input-group-control"
             :aria-label="$i18n.t.value.inputBox.placeholder"
             :contenteditable="disabled ? 'false' : 'true'"
-            class="min-h-10 flex-1 px-1 py-2 text-sm outline-none"
+            class="min-h-10 flex-1 px-1 py-2 text-sm outline-none focus-visible:ring-0 focus-visible:outline-none"
             @input="onChipInput"
             @keydown="onKeydown"
             @compositionstart="compositionActive = true"
@@ -1032,10 +1037,11 @@ defineExpose({ replaceDraft, offerFollowup });
           ref="textarea"
           v-model="input"
           name="message"
+          data-slot="input-group-control"
           :aria-label="$i18n.t.value.inputBox.placeholder"
           :placeholder="$i18n.t.value.inputBox.placeholder"
           rows="2"
-          class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none"
+          class="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none focus-visible:ring-0 focus-visible:outline-none"
           :disabled="disabled || polishing || compactPending"
           @keydown="onKeydown"
           @compositionstart="compositionActive = true"
@@ -1232,7 +1238,7 @@ defineExpose({ replaceDraft, offerFollowup });
             }}</span>
           </button>
         </div>
-      </div>
+      </ComposerSurface>
     </form>
     <WelcomeSuggestionList
       v-if="
