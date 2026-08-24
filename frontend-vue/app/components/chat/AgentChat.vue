@@ -1344,7 +1344,9 @@ onUnmounted(() => {
               </p>
             </div>
             <div
-              v-if="isWelcomeMode || followupsLoading || followups.length"
+              v-if="
+                !isWelcomeMode && (followupsLoading || followups.length > 0)
+              "
               v-show="!(bootstrap && creation.status.value === 'created')"
               data-slot="suggestions-list"
               class="mb-2 flex w-full flex-wrap justify-center gap-2"
@@ -1364,24 +1366,6 @@ onUnmounted(() => {
               >
                 {{ suggestion }}
               </button>
-              <template
-                v-if="
-                  isWelcomeMode && !followupsLoading && followups.length === 0
-                "
-              >
-                <button
-                  v-for="suggestion in $i18n.t.value.inputBox.suggestions.slice(
-                    0,
-                    3,
-                  )"
-                  :key="suggestion.suggestion"
-                  type="button"
-                  class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-3 py-1.5 text-xs"
-                  @click="composer?.offerFollowup(suggestion.prompt)"
-                >
-                  {{ suggestion.suggestion }}
-                </button>
-              </template>
               <button
                 v-if="followups.length"
                 type="button"
@@ -1412,6 +1396,7 @@ onUnmounted(() => {
               :streaming="stream.isStreaming.value"
               :uploading="localUploading"
               :is-welcome="isWelcomeMode"
+              :show-welcome-suggestions="route.query.mode !== 'skill'"
               :prompt-history="promptHistory"
               :ensure-thread="ensureThread"
               :submit-message="send"

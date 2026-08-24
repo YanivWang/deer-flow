@@ -9,6 +9,7 @@ import {
   buildComposerDraftKey,
   writeComposerDraft,
 } from "@/core/threads/composer-draft";
+import { findSuggestionTemplatePlaceholder } from "@/core/suggestions/placeholders";
 
 const mocks = vi.hoisted(() => ({
   loadSkills: vi.fn(),
@@ -35,6 +36,7 @@ function mountComposer(
     options.onAccepted();
     return true;
   }),
+  props: { isWelcome?: boolean; showWelcomeSuggestions?: boolean } = {},
 ) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -50,12 +52,16 @@ function mountComposer(
       promptHistory: [],
       context: { model_name: "reasoner", mode: "pro" },
       submitMessage,
+      ...props,
     },
     global: {
       plugins: [[VueQueryPlugin, { queryClient }]],
       stubs: {
         ReferenceAttachment: true,
-        ConfettiButton: true,
+        ConfettiButton: {
+          template:
+            '<button type="button" data-effect="confetti-button" @click="$emit(\'click\', $event)"><slot /></button>',
+        },
         GoalStatus: true,
       },
     },
@@ -101,6 +107,64 @@ describe("WP-03 composer submission and stale lifecycle", () => {
     mocks.uploadFiles.mockReset();
     mocks.polishInputDraft.mockReset();
     mocks.fetchWithAuth.mockReset();
+  });
+
+  it("renders the complete React welcome suggestion row in source order", async () => {
+    const { wrapper } = mountComposer(undefined, { isWelcome: true });
+    await flushPromises();
+
+    const suggestions = wrapper.get("[data-testid='welcome-suggestions']");
+    expect(
+      suggestions.findAll("button").map((button) => button.text()),
+    ).toEqual(["Surprise", "Write", "Research", "Collect", "Learn", "Create"]);
+    expect(suggestions.findAll("svg")).toHaveLength(6);
+    expect(wrapper.findAll("[data-slot='suggestions-list']")).toHaveLength(1);
+  });
+
+  it("fills a welcome suggestion and selects its placeholder without sending", async () => {
+    const submitMessage = vi.fn();
+    const { wrapper } = mountComposer(submitMessage, { isWelcome: true });
+    await flushPromises();
+
+    const suggestions = wrapper.get("[data-testid='welcome-suggestions']");
+    const research = suggestions
+      .findAll("button")
+      .find((button) => button.text() === "Research");
+    expect(research).toBeDefined();
+    await research!.trigger("click");
+    await flushPromises();
+
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const prompt = enUS.inputBox.suggestions[1]!.prompt;
+    const placeholder = findSuggestionTemplatePlaceholder(prompt);
+    expect(textarea.value).toBe(prompt);
+    expect(textarea.selectionStart).toBe(placeholder?.start);
+    expect(textarea.selectionEnd).toBe(placeholder?.end);
+    expect(submitMessage).not.toHaveBeenCalled();
+  });
+
+  it("opens Create and fills the selected creation prompt without sending", async () => {
+    const submitMessage = vi.fn();
+    const { wrapper } = mountComposer(submitMessage, { isWelcome: true });
+    await flushPromises();
+
+    await wrapper
+      .get("[data-testid='welcome-create-trigger']")
+      .trigger("click");
+    await flushPromises();
+    const webpage = document.querySelector<HTMLButtonElement>(
+      "[data-testid='welcome-create-webpage']",
+    );
+    expect(webpage).not.toBeNull();
+    webpage!.click();
+    await flushPromises();
+
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    expect(textarea.value).toBe(
+      (enUS.inputBox.suggestionsCreate[0] as { prompt: string }).prompt,
+    );
+    expect(submitMessage).not.toHaveBeenCalled();
+    wrapper.unmount();
   });
 
   it("keeps text and files on upload failure", async () => {

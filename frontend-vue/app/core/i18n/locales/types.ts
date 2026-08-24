@@ -216,12 +216,10 @@ export interface Translations {
     compactSkipped: string;
     compactNotPerformed: (reason: string) => string;
     compactFailed: string;
-    createPresentationPrompt: string;
     uploadFiles: string;
     stop: string;
     send: string;
     submit: string;
-    explore: string;
     suggestions: {
       suggestion: string;
       prompt: string;

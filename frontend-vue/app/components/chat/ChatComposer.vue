@@ -20,14 +20,13 @@ import {
   ArrowUp,
   Mic,
   Paperclip,
-  Sparkles,
   Square,
   WandSparkles,
   X,
 } from "lucide-vue-next";
+import WelcomeSuggestionList from "@/components/chat/WelcomeSuggestionList.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import GoalStatus from "@/components/workspace/GoalStatus.vue";
-import ConfettiButton from "@/components/ui/effects/ConfettiButton.vue";
 import type { SidecarReference } from "@/composables/useSidecar";
 import { useComposerDraft } from "@/composables/useComposerDraft";
 import { useModels } from "@/composables/useModels";
@@ -81,28 +80,32 @@ import {
   type SpeechRecognitionErrorKind,
 } from "@/core/voice-input/speech-recognition";
 
-const props = defineProps<{
-  threadKey: string;
-  targetThreadId: string;
-  userId?: string | null;
-  agentName?: string | null;
-  defaultModelName?: string | null;
-  modelSelectionReady?: boolean;
-  streaming: boolean;
-  uploading: boolean;
-  promptHistory: string[];
-  ensureThread?: () => Promise<string>;
-  submitMessage?: (
-    text: string,
-    files: FileInMessage[],
-    options: { onAccepted: () => void },
-  ) => Promise<boolean | undefined>;
-  isWelcome?: boolean;
-  references?: SidecarReference[];
-  context?: ThreadRunContextInput;
-  goal?: GoalState | null;
-  disabled?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    threadKey: string;
+    targetThreadId: string;
+    userId?: string | null;
+    agentName?: string | null;
+    defaultModelName?: string | null;
+    modelSelectionReady?: boolean;
+    streaming: boolean;
+    uploading: boolean;
+    promptHistory: string[];
+    ensureThread?: () => Promise<string>;
+    submitMessage?: (
+      text: string,
+      files: FileInMessage[],
+      options: { onAccepted: () => void },
+    ) => Promise<boolean | undefined>;
+    isWelcome?: boolean;
+    showWelcomeSuggestions?: boolean;
+    references?: SidecarReference[];
+    context?: ThreadRunContextInput;
+    goal?: GoalState | null;
+    disabled?: boolean;
+  }>(),
+  { showWelcomeSuggestions: true },
+);
 const { $i18n } = useNuxtApp();
 const queryClient = useQueryClient();
 const emit = defineEmits<{
@@ -855,14 +858,24 @@ function cancelPolish() {
   polishing.value = false;
   polishOriginal.value = null;
 }
-function applyResearchTemplate() {
-  input.value = $i18n.t.value.inputBox.suggestions[1]?.prompt ?? "";
-  void nextTick(() => textarea.value?.focus());
-}
 function replaceDraft(value: string) {
   input.value = value;
   selectedSkill.value = null;
   void nextTick(() => textarea.value?.focus());
+}
+function selectWelcomeSuggestion(value: string) {
+  input.value = value;
+  selectedSkill.value = null;
+  const placeholder = findSuggestionTemplatePlaceholder(value);
+  void nextTick(() => {
+    requestAnimationFrame(() => {
+      if (!textarea.value) return;
+      textarea.value.focus();
+      if (placeholder) {
+        textarea.value.setSelectionRange(placeholder.start, placeholder.end);
+      }
+    });
+  });
 }
 function offerFollowup(value: string) {
   if (
@@ -916,7 +929,10 @@ defineExpose({ replaceDraft, offerFollowup });
 </script>
 
 <template>
-  <div class="relative flex min-w-0 flex-col gap-2">
+  <div
+    class="relative flex min-w-0 flex-col"
+    :class="isWelcome ? 'gap-4' : 'gap-2'"
+  >
     <GoalStatus v-if="goal" :goal="goal" />
     <div
       v-if="pendingFollowup"
@@ -1218,33 +1234,16 @@ defineExpose({ replaceDraft, offerFollowup });
         </div>
       </div>
     </form>
-    <div
-      v-if="isWelcome"
-      class="flex min-h-12 flex-wrap items-center justify-center gap-2 pt-2"
-    >
-      <ConfettiButton
-        variant="outline"
-        size="sm"
-        class="text-muted-foreground hover:bg-accent flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs"
-        @click="replaceDraft($i18n.t.value.inputBox.surpriseMePrompt)"
-      >
-        <Sparkles :size="14" /> {{ $i18n.t.value.inputBox.surpriseMe }}
-      </ConfettiButton>
-      <button
-        type="button"
-        class="text-muted-foreground hover:bg-accent rounded-full border px-4 py-1.5 text-xs"
-        @click="applyResearchTemplate"
-      >
-        {{ $i18n.t.value.inputBox.explore }}
-      </button>
-      <button
-        type="button"
-        class="text-muted-foreground hover:bg-accent rounded-full border px-4 py-1.5 text-xs"
-        @click="replaceDraft($i18n.t.value.inputBox.createPresentationPrompt)"
-      >
-        {{ $i18n.t.value.common.create }}
-      </button>
-    </div>
+    <WelcomeSuggestionList
+      v-if="
+        isWelcome &&
+        showWelcomeSuggestions !== false &&
+        !selectedSkill &&
+        suggestions.length === 0
+      "
+      :disabled="disabled"
+      @select="selectWelcomeSuggestion"
+    />
     <p class="text-muted-foreground/70 px-4 text-center text-xs leading-4">
       {{ disclaimer }}
     </p>

@@ -242,12 +242,10 @@ export const zhCN: Translations = {
     compactSkipped: "当前上下文还不需要压缩。",
     compactNotPerformed: (reason) => `未压缩上下文：${reason}`,
     compactFailed: "上下文压缩失败。",
-    createPresentationPrompt: "创建一份关于[主题]的演示文稿。",
     uploadFiles: "上传文件",
     stop: "停止",
     send: "发送",
     submit: "提交",
-    explore: "探索",
     suggestions: [
       {
         suggestion: "写作",

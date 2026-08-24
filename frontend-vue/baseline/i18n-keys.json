@@ -1,7 +1,7 @@
 {
   "$comment": "词典 key 基线。由 `make i18n-refresh` 生成。趁词典还是上游原样时取（06 §M1 1d）——此后 key 新增/删除或 unused 集漂移，`make i18n-check` 立刻报出来。",
   "source": "app/core/i18n/locales/en-US.ts",
-  "total": 978,
+  "total": 976,
   "keys": [
     "agents.agentCreated",
     "agents.agentCreatedPendingRefresh",
@@ -274,10 +274,8 @@
     "inputBox.compactNotPerformed",
     "inputBox.compactSkipped",
     "inputBox.compactSuccess",
-    "inputBox.createPresentationPrompt",
     "inputBox.createSkillPrompt",
     "inputBox.disclaimer",
-    "inputBox.explore",
     "inputBox.flashMode",
     "inputBox.flashModeDescription",
     "inputBox.followupConfirmAppend",
@@ -982,7 +980,7 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 180,
+  "unusedTotal": 179,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.createPageSubtitle",
@@ -1043,7 +1041,6 @@
     "inputBox.reasoningEffortMinimalDescription",
     "inputBox.searchModels",
     "inputBox.suggestionPlaceholderRequired",
-    "inputBox.suggestionsCreate",
     "inputBox.voiceInputStop",
     "login.errors.sso_account_exists",
     "login.errors.sso_cancelled",

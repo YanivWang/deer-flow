@@ -257,12 +257,10 @@ export const enUS: Translations = {
     compactSkipped: "The current context does not need compaction yet.",
     compactNotPerformed: (reason) => `Context was not compacted: ${reason}`,
     compactFailed: "Context compaction failed.",
-    createPresentationPrompt: "Create a presentation about [topic].",
     uploadFiles: "Upload files",
     stop: "Stop",
     send: "Send",
     submit: "Submit",
-    explore: "Explore",
     suggestions: [
       {
         suggestion: "Write",
