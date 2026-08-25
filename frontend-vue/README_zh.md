@@ -4,8 +4,10 @@
 
 `frontend-vue` 是与 React 共存的 DeerFlow Nuxt 4 实现，与 `../frontend` 共用同一套
 Gateway 接口，并已建立聊天工作区、产物、sidecar、浏览器控制、智能体、渠道、集成、
-定时任务、设置、目标/模式、认证、Showcase、移动端布局和生产容器。基于当前源码的 API
-响应消费与产品行为工作已在本地闭环——代码、测试和门禁是唯一依据。
+定时任务、设置、目标/模式、认证、Showcase、移动端布局和生产容器。
+
+**这里不写完成度。** 某个能力做到什么程度，只能从代码、测试和门禁读出来；
+任何写在散文里的"已完成"都会先于代码过期，然后被下一个读者当成事实。
 
 生产环境目前仍由 React hostname 作为默认入口，只有 `DEER_FLOW_VUE_HOSTNAME` 选择
 Vue。本地 parity 证据不代表可以直接切换默认入口；公网 DNS、TLS、外层代理信任、
@@ -109,11 +111,12 @@ make typecheck-core     # packages/agent-core 的独立 tsc
 make upstream-drift     # 报告 ../frontend 自 marker 以来改了什么
 ```
 
-两条体积门禁量的不是同一个东西，别混：`make asset-budget` 把全部 472 个 chunk 加起来
-（约 13.9 MB），管的是产物总量失控；用户真正下载的由 `make e2e` 里的
-`tests/e2e/route-payload.spec.ts` 守——在真实导航里量浏览器请求的脚本（工作区约
-56 个文件 / 1.5 MB），并禁止 shiki / mermaid / KaTeX 进入关键路径。两者可以反向变动：
-KaTeX 改成按需加载后首屏少了 269 KB，产物总量却涨了 1 KiB。调性能看后者。
+两条体积门禁量的不是同一个东西，别混：`make asset-budget` 把**全部**构建产物加起来，
+管的是产物总量失控；用户真正下载的由 `make e2e` 里的
+`tests/e2e/route-payload.spec.ts` 守——在真实导航里量浏览器请求的脚本，并禁止
+shiki / mermaid / KaTeX 进入关键路径。两条命令都会打印当前实测值，**这里不抄**。
+两者可以反向变动：KaTeX 改成按需加载后首屏少了 269 KB，产物总量却涨了 1 KiB。
+调性能看后者。
 
 这里刻意不写 test 数——`make e2e-list` 会打印每个套件的实时数字，而抄进散文里的
 数字是最先过期的东西。本工作区文档里写出的每一条 `make` 命令、相对链接和仓库路径都由

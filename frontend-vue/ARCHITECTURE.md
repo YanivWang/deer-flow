@@ -217,8 +217,8 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
 
 ## 状态所有权
 
-以下所有权边界写在这里，是因为它们必须**持续保持**——缓存失效、thread-scoped
-composer 与 sidecar 生命周期都已经落地，代码和测试是唯一依据。
+以下所有权边界写在这里，是因为它们必须**持续保持**。本节描述的是**应当成立的
+边界**，不是完成度声明——某一条当前是否成立，去读对应的代码和测试。
 
 - 线程列表、历史页、models、skills、session 和 token usage：TanStack Query 缓存；`useThreads.ts` 负责主列表的
   raw-offset 分页和 sidecar 过滤，失效/删除镜像规则在 `app/core/threads/cache-invalidation.ts`。
@@ -340,11 +340,12 @@ make consumer-check  # 打包并在隔离 consumer 中验证 @deerflow/agent-cor
 make container-smoke # 生产镜像、health、SIGTERM、Showcase 资源与拒绝策略
 ```
 
-两条体积门禁量的是不同的东西，别混：`make asset-budget` 把全部 472 个 chunk 加起来
-（约 13.9 MB），管的是产物总量失控；用户真正下载的是 `make e2e` 里的
-`tests/e2e/route-payload.spec.ts`——在真实导航里量浏览器请求的脚本（工作区约
-56 个文件 / 1.5 MB），并禁止 shiki / mermaid / KaTeX 进入关键路径。两者可以反向变动：
-KaTeX 改成按需之后首屏少了 269 KB，而产物总量涨了 1 KiB。调性能看后者。
+两条体积门禁量的是不同的东西，别混：`make asset-budget` 把**全部**构建产物加起来，
+管的是产物总量失控；用户真正下载的是 `make e2e` 里的
+`tests/e2e/route-payload.spec.ts`——在真实导航里量浏览器请求的脚本，并禁止
+shiki / mermaid / KaTeX 进入关键路径。两条命令都会打印当前实测值，**这里不抄**，
+抄进散文的数字先于代码过期。两者可以反向变动：KaTeX 改成按需之后首屏少了
+269 KB，而产物总量反而涨了 1 KiB。调性能看后者。
 
 路由预算再往下分成 **critical 与 prefetch 两组，分别钉死**。一次导航里被请求的脚本
 有两类来源：浏览器为了把这一页跑起来而拉的（entry、`modulepreload`、运行期

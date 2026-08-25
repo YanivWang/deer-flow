@@ -1,5 +1,5 @@
 {
-  "$comment": "路由级首屏 JS 预算。口径 = 一次真实导航中浏览器请求的 _nuxt/*.js，字节数取磁盘上 Nuxt 预压缩产物，因此本机与 CI 一致。与 scripts/asset-budget.mjs 的区别：那条量的是全部构建产物（约 470 chunk / 13.9 MB），这条量的是用户实际下载的部分。改这里的数字要在提交说明里写明原因和实测值。",
+  "$comment": "路由级首屏 JS 预算。口径 = 一次真实导航中浏览器请求的 _nuxt/*.js，字节数取磁盘上 Nuxt 预压缩产物，因此本机与 CI 一致。与 scripts/asset-budget.mjs 的区别：那条量的是全部构建产物，这条量的是用户实际下载的部分——两者没有对应关系，方向还可以相反。改这里的数字要在提交说明里写明原因和实测值。",
   "$groups": "critical = 浏览器为了把这一页跑起来而请求的脚本（entry、modulepreload、运行期 import()）；prefetch = Nuxt 为下一次导航投机请求的 <link rel=prefetch>，空闲期最低优先级，不阻塞首屏。分类判据是 CDP 的 initialPriority === 'VeryLow'。两组必须分开钉：加总会让关键路径的回归被 prefetch 的下降掩盖，也会把「营销页加载了 65 KB 对话框代码」这种结论算成真——实测 / 的 reka-ui 100% 落在 prefetch 里。",
   "routes": {
     "/": {

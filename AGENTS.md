@@ -15,10 +15,10 @@ guide rather than expecting full detail here:
   architecture lives in `frontend-vue/ARCHITECTURE.md` and hard behavior contracts in
   `frontend-vue/BEHAVIOR_CONTRACTS.md`.
 
-The Vue application runs alongside React. Its source-backed replacement work is locally
-closed with executable evidence — the code, tests and gates are the only evidence, so verify
-against those rather than any status claim — but React remains the default production hostname
-and Vue is selected by a secondary hostname. That topology is not production-cutover evidence: public DNS/TLS/outer-proxy/real-IdP
+The Vue application runs alongside React. How complete the replacement is, is not stated
+anywhere in prose — read the code, its tests and the gates, and distrust any status claim you
+find, including this file's. React remains the default production hostname and Vue is selected
+by a secondary hostname. That topology is not production-cutover evidence: public DNS/TLS/outer-proxy/real-IdP
 activation and target-environment acceptance remain environment-owned. Vue owns its
 framework-specific stream/artifact-panel, agent-chat, channels, integrations and thread-history
 tests. Shared specs are limited to framework-neutral behavior, so a React change enters Vue-owned

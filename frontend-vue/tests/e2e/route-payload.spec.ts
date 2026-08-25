@@ -3,8 +3,8 @@
   【架构位置】     E2E 产品合同（mock Gateway）
   【主要导出】     无；Playwright cases
   【依赖关系】     baseline/route-payload-budget.json · .output/public/_nuxt
-  【边界与注意】   为什么不复用 `make asset-budget`：那条门禁把 `.output` 里**全部** 472 个
-                   chunk 加起来（13.9 MB），而用户打开工作区只下载 56 个文件 / 1.5 MB。
+  【边界与注意】   为什么不复用 `make asset-budget`：那条门禁把 `.output` 里**全部**
+                   chunk 加起来（十几 MB 量级），而用户打开工作区只下载其中几十个文件。
                    两个数没有关系——加一条懒加载路由会让它变大，把关键路径上的真实回归
                    淹掉。实测就是这样：katex 常年同步进首屏，那条门禁一次都没红过。
 

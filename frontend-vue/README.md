@@ -6,9 +6,11 @@ English | [简体中文](README_zh.md)
 application. It uses the same Gateway surface as `../frontend` and has
 implementations for the chat workspace, artifacts, sidecar, browser control,
 agents, channels, integrations, scheduled tasks, settings, goal/mode,
-authentication, Showcase, mobile layouts and the production container. The
-source-backed request/response-consumption and product-behavior work is locally
-closed, with the code, tests and gates as the only evidence.
+authentication, Showcase, mobile layouts and the production container.
+
+**Completion is not stated here.** How far any capability actually goes is
+readable only from the code, its tests and the gates. A "done" written into
+prose goes stale before the code does, and the next reader takes it as fact.
 
 React remains the default production hostname; Vue is selected only by
 `DEER_FLOW_VUE_HOSTNAME`. Local parity evidence does not authorize a default
@@ -125,13 +127,15 @@ make upstream-drift     # report what ../frontend changed since the reviewed mar
 ```
 
 Two size gates measure different things and are easy to confuse.
-`make asset-budget` sums all 472 emitted chunks (~13.9 MB) and guards against
-total build output running away. What a user actually downloads is guarded by
+`make asset-budget` sums **all** emitted chunks and guards against total build
+output running away. What a user actually downloads is guarded by
 `tests/e2e/route-payload.spec.ts` inside `make e2e`: it measures the scripts a
-real navigation requests (~56 files / 1.5 MB for the workspace) and forbids
-shiki, mermaid and KaTeX from entering the critical path. They can move in
-opposite directions — deferring KaTeX cut 269 KB from the workspace payload
-while total build output grew by 1 KiB. For performance work, read the second one.
+real navigation requests, and forbids shiki, mermaid and KaTeX from entering
+the critical path. Both commands print their current measurements — **they are
+not copied here**, because a number in prose goes stale before the code does.
+They can move in opposite directions: deferring KaTeX cut 269 KB from the
+workspace payload while total build output grew by 1 KiB. For performance
+work, read the second one.
 
 Test counts are deliberately not written down here — `make e2e-list` prints the
 live number for every suite, and a number copied into prose is the first thing
