@@ -175,9 +175,21 @@ onMounted(() => {
         >
           {{ $i18n.t.value.login.retry }}
         </button>
-        <NuxtLink to="/login" class="rounded-md border px-4 py-2">{{
-          $i18n.t.value.login.signIn
-        }}</NuxtLink>
+        <!--
+          按钮而不是链接，且走 replace。React 这里是
+          `<Button onClick={() => router.replace("/login")}>`（setup/page.tsx 的
+          gateway-unavailable 分支）。三处可观察差异都由此而来：role 决定读屏怎么
+          播报、以及空格键是否触发；replace 决定点完之后「后退」回到哪里——push
+          会把这个不可用页留在历史里，用户后退又撞回来；链接还多出右键、中键和
+          新标签页打开这些按钮没有的能力。
+        -->
+        <button
+          type="button"
+          class="rounded-md border px-4 py-2"
+          @click="navigateTo('/login', { replace: true })"
+        >
+          {{ $i18n.t.value.login.signIn }}
+        </button>
       </div>
     </section>
     <section

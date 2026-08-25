@@ -137,7 +137,10 @@ test.describe("auth pages with an unreachable Gateway", () => {
     const retry = page.getByRole("button", { name: "Try again" });
     await expect(retry).toBeEnabled();
     // 连不上 Gateway 时仍然留着一条离开这个页面的路。
-    await expect(page.getByRole("link", { name: "Sign In" })).toBeVisible();
+    // 是 button 不是 link——React 用的是 `<Button onClick={router.replace}>`。
+    // 这条断言原来写的是 link，把 Vue 当时的偏差钉成了正确行为：测试照着 Vue 的
+    // 现状写，就只能证明 Vue 没变，证明不了它和 React 一样。
+    await expect(page.getByRole("button", { name: "Sign In" })).toBeVisible();
 
     await markPageInstance(page);
     reachable = true;

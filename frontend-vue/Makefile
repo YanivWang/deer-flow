@@ -5,7 +5,7 @@
 	e2e-protocol e2e-real e2e-scheduled e2e-channels e2e-agents e2e-settings e2e-shell \
 	e2e-browser e2e-external e2e-mock e2e-backend e2e-list \
 	proxy-security audit docker-build container-smoke \
-	upstream-drift upstream-accept \
+	upstream-drift upstream-accept dom-parity \
 	i18n-check i18n-diff i18n-unused i18n-source-check i18n-refresh \
 	gen-api-types gen-api-types-check gen-contract-constants gen-contract-constants-check \
 	consumer-check standalone-check
@@ -58,6 +58,7 @@ help:
 	@echo "  make container-smoke           non-root /health / SIGTERM production image smoke"
 	@echo "  make upstream-drift            report what ../frontend changed since the marker"
 	@echo "  make upstream-accept           advance the reviewed-upstream marker to HEAD"
+	@echo "  make dom-parity                diff React vs Vue semantic DOM (needs both apps running)"
 	@echo "  make typecheck-core            standalone tsc for packages/agent-core"
 	@echo "  make gen-api-types             regenerate app/core/api/types.gen.ts from the snapshot"
 	@echo "  make gen-contract-constants    regenerate backend contract constants from contracts/*.json"
@@ -260,6 +261,14 @@ upstream-drift:
 
 upstream-accept:
 	node scripts/upstream-drift.mjs --accept
+
+# 语义 DOM 对照。需要两个 app 都在跑，所以是顾问命令而不是门禁：
+#   React  cd ../frontend && pnpm build && PORT=3000 pnpm start
+#   Vue    make build && PORT=3100 HOST=127.0.0.1 pnpm exec nuxt preview
+# 端口可用 DOM_PARITY_REACT_BASE / DOM_PARITY_VUE_BASE 覆盖。
+# 为什么不用词典比对：见 scripts/dom-parity.mjs 的文件头。
+dom-parity:
+	node scripts/dom-parity.mjs
 
 audit:
 	$(PNPM) audit --audit-level moderate --registry https://registry.npmjs.org
