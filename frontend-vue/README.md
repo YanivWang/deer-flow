@@ -29,8 +29,6 @@ traffic.
 - [REUSE.md](REUSE.md): private `@deerflow/agent-core` and reusable UI seams.
 - [Production dual-frontend guide](../docs/dual-frontend-production.md): hostname,
   OIDC, validation and rollback.
-- [app/core/PROVENANCE.md](app/core/PROVENANCE.md): maintained source-origin
-  ledger for files under `app/core/`.
 - [I18N_INVENTORY.md](I18N_INVENTORY.md): live product-SFC copy inventory,
   translation/dynamic-content classification and source-guard boundaries.
 
@@ -79,32 +77,61 @@ Start with the smallest relevant gate and finish with `make verify` for normal
 module changes:
 
 ```bash
-make verify
+make verify             # lint, format, types, unit, i18n, OpenAPI, standalone, build
+make asset-budget       # raw/gzip client budgets; run it after any dependency or chunk change
+make e2e-mock           # every suite that needs no backend process
+make e2e-backend        # every suite that needs a real Gateway
+make e2e-visual         # product screenshots; local-only, the baselines are `-darwin`
+make e2e-list           # collect every suite and print its test count
 make consumer-check     # changes to packages/agent-core
-make e2e-list           # inspect the shared browser-contract inventory
-make e2e-m5             # artifacts, sidecar and panel lifecycle contracts
-make e2e-m5-real-backend # real Gateway artifact Range/PUT/conflict contracts
-make e2e-m6             # includes Vue-owned browser DOM/wire contracts
-make e2e-m6-real-backend # real local Gateway + Chromium browser runtime
-make e2e-m7             # full Vue browser contract: 29 files / 165 tests
-make i18n-source-check  # AST guard for every product Vue SFC
-make e2e-wp07-real-backend # real Gateway scheduled-task HTTP/UI lifecycle
-make e2e-wp08-real-backend # real Auth/Gateway/SQLite channel lifecycle
-make e2e-wp09-real-backend # real Auth/Gateway/setup_agent/Agent persistence
-make e2e-wp10-real-backend # real Auth/DeerMem/Noop/Skills/MCP settings lifecycle
-make e2e-wp11-real-backend # real Auth/thread/workspace-changes shell lifecycle
-make e2e-m7-auth        # authentication requests and security
-make proxy-security     # Nitro body limits, bodyless/chunked DELETE, SSE and traversal
-make e2e-m7-real-protocol
-make e2e-m7-visual
-make asset-budget
-make container-smoke
+make container-smoke    # production image, health, SIGTERM and rejection policy
 ```
 
-Run `make help` for every specialized proxy, protocol, real-Gateway, visual,
-inventory and maintenance command. Some command names retain historical `m0`–`m7`
-suite identifiers; they are stable test entrypoints and do not communicate the
-completion state of the replacement gaps.
+One suite is one backend topology, and the name says what it tests. Pick the
+narrowest one while iterating:
+
+```bash
+make e2e                # product contracts on a mocked Gateway
+make e2e-auth           # auth UI contracts, frontend built with auth on
+make e2e-infra          # same-origin proxy and __m0 test pages
+make e2e-proxy-options  # proxy with streaming forwarding disabled
+make e2e-stream         # real chunked SSE: heartbeat, resume cursor, gap
+make e2e-protocol       # run-protocol state machine on a real Gateway
+make e2e-real           # render, multi-run order, artifact write
+make e2e-scheduled      # scheduled tasks against real Gateway/SQLite
+make e2e-channels       # channel connection lifecycle, auth on
+make e2e-agents         # custom agent creation and settings, auth on
+make e2e-settings       # settings with a supported and a degraded Gateway
+make e2e-shell          # workspace shell and workspace-changes, auth on
+make e2e-browser        # browser panel against a real Chromium backend
+make e2e-external       # WebSocket and OIDC; needs the backend browser extra
+```
+
+`make e2e-mock` aggregates `e2e`, `e2e-auth`, `e2e-infra`, `e2e-proxy-options`
+and `e2e-stream`; `make e2e-backend` aggregates `e2e-protocol`, `e2e-real`,
+`e2e-scheduled`, `e2e-channels`, `e2e-agents`, `e2e-settings`, `e2e-shell` and
+`e2e-browser`. `make e2e-visual` is deliberately in neither: its screenshot
+baselines exist only for `-darwin`, so it stays a local gate until `-linux`
+baselines are generated in a container and checked in.
+
+Targeted checks:
+
+```bash
+make proxy-security     # Nitro body limits, bodyless/chunked DELETE, SSE and traversal
+make i18n-source-check  # AST guard for every product Vue SFC
+make standalone-check   # no cross-app reference to ../frontend
+make typecheck-core     # standalone tsc for packages/agent-core
+make upstream-drift     # report what ../frontend changed since the reviewed marker
+```
+
+Test counts are deliberately not written down here — `make e2e-list` prints the
+live number for every suite, and a number copied into prose is the first thing
+to go stale. Every `make` command, relative link and repository path named in
+this workspace's documentation is checked by
+`tests/guards/doc-references.test.ts`, which also fails when a suite exists in
+the Makefile but not in this list. Run `make help` for the full target list. Suite names describe what
+a suite tests, not a migration stage, and a green local gate does not
+communicate the completion state of the replacement gaps.
 
 ## Runtime configuration
 
@@ -162,7 +189,7 @@ Filters include both schedule types and all six task statuses. Run history is
 loaded with explicit `limit/offset` pagination and shows all Gateway run states,
 times, thread/run IDs and errors.
 
-`make e2e-wp07-real-backend` starts a real local FastAPI Gateway backed by
+`make e2e-scheduled` starts a real local FastAPI Gateway backed by
 SQLite, the Nuxt preview server and Playwright Chromium. It covers real
 once/cron create and validation, context/thread permissions, PATCH,
 pause/resume, trigger, paged run records and delete. The model side uses a
@@ -184,7 +211,7 @@ poll and AbortController cleanup all belong to `useChannelConnections`.
 Settings expose two intentionally different destructive actions: a user can
 disconnect one exact connection ID, while an administrator can remove the
 provider runtime configuration, which revokes that provider's active
-connections instance-wide. `make e2e-wp08-real-backend` proves the real
+connections instance-wide. `make e2e-channels` proves the real
 FastAPI/Auth/CSRF/SQLite routes and Vue convergence with a controlled external
 channel worker/callback fixture. It does not prove real Slack, Telegram,
 Discord, Feishu or other platform authorization, production credentials,
@@ -210,7 +237,7 @@ new model lacks a capability. Cards preserve the response order and duplicates
 for skills and tool groups; `tool_groups: null` is shown as an unrestricted
 configured-group filter, while `[]` is shown as no configured groups.
 
-`make e2e-wp09-real-backend` exercises real FastAPI Auth/CSRF/features/models,
+`make e2e-agents` exercises real FastAPI Auth/CSRF/features/models,
 the thread/run router, LangGraph, `setup_agent`, SQLite Agent persistence,
 user isolation and Vue convergence. Only the external LLM is replaced with a
 deterministic model. The gate is not evidence for a production model/provider,
@@ -236,7 +263,7 @@ separate static role. Each mutation sends only the documented wire fields and
 then re-reads its shared TanStack Query cache; permission failures remain
 distinct from authentication and transport failures.
 
-`make e2e-wp10-real-backend` exercises real local Auth/CSRF, FastAPI routers,
+`make e2e-settings` exercises real local Auth/CSRF, FastAPI routers,
 user-isolated DeerMem storage, a separate real Noop manager, skill
 discovery/config writes, MCP atomic config writes and secret masking through
 Nuxt and Playwright Chromium. It pins malformed 422, validation 400, missing
@@ -271,7 +298,7 @@ request and late responses cannot replace the active result. The UI preserves
 summary truncation, all four statuses, all five exact diff-unavailable reasons,
 lossless Gateway errors and explicit retry.
 
-`make e2e-wp11-real-backend` runs a real local Auth/CSRF/FastAPI Gateway,
+`make e2e-shell` runs a real local Auth/CSRF/FastAPI Gateway,
 thread/checkpoint and run-event stores, production owner checks and the
 workspace-changes response builder through Nuxt and Chromium. Its isolated
 test-only seed writes one controlled workspace event into the Gateway's own

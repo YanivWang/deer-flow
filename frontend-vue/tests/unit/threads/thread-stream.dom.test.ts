@@ -659,7 +659,7 @@ describe("useThreadStream · new → 真 id 不是「切换 thread」（C9 的�
 
   // `/chats/new` 提交后 URL 会 replace 成后端建出的 id，threadId 从 null 变成
   // 具体值。照 C9 字面意思清场，第一个回合的 C8 重排就没了——先到的 AI 步骤
-  // 会永远排在 human 前面。这条 bug 是 make e2e-m4a-stream 撞出来的：
+  // 会永远排在 human 前面。这条 bug 是 `make e2e-stream` 撞出来的：
   // route.fulfill 那份用例里整条流在导航之前就到齐了，照绿。
   it("URL 从 new 换成真 id 之后，C8 的顺序锚点仍然有效", async () => {
     const threadId = ref<string | null>(null);

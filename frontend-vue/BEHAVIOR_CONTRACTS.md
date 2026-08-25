@@ -110,7 +110,7 @@ Vue 通过 `Content-Location` 与 `Last-Event-ID` 恢复；不得改回 backend 
 
 B12 由 `MessageList.vue` 的内容 `ResizeObserver` 驱动。主会话按 React 默认值平滑跟随，
 sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
-`tests/m4a-stream/real-stream.spec.ts`，同时固定贴底和用户主动上滚两条路径。
+`tests/e2e-stream/real-stream.spec.ts`，同时固定贴底和用户主动上滚两条路径。
 
 ---
 
@@ -261,7 +261,7 @@ Vue 前端使用 `splitpanes`。它通过响应式 `:size` 和 `@resize` / `@res
 | I13 | click/move 按 `object-contain` 的真实内容盒归一化；letterbox 外不发送。move 每动画帧只发最新点；wheel 使用 native non-passive listener，归一化 deltaMode 并逐帧合并                                                      |
 | I14 | 键盘只在 live + 非 editable + 非 composition 的 `keydown` 转发；printable 用 `text`、命名键/远端编辑 chord 用 `key`，keyup 不重复。宿主浏览器/系统快捷键不 `preventDefault`；IME 只在 `compositionend` 发一次完整 `text` |
 | I15 | 关闭 Live 只停 transport 并保留最后可见帧；切 thread/销毁才清帧和回收 blob URL。重新进入 Live 使用最后权威 URL seed，归一化 hash/尾斜杠后避免重复 navigate                                                               |
-| I16 | Vue browser 的 framework-specific DOM/wire 测试归 `frontend-vue/tests/m6/browser-control.spec.ts`；共享 `browser-feature.spec.ts` 只保留 feature flag 这一框架无关合同。Mock、real Gateway/replay、生产证据必须分开表述  |
+| I16 | Vue browser 的 framework-specific DOM/wire 测试归 `frontend-vue/tests/e2e/browser-control.spec.ts`；共享 `browser-feature.spec.ts` 只保留 feature flag 这一框架无关合同。Mock、real Gateway/replay、生产证据必须分开表述 |
 
 ---
 

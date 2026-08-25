@@ -32,7 +32,7 @@ Compose Watch 同步源码并在依赖清单变化时重建对应镜像；Nginx 
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------- |
 | L1 通用 Agent 内核 | `packages/agent-core/`                                                                                                                      | SSE 分帧、session 状态机、退避、watchdog、external store、通用消息合同 | Vue/Nuxt、Pinia、TanStack Query、DeerFlow URL/事件名 |
 | L2 可复用 UI       | `app/core/markdown/`、`app/core/code-editor/`、`app/components/markdown/`、`app/components/ui/`、`app/lib/utils.ts`、`app/lib/focusable.ts` | Markdown 流式渲染、代码块、Mermaid、代码编辑器、UI primitive 层        | DeerFlow API、线程、认证、产物和业务 store           |
-| L3 DeerFlow 应用   | `app/core/agent-deerflow/`、`app/core/api/`、`app/composables/`、`app/stores/`、页面和业务组件                                              | Gateway 协议适配、缓存、线程生命周期、认证和产品功能                   | 不得把协议专有知识反向写入 L1/L2                     |
+| L3 DeerFlow 应用   | `app/core/agent-deerflow/`、`app/core/api/`、`app/composables/`、页面和业务组件                                                             | Gateway 协议适配、缓存、线程生命周期、认证和产品功能                   | 不得把协议专有知识反向写入 L1/L2                     |
 
 ## UI primitive 层
 
@@ -161,8 +161,8 @@ Browser control 是 L3 DeerFlow 能力，不进入通用 agent 内核或 L2 UI�
    宿主快捷键边界不散落在模板中。
 
 测试证据分层：`tests/unit/wp05/` 使用 fake socket/HTTP 证明纯状态机和 DOM 生命周期；
-`tests/m6/browser-control.spec.ts` 使用 Mock Gateway/Mock WS 证明 Vue 自有 DOM 到 wire；
-`tests/m6-real-backend/browser-panel.spec.ts` 使用本地真实 FastAPI Gateway 与真实 Playwright
+`tests/e2e/browser-control.spec.ts` 使用 Mock Gateway/Mock WS 证明 Vue 自有 DOM 到 wire；
+`tests/e2e-browser/browser-panel.spec.ts` 使用本地真实 FastAPI Gateway 与真实 Playwright
 Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的模型 harness 仍是 replay，
 不等于生产模型、DNS/TLS、外层代理或真实 IdP 证明。
 
@@ -197,6 +197,8 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
 - 当前流、乐观消息、prepared replay 掩码、task/retry 状态：thread composable 的
   thread-scoped ref；切换 thread、stop、error、finish 或 scope dispose 时按合同收敛。
 - Pinia 只允许保存跨页面的客户端/UI 状态，不得复制 thread/session 等服务端真相。
+  当前全仓 `defineStore` 为 0，`app/stores/` 已不存在；`pinia` 与 `@pinia/nuxt` 仍在
+  依赖与 `nuxt.config.ts` 里注册着，是否摘掉属于去迁移化任务，不属于本文描述的边界。
 - artifacts、sidecar、browser：各自 composable/集成根持有面板状态，但最终业务数据仍来自同一
   thread snapshot/API。artifacts 由 `useArtifactsPanel` 持有 open/selection UI 状态，
   `useArtifactDraft` 独占 baseline/remote/draft/dirty/conflict/edit 生命周期；切文件、关面板、
@@ -270,17 +272,21 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
 
 ```bash
 cd frontend-vue
-make verify          # lint、格式、类型、单测、清单、i18n、OpenAPI、header、build
+make verify          # lint、格式、类型、单测、清单、i18n、OpenAPI、独立性、build
+make asset-budget    # 客户端 raw/gzip 分包预算
+make e2e-mock        # 不需要后端进程的全部套件
+make e2e-backend     # 需要真实 Gateway 的全部套件
+make e2e-visual      # 产品截图；基线只有 `-darwin`，本机门禁
+make e2e-list        # 收集全部套件并打印各自 test 数
 make consumer-check  # 打包并在隔离 consumer 中验证 @deerflow/agent-core
-make e2e-list        # 列出共享产品合同
-make e2e-m7          # 当前完整 Vue 浏览器合同入口（名称为既有测试套件标识）
-make e2e-wp07-real-backend # 真实 Gateway/SQLite/HTTP/Nuxt/Chromium 的 scheduled-task 合同
-make e2e-wp09-real-backend # 真实 Auth/LangGraph/setup_agent/SQLite Agent 合同
-make e2e-wp10-real-backend # 真实 Auth/DeerMem/Noop/Skills/MCP/Nuxt/Chromium 设置与错误合同
-make e2e-wp11-real-backend # 真实 Auth/thread/event-store/workspace-changes/Nuxt/Chromium 壳层合同
 make container-smoke # 生产镜像、health、SIGTERM、Showcase 资源与拒绝策略
 ```
 
-Makefile 中保留的 `m0`、`m4a`、`m7` 等名称是已经稳定下来的测试套件标识，不表示项目仍在
-迁移，也不表示可平替差异已经关闭。新增功能应按实际影响选择 unit、协议、浏览器、视觉、
-真实 Gateway 或生产镜像门禁，不要从旧阶段编号或单次全绿推断完成状态。
+一个套件 = 一份 playwright config = 一种后端拓扑；套件名说的是**测什么**，
+不是迁移阶段，完整清单见 [`README.md`](README.md) 的验证一节。新增功能按实际影响
+选择 unit、协议、浏览器、视觉、真实 Gateway 或生产镜像门禁，不要从单次全绿推断
+完成状态。
+
+文档里写出来的每一条 `make` 命令都由 `tests/guards/doc-references.test.ts` 校验必须
+真实存在——套件在 `1209651f` 按用途改名后，各处文档整整落后了一个版本，而所有门禁
+当时全绿，因为没有任何一条检查读过文档。

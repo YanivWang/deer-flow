@@ -21,7 +21,6 @@ Vue。本地 parity 证据不代表可以直接切换默认入口；公网 DNS�
   缓存、面板与 Vue 语义。
 - [REUSE.md](REUSE.md)：私有 `@deerflow/agent-core` 与可复用 UI 边界。
 - [双前端生产说明](../docs/dual-frontend-production.md)：hostname、OIDC、验证和回滚。
-- [app/core/PROVENANCE.md](app/core/PROVENANCE.md)：`app/core/` 当前源码溯源台账。
 - [I18N_INVENTORY.md](I18N_INVENTORY.md)：实时产品 SFC 文案清单、翻译/动态内容分类与
   source guard 边界。
 
@@ -65,30 +64,56 @@ make dev       # http://localhost:3100
 先运行与改动最相关的最小门禁，常规模块改动最终运行 `make verify`：
 
 ```bash
-make verify
+make verify             # lint、格式、类型、单测、i18n、OpenAPI、独立性、build
+make asset-budget       # 客户端 raw/gzip 预算；动依赖或改分包之后必跑
+make e2e-mock           # 不需要后端进程的全部套件
+make e2e-backend        # 需要真实 Gateway 的全部套件
+make e2e-visual         # 产品截图；只在本机，基线是 `-darwin`
+make e2e-list           # 收集全部套件并打印各自 test 数
 make consumer-check     # 修改 packages/agent-core 时运行
-make e2e-list           # 查看共享浏览器合同清单
-make e2e-m5             # artifacts、sidecar 与面板生命周期合同
-make e2e-m5-real-backend # 真实 Gateway artifact Range/PUT/冲突合同
-make e2e-m6             # 包含 Vue 自有 browser DOM/wire 合同
-make e2e-m6-real-backend # 真实本地 Gateway + Chromium browser runtime
-make e2e-m7             # 完整 Vue 浏览器合同：29 files / 165 tests
-make i18n-source-check  # 全部产品 Vue SFC 的 AST 文案门禁
-make e2e-wp07-real-backend # 真实 Gateway scheduled-task HTTP/UI 生命周期
-make e2e-wp08-real-backend # 真实 Auth/Gateway/SQLite channel 生命周期
-make e2e-wp09-real-backend # 真实 Auth/Gateway/setup_agent/Agent 持久化
-make e2e-wp10-real-backend # 真实 Auth/DeerMem/Noop/Skills/MCP 设置生命周期
-make e2e-wp11-real-backend # 真实 Auth/thread/workspace-changes 壳层生命周期
-make e2e-m7-auth        # 认证请求与安全
-make proxy-security     # Nitro body 限制、无 body/chunked DELETE、SSE 与 traversal
-make e2e-m7-real-protocol
-make e2e-m7-visual
-make asset-budget
-make container-smoke
+make container-smoke    # 生产镜像、health、SIGTERM 与拒绝策略
 ```
 
-执行 `make help` 可查看全部代理、协议、真实 Gateway、视觉、清单和维护命令。部分命令名
-保留 `m0`–`m7` 历史测试套件标识；它们是稳定的测试入口，不表达可平替差异的完成状态。
+一个套件 = 一种后端拓扑，名字说的是**测什么**。迭代时挑最窄的那个：
+
+```bash
+make e2e                # mock Gateway 上的产品合同
+make e2e-auth           # 认证 UI 合同，前端以 auth 开启构建
+make e2e-infra          # 同源代理与 __m0 测试页
+make e2e-proxy-options  # 关闭流式转发的代理
+make e2e-stream         # 真实分块 SSE：心跳、续传游标、gap
+make e2e-protocol       # 真实 Gateway 上的 run-protocol 状态机
+make e2e-real           # 渲染、多 run 顺序、artifact 写入
+make e2e-scheduled      # 真实 Gateway/SQLite 的定时任务
+make e2e-channels       # channel 连接生命周期，auth 开启
+make e2e-agents         # 自定义 agent 创建与设置，auth 开启
+make e2e-settings       # 支持与降级两种 Gateway 下的设置
+make e2e-shell          # workspace 壳层与 workspace-changes，auth 开启
+make e2e-browser        # 真实 Chromium 后端上的 browser 面板
+make e2e-external       # WebSocket 与 OIDC；需要 backend 的 browser extra
+```
+
+`make e2e-mock` 聚合 `e2e`、`e2e-auth`、`e2e-infra`、`e2e-proxy-options` 与
+`e2e-stream`；`make e2e-backend` 聚合 `e2e-protocol`、`e2e-real`、`e2e-scheduled`、
+`e2e-channels`、`e2e-agents`、`e2e-settings`、`e2e-shell` 与 `e2e-browser`。
+`make e2e-visual` 刻意两边都不进：截图基线只有 `-darwin` 一份，在 Linux 容器里
+生成并签入 `-linux` 基线之前，它是本机门禁。
+
+定向检查：
+
+```bash
+make proxy-security     # Nitro body 限制、无 body/chunked DELETE、SSE 与 traversal
+make i18n-source-check  # 全部产品 Vue SFC 的 AST 文案门禁
+make standalone-check   # 不允许任何指向 ../frontend 的跨应用引用
+make typecheck-core     # packages/agent-core 的独立 tsc
+make upstream-drift     # 报告 ../frontend 自 marker 以来改了什么
+```
+
+这里刻意不写 test 数——`make e2e-list` 会打印每个套件的实时数字，而抄进散文里的
+数字是最先过期的东西。本工作区文档里写出的每一条 `make` 命令、相对链接和仓库路径都由
+`tests/guards/doc-references.test.ts` 校验；Makefile 里多出一个套件而这张表没跟上时，
+它同样会红。执行 `make help` 查看完整目标列表。套件名说的是**测什么**，
+不是迁移阶段；本地门禁全绿也不表达可平替差异的完成状态。
 
 ## 运行配置
 
@@ -135,7 +160,7 @@ hourly/daily/weekly/monthly/custom cron、可编辑 IANA 时区、DST-aware 单�
 类型和全部六种 task 状态；运行历史使用明确的 `limit/offset` 分页，并展示全部 run 状态、
 时间、thread/run ID 和错误。
 
-`make e2e-wp07-real-backend` 会启动真实本地 FastAPI Gateway、SQLite、Nuxt preview 与
+`make e2e-scheduled` 会启动真实本地 FastAPI Gateway、SQLite、Nuxt preview 与
 Playwright Chromium，覆盖真实 once/cron 创建与校验、context/thread 权限、PATCH、
 pause/resume、trigger、分页 run 记录和 delete。模型侧使用签入的 replay fixture，认证也处于
 测试隔离模式；该门禁不证明生产 scheduler/模型、真实时间推进、DNS/TLS、外层代理信任或
@@ -152,7 +177,7 @@ Channel provider 只描述服务端能力与运行时配置，不拥有用户连
 
 Settings 明确区分两种破坏性操作：用户按准确 connection ID 断开单个账号；管理员移除
 provider runtime 配置，该操作会在实例级撤销此 provider 的有效连接。
-`make e2e-wp08-real-backend` 使用受控外部 worker/callback fixture，真实验证
+`make e2e-channels` 使用受控外部 worker/callback fixture，真实验证
 FastAPI/Auth/CSRF/SQLite 路由与 Vue 收敛；它不证明 Slack、Telegram、Discord、Feishu 等
 真实平台授权、生产凭据、真实 deep-link handler、DNS/TLS、外层代理或真实 IdP。
 
@@ -172,7 +197,7 @@ Gallery 和模型目录的服务端状态分别只归 `useAgents`、`useModels`�
 skills/tool groups 的响应顺序和重复项；`tool_groups: null` 明确显示为不限制已配置分组，
 `[]` 明确显示为没有配置分组。
 
-`make e2e-wp09-real-backend` 真实经过 FastAPI Auth/CSRF/features/models、thread/run router、
+`make e2e-agents` 真实经过 FastAPI Auth/CSRF/features/models、thread/run router、
 LangGraph、`setup_agent`、SQLite Agent 持久化、用户隔离和 Vue UI 收敛；只有外部 LLM
 被确定性模型替换。该门禁不证明生产模型/provider、生产模型凭据、真实 IdP、DNS/TLS、
 外层代理或生产部署。
@@ -190,7 +215,7 @@ Memory 是用户隔离的服务端状态，只由 `useMemory` 持有。页面支
 Gateway 的管理员语义，不额外发明 static role。每次 mutation 只发送文档定义的字段，成功后
 重读共享 TanStack Query 缓存；权限错误与未认证、普通传输错误分别展示。
 
-`make e2e-wp10-real-backend` 通过 Nuxt 与 Playwright Chromium 真实经过本地 Auth/CSRF、
+`make e2e-settings` 通过 Nuxt 与 Playwright Chromium 真实经过本地 Auth/CSRF、
 FastAPI router、用户隔离 DeerMem、独立真实 Noop manager、skill discovery/config write、MCP
 原子配置写入和 secret masking，并固定 malformed 422、校验 400、missing 404、duplicate 与
 revision-conflict 409、corrupted-storage 500、unsupported 501。fixture 只 seed operator-owned
@@ -215,7 +240,7 @@ Workspace-change summary/detail 使用独立 TanStack Query identity，完整包
 两个 include flag。identity 切换会中止旧请求，late response 不能覆盖当前结果。UI 保留 summary
 truncated、四种 status、五种精确 diff unavailable reason、保真 Gateway error 与显式 retry。
 
-`make e2e-wp11-real-backend` 通过 Nuxt 与 Chromium 真实经过本地 Auth/CSRF/FastAPI Gateway、
+`make e2e-shell` 通过 Nuxt 与 Chromium 真实经过本地 Auth/CSRF/FastAPI Gateway、
 thread/checkpoint、run-event store、production owner check 和 workspace-changes response builder。
 隔离的 test-only seed 只向 Gateway 自身 event store 写一条受控 workspace event；include 过滤、
 状态/reason 保留、认证、跨用户拒绝、thread state、clipboard 和下载仍是生产路径。唯一注入的

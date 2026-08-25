@@ -27,12 +27,12 @@
 ## 重新录制
 
 ```bash
-cd frontend-vue && make run-protocol-smoke
-cp test-results/real-backend/run-protocol*/create.redacted.sse tests/fixtures/streams/deerflow-create.sse
-cp test-results/real-backend/run-protocol*/resume-gap.redacted.sse tests/fixtures/streams/deerflow-resume-gap.sse
+cd frontend-vue && make e2e-protocol
+cp test-results/e2e-protocol/run-protocol*/create.redacted.sse tests/fixtures/streams/deerflow-create.sse
+cp test-results/e2e-protocol/run-protocol*/resume-gap.redacted.sse tests/fixtures/streams/deerflow-resume-gap.sse
 ```
 
-去敏由 `tests/m0-real-backend/run-protocol.spec.ts::redactRawBody` 完成，**不是手工做的**——
+去敏由 `tests/e2e-protocol/run-protocol.spec.ts::redactRawBody` 完成，**不是手工做的**——
 手工去敏无法复跑，也无法证明下一次录制去干净了。它只改三类字节：
 
 - uuid → 稳定占位符（**每个不同的 uuid 有各自的占位符**：`gap` 事件里的 run_id
@@ -66,4 +66,4 @@ reasoning。前两者是场景不产生（`custom` 已在请求里、这个场�
 上一份 README 说它们没覆盖，那是错的，录制里本来就有（9 个 `messages` 帧里
 2 个带 `tool_call_chunks`，human 消息的 id 从 `X` 变成 `X__user`）。
 合同与当前测试入口见 `frontend-vue/BEHAVIOR_CONTRACTS.md` 的 L 组，以及
-`tests/m0-real-backend/run-protocol.spec.ts`。
+`tests/e2e-protocol/run-protocol.spec.ts`。

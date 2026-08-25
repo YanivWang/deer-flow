@@ -221,12 +221,14 @@ Before adopting a new core revision:
 
 1. Compare `AGENT_CORE_CONTRACT_VERSION` and the exact export test.
 2. Run the consumer's adapter/reducer/session tests with raw protocol traces.
-3. Run `make consumer-check` and `make verify` here. Run `make migration-check`
-   when provenance manifests or generated/codemodded core files change; the command
-   name is retained as a maintenance API.
-4. If the change touches chat UI or Markdown seams, run `make e2e-m4b` and the
-   artifact gates. If it touches protocol/session/reducer, run `make e2e-m4a`,
-   `make e2e-m4a-stream`, `make e2e-m7-real-protocol` and the relevant real-backend gate.
+3. Run `make consumer-check` and `make verify` here. The provenance ledger and
+   its `migration-check` gate were deleted with the rest of the migration tooling
+   in `1209651f`; `app/core/` is maintained in this workspace now, so
+   `make verify` is the whole story.
+4. If the change touches chat UI or Markdown seams, run `make e2e` and the
+   artifact gates. If it touches protocol/session/reducer, run `make e2e-stream`,
+   `make e2e-protocol` and the relevant real-Gateway suite (`make e2e-backend`
+   runs all eight).
 5. Keep end-to-end product tests in the consuming project. L1 success does not
    prove its authentication, reverse proxy, business panels or visual states.
 
