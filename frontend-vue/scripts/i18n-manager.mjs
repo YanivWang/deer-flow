@@ -149,9 +149,28 @@ function sourceFiles(relRoot) {
  * 不做完整路径匹配是有意的——上游到处是 `const { common } = t` 再 `common.cancel`，
  * 以及 `t[section][key]` 这种间接访问，强求全路径会把大量真实引用误判成未引用。
  * 宁可少报：这个命令的用途是「重写完之后找死条目」，误删的代价远大于漏报。
+ *
+ * 变量下标要单独认。`authDomains[domain].label` 与 `descriptions[provider]`
+ * 里，被索引的那一段**永远不会**以 `.calendar` / `["buzz"]` 的形态出现在源码里，
+ * 于是整组条目会被报成 unused——而它们每一条都在页面上渲染着。实测两处：
+ * Lark 的 22 个授权域，以及 channels 的 provider 描述（后者的 e2e 明确断言
+ * "Buzz channels and direct messages" 可见，同一条 key 却在 unused 名单里）。
+ *
+ * 记的是**带形状的**下标访问，不是光记一个容器名：
+ *
+ *   `.authDomains[x].label`  ->  (authDomains, "label")
+ *   `.descriptions[x]`       ->  (descriptions, "*")
+ *
+ * 「容器名出现过就放行整棵子树」这条更省事的规则实测是错的：
+ * `app/core/settings/store.ts` 里有一处与词典毫无关系的 `.settings[key]`，
+ * 那条规则会把整个 `settings.*` 子树标成已引用——一次就吞掉 18 条真实
+ * 未渲染的 Lark 文案。带形状之后，(settings, "*") 只放行 settings 的直接子项，
+ * 够不到 settings.integrations.lark.waitingAuthTitle。
  */
-function referencedLeaves() {
+function referencedNames() {
   const leaves = new Set();
+  /** `${container}.${leafOrStar}` */
+  const dynamicAccess = new Set();
   const dictionary = new Set(Object.values(LOCALES).map((l) => l.file));
   for (const root of USAGE_ROOTS) {
     for (const rel of sourceFiles(root)) {
@@ -163,9 +182,31 @@ function referencedLeaves() {
       for (const match of text.matchAll(/\[["']([^"']+)["']\]/g)) {
         leaves.add(match[1]);
       }
+      // `.container[<变量>]` 可选地再跟一个 `.prop`。
+      const dynamic =
+        /\.([A-Za-z_$][\w$]*)\s*\[\s*[^\]"'\s][^\]]*\]\s*(?:\.([A-Za-z_$][\w$]*))?/g;
+      for (const match of text.matchAll(dynamic)) {
+        dynamicAccess.add(`${match[1]}.${match[2] ?? "*"}`);
+      }
     }
   }
-  return leaves;
+  return { leaves, dynamicAccess };
+}
+
+function isReferenced(key, { leaves, dynamicAccess }) {
+  const segments = key.split(".");
+  if (leaves.has(segments.at(-1))) return true;
+  const [leaf, parent, grandparent] = [
+    segments.at(-1),
+    segments.at(-2),
+    segments.at(-3),
+  ];
+  // `descriptions[provider]` -> descriptions 的直接子项。
+  if (parent !== undefined && dynamicAccess.has(`${parent}.*`)) return true;
+  // `authDomains[domain].label` -> authDomains 的孙辈中名为 label 的那些。
+  return (
+    grandparent !== undefined && dynamicAccess.has(`${grandparent}.${leaf}`)
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -194,10 +235,8 @@ function compareToBaseline(keys) {
 }
 
 function unusedKeys(keys) {
-  const referenced = referencedLeaves();
-  return [...keys]
-    .filter((key) => !referenced.has(key.split(".").pop()))
-    .sort();
+  const referenced = referencedNames();
+  return [...keys].filter((key) => !isReferenced(key, referenced)).sort();
 }
 
 function compareUnusedToBaseline(dead) {

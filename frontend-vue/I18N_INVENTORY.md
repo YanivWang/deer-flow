@@ -26,7 +26,7 @@
 ## Key 与 unused baseline
 
 `en-US` 和 `zh-CN` 当前各有 987 个完全一致的 leaf key。
-`baseline/i18n-keys.json` 同时固定精确 key 集合和 150 个已审阅 unused key；
+`baseline/i18n-keys.json` 同时固定精确 key 集合和 110 个已审阅 unused key；
 新增、删除、新增 unused 或旧 key 意外恢复使用都会使
 `i18n-check`、`i18n-diff` 或 `i18n-unused` 失败。只有审阅精确 diff 与真实消费者后，
 才允许运行 `make i18n-refresh`。
@@ -36,6 +36,14 @@ unused 的判据是**叶子名**在 `app`/`tests`/`packages` 里以属性访问�
 写 `EditorState.readOnly.of(...)` 之后，词典里真正没人用的 `humanInput.readOnly`
 就被算成「已引用」而退出 unused 集。这类漂移必须在 diff 里逐条看懂再 refresh，
 不能因为「反正只是 unused 集」就放过——它同时也是「key 是否还有消费者」的唯一记录。
+
+叶子名之外还认**带形状的变量下标**：`.authDomains[domain].label` 记成
+`(authDomains, label)`，`.descriptions[provider]` 记成 `(descriptions, *)`。
+没有这一条时，凡是用变量下标渲染的整组文案都会被报成 unused——Lark 的 22 个
+授权域和 channels 的 provider 描述都在里面，而后者的 e2e 明明断言
+"Buzz channels and direct messages" 可见。形状是必须的：早先那版只记容器名、
+放行整棵子树，被 `app/core/settings/store.ts` 里一处与词典无关的 `.settings[key]`
+一次吞掉 18 条真实未渲染的 Lark 文案。
 
 source guard 使用 Vue compiler AST 与 TypeScript AST，覆盖模板文本、可访问性属性、
 绑定属性中的字面量、插值字面量，以及 error/toast/label/placeholder 等 UI script sink。
