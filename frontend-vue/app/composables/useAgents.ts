@@ -3,7 +3,7 @@
   【架构位置】     L3 Vue server-state adapter
   【主要导出】     useAgents
   【依赖关系】     @tanstack/vue-query · core/agents API/query keys
-  【边界与注意】   feature 未加载或关闭时不发 list；无自动 retry storm；Pinia 不复制 server state。
+  【边界与注意】   feature 未加载或关闭时不发 list；无自动 retry storm；不得复制 server state。
 */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";

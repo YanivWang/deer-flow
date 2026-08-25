@@ -294,7 +294,7 @@ Vue 前端使用 `splitpanes`。它通过响应式 `:size` 和 `@resize` / `@res
 | K6  | 定时后台运行是**非交互**的：`context.non_interactive=true` 时 lead-agent 工具集排除 `ask_clarification`。该键只对内部认证的调用方生效，客户端提交的会被丢弃（后端行为，前端不要伪造）                        |
 | K7  | prepared replay 的 prepare 与 stream 共用 generation/AbortController；重复提交、切路由、stop、error、cancel 和成功都必须清掉 guard、乐观态与 superseded masks                                                |
 | K8  | Gateway 非成功响应统一保留 HTTP status、FastAPI `detail`、结构化 body 与原始正文，不能在 prepared replay 或 compact 路径换成通用错误                                                                         |
-| K9  | 所有主 thread 列表按**原始后端行数**推进 offset，再过滤 sidecar；Pinia 不保存第二份 server-state 列表                                                                                                        |
+| K9  | 所有主 thread 列表按**原始后端行数**推进 offset，再过滤 sidecar；不得保存第二份 server-state 列表                                                                                                            |
 | K10 | 删除主 thread 时先全量搜索并并发删除 sidecar，sidecar 全成功后才删主 thread；部分失败保留主 thread、清掉已成功缓存并暴露失败 ID 的可见重试                                                                   |
 | K11 | Workspace 可见入口以 React 当前调用点为准：聊天 header 是定时任务 → token/context → sidecar → browser → export → artifacts；侧栏底部菜单只含 React 六项操作，品牌文字在非静态工作区不得成为 Vue 独有导航链接 |
 | K12 | 自定义 Agent bootstrap 的 Save 在初始 design conversation 成功完成且 send owner 完整释放前保持禁用；不能让保存操作与 bootstrap run 竞争同一 runner，也不能用定时延迟掩盖竞态                                 |
@@ -386,7 +386,7 @@ raw trace、代理 smoke 和 replay Gateway 浏览器测试覆盖，不能只依
 | #   | 约束                                                                                                                                                                                                                                   |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | P1  | providers 只描述 capability/config/connectable；当前用户所有账号、connection ID 与展示 status 只从 scoped `/connections` query 推导。两端冲突时 connections 获胜，多账号保持响应顺序与稳定 ID。                                        |
-| P2  | `useChannelConnections` 是 providers/connections query、connect/configure/disconnect mutation、invalidation、poll 与 cleanup 的唯一 owner；Pinia 和组件不得复制 server state。query key 必须包含认证 user scope。                      |
+| P2  | `useChannelConnections` 是 providers/connections query、connect/configure/disconnect mutation、invalidation、poll 与 cleanup 的唯一 owner；组件不得复制 server state。query key 必须包含认证 user scope。                              |
 | P3  | connect 必须同时消费 `url`、`instruction`、`expires_in`：deep link 通过同步预开窗口交给现有 URL helper；URL-only 和 instruction-only 都可见且可收敛。                                                                                  |
 | P4  | expiry 必须规范到正数且不超过一小时的有限 deadline。success、expiry、cancel、重新连接、组件卸载、effect scope dispose 或 user scope 切换都清 timer 并 abort 在途请求；late result 不得跨 scope 回写。                                  |
 | P5  | 新多账号绑定只由发起请求后新出现/重新激活的 connected instance 完成；绑定前已 connected 的 ID 不能让新 poll 提前成功。waiting mutation/poll 阻止同 provider 重复 connect。                                                             |
@@ -405,7 +405,7 @@ raw trace、代理 smoke 和 replay Gateway 浏览器测试覆盖，不能只依
 | Q3  | `useAgentCreationSession` 是 idle/saving/verifying/created/error、重复提交 guard、run 完成、有限 visibility retry 和 cleanup 的唯一 owner；组件不得再建 timer、一次性 `getAgent` 或第二条保存路径。                                                           |
 | Q4  | visibility retry 只重试 404，使用有限 `[0, 200, 500, 1000, 2000]` ms 预算；tool/run/其他 Gateway 错误立即保留真实 detail。retry verification 不得新建第二个 run，已 created 后不得再次提交。                                                                  |
 | Q5  | run 与验证共享 generation/AbortSignal 边界；取消、route/scope dispose 或新 session 会清 timer、abort 在途请求并拒绝 late result 回写。                                                                                                                        |
-| Q6  | `useAgents` 与 `useModels` 是 Agent list/detail、model catalog、update/delete cache convergence 的唯一服务端状态 owner；feature 尚未 ready 或 disabled 时不查询，自动 retry 关闭，Pinia/组件不复制缓存。                                                      |
+| Q6  | `useAgents` 与 `useModels` 是 Agent list/detail、model catalog、update/delete cache convergence 的唯一服务端状态 owner；feature 尚未 ready 或 disabled 时不查询，自动 retry 关闭，组件不复制缓存。                                                            |
 | Q7  | 设置模型只来自 `/api/models`。`__default__` 发送 `model: null`，并使用模型列表首项的 capability；未知显式模型拒绝提交。temperature 为 0–2，max_tokens 为 1–200000 整数；两者都空时 `model_settings: null`，显式 0 不得丢失。                                  |
 | Q8  | thinking 使用 true/false/null 三态；reasoning 使用 low/medium/high/null。模型不支持对应 capability 时必须发送 null 清除 stale override；mutation pending 禁止重复保存/删除，失败保持 dialog 和 Gateway detail，成功同步并重读 Agent list。                    |
 | Q9  | Agent card 的 model、skills、tool_groups 只来自 Agent 响应，保留顺序、重复和长文本。`tool_groups: null` 表示不限制已配置 group，`[]` 表示没有配置 group；不得改写成“全部工具/无工具”。                                                                        |

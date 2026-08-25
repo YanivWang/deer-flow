@@ -98,7 +98,7 @@ point. It intentionally uses a non-LangGraph `/sessions` protocol.
    - `inspect()` maps durable backend status to `RunOutcome`.
 3. Classify the backend's terminal/error/gap events with `ClassifyEvent`.
 4. Implement a pure `EventReducer` in `reducer.ts`. A full snapshot should use
-   `replace-state`; message deltas use message actions. Do not mutate Vue/Pinia
+   `replace-state`; message deltas use message actions. Do not mutate host reactive
    state from the reducer.
 5. Create one external store and run session per conversation/child session.
    The framework adapter subscribes to snapshots; it does not reimplement the
@@ -193,7 +193,7 @@ Replace every applicable group below when moving to another backend/product:
 3. Vue/thread application adapter:
    - `app/composables/useThreadStream.ts`, `useThreadHistory.ts`, `useThreads.ts`,
      `thread-context.ts`, `useCoalescedStreamMessages.ts`;
-   - `app/core/threads/**` and thread routes. Pinia does not own a duplicate thread list.
+   - `app/core/threads/**` and thread routes. Nothing owns a duplicate thread list.
 4. DeerFlow product extensions:
    - `app/core/artifacts/**`, `components/workspace/artifacts/**`,
      `useArtifactsPanel.ts`;

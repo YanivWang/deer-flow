@@ -82,7 +82,7 @@ CodeMirror 全部经 `await import()` 进入，首屏不加载一个字节；`nu
    `src/store/` 合并同一宏任务内的通知并发布不可变 snapshot。
 4. TanStack Query/composable 将 live snapshot、checkpoint 历史、乐观消息和分页数据
    合并为 UI 状态。`useThreads.ts` 是主线程列表的唯一 server-state 所有者；models、skills、
-   session 与 thread token usage 也各有唯一 Vue Query composable，Pinia 不保留第二份真相。
+   session 与 thread token usage 也各有唯一 Vue Query composable，不保留第二份真相。
    排序、sidecar 过滤与身份规则集中在 `app/core/threads/`。
 5. custom 帧由 `tasks/custom-event.ts` 统一折叠 task 生命周期、步骤、累计 token、模型和
    `llm_retry`；`SubtaskCard.vue` 展开历史 run 时才回填持久化步骤。
@@ -198,9 +198,10 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
   raw-offset 分页和 sidecar 过滤，失效/删除镜像规则在 `app/core/threads/cache-invalidation.ts`。
 - 当前流、乐观消息、prepared replay 掩码、task/retry 状态：thread composable 的
   thread-scoped ref；切换 thread、stop、error、finish 或 scope dispose 时按合同收敛。
-- Pinia 只允许保存跨页面的客户端/UI 状态，不得复制 thread/session 等服务端真相。
-  当前全仓 `defineStore` 为 0，`app/stores/` 已不存在；`pinia` 与 `@pinia/nuxt` 仍在
-  依赖与 `nuxt.config.ts` 里注册着，是否摘掉属于去迁移化任务，不属于本文描述的边界。
+- **本工作区没有客户端 store。** 服务端真相一律由 TanStack Query 持有，跨页面的
+  纯 UI 状态由 composable + `provide/inject` 持有。Pinia 曾经注册着但一个
+  `defineStore` 都没有，只往生产包里塞了一个空插件，已经移除；再引入客户端 store
+  之前先确认它保存的不是服务端真相的副本。
 - artifacts、sidecar、browser：各自 composable/集成根持有面板状态，但最终业务数据仍来自同一
   thread snapshot/API。artifacts 由 `useArtifactsPanel` 持有 open/selection UI 状态，
   `useArtifactDraft` 独占 baseline/remote/draft/dirty/conflict/edit 生命周期；切文件、关面板、
@@ -228,9 +229,9 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
   connect/configure/单 connection DELETE/provider runtime DELETE 后重读两端；connect poll 只
   更新原 scope 的 connections key，发起绑定前已 connected 的 ID 不得完成新账号绑定。
   generation、AbortSignal、effect scope dispose 共同阻止旧 query/poll/mutation 跨用户回写。
-  Pinia、组件和 provider.connection_status 均不得建立第二份用户连接真相。
+  组件与 provider.connection_status 均不得建立第二份用户连接真相。
 - agents/models 的服务端真相只归 `useAgents` 与 `useModels` 的 TanStack Query key；gallery、
-  creation success、settings update 与 delete 都同步或失效同一份 Agent key，组件和 Pinia 不
+  creation success、settings update 与 delete 都同步或失效同一份 Agent key，组件不
   保留镜像。`agents/settings.ts` 独占 capability-aware exact PUT body，`agents/presentation.ts`
   独占 card 的 model/skills/tool-groups 映射；`tool_groups` 的 null/empty/ordered values 不在
   模板中重新解释。

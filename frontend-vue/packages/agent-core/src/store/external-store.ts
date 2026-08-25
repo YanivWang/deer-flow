@@ -3,7 +3,7 @@
   【架构位置】     L1
   【主要导出】     AgentExternalStore · createAgentExternalStore · applyReduceActions
   【依赖关系】     ./snapshot · ../message
-  【边界与注意】   本文件不返回 `StoreDefinition`，也不 import Pinia。Vue 侧的包装在
+  【边界与注意】   本文件不返回任何具体框架的 store 定义，也不 import store 库。Vue 侧的包装在
                    `app/core/agent-deerflow/vue/`，那里才知道 thread 作用域与卸载。
 
                    快照是**不可变替换**而不是原地改：`useSyncExternalStore` 与

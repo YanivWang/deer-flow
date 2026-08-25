@@ -3,7 +3,7 @@
   【架构位置】     L3 Vue adapter
   【主要导出】     useThreads
   【依赖关系】     core/threads/infinite · delete · cache-invalidation
-  【边界与注意】   主列表永远走 sidecar 过滤后的 raw-offset 分页；Pinia 不持有副本。
+  【边界与注意】   主列表永远走 sidecar 过滤后的 raw-offset 分页；不得另存副本。
 */
 import {
   useInfiniteQuery,

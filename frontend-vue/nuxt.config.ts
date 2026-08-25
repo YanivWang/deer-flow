@@ -40,9 +40,7 @@ function clientChunkFileName(chunk: ClientChunk) {
     return "_nuxt/vendor-ui-[hash].js";
   }
   if (
-    /node_modules\/.+\/(?:@vue|vue|vue-router|pinia|@pinia|@tanstack\/vue-query)/.test(
-      ids,
-    )
+    /node_modules\/.+\/(?:@vue|vue|vue-router|@tanstack\/vue-query)/.test(ids)
   ) {
     return "_nuxt/vendor-vue-[hash].js";
   }
@@ -51,7 +49,7 @@ function clientChunkFileName(chunk: ClientChunk) {
 
 export default defineNuxtConfig({
   compatibilityDate: "2026-08-03",
-  modules: ["shadcn-nuxt", "@nuxt/eslint", "@pinia/nuxt"],
+  modules: ["shadcn-nuxt", "@nuxt/eslint"],
   app: {
     head: {
       script: [

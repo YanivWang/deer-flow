@@ -57,8 +57,8 @@
 
 ## 3. Vue 实现原则
 
-- 服务端状态使用 `@tanstack/vue-query` 的 query/mutation/invalidation；不要用 Pinia 手写第二套服务端缓存。
-- Pinia 只保存需要跨页面共享的客户端状态，例如工作区 UI；thread/session 等服务端真相只由 Vue Query/composable 持有。
+- 服务端状态使用 `@tanstack/vue-query` 的 query/mutation/invalidation；不要手写第二套服务端缓存。
+- 跨页面共享的纯客户端状态（例如工作区 UI）由 composable + `provide/inject` 持有；thread/session 等服务端真相只由 Vue Query/composable 持有。本工作区没有客户端 store，Pinia 已在确认零 `defineStore` 后移除。
 - 组件内生命周期使用 `ref`、`computed`、`watch`、`onScopeDispose`、`provide/inject`；不要照搬 React hook/context 形状。
 - 流式协议、文件类型策略、缓存 key、payload 归一化等框架无关规则应保留为纯 TypeScript，并由 Vue composable 调用。
 - Dialog、Popover、Select 等优先使用 Reka UI 等 Vue 无障碍 primitives，保持焦点锁定、Escape、aria 和键盘语义。
@@ -195,7 +195,7 @@
 - [`SubtaskCard.vue`](app/components/chat/SubtaskCard.vue) 合并实时 state、终态 ToolMessage 与展开时的历史 `subagent.step` backfill，展示模型、累计 token、步骤、结果和可重试错误。
 - [`ChatComposer.vue`](app/components/chat/ChatComposer.vue) 对已建立会话执行真实 `/compact`；在途 guard、AbortController、成功清草稿、4xx/409 保留输入与六类缓存失效均已接通。
 - prepared replay 使用统一 [`api/errors.ts`](app/core/api/errors.ts) 保留 status/body/detail，并以 generation + abort 阻止旧 prepare/stream 写回新路由；所有退出路径收敛 guard、掩码和乐观态。
-- [`useThreads.ts`](app/composables/useThreads.ts) 是 thread 列表唯一 server-state 所有者，复用 raw-offset sidecar 过滤 helper；旧 Pinia thread store 已删除。
+- [`useThreads.ts`](app/composables/useThreads.ts) 是 thread 列表唯一 server-state 所有者，复用 raw-offset sidecar 过滤 helper；旧 thread store 已删除。
 - [`threads/delete.ts`](app/core/threads/delete.ts) 全量搜索 parent sidecar、并发删除后再删主 thread；部分失败保留主 thread、清除已成功项缓存并向侧栏暴露重试。
 - [`useThreadHistory.ts`](app/composables/useThreadHistory.ts) 初次只请求最新一页，MessageList 按显式按钮或用户向上交互后的 sentinel 加载下一页并保持滚动锚点。
 - 线程存在性由 [`threads/thread-presence.ts`](app/core/threads/thread-presence.ts) 判定，不再绑定 checkpoint：`GET /threads/{id}` 与 `/state` 在上下文压缩后 404 属常态，而 `/messages/page` 仍完整返回历史。只有元数据 403/404 确认缺失、历史已问出结论且确实为空时才退回新会话；其余错误保持原地。合同见 `BEHAVIOR_CONTRACTS.md` S8，证据为 `tests/unit/threads/thread-presence.test.ts`、`tests/e2e/thread-without-checkpoint.spec.ts` 与 `tests/e2e-real/multi-run-order.spec.ts`（后者的 `test.fail()` 已摘除）。
@@ -487,7 +487,7 @@
 
 - [`app/composables/useChannelConnections.ts`](app/composables/useChannelConnections.ts) 是按认证
   user scope 隔离的 providers/connections Vue Query、四类 mutation、poll 与 cleanup 唯一 owner；
-  旧模块级 `useChannels` ref 缓存已删除，Pinia 没有复制 server state。
+  旧模块级 `useChannels` ref 缓存已删除，没有第二份 server state 副本。
 - [`app/core/channels/state.ts`](app/core/channels/state.ts) 只从 connections 响应推导用户状态和
   多账号列表；provider 的 `connection_status` 即使冲突也不会覆盖它。
 - connect 同时消费 `url`、`instruction`、`expires_in`。poll 有有限 deadline、expired 状态和
@@ -546,7 +546,7 @@
   wire messages，避免 durable state 投影缺 messages 时丢失 tool result。
 - [`app/composables/useAgents.ts`](app/composables/useAgents.ts) 与
   [`useModels.ts`](app/composables/useModels.ts) 分别独占 Agent/model Vue Query server state；feature
-  未 ready/disabled 不查询，mutation success 同步并重读真实 list，Pinia 没有第二份缓存。
+  未 ready/disabled 不查询，mutation success 同步并重读真实 list，没有第二份缓存。
 - [`agents/settings.ts`](app/core/agents/settings.ts) 按真实模型 capability 构造 exact PUT：default
   sentinel → `model:null`，thinking/reasoning 保留 true/false/null/inherit，unsupported 显式 null
   清 stale override，temperature 0–2、max_tokens 1–200000 整数且接受浏览器 number v-model。

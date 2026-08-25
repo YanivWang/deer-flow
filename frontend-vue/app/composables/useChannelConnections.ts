@@ -3,7 +3,7 @@
   【架构位置】     L3 Vue server-state adapter
   【主要导出】     useChannelConnections · ChannelConnectFlow
   【依赖关系】     @tanstack/vue-query · core/channels
-  【边界与注意】   用户 scope、AbortSignal 与 generation 同时隔离 late response；Pinia 不复制 server state。
+  【边界与注意】   用户 scope、AbortSignal 与 generation 同时隔离 late response；不得复制 server state。
 */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
