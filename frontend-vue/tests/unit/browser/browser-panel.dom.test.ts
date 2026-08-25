@@ -1,5 +1,5 @@
 /*
-  【文件职责】     固定 WP-05 BrowserPanel 的 live/static、REST、geometry、keyboard 与 IME 接线。
+  【文件职责】     固定BrowserPanel 的 live/static、REST、geometry、keyboard 与 IME 接线。
   【架构位置】     测试
   【主要导出】     BrowserPanel DOM 回归用例
   【依赖关系】     BrowserPanel.vue · Vue Query · fake WebSocket/Gateway fetch
@@ -110,7 +110,7 @@ function setImageGeometry(
     }) as DOMRect;
 }
 
-describe("BrowserPanel WP-05 behavior", () => {
+describe("BrowserPanel behavior", () => {
   beforeEach(() => {
     sockets.length = 0;
     animationFrames.length = 0;

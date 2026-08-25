@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-10 fact 表单、PATCH omitted/显式值与搜索筛选合同。
-  【架构位置】     WP-10 pure view-model test
+  【文件职责】     固定fact 表单、PATCH omitted/显式值与搜索筛选合同。
+  【架构位置】     pure view-model test
   【主要导出】     无；Vitest cases
   【依赖关系】     core/memory/view-model
   【边界与注意】   显式 0 不得被 truthy fallback 吞掉；空 memory 与无匹配结果必须区分。

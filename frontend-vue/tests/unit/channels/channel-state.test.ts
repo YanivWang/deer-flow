@@ -1,6 +1,6 @@
 /*
   【文件职责】     固定 provider capability 与用户 connection instance 分离后的展示模型。
-  【架构位置】     WP-08 纯逻辑测试
+  【架构位置】     纯逻辑测试
   【主要导出】     无；Vitest cases
   【依赖关系】     core/channels/state · query-keys
   【边界与注意】   connections 响应是用户连接状态真相；provider.connection_status 不能覆盖它。

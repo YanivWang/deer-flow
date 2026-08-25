@@ -1,5 +1,5 @@
 /*
-  【文件职责】     WP-06 HTML artifact 的完整文档与安全预览策略。
+  【文件职责】     HTML artifact 的完整文档与安全预览策略。
   【架构位置】     L3
   【主要导出】     isCompleteHtmlDocument / canRenderArtifactHtml
   【依赖关系】     无

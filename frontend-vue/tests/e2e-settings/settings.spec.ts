@@ -1,6 +1,6 @@
 /*
-  【文件职责】     以真实 Auth/CSRF/FastAPI/DeerMem/Noop/skills/MCP/Nuxt/Chromium 验证 WP-10。
-  【架构位置】     WP-10 real-backend acceptance
+  【文件职责】     以真实 Auth/CSRF/FastAPI/DeerMem/Noop/skills/MCP/Nuxt/Chromium 验证。
+  【架构位置】     real-backend acceptance
   【主要导出】     Playwright HTTP 与 browser scenarios
   【依赖关系】     run_replay_gateway.py · settings_e2e_fixture.py · Vue Settings UI
   【边界与注意】   仅初始 operator files/home marker 是 fixture；错误分类仍经过 production router/manager/storage。
@@ -90,7 +90,7 @@ function importDocument() {
         updatedAt: "2026-08-22",
       },
       personalContext: { summary: "", updatedAt: "" },
-      topOfMind: { summary: "WP-10", updatedAt: "2026-08-22" },
+      topOfMind: { summary: "Recent work", updatedAt: "2026-08-22" },
     },
     history: {
       recentMonths: { summary: "Settings parity", updatedAt: "2026-08-22" },
@@ -102,7 +102,7 @@ function importDocument() {
   };
 }
 
-test.describe.serial("WP-10 real Gateway settings", () => {
+test.describe.serial("real Gateway settings", () => {
   test("unauthenticated settings APIs and workspace use the shared login boundary", async ({
     page,
     request,

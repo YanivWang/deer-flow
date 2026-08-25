@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-09 Agent 创建状态机、有限验证、去重与 effect-scope cleanup。
-  【架构位置】     WP-09 Vue composable DOM test
+  【文件职责】     固定Agent 创建状态机、有限验证、去重与 effect-scope cleanup。
+  【架构位置】     Vue composable DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     useAgentCreationSession · GatewayResponseError · Vue effectScope
   【边界与注意】   run 与 getAgent 的晚到结果不得跨 agent/scope 回写；验证耗尽重试不得新建第二个 run。

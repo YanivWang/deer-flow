@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-10 Memory/Skills/MCP 的唯一 Vue Query owner、权限与精确 mutation。
-  【架构位置】     WP-10 Vue composable DOM test
+  【文件职责】     固定Memory/Skills/MCP 的唯一 Vue Query owner、权限与精确 mutation。
+  【架构位置】     Vue composable DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     useMemory · useSkillSettings · useMCPConfig · Vue Query
   【边界与注意】   不做 optimistic 成功；成功响应与 authoritative re-read 才更新同一 key。

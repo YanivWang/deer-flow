@@ -1,4 +1,4 @@
-/* WP-11 shell component contract: one toaster and keyboard-operable palette. */
+/* shell component contract: one toaster and keyboard-operable palette. */
 import { flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, h, provide } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

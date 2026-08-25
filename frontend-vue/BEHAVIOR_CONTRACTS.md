@@ -1,17 +1,16 @@
 # Vue 前端行为合同
 
 本文记录 `frontend-vue` 已满足后必须持续保持、以及为了替换 React 必须达到的产品和
-协议行为。它不是完成清单，也不表示每一条当前都已实现；真实实现以当前源码为准，
-未满足项及执行状态以 [PARITY_GAPS.md](PARITY_GAPS.md) 为准，验证入口以
-[README.md](README.md) 和各测试配置为准。
+协议行为。它不是完成清单，也不表示每一条当前都已实现；**真实实现以当前源码为准**，
+验证入口以 [README.md](README.md) 和各测试配置为准。
 
 全表 **A–S 共 19 组**。A–K 与 O–S 是产品行为，L 是 SSE/会话协议约束，M 是 Vue
 框架语义约束，N 是需要跨浏览器或跨层验证的模块。修改相关代码时必须同时更新本合同、
 差异清单和对应测试，不能用单次全绿替代逐项判断。
 
-当前 `PARITY_GAPS.md` 记录的本地源码差异均已关闭；这不代表生产 IdP、DNS/TLS、
-外层代理、外部 provider 或目标部署环境已经验收。新的未满足合同先加入
-`PARITY_GAPS.md`，再补合同和测试。
+本地门禁全绿**不代表**生产 IdP、DNS/TLS、外层代理、外部 provider 或目标部署环境
+已经验收。发现新的未满足行为时，直接在本文件加合同并补测试——不要另建待办清单，
+那种清单最后只会变成一份没人核对的自述。
 
 ---
 
@@ -95,7 +94,7 @@ Vue 通过 `Content-Location` 与 `Last-Event-ID` 恢复；不得改回 backend 
 | B13 | 实际 `MessageList → StreamMarkdown` 的全部链接必须经过统一 MarkdownLink；协议 allowlist 先于 citation/artifact 分支，危险 href 降级为不可点击文本；HTTP(S) 外链与 artifact/citation 使用 `target="_blank"` 和安全 `rel`                                                                                                        | 只在默认 Markdown pipeline 加 sanitizer 不能保护消息实际覆盖的 `components.a` 路径                                                                                                                                     |
 | B14 | HumanMessage 附件以持久化 `additional_kwargs.files` 为主，并兼容 `current_uploads` / `uploaded_files` 标签；图片走 thread artifact 预览，普通文件走安全新窗口下载                                                                                                                                                              | 刷新后的 UI 不能依赖 composer 本地 `File` 状态                                                                                                                                                                         |
 | B15 | 当前 React `MessageList` 调用点未向 `MessageListItem` 传入 `feedback`，因此 Vue 消息操作区也不得显示点赞/踩或触发 feedback mutation；历史消息仍可无损携带 Gateway feedback 字段                                                                                                                                                | core API/data contract 不等于已启用的产品入口；React 日后接通调用点时必须重新审计两端 UI                                                                                                                               |
-| B16 | human 与 assistant turn 都提供复制；citation sources 展开后显示去重 URL、domain、引用次数和单条 reference copy，且只接受 core 已归一化的 HTTP(S) URL                                                                                                                                                                           | 保持 WP-02 Markdown 安全合同，同时补齐消息操作                                                                                                                                                                         |
+| B16 | human 与 assistant turn 都提供复制；citation sources 展开后显示去重 URL、domain、引用次数和单条 reference copy，且只接受 core 已归一化的 HTTP(S) URL                                                                                                                                                                           | 保持 Markdown 安全合同，同时补齐消息操作                                                                                                                                                                               |
 | B17 | `thread.values.todos` 从 live snapshot 或持久化 thread state 读取，只渲染真实 `pending` / `in_progress` / `completed` 状态                                                                                                                                                                                                     | stream `values` 是 todos 的权威生产链，不在消息文本中反推                                                                                                                                                              |
 | B18 | token usage feature 由完整 models 响应的 `token_usage.enabled` 控制；线程最终 snapshot 为总量基线，只追加当前 active run 的 SSE usage，settled 后以最终 snapshot 替换；inline off 不渲染局部 usage                                                                                                                             | 避免刷新丢失、跨线程闪回和增量/最终值重复累计                                                                                                                                                                          |
 | B19 | processing 组必须先投影为唯一步骤视图：较早的非文本步骤折叠、最新 tool call/关联结果只显示一次、trailing reasoning 单独披露、其后答案保持在下方；不得逐条渲染 raw ToolMessage                                                                                                                                                  | 同一组同时画 AI tool call 与 ToolMessage 会重复工具名称、参数和结果，并让流式/settled 布局跳变                                                                                                                         |
@@ -438,7 +437,7 @@ raw trace、代理 smoke 和 replay Gateway 浏览器测试覆盖，不能只依
 | S4  | Gateway banner 与 route middleware 复用唯一 auth session Query。401 才跳登录；unavailable 不清 session/cookie。只有 unavailable→authenticated 边沿显示恢复通知，且 middleware 先填充 unavailable 时也不能丢边沿。                                                                                                                                                                             |
 | S5  | Share 只生成 React 等价稳定 URL 并写剪贴板，不调用不存在的 share API。Export 必须先读真实 thread state；无消息、Gateway、剪贴板和下载错误可见，临时 anchor/object URL 在成功和异常路径都清理。列表相对时间只来自有效 `updated_at`。                                                                                                                                                           |
 | S6  | `useWorkspaceChanges` 是 summary/detail 的唯一 server-state owner；key 必须包含 thread/run/include_files/include_diff 并透传 AbortSignal。切换 key 时旧请求被取消，late response 不得覆盖当前 thread/run。                                                                                                                                                                                    |
-| S7  | UI 完整显示 summary `truncated`、created/modified/deleted/symlink_created 和 binary/large/sensitive/truncated/symlink reason；summary/detail 错误保留 Gateway detail 并提供显式 retry。Mock M7 证明 DOM/焦点/浏览器边界；WP-11 real gate 证明真实 Auth/owner check/thread state/event store/response filtering/Nuxt/UI，受控 event 与注入 503 不等于生产网络或部署证明。                      |
+| S7  | UI 完整显示 summary `truncated`、created/modified/deleted/symlink_created 和 binary/large/sensitive/truncated/symlink reason；summary/detail 错误保留 Gateway detail 并提供显式 retry。Mock M7 证明 DOM/焦点/浏览器边界；real gate 证明真实 Auth/owner check/thread state/event store/response filtering/Nuxt/UI，受控 event 与注入 503 不等于生产网络或部署证明。                            |
 | S8  | 线程是否存在的判据是「后端还能不能给出这段会话」，**不是 checkpoint 是否存在**。`GET /threads/{id}` 与 `/state` 在上下文压缩后 404 属常态，此时 `/threads/{id}/messages/page` 仍完整返回历史。只有「元数据 403/404 确认缺失」**且**「历史已问出结论（含失败）」**且**「确实没有任何可见消息」三者同时成立，才放弃该 URL 退回新会话；其余错误一律不构成缺失，一次瞬时 5xx 不得把用户踢出会话。 |
 
 ---

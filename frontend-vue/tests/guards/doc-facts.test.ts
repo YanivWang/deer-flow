@@ -2,7 +2,7 @@
   【文件职责】     守住文档里那些**可核实的数字**与代码实际情况一致。
   【架构位置】     门禁测试
   【主要导出】     无；Vitest cases
-  【依赖关系】     I18N_INVENTORY.md · BEHAVIOR_CONTRACTS.md · PARITY_GAPS.md ·
+  【依赖关系】     I18N_INVENTORY.md · BEHAVIOR_CONTRACTS.md ·
                    baseline/*.json · tests/fixtures/streams/*.sse · i18n source guard
   【边界与注意】   与 `doc-references.test.ts` 分工：那边管「文档点名的东西存在吗」，
                    这边管「文档说的数字对吗」。两类都是同一种失效——文档在说谎，
@@ -12,7 +12,6 @@
                    - `I18N_INVENTORY.md` 说 82 个 SFC / 80 个产品 SFC，实际 158 / 156；
                    - 同一份文档说 976 个 key / 160 个 unused，实际 987 / 150；
                    - `BEHAVIOR_CONTRACTS.md` 开头写「A–Q 共 17 组」，实际已经是 A–S 19 组；
-                   - `PARITY_GAPS.md` 顶部写「未完成清单」，而 58 个 ID 全部 DONE；
                    - `openapi.snapshot.README.md` 说其余 24 个 router 无条件挂载，实际 22。
                    没有一条会让任何门禁变红，因为在此之前没有门禁读过文档。
 
@@ -63,19 +62,6 @@ describe("文档里的数字和代码一致", () => {
     expect(groups.length).toBeGreaterThan(10);
     const last = groups.at(-1);
     expect(doc).toContain(`全表 **A–${last} 共 ${groups.length} 组**`);
-  });
-
-  it("PARITY_GAPS 顶部的状态和总清单里的状态一致", () => {
-    const doc = read("PARITY_GAPS.md");
-    const rows = [...doc.matchAll(/^\| [A-Z]+-\d+\s*\| P\d\s*\| (\w+)\s*\|/gm)];
-    expect(rows.length).toBeGreaterThan(20);
-    const open = rows.filter((m) => m[1] !== "DONE");
-    if (open.length === 0) {
-      // 全 DONE 时不能再自称「未完成清单」——那会让读者以为还有活没干。
-      expect(doc).toContain(`第 5 节 ${rows.length} 个 ID **全部 DONE**`);
-    } else {
-      expect(doc).not.toContain("全部 DONE");
-    }
   });
 
   it("openapi 快照 README 的路径/schema/router 数与签入快照一致", () => {

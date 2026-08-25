@@ -1,5 +1,5 @@
 /*
-  【文件职责】     WP-12 locale/theme 的真实 Nuxt + Chromium 行为矩阵。
+  【文件职责】     locale/theme 的真实 Nuxt + Chromium 行为矩阵。
   【架构位置】     Vue-owned M7 Playwright
   【主要导出】     Playwright scenarios
   【依赖关系】     shared mock Gateway · app i18n/theme owners
@@ -20,7 +20,7 @@ function prepare(page: Page) {
     threads: [
       {
         thread_id: THREAD_ID,
-        title: "WP-12 dynamic title",
+        title: "dynamic title",
         messages: [
           { type: "human", id: "wp12-human", content: "用户动态内容 X12" },
           {
@@ -31,7 +31,7 @@ function prepare(page: Page) {
               {
                 id: "wp12-write",
                 name: "write_file",
-                args: { path: ARTIFACT_PATH, content: "# WP-12" },
+                args: { path: ARTIFACT_PATH, content: "# Heading" },
               },
             ],
           },
@@ -82,7 +82,7 @@ test("locale switch updates an open dialog, product surfaces, future errors and 
   });
   const row = page
     .locator('[data-sidebar="menu-item"]')
-    .filter({ hasText: "WP-12 dynamic title" });
+    .filter({ hasText: "dynamic title" });
   await row.getByRole("button", { name: zhCN.common.more }).click();
   await page.getByTestId("thread-share").click();
   await expect(

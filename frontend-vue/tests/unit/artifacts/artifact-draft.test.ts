@@ -1,5 +1,5 @@
 /*
-  【文件职责】     固定 WP-06 draft baseline/remote/conflict/save/discard 的纯状态转换。
+  【文件职责】     固定draft baseline/remote/conflict/save/discard 的纯状态转换。
   【架构位置】     测试
   【主要导出】     artifact draft reducer 回归
   【依赖关系】     app/core/artifacts/draft.ts

@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-10 memory import 的运行时 schema、extra 与 duplicate 合同。
-  【架构位置】     WP-10 pure contract test
+  【文件职责】     固定memory import 的运行时 schema、extra 与 duplicate 合同。
+  【架构位置】     pure contract test
   【主要导出】     无；Vitest cases
   【依赖关系】     core/memory/schema
   【边界与注意】   Gateway 对 partial/extra 较宽松；设置页按 React 完整导出结构预检，并显式提示会被 Gateway 忽略的 extra。
@@ -21,7 +21,7 @@ function memoryFixture() {
     user: {
       workContext: { summary: "Vue migration", updatedAt: "2026-08-22" },
       personalContext: { summary: "", updatedAt: "" },
-      topOfMind: { summary: "WP-10", updatedAt: "2026-08-22" },
+      topOfMind: { summary: "Recent work", updatedAt: "2026-08-22" },
     },
     history: {
       recentMonths: { summary: "Parity work", updatedAt: "2026-08-22" },

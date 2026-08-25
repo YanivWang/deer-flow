@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-12 locale 即时更新、cookie/lang 与已打开 Appearance UI 合同。
-  【架构位置】     WP-12 Vue DOM test
+  【文件职责】     固定locale 即时更新、cookie/lang 与已打开 Appearance UI 合同。
+  【架构位置】     Vue DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     app/plugins/i18n.ts · AppearanceSettings.vue
   【边界与注意】   plugin 提供 ref/computed；dialog 不缓存第二份词典或 locale。

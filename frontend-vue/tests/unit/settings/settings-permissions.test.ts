@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-10 session role 到 Skill/MCP 权限视图的单一映射。
-  【架构位置】     WP-10 pure permission test
+  【文件职责】     固定session role 到 Skill/MCP 权限视图的单一映射。
+  【架构位置】     pure permission test
   【主要导出】     无；Vitest cases
   【依赖关系】     core/settings/permissions
   【边界与注意】   auth-disabled 是 Gateway synthetic admin；普通用户 skill 可读但不可改，MCP 不可读写。

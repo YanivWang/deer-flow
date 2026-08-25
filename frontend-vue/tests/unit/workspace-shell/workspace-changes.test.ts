@@ -1,4 +1,4 @@
-/* WP-11 red/green contract for the Workspace Changes server-state owner. */
+/* red/green contract for the Workspace Changes server-state owner. */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchWorkspaceChanges } from "@/core/workspace-changes/api";

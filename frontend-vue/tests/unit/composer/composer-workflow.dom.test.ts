@@ -481,7 +481,7 @@ describe("composer submission and stale lifecycle", () => {
     await flushPromises();
     await goalWrapper
       .get("textarea[name='message']")
-      .setValue("/goal Ship WP-03");
+      .setValue("/goal Ship the release");
     await goalWrapper.get("form").trigger("submit");
     await vi.waitFor(() =>
       expect(mocks.fetchWithAuth).toHaveBeenCalledTimes(1),
@@ -491,10 +491,13 @@ describe("composer submission and stale lifecycle", () => {
       targetThreadId: "thread-2",
     });
     resolveGoal(
-      new Response(JSON.stringify({ goal: { objective: "Ship WP-03" } }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({ goal: { objective: "Ship the release" } }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
     await flushPromises();
     expect(goalWrapper.emitted("goalChange")).toBeUndefined();

@@ -1,4 +1,4 @@
-"""Controlled model boundary for the WP-09 real-Gateway Agent e2e.
+"""Controlled model boundary for the Vue real-Gateway Agent e2e.
 
 Auth, CSRF, FastAPI routers, LangGraph, setup_agent, persistence and model
 capability discovery remain production code. Only the external LLM is replaced

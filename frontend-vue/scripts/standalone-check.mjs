@@ -5,9 +5,8 @@
   【架构位置】     构建脚本
   【主要导出】     CLI：默认 --check；--json 输出机器可读记分牌
   【依赖关系】     git（已跟踪 + 未忽略的未跟踪文件）；无运行时依赖
-  【边界与注意】   BLOCKING 计数必须归零才算平替达成。COMMENT 计数是 P7 的清理目标，
-                   不阻断构建，但会一起打印，避免「注释里还写着对应哪个 React 文件」
-                   被当成已经解耦。
+  【边界与注意】   BLOCKING 计数必须归零才算平替达成。COMMENT / DOCS 计数不阻断构建，
+                   但会一起打印，避免「注释里还写着对应哪个 React 文件」被当成已经解耦。
 */
 
 import { execFileSync } from "node:child_process";
@@ -227,10 +226,8 @@ if (process.argv.includes("--json")) {
   console.log(
     `  BLOCKING 代码级跨应用引用 : ${blocking.length} 处 / ${byFile(blocking).length} 个文件`,
   );
-  console.log(
-    `  COMMENT  注释级引用       : ${comments.length} 处（P7 清理目标）`,
-  );
-  console.log(`  DOCS     文档级引用       : ${docs.length} 处（P7 清理目标）`);
+  console.log(`  COMMENT  注释级引用       : ${comments.length} 处（不阻断）`);
+  console.log(`  DOCS     文档级引用       : ${docs.length} 处（不阻断）`);
   console.log(
     `  DECLARED 声明的对照工具   : ${declared.length} 处 / ${Object.keys(CROSS_APP_BY_DESIGN).length} 个文件`,
   );

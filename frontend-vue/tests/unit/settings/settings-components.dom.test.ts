@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-10 Memory/Skills/MCP 设置页的预览确认、权限与 exact mutation DOM 行为。
-  【架构位置】     WP-10 Vue DOM test
+  【文件职责】     固定Memory/Skills/MCP 设置页的预览确认、权限与 exact mutation DOM 行为。
+  【架构位置】     Vue DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     Settings components · mocked query owners · i18n
   【边界与注意】   无效 import 必须零请求；普通用户只能读 skills 且不得触发 admin-only MCP I/O。
@@ -40,7 +40,7 @@ const memory: UserMemory = {
   user: {
     workContext: { summary: "Vue parity", updatedAt: "2026-08-22" },
     personalContext: { summary: "", updatedAt: "" },
-    topOfMind: { summary: "WP-10", updatedAt: "2026-08-22" },
+    topOfMind: { summary: "Recent work", updatedAt: "2026-08-22" },
   },
   history: {
     recentMonths: { summary: "Settings", updatedAt: "2026-08-22" },

@@ -1,5 +1,5 @@
 /*
-  【文件职责】     保留 React baseline poll cases，并固定 Vue WP-08 的到期即停语义。
+  【文件职责】     保留 React baseline poll cases，并固定 Vue 的到期即停语义。
   【架构位置】     L3 hand-maintained baseline adaptation
   【主要导出】     无；Vitest cases
   【依赖关系】     core/channels/connect-poll

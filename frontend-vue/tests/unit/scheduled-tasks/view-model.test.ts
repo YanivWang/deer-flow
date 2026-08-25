@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-07 全状态筛选、类型筛选与确定性 selection 恢复。
-  【架构位置】     WP-07 view-model test
+  【文件职责】     固定全状态筛选、类型筛选与确定性 selection 恢复。
+  【架构位置】     view-model test
   【主要导出】     无；Vitest cases
   【依赖关系】     core/scheduled-tasks/view-model
   【边界与注意】   task status 六种全部覆盖；筛选隐藏当前项时选择首个可见项。

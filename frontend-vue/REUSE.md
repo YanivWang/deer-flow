@@ -5,10 +5,9 @@ This guide describes the contracts that are reusable **from this checkout**. The
 supported paths today are a workspace dependency or a tarball produced with
 `pnpm pack`; do not write an npm registry version into another project.
 
-This guide is about reuse boundaries, not React/Vue product parity. Open L3
-replacement gaps are tracked in [PARITY_GAPS.md](PARITY_GAPS.md); a green L1/L2
-consumer test must not be used as evidence that the DeerFlow Vue application is
-ready to replace React.
+This guide is about reuse boundaries, not React/Vue product parity. A green
+L1/L2 consumer test must not be used as evidence that the DeerFlow Vue
+application is ready to replace React.
 
 ## 1. Choose the layer you need
 

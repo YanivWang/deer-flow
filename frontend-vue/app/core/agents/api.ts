@@ -3,7 +3,7 @@
   【架构位置】     L3 Agent HTTP contract
   【主要导出】     list/get/create/update/delete/check Agent · typed errors
   【依赖关系】     shared authenticated fetch · Gateway response error · config
-  【边界与注意】   WP-09 后由 Vue Query 持有 server state；本层只保留可中止 transport 与精确 status/detail。
+  【边界与注意】   后由 Vue Query 持有 server state；本层只保留可中止 transport 与精确 status/detail。
 */
 
 import {

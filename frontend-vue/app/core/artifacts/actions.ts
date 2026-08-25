@@ -1,5 +1,5 @@
 /*
-  【文件职责】     WP-06 open/download 前的 Gateway 可访问性预检与错误保真。
+  【文件职责】     open/download 前的 Gateway 可访问性预检与错误保真。
   【架构位置】     L3
   【主要导出】     ArtifactActionError / probeArtifactAction
   【依赖关系】     core/api/fetcher

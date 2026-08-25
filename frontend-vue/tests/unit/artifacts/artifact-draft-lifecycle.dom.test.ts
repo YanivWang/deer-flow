@@ -1,5 +1,5 @@
 /*
-  【文件职责】     固定 WP-06 唯一 draft owner 的 switch/close/route/beforeunload/exit 生命周期。
+  【文件职责】     固定唯一 draft owner 的 switch/close/route/beforeunload/exit 生命周期。
   【架构位置】     测试
   【主要导出】     useArtifactDraft DOM 生命周期回归
   【依赖关系】     app/composables/useArtifactDraft.ts

@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-08 settings UI 的多账号、删除边界、connect 指引与 Gateway 错误展示。
-  【架构位置】     WP-08 Vue DOM test
+  【文件职责】     固定settings UI 的多账号、删除边界、connect 指引与 Gateway 错误展示。
+  【架构位置】     Vue DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     ChannelConnections.vue · i18n · mocked composable owner
   【边界与注意】   provider runtime 删除与 connection instance 删除必须保持为两个明确动作。

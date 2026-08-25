@@ -1,6 +1,6 @@
 /*
-  【文件职责】     以真实 Auth/FastAPI/SQLite/LangGraph/setup_agent/Nuxt/Chromium 验证 WP-09 Agent lifecycle。
-  【架构位置】     WP-09 real-backend acceptance
+  【文件职责】     以真实 Auth/FastAPI/SQLite/LangGraph/setup_agent/Nuxt/Chromium 验证Agent lifecycle。
+  【架构位置】     real-backend acceptance
   【主要导出】     Playwright HTTP 与 browser scenarios
   【依赖关系】     run_replay_gateway.py · agent_e2e_fixture.py · Vue Agent UI
   【边界与注意】   LLM 受控；ToolMessage、router、store、用户隔离、Auth/CSRF 与 UI 均为真实实现。
@@ -76,7 +76,7 @@ async function setEnabled(context: BrowserContext, enabled: boolean) {
     .toMatchObject({ agents_api: { enabled } });
 }
 
-test.describe.serial("WP-09 real Gateway Agent lifecycle", () => {
+test.describe.serial("real Gateway Agent lifecycle", () => {
   test("unauthenticated API and workspace navigation use the real shared login boundary", async ({
     page,
     request,

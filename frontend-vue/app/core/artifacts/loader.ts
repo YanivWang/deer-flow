@@ -1,5 +1,5 @@
 /*
-  【文件职责】     WP-06 有界加载正式 UTF-8 artifact，并保留 Gateway 错误与 revision。
+  【文件职责】     有界加载正式 UTF-8 artifact，并保留 Gateway 错误与 revision。
   【架构位置】     L3
   【主要导出】     ARTIFACT_PREVIEW_MAX_BYTES / loadArtifactContent / loadArtifactContentFromToolCall
   【依赖关系】     见下方 import。

@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-07 scheduled-task HTTP method/path/query/body/error 合同。
-  【架构位置】     WP-07 API contract test
+  【文件职责】     固定scheduled-task HTTP method/path/query/body/error 合同。
+  【架构位置】     API contract test
   【主要导出】     无；Vitest cases
   【依赖关系】     core/scheduled-tasks/api · mocked fetcher
   【边界与注意】   不对 Gateway 增加 interval/enabled/schedule_type PATCH 等字段。

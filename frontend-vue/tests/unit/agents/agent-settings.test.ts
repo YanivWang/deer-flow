@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-09 模型目录、capability 与 Agent update exact payload。
-  【架构位置】     WP-09 纯逻辑测试
+  【文件职责】     固定模型目录、capability 与 Agent update exact payload。
+  【架构位置】     纯逻辑测试
   【主要导出】     无；Vitest cases
   【依赖关系】     core/agents/settings · core/models/types
   【边界与注意】   unsupported capability 必须显式清空旧值；false/0 不得被 truthy fallback 吞掉。

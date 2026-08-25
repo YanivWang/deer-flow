@@ -1,5 +1,5 @@
 /*
-  【文件职责】     WP-06 文本 artifact 的 baseline、remote、draft 与冲突状态机。
+  【文件职责】     文本 artifact 的 baseline、remote、draft 与冲突状态机。
   【架构位置】     L3
   【主要导出】     ArtifactDraftRecord 及纯状态转换
   【依赖关系】     无

@@ -1,4 +1,4 @@
-/* WP-11 stale/abort contract for the single Workspace Changes Query owner. */
+/* stale/abort contract for the single Workspace Changes Query owner. */
 import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query";
 import { flushPromises, mount } from "@vue/test-utils";
 import { computed, defineComponent, ref } from "vue";

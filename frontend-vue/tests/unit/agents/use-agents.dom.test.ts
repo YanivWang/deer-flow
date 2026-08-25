@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-09 Agent Vue Query 的 feature gate、single owner 与 mutation cache sync。
-  【架构位置】     WP-09 Vue composable DOM test
+  【文件职责】     固定Agent Vue Query 的 feature gate、single owner 与 mutation cache sync。
+  【架构位置】     Vue composable DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     useAgents · QueryClient · mocked Agent API
   【边界与注意】   disabled 不请求；query retry=false；更新/删除通过同一 query identity 回写并失效。

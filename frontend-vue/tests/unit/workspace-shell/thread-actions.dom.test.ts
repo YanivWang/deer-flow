@@ -1,4 +1,4 @@
-/* WP-11 red/green contract for thread share/export and updated time. */
+/* red/green contract for thread share/export and updated time. */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { downloadAsFile } from "@/core/threads/export";

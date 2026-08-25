@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-12 双 locale key、代表性产品域与 formatter 动态内容合同。
-  【架构位置】     WP-12 Vue unit test
+  【文件职责】     固定双 locale key、代表性产品域与 formatter 动态内容合同。
+  【架构位置】     Vue unit test
   【主要导出】     无；Vitest cases
   【依赖关系】     两份 typed dictionaries
   【边界与注意】   动态文件名、用户内容、URL 与参数值必须原样保留。

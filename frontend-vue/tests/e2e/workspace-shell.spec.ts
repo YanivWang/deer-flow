@@ -1,5 +1,5 @@
 /*
-  【文件职责】     WP-11 workspace shell/thread actions/changes 的真实 Nuxt + Chromium 合同。
+  【文件职责】     workspace shell/thread actions/changes 的真实 Nuxt + Chromium 合同。
   【架构位置】     Vue-owned M7 Playwright
   【主要导出】     Playwright scenarios
   【依赖关系】     shared mock Gateway · Vue workspace DOM

@@ -1,5 +1,5 @@
 /*
-  WP-11 red/green contract for the workspace-level shell owners.
+  red/green contract for the workspace-level shell owners.
 */
 import { describe, expect, it, vi } from "vitest";
 

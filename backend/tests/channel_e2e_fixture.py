@@ -1,4 +1,4 @@
-"""Controlled external-channel boundary for the WP-08 real-Gateway e2e.
+"""Controlled external-channel boundary for the Vue real-Gateway channel e2e.
 
 The production FastAPI app, auth/CSRF middleware, SQLAlchemy repository and
 channel routes remain real. Only the external Slack/Telegram worker is replaced

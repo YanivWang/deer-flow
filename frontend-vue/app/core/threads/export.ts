@@ -3,7 +3,7 @@
   【架构位置】     L3
   【主要导出】     ExportOptions / ThreadExportFormat / formatThreadAsMarkdown / formatThreadAsJSON / downloadAsFile / exportThreadAsMarkdown 等 8 个
   【依赖关系】     message utils · thread utils · browser Blob/URL
-  【边界与注意】   ADAPTED：沿用 React 格式/MIME；WP-11 用 finally 保证异常下载也清理 DOM/URL。
+  【边界与注意】   ADAPTED：沿用 React 格式/MIME；用 finally 保证异常下载也清理 DOM/URL。
 */
 
 import type { Message } from "@/core/types/message";

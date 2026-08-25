@@ -1,5 +1,5 @@
 /*
-  【文件职责】     以 Vue 自有 DOM 固定 WP-05 browser live/static、输入 wire 与 REST 恢复路径。
+  【文件职责】     以 Vue 自有 DOM 固定browser live/static、输入 wire 与 REST 恢复路径。
   【架构位置】     测试
   【主要导出】     Playwright Vue browser-control scenarios
   【依赖关系】     frontend shared mock API · Playwright WebSocketRoute · Vue BrowserPanel

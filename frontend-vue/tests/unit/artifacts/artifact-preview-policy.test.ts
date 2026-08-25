@@ -1,5 +1,5 @@
 /*
-  【文件职责】     固定 WP-06 HTML preview 的完整性、Range 截断和 write-file 边界。
+  【文件职责】     固定HTML preview 的完整性、Range 截断和 write-file 边界。
   【架构位置】     测试
   【主要导出】     canRenderArtifactHtml 回归
   【依赖关系】     app/core/artifacts/preview-policy.ts

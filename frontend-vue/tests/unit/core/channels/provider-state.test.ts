@@ -3,7 +3,7 @@
   【架构位置】     L1 core unit test
   【主要导出】     Vitest cases
   【依赖关系】     core/channels/provider-state
-  【边界与注意】   WP-08 适配：connection_status 不是 connect capability，也不能阻止多账号新增。
+  【边界与注意】   适配：connection_status 不是 connect capability，也不能阻止多账号新增。
 */
 
 import { describe, expect, it } from "vitest";

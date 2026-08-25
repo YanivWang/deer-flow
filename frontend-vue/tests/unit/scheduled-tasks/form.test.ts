@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-07 scheduled-task 表单、payload、context、recipe 与时区转换合同。
-  【架构位置】     WP-07 纯逻辑测试
+  【文件职责】     固定scheduled-task 表单、payload、context、recipe 与时区转换合同。
+  【架构位置】     纯逻辑测试
   【主要导出】     无；Vitest cases
   【依赖关系】     core/scheduled-tasks/form · recipes · types
   【边界与注意】   Gateway 只支持 once/cron；PATCH 不得出现 schedule_type/enabled/non_interactive。

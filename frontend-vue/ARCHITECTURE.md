@@ -4,9 +4,26 @@
 迁移过程和单次验收结果不属于本文件。
 
 > **状态边界：** 本文件描述已经存在或应保持的架构边界，不表示 L3 产品能力已与 React
-> 完全对齐。当前源码确认的 API 消费、页面、流式、交互和安全差异统一维护在
-> [`PARITY_GAPS.md`](PARITY_GAPS.md)。如果架构描述与实际源码不一致，以当前源码为准，
-> 并在同一改动中修正文档。
+> 完全对齐。如果架构描述与实际源码不一致，**以当前源码为准**，并在同一改动中修正文档。
+> 完成度不由任何文档自述，只由代码、测试和门禁证明。
+
+## 不需要对齐 React 的范围
+
+以下都是**显式豁免，不是待办**——不要因为「React 有」就搬进 Vue：
+
+- React 营销落地页；Vue 的 `/`、`/pricing`、`/about` 是自定义占位页；
+- React 文档站、博客、Nextra 内容和相关依赖；
+- `?mock=true`、`public/demo`、Next mock route handlers 等静态录制回放产品模式；
+- 没有产品消费者的 `@xyflow/react` canvas 组件；
+- Next Route Handler 与 Nuxt/Nitro server route 的框架实现形式——但它们产生的
+  HTTP 行为必须一致；
+- landing 独占或已无消费者的组件和依赖；
+- 两边图标库、组件库内部 DOM、React Context/hook 的具体写法；
+- 不影响布局、键盘、焦点、可访问性、测试选择器或外部集成的内部组件拆分差异。
+
+**仍需严格对齐**的是：URL、method、query、headers、body、响应解析、错误信息、
+缓存失效、SSE/WS 事件、用户状态、页面能力、交互顺序、语义 DOM、键盘和焦点行为、
+响应式布局。
 
 ## 运行拓扑
 
@@ -200,9 +217,8 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
 
 ## 状态所有权
 
-以下所有权边界当前**已经全部落地**：[`PARITY_GAPS.md`](PARITY_GAPS.md) 第 5 节的
-58 个 ID 均为 DONE，缓存失效、thread-scoped composer 与 sidecar 生命周期不再是待办。
-它们仍写在这里，是因为这是必须**持续保持**的边界，不是因为还没做完。
+以下所有权边界写在这里，是因为它们必须**持续保持**——缓存失效、thread-scoped
+composer 与 sidecar 生命周期都已经落地，代码和测试是唯一依据。
 
 - 线程列表、历史页、models、skills、session 和 token usage：TanStack Query 缓存；`useThreads.ts` 负责主列表的
   raw-offset 分页和 sidecar 过滤，失效/删除镜像规则在 `app/core/threads/cache-invalidation.ts`。

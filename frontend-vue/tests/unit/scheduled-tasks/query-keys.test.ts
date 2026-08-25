@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-07 query key 与 mutation invalidation 的唯一所有权。
-  【架构位置】     WP-07 cache contract test
+  【文件职责】     固定query key 与 mutation invalidation 的唯一所有权。
+  【架构位置】     cache contract test
   【主要导出】     无；Vitest cases
   【依赖关系】     core/scheduled-tasks/query-keys
   【边界与注意】   task/thread/runs key 必须可区分，trigger 必须包含对应 runs。

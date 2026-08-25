@@ -48,7 +48,7 @@ gateway's own run/event stores using the request's auth context, so the real
 #3354 frontend fix turns this spec red.
 
 The same replay-only seeder accepts an optional controlled
-`workspace_changes` payload for the Vue WP-11 acceptance gate. It writes a
+`workspace_changes` payload for the Vue workspace-changes acceptance gate. It writes a
 normal `category="workspace"` event into the Gateway's own run-event store; the
 test then reads it only through the production Auth/owner-check and
 `GET /api/threads/{thread}/runs/{run}/workspace-changes` path. The fixture does

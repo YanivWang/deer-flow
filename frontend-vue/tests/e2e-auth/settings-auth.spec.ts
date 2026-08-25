@@ -1,6 +1,6 @@
 /*
   【文件职责】     在 auth-enabled M7 环境固定 Settings 的 admin/user/401/403 浏览器权限边界。
-  【架构位置】     WP-10 M7 auth Playwright contract
+  【架构位置】     auth Playwright contract
   【主要导出】     Playwright scenarios
   【依赖关系】     real Vue auth/session query · mocked HTTP roles
   【边界与注意】   user role 不得触发 admin-only MCP I/O；401 仍只由共享 fetch boundary 跳登录。

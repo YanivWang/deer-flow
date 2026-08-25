@@ -1,5 +1,5 @@
 /*
-  【文件职责】     固定 WP-06 ArtifactPanel 的文件策略、完整加载、动作、错误与 stale DOM 合同。
+  【文件职责】     固定ArtifactPanel 的文件策略、完整加载、动作、错误与 stale DOM 合同。
   【架构位置】     测试
   【主要导出】     ArtifactPanel DOM 回归
   【依赖关系】     ArtifactPanel · useArtifactDraft

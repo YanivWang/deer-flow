@@ -1,6 +1,6 @@
 /*
-  【文件职责】     以真实 FastAPI Gateway/SQLite/HTTP/Nuxt/Chromium 验证 WP-07 调度合同。
-  【架构位置】     WP-07 real-backend acceptance
+  【文件职责】     以真实 FastAPI Gateway/SQLite/HTTP/Nuxt/Chromium 验证调度合同。
+  【架构位置】     real-backend acceptance
   【主要导出】     Playwright HTTP 与 browser scenarios
   【依赖关系】     run_replay_gateway.py · scheduled-task Gateway routers/repos/service · Vue page
   【边界与注意】   Gateway/Auth/DB/run lifecycle 真实；agent model 是签入 replay fixture，非真实外部模型。

@@ -1,4 +1,4 @@
-/* WP-11 thread action menu owns share/export request and visible failure state. */
+/* thread action menu owns share/export request and visible failure state. */
 import { flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, h, provide } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

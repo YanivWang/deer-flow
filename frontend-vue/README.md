@@ -7,9 +7,8 @@ application. It uses the same Gateway surface as `../frontend` and has
 implementations for the chat workspace, artifacts, sidecar, browser control,
 agents, channels, integrations, scheduled tasks, settings, goal/mode,
 authentication, Showcase, mobile layouts and the production container. The
-source-backed request/response-consumption and product-behavior packages are
-locally closed; their executable checklist and evidence are maintained in
-[PARITY_GAPS.md](PARITY_GAPS.md).
+source-backed request/response-consumption and product-behavior work is locally
+closed, with the code, tests and gates as the only evidence.
 
 React remains the default production hostname; Vue is selected only by
 `DEER_FLOW_VUE_HOSTNAME`. Local parity evidence does not authorize a default
@@ -19,9 +18,6 @@ traffic.
 
 ## Documentation
 
-- [PARITY_GAPS.md](PARITY_GAPS.md): source-backed React/Vue replacement audit,
-  execution order, acceptance criteria, completion evidence and remaining
-  environment risks. A green local gate is not production-cutover evidence.
 - [ARCHITECTURE.md](ARCHITECTURE.md): current layers, runtime flow, state
   ownership, proxy and authentication boundaries.
 - [BEHAVIOR_CONTRACTS.md](BEHAVIOR_CONTRACTS.md): product, streaming, ordering,

@@ -1,6 +1,6 @@
 /*
-  【文件职责】     以真实 Auth/FastAPI/SQLite/HTTP/Nuxt/Chromium 验证 WP-08 channel lifecycle。
-  【架构位置】     WP-08 real-backend acceptance
+  【文件职责】     以真实 Auth/FastAPI/SQLite/HTTP/Nuxt/Chromium 验证channel lifecycle。
+  【架构位置】     real-backend acceptance
   【主要导出】     Playwright HTTP 与 browser scenarios
   【依赖关系】     run_replay_gateway.py · channel_e2e_fixture.py · ChannelConnections.vue
   【边界与注意】   外部 worker/callback 受控；鉴权、CSRF、router、repository、HTTP、UI 均为真实实现。

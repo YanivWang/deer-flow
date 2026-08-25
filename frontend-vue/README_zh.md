@@ -5,8 +5,7 @@
 `frontend-vue` 是与 React 共存的 DeerFlow Nuxt 4 实现，与 `../frontend` 共用同一套
 Gateway 接口，并已建立聊天工作区、产物、sidecar、浏览器控制、智能体、渠道、集成、
 定时任务、设置、目标/模式、认证、Showcase、移动端布局和生产容器。基于当前源码的 API
-响应消费与产品行为工作包已在本地闭环，执行清单与证据统一维护在
-[PARITY_GAPS.md](PARITY_GAPS.md)。
+响应消费与产品行为工作已在本地闭环——代码、测试和门禁是唯一依据。
 
 生产环境目前仍由 React hostname 作为默认入口，只有 `DEER_FLOW_VUE_HOSTNAME` 选择
 Vue。本地 parity 证据不代表可以直接切换默认入口；公网 DNS、TLS、外层代理信任、
@@ -14,8 +13,6 @@ Vue。本地 parity 证据不代表可以直接切换默认入口；公网 DNS�
 
 ## 文档入口
 
-- [PARITY_GAPS.md](PARITY_GAPS.md)：基于当前源码的 React/Vue 可平替审计、实施顺序、
-  验收标准、完成证据与剩余环境风险；本地门禁全绿不是生产切流证据。
 - [ARCHITECTURE.md](ARCHITECTURE.md)：当前分层、运行数据流、状态所有权、代理与认证边界。
 - [BEHAVIOR_CONTRACTS.md](BEHAVIOR_CONTRACTS.md)：修改时必须保留的产品、流式、顺序、
   缓存、面板与 Vue 语义。

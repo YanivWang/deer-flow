@@ -7,8 +7,8 @@
                    （m0/m4a/m4b/m5/m6/m7/wp07…wp11 → e2e/e2e-stream/e2e-real/
                    e2e-browser/e2e-scheduled/…），同时删掉了整套迁移台账，
                    于是 `migration-check` 也不复存在。**文档一个字没改。**
-                   结果是 README、ARCHITECTURE、REUSE 和 PARITY_GAPS 的「验证命令」
-                   里躺着 20 个名字、上百处引用，照着敲全都是 make 的
+                   结果是 README、ARCHITECTURE、REUSE 和当时的差异清单里躺着
+                   20 个名字、上百处引用，照着敲全都是 make 的
                    “No rule to make target”——而所有门禁一路全绿，因为没有任何
                    一条检查读过文档。
 
@@ -16,11 +16,10 @@
                    只写 target 名、不写成完整命令，否则它会把自己判红。）
                    为此要把两类文本分开：
 
-                   - 指令（README/ARCHITECTURE/REUSE/PARITY_GAPS §9/各 README 配方）
-                     必须只出现当前真实存在的 target；
-                   - 历史记录（「本工作包实测」「最终顺序门禁」「完成证据」）写的是
-                     **当时**跑了哪条命令，是既成事实。PARITY_GAPS §12 明写
-                     「在此追加，不删除历史记录」，把它们改成今天的名字等于伪造记录。
+                   - 指令（README/ARCHITECTURE/REUSE/各 README 配方）必须只出现
+                     当前真实存在的 target；
+                   - 历史记录写的是**当时**跑了哪条命令，是既成事实，把它们改成
+                     今天的名字等于伪造记录。
 
                    历史区用 `<!-- historical-commands:begin/end -->` 显式圈出，
                    不用行号（行号会随任何一次编辑失效），也不靠「看起来像历史」猜。

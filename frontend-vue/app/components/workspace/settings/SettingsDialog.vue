@@ -4,7 +4,7 @@
   【架构位置】     L3 workspace settings shell
   【主要导出】     默认 SettingsDialog 组件
   【依赖关系】     ui/dialog · ui/scroll-area · useSettingsDialog · vue-router · settings panels
-  【边界与注意】   useSettingsDialog 是唯一 UI owner；各 WP-10 Query owner 保持在子面板内。
+  【边界与注意】   useSettingsDialog 是唯一 UI owner；各 Query owner 保持在子面板内。
 */
 import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
 import {

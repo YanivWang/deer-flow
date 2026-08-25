@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-08 Vue Query owner 的 scope、poll、mutation、刷新与 cleanup。
-  【架构位置】     WP-08 Vue DOM/composable test
+  【文件职责】     固定Vue Query owner 的 scope、poll、mutation、刷新与 cleanup。
+  【架构位置】     Vue DOM/composable test
   【主要导出】     无；Vitest cases
   【依赖关系】     @tanstack/vue-query · composables/useChannelConnections
   【边界与注意】   旧 scope 请求只能写旧 key；dispose 必须 abort query 与 poll observer。

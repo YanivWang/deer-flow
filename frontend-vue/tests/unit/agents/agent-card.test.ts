@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-09 Agent 卡片的 model/skills/tool-groups 纯展示模型。
-  【架构位置】     WP-09 纯逻辑测试
+  【文件职责】     固定Agent 卡片的 model/skills/tool-groups 纯展示模型。
+  【架构位置】     纯逻辑测试
   【主要导出】     无；Vitest cases
   【依赖关系】     core/agents/presentation · core/agents/types
   【边界与注意】   null/empty 是不同真实合同；多个值和重复值保持 Gateway 响应顺序。

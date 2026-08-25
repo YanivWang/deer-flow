@@ -1,5 +1,5 @@
 /*
-  【文件职责】     WP-06 artifact 显式文件分类与能力策略。
+  【文件职责】     artifact 显式文件分类与能力策略。
   【架构位置】     L3
   【主要导出】     classifyArtifact / canLoadArtifactText / canSaveArtifactText / canInstallSkillArtifact
   【依赖关系】     无

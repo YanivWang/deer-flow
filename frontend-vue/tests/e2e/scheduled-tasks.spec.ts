@@ -1,6 +1,6 @@
 /*
   【文件职责】     Vue-owned scheduled-task 产品交互、payload、筛选、分页与错误 E2E。
-  【架构位置】     WP-07 Playwright contract
+  【架构位置】     Playwright contract
   【主要导出】     Playwright scenarios
   【依赖关系】     shared mock Gateway · Vue scheduled-task page/components
   【边界与注意】   Mock 只验证确定性 UI/HTTP 边界；真实 FastAPI 语义由 wp07-real-backend suite 证明。

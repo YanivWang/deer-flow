@@ -1,6 +1,6 @@
 /*
   【文件职责】     固定 channel connect poll 的成功、过期、异常 expires 与取消清理。
-  【架构位置】     WP-08 纯生命周期测试
+  【架构位置】     纯生命周期测试
   【主要导出】     无；Vitest cases
   【依赖关系】     core/channels/connect-poll
   【边界与注意】   cancel 必须 abort 在途请求；非法 expires 也必须落到有限 deadline。

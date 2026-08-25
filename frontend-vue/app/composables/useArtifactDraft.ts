@@ -1,5 +1,5 @@
 /*
-  【文件职责】     WP-06 单一 artifact draft、编辑、离开确认与 beforeunload 生命周期 owner。
+  【文件职责】     单一 artifact draft、编辑、离开确认与 beforeunload 生命周期 owner。
   【架构位置】     L3（DeerFlow artifacts）
   【主要导出】     useArtifactDraft / ArtifactDraftOwner
   【依赖关系】     core/artifacts/draft · vue-router

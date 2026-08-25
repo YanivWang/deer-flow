@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-09 Agent card 与 capability settings 的用户可见 DOM/exact payload。
-  【架构位置】     WP-09 Vue DOM test
+  【文件职责】     固定Agent card 与 capability settings 的用户可见 DOM/exact payload。
+  【架构位置】     Vue DOM test
   【主要导出】     无；Vitest cases
   【依赖关系】     AgentCard · AgentSettingsDialog · i18n
   【边界与注意】   badges 保序不去重；unsupported capability 提交 null 清除，不保留 stale override。

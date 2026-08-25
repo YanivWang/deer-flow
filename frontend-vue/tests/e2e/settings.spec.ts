@@ -1,6 +1,6 @@
 /*
   【文件职责】     Vue-owned Memory/Skills/MCP settings 的 Mock Gateway 浏览器合同。
-  【架构位置】     WP-10 M7 Playwright contract
+  【架构位置】     Playwright contract
   【主要导出】     Playwright scenarios
   【依赖关系】     shared mock Gateway · Vue settings components
   【边界与注意】   Mock 只证明 deterministic UI/HTTP；Auth/CSRF/真实 manager/config write 由 wp10-real-backend 证明。
@@ -18,7 +18,7 @@ function memoryDocument() {
     user: {
       workContext: { summary: "Vue parity", updatedAt: "2026-08-22" },
       personalContext: { summary: "", updatedAt: "" },
-      topOfMind: { summary: "WP-10", updatedAt: "2026-08-22" },
+      topOfMind: { summary: "Recent work", updatedAt: "2026-08-22" },
     },
     history: {
       recentMonths: { summary: "Settings", updatedAt: "2026-08-22" },

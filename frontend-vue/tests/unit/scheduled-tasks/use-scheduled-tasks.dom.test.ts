@@ -1,6 +1,6 @@
 /*
-  【文件职责】     验证 WP-07 Vue Query 在 task 切换与 scope dispose 后拒绝 stale 回写并停止轮询。
-  【架构位置】     WP-07 Vue DOM/composable test
+  【文件职责】     验证Vue Query 在 task 切换与 scope dispose 后拒绝 stale 回写并停止轮询。
+  【架构位置】     Vue DOM/composable test
   【主要导出】     无；Vitest cases
   【依赖关系】     @tanstack/vue-query · composables/useScheduledTasks
   【边界与注意】   不使用组件级 timer；poll 归 query observer，unmount 后必须停止。

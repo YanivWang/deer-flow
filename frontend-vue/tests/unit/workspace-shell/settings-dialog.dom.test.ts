@@ -1,4 +1,4 @@
-/* WP-11 settings modal DOM/history contract. */
+/* settings modal DOM/history contract. */
 import { flushPromises, mount } from "@vue/test-utils";
 import { reactive } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

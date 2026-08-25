@@ -1,4 +1,4 @@
-"""Hermetic filesystem seed for WP-10 real settings acceptance.
+"""Hermetic filesystem seed for the Vue real-settings acceptance gate.
 
 This fixture only prepares operator-owned inputs before the production Gateway
 is imported.  Auth, CSRF, MemoryManager, skills/MCP routers, atomic config
@@ -21,7 +21,7 @@ def configure_settings_memory_backend(config_yaml: str, backend: str) -> str:
     """Select a checked-in memory backend without adding a second YAML key.
 
     This helper is deliberately limited to the two backends exercised by the
-    WP-10 acceptance gate.  It edits the hermetic replay config before the
+    acceptance gate.  It edits the hermetic replay config before the
     production Gateway imports its config singleton; it does not replace or
     patch the production manager factory.
     """

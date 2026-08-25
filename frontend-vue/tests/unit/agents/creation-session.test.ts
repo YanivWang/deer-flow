@@ -1,6 +1,6 @@
 /*
-  【文件职责】     固定 WP-09 setup_agent ToolMessage 识别与隐藏保存请求合同。
-  【架构位置】     WP-09 纯逻辑测试
+  【文件职责】     固定setup_agent ToolMessage 识别与隐藏保存请求合同。
+  【架构位置】     纯逻辑测试
   【主要导出】     无；Vitest cases
   【依赖关系】     core/agents/creation-session · core/types/message
   【边界与注意】   只接受真实 tool call/result 关联与 ToolMessage.status；assistant 文本不是成功证据。

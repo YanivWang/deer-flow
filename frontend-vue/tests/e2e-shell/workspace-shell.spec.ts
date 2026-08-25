@@ -1,6 +1,6 @@
 /*
-  【文件职责】     以真实 Auth/owner check/thread state/event store/Gateway/Nuxt/Chromium 验证 WP-11。
-  【架构位置】     WP-11 real-backend acceptance
+  【文件职责】     以真实 Auth/owner check/thread state/event store/Gateway/Nuxt/Chromium 验证。
+  【架构位置】     real-backend acceptance
   【主要导出】     Playwright HTTP 与 browser scenarios
   【依赖关系】     run_replay_gateway.py · seed_runs_router.py · Vue workspace shell
   【边界与注意】   workspace event 是隔离 fixture；唯一网络故障注入只用于 unavailable→真实 session 恢复。
@@ -20,7 +20,7 @@ const THREAD_ID = "00000000-0000-0000-0000-000000001114";
 const RUN_ID = "run-wp11-real-workspace-changes";
 const PASSWORD = "very-strong-password-123";
 const ADMIN_EMAIL = "e2e-wp11-admin@example.com";
-const TITLE = "WP-11 real shell";
+const TITLE = "real shell";
 const QUESTION = "Verify the real workspace shell boundary";
 const ANSWER = "The production Gateway contract is connected.";
 

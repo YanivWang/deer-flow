@@ -1,4 +1,4 @@
-"""Contracts for the explicitly enabled WP-10 real-settings fixture."""
+"""Contracts for the explicitly enabled Vue real-settings fixture."""
 
 from pathlib import Path
 
