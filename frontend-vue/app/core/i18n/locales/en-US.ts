@@ -1385,8 +1385,6 @@ export const enUS: Translations = {
     completeSetup: "Complete Setup",
   },
   marketing: {
-    aboutPlaceholder: "About placeholder",
-    pricingPlaceholder: "Pricing placeholder",
     badge: "Super Agent, now with public examples",
     showcaseDescription:
       "Explore real DeerFlow conversations in a safe, read-only showcase.",

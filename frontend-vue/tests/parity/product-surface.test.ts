@@ -43,7 +43,7 @@ function normalizedRoute(path: string) {
 }
 
 describe.skipIf(!upstreamPresent)("React-observable product surface", () => {
-  it("does not expose an unowned Vue page outside documented marketing fixtures", () => {
+  it("does not expose a Vue page React does not have", () => {
     const reactRoutes = new Set(
       filesBelow(reactPages)
         .filter((file) => file.endsWith("/page.tsx"))
@@ -55,12 +55,10 @@ describe.skipIf(!upstreamPresent)("React-observable product surface", () => {
       .filter((file) => !file.startsWith("__m0/"))
       .map(normalizedRoute);
 
-    const documentedExceptions = new Set(["/about", "/pricing"]);
-    expect(
-      vueRoutes.filter(
-        (route) => !reactRoutes.has(route) && !documentedExceptions.has(route),
-      ),
-    ).toEqual([]);
+    // 没有例外集合。`/about` 与 `/pricing` 曾经列在这里，而 React 从来没有这两条
+    // 路由——它的落地页导航只链到 `/{lang}/docs` 与 `/blog/posts`。一个写死的
+    // 例外集合就是豁免，只是换了个不带「豁免」字样的名字，按关键词搜不到。
+    expect(vueRoutes.filter((route) => !reactRoutes.has(route))).toEqual([]);
   });
 
   it("does not expose feedback until the React message-list call site does", () => {

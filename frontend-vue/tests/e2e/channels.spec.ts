@@ -747,7 +747,7 @@ test.describe("IM channels", () => {
         body: JSON.stringify({
           provider: "telegram",
           mode: "deep_link",
-          url: "/about",
+          url: "/login",
           code: "deep123",
           instruction: "Finish the connection in Telegram.",
           expires_in: 30,
@@ -762,7 +762,7 @@ test.describe("IM channels", () => {
       .getByRole("button", { name: "Connect" })
       .click();
     const popup = await popupPromise;
-    await popup.waitForURL("**/about");
+    await popup.waitForURL("**/login**");
     await expect(
       page.getByRole("dialog", { name: "Connect channel" }),
     ).toContainText("Finish the connection in Telegram.");
@@ -830,7 +830,7 @@ test.describe("IM channels", () => {
     const readsAtExpiry = connectionReads;
     await page.waitForTimeout(2500);
     expect(connectionReads).toBe(readsAtExpiry);
-    await page.goto("/about");
+    await page.goto("/");
     await page.waitForTimeout(2500);
     expect(connectionReads).toBe(readsAtExpiry);
   });

@@ -33,7 +33,7 @@ describe("decideAuthNavigation", () => {
   it("allows public routes without authentication", () => {
     expect(
       decideAuthNavigation({
-        path: "/about",
+        path: "/",
         authDisabled: false,
         authenticated: false,
       }),

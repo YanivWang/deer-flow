@@ -83,9 +83,9 @@ test("command palette owns exact shortcuts, keyboard navigation and cleanup", as
   await page.keyboard.press("Control+Shift+n");
   await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
 
-  await page.goto("/about");
+  await page.goto("/");
   await page.keyboard.press("Control+Shift+n");
-  await expect(page).toHaveURL(/\/about$/);
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test("settings deep link traps focus and back/forward replays only settings query", async ({

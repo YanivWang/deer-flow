@@ -7,7 +7,7 @@
 
                    **session query 只能动态 import。** 这是全局 middleware——它进
                    Nuxt entry，它静态依赖的一切都进**每个**路由的关键路径，包括
-                   `/`、`/pricing`、`/about` 这三个公开页。而 `session-query` →
+                   `/` 这类不需要 session 的公开页。而 `session-query` →
                    `session` → `auth/types` 拖着整个 zod runtime（实测 57,358 raw /
                    11,635 brotli）。营销页永远走不到下面那个 `if`，却一直在为它
                    下载解析器。`await import()` 让 zod 只在真的要探测 session 时

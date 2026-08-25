@@ -1325,8 +1325,6 @@ export const zhCN: Translations = {
     completeSetup: "完成设置",
   },
   marketing: {
-    aboutPlaceholder: "关于页面占位内容",
-    pricingPlaceholder: "价格页面占位内容",
     badge: "超级智能体，现已提供公开示例",
     showcaseDescription: "在安全的只读展示中探索真实的 DeerFlow 会话。",
     enterWorkspace: "进入工作区",

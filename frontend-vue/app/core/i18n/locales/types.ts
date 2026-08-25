@@ -1136,8 +1136,6 @@ export interface Translations {
   };
 
   marketing: {
-    aboutPlaceholder: string;
-    pricingPlaceholder: string;
     badge: string;
     showcaseDescription: string;
     enterWorkspace: string;
