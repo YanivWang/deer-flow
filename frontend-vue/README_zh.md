@@ -90,11 +90,16 @@ make e2e-settings       # 支持与降级两种 Gateway 下的设置
 make e2e-shell          # workspace 壳层与 workspace-changes，auth 开启
 make e2e-browser        # 真实 Chromium 后端上的 browser 面板
 make e2e-external       # WebSocket 与 OIDC；需要 backend 的 browser extra
+make e2e-parity         # React 与 Vue 架在同一个 replay Gateway 上；需要 ../frontend
 ```
 
 `make e2e-mock` 聚合 `e2e`、`e2e-auth`、`e2e-infra`、`e2e-proxy-options` 与
 `e2e-stream`；`make e2e-backend` 聚合 `e2e-protocol`、`e2e-real`、`e2e-scheduled`、
 `e2e-channels`、`e2e-agents`、`e2e-settings`、`e2e-shell` 与 `e2e-browser`。
+`make e2e-parity` 同样两边都不进，但理由不同：它是唯一需要兄弟 React 应用的套件，
+而本工作区的 install、build、test 与 e2e 都必须在没有它的情况下跑通
+（`make standalone-check`）。`../frontend` 缺席时它不启动 React，用例整组跳过。
+
 `make e2e-visual` 刻意两边都不进：截图基线只有 `-darwin` 一份，在生成并签入
 `-linux` 基线之前，它是本机门禁。这两件事由
 `tests/guards/visual-baseline-platforms.test.ts` 双向绑定：只签基线不接 CI 会红，

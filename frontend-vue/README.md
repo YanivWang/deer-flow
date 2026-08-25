@@ -103,12 +103,18 @@ make e2e-settings       # settings with a supported and a degraded Gateway
 make e2e-shell          # workspace shell and workspace-changes, auth on
 make e2e-browser        # browser panel against a real Chromium backend
 make e2e-external       # WebSocket and OIDC; needs the backend browser extra
+make e2e-parity         # React and Vue on one replay Gateway; needs ../frontend
 ```
 
 `make e2e-mock` aggregates `e2e`, `e2e-auth`, `e2e-infra`, `e2e-proxy-options`
 and `e2e-stream`; `make e2e-backend` aggregates `e2e-protocol`, `e2e-real`,
 `e2e-scheduled`, `e2e-channels`, `e2e-agents`, `e2e-settings`, `e2e-shell` and
-`e2e-browser`. `make e2e-visual` is deliberately in neither: its screenshot
+`e2e-browser`. `make e2e-parity` is in neither either, for a different reason:
+it is the only suite that needs the sibling React app, and this workspace's
+install, build, test and e2e must all work without it (`make standalone-check`).
+When `../frontend` is absent it does not start React and its cases skip.
+
+`make e2e-visual` is deliberately in neither: its screenshot
 baselines exist only for `-darwin`, so it stays a local gate until `-linux`
 baselines are generated and checked in. Those two facts are coupled by
 `tests/guards/visual-baseline-platforms.test.ts` — checking in `-linux`

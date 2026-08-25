@@ -3,7 +3,7 @@
 .PHONY: help install dev build preview lint format format-check typecheck typecheck-core test verify asset-budget \
 	e2e-install e2e-preflight e2e e2e-auth e2e-visual e2e-infra e2e-proxy-options e2e-stream \
 	e2e-protocol e2e-real e2e-scheduled e2e-channels e2e-agents e2e-settings e2e-shell \
-	e2e-browser e2e-external e2e-mock e2e-backend e2e-list \
+	e2e-browser e2e-external e2e-parity e2e-mock e2e-backend e2e-list \
 	proxy-security audit docker-build container-smoke \
 	upstream-drift upstream-accept dom-parity \
 	i18n-check i18n-diff i18n-unused i18n-source-check i18n-refresh \
@@ -27,6 +27,10 @@ E2E_CHANNELS_PORT ?= 3111
 E2E_AGENTS_PORT ?= 3112
 E2E_SETTINGS_PORT ?= 3113
 E2E_SHELL_PORT ?= 3114
+# parity 一个套件要起三个服务：Gateway + Vue + 兄弟 React。
+E2E_PARITY_PORT ?= 3115
+E2E_PARITY_REACT_PORT ?= 3116
+E2E_PARITY_GATEWAY_PORT ?= 8021
 IMAGE ?= deer-flow-frontend-vue:ci
 
 help:
@@ -50,6 +54,7 @@ help:
 	@echo "  make e2e-shell                 workspace shell and workspace-changes (auth on)"
 	@echo "  make e2e-browser               browser panel against a real Chromium backend"
 	@echo "  make e2e-external              WebSocket and OIDC; needs the backend browser extra"
+	@echo "  make e2e-parity                React and Vue on one replay Gateway; needs ../frontend"
 	@echo "  make e2e-mock                  every suite that needs no backend process"
 	@echo "  make e2e-backend               every suite that needs a real Gateway"
 	@echo "  make e2e-list                  collect every suite and print its test count"
@@ -226,6 +231,12 @@ e2e-browser:
 # 需要后端的 browser extra 与自带 IdP。
 e2e-external:
 	$(call run_suite,external)
+
+# 唯一需要**兄弟应用**的套件：React 与 Vue 同时架在一个 replay Gateway 上。
+# 因此它不进任何聚合入口——本仓的 install/build/test/e2e 都不依赖 ../frontend
+# （见 make standalone-check）。frontend/ 缺席时 React 不启动，用例整组跳过。
+e2e-parity:
+	$(call run_suite,parity)
 
 # ── 聚合入口 ────────────────────────────────────────────────────────────
 # 不需要任何后端进程，CI 的主门禁。

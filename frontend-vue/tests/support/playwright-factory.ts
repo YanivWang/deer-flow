@@ -110,6 +110,8 @@ export function defineSuite(options: {
   globalSetup?: string;
   expect?: PlaywrightTestConfig["expect"];
   grep?: RegExp;
+  /** 套件专属的 use 覆盖，合并在默认值之后。跨应用对照需要把时区、动画和配色钉死。 */
+  use?: PlaywrightTestConfig["use"];
 }) {
   const baseURL =
     process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${options.port}`;
@@ -136,6 +138,7 @@ export function defineSuite(options: {
       trace: "on-first-retry",
       screenshot: "only-on-failure",
       video: "retain-on-failure",
+      ...options.use,
     },
     // project 名就是浏览器维度。套件身份由 config 承担，不重复编进 project——
     // 视觉快照的文件名里含 project 名，把套件名编进去会让「改套件名」
