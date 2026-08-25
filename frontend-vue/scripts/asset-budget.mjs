@@ -5,10 +5,9 @@
   【主要导出】     CLI：读取 .output/public/_nuxt，超预算退出 1
   【依赖关系】     Nuxt production build；Node zlib
   【边界与注意】   这里只给现有动态 import 生成的 chunk 命名和计量，不创建 manual
-                   chunk，也不改 Rolldown 执行顺序。CodeMirror 当前未安装/消费，
-                   所以它的预算刻意为零；未来引入必须显式更新实现和预算。
-                   本门禁**不在** verify 里，只能单独跑 `make asset-budget`——
-                   所以每次动依赖或分包，记得手动跑一次，否则它会红着没人发现。
+                   chunk，也不改 Rolldown 执行顺序。
+                   本门禁**不在** verify 里，但已经是 CI 的独立一步（0ce8caa3）：
+                   动依赖或改分包之后不跑它，红的会是 PR 而不是本机。
 */
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -33,7 +32,15 @@ const budgets = {
     // without forcing another component boundary solely to satisfy this gate.
     maxRaw: 380_000,
   },
-  "vendor-codemirror": { totalRaw: 0, totalGzip: 0, maxRaw: 0 },
+  // 这一格从「刻意为零」变成实测值：artifact 编辑器现在真的跑 CodeMirror 6。
+  // 实测 raw 555_743 / gzip 199_712 / maxRaw 199_773（11 个 chunk，全部动态
+  // import，首屏一个字节都不加载）。maxRaw 那一个是 `@codemirror/view`。
+  // 语法包按语言分片，所以打开一个 .py 不会顺带下载 html/css/markdown。
+  "vendor-codemirror": {
+    totalRaw: 580_000,
+    totalGzip: 210_000,
+    maxRaw: 210_000,
+  },
   // Typed dictionaries deliberately retain the React suggestion icon shape,
   // so their chunk also contains a small lucide subset. Classify i18n before
   // vendor-ui and budget the complete locale payload instead of hiding it in
@@ -47,9 +54,13 @@ const budgets = {
   // 消费它的 markdown/workspace chunk 引用同一份。整包 raw/gzip 天花板仍然通过。
   "vendor-ui": { totalRaw: 380_000, totalGzip: 115_000, maxRaw: 150_000 },
 };
+// 整包天花板同步抬高，抬的正好是 CodeMirror 那 542.7 KiB / 195.0 KiB：
+// 实测 raw 14_305_757 / gzip 3_292_309 / maxRaw 779_847 / maxGzip 230_136。
+// 不抬的话 gzip 只剩 7_691 字节余量，下一次无关改动就会撞线，
+// 而撞线的原因和被记录的原因对不上——那种门禁只会教人抬数字。
 const overallBudget = {
-  totalRaw: 14_500_000,
-  totalGzip: 3_300_000,
+  totalRaw: 14_800_000,
+  totalGzip: 3_400_000,
   maxRaw: 800_000,
   maxGzip: 240_000,
 };
@@ -117,6 +128,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(
-  "Asset budget passed; CodeMirror remains absent until editor parity is implemented explicitly.",
-);
+console.log("Asset budget passed.");

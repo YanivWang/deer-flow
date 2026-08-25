@@ -25,6 +25,7 @@ import {
 } from "lucide-vue-next";
 import ComposerAttachmentChip from "@/components/chat/ComposerAttachmentChip.vue";
 import ComposerModelSelector from "@/components/chat/ComposerModelSelector.vue";
+import ModeHoverGuide from "@/components/chat/ModeHoverGuide.vue";
 import ComposerSurface from "@/components/chat/ComposerSurface.vue";
 import WelcomeSuggestionList from "@/components/chat/WelcomeSuggestionList.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
@@ -193,6 +194,17 @@ const availableModes = computed(() =>
   selectedModel.value?.supports_thinking === true
     ? modes.value
     : modes.value.filter((mode) => mode.id === "flash"),
+);
+/*
+  触发器的文案和 hover 说明必须来自同一条记录。原来模板里对同一个 find 调用了
+  三次（标签一次、native title 的两段各一次），改一处漏两处是迟早的事。
+  没有匹配项时回落到第一个可用模式，这样触发器永远有名字。
+*/
+const activeMode = computed(
+  () =>
+    availableModes.value.find((mode) => mode.id === selectedMode.value) ??
+    availableModes.value[0] ??
+    modes.value[0]!,
 );
 const textarea = ref<HTMLTextAreaElement | null>(null);
 const chipInput = ref<HTMLElement | null>(null);
@@ -1172,15 +1184,18 @@ defineExpose({ replaceDraft, offerFollowup });
           <span class="flex-1" />
           <DropdownMenu>
             <DropdownMenuTrigger>
-              <button
-                type="button"
-                class="hover:bg-accent h-8 rounded-md px-2 text-xs"
-                :title="`${availableModes.find((mode) => mode.id === selectedMode)?.label}: ${availableModes.find((mode) => mode.id === selectedMode)?.description}`"
+              <ModeHoverGuide
+                :label="activeMode.label"
+                :description="activeMode.description"
               >
-                {{
-                  availableModes.find((mode) => mode.id === selectedMode)?.label
-                }}
-              </button>
+                <button
+                  type="button"
+                  data-testid="composer-mode-trigger"
+                  class="hover:bg-accent h-8 rounded-md px-2 text-xs"
+                >
+                  {{ activeMode.label }}
+                </button>
+              </ModeHoverGuide>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top" class="w-72">
               <DropdownMenuRadioGroup

@@ -24,11 +24,17 @@ WP-12 的盘点范围由 `scripts/i18n-source-guard.mjs --inventory` 实时生�
 
 ## Key 与 unused baseline
 
-`en-US` 和 `zh-CN` 当前各有 978 个完全一致的 leaf key。
-`baseline/i18n-keys.json` 同时固定精确 key 集合和 180 个已审阅 unused key；
+`en-US` 和 `zh-CN` 当前各有 987 个完全一致的 leaf key。
+`baseline/i18n-keys.json` 同时固定精确 key 集合和 150 个已审阅 unused key；
 新增、删除、新增 unused 或旧 key 意外恢复使用都会使
 `i18n-check`、`i18n-diff` 或 `i18n-unused` 失败。只有审阅精确 diff 与真实消费者后，
 才允许运行 `make i18n-refresh`。
+
+unused 的判据是**叶子名**在 `app`/`tests`/`packages` 里以属性访问出现过（脚本文件头
+解释了为什么不做全路径匹配）。代价是同名叶子会互相遮蔽：`app/core/code-editor/editor.ts`
+写 `EditorState.readOnly.of(...)` 之后，词典里真正没人用的 `humanInput.readOnly`
+就被算成「已引用」而退出 unused 集。这类漂移必须在 diff 里逐条看懂再 refresh，
+不能因为「反正只是 unused 集」就放过——它同时也是「key 是否还有消费者」的唯一记录。
 
 source guard 使用 Vue compiler AST 与 TypeScript AST，覆盖模板文本、可访问性属性、
 绑定属性中的字面量、插值字面量，以及 error/toast/label/placeholder 等 UI script sink。

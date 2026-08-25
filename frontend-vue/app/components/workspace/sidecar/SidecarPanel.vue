@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import ComposerAttachmentChip from "@/components/chat/ComposerAttachmentChip.vue";
 import ComposerModelSelector from "@/components/chat/ComposerModelSelector.vue";
+import ModeHoverGuide from "@/components/chat/ModeHoverGuide.vue";
 import ComposerSurface from "@/components/chat/ComposerSurface.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import type { SidecarSession } from "@/composables/useSidecarSession";
@@ -103,16 +104,33 @@ const selectedModel = computed(
     models.value[0],
 );
 const modeOptions = computed(() => [
-  { id: "flash", label: $i18n.t.value.inputBox.flashMode },
-  { id: "thinking", label: $i18n.t.value.inputBox.reasoningMode },
-  { id: "pro", label: $i18n.t.value.inputBox.proMode },
-  { id: "ultra", label: $i18n.t.value.inputBox.ultraMode },
+  {
+    id: "flash",
+    label: $i18n.t.value.inputBox.flashMode,
+    description: $i18n.t.value.inputBox.flashModeDescription,
+  },
+  {
+    id: "thinking",
+    label: $i18n.t.value.inputBox.reasoningMode,
+    description: $i18n.t.value.inputBox.reasoningModeDescription,
+  },
+  {
+    id: "pro",
+    label: $i18n.t.value.inputBox.proMode,
+    description: $i18n.t.value.inputBox.proModeDescription,
+  },
+  {
+    id: "ultra",
+    label: $i18n.t.value.inputBox.ultraMode,
+    description: $i18n.t.value.inputBox.ultraModeDescription,
+  },
 ]);
-const modeLabel = computed(
+/* 触发器文案与 hover 说明取自同一条记录；未知 mode 回落到 pro，与 React 一致。 */
+const activeMode = computed(
   () =>
     modeOptions.value.find(
       (option) => option.id === String(localContext.mode ?? "pro"),
-    )?.label ?? $i18n.t.value.inputBox.proMode,
+    ) ?? modeOptions.value.find((option) => option.id === "pro")!,
 );
 
 function updateContext(next: ThreadRunContextInput) {
@@ -298,12 +316,18 @@ async function confirmDelete() {
             </label>
             <DropdownMenu>
               <DropdownMenuTrigger>
-                <button
-                  type="button"
-                  class="hover:bg-accent h-8 rounded-md px-2 text-xs"
+                <ModeHoverGuide
+                  :label="activeMode.label"
+                  :description="activeMode.description"
                 >
-                  {{ modeLabel }}
-                </button>
+                  <button
+                    type="button"
+                    data-testid="sidecar-mode-trigger"
+                    class="hover:bg-accent h-8 rounded-md px-2 text-xs"
+                  >
+                    {{ activeMode.label }}
+                  </button>
+                </ModeHoverGuide>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" side="top" class="w-32">
                 <DropdownMenuRadioGroup

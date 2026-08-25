@@ -537,7 +537,9 @@ onBeforeUnmount(() => {
       <ArtifactEditor
         v-else-if="editing && canEdit"
         :model-value="activeDraft.draftContent"
+        :language="policy.language"
         @update:model-value="updateDraft"
+        @save="save"
       />
       <ArtifactPreview
         v-else

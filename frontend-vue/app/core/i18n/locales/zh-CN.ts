@@ -1240,6 +1240,7 @@ export const zhCN: Translations = {
       removeFile: (filename) => `移除 ${filename}`,
     },
     previewTitle: "产物预览",
+    editorLabel: "产物编辑器",
     loadFailed: "加载产物失败",
     saveFailed: "保存失败",
     copyFailed: "无法复制产物内容。",

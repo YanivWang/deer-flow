@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 
 import { expect, test } from "@playwright/test";
 
+import { artifactEditorInput } from "../support/artifact-editor";
+
 const here = dirname(fileURLToPath(import.meta.url));
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3101";
 const fixture = JSON.parse(
@@ -146,7 +148,7 @@ test("real Gateway streams a write-file draft into the artifact panel", async ({
     formalPanel.getByText("server baseline", { exact: true }),
   ).toBeVisible({ timeout: 30_000 });
   await formalPanel.getByLabel("Edit artifact").click();
-  await formalPanel.getByTestId("artifact-editor").fill("vue draft survives");
+  await artifactEditorInput(formalPanel).fill("vue draft survives");
 
   const concurrentPut = await context.request.put(noteUrl, {
     data: {
@@ -170,7 +172,7 @@ test("real Gateway streams a write-file draft into the artifact panel", async ({
   await expect(formalPanel.getByRole("alert")).toContainText(
     "Artifact changed since it was opened",
   );
-  await expect(formalPanel.getByTestId("artifact-editor")).toHaveValue(
+  await expect(artifactEditorInput(formalPanel)).toHaveText(
     "vue draft survives",
   );
   await formalPanel.getByLabel("Discard artifact changes").click();

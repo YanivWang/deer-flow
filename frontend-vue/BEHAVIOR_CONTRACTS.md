@@ -150,6 +150,8 @@ sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
 | D9  | `useArtifactDraft` 是 baseline、remote、draft、dirty、conflict 和 edit 状态的唯一 owner；切文件、关面板、切右侧产品、切线程、路由离开和页面关闭共用该 owner | 仅 dirty 时注册 `beforeunload`；确认离开后确定性丢弃，取消则保持当前文件、面板和草稿；远程刷新不能覆盖 dirty draft                                                        |
 | D10 | copy/open/download/install-skill 均由显式策略决定可见性；open/download 先用认证 GET Range 预检，install 只对真实 skill artifact + admin 开放                | 预检只读取一字节，合法空文件的 `416 + Content-Range: bytes */0` 视为可访问；其他权限/Gateway 错误必须可见                                                                 |
 | D11 | 正式 artifact、write-file 瞬态草稿和 skill artifact 是不同来源；自动历史打开不得覆盖用户或持久化选择，旧 load/save/action 结果不得跨路径回写                | 每次 path/kind/thread 变化都要 abort 并递增 generation；组件按 FileList、Editor、Preview、Actions 分工，面板根只编排当前选择                                              |
+| D12 | 编辑视图是 CodeMirror 6：语言按 `app/core/code-editor/language.ts` 的 7 值规则归一并**动态**加载语法包，只读、主题、语言三项一律走 Compartment reconfigure  | 语言表是产品行为（决定看不看得到高亮），归一到一个加载不出来的模式不会报错，只会静静失去高亮。重建 EditorView 会连光标、选区和撤销历史一起清掉——换个主题不该有这种代价    |
+| D13 | 编辑器不得把自己写入的文档当成用户编辑再 emit 一次；`Mod-S` 必须走 ArtifactPanel **已有**的 revision 保存路径，不另开保存入口                               | v-model 少了这道 annotation 就会自激；另开保存入口意味着 D7 的 `expected_sha256`、冲突与 streaming 禁保存要被复制第二遍，而复制的那份迟早和主路径分叉                     |
 
 ---
 
@@ -176,6 +178,7 @@ sidecar 与 React 一样使用即时跟随；真实分块 SSE 回归位于
 | E17 | 主 composer 的附件入口必须是可聚焦、可键盘触发并具有 React 同名 accessible label 的真实 `button`；隐藏 file input 只负责文件选择 transport，不能代替产品操作入口                                                                                                                 |
 | E18 | 主 composer 与 sidecar 的 body/footer 使用同一分区；空草稿单行态由 64 px body、50 px footer 与边框形成 116 px surface，外层在 viewport 底部保留 16 px。disclaimer/background 绝对定位且不得参与 composer 高度；文本增长、附件和 welcome 状态仍可按内容扩展                       |
 | E19 | sidecar 在 submission pending 或 stream 运行期间只由一个 `composerBusy` 派生 form busy、textarea disabled 与 submit disabled；关闭再打开面板不得提前解锁，settle 后三者一起恢复                                                                                                  |
+| E20 | 主 composer 与 sidecar 的模式触发器共用 `ModeHoverGuide`，说明浮层建在 `ui/tooltip` 上，hover 与键盘焦点都能唤出；触发器文案与说明取自同一条模式记录，不各自 find 一遍                                                                                                           |
 
 ---
 
@@ -275,6 +278,7 @@ Vue 前端使用 `splitpanes`。它通过响应式 `:size` 和 `@resize` / `@res
 | J7  | OIDC callback 必须通过同源 `/api/v1/auth/me` 验证 session，复用 `next-path.ts` 拒绝开放重定向，并分别收敛 authenticated、401、Gateway unavailable 的状态与 replace 跳转                                                                                                       |
 | J8  | Gateway session 只由统一 Vue Query key/composable 持有；middleware 与 workspace 不能各存一套用户真相。401 才跳登录，unavailable 保留当前工作区、显示状态并提供后台/手动重试，恢复 authenticated 后原地继续                                                                    |
 | J9  | 真实模式的 `/workspace` 固定进入 `/workspace/chats/new`；不得恢复已排除的 static demo/mock 分支                                                                                                                                                                               |
+| J10 | Gateway 完全连不上时，登录与首次设置页仍必须渲染完整表单、显示明确的不可用状态并提供可用的重试；恢复必须**就地**完成，不能要求用户整页刷新                                                                                                                                    |
 
 ---
 
@@ -332,14 +336,16 @@ raw trace、代理 smoke 和 replay Gateway 浏览器测试覆盖，不能只依
 
 ## M. Vue 框架语义
 
-| #   | 约束                                                                   | 为什么                                                                                                                      |
-| --- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| M1  | `provide()` 必须传 **ref / reactive / computed**，不能传普通对象或裸值 | Vue 的 `inject` 在 setup 期间**一次性解析**，拿到的是当时那个引用；传裸值时后续变化不会传播到消费方                         |
-| M2  | `inject()` 只能在 setup 同步阶段调用                                   | `await` 之后或回调里调用会拿不到值。React 的 `useContext` 无此限制                                                          |
-| M3  | 自定义 Markdown 组件覆盖接收的是 **`class`** 而不是 `className`        | `hast-util-to-jsx-runtime` 对 Vue 必须设 `elementAttributeNameCase: 'html'`                                                 |
-| M4  | 逐词动画的 key 必须稳定                                                | 与 B 组无关，是 Vue 的 diff 语义：key 变化会重新挂载节点并重播动画。铁律仍是**不要用 per-word rehype 插件**                 |
-| M5  | `watch` 默认是**惰性**的，React 的 `useEffect` 默认首次就跑            | 搬 effect 时若原逻辑依赖挂载即执行，要显式 `{ immediate: true }`。A7、D1、D4 这类"初始状态不得被覆盖"的约束最容易在这里翻车 |
-| M6  | `onErrorCaptured` 返回 `false` 才阻止错误继续冒泡                      | 与 React ErrorBoundary 的语义不同，Markdown 错误边界要显式返回                                                              |
+| #   | 约束                                                                            | 为什么                                                                                                                                                                                                                                               |
+| --- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M1  | `provide()` 必须传 **ref / reactive / computed**，不能传普通对象或裸值          | Vue 的 `inject` 在 setup 期间**一次性解析**，拿到的是当时那个引用；传裸值时后续变化不会传播到消费方                                                                                                                                                  |
+| M2  | `inject()` 只能在 setup 同步阶段调用                                            | `await` 之后或回调里调用会拿不到值。React 的 `useContext` 无此限制                                                                                                                                                                                   |
+| M3  | 自定义 Markdown 组件覆盖接收的是 **`class`** 而不是 `className`                 | `hast-util-to-jsx-runtime` 对 Vue 必须设 `elementAttributeNameCase: 'html'`                                                                                                                                                                          |
+| M4  | 逐词动画的 key 必须稳定                                                         | 与 B 组无关，是 Vue 的 diff 语义：key 变化会重新挂载节点并重播动画。铁律仍是**不要用 per-word rehype 插件**                                                                                                                                          |
+| M5  | `watch` 默认是**惰性**的，React 的 `useEffect` 默认首次就跑                     | 搬 effect 时若原逻辑依赖挂载即执行，要显式 `{ immediate: true }`。A7、D1、D4 这类"初始状态不得被覆盖"的约束最容易在这里翻车                                                                                                                          |
+| M6  | `onErrorCaptured` 返回 `false` 才阻止错误继续冒泡                               | 与 React ErrorBoundary 的语义不同，Markdown 错误边界要显式返回                                                                                                                                                                                       |
+| M7  | Reka 的 tooltip 触发器与下拉触发器套在同一个按钮上时，**tooltip 必须在里层**    | 两者各渲染一个 `PopperAnchor`，而它注入的是**最近**的 `PopperRoot`。tooltip 在外层时，下拉的 anchor 会注册进 tooltip 的 Popper，下拉自己的 Popper 一个 anchor 都没有——实测菜单打得开但整块渲染在视口外（y = -563），一个选项都点不到，且没有任何报错 |
+| M8  | 根节点是 fragment 的包装组件必须 `inheritAttrs: false` 并显式 `v-bind="$attrs"` | 多根组件不会自动继承 attrs，Vue 只在开发期警告。以 as-child 传下来的 `onClick`/`aria-*` 会被静默丢掉，表现是「菜单根本打不开」                                                                                                                       |
 
 ---
 

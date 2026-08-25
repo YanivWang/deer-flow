@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { expect, test } from "@playwright/test";
 
 import { mockLangGraphAPI } from "./utils/mock-api";
+import { artifactEditorInput } from "../support/artifact-editor";
 
 const THREAD_ID = "00000000-0000-0000-0000-000000004354";
 const RUN_ID = "00000000-0000-0000-0000-000000004355";
@@ -340,12 +341,12 @@ test("uses the same dirty guard for file switch and panel close", async ({
   await page.getByTestId("artifact-trigger").click();
   const panel = page.locator("#artifacts");
   await panel.getByLabel("Edit artifact").click();
-  await panel.getByTestId("artifact-editor").fill("dirty draft");
+  await artifactEditorInput(panel).fill("dirty draft");
 
   page.once("dialog", (dialog) => dialog.dismiss());
   await panel.getByRole("combobox").click();
   await panel.getByRole("option", { name: "second.txt" }).click();
-  await expect(panel.getByTestId("artifact-editor")).toHaveValue("dirty draft");
+  await expect(artifactEditorInput(panel)).toHaveText("dirty draft");
   await expect(panel.getByRole("combobox")).toContainText("first.txt");
 
   page.once("dialog", (dialog) => dialog.accept());

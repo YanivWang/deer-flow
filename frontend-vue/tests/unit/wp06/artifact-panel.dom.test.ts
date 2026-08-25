@@ -6,9 +6,18 @@
   【边界与注意】   通过用户可见 DOM 和真实调用参数证明边界，不断言组件内部实现细节。
 */
 
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { defineComponent, h, ref } from "vue";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { EditorView } from "@codemirror/view";
 
 import ArtifactPanel from "@/components/workspace/artifacts/ArtifactPanel.vue";
 import { useArtifactDraft } from "@/composables/useArtifactDraft";
@@ -45,6 +54,47 @@ vi.mock("@/core/clipboard", () => ({ writeTextToClipboard: mocks.copy }));
 vi.mock("@/core/skills/api", () => ({ installSkill: mocks.install }));
 
 const SHA = "a".repeat(64);
+
+/*
+  编辑器现在是 CodeMirror，`data-testid` 仍在 ArtifactEditor 渲染的宿主上（所以
+  「有没有挂编辑器」的断言语义没变），但可编辑的是它内部那个 contenteditable。
+  CodeMirror 只在 mount 后动态 import，所以要轮询等它就位，不能假设一次
+  flushPromises 就够。
+*/
+/*
+  预热 CodeMirror 的模块图。组件里的 `await import()` 第一次要把 5 个包过一遍
+  transform，那一轮不是靠 flushPromises 让路就能推进的——不预热的话，第一个
+  用到编辑器的用例会因为「还没加载完」而不是「行为不对」失败。
+*/
+async function warmCodeEditorModules() {
+  await import("@/core/code-editor/editor");
+  await import("@codemirror/lang-markdown");
+}
+
+async function editorView(wrapper: VueWrapper): Promise<EditorView> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const host = wrapper.find("[data-testid='artifact-editor']");
+    const view = host.exists()
+      ? EditorView.findFromDOM(host.element as HTMLElement)
+      : null;
+    if (view) return view;
+    await flushPromises();
+  }
+  throw new Error("artifact editor did not mount");
+}
+
+/** 用一次事务替换全文：和用户全选后重打一遍走的是同一条 update 路径。 */
+async function typeInEditor(wrapper: VueWrapper, text: string) {
+  const view = await editorView(wrapper);
+  view.dispatch({
+    changes: { from: 0, to: view.state.doc.length, insert: text },
+  });
+  await flushPromises();
+}
+
+async function editorText(wrapper: VueWrapper) {
+  return (await editorView(wrapper)).state.doc.toString();
+}
 
 function loaded(
   content: string,
@@ -96,6 +146,7 @@ function mountPanel(
 }
 
 describe("WP-06 ArtifactPanel", () => {
+  beforeAll(warmCodeEditorModules);
   beforeEach(() => {
     mocks.load.mockReset();
     mocks.loadTool.mockReset();
@@ -272,7 +323,7 @@ describe("WP-06 ArtifactPanel", () => {
     const { wrapper } = mountPanel("/mnt/user-data/outputs/report.txt");
     await flushPromises();
     await wrapper.get("button[aria-label='Edit artifact']").trigger("click");
-    await wrapper.get("[data-testid='artifact-editor']").setValue("saved");
+    await typeInEditor(wrapper, "saved");
     await wrapper.get("button[aria-label='Save artifact']").trigger("click");
     await flushPromises();
 
@@ -299,19 +350,14 @@ describe("WP-06 ArtifactPanel", () => {
       const { wrapper } = mountPanel("/mnt/user-data/outputs/report.txt");
       await flushPromises();
       await wrapper.get("button[aria-label='Edit artifact']").trigger("click");
-      await wrapper.get("[data-testid='artifact-editor']").setValue("my draft");
+      await typeInEditor(wrapper, "my draft");
       await wrapper.get("button[aria-label='Save artifact']").trigger("click");
       await flushPromises();
 
       expect(wrapper.get("[role='alert']").text()).toContain(
         `gateway-${status}`,
       );
-      expect(
-        (
-          wrapper.get("[data-testid='artifact-editor']")
-            .element as HTMLTextAreaElement
-        ).value,
-      ).toBe("my draft");
+      expect(await editorText(wrapper)).toBe("my draft");
       wrapper.unmount();
     },
   );
@@ -324,7 +370,7 @@ describe("WP-06 ArtifactPanel", () => {
     const { wrapper } = mountPanel("/mnt/user-data/outputs/report.txt");
     await flushPromises();
     await wrapper.get("button[aria-label='Edit artifact']").trigger("click");
-    await wrapper.get("[data-testid='artifact-editor']").setValue("my draft");
+    await typeInEditor(wrapper, "my draft");
     await wrapper.get("button[aria-label='Save artifact']").trigger("click");
     await flushPromises();
 
@@ -359,9 +405,7 @@ describe("WP-06 ArtifactPanel", () => {
     await active.wrapper
       .get("button[aria-label='Edit artifact']")
       .trigger("click");
-    await active.wrapper
-      .get("[data-testid='artifact-editor']")
-      .setValue("blocked");
+    await typeInEditor(active.wrapper, "blocked");
     expect(
       active.wrapper
         .get("button[aria-label='Save artifact']")
@@ -379,9 +423,7 @@ describe("WP-06 ArtifactPanel", () => {
     await stale.wrapper
       .get("button[aria-label='Edit artifact']")
       .trigger("click");
-    await stale.wrapper
-      .get("[data-testid='artifact-editor']")
-      .setValue("old draft");
+    await typeInEditor(stale.wrapper, "old draft");
     await stale.wrapper
       .get("button[aria-label='Save artifact']")
       .trigger("click");

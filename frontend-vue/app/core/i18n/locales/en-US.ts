@@ -1298,6 +1298,7 @@ export const enUS: Translations = {
       removeFile: (filename) => `Remove ${filename}`,
     },
     previewTitle: "Artifact preview",
+    editorLabel: "Artifact editor",
     loadFailed: "Failed to load artifact",
     saveFailed: "Save failed",
     copyFailed: "Unable to copy artifact content.",

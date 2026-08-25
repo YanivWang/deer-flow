@@ -28,18 +28,19 @@ Compose Watch 同步源码并在依赖清单变化时重建对应镜像；Nginx 
 
 ## 三层边界
 
-| 层                 | 当前目录                                                                                                           | 职责                                                                   | 禁止依赖                                             |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------- |
-| L1 通用 Agent 内核 | `packages/agent-core/`                                                                                             | SSE 分帧、session 状态机、退避、watchdog、external store、通用消息合同 | Vue/Nuxt、Pinia、TanStack Query、DeerFlow URL/事件名 |
-| L2 可复用 UI       | `app/core/markdown/`、`app/components/markdown/`、`app/components/ui/`、`app/lib/utils.ts`、`app/lib/focusable.ts` | Markdown 流式渲染、代码块、Mermaid、UI primitive 层                    | DeerFlow API、线程、认证、产物和业务 store           |
-| L3 DeerFlow 应用   | `app/core/agent-deerflow/`、`app/core/api/`、`app/composables/`、`app/stores/`、页面和业务组件                     | Gateway 协议适配、缓存、线程生命周期、认证和产品功能                   | 不得把协议专有知识反向写入 L1/L2                     |
+| 层                 | 当前目录                                                                                                                                    | 职责                                                                   | 禁止依赖                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------- |
+| L1 通用 Agent 内核 | `packages/agent-core/`                                                                                                                      | SSE 分帧、session 状态机、退避、watchdog、external store、通用消息合同 | Vue/Nuxt、Pinia、TanStack Query、DeerFlow URL/事件名 |
+| L2 可复用 UI       | `app/core/markdown/`、`app/core/code-editor/`、`app/components/markdown/`、`app/components/ui/`、`app/lib/utils.ts`、`app/lib/focusable.ts` | Markdown 流式渲染、代码块、Mermaid、代码编辑器、UI primitive 层        | DeerFlow API、线程、认证、产物和业务 store           |
+| L3 DeerFlow 应用   | `app/core/agent-deerflow/`、`app/core/api/`、`app/composables/`、`app/stores/`、页面和业务组件                                              | Gateway 协议适配、缓存、线程生命周期、认证和产品功能                   | 不得把协议专有知识反向写入 L1/L2                     |
 
 ## UI primitive 层
 
 `app/components/ui/` 是唯一的交互控件底座，建在 Reka UI 之上：Dialog、AlertDialog、
 Sheet、Popover、DropdownMenu、Select、Tabs、Switch、Tooltip、HoverCard、ScrollArea、
-Command、Button。产品组件不再直接 import `reka-ui`——焦点陷阱、Escape、外点关闭、
-方向键与 aria 状态属于这一层，散在调用点就会各写一份、各错一处。
+Command、Button，以及建在 CodeMirror 6 之上的 CodeEditor。产品组件不再直接 import
+`reka-ui`——焦点陷阱、Escape、外点关闭、方向键与 aria 状态属于这一层，散在调用点
+就会各写一份、各错一处。
 
 三条硬约束，都是实测踩出来的：
 
@@ -55,6 +56,16 @@ Command、Button。产品组件不再直接 import `reka-ui`——焦点陷阱�
 模态语义与层级：Reka 不写 `aria-modal`，本层显式补上（Popover 这类非模态浮层绝不加）。
 所有 portal 浮层共用 `z-80` 一层，谁后打开谁在上；只有 tooltip 用 `z-90`。
 「当前可见且可聚焦」的判据只有一份，住在 `app/lib/focusable.ts`，抽屉与 primitive 共用。
+tooltip 与 dropdown 套在同一个按钮上时 tooltip 必须在里层——两者各渲染一个
+`PopperAnchor`，顺序反了下拉就会失去自己的 anchor（合同 M7/M8）。
+
+代码编辑器同样住在这一层。框架无关的部分是纯 TS：`app/core/code-editor/language.ts`
+拥有唯一的语言归一表和语法包动态加载边界，`palette.ts` 只放语法色（外壳颜色走
+CSS 变量，跟随主题自动翻转），`editor.ts` 在任意宿主 DOM 上创建 `EditorView` 并
+暴露 `setDocument/setLanguage/setTheme/setReadOnly/focus/destroy` 句柄。
+`CodeEditor.vue` 只做接线：v-model、只读、主题、可访问名字和销毁。
+CodeMirror 全部经 `await import()` 进入，首屏不加载一个字节；`nuxt.config.ts`
+的分包规则把它们收进 `vendor-codemirror`，预算在 `scripts/asset-budget.mjs`。
 
 `@deerflow/agent-core` 只允许从包根导入。`package.json#exports` 和
 `packages/agent-core/tests/architecture.test.ts` 同时阻止深路径依赖。包仍是私有源码包，
@@ -192,7 +203,9 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
   切右侧产品、切线程、路由离开和 `beforeunload` 都必须先经过该 owner。文件能力只由
   `app/core/artifacts/policy.ts` 的显式扩展名/source allowlist 决定，未知、Office、archive、
   SVG、无扩展名和其他二进制 fail closed；MIME 不提升能力。`ArtifactPanel` 只编排当前路径的
-  abort/generation 与 I/O，FileList、Editor、Preview、Actions 不复制状态。sidecar 进一步拆成 `useSidecar` 的开关/引用状态与
+  abort/generation 与 I/O，FileList、Editor、Preview、Actions 不复制状态。`ArtifactEditor`
+  把 policy 语言与当前 resolved theme 交给 L2 编辑器，并把 `Mod-S` 转回同一条
+  revision 保存路径；它不持有第二个保存入口。sidecar 进一步拆成 `useSidecar` 的开关/引用状态与
   `useSidecarSession` 的唯一会话状态；后者独占 restore-before-create、run、附件上传缓存、
   HIL 与真实删除，`SidecarPanel` 只做 UI 适配。隐藏或切换右侧面板不销毁 session，切换主
   thread 或 scope dispose 才使旧异步结果失效。

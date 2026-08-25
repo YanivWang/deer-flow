@@ -10,7 +10,7 @@
 
 import { config } from "@vue/test-utils";
 import { beforeEach, vi } from "vitest";
-import { ref } from "vue";
+import { readonly, ref } from "vue";
 
 import { enUS } from "@/core/i18n/locales/en-US";
 
@@ -20,6 +20,22 @@ beforeEach(() => {
     setLocale: vi.fn(),
     t: ref(enUS),
   };
-  vi.stubGlobal("useNuxtApp", () => ({ $i18n }));
+  // 与 app/plugins/theme.ts 的 SSR 快照同形：只读 refs + 无副作用 setter。
+  // 消费 $theme 的组件在 dom project 里同样应该走生产 useNuxtApp。
+  const $theme = {
+    preference: readonly(ref<"system" | "light" | "dark">("system")),
+    resolved: readonly(ref<"light" | "dark">("light")),
+    forced: readonly(ref<"light" | "dark" | null>(null)),
+    setPreference: vi.fn(),
+    setForcedTheme: vi.fn(),
+    dispose: vi.fn(),
+  };
+  vi.stubGlobal("useNuxtApp", () => ({ $i18n, $theme }));
+  /*
+    只有 $i18n 进 globalProperties。模板里以 `$` 开头的标识符走 ctx 而不是
+    setup 绑定，所以往这里塞 $theme 会盖掉那些自带 theme owner 的用例
+    （wp12 的 AppearanceSettings 就是）。消费 theme 的组件从
+    useNuxtApp() 取，不靠模板 ctx。
+  */
   config.global.mocks = { ...config.global.mocks, $i18n };
 });

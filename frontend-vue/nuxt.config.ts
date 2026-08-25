@@ -14,15 +14,20 @@ type ClientChunk = { moduleIds: string[]; name: string };
 
 function clientChunkFileName(chunk: ClientChunk) {
   const ids = chunk.moduleIds.join("\n");
+  /*
+    CodeMirror 必须排在 markdown 之前。`@codemirror/lang-markdown` 依赖
+    `@lezer/markdown`，它的路径里带着字面量 `/markdown/`——按原来的顺序，
+    整个语法高亮 chunk 会被命名成 vendor-markdown，同时污染两边的预算。
+  */
+  if (/(?:codemirror|@codemirror)/.test(ids)) {
+    return "_nuxt/vendor-codemirror-[hash].js";
+  }
   if (
     /(?:StreamMarkdown|\/markdown\/|node_modules\/.+\/(?:hast|mdast|unified|unist-util|remark-|rehype-|marked|remend|katex))/.test(
       ids,
     )
   ) {
     return "_nuxt/vendor-markdown-[hash].js";
-  }
-  if (/(?:codemirror|@codemirror)/.test(ids)) {
-    return "_nuxt/vendor-codemirror-[hash].js";
   }
   if (/\/app\/core\/i18n\//.test(ids)) {
     return "_nuxt/vendor-i18n-[hash].js";

@@ -1047,6 +1047,7 @@ export interface Translations {
       removeFile: (filename: string) => string;
     };
     previewTitle: string;
+    editorLabel: string;
     loadFailed: string;
     saveFailed: string;
     copyFailed: string;
