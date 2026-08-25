@@ -352,7 +352,7 @@
 
 #### 验收与测试
 
-- Vue unit/DOM：`tests/unit/wp05/` 共 7 个文件 / 24 个用例，覆盖 connecting pending、退避上限、seed 归一化、stale thread、二进制/legacy frame、消息帧/REST 所有权、REST 错误、live/static、竖屏 letterbox、move/wheel、keyboard/IME 与 cleanup。
+- Vue unit/DOM：`tests/unit/browser/` 共 7 个文件 / 24 个用例，覆盖 connecting pending、退避上限、seed 归一化、stale thread、二进制/legacy frame、消息帧/REST 所有权、REST 错误、live/static、竖屏 letterbox、move/wheel、keyboard/IME 与 cleanup。
 - Vue-owned Playwright：`tests/e2e/browser-control.spec.ts` 3 个用例，覆盖 ToolMessage 静态帧自动打开、Gateway URL/title 收敛、输入 wire、Static REST 失败和同目标重试；该层使用 Mock Gateway/Mock WS，不冒充真实后端。
 - Real-Gateway：`tests/e2e-browser/browser-panel.spec.ts` 使用本地真实 FastAPI Gateway 与真实 Playwright Chromium browser runtime 验证 REST 响应、二进制 WS 帧和 Vue UI 收敛；Gateway harness 的模型侧是 replay，不冒充生产模型/环境。
 - 聚焦 TDD：7 个 Vue unit/DOM 文件、24/24 用例通过；新增 Vue-owned Playwright 3/3 通过。
@@ -397,7 +397,7 @@
 
 #### 验收与测试
 
-- `tests/unit/wp06/` 共 7 个文件 / 58 个用例，覆盖文本、代码、图片、音频、视频、PDF、SVG、Office、archive、无扩展名、未知二进制、来源与权限矩阵；未知/二进制不进入 loader/PUT。
+- `tests/unit/artifacts/` 共 7 个文件 / 58 个用例，覆盖文本、代码、图片、音频、视频、PDF、SVG、Office、archive、无扩展名、未知二进制、来源与权限矩阵；未知/二进制不进入 loader/PUT。
 - unit/DOM 覆盖 dirty switch/close/sidecar/browser/thread/route/beforeunload、save success、403/404/409/412/413/415、远程刷新、discard/exit、run guard、stale load/save/action 和 text→write transition。
 - Vue-owned 浏览器合同覆盖 download-only、完整 D3 HTML 与 dirty switch/close（现属 `make e2e`）。正式截断 HTML 不创建 iframe/editor，并提供显式加载完整文件。
 - `tests/e2e-real/artifact-write.spec.ts` 使用同一真实本地 FastAPI Gateway、Nuxt 与 Playwright Chromium 验证 206 Range/ETag、真实 PUT SHA/size、并发修改后的真实 412 与草稿保留、Office/archive/unknown 零文本 GET，以及 1.1 MiB HTML 截断边界。模型侧使用 replay，不等于生产模型、DNS/TLS、外层代理或真实 IdP 证明。
@@ -436,7 +436,7 @@
 
 #### 验收与测试
 
-- 严格 TDD 红灯起步：新增 `tests/unit/wp07/` 后首先因 form/query-key/view-model/composable/API
+- 严格 TDD 红灯起步：新增 `tests/unit/scheduled-tasks/` 后首先因 form/query-key/view-model/composable/API
   缺失而 5 files 全部失败；最终聚焦 unit/DOM 为 5 files / 33 tests，覆盖精确 payload、cron
   presets、browser timezone、DST gap/fold、fresh/reuse、PATCH 禁止字段、全部错误码、query
   invalidation、stale task/runs 与 observer dispose。

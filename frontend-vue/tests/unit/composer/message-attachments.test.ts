@@ -7,7 +7,7 @@ import {
 import type { Message } from "@/core/types/message";
 import { buildVisibleHistoryMessages } from "@/core/threads/message-identity";
 
-describe("WP-03 persisted message attachments", () => {
+describe("persisted message attachments", () => {
   it("reads modern additional_kwargs.files without local composer state", () => {
     const message = {
       type: "human",

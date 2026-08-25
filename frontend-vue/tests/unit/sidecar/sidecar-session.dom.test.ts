@@ -74,7 +74,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-describe("WP-04 useSidecarSession", () => {
+describe("useSidecarSession", () => {
   let scope: EffectScope;
 
   beforeEach(() => {

@@ -34,7 +34,7 @@ const models: Model[] = [
   },
 ];
 
-describe("WP-03 model defaults and capabilities", () => {
+describe("model defaults and capabilities", () => {
   it("selects requested model, then agent default, then backend order", () => {
     expect(resolveComposerModel(models, "reasoner", "basic")?.name).toBe(
       "reasoner",

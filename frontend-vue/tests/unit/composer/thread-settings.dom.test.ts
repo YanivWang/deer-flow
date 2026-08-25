@@ -2,7 +2,7 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import { defineComponent, h, nextTick, ref } from "vue";
 
-describe("WP-03 thread-scoped context settings", () => {
+describe("thread-scoped context settings", () => {
   it("restores each thread and agent model while new sessions inherit only the React base context", async () => {
     localStorage.clear();
     vi.resetModules();

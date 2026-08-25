@@ -27,7 +27,7 @@ const PIPELINE = {
   rehypePlugins: appRehypePlugins,
 };
 
-describe("M3 · 组件覆盖收到的是 class 不是 className", () => {
+describe("组件覆盖收到的是 class 不是 className", () => {
   it("覆盖组件的 props 里有 class，没有 className", () => {
     const seen: Record<string, unknown>[] = [];
     const Probe = defineComponent({
@@ -57,7 +57,7 @@ describe("M3 · 组件覆盖收到的是 class 不是 className", () => {
   });
 });
 
-describe("M4 · 逐词动画的 key 必须稳定", () => {
+describe("逐词动画的 key 必须稳定", () => {
   it("追加 chunk 后已渲染的词还是同一个 DOM 节点", async () => {
     const wrapper = mount(StreamMarkdown, {
       props: {
@@ -117,7 +117,7 @@ describe("M4 · 逐词动画的 key 必须稳定", () => {
   });
 });
 
-describe("M5 · watch 惰性", () => {
+describe("watch 惰性", () => {
   it("本层每个 watch 都显式声明了 immediate（首帧就要跑）", async () => {
     // 直接验行为而不是扫源码：代码块的高亮与 mermaid 的渲染都发生在 watch 里，
     // 漏了 immediate 的表现是「首帧永远不生效」，而首帧正是停留最久的那一帧。
@@ -153,7 +153,7 @@ describe("M5 · watch 惰性", () => {
   });
 });
 
-describe("M6 · onErrorCaptured 必须显式 return false", () => {
+describe("onErrorCaptured 必须显式 return false", () => {
   /** 一个必定在渲染期抛错的组件覆盖。 */
   const Exploding = defineComponent({
     name: "Exploding",

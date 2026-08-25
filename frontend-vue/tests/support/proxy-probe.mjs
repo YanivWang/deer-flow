@@ -2,7 +2,7 @@
   【文件职责】     提供可观测的 HTTP/SSE 请求流探针，不冒充真实 Gateway。
   【架构位置】     测试夹具
   【主要导出】     本地 8012 HTTP server
-  【依赖关系】     被 playwright.m0.config.ts 启动
+  【依赖关系】     被 playwright.infra.config.ts 启动
   【边界与注意】   仅证明 Nitro 代理行为；真实 Gateway 由 real-backend config 另验。
 */
 

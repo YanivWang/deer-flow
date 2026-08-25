@@ -20,7 +20,7 @@
                    这类每次改动都会变的量，正确做法是不写进散文，而不是在这里追着它跑。
 */
 
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -104,42 +104,61 @@ describe("文档里的数字和代码一致", () => {
     );
   });
 
-  it("遗留阶段命名清单既没漏项，也没多出新的", () => {
-    const doc = read("ARCHITECTURE.md");
+  it("tests/unit 下不再有阶段命名目录", () => {
     const dirs = readdirSync(join(ROOT, "tests/unit"), { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name)
-      .filter((name) => /^(?:wp\d+|m\d+[ab]?)$/.test(name))
-      .sort();
-    expect(dirs.length).toBeGreaterThan(0);
+      .map((entry) => entry.name);
+    expect(dirs.length).toBeGreaterThan(10);
+    // `wp02`…`wp12` 与 `m7` 已按用途归位；再冒出一个就说明有人照旧习惯建了目录。
+    expect(dirs.filter((name) => /^(?:wp\d+|m\d+[ab]?)$/.test(name))).toEqual(
+      [],
+    );
+  });
 
-    // 文档必须覆盖到区间两端和 m7 这类单点，漏了就等于清单在说谎。
-    const workPackages = dirs.filter((name) => name.startsWith("wp"));
-    expect(doc).toContain(
-      `\`tests/unit/${workPackages[0]}\` … \`tests/unit/${workPackages.at(-1)}\``,
-    );
-    expect(doc).toContain(
-      `${workPackages.length} 个按迁移工作包编号的单测目录`,
-    );
-    for (const name of dirs.filter((n) => !n.startsWith("wp"))) {
-      expect(doc).toContain(`\`tests/unit/${name}\``);
+  it("测试标题里没有阶段前缀", () => {
+    const offenders: string[] = [];
+    const walk = (rel: string) => {
+      for (const entry of readdirSync(join(ROOT, rel), {
+        withFileTypes: true,
+      })) {
+        const child = `${rel}/${entry.name}`;
+        if (entry.isDirectory()) walk(child);
+        else if (
+          child.endsWith(".ts") &&
+          /describe\(\s*"(?:WP-\d+|M\d+[ab]?)[\s·]/.test(read(child))
+        ) {
+          offenders.push(child);
+        }
+      }
+    };
+    walk("tests");
+    expect(offenders).toEqual([]);
+  });
+
+  it("遗留阶段标识清单既没漏项，也没多出新的", () => {
+    const doc = read("ARCHITECTURE.md");
+    /*
+      还剩下的都是**标识符**（页面目录、环境变量、harness 文件、契约常量），
+      改它们会波及 Dockerfile / CI / 后端 harness，所以留着并如实列出。
+      这里两个方向都查：文档写了的必须真的存在，存在的必须写进文档。
+    */
+    const survivors = [
+      "app/pages/__m0",
+      "tests/support/run_m0_gateway.py",
+      "tests/support/m0_replay_provider.py",
+    ];
+    for (const rel of survivors) {
+      expect({ rel, exists: existsSync(join(ROOT, rel)) }).toEqual({
+        rel,
+        exists: true,
+      });
+      expect(doc).toContain(rel.split("/").pop() as string);
     }
-
-    // 反方向：不许再添新的阶段命名目录，清掉一个就要同步改文档。
-    expect(dirs).toEqual([
-      "m7",
-      "wp02",
-      "wp03",
-      "wp04",
-      "wp05",
-      "wp06",
-      "wp07",
-      "wp08",
-      "wp09",
-      "wp10",
-      "wp11",
-      "wp12",
-    ]);
+    expect(doc).toContain("NUXT_PUBLIC_M0_TEST_PAGES");
+    expect(read("packages/agent-core/src/index.ts")).toContain(
+      'AGENT_CORE_CONTRACT_VERSION = "m8"',
+    );
+    expect(doc).toContain('AGENT_CORE_CONTRACT_VERSION = "m8"');
   });
 
   it("SSE golden trace 的帧数就是签入文件里的帧数", () => {

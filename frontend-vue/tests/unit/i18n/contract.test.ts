@@ -18,7 +18,7 @@ function leafKeys(value: unknown, prefix = ""): string[] {
   );
 }
 
-describe("WP-12 locale contract", () => {
+describe("locale contract", () => {
   it("keeps en-US and zh-CN leaf keys exactly identical", () => {
     expect(leafKeys(zhCN).sort()).toEqual(leafKeys(enUS).sort());
   });

@@ -145,7 +145,7 @@ function mountPanel(
   return { wrapper, selected, draftOwner };
 }
 
-describe("WP-06 ArtifactPanel", () => {
+describe("ArtifactPanel", () => {
   beforeAll(warmCodeEditorModules);
   beforeEach(() => {
     mocks.load.mockReset();

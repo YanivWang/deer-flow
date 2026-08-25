@@ -85,7 +85,7 @@ async function selectFile(
   await input.trigger("change");
 }
 
-describe("WP-03 composer submission and stale lifecycle", () => {
+describe("composer submission and stale lifecycle", () => {
   beforeEach(() => {
     sessionStorage.clear();
     vi.stubGlobal("useNuxtApp", () => ({

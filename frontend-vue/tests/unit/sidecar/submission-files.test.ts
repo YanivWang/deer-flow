@@ -15,7 +15,7 @@ function uploaded(filename: string, size: number) {
   };
 }
 
-describe("WP-04 reusable attachment submission", () => {
+describe("reusable attachment submission", () => {
   it("uploads to the final sidecar thread and returns message descriptors", async () => {
     const file = new File(["hello"], "notes.txt");
     const upload = vi.fn(async () => ({

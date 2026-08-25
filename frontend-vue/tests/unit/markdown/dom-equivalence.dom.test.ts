@@ -76,7 +76,7 @@ function pluginsFor(entry: { preset: string; streaming?: boolean }): {
   };
 }
 
-describe("M3 gate · 归一化 DOM 等价", () => {
+describe("gate · 归一化 DOM 等价", () => {
   it("语料与夹具一一对应（夹具过期时不能假绿）", () => {
     expect(Object.keys(entries).sort()).toEqual(
       CORPUS.map((entry: { id: string }) => entry.id).sort(),

@@ -77,7 +77,7 @@ function mountHumanInput(
   });
 }
 
-describe("WP-03 Human Input state machine", () => {
+describe("Human Input state machine", () => {
   beforeEach(() => {
     vi.stubGlobal("useNuxtApp", () => ({
       $i18n: { t: ref(enUS), locale: ref("en-US") },

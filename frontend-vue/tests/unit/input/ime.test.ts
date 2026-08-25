@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { isImeComposing } from "@/core/input/ime";
 
-describe("M7 isImeComposing", () => {
+describe("isImeComposing", () => {
   it.each([
     [{ isComposing: true, keyCode: 13 }, false],
     [{ isComposing: false, keyCode: 229 }, false],

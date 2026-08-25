@@ -36,7 +36,7 @@ function mountMessages(messages: Message[], streaming = false) {
   return { wrapper, invalidate };
 }
 
-describe("WP-03 persisted message surfaces", () => {
+describe("persisted message surfaces", () => {
   beforeEach(() => {
     vi.stubGlobal("useNuxtApp", () => ({
       $i18n: { t: ref(enUS), locale: ref("en-US") },

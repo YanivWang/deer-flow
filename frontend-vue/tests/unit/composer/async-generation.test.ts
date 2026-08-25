@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createAsyncGeneration } from "@/core/async/generation";
 
-describe("WP-03 asynchronous stale guard", () => {
+describe("asynchronous stale guard", () => {
   it("rejects results replaced by a new request, route, stop, or unmount", () => {
     const guard = createAsyncGeneration();
     const first = guard.begin("thread-a/agent-a");

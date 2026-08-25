@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { isEditableKeyboardTarget } from "@/core/input/keyboard";
 
-describe("M7 global keyboard ownership", () => {
+describe("global keyboard ownership", () => {
   it.each(["input", "textarea", "select", "[contenteditable=true]"])(
     "recognizes %s as an editable shortcut owner",
     (selector) => {

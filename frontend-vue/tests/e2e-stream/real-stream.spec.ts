@@ -35,7 +35,7 @@ async function openNewChat(page: Page) {
   return textarea;
 }
 
-test.describe("M4a 真流 gate", () => {
+test.describe("真流 gate", () => {
   test("回答在同一个 AI 气泡内逐片增高时，视口持续贴住底部", async ({
     page,
   }) => {

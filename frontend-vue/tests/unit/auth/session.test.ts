@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { probeSession } from "@/core/auth/session";
 
-describe("M7 probeSession", () => {
+describe("probeSession", () => {
   it("distinguishes 401 from an unavailable Gateway", async () => {
     await expect(
       probeSession(

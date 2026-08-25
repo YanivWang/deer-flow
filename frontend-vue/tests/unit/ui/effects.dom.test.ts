@@ -20,7 +20,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("M7 named effects", () => {
+describe("named effects", () => {
   it("renders Aurora text once for assistive technology and once as decoration", () => {
     const wrapper = mount(AuroraText, {
       props: { colors: ["red", "blue"], speed: 2 },

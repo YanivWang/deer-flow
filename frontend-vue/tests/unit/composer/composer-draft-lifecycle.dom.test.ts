@@ -7,7 +7,7 @@ import {
 } from "@/core/threads/composer-draft";
 import { clearComposerDrafts } from "@/core/threads/composer-draft-lifecycle";
 
-describe("WP-03 composer draft lifecycle", () => {
+describe("composer draft lifecycle", () => {
   beforeEach(() => sessionStorage.clear());
 
   it("isolates two users, two threads, and agent/non-agent drafts", () => {

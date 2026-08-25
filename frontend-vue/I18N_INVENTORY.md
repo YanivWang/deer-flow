@@ -8,7 +8,7 @@
 - 仅精确排除 `app/pages/__m0/splitpanes.vue` 与
   `app/pages/__m0/visual.vue` 两个 M0 浏览器测试 fixture；
 - `node scripts/i18n-source-guard.mjs --inventory` 输出逐文件清单（文件总数由
-  `tests/unit/wp12/i18n-source-guard.test.ts` 精确钉住，改一个 SFC 就要同步），
+  `tests/unit/i18n/source-guard.test.ts` 精确钉住，改一个 SFC 就要同步），
   `make i18n-source-check` 执行阻断检查。
 
 ## 分类结果

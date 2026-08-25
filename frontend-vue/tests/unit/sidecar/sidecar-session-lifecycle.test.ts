@@ -20,7 +20,7 @@ const context = {
   content: "Use this context.",
 };
 
-describe("WP-04 sidecar session lifecycle", () => {
+describe("sidecar session lifecycle", () => {
   it("restores before creating and coalesces concurrent ensure calls", async () => {
     const restore = deferred<{ thread_id: string } | null>();
     const create = deferred<{ thread_id: string }>();

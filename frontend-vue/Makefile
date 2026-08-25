@@ -1,4 +1,4 @@
-# frontend-vue M0 developer entrypoint. package.json intentionally contains only postinstall.
+# frontend-vue developer entrypoint. package.json intentionally contains only postinstall.
 
 .PHONY: help install dev build preview lint format format-check typecheck typecheck-core test verify asset-budget \
 	e2e-install e2e-preflight e2e e2e-auth e2e-visual e2e-infra e2e-proxy-options e2e-stream \
@@ -30,7 +30,7 @@ E2E_SHELL_PORT ?= 3114
 IMAGE ?= deer-flow-frontend-vue:ci
 
 help:
-	@echo "frontend-vue M0 commands:"
+	@echo "frontend-vue commands:"
 	@echo "  make dev / build / preview     Nuxt lifecycle (dev port $(DEV_PORT))"
 	@echo "  make verify                    lint + format-check + typecheck + unit + build"
 	@echo ""

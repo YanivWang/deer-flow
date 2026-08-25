@@ -329,7 +329,7 @@ const l2ForbiddenImports = [
   /^#(?:app|imports)(?:\/|$)/,
 ];
 
-describe("M8 L2 reusable UI boundary", () => {
+describe("L2 reusable UI boundary", () => {
   it("freezes the exact reusable source set and final L2 headers", () => {
     const missing: string[] = [];
     for (const file of l2Files) {

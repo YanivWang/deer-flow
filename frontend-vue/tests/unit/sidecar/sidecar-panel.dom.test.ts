@@ -86,7 +86,7 @@ function mountPanel(session = makeSession()) {
   return { wrapper, session };
 }
 
-describe("WP-04 SidecarPanel session adapter", () => {
+describe("SidecarPanel session adapter", () => {
   beforeEach(() => {
     mocks.sendMessage.mockReset();
     mocks.loadModels.mockReset().mockResolvedValue({ models: [] });

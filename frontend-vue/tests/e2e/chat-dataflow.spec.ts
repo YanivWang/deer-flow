@@ -157,7 +157,7 @@ async function mockGateway(
   );
 }
 
-test.describe("M4a 数据流 gate", () => {
+test.describe("数据流 gate", () => {
   test("发消息 → 流式回来，先到的 AI 步骤排在 human 之后（C8）", async ({
     page,
   }) => {

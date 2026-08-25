@@ -30,7 +30,7 @@ const pending = {
   },
 } as unknown as Message;
 
-describe("WP-03 token usage surfaces", () => {
+describe("token usage surfaces", () => {
   beforeEach(() => {
     vi.stubGlobal("useNuxtApp", () => ({
       $i18n: { t: ref(enUS), locale: ref("en-US") },
