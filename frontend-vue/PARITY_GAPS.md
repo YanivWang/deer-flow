@@ -1,10 +1,11 @@
 # React / Vue 可平替差异与执行清单
 
-> 状态：当前源码审计后的未完成清单。
+> 状态：第 5 节 58 个 ID **全部 DONE**——源码级差异已在本地关闭并留下可执行证据。
+> 这**不等于**生产切流证据：公网 DNS/TLS、外层代理、真实 IdP 与目标环境验收仍属环境侧，
+> 本文件不为它们背书。新发现的差异按第 4 节加 ID，不要因为「表里全是 DONE」就认为
+> 本文件已经作废。
 >
-> 基线日期：2026-08-22。
->
-> React 基线：`../frontend`；Vue 实现：当前目录 `frontend-vue`。
+> 首次审计基线日期：2026-08-22。React 基线：`../frontend`；Vue 实现：当前目录 `frontend-vue`。
 >
 > 核心目标：两个前端共用同一个 Gateway/API，可以在不改变后台的前提下互相替换。
 
@@ -398,7 +399,7 @@
 
 - `tests/unit/wp06/` 共 7 个文件 / 58 个用例，覆盖文本、代码、图片、音频、视频、PDF、SVG、Office、archive、无扩展名、未知二进制、来源与权限矩阵；未知/二进制不进入 loader/PUT。
 - unit/DOM 覆盖 dirty switch/close/sidecar/browser/thread/route/beforeunload、save success、403/404/409/412/413/415、远程刷新、discard/exit、run guard、stale load/save/action 和 text→write transition。
-- Vue-owned M5 新增 download-only、完整 D3 HTML、dirty switch/close 浏览器合同；清单为 6 files / 29 tests。正式截断 HTML 不创建 iframe/editor，并提供显式加载完整文件。
+- Vue-owned 浏览器合同覆盖 download-only、完整 D3 HTML 与 dirty switch/close（现属 `make e2e`）。正式截断 HTML 不创建 iframe/editor，并提供显式加载完整文件。
 - `tests/e2e-real/artifact-write.spec.ts` 使用同一真实本地 FastAPI Gateway、Nuxt 与 Playwright Chromium 验证 206 Range/ETag、真实 PUT SHA/size、并发修改后的真实 412 与草稿保留、Office/archive/unknown 零文本 GET，以及 1.1 MiB HTML 截断边界。模型侧使用 replay，不等于生产模型、DNS/TLS、外层代理或真实 IdP 证明。
 
 <!-- 历史记录：写的是**当时**跑了哪条命令，不改写。旧名到今天的对照见第 9 节。 -->
@@ -441,7 +442,7 @@
   invalidation、stale task/runs 与 observer dispose。
 - Vue-owned [`tests/e2e/scheduled-tasks.spec.ts`](tests/e2e/scheduled-tasks.spec.ts) 为 9 tests：
   create/edit/pause/resume/trigger/delete、recipe、once/DST、六 task 状态、两种类型、running
-  lock、错误展示/401 跳转、runs 50+5 分页和详细字段；完整 M7 清单为 26 files / 138 tests。
+  lock、错误展示/401 跳转、runs 50+5 分页和详细字段。
 
 <!-- 历史记录：写的是**当时**跑了哪条命令，不改写。旧名到今天的对照见第 9 节。 -->
 <!-- historical-commands:begin -->
@@ -472,7 +473,8 @@
 
 <!-- historical-commands:end -->
 
-- `make verify` 有 59 个 lint warning、0 error；生产构建另有既有 chunk-size、Tailwind
+- `make verify` 有 0 error，余下 warning 全部是既有的 `vue/html-self-closing` 与
+  `vue/require-default-prop`（具体条数以命令输出为准，不抄进本文）；生产构建另有既有 chunk-size、Tailwind
   sourcemap 与 unused external import warning。沙箱内首轮完整 Vitest 因
   `listen EPERM 127.0.0.1` 令 12 个 fake-upstream 用例超时，完全相同命令在允许回环监听的
   环境原样重跑后 1337/1337 通过。
@@ -515,9 +517,9 @@
 - 严格 TDD 红灯起步：新增测试首先因 `query-keys`、`state`、`useChannelConnections` 缺失，且
   旧 poll 没有 AbortSignal、expired callback、有限上界而失败；最终 WP-08 unit/DOM 为
   4 files / 21 tests，连同既有 channels/guard 聚焦门禁为 9 files / 55 tests。
-- Vue-owned M7 channels 为 11 tests：覆盖 provider/connection 冲突、URL popup、instruction-only、
-  多账号、有限过期、导航 dispose、pending/race、单 connection/provider 删除、429 与 401；完整
-  M7 清单更新为 26 files / 144 tests。
+- Vue-owned channels spec（现属 `make e2e`）覆盖 provider/connection 冲突、URL popup、
+  instruction-only、多账号、有限过期、导航 dispose、pending/race、单 connection/provider
+  删除、429 与 401。
 
 <!-- 历史记录：写的是**当时**跑了哪条命令，不改写。旧名到今天的对照见第 9 节。 -->
 <!-- historical-commands:begin -->
@@ -570,7 +572,7 @@
 - 严格 TDD 初始红灯覆盖缺少 creation owner/settings/card view、错误 tool 结果误判、无限/重复
   验证、capability stale 字段和 tool-groups DOM；实现后 WP-09 unit/DOM 覆盖 tool success/error、
   immediate/delayed/exhausted visibility、double save、Abort/scope cleanup、exact payload 与 card。
-- Vue-owned M7 Agent spec 为 18 tests：覆盖精确 card、模型目录/错误无 retry storm、exact PUT/
+- Vue-owned Agent spec（现属 `make e2e`）覆盖精确 card、模型目录/错误无 retry storm、exact PUT/
   re-read、失败保留 dialog、隐藏 save、setup_agent 关联、误导性 prose、显式 retry 与既有 Agent chat。
 
 <!-- 历史记录：写的是**当时**跑了哪条命令，不改写。旧名到今天的对照见第 9 节。 -->
@@ -599,9 +601,9 @@
   auth-disabled Gateway 语义派生权限，不建立 static role。Skills 对普通用户保持可读、禁用写；
   MCP 对已知 non-admin 零 GET/PATCH。`useSkillSettings` 与 `useMCPConfig` 分别独占共享 query
   key，精确发送 `{enabled}` / `{server_name, enabled}`，不 optimistic，成功后 authoritative re-read。
-- Vue-owned M7 Settings 为 6 tests，覆盖 import preview/无效数据零请求、失败保留、CRUD/
-  搜索/筛选/二次确认和 auth-disabled admin；auth M7 增至 2 files / 13 tests，覆盖普通用户零
-  MCP I/O、真实 403 分类与 mutation 401 登录边界；完整 M7 清单为 27 files / 156 tests。
+- Vue-owned Settings spec（现属 `make e2e`）覆盖 import preview/无效数据零请求、失败保留、CRUD/
+  搜索/筛选/二次确认和 auth-disabled admin；auth 套件（现属 `make e2e-auth`）覆盖普通用户零
+  MCP I/O、真实 403 分类与 mutation 401 登录边界。
 
 <!-- 历史记录：写的是**当时**跑了哪条命令，不改写。旧名到今天的对照见第 9 节。 -->
 <!-- historical-commands:begin -->
@@ -636,7 +638,7 @@
 
 - WP-11 unit/DOM 覆盖 shortcuts、toast/recovery、settings query/focus、thread action、export cleanup、
   workspace status/reason/error/retry 与真实 stale/abort owner。
-- Vue-owned M7 新增 4 个 shell scenarios，完整清单为 28 files / 160 tests；真实 Chromium 覆盖
+- Vue-owned shell scenarios（现属 `make e2e`）由真实 Chromium 覆盖
   快捷键清理、settings deep-link/history/focus、share/export/updated time 与 changes 可见/重试。
 
 <!-- 历史记录：写的是**当时**跑了哪条命令，不改写。旧名到今天的对照见第 9 节。 -->
@@ -655,11 +657,11 @@
 
 #### 已实现合同
 
-- 全量 90 个 Vue SFC 由可执行 inventory 固定：88 个产品 SFC 进入扫描，仅精确排除 2 个
+- 全量 158 个 Vue SFC 由可执行 inventory 固定：156 个产品 SFC 进入扫描，仅精确排除 2 个
   `app/pages/__m0` 测试 fixture。产品文案、aria/title/placeholder、empty/error/loading、toast
   与 dialog 均从单一 typed locale owner 消费；backend/user/code/file/URL/protocol 动态值保持原样。
 - `app/plugins/i18n.ts` 独占 locale ref/computed、cookie 与 `document.lang`。`en-US`/`zh-CN`
-  各 976 个精确 leaf key，160 个 audited unused key；key/unused drift 与 Vue/TypeScript AST source
+  各 987 个精确 leaf key，150 个 audited unused key；key/unused drift 与 Vue/TypeScript AST source
   guard 共同阻止字典或产品消费回退，只允许精确品牌/技术/快捷键/内部 token。
 - `app/plugins/theme.ts` 创建唯一应用级 controller；它独占 storage、preference/resolved/forced、
   唯一 `matchMedia` listener、根 class/color-scheme 与幂等 cleanup。system 实时跟随，显式主题
@@ -672,7 +674,7 @@
 - WP-12 unit/DOM 4 files / 14 tests；真实 Chromium 覆盖 locale 即时切换/刷新/非法 cookie、
   动态内容不翻译、system light→dark→light、explicit 忽略、切回 system、早期 bootstrap、
   非法 storage、`/` forced dark 与离开恢复。
-- M7 清单为 29 files / 166 tests；visual 为 8/8，新增 zh-CN dark settings baseline，并更新
+- visual 全部通过，新增 zh-CN dark settings baseline，并更新
   这次文案改变对应的唯一 mobile baseline。i18n key/unused/source guard、migration、build 与
   asset budget 同时全绿。
 
@@ -715,7 +717,8 @@
 - unit/DOM 固定 feedback 缺席、MessageMarkdown 默认插件链、表格三项操作、token radio menu、
   header export、suggestions Query owner、操作按钮规格、滚动条 gutter、语义纯净的尾部 padding 与
   composer disclaimer 脱离布局流。
-- Vue-owned M7 固定 settings 菜单、非链接品牌、Agent header/browser 开关和完成后 suggestions。
+- Vue-owned 浏览器合同（现属 `make e2e`）固定 settings 菜单、非链接品牌、Agent header/browser
+  开关和完成后 suggestions。
 - thread-history 浏览器合同直接测量 assistant 操作按钮、横向步进、动作到耗时、消息尾部结构、
   滚动视口到 composer 与 viewport bottom inset；真实双端天气长对话另做同 viewport 几何比对。
 - 同一真实天气 thread 必须在两端显示同一处理步骤、reasoning、GFM 表格与消息操作集合；模型

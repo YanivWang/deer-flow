@@ -3,8 +3,9 @@
 06 §M2 B 的**第 2 类证据**。它验证的是分帧、事件顺序、chunk 合并、心跳、gap、
 `end`/`error` 与 event id；它**不验证**真实代理与网络行为（那是第 4 类）。
 
-不要拿 `thread.json`（516 条最终消息）代替这里的任何一条断言——最终 checkpoint
-是 adapter 的 oracle，不是 transport 的（05 L14）。
+不要拿最终 checkpoint 快照代替这里的任何一条断言：checkpoint 是 adapter 的 oracle，
+不是 transport 的。（原文点名的那份 `thread.json` 已不在本工作区——现在同名文件只有
+`public/demo/threads/*/thread.json`，最多 74 条消息，不是当年那份。）
 
 ## 清单
 

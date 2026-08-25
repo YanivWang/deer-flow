@@ -6,13 +6,15 @@
   【边界与注意】   这条门禁是被现实逼出来的。`1209651f` 把 E2E 套件按用途重命名
                    （m0/m4a/m4b/m5/m6/m7/wp07…wp11 → e2e/e2e-stream/e2e-real/
                    e2e-browser/e2e-scheduled/…），同时删掉了整套迁移台账，
-                   于是 `make migration-check` 也不复存在。**文档一个字没改。**
+                   于是 `migration-check` 也不复存在。**文档一个字没改。**
                    结果是 README、ARCHITECTURE、REUSE 和 PARITY_GAPS 的「验证命令」
-                   里躺着 20 个名字、上百处引用，照着敲全都是
-                   `No rule to make target`——而所有门禁一路全绿，因为没有任何
+                   里躺着 20 个名字、上百处引用，照着敲全都是 make 的
+                   “No rule to make target”——而所有门禁一路全绿，因为没有任何
                    一条检查读过文档。
 
-                   判据只有一条：**能敲的命令必须存在**。为此要把两类文本分开：
+                   判据只有一条：**能敲的命令必须存在**。（本文件自己提到旧名时
+                   只写 target 名、不写成完整命令，否则它会把自己判红。）
+                   为此要把两类文本分开：
 
                    - 指令（README/ARCHITECTURE/REUSE/PARITY_GAPS §9/各 README 配方）
                      必须只出现当前真实存在的 target；
@@ -23,9 +25,9 @@
                    历史区用 `<!-- historical-commands:begin/end -->` 显式圈出，
                    不用行号（行号会随任何一次编辑失效），也不靠「看起来像历史」猜。
 
-                   识别规则：`make X` 中的 X 带连字符，或者被反引号/代码块包住时
-                   参与检查。这样「Deerflow is AI and can make mistakes」这类散文
-                   不会误报，而 `make e2e-m7` 这类死名字跑不掉。
+                   识别规则：命令里的 target 名带连字符，或者整条命令被反引号/代码块
+                   包住时参与检查。这样「Deerflow is AI and can make mistakes」这类散文
+                   不会误报，而 `e2e-m7` 这类死名字跑不掉。
                    残留缺口：一个**没有连字符**、又**没被反引号包住**的已删除
                    target 仍会漏网。当前 Makefile 里的单词 target（verify、test、
                    build…）都还活着，所以这个缺口现在是空的；这里如实写出来，
@@ -90,11 +92,19 @@ function makeTargets(makefile: string): Set<string> {
   return targets;
 }
 
+/*
+  已跟踪 + 未跟踪且未被忽略。只用 `git ls-files` 会让**还没提交的文件对门禁隐形**——
+  这条门禁自己就掉进过这个洞：它第一次跑绿，只是因为它自身还没进版本库。
+  `48fd6cff` 给 standalone-check 修的是同一个洞。
+*/
 function trackedTextFiles(): string[] {
-  const listed = execFileSync("git", ["ls-files"], {
-    cwd: ROOT,
-    encoding: "utf8",
-  });
+  const listed = [
+    execFileSync("git", ["ls-files"], { cwd: ROOT, encoding: "utf8" }),
+    execFileSync("git", ["ls-files", "--others", "--exclude-standard"], {
+      cwd: ROOT,
+      encoding: "utf8",
+    }),
+  ].join("\n");
   return listed
     .split("\n")
     .filter((rel) => rel !== "")

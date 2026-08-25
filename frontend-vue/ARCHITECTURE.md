@@ -57,7 +57,8 @@ Command、Button，以及建在 CodeMirror 6 之上的 CodeEditor。产品组件
 所有 portal 浮层共用 `z-80` 一层，谁后打开谁在上；只有 tooltip 用 `z-90`。
 「当前可见且可聚焦」的判据只有一份，住在 `app/lib/focusable.ts`，抽屉与 primitive 共用。
 tooltip 与 dropdown 套在同一个按钮上时 tooltip 必须在里层——两者各渲染一个
-`PopperAnchor`，顺序反了下拉就会失去自己的 anchor（合同 M7/M8）。
+`PopperAnchor`，顺序反了下拉就会失去自己的 anchor（见 `BEHAVIOR_CONTRACTS.md` 的
+M7/M8——那是合同编号，不是迁移阶段）。
 
 代码编辑器同样住在这一层。框架无关的部分是纯 TS：`app/core/code-editor/language.ts`
 拥有唯一的语言归一表和语法包动态加载边界，`palette.ts` 只放语法色（外壳颜色走
@@ -189,8 +190,9 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
 
 ## 状态所有权
 
-以下是目标所有权边界。当前尚未完全遵守的缓存失效、thread-scoped composer、sidecar
-生命周期等事项以 [`PARITY_GAPS.md`](PARITY_GAPS.md) 为执行清单。
+以下所有权边界当前**已经全部落地**：[`PARITY_GAPS.md`](PARITY_GAPS.md) 第 5 节的
+58 个 ID 均为 DONE，缓存失效、thread-scoped composer 与 sidecar 生命周期不再是待办。
+它们仍写在这里，是因为这是必须**持续保持**的边界，不是因为还没做完。
 
 - 线程列表、历史页、models、skills、session 和 token usage：TanStack Query 缓存；`useThreads.ts` 负责主列表的
   raw-offset 分页和 sidecar 过滤，失效/删除镜像规则在 `app/core/threads/cache-invalidation.ts`。
@@ -267,6 +269,25 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
   listener，因此不形成第二个生命周期 owner。公开根路由 `/` 临时强制 dark，但不改写
   用户 preference/storage；离开后立即恢复实际 preference。完整 locale payload 归独立
   `vendor-i18n` chunk 与显式 asset budget，不占用 `vendor-ui` 预算。
+
+## 遗留的阶段命名
+
+下面这些名字来自迁移期，**不表达当前的模块边界**。读代码时按内容找，不要从名字
+反推范围——这是本仓最容易被误读的一处，所以在这里一次列清。
+清单由 `tests/guards/doc-facts.test.ts` 冻结：既不许某一项悄悄消失而文档还留着，
+也不许再新增一个阶段命名的目录。
+
+| 名字                                  | 实际是什么                                                                    |
+| ------------------------------------- | ----------------------------------------------------------------------------- |
+| `tests/unit/wp02` … `tests/unit/wp12` | 11 个按迁移工作包编号的单测目录，与今天的功能划分**没有**对应关系             |
+| `tests/unit/m7`                       | 同上                                                                          |
+| `app/pages/__m0/`                     | 两个浏览器测试 fixture 页，仅在 `NUXT_PUBLIC_M0_TEST_PAGES=1` 时挂载          |
+| `AGENT_CORE_CONTRACT_VERSION = "m8"`  | `@deerflow/agent-core` 的契约版本字符串；改它是对消费方的破坏性变更，不是改名 |
+| `Makefile` 头两行的 “M0”              | 历史措辞，命令本身按用途命名                                                  |
+
+E2E 套件已经全部按用途命名（`e2e`、`e2e-stream`、`e2e-real`…），`app/core/`、
+`app/components/` 与 `packages/` 下也没有阶段命名。把上表清掉属于去迁移化任务，
+不属于本文描述的架构边界。
 
 ## 验证入口
 
