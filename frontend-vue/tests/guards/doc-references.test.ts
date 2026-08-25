@@ -174,6 +174,38 @@ try {
   rootTargets = null;
 }
 
+/*
+  仓库根上由本 fork 维护的文档。它们讲的是「整套服务怎么跑」，位置由职责决定，
+  搬不进 frontend-vue/——但此前它们**完全在门禁之外**：这条检查的 root 是
+  frontend-vue/，`git ls-files` 也只列这个目录。
+
+  代价是实测出来的：`1209651f` 把 E2E 套件改名后，上一轮只修好了 frontend-vue/
+  里的引用，而根 `AGENTS.md` 里的 `e2e-wp10-real-backend`、
+  `e2e-wp11-real-backend`、`migration-check`、`e2e-m7` 四个死名字一直躺着，
+  照着敲全是 make 的「无此规则」。同一场腐烂，只因为跨了一个目录就漏掉。
+
+  **为什么是显式清单而不是「扫所有根文档」**：实测扫过，上游那些英文文档里
+  的 `all` / `simple` / `should-not-trigger` 之类全是普通动词短语被误判，
+  会淹没真信号；而且上游文档本来就不该由我们改。
+
+  **清单不会腐烂**，因为下面第一条用例校验它自己：只要仓库其余部分在
+  checkout 里，这里每一项都必须真的存在。
+*/
+const FORK_ROOT_DOCS = [
+  "../AGENTS.md",
+  "../ENTRY.md",
+  "../docs/dual-frontend-production.md",
+];
+
+/** 这些文档会引用三层 Makefile 的入口，三层都算数。 */
+function backendTargets(): Set<string> {
+  try {
+    return makeTargets(readFileSync(join(ROOT, "../backend/Makefile"), "utf8"));
+  } catch {
+    return new Set();
+  }
+}
+
 const known = new Set([...localTargets, ...ROOT_MAKE_TARGETS]);
 
 function markdownFiles() {
@@ -292,6 +324,40 @@ describe("套件表和 Makefile 不许分叉", () => {
         });
       }
     }
+  });
+});
+
+describe("仓库根上 fork 维护的文档", () => {
+  const inFullCheckout = rootTargets !== null;
+
+  it("清单里的每个文件都存在（清单自己不会腐烂）", () => {
+    if (!inFullCheckout) return;
+    const missing = FORK_ROOT_DOCS.filter(
+      (rel) => !existsSync(join(ROOT, rel)),
+    );
+    expect(
+      missing,
+      "文件没了就把它从 FORK_ROOT_DOCS 拿掉，别让门禁指向空气",
+    ).toEqual([]);
+  });
+
+  it("里面每条 make 命令都真的存在", () => {
+    if (!inFullCheckout) return;
+    const everywhere = new Set([
+      ...localTargets,
+      ...(rootTargets ?? []),
+      ...backendTargets(),
+    ]);
+    const dead: string[] = [];
+    for (const rel of FORK_ROOT_DOCS) {
+      const path = join(ROOT, rel);
+      if (!existsSync(path)) continue;
+      const source = readFileSync(path, "utf8");
+      for (const { name, line } of referencedTargets(source)) {
+        if (!everywhere.has(name)) dead.push(`${rel}:${line} make ${name}`);
+      }
+    }
+    expect(dead, "照着文档敲会得到 make 的「无此规则」").toEqual([]);
   });
 });
 

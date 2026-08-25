@@ -110,9 +110,9 @@ Scheduled-task note:
 
 Vue parity notes:
 
-- Memory, Skills & MCP retain Query owners and auth boundaries; `make e2e-wp10-real-backend` covers the production path.
+- Memory, Skills & MCP retain Query owners and auth boundaries; `make e2e-settings` covers the production path.
 - The workspace layout owns one palette, settings host and toaster. The route owns settings-open state; Query owns workspace changes and propagates aborts.
-- `make e2e-wp11-real-backend` keeps production Auth, owner checks, event reads, filtering and Nuxt; only its isolated seed event and recovery 503 are controlled fixtures.
+- `make e2e-shell` keeps production Auth, owner checks, event reads, filtering and Nuxt; only its isolated seed event and recovery 503 are controlled fixtures.
 
 ## Commands: Root vs. Module
 
@@ -158,8 +158,8 @@ cd frontend && pnpm test      # Unit tests
 
 # Vue frontend (see frontend-vue/README.md for all gates)
 cd frontend-vue && make verify
-cd frontend-vue && make migration-check
-cd frontend-vue && make e2e-m7
+cd frontend-vue && make e2e-mock
+cd frontend-vue && make e2e-backend
 ```
 
 Rule of thumb: root `make` owns application lifecycle; module Makefiles/package commands
