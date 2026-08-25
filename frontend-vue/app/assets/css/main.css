@@ -1,6 +1,5 @@
 /*
   【文件职责】     提供 Tailwind 4、主题变量与全局基础样式。
-  【对应 frontend/】 frontend/src/styles/globals.css
   【架构位置】     L2
   【主要导出】     全局 CSS
   【依赖关系】     由 nuxt.config.ts 加载
