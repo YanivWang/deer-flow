@@ -9,6 +9,8 @@
 <script setup lang="ts">
 import { onScopeDispose, watch } from "vue";
 
+import RouteAnnouncer from "@/components/RouteAnnouncer.vue";
+
 const { $theme } = useNuxtApp();
 const route = useRoute();
 const stopRouteTheme = watch(
@@ -26,4 +28,6 @@ onScopeDispose(() => {
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
+  <!-- React 的每条路由上都有 Next 注入的同类实时区域；见组件文件头。 -->
+  <RouteAnnouncer />
 </template>

@@ -52,6 +52,19 @@ export default defineNuxtConfig({
   modules: ["shadcn-nuxt", "@nuxt/eslint"],
   app: {
     head: {
+      /*
+        与 React 的根 layout metadata 逐字一致（frontend/src/app/layout.tsx）。
+        Vue 此前一条都没设，`document.title` 是空字符串——浏览器标签、书签、
+        窗口标题和读屏打开页面时的播报全都拿不到名字。只有 blog 与 docs 路由
+        在 React 侧覆盖了标题，而那几条路由 Vue 还没有。
+      */
+      title: "DeerFlow",
+      meta: [
+        {
+          name: "description",
+          content: "A LangChain-based framework for building super agents.",
+        },
+      ],
       script: [
         {
           key: "deerflow-theme-bootstrap",

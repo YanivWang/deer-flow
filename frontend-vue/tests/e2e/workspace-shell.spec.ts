@@ -242,9 +242,9 @@ test("workspace changes exposes truncated/status/reasons and retries detail erro
     await expect(page.getByText(status, { exact: true }).first()).toBeVisible();
   }
   await page.getByTestId("workspace-changes-open").click();
-  await expect(page.getByRole("alert")).toContainText(
-    "workspace snapshot expired",
-  );
+  await expect(
+    page.getByRole("alert").filter({ hasText: "workspace snapshot expired" }),
+  ).toBeVisible();
   await page.getByTestId("workspace-changes-retry").click();
   for (const reason of [
     "Binary file. Diff unavailable.",

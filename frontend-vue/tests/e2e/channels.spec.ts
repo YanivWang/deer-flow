@@ -871,7 +871,7 @@ test.describe("IM channels", () => {
       .locator("[data-sidebar='sidebar']")
       .getByRole("button", { name: "Connect" })
       .click();
-    await expect(page.getByRole("alert")).toHaveText(
+    await expect(page.getByRole("alert").filter({ hasText: /\S/ })).toHaveText(
       "Too many pending channel connection codes.",
     );
   });

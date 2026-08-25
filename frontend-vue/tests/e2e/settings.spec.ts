@@ -195,7 +195,9 @@ test.describe("Vue settings", () => {
       mimeType: "application/json",
       buffer: Buffer.from("{oops"),
     });
-    await expect(page.getByRole("alert")).toContainText("malformed-json");
+    await expect(
+      page.getByRole("alert").filter({ hasText: "malformed-json" }),
+    ).toBeVisible();
     expect(gateway.requests).toHaveLength(0);
 
     const imported = {

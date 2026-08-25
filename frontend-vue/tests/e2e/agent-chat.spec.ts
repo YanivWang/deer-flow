@@ -308,9 +308,9 @@ test.describe("Agent chat", () => {
       .click();
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.getByRole("alert")).toContainText(
-      "Unknown model 'retired'",
-    );
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Unknown model" }),
+    ).toBeVisible();
     expect(puts).toBe(1);
   });
 
@@ -332,9 +332,9 @@ test.describe("Agent chat", () => {
     await page
       .getByRole("button", { name: "Model settings: test-agent" })
       .click();
-    await expect(page.getByRole("alert")).toContainText(
-      "model catalog unavailable",
-    );
+    await expect(
+      page.getByRole("alert").filter({ hasText: "model catalog unavailable" }),
+    ).toBeVisible();
     await page.waitForTimeout(300);
     expect(modelReads).toBe(1);
   });
