@@ -96,8 +96,11 @@ make e2e-external       # WebSocket 与 OIDC；需要 backend 的 browser extra
 `make e2e-mock` 聚合 `e2e`、`e2e-auth`、`e2e-infra`、`e2e-proxy-options` 与
 `e2e-stream`；`make e2e-backend` 聚合 `e2e-protocol`、`e2e-real`、`e2e-scheduled`、
 `e2e-channels`、`e2e-agents`、`e2e-settings`、`e2e-shell` 与 `e2e-browser`。
-`make e2e-visual` 刻意两边都不进：截图基线只有 `-darwin` 一份，在 Linux 容器里
-生成并签入 `-linux` 基线之前，它是本机门禁。
+`make e2e-visual` 刻意两边都不进：截图基线只有 `-darwin` 一份，在生成并签入
+`-linux` 基线之前，它是本机门禁。这两件事由
+`tests/guards/visual-baseline-platforms.test.ts` 双向绑定：只签基线不接 CI 会红，
+只接 CI 不签基线也会红。解除步骤、以及为什么不能在本机用 amd64 模拟生成基线，
+写在那个文件的头注释里。
 
 定向检查：
 

@@ -101,8 +101,20 @@ jobs:
       #
       # e2e-visual is deliberately NOT part of e2e-mock: the screenshot
       # baselines are `-darwin` only and this runner is Linux. The Makefile
-      # target carries the same note. Landing it here needs `-linux` baselines
-      # generated in a container and checked in first.
+      # target carries the same note, and
+      # frontend-vue/tests/guards/visual-baseline-platforms.test.ts now
+      # enforces the coupling in both directions -- `-linux` baselines without
+      # this step, or this step without `-linux` baselines, both fail.
+      #
+      # To land it: add a temporary step here running
+      #   npx playwright test --config=playwright.visual.config.ts --update-snapshots
+      # upload the snapshots directory with actions/upload-artifact, download
+      # it, commit the `-linux` PNGs, and add `make e2e-visual` in the same
+      # change. Do NOT generate them locally on an Apple Silicon Mac through
+      # QEMU: there is no evidence that emulated amd64 font rasterisation
+      # matches this runner, and `maxDiffPixelRatio: 0.01` over a fullPage
+      # screenshot is loose enough to hide the difference -- which yields a
+      # gate that looks green while guarding nothing.
       - name: Run every suite that needs no backend
         working-directory: frontend-vue
         run: make e2e-mock

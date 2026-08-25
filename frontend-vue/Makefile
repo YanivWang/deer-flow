@@ -230,9 +230,12 @@ e2e-external:
 # 不需要任何后端进程，CI 的主门禁。
 #
 # e2e-visual **不在**这里：截图基线目前只有 `-darwin` 一份，而 CI 跑 Linux，
-# 两边的字体栅格化不同。要把它接进 CI，得先在 Linux 容器里生成 `-linux` 基线
-# 并签入。在那之前它是本机门禁——这也正是它悄悄红了三个提交没人发现的原因
-# （旧 CI 只跑 @visual-seed，从没跑过产品截图）。
+# 两边的字体栅格化不同。要把它接进 CI，得先生成 `-linux` 基线并签入。在那之前
+# 它是本机门禁——这也正是它悄悄红了三个提交没人发现的原因（旧 CI 只跑
+# @visual-seed，从没跑过产品截图）。
+# 「基线平台集合 == 门禁运行平台集合」现在由
+# tests/guards/visual-baseline-platforms.test.ts 双向守着，具体解除步骤写在
+# 那个文件的头注释里。
 e2e-mock: e2e e2e-auth e2e-infra e2e-proxy-options e2e-stream
 
 # 需要 backend 的 uv 环境。

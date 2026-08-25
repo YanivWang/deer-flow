@@ -112,7 +112,11 @@ and `e2e-stream`; `make e2e-backend` aggregates `e2e-protocol`, `e2e-real`,
 `e2e-scheduled`, `e2e-channels`, `e2e-agents`, `e2e-settings`, `e2e-shell` and
 `e2e-browser`. `make e2e-visual` is deliberately in neither: its screenshot
 baselines exist only for `-darwin`, so it stays a local gate until `-linux`
-baselines are generated in a container and checked in.
+baselines are generated and checked in. Those two facts are coupled by
+`tests/guards/visual-baseline-platforms.test.ts` — checking in `-linux`
+baselines without wiring the gate into CI fails, and so does the reverse. The
+procedure, and why the baselines must not be produced locally through amd64
+emulation, is in that file's header.
 
 Targeted checks:
 
