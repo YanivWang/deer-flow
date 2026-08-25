@@ -1,0 +1,666 @@
+{
+  "$comment": "React 与 Vue 在每个对照场景上的双向差异。这份清单只能缩短：修好一条就从这里删一条，新出现一条会让 e2e-parity 立刻红。空数组是目标状态，不是「还没测」。刷新用 make parity-accept，刷新前先逐条看清楚是修好了还是新坏了。键是 场景/断点/主题/语言；aria* 是可访问性树的双向逐行差异，requests* 是产品 API 请求的多重集差异。",
+  "entries": {
+    "chat/desktop/light/en-US": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Polish input\" [disabled]",
+        "- button \"Submit\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"Toggle Sidebar\"",
+        "- group:",
+        "- group:",
+        "- list:",
+        "- list:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- separator [disabled]",
+        "- status \"Context window\"",
+        "- text: 👋 Hello, again!"
+      ],
+      "ariaOnlyVue": [
+        "- button \"Collapse sidebar\" [expanded]",
+        "- button \"Flash\"",
+        "- button \"Polish input\"",
+        "- button \"Send\" [disabled]",
+        "- button \"Upload files\"",
+        "- complementary:",
+        "- list",
+        "- list \"Notification\"",
+        "- listitem",
+        "- log \"Conversation\":",
+        "- navigation:",
+        "- text: Hello, again!",
+        "- text: New chat",
+        "- text: Recent chats"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "chat/desktop/light/zh-CN": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Submit\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"优化输入\" [disabled]",
+        "- group:",
+        "- group:",
+        "- list:",
+        "- list:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- separator [disabled]",
+        "- status \"上下文窗口\"",
+        "- text: 👋 你好，欢迎回来！"
+      ],
+      "ariaOnlyVue": [
+        "- button \"上传文件\"",
+        "- button \"优化输入\"",
+        "- button \"发送\" [disabled]",
+        "- button \"收起侧栏\" [expanded]",
+        "- button \"闪速\"",
+        "- complementary:",
+        "- list",
+        "- list \"通知\"",
+        "- listitem",
+        "- log \"对话\":",
+        "- navigation:",
+        "- text: 你好，欢迎回来！",
+        "- text: 新对话",
+        "- text: 最近的对话"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "chat/desktop/dark/en-US": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Polish input\" [disabled]",
+        "- button \"Submit\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"Toggle Sidebar\"",
+        "- group:",
+        "- group:",
+        "- list:",
+        "- list:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- separator [disabled]",
+        "- status \"Context window\"",
+        "- text: 👋 Hello, again!"
+      ],
+      "ariaOnlyVue": [
+        "- button \"Collapse sidebar\" [expanded]",
+        "- button \"Flash\"",
+        "- button \"Polish input\"",
+        "- button \"Send\" [disabled]",
+        "- button \"Upload files\"",
+        "- complementary:",
+        "- list",
+        "- list \"Notification\"",
+        "- listitem",
+        "- log \"Conversation\":",
+        "- navigation:",
+        "- text: Hello, again!",
+        "- text: New chat",
+        "- text: Recent chats"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "chat/desktop/dark/zh-CN": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Submit\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"优化输入\" [disabled]",
+        "- group:",
+        "- group:",
+        "- list:",
+        "- list:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- separator [disabled]",
+        "- status \"上下文窗口\"",
+        "- text: 👋 你好，欢迎回来！"
+      ],
+      "ariaOnlyVue": [
+        "- button \"上传文件\"",
+        "- button \"优化输入\"",
+        "- button \"发送\" [disabled]",
+        "- button \"收起侧栏\" [expanded]",
+        "- button \"闪速\"",
+        "- complementary:",
+        "- list",
+        "- list \"通知\"",
+        "- listitem",
+        "- log \"对话\":",
+        "- navigation:",
+        "- text: 你好，欢迎回来！",
+        "- text: 新对话",
+        "- text: 最近的对话"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "chat/tablet/light/en-US": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Polish input\" [disabled]",
+        "- button \"Submit\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"Toggle Sidebar\"",
+        "- group:",
+        "- group:",
+        "- list:",
+        "- list:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- separator [disabled]",
+        "- status \"Context window\"",
+        "- text: 👋 Hello, again!"
+      ],
+      "ariaOnlyVue": [
+        "- button \"Collapse sidebar\" [expanded]",
+        "- button \"Flash\"",
+        "- button \"Polish input\"",
+        "- button \"Send\" [disabled]",
+        "- button \"Upload files\"",
+        "- complementary:",
+        "- list",
+        "- list \"Notification\"",
+        "- listitem",
+        "- log \"Conversation\":",
+        "- navigation:",
+        "- text: Hello, again!",
+        "- text: New chat",
+        "- text: Recent chats"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "chat/tablet/light/zh-CN": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Submit\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"优化输入\" [disabled]",
+        "- group:",
+        "- group:",
+        "- list:",
+        "- list:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- separator [disabled]",
+        "- status \"上下文窗口\"",
+        "- text: 👋 你好，欢迎回来！"
+      ],
+      "ariaOnlyVue": [
+        "- button \"上传文件\"",
+        "- button \"优化输入\"",
+        "- button \"发送\" [disabled]",
+        "- button \"收起侧栏\" [expanded]",
+        "- button \"闪速\"",
+        "- complementary:",
+        "- list",
+        "- list \"通知\"",
+        "- listitem",
+        "- log \"对话\":",
+        "- navigation:",
+        "- text: 你好，欢迎回来！",
+        "- text: 新对话",
+        "- text: 最近的对话"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "chat/tablet/dark/en-US": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Polish input\" [disabled]",
+        "- button \"Submit\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"Toggle Sidebar\"",
+        "- group:",
+        "- group:",
+        "- list:",
+        "- list:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- separator [disabled]",
+        "- status \"Context window\"",
+        "- text: 👋 Hello, again!"
+      ],
+      "ariaOnlyVue": [
+        "- button \"Collapse sidebar\" [expanded]",
+        "- button \"Flash\"",
+        "- button \"Polish input\"",
+        "- button \"Send\" [disabled]",
+        "- button \"Upload files\"",
+        "- complementary:",
+        "- list",
+        "- list \"Notification\"",
+        "- listitem",
+        "- log \"Conversation\":",
+        "- navigation:",
+        "- text: Hello, again!",
+        "- text: New chat",
+        "- text: Recent chats"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "chat/tablet/dark/zh-CN": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Submit\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"优化输入\" [disabled]",
+        "- group:",
+        "- group:",
+        "- list:",
+        "- list:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- separator [disabled]",
+        "- status \"上下文窗口\"",
+        "- text: 👋 你好，欢迎回来！"
+      ],
+      "ariaOnlyVue": [
+        "- button \"上传文件\"",
+        "- button \"优化输入\"",
+        "- button \"发送\" [disabled]",
+        "- button \"收起侧栏\" [expanded]",
+        "- button \"闪速\"",
+        "- complementary:",
+        "- list",
+        "- list \"通知\"",
+        "- listitem",
+        "- log \"对话\":",
+        "- navigation:",
+        "- text: 你好，欢迎回来！",
+        "- text: 新对话",
+        "- text: 最近的对话"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "chat/mobile/light/en-US": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Polish input\" [disabled]",
+        "- button \"Submit\"",
+        "- group:",
+        "- group:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- status \"Context window\"",
+        "- text: 👋 Hello, again!"
+      ],
+      "ariaOnlyVue": [
+        "- /url: /workspace/agents",
+        "- /url: /workspace/chats",
+        "- /url: /workspace/chats/new",
+        "- /url: /workspace/scheduled-tasks",
+        "- button \"Flash\"",
+        "- button \"Polish input\"",
+        "- button \"Send\" [disabled]",
+        "- button \"Settings and more\"",
+        "- button \"Upload files\"",
+        "- complementary:",
+        "- link \"Agents\":",
+        "- link \"Chats\":",
+        "- link \"New chat\":",
+        "- link \"Scheduled tasks\":",
+        "- list",
+        "- list \"Notification\"",
+        "- list:",
+        "- listitem",
+        "- log \"Conversation\":",
+        "- navigation:",
+        "- text: DeerFlow",
+        "- text: Hello, again!",
+        "- text: New chat",
+        "- text: Recent chats"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "chat/mobile/light/zh-CN": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Submit\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"优化输入\" [disabled]",
+        "- group:",
+        "- group:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- status \"上下文窗口\"",
+        "- text: 👋 你好，欢迎回来！"
+      ],
+      "ariaOnlyVue": [
+        "- /url: /workspace/agents",
+        "- /url: /workspace/chats",
+        "- /url: /workspace/chats/new",
+        "- /url: /workspace/scheduled-tasks",
+        "- button \"上传文件\"",
+        "- button \"优化输入\"",
+        "- button \"切换侧边栏\"",
+        "- button \"发送\" [disabled]",
+        "- button \"设置和更多\"",
+        "- button \"闪速\"",
+        "- complementary:",
+        "- link \"定时任务\":",
+        "- link \"对话\":",
+        "- link \"新对话\":",
+        "- link \"智能体\":",
+        "- list",
+        "- list \"通知\"",
+        "- list:",
+        "- listitem",
+        "- log \"对话\":",
+        "- navigation:",
+        "- text: DeerFlow",
+        "- text: 你好，欢迎回来！",
+        "- text: 新对话",
+        "- text: 最近的对话"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "chat/mobile/dark/en-US": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Polish input\" [disabled]",
+        "- button \"Submit\"",
+        "- group:",
+        "- group:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- status \"Context window\"",
+        "- text: 👋 Hello, again!"
+      ],
+      "ariaOnlyVue": [
+        "- /url: /workspace/agents",
+        "- /url: /workspace/chats",
+        "- /url: /workspace/chats/new",
+        "- /url: /workspace/scheduled-tasks",
+        "- button \"Flash\"",
+        "- button \"Polish input\"",
+        "- button \"Send\" [disabled]",
+        "- button \"Settings and more\"",
+        "- button \"Upload files\"",
+        "- complementary:",
+        "- link \"Agents\":",
+        "- link \"Chats\":",
+        "- link \"New chat\":",
+        "- link \"Scheduled tasks\":",
+        "- list",
+        "- list \"Notification\"",
+        "- list:",
+        "- listitem",
+        "- log \"Conversation\":",
+        "- navigation:",
+        "- text: DeerFlow",
+        "- text: Hello, again!",
+        "- text: New chat",
+        "- text: Recent chats"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "chat/mobile/dark/zh-CN": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Submit\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"优化输入\" [disabled]",
+        "- group:",
+        "- group:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- status \"上下文窗口\"",
+        "- text: 👋 你好，欢迎回来！"
+      ],
+      "ariaOnlyVue": [
+        "- /url: /workspace/agents",
+        "- /url: /workspace/chats",
+        "- /url: /workspace/chats/new",
+        "- /url: /workspace/scheduled-tasks",
+        "- button \"上传文件\"",
+        "- button \"优化输入\"",
+        "- button \"切换侧边栏\"",
+        "- button \"发送\" [disabled]",
+        "- button \"设置和更多\"",
+        "- button \"闪速\"",
+        "- complementary:",
+        "- link \"定时任务\":",
+        "- link \"对话\":",
+        "- link \"新对话\":",
+        "- link \"智能体\":",
+        "- list",
+        "- list \"通知\"",
+        "- list:",
+        "- listitem",
+        "- log \"对话\":",
+        "- navigation:",
+        "- text: DeerFlow",
+        "- text: 你好，欢迎回来！",
+        "- text: 新对话",
+        "- text: 最近的对话"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "sidebar/desktop/light/en-US": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Polish input\" [disabled]",
+        "- button \"Submit\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"Toggle Sidebar\"",
+        "- group:",
+        "- group:",
+        "- list:",
+        "- list:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- separator [disabled]",
+        "- status \"Context window\"",
+        "- text: 👋 Hello, again!"
+      ],
+      "ariaOnlyVue": [
+        "- button \"Collapse sidebar\" [expanded]",
+        "- button \"Flash\"",
+        "- button \"Polish input\"",
+        "- button \"Send\" [disabled]",
+        "- button \"Upload files\"",
+        "- complementary:",
+        "- list",
+        "- list \"Notification\"",
+        "- listitem",
+        "- log \"Conversation\":",
+        "- navigation:",
+        "- text: Hello, again!",
+        "- text: New chat",
+        "- text: Recent chats"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    },
+    "thread-history/desktop/light/en-US": {
+      "ariaOnlyReact": [
+        "- button",
+        "- button",
+        "- button \"Polish input\" [disabled]",
+        "- button \"Submit\"",
+        "- button \"Toggle Sidebar\"",
+        "- button \"Toggle Sidebar\"",
+        "- group:",
+        "- group:",
+        "- list:",
+        "- list:",
+        "- list:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- listitem:",
+        "- log",
+        "- main:",
+        "- region \"Notifications alt+T\"",
+        "- separator [disabled]",
+        "- status \"Context window\"",
+        "- text: 👋 Hello, again!"
+      ],
+      "ariaOnlyVue": [
+        "- button \"Collapse sidebar\" [expanded]",
+        "- button \"Flash\"",
+        "- button \"Polish input\"",
+        "- button \"Send\" [disabled]",
+        "- button \"Upload files\"",
+        "- complementary:",
+        "- list",
+        "- list \"Notification\"",
+        "- log \"Conversation\":",
+        "- navigation:",
+        "- text: Hello, again!",
+        "- text: New chat"
+      ],
+      "requestsOnlyReact": [
+        "GET /api/features"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/channels/connections"
+      ]
+    }
+  }
+}

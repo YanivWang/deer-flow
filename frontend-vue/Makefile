@@ -5,7 +5,7 @@
 	e2e-protocol e2e-real e2e-scheduled e2e-channels e2e-agents e2e-settings e2e-shell \
 	e2e-browser e2e-external e2e-parity e2e-mock e2e-backend e2e-list \
 	proxy-security audit docker-build container-smoke \
-	upstream-drift upstream-accept dom-parity \
+	upstream-drift upstream-accept dom-parity parity-accept \
 	i18n-check i18n-diff i18n-unused i18n-source-check i18n-refresh \
 	gen-api-types gen-api-types-check gen-contract-constants gen-contract-constants-check \
 	consumer-check standalone-check
@@ -64,6 +64,7 @@ help:
 	@echo "  make upstream-drift            report what ../frontend changed since the marker"
 	@echo "  make upstream-accept           advance the reviewed-upstream marker to HEAD"
 	@echo "  make dom-parity                diff React vs Vue semantic DOM (needs both apps running)"
+	@echo "  make parity-accept             re-record the checked-in parity difference list"
 	@echo "  make typecheck-core            standalone tsc for packages/agent-core"
 	@echo "  make gen-api-types             regenerate app/core/api/types.gen.ts from the snapshot"
 	@echo "  make gen-contract-constants    regenerate backend contract constants from contracts/*.json"
@@ -237,6 +238,12 @@ e2e-external:
 # （见 make standalone-check）。frontend/ 缺席时 React 不启动，用例整组跳过。
 e2e-parity:
 	$(call run_suite,parity)
+
+# 刷新对照差异清单。accept 只**记录**测量结果，不判断对错——刷新之前必须逐条
+# 看清楚每一条变化是修好了还是新坏了，否则这个目标会变成把回归洗白的按钮。
+parity-accept:
+	@$(MAKE) --no-print-directory e2e-preflight
+	PARITY_ACCEPT=1 $(E2E_EXEC) playwright test -c playwright.parity.config.ts diff.spec.ts
 
 # ── 聚合入口 ────────────────────────────────────────────────────────────
 # 不需要任何后端进程，CI 的主门禁。

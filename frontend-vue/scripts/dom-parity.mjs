@@ -28,6 +28,8 @@ import { writeFileSync } from "node:fs";
 // 直接 import 会在 pnpm 的严格 node_modules 下解析不到）。
 import { chromium } from "@playwright/test";
 
+import { diffAriaLines, normalizeAriaSnapshot } from "./lib/aria-parity.mjs";
+
 const REACT_BASE = process.env.DOM_PARITY_REACT_BASE ?? "http://127.0.0.1:3000";
 const VUE_BASE = process.env.DOM_PARITY_VUE_BASE ?? "http://127.0.0.1:3100";
 
@@ -46,29 +48,6 @@ const asJson = process.argv.includes("--json");
 const outFlag = process.argv.indexOf("--out");
 const outPath = outFlag === -1 ? null : process.argv[outFlag + 1];
 
-/**
- * 归一化 aria 快照。
- *
- * 去掉的都是**两边不可能相同、且用户感知不到**的东西：reka-ui 与 radix 生成的
- * 元素 id、Nuxt/Next 各自的水合标记、以及纯装饰性的空节点。保留 role、可访问名、
- * 层级与顺序——差一条就是真差异。
- */
-function normalize(snapshot) {
-  return snapshot
-    .split("\n")
-    .map((line) => line.replace(/\s+$/, ""))
-    .map((line) =>
-      line
-        // reka-/radix- 自动生成的 id 每次渲染都不同，且不进可访问名
-        .replace(/(reka|radix)-[\w-]+/g, "«id»")
-        // 组件库把序号拼进 name 的场合（v-0-2 这类）
-        .replace(/-v-\d+(-\d+)*/g, "")
-        .replace(/\s{2,}/g, " "),
-    )
-    .filter((line) => line.trim() !== "" && line.trim() !== "- generic")
-    .join("\n");
-}
-
 async function snapshotOf(context, base, path) {
   const page = await context.newPage();
   const errors = [];
@@ -80,48 +59,12 @@ async function snapshotOf(context, base, path) {
     });
     const status = response?.status() ?? 0;
     const snapshot = await page.locator("body").ariaSnapshot();
-    return { status, snapshot: normalize(snapshot), errors };
+    return { status, snapshot: normalizeAriaSnapshot(snapshot), errors };
   } catch (cause) {
     return { status: 0, snapshot: "", errors: [...errors, String(cause)] };
   } finally {
     await page.close();
   }
-}
-
-/**
- * 逐行差异，**先去掉缩进**。
- *
- * 保留缩进的话，只要一边多包一层容器（Vue 的登录页外面多一个 `<main>`），
- * 它下面每一行的缩进都变了，于是整棵子树在两侧同时出现——实测把 2 处真差异
- * 刷成 24 行。层级差异本身有价值，但要用树 diff 单独报，不能让它淹没内容差异。
- * 这里只回答「有没有多/少某个可访问节点」。
- */
-function diffLines(reactSnapshot, vueSnapshot) {
-  const strip = (text) =>
-    text
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-  const react = strip(reactSnapshot);
-  const vue = strip(vueSnapshot);
-  const count = (lines) => {
-    const map = new Map();
-    for (const line of lines) map.set(line, (map.get(line) ?? 0) + 1);
-    return map;
-  };
-  const reactCount = count(react);
-  const vueCount = count(vue);
-  const onlyReact = [];
-  const onlyVue = [];
-  for (const [line, n] of reactCount) {
-    const extra = n - (vueCount.get(line) ?? 0);
-    for (let i = 0; i < extra; i++) onlyReact.push(line);
-  }
-  for (const [line, n] of vueCount) {
-    const extra = n - (reactCount.get(line) ?? 0);
-    for (let i = 0; i < extra; i++) onlyVue.push(line);
-  }
-  return { onlyReact, onlyVue };
 }
 
 const browser = await chromium.launch();
@@ -137,7 +80,7 @@ for (const scenario of SCENARIOS) {
     ...scenario,
     react: { status: react.status, errors: react.errors },
     vue: { status: vue.status, errors: vue.errors },
-    ...diffLines(react.snapshot, vue.snapshot),
+    ...diffAriaLines(react.snapshot, vue.snapshot),
   });
 }
 

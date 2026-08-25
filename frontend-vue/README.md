@@ -125,6 +125,7 @@ emulation, is in that file's header.
 Targeted checks:
 
 ```bash
+make parity-accept      # re-record baseline/parity-diff.json after a parity change
 make proxy-security     # Nitro body limits, bodyless/chunked DELETE, SSE and traversal
 make i18n-source-check  # AST guard for every product Vue SFC
 make standalone-check   # no cross-app reference to ../frontend

@@ -109,6 +109,7 @@ make e2e-parity         # React 与 Vue 架在同一个 replay Gateway 上；需
 定向检查：
 
 ```bash
+make parity-accept      # 对照差异变了之后重新记录 baseline/parity-diff.json
 make proxy-security     # Nitro body 限制、无 body/chunked DELETE、SSE 与 traversal
 make i18n-source-check  # 全部产品 Vue SFC 的 AST 文案门禁
 make standalone-check   # 不允许任何指向 ../frontend 的跨应用引用
