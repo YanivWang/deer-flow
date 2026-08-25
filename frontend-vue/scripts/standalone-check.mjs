@@ -47,6 +47,10 @@ const CROSS_APP_BY_DESIGN = {
     "对齐范围的豁免定义（纯数据），命中的是它点名的上游路径；唯一消费者整组 skipIf 跳过。",
   "tests/e2e-parity/support/react-preview.ts":
     "对照套件启动兄弟应用的地方；缺席时不启动它，e2e-parity 整组跳过，不进任何聚合入口。",
+  "tests/parity/scenario-coverage.test.ts":
+    "场景覆盖率棘轮；坐标系是上游的 spec 清单，缺席时那条用例 skipIf 跳过。",
+  "baseline/parity-scenario-coverage.json":
+    "覆盖率棘轮的数据（纯数据），命中的是它说明坐标系来自哪里。",
 };
 
 const COMMENT_STYLES = {
