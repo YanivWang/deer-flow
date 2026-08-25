@@ -65,10 +65,25 @@ const SHA = "a".repeat(64);
   预热 CodeMirror 的模块图。组件里的 `await import()` 第一次要把 5 个包过一遍
   transform，那一轮不是靠 flushPromises 让路就能推进的——不预热的话，第一个
   用到编辑器的用例会因为「还没加载完」而不是「行为不对」失败。
+
+  ⚠️ **必须逐个预热 `editor.ts` 内部 `Promise.all` 里的那 5 个包，import
+  `editor` 模块本身不够。** import 一个模块只会执行它的顶层代码，而这 5 个
+  import 写在 `createCodeEditor()` 函数体里，只有真正建编辑器时才触发。
+  漏掉它们的版本在本机 5 次 `make verify` 里红了 2 次——`.txt` 用例不需要任何
+  语法包，所以当时预热的 `lang-markdown` 对它一点用都没有，而 50 轮
+  flushPromises 是否够用取决于机器负载。一条时红时绿的门禁比没有门禁更糟：
+  它教人重跑到绿为止。
 */
 async function warmCodeEditorModules() {
-  await import("@/core/code-editor/editor");
-  await import("@codemirror/lang-markdown");
+  await Promise.all([
+    import("@/core/code-editor/editor"),
+    import("@codemirror/state"),
+    import("@codemirror/view"),
+    import("@codemirror/language"),
+    import("@codemirror/commands"),
+    import("@lezer/highlight"),
+    import("@codemirror/lang-markdown"),
+  ]);
 }
 
 async function editorView(wrapper: VueWrapper): Promise<EditorView> {
