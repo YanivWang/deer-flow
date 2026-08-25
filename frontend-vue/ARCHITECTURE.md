@@ -280,6 +280,15 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
   listener，因此不形成第二个生命周期 owner。公开根路由 `/` 临时强制 dark，但不改写
   用户 preference/storage；离开后立即恢复实际 preference。完整 locale payload 归独立
   `vendor-i18n` chunk 与显式 asset budget，不占用 `vendor-ui` 预算。
+  **两本词典同装一个 chunk 是权衡后的结果，不是没人想过拆。** 实测拆过：把
+  `clientTranslations` 换成按 locale 的 `await import()` 之后，`/` 的关键路径确实
+  掉了 92,053 raw / 26,629 brotli——然后 prefetch 涨了 93,066 raw / 29,621 brotli，
+  每个用户**净多下载 2,992 brotli**。原因是 Nuxt 按 client manifest 给 entry 的每个
+  动态 import 都发 `<link rel="prefetch">`，两本词典都会被投机拉下来；而只要运行期
+  还能切语言，两本就都从 entry 可达，这个 prefetch 无法只留一本。更糟的是当前 locale
+  那本**也只拿到 prefetch**——`ssrContext.modules` 只收 SSR 渲染过的组件，plugin 里
+  import 的纯 TS 模块进不去，所以拿不到 `modulepreload`。于是 hydration 会等一个
+  `VeryLow` 优先级的请求，而路由预算反而报告「关键路径变小了」。结论：维持现状。
 
 ## 遗留的阶段命名
 

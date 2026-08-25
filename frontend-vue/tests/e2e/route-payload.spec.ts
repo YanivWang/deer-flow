@@ -25,6 +25,14 @@
                    `VeryLow`，其余（entry script、modulepreload、运行期动态 import）
                    都不是。这是浏览器自己的调度事实，不是从 HTML 反推的。
 
+                   ⚠️ **它量的是浏览器怎么排的队，不是应用需不需要。** 如果某个
+                   chunk 既被 Nuxt 投机 prefetch、又被应用同步 await，浏览器只会为
+                   它发一次 `VeryLow` 请求（后续 import 命中 prefetch 缓存），这里
+                   就把它记成 prefetch——数字变好看，首屏其实被一个最低优先级的
+                   请求挡住了。i18n 按 locale 分包实测就是这个形状。所以：
+                   **一次改动把大量字节从 critical 挪到 prefetch 时，先去看
+                   `.output` 里那一页 HTML 的 link rel，确认它真的没人在等。**
+
                    除了总量还钉**成分**：mermaid / shiki / katex 这类重量级渲染器
                    必须留在关键路径之外，按需加载。成分检查覆盖 critical ∪ prefetch，
                    因为投机下载同样要用户付流量，退到只查 critical 会放松门禁。
