@@ -3,7 +3,10 @@
   【架构位置】     L3
   【主要导出】     / 页面
   【依赖关系】     shared/showcase · Vue-owned static demo assets
-  【边界与注意】   营销落地页属于明确豁免范围，不复制 React DOM。
+  【边界与注意】   ⚠️ 未对齐：这是 Vue 自写的占位页，不是 React 落地页的实现。
+                   React 的 `/` 由 Header/Hero/CaseStudy/Skills/Sandbox/WhatsNew/
+                   Community/Footer 组成，见 frontend/src/app/page.tsx。营销页
+                   曾被列为豁免，现已取消——这里是待办，不是终态。
 -->
 
 <script setup lang="ts">

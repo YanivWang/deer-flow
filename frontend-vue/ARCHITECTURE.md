@@ -7,23 +7,42 @@
 > 完全对齐。如果架构描述与实际源码不一致，**以当前源码为准**，并在同一改动中修正文档。
 > 完成度不由任何文档自述，只由代码、测试和门禁证明。
 
-## 不需要对齐 React 的范围
+## 与 React 的对齐范围
 
-以下都是**显式豁免，不是待办**——不要因为「React 有」就搬进 Vue：
+**没有豁免项。** 目标是完全平替：React 有的 Vue 都要有，**React 没有的 Vue 不许有**。
 
-- React 营销落地页；Vue 的 `/`、`/pricing`、`/about` 是自定义占位页；
-- React 文档站、博客、Nextra 内容和相关依赖；
-- `?mock=true`、`public/demo`、Next mock route handlers 等静态录制回放产品模式；
-- 没有产品消费者的 `@xyflow/react` canvas 组件；
-- Next Route Handler 与 Nuxt/Nitro server route 的框架实现形式——但它们产生的
-  HTTP 行为必须一致；
-- landing 独占或已无消费者的组件和依赖；
-- 两边图标库、组件库内部 DOM、React Context/hook 的具体写法；
-- 不影响布局、键盘、焦点、可访问性、测试选择器或外部集成的内部组件拆分差异。
+后半句是这一节最容易漏掉的一半。此前的规则只写了「不要因为 React 有就搬进 Vue」，
+没写反向；于是 Vue 自造的错误提示、自加的 aria-label、以及被重新措辞的整组
+artifact 面板文案，在所有门禁全绿的情况下长期存在——门禁只比对了「React 有、
+Vue 无」这一个方向。差异必须**双向**枚举。
 
-**仍需严格对齐**的是：URL、method、query、headers、body、响应解析、错误信息、
-缓存失效、SSE/WS 事件、用户状态、页面能力、交互顺序、语义 DOM、键盘和焦点行为、
-响应式布局。
+### 三处只能对齐可观察行为
+
+以下三处的**源码形式**无法相同，因为两边是不同的框架和库。这不是豁免，是把判据
+从「代码一样」换成「行为一样」：
+
+- **Next Route Handler ↔ Nitro server route**：判据是同样的 URL、method、
+  状态码、响应体与错误形状。React 侧每有一个 route handler，Vue 就要有一条对应的
+  HTTP 行为。
+- **图标库与组件库内部 DOM**：React 用 lucide-react + shadcn(radix)，Vue 用
+  lucide-vue-next + reka-ui。判据是 role、accessible name、层级、顺序、可聚焦性
+  与键盘行为一致；不比 class 名、包装元素和 primitive 内部结构。
+- **React Context/hook ↔ Vue composable 的写法**：判据是它们产生的状态转换与
+  副作用时机一致。
+
+除此之外没有第四处。「landing 只是营销页」「docs 站是 Nextra 的」「那个组件反正
+没人用」都不构成跳过的理由。
+
+### 严格对齐的内容
+
+URL、method、query、headers、body、响应解析、错误信息、缓存失效、SSE/WS 事件、
+用户状态、页面能力、交互顺序、语义 DOM、键盘和焦点行为、响应式布局，以及
+**用户可见的每一段文案**——包括 React 从第三方组件（如 streamdown 的表格
+复制与全屏控件）渲染出来、并不在它自己词典里的那些。比对文案时只看词典会把
+Vue 的忠实复刻误判成自创。
+
+未对齐项由投影工具枚举，不写进本文件：写进散文的清单会先于代码过期，而且会被
+下一个读者当成「已经想清楚可以不做」的东西。
 
 ## 运行拓扑
 
