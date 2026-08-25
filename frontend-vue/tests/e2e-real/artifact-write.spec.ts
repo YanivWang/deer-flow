@@ -80,6 +80,23 @@ test("real Gateway streams a write-file draft into the artifact panel", async ({
   ).toBeVisible();
 
   await expect(page).toHaveURL(/\/workspace\/chats\/[0-9a-f-]+$/);
+
+  /*
+    产物出现**不等于** run 结束——write-file 在流式中途就落盘，模型还会继续输出。
+    下面的 PUT 直接打 Gateway，而 Gateway 对同一 thread 有硬约束：run 在飞就拒绝
+    保存（`Thread has a run in flight. Save after the run finishes.`）。此前这里
+    没有任何等待，靠的是「PUT 发出去时 run 通常已经结束」——机器空闲时确实如此，
+    整套 `make e2e-backend` 连跑 8 个套件时红过一次。
+
+    Stop 按钮只在 `streaming` 为真时渲染，是产品自己的在飞信号。实测确认过它
+    确实会出现（run 期间轮询到 `true`），所以这不是一条永远立即通过的空断言；
+    只是空闲机器上 run 早已结束，等待通常是零成本。
+
+    `toBeHidden` 有一个「等得太早」的洞：run 还没开始时 Stop 也是 hidden。这里
+    不受影响——上面已经断言产物内容流出来了，run 必然已经开始。
+  */
+  await expect(page.getByLabel("Stop")).toBeHidden({ timeout: 60_000 });
+
   const threadId = page.url().split("/").at(-1)!;
   const notePath = "/mnt/user-data/outputs/note.txt";
   const noteUrl = `${APP}/api/threads/${threadId}/artifacts/mnt/user-data/outputs/note.txt`;
