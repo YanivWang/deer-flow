@@ -315,6 +315,15 @@ make container-smoke # 生产镜像、health、SIGTERM、Showcase 资源与拒�
 56 个文件 / 1.5 MB），并禁止 shiki / mermaid / KaTeX 进入关键路径。两者可以反向变动：
 KaTeX 改成按需之后首屏少了 269 KB，而产物总量涨了 1 KiB。调性能看后者。
 
+路由预算再往下分成 **critical 与 prefetch 两组，分别钉死**。一次导航里被请求的脚本
+有两类来源：浏览器为了把这一页跑起来而拉的（entry、`modulepreload`、运行期
+`import()`），和 Nuxt 为**下一次**导航投机拉的 `<link rel="prefetch">`。判据是 CDP 的
+`initialPriority`——prefetch 是 `VeryLow`，其余都不是。加总会说谎：`/` 的四个
+reka-ui chunk 曾被读成「营销页同步加载了 65 KB 对话框机器」，实测它们 100% 落在
+prefetch 组，阻塞首屏的那 136 KB 里没有一个字节的 reka-ui；加总还会互相掩盖，
+关键路径涨 30 KB、prefetch 少 30 KB，总量纹丝不动。成分检查（shiki/mermaid/KaTeX）
+仍覆盖两组之并，投机下载同样是用户付的流量。
+
 一个套件 = 一份 playwright config = 一种后端拓扑；套件名说的是**测什么**，
 不是迁移阶段，完整清单见 [`README.md`](README.md) 的验证一节。新增功能按实际影响
 选择 unit、协议、浏览器、视觉、真实 Gateway 或生产镜像门禁，不要从单次全绿推断
