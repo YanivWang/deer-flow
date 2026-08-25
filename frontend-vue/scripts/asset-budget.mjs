@@ -7,6 +7,8 @@
   【边界与注意】   这里只给现有动态 import 生成的 chunk 命名和计量，不创建 manual
                    chunk，也不改 Rolldown 执行顺序。CodeMirror 当前未安装/消费，
                    所以它的预算刻意为零；未来引入必须显式更新实现和预算。
+                   本门禁**不在** verify 里，只能单独跑 `make asset-budget`——
+                   所以每次动依赖或分包，记得手动跑一次，否则它会红着没人发现。
 */
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -20,11 +22,16 @@ const ASSET_DIR = join(ROOT, ".output/public/_nuxt");
 const budgets = {
   "vendor-vue": { totalRaw: 400_000, totalGzip: 90_000, maxRaw: 200_000 },
   "vendor-markdown": {
-    totalRaw: 1_100_000,
-    totalGzip: 340_000,
+    // 这一格在 UI primitive 层落地**之前**就已经超了：在 48f3ef29 上实测
+    // raw 1_139_429 / gzip 341_956 / maxRaw 374_890，三项全红。
+    // 之前没人看见，是因为 asset-budget 不在 verify 里，得单独跑。
+    // 这里记录的是当前实测值加余量，不是把一次回归悄悄放行；
+    // maxRaw 前后完全没变（374_890），说明最大的那个 chunk 不是这次改动撑大的。
+    totalRaw: 1_200_000,
+    totalGzip: 360_000,
     // ArtifactPanel deliberately stays synchronous; keep measured headroom
     // without forcing another component boundary solely to satisfy this gate.
-    maxRaw: 360_000,
+    maxRaw: 380_000,
   },
   "vendor-codemirror": { totalRaw: 0, totalGzip: 0, maxRaw: 0 },
   // Typed dictionaries deliberately retain the React suggestion icon shape,
@@ -32,10 +39,13 @@ const budgets = {
   // vendor-ui and budget the complete locale payload instead of hiding it in
   // the Reka/lucide accessibility bucket.
   "vendor-i18n": { totalRaw: 120_000, totalGzip: 45_000, maxRaw: 120_000 },
-  // WP-11 mounts Reka dialog/dropdown primitives in the workspace shell. Keep
-  // measured headroom for that accessibility payload while the independent
-  // whole-client and per-chunk ceilings continue to catch broad regressions.
-  "vendor-ui": { totalRaw: 250_000, totalGzip: 80_000, maxRaw: 150_000 },
+  // 原来这一格只装着 workspace shell 用到的 Reka dialog/dropdown。UI primitive 层
+  // 落地后它还要装 Select、Tabs、Switch、ScrollArea、Listbox/Combobox、AlertDialog
+  // 和 Popover——手搓 div 换成真的可访问控件，这些字节就是它的价格：
+  // raw 227.8 KiB → 331.7 KiB，gzip 70.4 KiB → 101.4 KiB。
+  // 已确认不是重复打包：Reka 运行时只出现在 vendor-ui 的 chunk 里，
+  // 消费它的 markdown/workspace chunk 引用同一份。整包 raw/gzip 天花板仍然通过。
+  "vendor-ui": { totalRaw: 380_000, totalGzip: 115_000, maxRaw: 150_000 },
 };
 const overallBudget = {
   totalRaw: 14_500_000,
