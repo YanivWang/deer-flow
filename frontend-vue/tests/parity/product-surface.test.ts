@@ -42,23 +42,59 @@ function normalizedRoute(path: string) {
   return `/${segments.join("/")}`;
 }
 
-describe.skipIf(!upstreamPresent)("React-observable product surface", () => {
-  it("does not expose a Vue page React does not have", () => {
-    const reactRoutes = new Set(
-      filesBelow(reactPages)
-        .filter((file) => file.endsWith("/page.tsx"))
-        .map((file) => normalizedRoute(relative(reactPages, file))),
-    );
-    const vueRoutes = filesBelow(vuePages)
+function routeSets() {
+  const react = new Set(
+    filesBelow(reactPages)
+      .filter((file) => file.endsWith("/page.tsx"))
+      .map((file) => normalizedRoute(relative(reactPages, file))),
+  );
+  const vue = new Set(
+    filesBelow(vuePages)
       .filter((file) => file.endsWith(".vue"))
       .map((file) => relative(vuePages, file))
       .filter((file) => !file.startsWith("__m0/"))
-      .map(normalizedRoute);
+      .map(normalizedRoute),
+  );
+  return { react, vue };
+}
+
+describe.skipIf(!upstreamPresent)("React-observable product surface", () => {
+  it("does not expose a Vue page React does not have", () => {
+    const { react, vue } = routeSets();
 
     // 没有例外集合。`/about` 与 `/pricing` 曾经列在这里，而 React 从来没有这两条
     // 路由——它的落地页导航只链到 `/{lang}/docs` 与 `/blog/posts`。一个写死的
     // 例外集合就是豁免，只是换了个不带「豁免」字样的名字，按关键词搜不到。
-    expect(vueRoutes.filter((route) => !reactRoutes.has(route))).toEqual([]);
+    expect([...vue].filter((route) => !react.has(route)).sort()).toEqual([]);
+  });
+
+  /*
+    反方向：React 有、Vue 还没有的路由。
+
+    直接断言差集为空会让这条门禁从落地第一天起就是红的（docs 与 blog 都还没做），
+    而常红的门禁最后一定被人加 skip 关掉——那比没有门禁更糟，因为它看起来还在。
+    所以钉的是**签入的缺失清单**，双向收紧：多出一条立刻红，少一条也红。
+    于是它从第一天就是绿的，而清单只能靠真把页面做出来才变短。
+    与 baseline/i18n-keys.json 的 unusedKeys 同一套办法。
+  */
+  it("keeps the missing-route list exact, so it can only shrink", () => {
+    const { react, vue } = routeSets();
+    const missing = [...react].filter((route) => !vue.has(route)).sort();
+    const baseline = JSON.parse(
+      readFileSync(
+        new URL(
+          "../../baseline/react-routes-missing-in-vue.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ) as { routes: string[] };
+
+    expect(
+      missing,
+      "React 路由集与 baseline/react-routes-missing-in-vue.json 不一致：" +
+        "新缺失要么补上页面、要么显式加进清单；已经做出来的要从清单里删掉。",
+    ).toEqual([...baseline.routes].sort());
   });
 
   it("does not expose feedback until the React message-list call site does", () => {
