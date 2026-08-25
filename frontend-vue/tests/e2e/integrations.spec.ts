@@ -56,6 +56,47 @@ test.describe("Integrations settings", () => {
     await expect(dialog.getByText("Lark / Feishu CLI")).toBeVisible();
   });
 
+  test("shows the installed version and the next-step explanation", async ({
+    page,
+  }) => {
+    // 这一页的状态标题只说「现在在哪一步」，说明才回答「我要做什么」。
+    // 两者曾经只渲染了标题：说明连同版本行在词典里翻译好了，页面上却没有出口。
+    mockLangGraphAPI(page);
+    await page.route("**/api/integrations/lark/status", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...configuredLarkStatus(),
+          latest_available_version: "v1.0.66",
+          runtime_version_mismatch: true,
+        }),
+      }),
+    );
+
+    await page.goto("/workspace/chats/new?settings=integrations");
+
+    const dialog = page.getByRole("dialog", { name: "Settings" });
+    await expect(dialog.getByText("Installed: v1.0.65")).toBeVisible();
+    await expect(
+      dialog.getByText("Update available: v1.0.66", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText("Skill pack version differs", { exact: false }),
+    ).toBeVisible();
+    // connected 分支的说明。标题是 connectedTitle，说明必须跟着出现。
+    await expect(
+      dialog.getByText("The current user's authorization was verified", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText("Advanced: if an error reports a missing scope", {
+        exact: false,
+      }),
+    ).toBeVisible();
+  });
+
   test("falls back when copying a Lark authorization link without the Clipboard API", async ({
     page,
   }) => {

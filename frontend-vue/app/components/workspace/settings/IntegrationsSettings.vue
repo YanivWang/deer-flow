@@ -69,6 +69,11 @@ const selectedDomains = ref<string[]>([]);
 const customScope = ref("");
 const pendingFlow = ref<PendingFlow | null>(null);
 const checkingConnection = ref(false);
+/* 这两个状态不能并进 `busy`。`busy` 是「有请求在飞」的通用锁，四条流程共用；
+   而安装中和等待授权要各自渲染自己的说明块，共用一个标志就会在换应用凭据时
+   弹出「正在安装技能包」。 */
+const installing = ref(false);
+const awaitingAuth = ref(false);
 const showChangeApp = ref(false);
 const changeAppId = ref("");
 const changeAppSecret = ref("");
@@ -155,6 +160,46 @@ const nextStepTitle = computed(() => {
   if (connected.value) return larkCopy.value.connectedTitle;
   if (credentialsConfigured.value) return larkCopy.value.configuredTitle;
   return larkCopy.value.authNextTitle;
+});
+/* 与 nextStepTitle 同一组分支。标题只说「现在处于哪一步」，说明才回答
+   「我该做什么、要等多久」——只渲染标题等于把这一页的操作指引整段丢掉。 */
+const nextStepDescription = computed(() => {
+  if (!status.value?.installed) return larkCopy.value.installNextDescription;
+  if (!status.value.cli.available) return larkCopy.value.cliNextDescription;
+  if (connected.value) return larkCopy.value.connectedDescription;
+  if (credentialsConfigured.value) return larkCopy.value.configuredDescription;
+  return larkCopy.value.authNextDescription;
+});
+/* 待办流程的标题与说明。auth 分支在等待授权回调期间要换成 waiting 文案，
+   否则用户看到的仍是「打开链接」，而链接已经打开、系统正在轮询。 */
+const pendingFlowTitle = computed(() => {
+  const pending = pendingFlow.value;
+  if (!pending) return "";
+  if (pending.kind === "config") return larkCopy.value.openConnectionLinkTitle;
+  return awaitingAuth.value
+    ? larkCopy.value.waitingAuthTitle
+    : larkCopy.value.openAuthLinkTitle;
+});
+const pendingFlowDescription = computed(() => {
+  const pending = pendingFlow.value;
+  if (!pending) return "";
+  if (pending.kind === "config")
+    return larkCopy.value.openConnectionLinkDescription;
+  return awaitingAuth.value
+    ? larkCopy.value.waitingAuthDescription
+    : larkCopy.value.openAuthLinkDescription;
+});
+
+/* manifest 版本优先于运行时版本：技能包声明的版本才是用户「装了哪一版」的答案，
+   `version` 是回退。 */
+const installedVersion = computed(() =>
+  status.value ? (status.value.manifest_version ?? status.value.version) : null,
+);
+/* 只有确实更新时才提示。上游有版本号但与已装版本相同时不算可更新。 */
+const updateAvailableVersion = computed(() => {
+  const latest = status.value?.latest_available_version;
+  if (!latest || latest === installedVersion.value) return null;
+  return latest;
 });
 
 function domainLabel(domain: (typeof DOMAINS)[number]) {
@@ -254,6 +299,7 @@ async function load(initial = false, propagate = false) {
 
 async function install() {
   busy.value = true;
+  installing.value = true;
   error.value = null;
   try {
     const result = await installLarkIntegration();
@@ -268,6 +314,7 @@ async function install() {
           : copy.value.settings.integrations.installFailed;
   } finally {
     busy.value = false;
+    installing.value = false;
   }
 }
 
@@ -290,6 +337,7 @@ async function completeAuth(
   attempt: number,
   automatic: boolean,
 ) {
+  awaitingAuth.value = true;
   try {
     const completed = await completeLarkAuthorization({
       device_code: result.device_code,
@@ -323,6 +371,12 @@ async function completeAuth(
       cause instanceof Error
         ? cause.message
         : copy.value.settings.integrations.authorizationFailed;
+  } finally {
+    // 只有还属于当前流程的这一轮才有资格改状态：授权是带重试的轮询，
+    // 上一轮迟到的 finally 会把正在等待的那一轮标记成不在等待。
+    if (active(generation) && attempt === authAttempt) {
+      awaitingAuth.value = false;
+    }
   }
 }
 
@@ -580,8 +634,31 @@ onUnmounted(() => {
             </div>
           </div>
 
+          <div
+            v-if="status.installed"
+            class="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"
+          >
+            <span v-if="installedVersion">{{
+              larkCopy.installedVersion(installedVersion)
+            }}</span>
+            <span v-if="updateAvailableVersion" class="text-amber-600">
+              {{ larkCopy.updateAvailable(updateAvailableVersion) }}
+            </span>
+            <span v-if="status.runtime_version_mismatch" class="text-amber-600">
+              {{ larkCopy.runtimeVersionMismatch }}
+            </span>
+          </div>
+
           <div class="rounded-lg border p-3 text-sm">
             <strong>{{ nextStepTitle }}</strong>
+            <p class="text-muted-foreground mt-1">{{ nextStepDescription }}</p>
+          </div>
+
+          <div v-if="installing" class="rounded-lg border p-3 text-sm">
+            <div class="font-medium">{{ larkCopy.installingTitle }}</div>
+            <p class="text-muted-foreground mt-1">
+              {{ larkCopy.installingDescription }}
+            </p>
           </div>
 
           <div
@@ -619,6 +696,9 @@ onUnmounted(() => {
               class="border-input mt-3 w-full rounded-md border px-3 py-2 text-sm"
               :disabled="integrationBusy"
             />
+            <p class="text-muted-foreground mt-1 text-xs">
+              {{ larkCopy.customScopeDescription }}
+            </p>
           </div>
 
           <div class="flex flex-wrap gap-2">
@@ -732,13 +812,9 @@ onUnmounted(() => {
             class="space-y-3 rounded-lg border p-3 text-sm"
           >
             <div class="flex items-center gap-2 font-medium">
-              <span aria-hidden="true">↗</span
-              >{{
-                pendingFlow.kind === "config"
-                  ? larkCopy.openConnectionLinkTitle
-                  : larkCopy.openAuthLinkTitle
-              }}
+              <span aria-hidden="true">↗</span>{{ pendingFlowTitle }}
             </div>
+            <p class="text-muted-foreground">{{ pendingFlowDescription }}</p>
             <div class="bg-muted rounded-md px-3 py-2 text-xs break-all">
               {{ pendingFlow.verification_url }}
             </div>
