@@ -20,11 +20,11 @@
 */
 
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue";
+import { loadKatexRehypePlugin } from "@/core/markdown/math";
 import {
-  appRehypePlugins,
   appRemarkPlugins,
   defaultRehypePlugins,
   defaultRemarkPlugins,
@@ -33,6 +33,7 @@ import {
 } from "@/core/markdown/plugins";
 
 import fixture from "../../fixtures/react-markdown-dom.json";
+
 import {
   CORPUS,
   PRESET_DEFAULT,
@@ -43,7 +44,13 @@ import {
   normalizeHtml,
 } from "../../support/dom-equivalence";
 
-import type { PluggableList } from "unified";
+import type { Pluggable, PluggableList } from "unified";
+
+/* KaTeX 运行时按内容加载；这里取到同一个插件，比对产品最终到达的那条链。 */
+let katex: Pluggable;
+beforeAll(async () => {
+  katex = await loadKatexRehypePlugin();
+});
 
 interface FixtureEntry {
   preset: string;
@@ -68,8 +75,13 @@ function pluginsFor(entry: { preset: string; streaming?: boolean }): {
       rehypePlugins: [...defaultRehypePlugins, ...streaming],
     };
   }
+  /*
+    夹具录的是 React 的最终 DOM，其中含 KaTeX 排版结果。运行时 KaTeX 是按内容
+    加载的（core/markdown/math.ts），这里在 beforeAll 里把它取到，比对的仍然是
+    产品最终会到达的那条链——变的只是加载时机，不是链的组成。
+  */
   const base =
-    entry.preset === PRESET_RAW ? rawHtmlRehypePlugins : appRehypePlugins;
+    entry.preset === PRESET_RAW ? [...rawHtmlRehypePlugins, katex] : [katex];
   return {
     remarkPlugins: appRemarkPlugins,
     rehypePlugins: [...base, ...streaming],

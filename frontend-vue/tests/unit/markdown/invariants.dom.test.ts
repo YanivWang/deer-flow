@@ -20,11 +20,11 @@ import { defineComponent, h, onErrorCaptured, ref, watch } from "vue";
 import { describe, expect, it, vi } from "vitest";
 
 import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue";
-import { appRehypePlugins, appRemarkPlugins } from "@/core/markdown/plugins";
+import { appRemarkPlugins } from "@/core/markdown/plugins";
 
 const PIPELINE = {
   remarkPlugins: appRemarkPlugins,
-  rehypePlugins: appRehypePlugins,
+  rehypePlugins: [], // 消息路径的同步 rehype 链现在是空的：KaTeX 由 core/markdown/math.ts 按内容加载。
 };
 
 describe("组件覆盖收到的是 class 不是 className", () => {

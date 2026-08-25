@@ -118,6 +118,10 @@ citation 和 per-turn usage 都不依赖提交前 UI 状态。processing 只走�
 横向起点和消息尾部留白都能从结构推导，而不由调用页添加位置偏移。
 `MessageMarkdown.vue` 是消息、reasoning 与 processing 文本的唯一产品适配器，集中提供安全预处理、
 GFM/math/streaming 插件和 Streamdown 等价组件，防止调用点漏传插件后把表格静默退化成纯文本。
+三个重量级渲染器都按内容加载，不进关键路径：代码高亮（shiki）由 `CodeBlock.vue` 触发，
+图表（mermaid）由 `MermaidDiagram.vue` 触发，公式排版（KaTeX，约 264 KB raw）由
+`core/markdown/math.ts` 的 `containsMath` 判定后动态 import。判据宁可多报不可漏报——
+多报只是白下一次，漏报是公式永远渲染不出来且不报错。
 `thread.values.todos` 与最终 token usage 仍由 thread snapshot/API 提供。Gateway feedback 字段和 core
 API 可继续无损存在，但当前 React 消息调用点没有启用该入口，因此 Vue 不显示点赞/踩，也不建立
 只由 Vue 触发的 feedback mutation。
@@ -296,7 +300,7 @@ Chromium browser runtime 证明握手、REST 和二进制帧。最后一层的�
 ```bash
 cd frontend-vue
 make verify          # lint、格式、类型、单测、清单、i18n、OpenAPI、独立性、build
-make asset-budget    # 客户端 raw/gzip 分包预算
+make asset-budget    # 构建产物总量天花板（**不是**用户下载量，见下）
 make e2e-mock        # 不需要后端进程的全部套件
 make e2e-backend     # 需要真实 Gateway 的全部套件
 make e2e-visual      # 产品截图；基线只有 `-darwin`，本机门禁
@@ -304,6 +308,12 @@ make e2e-list        # 收集全部套件并打印各自 test 数
 make consumer-check  # 打包并在隔离 consumer 中验证 @deerflow/agent-core
 make container-smoke # 生产镜像、health、SIGTERM、Showcase 资源与拒绝策略
 ```
+
+两条体积门禁量的是不同的东西，别混：`make asset-budget` 把全部 472 个 chunk 加起来
+（约 13.9 MB），管的是产物总量失控；用户真正下载的是 `make e2e` 里的
+`tests/e2e/route-payload.spec.ts`——在真实导航里量浏览器请求的脚本（工作区约
+56 个文件 / 1.5 MB），并禁止 shiki / mermaid / KaTeX 进入关键路径。两者可以反向变动：
+KaTeX 改成按需之后首屏少了 269 KB，而产物总量涨了 1 KiB。调性能看后者。
 
 一个套件 = 一份 playwright config = 一种后端拓扑；套件名说的是**测什么**，
 不是迁移阶段，完整清单见 [`README.md`](README.md) 的验证一节。新增功能按实际影响

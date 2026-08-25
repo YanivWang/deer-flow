@@ -5,7 +5,7 @@ import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue";
 import MessageMarkdown from "@/components/chat/MessageMarkdown.vue";
 import { richContentComponents } from "@/components/markdown/components";
 import { enUS } from "@/core/i18n/locales/en-US";
-import { appRehypePlugins, appRemarkPlugins } from "@/core/markdown/plugins";
+import { appRemarkPlugins } from "@/core/markdown/plugins";
 
 const writeText = vi.fn();
 
@@ -65,7 +65,7 @@ describe("markdown table controls", () => {
       props: {
         content: "| City | Weather |\n| --- | --- |\n| Shanghai | Sunny |",
         remarkPlugins: appRemarkPlugins,
-        rehypePlugins: appRehypePlugins,
+        rehypePlugins: [], // 消息路径的同步 rehype 链现在是空的：KaTeX 由 core/markdown/math.ts 按内容加载。
         components: richContentComponents as unknown as Record<string, unknown>,
       },
     });

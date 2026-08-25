@@ -65,7 +65,7 @@ make dev       # http://localhost:3100
 
 ```bash
 make verify             # lint、格式、类型、单测、i18n、OpenAPI、独立性、build
-make asset-budget       # 客户端 raw/gzip 预算；动依赖或改分包之后必跑
+make asset-budget       # 构建产物总量天花板（**不是**用户下载量）
 make e2e-mock           # 不需要后端进程的全部套件
 make e2e-backend        # 需要真实 Gateway 的全部套件
 make e2e-visual         # 产品截图；只在本机，基线是 `-darwin`
@@ -108,6 +108,12 @@ make standalone-check   # 不允许任何指向 ../frontend 的跨应用引用
 make typecheck-core     # packages/agent-core 的独立 tsc
 make upstream-drift     # 报告 ../frontend 自 marker 以来改了什么
 ```
+
+两条体积门禁量的不是同一个东西，别混：`make asset-budget` 把全部 472 个 chunk 加起来
+（约 13.9 MB），管的是产物总量失控；用户真正下载的由 `make e2e` 里的
+`tests/e2e/route-payload.spec.ts` 守——在真实导航里量浏览器请求的脚本（工作区约
+56 个文件 / 1.5 MB），并禁止 shiki / mermaid / KaTeX 进入关键路径。两者可以反向变动：
+KaTeX 改成按需加载后首屏少了 269 KB，产物总量却涨了 1 KiB。调性能看后者。
 
 这里刻意不写 test 数——`make e2e-list` 会打印每个套件的实时数字，而抄进散文里的
 数字是最先过期的东西。本工作区文档里写出的每一条 `make` 命令、相对链接和仓库路径都由

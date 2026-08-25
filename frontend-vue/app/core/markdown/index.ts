@@ -38,7 +38,6 @@ export {
   type MarkdownPipelineOptions,
 } from "./pipeline";
 export {
-  appRehypePlugins,
   appRemarkPlugins,
   defaultRehypePlugins,
   defaultRemarkPlugins,

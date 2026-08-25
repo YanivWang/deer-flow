@@ -1,13 +1,22 @@
 #!/usr/bin/env node
 /*
-  【文件职责】     统计生产客户端 JS 的 raw/gzip 体积，并钉住 M7 运行时安全分包预算。
+  【文件职责】     统计**全部构建产物**的 raw/gzip 体积，防止依赖或分包整体失控。
   【架构位置】     构建脚本
   【主要导出】     CLI：读取 .output/public/_nuxt，超预算退出 1
   【依赖关系】     Nuxt production build；Node zlib
-  【边界与注意】   这里只给现有动态 import 生成的 chunk 命名和计量，不创建 manual
-                   chunk，也不改 Rolldown 执行顺序。
-                   本门禁**不在** verify 里，但已经是 CI 的独立一步（0ce8caa3）：
-                   动依赖或改分包之后不跑它，红的会是 PR 而不是本机。
+  【边界与注意】   ⚠️ **这条门禁量的不是用户下载的字节。** 它把 472 个 chunk 全部加起来
+                   （约 13.9 MB），其中绝大多数是懒加载的；打开工作区实际只下载
+                   56 个文件 / 1.5 MB。两个数没有对应关系，而且方向可以相反：把
+                   KaTeX 从同步改成按需之后，用户首屏少了 269 KB，这里的总数却
+                   **涨了 1 KiB**（多分出一个 chunk）——它对那次改进完全无感。
+
+                   面向用户的预算在 `tests/e2e/route-payload.spec.ts` +
+                   `baseline/route-payload-budget.json`：在真实导航里量浏览器
+                   实际请求的脚本，并禁止重量级渲染器进入关键路径。调性能先看那条。
+
+                   本条保留的价值是另一个方向：**产物总量**的天花板，能抓住
+                   「装了个巨大的包」「分包规则失效导致重复打包」这类问题。
+                   它不在 verify 里，但是 CI 的独立一步（0ce8caa3）。
 */
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -128,4 +137,6 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("Asset budget passed.");
+console.log(
+  "Build-output budget passed. 面向用户的首屏预算见 make e2e（route-payload.spec.ts）。",
+);

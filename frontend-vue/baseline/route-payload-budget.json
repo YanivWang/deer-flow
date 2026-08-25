@@ -1,0 +1,27 @@
+{
+  "$comment": "路由级首屏 JS 预算。口径 = 一次真实导航中浏览器请求的 _nuxt/*.js，字节数取磁盘上 Nuxt 预压缩产物，因此本机与 CI 一致。与 scripts/asset-budget.mjs 的区别：那条量的是全部构建产物（469 chunk / 13.9 MB），这条量的是用户实际下载的部分。改这里的数字要在提交说明里写明原因和实测值。",
+  "routes": {
+    "/": {
+      "files": 50,
+      "raw": 772000,
+      "brotli": 233000
+    },
+    "/login": {
+      "files": 50,
+      "raw": 779000,
+      "brotli": 235000
+    },
+    "/workspace/chats/new": {
+      "files": 60,
+      "raw": 1610000,
+      "brotli": 446000
+    }
+  },
+  "criticalPathForbidden": [
+    "KaTeX parse error",
+    "getSingletonHighlighter",
+    "sequenceDiagram"
+  ],
+  "$criticalPathComment": "关键路径禁入的重量级渲染器，用**库本体**特征串识别，不是包名——包名会以动态 import 引用的形式出现在同步 chunk 里，按包名判会全是误报。三个标记都已核对：KaTeX parse error 只在 katex 本体，getSingletonHighlighter 只在 shiki 本体，sequenceDiagram 只在 mermaid 本体。",
+  "$measured": "2026-08-25 实测：/ 46 files 733,848 raw / 221,025 brotli；/login 46 / 741,071 / 223,314；/workspace/chats/new 56 / 1,531,995 / 424,662。预算 = 实测值 + 约 5% 余量。"
+}

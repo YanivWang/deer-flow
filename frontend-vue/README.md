@@ -78,7 +78,7 @@ module changes:
 
 ```bash
 make verify             # lint, format, types, unit, i18n, OpenAPI, standalone, build
-make asset-budget       # raw/gzip client budgets; run it after any dependency or chunk change
+make asset-budget       # build-output ceiling across every chunk (not what users download)
 make e2e-mock           # every suite that needs no backend process
 make e2e-backend        # every suite that needs a real Gateway
 make e2e-visual         # product screenshots; local-only, the baselines are `-darwin`
@@ -123,6 +123,15 @@ make standalone-check   # no cross-app reference to ../frontend
 make typecheck-core     # standalone tsc for packages/agent-core
 make upstream-drift     # report what ../frontend changed since the reviewed marker
 ```
+
+Two size gates measure different things and are easy to confuse.
+`make asset-budget` sums all 472 emitted chunks (~13.9 MB) and guards against
+total build output running away. What a user actually downloads is guarded by
+`tests/e2e/route-payload.spec.ts` inside `make e2e`: it measures the scripts a
+real navigation requests (~56 files / 1.5 MB for the workspace) and forbids
+shiki, mermaid and KaTeX from entering the critical path. They can move in
+opposite directions — deferring KaTeX cut 269 KB from the workspace payload
+while total build output grew by 1 KiB. For performance work, read the second one.
 
 Test counts are deliberately not written down here — `make e2e-list` prints the
 live number for every suite, and a number copied into prose is the first thing

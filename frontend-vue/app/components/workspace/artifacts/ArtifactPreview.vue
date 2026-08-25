@@ -6,13 +6,14 @@
   【依赖关系】     ArtifactPolicy · StreamMarkdown · HTML URL rewrite
   【边界与注意】   HTML iframe 只消费父层已通过 full + D3 的内容；本组件不自行提升能力。
 */
-import { computed } from "vue";
-import type { PluggableList } from "unified";
+import { computed, shallowRef, watch } from "vue";
+import type { Pluggable, PluggableList } from "unified";
 
 import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue";
 import { richContentComponents } from "@/components/markdown/components";
 import type { ArtifactPolicy } from "@/core/artifacts/policy";
 import { rewriteHtmlPreviewResourceUrls } from "@/core/artifacts/preview";
+import { containsMath, loadKatexRehypePlugin } from "@/core/markdown/math";
 import {
   rawHtmlRehypePlugins,
   rehypeHeadingSlugs,
@@ -29,11 +30,23 @@ const props = defineProps<{
   htmlPreviewAllowed: boolean;
 }>();
 
-const artifactRehypePlugins: PluggableList = [
-  ...rawHtmlRehypePlugins.slice(0, 1),
+/* KaTeX 与消息路径同一条规则：内容出现公式才下载。见 core/markdown/math.ts。 */
+const katexPlugin = shallowRef<Pluggable | null>(null);
+watch(
+  () => props.content,
+  (content) => {
+    if (katexPlugin.value !== null || !containsMath(content)) return;
+    void loadKatexRehypePlugin().then((plugin) => {
+      katexPlugin.value = plugin;
+    });
+  },
+  { immediate: true },
+);
+const artifactRehypePlugins = computed<PluggableList>(() => [
+  ...rawHtmlRehypePlugins,
   rehypeHeadingSlugs,
-  ...rawHtmlRehypePlugins.slice(1),
-];
+  ...(katexPlugin.value === null ? [] : [katexPlugin.value]),
+]);
 const html = computed(() =>
   rewriteHtmlPreviewResourceUrls(props.content, props.contentUrl),
 );

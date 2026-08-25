@@ -5,7 +5,7 @@
   【主要导出】     rehypeStreamingListItems · remarkHtmlToText · remarkCodeMeta ·
                    streamdownSanitizeSchema · hardenOptions · katexOptions ·
                    defaultRemarkPlugins / defaultRehypePlugins / appRemarkPlugins /
-                   appRehypePlugins / rawHtmlRehypePlugins · wordAnimation
+                   rawHtmlRehypePlugins · wordAnimation
   【依赖关系】     unist-util-visit · rehype-{raw,sanitize,harden,katex} · remark-{gfm,math}
   【边界与注意】   上游 `plugins.ts` 98 行里**只有 `rehypeStreamingListItems` 能搬**，其余
                    import 了 `@streamdown/code` / `@streamdown/mermaid` / `streamdown` 三个
@@ -23,12 +23,14 @@
                    显式传 `remarkPlugins` / `rehypePlugins`，而 Streamdown 的语义是**替换**
                    而非追加）。也就是说线上消息渲染既没有 rehype-raw，也没有 sanitize 与
                    harden——raw HTML 走 `remarkHtmlToText` 变成转义文本，所以净化没有作用
-                   对象。`appRehypePlugins` 如实反映这一点；要给它加回 sanitize/harden 是
+                   对象。本文件如实反映这一点；要给消息路径加回 sanitize/harden 是
                    一次行为变更，不属于「照搬」。
+
+                   KaTeX 排版插件**不在**本文件：它在 `math.ts` 里按内容动态加载，
+                   理由和实测数字写在那边的文件头。
 */
 
 import { harden } from "rehype-harden";
-import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
@@ -184,14 +186,13 @@ export const appRemarkPlugins: PluggableList = [
   [remarkMath, mathOptions],
 ];
 
-/** DeerFlow 消息路径实际使用的 rehype 链（**没有** raw / sanitize / harden）。 */
-export const appRehypePlugins: PluggableList = [[rehypeKatex, katexOptions]];
-
-/** `streamdownPlugins` 那一档：同上再加 rehype-raw（artifacts 预览路径）。 */
-export const rawHtmlRehypePlugins: PluggableList = [
-  rehypeRaw,
-  [rehypeKatex, katexOptions],
-];
+/**
+ * `streamdownPlugins` 那一档：artifacts 预览路径需要 rehype-raw。
+ *
+ * KaTeX **不在**这里：它由 `math.ts` 在内容确实含公式时才动态加载。
+ * 消息路径不需要额外 rehype 插件，所以没有对应的 `appRehypePlugins`。
+ */
+export const rawHtmlRehypePlugins: PluggableList = [rehypeRaw];
 
 /**
  * 逐词动画参数。

@@ -16,7 +16,6 @@ import {
   markdownToHast,
 } from "@/core/markdown/pipeline";
 import {
-  appRehypePlugins,
   appRemarkPlugins,
   defaultRehypePlugins,
   defaultRemarkPlugins,
@@ -50,7 +49,7 @@ describe("管线装配", () => {
   it("没有 rehype-raw 时原始 HTML 变成转义文本，而不是消失", () => {
     const tree = markdownToHast('<div class="x">raw</div>\n', {
       remarkPlugins: appRemarkPlugins,
-      rehypePlugins: appRehypePlugins,
+      rehypePlugins: [], // 消息路径的同步 rehype 链现在是空的：KaTeX 由 core/markdown/math.ts 按内容加载。
     });
     expect(findElement(tree, "div")).toBeUndefined();
     expect(textOf(tree)).toContain('<div class="x">raw</div>');
@@ -115,8 +114,8 @@ describe("处理器缓存", () => {
     // createMarkdownProcessor 本身不缓存——缓存在 markdownToHast 那条路径上。
     expect(first).not.toBe(second);
 
-    const a = markdownToHast("x", { rehypePlugins: [...appRehypePlugins] });
-    const b = markdownToHast("x", { rehypePlugins: [...appRehypePlugins] });
+    const a = markdownToHast("x", { rehypePlugins: [] });
+    const b = markdownToHast("x", { rehypePlugins: [] });
     expect(a.type).toBe("root");
     expect(b.type).toBe("root");
   });
@@ -164,7 +163,7 @@ describe("getSafeMarkdown", () => {
     expect(() =>
       markdownToHast(safe, {
         remarkPlugins: appRemarkPlugins,
-        rehypePlugins: appRehypePlugins,
+        rehypePlugins: [], // 消息路径的同步 rehype 链现在是空的：KaTeX 由 core/markdown/math.ts 按内容加载。
       }),
     ).not.toThrow();
   });
