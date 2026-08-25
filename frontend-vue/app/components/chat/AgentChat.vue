@@ -57,6 +57,11 @@ import {
   selectContextUsage,
   threadTokenUsageToTokenUsage,
 } from "@/core/threads/token-usage";
+import {
+  isThreadMissingError,
+  shouldLeaveMissingThread,
+  type ThreadPresence,
+} from "@/core/threads/thread-presence";
 import type { AgentThread, GoalState } from "@/core/threads/types";
 import type { Todo } from "@/core/todos";
 import {
@@ -183,6 +188,14 @@ const persistedTokenUsage = computed(() =>
 const suggestionGeneration = createAsyncGeneration();
 let suggestionController: AbortController | null = null;
 const preparedThreadId = ref<string | null>(null);
+/**
+ * `GET /threads/{id}` 的探测结果，和它属于哪个 thread 绑在一起。
+ * 只带一个裸 presence 会在切换 thread 后把上一条线程的结论用在新线程上。
+ */
+const threadPresence = ref<{ threadId: string; presence: ThreadPresence }>({
+  threadId: initialRouteThreadId ?? "",
+  presence: "unknown",
+});
 const editState = ref<{
   messageId: string;
   text: string;
@@ -631,6 +644,29 @@ const visibleMessages = computed(() =>
     (message: Message) => !isHiddenFromUIMessage(message),
   ),
 );
+
+/**
+ * 只有「元数据确认缺失 + 历史已问出结论 + 确实一条消息都没有」才放弃这个 URL。
+ *
+ * 之前这里是 `onMounted` 的 catch 直接 `router.replace`：checkpoint 一 404 就跳。
+ * 而上下文压缩之后 checkpoint 本来就不再持有旧消息，`/threads/{id}` 与 `/state`
+ * 双双 404，`/threads/{id}/messages/page` 却仍然能完整返回这段会话——用户于是被
+ * 静默送回新会话，对话看起来凭空消失。判据必须是「后端还能不能给出这段会话」。
+ */
+watch(
+  () =>
+    shouldLeaveMissingThread({
+      presence:
+        threadPresence.value.threadId === routeThreadId.value
+          ? threadPresence.value.presence
+          : "unknown",
+      historySettled: stream.isHistorySettled.value,
+      hasMessages: visibleMessages.value.length > 0,
+    }),
+  (leave) => {
+    if (leave) void router.replace("/workspace/chats/new");
+  },
+);
 const pendingUsageMessages = computed(() => {
   if (!stream.isStreaming.value || !stream.activeRunId.value) return [];
   const runId = stream.activeRunId.value;
@@ -1077,18 +1113,33 @@ onMounted(async () => {
 });
 onMounted(async () => {
   if (!initialRouteThreadId || isDemo.value) return;
-  try {
-    const [thread, state] = await Promise.all([
-      getAPIClient().threads.get(initialRouteThreadId),
-      getAPIClient().threads.getState(initialRouteThreadId),
-    ]);
+  // 元数据和 checkpoint 分开判：上下文压缩之后 `/state` 404 是常态，
+  // 它只影响能不能补全列表快照，**不能**参与「线程是否存在」的判断。
+  // 用 allSettled 而不是 all，就是为了让这两条结论互不牵连。
+  const [metadata, state] = await Promise.allSettled([
+    getAPIClient().threads.get(initialRouteThreadId),
+    getAPIClient().threads.getState(initialRouteThreadId),
+  ]);
+  if (metadata.status === "fulfilled") {
     threads.upsert({
-      ...thread,
-      values: { ...thread.values, ...state.values },
+      ...metadata.value,
+      values: {
+        ...metadata.value.values,
+        ...(state.status === "fulfilled" ? state.value.values : {}),
+      },
     });
-  } catch {
-    await router.replace("/workspace/chats/new");
+    threadPresence.value = {
+      threadId: initialRouteThreadId,
+      presence: "present",
+    };
+    return;
   }
+  // 探测失败本身不构成「不存在」：只有 403/404 才是。其余错误留在 unknown，
+  // 于是一次瞬时 5xx 不会把用户连人带对话踢回新会话。
+  threadPresence.value = {
+    threadId: initialRouteThreadId,
+    presence: isThreadMissingError(metadata.reason) ? "missing" : "unknown",
+  };
 });
 watch(
   [() => props.agentName, isDemo],

@@ -964,6 +964,8 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     isUploading: isUploading as Ref<boolean>,
     isHistoryLoading: history.loadingInitial,
     isHistoryLoadingMore: history.loadingMore,
+    /** 历史是否已经问出结论（含失败）。跳转类决定必须等它，见 useThreadHistory。 */
+    isHistorySettled: history.settled,
     historyError: history.error,
     error: streamError,
     hasMoreHistory: history.hasMore,

@@ -194,6 +194,7 @@
 - [`useThreads.ts`](app/composables/useThreads.ts) 是 thread 列表唯一 server-state 所有者，复用 raw-offset sidecar 过滤 helper；旧 Pinia thread store 已删除。
 - [`threads/delete.ts`](app/core/threads/delete.ts) 全量搜索 parent sidecar、并发删除后再删主 thread；部分失败保留主 thread、清除已成功项缓存并向侧栏暴露重试。
 - [`useThreadHistory.ts`](app/composables/useThreadHistory.ts) 初次只请求最新一页，MessageList 按显式按钮或用户向上交互后的 sentinel 加载下一页并保持滚动锚点。
+- 线程存在性由 [`threads/thread-presence.ts`](app/core/threads/thread-presence.ts) 判定，不再绑定 checkpoint：`GET /threads/{id}` 与 `/state` 在上下文压缩后 404 属常态，而 `/messages/page` 仍完整返回历史。只有元数据 403/404 确认缺失、历史已问出结论且确实为空时才退回新会话；其余错误保持原地。合同见 `BEHAVIOR_CONTRACTS.md` S8，证据为 `tests/unit/threads/thread-presence.test.ts`、`tests/e2e/thread-without-checkpoint.spec.ts` 与 `tests/e2e-real/multi-run-order.spec.ts`（后者的 `test.fail()` 已摘除）。
 
 #### 必须实现
 

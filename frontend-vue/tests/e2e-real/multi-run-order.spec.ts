@@ -27,16 +27,15 @@ const ALPHA = "ALPHA-FIRST-QUESTION-7f3a2c";
 const OMEGA = "OMEGA-SECOND-QUESTION-9b21d4";
 
 test.describe("multi-run thread renders chronologically (replay, no API key)", () => {
-  // 已知缺陷，不是本用例写错：后端 `GET /threads/{id}/messages/page` 确实返回 4 行
-  // （用例在 goto 之前就断言过），但 Vue 打开这个线程时渲染成空会话——没有
-  // checkpoint、只有 run_events 的线程走不通 useThreadHistory 的加载路径。
+  // 曾经的 `test.fail()` 已摘除。当时的失败**不是**顺序反了，而是这个线程根本
+  // 打不开：`GET /threads/{id}` 与 `/state` 因为没有 checkpoint 双双 404，
+  // AgentChat 把 404 当成「线程不存在」，把用户静默送回 /workspace/chats/new，
+  // 于是 ALPHA/OMEGA 一条都渲染不出来。判据已经改成「后端还能不能给出这段会话」
+  // （app/core/threads/thread-presence.ts）。
   //
-  // 用 test.fail() 而不是 skip：用例照跑，修好的那一天 CI 会因为「预期失败却通过了」
-  // 变红，提醒把这个标记摘掉。skip 不会。
-  //
-  // 之前看不见是因为这个套件从来没进过 CI（旧 real-backend config 的文件头
-  // 自己写着「M0 只保证 collection；业务断言随 M1-M7 逐步通过」）。
-  test.fail();
+  // 顺序这一半对 Vue 来说是免费的：它走的是 thread 全局分页接口，后端按 seq 正序
+  // 返回；React 的 #3352 才是 per-run 重建把顺序颠倒。下面的断言仍然保留——
+  // 它钉的是「渲染顺序跟随后端顺序」，将来换回按 run 拼装时会立刻变红。
   test("first run renders above second run after history rebuild (#3352)", async ({
     page,
     context,

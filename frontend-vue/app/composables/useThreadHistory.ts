@@ -171,8 +171,25 @@ export function useThreadHistory(
     ),
   );
 
+  /**
+   * 历史「已经问完了」——不是「暂时没在加载」。
+   *
+   * 不能用 `!isLoading && !hasNextPage` 代替：TanStack 的 `isLoading` 是
+   * `isPending && isFetching`，查询已启用但还没真正发出请求的那一瞬间它是 false，
+   * 于是会出现「一帧看起来历史已经空了」的窗口。谁拿这个窗口做跳转决定，
+   * 谁就会把有历史的线程踢走。
+   *
+   * 请求失败也算问完了：调用方需要一个终点，否则错误状态下永远等不到结论。
+   */
+  const settled = computed(
+    () =>
+      isAuthoritativeComplete.value ||
+      (historyQuery.isError.value && !historyQuery.isFetching.value),
+  );
+
   return {
     messages,
+    settled,
     loading: computed(
       () =>
         historyQuery.isLoading.value || historyQuery.isFetchingNextPage.value,
