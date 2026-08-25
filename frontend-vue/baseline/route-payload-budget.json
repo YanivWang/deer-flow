@@ -4,38 +4,38 @@
   "routes": {
     "/": {
       "critical": {
-        "files": 30,
-        "raw": 458000,
-        "brotli": 143000
+        "files": 28,
+        "raw": 396000,
+        "brotli": 130400
       },
       "prefetch": {
-        "files": 20,
-        "raw": 313000,
-        "brotli": 89000
+        "files": 22,
+        "raw": 373000,
+        "brotli": 101700
       }
     },
     "/login": {
       "critical": {
-        "files": 26,
-        "raw": 427000,
-        "brotli": 134000
+        "files": 24,
+        "raw": 366000,
+        "brotli": 121300
       },
       "prefetch": {
-        "files": 24,
-        "raw": 351000,
-        "brotli": 100500
+        "files": 26,
+        "raw": 411000,
+        "brotli": 113200
       }
     },
     "/workspace/chats/new": {
       "critical": {
-        "files": 36,
-        "raw": 1258000,
-        "brotli": 345500
+        "files": 34,
+        "raw": 1196000,
+        "brotli": 332600
       },
       "prefetch": {
-        "files": 24,
-        "raw": 351000,
-        "brotli": 100500
+        "files": 26,
+        "raw": 411000,
+        "brotli": 113200
       }
     }
   },
@@ -45,5 +45,5 @@
     "sequenceDiagram"
   ],
   "$criticalPathComment": "关键路径禁入的重量级渲染器，用**库本体**特征串识别，不是包名——包名会以动态 import 引用的形式出现在同步 chunk 里，按包名判会全是误报。三个标记都已核对：KaTeX parse error 只在 katex 本体，getSingletonHighlighter 只在 shiki 本体，sequenceDiagram 只在 mermaid 本体。检查覆盖 critical ∪ prefetch：投机下载同样是用户付的流量。",
-  "$measured": "2026-08-25 实测（critical / prefetch）：/ 28 files 435,744 raw 136,437 br / 18 files 298,104 raw 84,588 br；/login 24 / 406,849 / 127,681 与 22 / 334,222 / 95,633；/workspace/chats/new 34 / 1,197,773 / 329,029 与 22 / 334,222 / 95,633。预算 = 实测值 + 约 5% 余量。"
+  "$measured": "2026-08-25 实测（critical / prefetch）：/ 26 files 377,962 raw 124,284 br 与 20 files 356,117 raw 96,859 br；/login 22 / 349,067 / 115,528 与 24 / 392,235 / 107,904；/workspace/chats/new 32 / 1,139,992 / 316,847 与 24 / 392,235 / 107,904。预算 = 实测值 + 约 5% 余量。"
 }
