@@ -25,6 +25,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { diffAriaLines } from "../../scripts/lib/aria-parity.mjs";
 import { captureScenario, type GeometrySample } from "./support/capture";
+import { PARITY_CONTEXT_OPTIONS } from "./support/context-options";
 import { reactAppPresent } from "./support/react-preview";
 import {
   DEFAULT_DIMENSION,
@@ -128,16 +129,25 @@ function diffGeometry(
   return lines;
 }
 
-test("每个场景的双向差异都与签入的清单一致", async ({ context }) => {
+test("每个场景的双向差异都与签入的清单一致", async ({ browser }) => {
   test.setTimeout(600_000);
 
   const entries: Record<string, DiffEntry> = {};
 
   for (const scenario of PARITY_SCENARIOS) {
     for (const dimension of scenario.dimensions ?? [DEFAULT_DIMENSION]) {
-      // 一个应用一个 page：mock 路由、init script 与视口都是 page 级状态。
-      const vuePage: Page = await context.newPage();
-      const reactPage: Page = await context.newPage();
+      /*
+        一个场景一个 context，不是一个 page。
+
+        起初两个 page 共用整条用例的 context，实测在 channels 上超时：那条场景
+        靠路由覆盖换掉 providers 列表，而在一个跑了几十次导航的长命 context 里
+        它偶发拿不到。取样之间必须互不影响——这跟归一化只在必要处抹信息是同一条
+        纪律：样本的差异只能来自被测应用，不能来自它排在第几个跑。
+      */
+      const vueContext = await browser.newContext(PARITY_CONTEXT_OPTIONS);
+      const reactContext = await browser.newContext(PARITY_CONTEXT_OPTIONS);
+      const vuePage: Page = await vueContext.newPage();
+      const reactPage: Page = await reactContext.newPage();
       const vue = await captureScenario(vuePage, VUE_APP, scenario, dimension);
       const react = await captureScenario(
         reactPage,
@@ -145,8 +155,8 @@ test("每个场景的双向差异都与签入的清单一致", async ({ context 
         scenario,
         dimension,
       );
-      await vuePage.close();
-      await reactPage.close();
+      await vueContext.close();
+      await reactContext.close();
 
       const aria = diffAriaLines(react.aria, vue.aria);
       const requests = diffMultiset(react.requests, vue.requests);
@@ -201,7 +211,7 @@ test("每个场景的双向差异都与签入的清单一致", async ({ context 
   多重集收紧成顺序；不一致的话，收紧只会得到一份随机变红的门禁。
   这里如实把测量结果留在报告里，而不是先假设一个答案。
 */
-test("同一应用两次取样的请求序列", async ({ context }) => {
+test("同一应用两次取样的请求序列", async ({ browser }) => {
   test.setTimeout(180_000);
   const scenario = PARITY_SCENARIOS[0]!;
   const samples: Record<string, string[][]> = {};
@@ -212,7 +222,8 @@ test("同一应用两次取样的请求序列", async ({ context }) => {
   ] as const) {
     samples[name] = [];
     for (let round = 0; round < 2; round++) {
-      const page = await context.newPage();
+      const roundContext = await browser.newContext(PARITY_CONTEXT_OPTIONS);
+      const page = await roundContext.newPage();
       const capture = await captureScenario(
         page,
         base,
@@ -220,7 +231,7 @@ test("同一应用两次取样的请求序列", async ({ context }) => {
         DEFAULT_DIMENSION,
       );
       samples[name]!.push(capture.requests);
-      await page.close();
+      await roundContext.close();
     }
   }
 

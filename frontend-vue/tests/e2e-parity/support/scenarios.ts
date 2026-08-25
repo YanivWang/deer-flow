@@ -67,6 +67,20 @@ export type ParityStep =
   | { kind: "fill"; target: ParityTarget; value: string }
   | { kind: "press"; key: string };
 
+/**
+ * 额外的路由覆盖，写成数据。
+ *
+ * 好几个 React spec 在 mockLangGraphAPI 之上再盖一条 `page.route`（把某个 feature
+ * flag 关掉、换一份 provider 列表）。这里照搬那种能力，但仍然是数据：一旦允许写
+ * 回调，场景就又能分叉了。Playwright 后注册的路由优先，所以覆盖必须在 mock 之后注册。
+ */
+export type ParityRouteOverride = {
+  /** Playwright glob，与 mock-api 里的写法一致。 */
+  pattern: string;
+  status?: number;
+  json: unknown;
+};
+
 export type ParityScenario = {
   /** 与 React spec 文件同名（去掉 .spec.ts），覆盖率棘轮靠它对齐。 */
   id: string;
@@ -75,6 +89,7 @@ export type ParityScenario = {
   /** 两个应用打开同一个路径。 */
   path: string;
   mock?: MockAPIOptions;
+  routes?: ParityRouteOverride[];
   /** 打开后等到这些锚点，保证两边取样时机一致。 */
   settle: ParityStep[];
   /** 取样前的交互。 */
@@ -92,8 +107,21 @@ export function locateTarget(page: Page, target: ParityTarget) {
 }
 
 /** 把后端接上。mock 场景必须在 goto 之前调用。 */
-export function applyScenarioBackend(page: Page, scenario: ParityScenario) {
+export async function applyScenarioBackend(
+  page: Page,
+  scenario: ParityScenario,
+) {
   if (scenario.backend === "mock") mockLangGraphAPI(page, scenario.mock);
+  // 后注册者优先，所以覆盖一定要在 mock 之后。
+  for (const override of scenario.routes ?? []) {
+    await page.route(override.pattern, (route) =>
+      route.fulfill({
+        status: override.status ?? 200,
+        contentType: "application/json",
+        body: JSON.stringify(override.json),
+      }),
+    );
+  }
 }
 
 /**
@@ -146,7 +174,7 @@ export async function runScenario(
   dimension: ParityDimension = DEFAULT_DIMENSION,
   timeout = 30_000,
 ) {
-  applyScenarioBackend(page, scenario);
+  await applyScenarioBackend(page, scenario);
   await applyDimension(page, base, dimension);
   await page.goto(`${base}${scenario.path}`);
   for (const step of scenario.settle) await runStep(page, step, timeout);
@@ -155,7 +183,102 @@ export async function runScenario(
 }
 
 const MOCK_THREAD_ID = "00000000-0000-0000-0000-000000000001";
+const MOCK_RUN_ID = "00000000-0000-0000-0000-000000000099";
 const MOCK_THREAD_ID_2 = "00000000-0000-0000-0000-000000000002";
+
+const MOCK_AGENTS = [
+  {
+    name: "test-agent",
+    description: "A test agent for E2E tests",
+    system_prompt: "You are a test agent.",
+  },
+  {
+    name: "second-agent",
+    description: "Another test agent for E2E tests",
+    system_prompt: "You are another test agent.",
+  },
+];
+
+/** 与 frontend/tests/e2e/thread-list-infinite-scroll.spec.ts 同一份构造。 */
+const MANY_THREADS = Array.from({ length: 120 }, (_, index) => {
+  const padded = String(index + 1).padStart(3, "0");
+  return {
+    thread_id: `00000000-0000-0000-0000-0000000${padded.padStart(5, "0")}`,
+    title: `Conversation ${padded}`,
+    updated_at: new Date(
+      Date.UTC(2025, 5, 30, 12, 0, 0) - index * 60_000,
+    ).toISOString(),
+  };
+});
+
+const PLAIN_TEXT_SOURCE = "#include <stdio.h>";
+
+/** 与 frontend/tests/e2e/channels.spec.ts 同一份 provider 列表。 */
+const CHANNEL_PROVIDERS = [
+  ["buzz", "Buzz", "binding_code"],
+  ["telegram", "Telegram", "deep_link"],
+  ["slack", "Slack", "binding_code"],
+  ["discord", "Discord", "binding_code"],
+  ["feishu", "Feishu", "binding_code"],
+  ["dingtalk", "DingTalk", "binding_code"],
+  ["wechat", "WeChat", "binding_code"],
+  ["wecom", "WeCom", "binding_code"],
+].map(([provider, displayName, authMode]) => ({
+  provider,
+  display_name: displayName,
+  enabled: true,
+  configured: true,
+  connectable: true,
+  auth_mode: authMode,
+  connection_status: "connected",
+  credential_fields: [
+    { name: "token", label: "Token", type: "password", required: true },
+  ],
+}));
+
+const ARTIFACT_PATH = "/artifact-fixtures/report.html";
+
+/** 与 frontend/tests/e2e/artifact-preview.spec.ts 的 writeFileMessages() 同形。 */
+const ARTIFACT_MESSAGES = [
+  {
+    type: "human",
+    id: "msg-human-artifact",
+    content: [{ type: "text", text: "Create a report artifact" }],
+  },
+  {
+    type: "ai",
+    id: "msg-ai-write-artifact",
+    content: "",
+    tool_calls: [
+      {
+        id: "write-file-artifact",
+        name: "write_file",
+        args: {
+          description: "Writing report artifact",
+          path: ARTIFACT_PATH,
+          content:
+            "<!doctype html><html><body><h1>Report draft</h1><p>测试内容</p></body></html>",
+        },
+        type: "tool_call",
+      },
+    ],
+    invalid_tool_calls: [],
+  },
+];
+
+const SUBTASK_DESCRIPTION = "Research stopped reload regression";
+
+const MERMAID_CONTENT = `Here is a relationship diagram.
+
+\`\`\`mermaid
+flowchart TD
+    A[Lin<br/>protagonist]
+    F[Gu<br/>daughter]
+    A -- "sealed memory" -.-> F
+\`\`\`
+`;
+
+const WORKSPACE_CHANGES_RUN_ID = "00000000-0000-0000-0000-0000000009c1";
 
 const HISTORY_THREADS = [
   {
@@ -232,5 +355,522 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       { kind: "visible", target: { text: "First conversation" } },
       { kind: "visible", target: { text: "Second conversation" } },
     ],
+  },
+  {
+    id: "agent-chat",
+    title: "自定义 agent 的新会话页",
+    backend: "mock",
+    path: "/workspace/agents/test-agent/chats/new",
+    mock: { agents: MOCK_AGENTS },
+    settle: [{ kind: "visible", target: { selector: "textarea" } }],
+  },
+  {
+    id: "agents-feature-disabled",
+    title: "agents_api 关闭时的说明页",
+    backend: "mock",
+    path: "/workspace/agents",
+    mock: { agents: [] },
+    routes: [
+      { pattern: "**/api/features", json: { agents_api: { enabled: false } } },
+    ],
+    settle: [
+      {
+        kind: "visible",
+        target: { text: /contact your administrator|联系管理员/i },
+      },
+    ],
+  },
+  {
+    id: "browser-feature",
+    title: "浏览器面板入口",
+    backend: "mock",
+    path: `/workspace/chats/${MOCK_THREAD_ID}`,
+    mock: {
+      threads: [{ thread_id: MOCK_THREAD_ID, title: "Browser Enabled" }],
+    },
+    settle: [{ kind: "visible", target: { testId: "browser-trigger" } }],
+  },
+  {
+    id: "thread-list-pin",
+    title: "会话列表的置顶排序",
+    backend: "mock",
+    path: "/workspace/chats/new",
+    mock: {
+      threads: [
+        {
+          thread_id: "00000000-0000-0000-0000-00000000010a",
+          title: "Newest chat",
+          updated_at: "2026-07-04T10:00:00Z",
+        },
+        {
+          thread_id: "00000000-0000-0000-0000-00000000010b",
+          title: "Older chat",
+          updated_at: "2026-07-03T10:00:00Z",
+        },
+      ],
+    },
+    settle: [
+      { kind: "visible", target: { text: "Newest chat" } },
+      { kind: "visible", target: { text: "Older chat" } },
+    ],
+  },
+  {
+    id: "thread-list-infinite-scroll",
+    title: "会话列表页的首屏分页",
+    backend: "mock",
+    path: "/workspace/chats",
+    mock: { threads: MANY_THREADS },
+    settle: [{ kind: "visible", target: { text: "Conversation 001" } }],
+  },
+  {
+    id: "ui-polish-mobile",
+    title: "移动端工作区首屏",
+    backend: "mock",
+    path: "/workspace/chats/new",
+    settle: [{ kind: "visible", target: { selector: "textarea" } }],
+    // 这个场景的全部意义就是小屏，所以它只跑 mobile。
+    dimensions: [{ viewport: "mobile", theme: "light", locale: "en-US" }],
+  },
+  {
+    id: "user-message-plain-text",
+    title: "用户消息按纯文本渲染",
+    backend: "mock",
+    path: `/workspace/chats/${MOCK_THREAD_ID}`,
+    mock: {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Plain text rendering",
+          updated_at: "2025-06-01T12:00:00Z",
+          messages: [
+            {
+              type: "human",
+              id: "msg-human-plain-text",
+              content: [{ type: "text", text: PLAIN_TEXT_SOURCE }],
+            },
+            { type: "ai", id: "msg-ai-plain-text", content: "ack" },
+          ],
+        },
+      ],
+    },
+    settle: [{ kind: "visible", target: { text: PLAIN_TEXT_SOURCE } }],
+  },
+  {
+    id: "integrations",
+    title: "设置里的集成页",
+    backend: "mock",
+    path: "/workspace/chats/new?settings=integrations",
+    settle: [
+      { kind: "visible", target: { role: "dialog", name: "Settings" } },
+      { kind: "visible", target: { text: "Lark / Feishu CLI" } },
+    ],
+  },
+  {
+    id: "branch-thread",
+    title: "已完成回合上的分支入口",
+    backend: "mock",
+    path: `/workspace/chats/${MOCK_THREAD_ID}`,
+    mock: {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Original chat",
+          updated_at: "2026-06-01T12:00:00Z",
+          messages: [
+            {
+              type: "human",
+              id: "human-1",
+              content: [{ type: "text", text: "First question" }],
+            },
+            { type: "ai", id: "ai-1", content: "First answer" },
+            {
+              type: "human",
+              id: "human-2",
+              content: [{ type: "text", text: "Second question" }],
+            },
+            { type: "ai", id: "ai-2", content: "Intermediate answer" },
+          ],
+        },
+      ],
+    },
+    settle: [{ kind: "visible", target: { text: "First answer" } }],
+  },
+  {
+    id: "subtask-card",
+    title: "子任务卡片",
+    backend: "mock",
+    path: `/workspace/chats/${MOCK_THREAD_ID}`,
+    mock: {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Stopped subtask",
+          updated_at: "2026-06-18T12:00:00Z",
+          messages: [
+            {
+              type: "human",
+              id: "msg-human-stopped-subtask",
+              content: [
+                {
+                  type: "text",
+                  text: "Start a subtask and then stop before the task tool returns.",
+                },
+              ],
+            },
+            {
+              type: "ai",
+              id: "msg-ai-stopped-subtask",
+              content: "",
+              additional_kwargs: {},
+              response_metadata: {},
+              tool_calls: [
+                {
+                  id: "call-stopped-subtask",
+                  name: "task",
+                  args: {
+                    subagent_type: "general-purpose",
+                    description: SUBTASK_DESCRIPTION,
+                    prompt:
+                      "Investigate why the stopped subtask card should not remain running after reload.",
+                  },
+                  type: "tool_call",
+                },
+              ],
+              invalid_tool_calls: [],
+            },
+          ],
+        },
+      ],
+    },
+    settle: [{ kind: "visible", target: { text: SUBTASK_DESCRIPTION } }],
+  },
+  {
+    id: "artifact-preview",
+    title: "打开 artifact 面板后的预览",
+    backend: "mock",
+    path: `/workspace/chats/${MOCK_THREAD_ID}`,
+    mock: {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Artifact preview",
+          updated_at: "2026-06-02T12:00:00Z",
+          messages: ARTIFACT_MESSAGES,
+        },
+      ],
+    },
+    settle: [{ kind: "visible", target: { text: ARTIFACT_PATH } }],
+    steps: [
+      { kind: "click", target: { text: ARTIFACT_PATH } },
+      { kind: "visible", target: { text: "report.html" } },
+    ],
+  },
+  {
+    id: "artifact-panel-resize",
+    title: "artifact 面板的分栏几何",
+    backend: "mock",
+    path: `/workspace/chats/${MOCK_THREAD_ID}`,
+    mock: {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Artifact panel resize",
+          updated_at: "2026-06-03T12:00:00Z",
+          messages: ARTIFACT_MESSAGES,
+        },
+      ],
+    },
+    settle: [{ kind: "visible", target: { text: ARTIFACT_PATH } }],
+    steps: [{ kind: "click", target: { text: ARTIFACT_PATH } }],
+  },
+  {
+    id: "scheduled-tasks",
+    title: "定时任务列表",
+    backend: "mock",
+    path: "/workspace/scheduled-tasks",
+    mock: {
+      threads: [],
+      scheduledTasks: [
+        {
+          id: "task-1",
+          thread_id: "thread-1",
+          title: "Daily summary",
+          prompt: "Summarize thread",
+          schedule_type: "cron",
+          schedule_spec: { cron: "0 9 * * *" },
+          timezone: "UTC",
+          status: "enabled",
+          next_run_at: "2026-07-02T01:00:00+00:00",
+          last_run_at: null,
+          last_run_id: null,
+          last_error: null,
+          run_count: 0,
+          created_at: "2026-07-01T00:00:00+00:00",
+          updated_at: "2026-07-01T00:00:00+00:00",
+        },
+      ],
+    },
+    settle: [
+      { kind: "visible", target: { role: "button", name: /Daily summary/i } },
+    ],
+  },
+  {
+    id: "channels",
+    title: "侧栏的 IM 渠道列表",
+    backend: "mock",
+    path: "/workspace/chats/new",
+    routes: [
+      {
+        pattern: "**/api/channels/providers",
+        json: { enabled: true, providers: CHANNEL_PROVIDERS },
+      },
+      { pattern: "**/api/channels/connections", json: { connections: [] } },
+    ],
+    settle: [
+      {
+        kind: "visible",
+        target: { selector: "[data-sidebar='sidebar']" },
+      },
+      { kind: "visible", target: { text: "Telegram" } },
+      { kind: "visible", target: { text: "DingTalk" } },
+    ],
+  },
+  {
+    id: "thread-history-mermaid",
+    title: "历史消息里的 Mermaid 图",
+    backend: "mock",
+    path: `/workspace/chats/${MOCK_THREAD_ID}`,
+    mock: {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Mermaid history",
+          updated_at: "2026-05-24T04:47:01.123949+00:00",
+        },
+      ],
+    },
+    routes: [
+      {
+        pattern: "**/api/langgraph/threads/*/runs*",
+        json: [
+          {
+            run_id: MOCK_RUN_ID,
+            thread_id: MOCK_THREAD_ID,
+            status: "success",
+            created_at: "2026-05-24T04:46:42.565307+00:00",
+            updated_at: "2026-05-24T04:47:01.123949+00:00",
+          },
+        ],
+      },
+      {
+        pattern: `**/api/threads/${MOCK_THREAD_ID}/messages/page*`,
+        json: {
+          data: [
+            {
+              thread_id: MOCK_THREAD_ID,
+              run_id: MOCK_RUN_ID,
+              event_type: "llm.ai.response",
+              category: "message",
+              content: {
+                content: MERMAID_CONTENT,
+                additional_kwargs: {},
+                response_metadata: {},
+                type: "ai",
+                name: null,
+                id: "lc_run--issue-3193",
+                tool_calls: [],
+                invalid_tool_calls: [],
+              },
+              seq: 720,
+              created_at: "2026-05-24T04:47:01.123949+00:00",
+              metadata: {
+                caller: "lead_agent",
+                content_is_json: true,
+                content_is_dict: true,
+              },
+            },
+          ],
+          has_more: false,
+          next_before_seq: null,
+        },
+      },
+    ],
+    /*
+      锚点是消息正文，不是图本身。锚点的职责只是确定取样时刻——正文出现就说明
+      这条历史消息已经从 messages/page 加载并渲染完了。把「图渲染出来了没有」
+      写成锚点，等于让锚点兼任断言：一边渲染不出来时，得到的是一条超时，
+      而不是台账里那一行「React 有这个节点、Vue 没有」。
+    */
+    settle: [
+      { kind: "visible", target: { text: "Here is a relationship diagram." } },
+    ],
+  },
+  {
+    id: "workspace-changes",
+    title: "工作区改动摘要",
+    backend: "mock",
+    path: `/workspace/chats/${MOCK_THREAD_ID}`,
+    mock: {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Workspace changes",
+          updated_at: "2026-07-04T10:00:00Z",
+          messages: [
+            {
+              type: "human",
+              id: "msg-human-workspace-changes",
+              content: [{ type: "text", text: "Create a report" }],
+              run_id: WORKSPACE_CHANGES_RUN_ID,
+            },
+            {
+              type: "ai",
+              id: "msg-ai-workspace-changes",
+              content: "I updated the workspace report.",
+              run_id: WORKSPACE_CHANGES_RUN_ID,
+            },
+          ],
+        },
+      ],
+    },
+    routes: [
+      {
+        pattern: "**/api/threads/*/runs/*/workspace-changes*",
+        json: {
+          available: true,
+          version: 1,
+          summary: {
+            created: 1,
+            modified: 1,
+            deleted: 0,
+            symlink_created: 0,
+            additions: 8,
+            deletions: 2,
+            truncated: false,
+          },
+          files: [
+            {
+              path: "/mnt/user-data/outputs/report.md",
+              root: "outputs",
+              status: "modified",
+              binary: false,
+              sensitive: false,
+              size_before: 12,
+              size_after: 20,
+              sha256_before: "before",
+              sha256_after: "after",
+              diff: "--- a/mnt/user-data/outputs/report.md\n+++ b/mnt/user-data/outputs/report.md\n@@ -1,2 +1,2 @@\n-Draft\n+Ready",
+              diff_truncated: false,
+              diff_unavailable_reason: null,
+              additions: 1,
+              deletions: 1,
+            },
+          ],
+        },
+      },
+    ],
+    settle: [
+      { kind: "visible", target: { text: "I updated the workspace report." } },
+    ],
+  },
+  {
+    id: "streaming-reasoning-order",
+    title: "已结束回合里推理在答案之上",
+    backend: "mock",
+    path: `/workspace/chats/${MOCK_THREAD_ID}`,
+    /*
+      取的是 React spec 里**已结束**的那半边。另一半要挂一个「一直不关」的流服务器，
+      那超出当前步骤词汇能表达的范围；顺序这件事在结束态同样可比。
+    */
+    mock: {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Settled reasoning order",
+          updated_at: "2026-06-04T12:00:00Z",
+          messages: [
+            {
+              type: "human",
+              id: "msg-human-4576",
+              content: [{ type: "text", text: "Who are you?" }],
+            },
+            {
+              type: "ai",
+              id: "msg-ai-4576-settled",
+              content: "I am DeerFlow, an open-source super agent.",
+              additional_kwargs: {
+                reasoning_content:
+                  "The user asked who I am, so I will list the core capabilities.",
+              },
+            },
+          ],
+        },
+      ],
+    },
+    settle: [
+      {
+        kind: "visible",
+        target: { text: "I am DeerFlow, an open-source super agent." },
+      },
+    ],
+  },
+  {
+    id: "artifact-stream-state",
+    title: "线程带 artifact 时的入口",
+    backend: "mock",
+    path: `/workspace/chats/${MOCK_THREAD_ID}`,
+    mock: {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Artifact stream state",
+          updated_at: "2026-06-05T12:00:00Z",
+          artifacts: ["/artifact-fixtures/report.md"],
+          messages: [
+            {
+              type: "human",
+              id: "msg-human-artifact",
+              content: [{ type: "text", text: "Create a markdown report" }],
+            },
+            {
+              type: "ai",
+              id: "msg-ai-artifact",
+              content: "Created a markdown report.",
+            },
+          ],
+        },
+      ],
+    },
+    settle: [{ kind: "visible", target: { testId: "artifact-trigger" } }],
+  },
+  {
+    id: "artifact-batched-stream",
+    title: "批量写入后的 artifact 面板",
+    backend: "mock",
+    path: `/workspace/chats/${MOCK_THREAD_ID}`,
+    mock: {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Artifact batched stream",
+          updated_at: "2026-06-06T12:00:00Z",
+          artifacts: ["/artifact-fixtures/batched-report.md"],
+          messages: [
+            {
+              type: "human",
+              id: "msg-human-batched",
+              content: [{ type: "text", text: "Create a markdown report" }],
+            },
+            {
+              type: "ai",
+              id: "msg-ai-batched",
+              content: "Created a markdown report.",
+            },
+          ],
+        },
+      ],
+    },
+    settle: [{ kind: "visible", target: { testId: "artifact-trigger" } }],
+    steps: [{ kind: "click", target: { testId: "artifact-trigger" } }],
   },
 ];

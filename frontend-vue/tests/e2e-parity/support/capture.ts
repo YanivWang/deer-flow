@@ -141,7 +141,34 @@ async function sampleGeometry(
     const label = targetLabel(step.target);
     const locator = locateTarget(page, step.target).first();
     samples[label] = await locator
-      .evaluate((element) => {
+      .evaluate(async (element) => {
+        /*
+          先等布局停下来再量。
+
+          实测：mermaid 场景里 React 侧同一个锚点的 y 在两次运行之间差 1px——
+          它下面的图是异步渲染的，量早了就量到中间态。这类抖动不是产品差异，但
+          它会让清单每跑一次变一行，而一份每次都变的清单等于没有清单。
+
+          判据是「连续两帧盒模型不变」，不是「等固定毫秒」：固定等待在慢机器上
+          仍然会量到中间态，只是概率低一点，而低概率的假差异比高概率的更难查。
+        */
+        const frame = () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => resolve()),
+          );
+        const boxOf = () => {
+          const { x, y, width, height } = element.getBoundingClientRect();
+          return `${x}|${y}|${width}|${height}`;
+        };
+        let previous = boxOf();
+        for (let attempt = 0; attempt < 40; attempt++) {
+          await frame();
+          await frame();
+          const current = boxOf();
+          if (current === previous) break;
+          previous = current;
+        }
+
         const rect = element.getBoundingClientRect();
         const style = globalThis.getComputedStyle(element);
         const round = (value: number) => Math.round(value * 10) / 10;

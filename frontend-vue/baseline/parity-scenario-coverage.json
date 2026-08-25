@@ -2,11 +2,6 @@
   "$comment": "对照场景的覆盖率棘轮。id 是 frontend/tests/e2e/*.spec.ts 的文件名（去掉 .spec.ts）——拿 React 自己的用例清单当坐标系，是因为它是唯一一份「React 认为哪些行为值得守住」的机器可读事实。三个桶必须恰好划分这份清单：上游新增一个 spec 而三个桶都没有它，门禁立刻红。",
   "$semantics": "covered 由 tests/e2e-parity/support/scenarios.ts 的目录反查，必须逐字相等；pending 只能变短——把一个场景写进目录就从这里删掉；exempt 不是「太难所以不做」的垃圾桶，每一条都必须写出它所在的路由，而那条路由必须已经在 baseline/react-parity-scope.json 里被豁免。",
   "covered": [
-    "chat",
-    "sidebar",
-    "thread-history"
-  ],
-  "pending": [
     "agent-chat",
     "agents-feature-disabled",
     "artifact-batched-stream",
@@ -16,19 +11,24 @@
     "branch-thread",
     "browser-feature",
     "channels",
-    "chat-thread-init-ordering",
+    "chat",
     "integrations",
     "scheduled-tasks",
-    "settings-notification",
-    "sidecar-chat",
+    "sidebar",
     "streaming-reasoning-order",
     "subtask-card",
+    "thread-history",
     "thread-history-mermaid",
     "thread-list-infinite-scroll",
     "thread-list-pin",
     "ui-polish-mobile",
     "user-message-plain-text",
     "workspace-changes"
+  ],
+  "pending": [
+    "chat-thread-init-ordering",
+    "settings-notification",
+    "sidecar-chat"
   ],
   "exempt": [
     {
@@ -39,5 +39,10 @@
       "id": "landing",
       "route": "/"
     }
-  ]
+  ],
+  "$pendingReasons": {
+    "chat-thread-init-ordering": "要在真实提交一条消息之后取样，而步骤词汇里还没有「填入并发送」这一步；补它之前要先测流式取样是否稳定，否则整份台账会跟着流的时序抖。",
+    "settings-notification": "同上，另外还要在页面加载前替换 Notification 与 document.hasFocus，那属于夹具注入而不是交互步骤。",
+    "sidecar-chat": "要先选中一段正文再点浮动工具栏，步骤词汇里没有「选中文本」。"
+  }
 }
