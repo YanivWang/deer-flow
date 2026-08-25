@@ -36,15 +36,35 @@ import {
 
 import { normalizeAriaSnapshot } from "../../../scripts/lib/aria-parity.mjs";
 import {
+  locateTarget,
   runScenario,
   type ParityDimension,
   type ParityScenario,
+  type ParityTarget,
 } from "./scenarios";
 
 export type ParityCapture = {
   aria: string;
   /** 归一化后的产品 API 请求，按发出顺序。 */
   requests: string[];
+  /** 场景锚点的盒模型与关键计算样式。 */
+  geometry: Record<string, GeometrySample | null>;
+};
+
+/**
+ * 一个锚点的可见几何与色板。
+ *
+ * 只取用户能看见的量：位置、尺寸、前景/背景色、字号。不取 class、不取内边距的
+ * 具体来源、也不取组件库的包装层——那些是 ARCHITECTURE 里只对齐可观察行为的地方。
+ */
+export type GeometrySample = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  background: string;
+  fontSize: string;
 };
 
 /** 会随时间或随机数变化、且不体现产品行为的查询参数。 */
@@ -101,6 +121,65 @@ export function normalizeRequest(
  * 静置窗口是取样的一部分，两个应用用同一个值，否则「谁被多等了一会儿」会变成
  * 一条假差异。
  */
+/** 锚点的稳定标识。两个应用用同一份场景数据，所以标识天然一致。 */
+export function targetLabel(target: ParityTarget): string {
+  if ("testId" in target) return `testId:${target.testId}`;
+  if ("selector" in target) return `selector:${target.selector}`;
+  if ("role" in target) return `role:${target.role}[${String(target.name)}]`;
+  return `text:${String(target.text)}`;
+}
+
+async function sampleGeometry(
+  page: Page,
+  scenario: ParityScenario,
+): Promise<Record<string, GeometrySample | null>> {
+  const samples: Record<string, GeometrySample | null> = {};
+  // 只取 settle 里的 visible 锚点：它们是场景定义的「稳定态可见元素」。
+  // click/fill 的目标在交互后可能已经移动或消失，拿它们量几何是在量时序。
+  for (const step of scenario.settle) {
+    if (step.kind !== "visible") continue;
+    const label = targetLabel(step.target);
+    const locator = locateTarget(page, step.target).first();
+    samples[label] = await locator
+      .evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = globalThis.getComputedStyle(element);
+        const round = (value: number) => Math.round(value * 10) / 10;
+        /*
+          计算样式给出的颜色**记法**两边不同：实测 React 侧序列化成
+          `lab(2.75381 0 0)`，Vue 侧是 `oklch(0.145 0 0)`——而这两个是同一个颜色
+          （都解析成 rgba(10,10,10,255)）。直接比字符串等于在比记法，会让台账里
+          塞满假条目，而假条目比没有条目更糟：它会让人不再相信这份清单。
+          让浏览器自己画一像素再读回来，比的就是最终呈现的颜色。
+        */
+        const canvas = document.createElement("canvas");
+        canvas.width = 1;
+        canvas.height = 1;
+        const ctx = canvas.getContext("2d");
+        const toRgba = (value: string) => {
+          if (!ctx) return value;
+          ctx.clearRect(0, 0, 1, 1);
+          ctx.fillStyle = "#000";
+          ctx.fillStyle = value;
+          ctx.fillRect(0, 0, 1, 1);
+          const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+          return `rgba(${r},${g},${b},${a})`;
+        };
+        return {
+          x: round(rect.x),
+          y: round(rect.y),
+          width: round(rect.width),
+          height: round(rect.height),
+          color: toRgba(style.color),
+          background: toRgba(style.backgroundColor),
+          fontSize: style.fontSize,
+        };
+      })
+      .catch(() => null);
+  }
+  return samples;
+}
+
 export async function captureScenario(
   page: Page,
   base: string,
@@ -120,7 +199,8 @@ export async function captureScenario(
     const aria = normalizeAriaSnapshot(
       await page.locator("body").ariaSnapshot(),
     );
-    return { aria, requests };
+    const geometry = await sampleGeometry(page, scenario);
+    return { aria, requests, geometry };
   } finally {
     page.off("request", onRequest);
   }

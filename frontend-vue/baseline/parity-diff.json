@@ -1,5 +1,5 @@
 {
-  "$comment": "React 与 Vue 在每个对照场景上的双向差异。这份清单只能缩短：修好一条就从这里删一条，新出现一条会让 e2e-parity 立刻红。空数组是目标状态，不是「还没测」。刷新用 make parity-accept，刷新前先逐条看清楚是修好了还是新坏了。键是 场景/断点/主题/语言；aria* 是可访问性树的双向逐行差异，requests* 是产品 API 请求的多重集差异。",
+  "$comment": "React 与 Vue 在每个对照场景上的双向差异。这份清单只能缩短：修好一条就从这里删一条，新出现一条会让 e2e-parity 立刻红。空数组是目标状态，不是「还没测」。刷新用 make parity-accept，刷新前先逐条看清楚是修好了还是新坏了。键是 场景/断点/主题/语言；aria* 是可访问性树的双向逐行差异，requests* 是产品 API 请求的多重集差异，geometry 是锚点的盒模型与色板差异。",
   "entries": {
     "chat/desktop/light/en-US": {
       "ariaOnlyReact": [
@@ -46,6 +46,9 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:textarea y React=257 Vue=281 Δ24"
       ]
     },
     "chat/desktop/light/zh-CN": {
@@ -93,6 +96,9 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:textarea y React=257 Vue=281 Δ24"
       ]
     },
     "chat/desktop/dark/en-US": {
@@ -140,6 +146,9 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:textarea y React=257 Vue=281 Δ24"
       ]
     },
     "chat/desktop/dark/zh-CN": {
@@ -187,6 +196,9 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:textarea y React=257 Vue=281 Δ24"
       ]
     },
     "chat/tablet/light/en-US": {
@@ -234,6 +246,9 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:textarea y React=357 Vue=381 Δ24"
       ]
     },
     "chat/tablet/light/zh-CN": {
@@ -281,6 +296,9 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:textarea y React=369 Vue=393 Δ24"
       ]
     },
     "chat/tablet/dark/en-US": {
@@ -328,6 +346,9 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:textarea y React=357 Vue=381 Δ24"
       ]
     },
     "chat/tablet/dark/zh-CN": {
@@ -375,6 +396,9 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:textarea y React=369 Vue=393 Δ24"
       ]
     },
     "chat/mobile/light/en-US": {
@@ -422,6 +446,10 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:textarea y React=211 Vue=275 Δ64",
+        "selector:textarea fontSize React=16px Vue=14px"
       ]
     },
     "chat/mobile/light/zh-CN": {
@@ -471,6 +499,10 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:textarea y React=211 Vue=275 Δ64",
+        "selector:textarea fontSize React=16px Vue=14px"
       ]
     },
     "chat/mobile/dark/en-US": {
@@ -518,6 +550,10 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:textarea y React=211 Vue=275 Δ64",
+        "selector:textarea fontSize React=16px Vue=14px"
       ]
     },
     "chat/mobile/dark/zh-CN": {
@@ -567,6 +603,10 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:textarea y React=211 Vue=275 Δ64",
+        "selector:textarea fontSize React=16px Vue=14px"
       ]
     },
     "sidebar/desktop/light/en-US": {
@@ -614,6 +654,10 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "selector:[data-sidebar='sidebar'] a[href='/workspace/agents'] y React=128 Vue=120 Δ-8",
+        "selector:[data-sidebar='sidebar'] a[href='/workspace/chats'] y React=92 Vue=84 Δ-8"
       ]
     },
     "thread-history/desktop/light/en-US": {
@@ -660,6 +704,18 @@
       ],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
+      ],
+      "geometry": [
+        "text:First conversation x React=16 Vue=8 Δ-8",
+        "text:First conversation y React=294 Vue=264 Δ-30",
+        "text:First conversation width React=114.8 Vue=203 Δ88.2",
+        "text:First conversation height React=20 Vue=32 Δ12",
+        "text:First conversation color React=rgba(115,115,115,255) Vue=rgba(10,10,10,255)",
+        "text:Second conversation x React=16 Vue=8 Δ-8",
+        "text:Second conversation y React=258 Vue=228 Δ-30",
+        "text:Second conversation width React=135.4 Vue=203 Δ67.6",
+        "text:Second conversation height React=20 Vue=32 Δ12",
+        "text:Second conversation color React=rgba(115,115,115,255) Vue=rgba(10,10,10,255)"
       ]
     }
   }

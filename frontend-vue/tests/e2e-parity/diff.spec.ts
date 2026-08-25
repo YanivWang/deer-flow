@@ -24,7 +24,7 @@ import { dirname } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 import { diffAriaLines } from "../../scripts/lib/aria-parity.mjs";
-import { captureScenario } from "./support/capture";
+import { captureScenario, type GeometrySample } from "./support/capture";
 import { reactAppPresent } from "./support/react-preview";
 import {
   DEFAULT_DIMENSION,
@@ -47,7 +47,22 @@ type DiffEntry = {
   ariaOnlyVue: string[];
   requestsOnlyReact: string[];
   requestsOnlyVue: string[];
+  /** 锚点的几何与色板差异，一行一处。 */
+  geometry: string[];
 };
+
+/**
+ * 几何容差。
+ *
+ * 不能要求逐像素相等：两边的 primitive 各有自己的内边距与边框实现，那正是
+ * ARCHITECTURE 里只对齐可观察行为的三处之一。但也不能没有判据。
+ *
+ * 2px 是先定后测的。测完的事实是：当前 22 处几何差异里最小的 |Δ| 是 8px，
+ * 最大 88.2px，**2~8px 这一档一条都没有**——也就是说这个阈值现在没有压住任何
+ * 贴边的东西，它挡掉的只会是真正的零头。哪天有差异落进这一档，要做的是回去看
+ * 那一处，而不是顺手把数字调大。
+ */
+const GEOMETRY_TOLERANCE_PX = 2;
 
 test.skip(
   !reactAppPresent,
@@ -80,6 +95,39 @@ function diffMultiset(react: string[], vue: string[]) {
   return { onlyReact: onlyReact.sort(), onlyVue: onlyVue.sort() };
 }
 
+function diffGeometry(
+  react: Record<string, GeometrySample | null>,
+  vue: Record<string, GeometrySample | null>,
+) {
+  const lines: string[] = [];
+  for (const label of [
+    ...new Set([...Object.keys(react), ...Object.keys(vue)]),
+  ].sort()) {
+    const r = react[label] ?? null;
+    const v = vue[label] ?? null;
+    if (!r || !v) {
+      lines.push(
+        `${label} 取样缺失 React=${r ? "有" : "无"} Vue=${v ? "有" : "无"}`,
+      );
+      continue;
+    }
+    for (const field of ["x", "y", "width", "height"] as const) {
+      const delta = Math.round((v[field] - r[field]) * 10) / 10;
+      if (Math.abs(delta) > GEOMETRY_TOLERANCE_PX) {
+        lines.push(
+          `${label} ${field} React=${r[field]} Vue=${v[field]} Δ${delta}`,
+        );
+      }
+    }
+    for (const field of ["color", "background", "fontSize"] as const) {
+      if (r[field] !== v[field]) {
+        lines.push(`${label} ${field} React=${r[field]} Vue=${v[field]}`);
+      }
+    }
+  }
+  return lines;
+}
+
 test("每个场景的双向差异都与签入的清单一致", async ({ context }) => {
   test.setTimeout(600_000);
 
@@ -107,6 +155,7 @@ test("每个场景的双向差异都与签入的清单一致", async ({ context 
         ariaOnlyVue: aria.onlyVue,
         requestsOnlyReact: requests.onlyReact,
         requestsOnlyVue: requests.onlyVue,
+        geometry: diffGeometry(react.geometry, vue.geometry),
       };
     }
   }
@@ -124,7 +173,7 @@ test("每个场景的双向差异都与签入的清单一致", async ({ context 
             "新出现一条会让 e2e-parity 立刻红。空数组是目标状态，不是「还没测」。" +
             "刷新用 make parity-accept，刷新前先逐条看清楚是修好了还是新坏了。" +
             "键是 场景/断点/主题/语言；aria* 是可访问性树的双向逐行差异，" +
-            "requests* 是产品 API 请求的多重集差异。",
+            "requests* 是产品 API 请求的多重集差异，geometry 是锚点的盒模型与色板差异。",
           entries,
         },
         null,

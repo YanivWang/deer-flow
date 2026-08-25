@@ -83,7 +83,7 @@ export type ParityScenario = {
   dimensions?: ParityDimension[];
 };
 
-function locate(page: Page, target: ParityTarget) {
+export function locateTarget(page: Page, target: ParityTarget) {
   if ("testId" in target) return page.getByTestId(target.testId);
   if ("selector" in target) return page.locator(target.selector);
   if ("role" in target)
@@ -125,7 +125,7 @@ export async function applyDimension(
 
 async function runStep(page: Page, step: ParityStep, timeout: number) {
   if (step.kind === "press") return page.keyboard.press(step.key);
-  const locator = locate(page, step.target).first();
+  const locator = locateTarget(page, step.target).first();
   switch (step.kind) {
     case "visible":
       return locator.waitFor({ state: "visible", timeout });
