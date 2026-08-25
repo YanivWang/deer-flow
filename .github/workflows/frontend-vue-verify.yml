@@ -41,6 +41,11 @@ on:
       - ".github/workflows/frontend-vue-verify.yml"
 
   workflow_dispatch:
+    inputs:
+      generate_visual_baselines:
+        description: "Generate -linux visual baselines and upload them as an artifact"
+        type: boolean
+        default: false
 
 concurrency:
   group: fe-vue-${{ github.event.pull_request.number || github.ref }}
@@ -201,3 +206,54 @@ jobs:
       - name: Run browser WebSocket and OIDC gates
         working-directory: frontend-vue
         run: make e2e-external
+
+  # One-shot, manual. `make e2e-visual` cannot enter CI until `-linux`
+  # screenshot baselines exist, and this runner is the only place allowed to
+  # produce them: baselines generated locally through amd64 emulation have no
+  # evidence of matching this runner's font rasterisation, and
+  # `maxDiffPixelRatio: 0.01` over a fullPage screenshot is loose enough to
+  # hide the difference — which yields a gate that looks green while guarding
+  # nothing. See frontend-vue/tests/guards/visual-baseline-platforms.test.ts.
+  #
+  # Run this job from the Actions tab with the input checked, download the
+  # `visual-baselines-linux` artifact, commit the `-linux` PNGs, and add
+  # `make e2e-visual` to the verify job in the SAME change — that guard fails
+  # if either half lands alone. Deliberately does NOT invoke `make e2e-visual`:
+  # generating baselines is not running the gate, and the guard reads this
+  # file for that command.
+  visual-baselines:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.generate_visual_baselines }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.22.3"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install frontend-vue dependencies
+        run: python3 scripts/pnpm.py --dir frontend-vue install --frozen-lockfile --strict-peer-dependencies
+
+      - name: Install Playwright Chromium
+        working-directory: frontend-vue
+        run: make e2e-install
+
+      - name: Generate -linux screenshot baselines
+        working-directory: frontend-vue
+        run: >-
+          node scripts/with-loopback-no-proxy.mjs --
+          python3 ../scripts/pnpm.py --dir frontend-vue exec
+          playwright test -c playwright.visual.config.ts --update-snapshots
+
+      - name: Upload generated baselines
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines-linux
+          path: frontend-vue/tests/e2e-visual/**/*-linux.png
+          if-no-files-found: error
