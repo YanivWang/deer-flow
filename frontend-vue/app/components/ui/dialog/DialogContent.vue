@@ -44,7 +44,12 @@ const props = withDefaults(
       modal?: boolean;
     }
   >(),
-  { modal: true },
+  {
+    modal: true,
+    class: undefined,
+    overlayClass: undefined,
+    closeLabel: undefined,
+  },
 );
 const emits = defineEmits<DialogContentEmits>();
 

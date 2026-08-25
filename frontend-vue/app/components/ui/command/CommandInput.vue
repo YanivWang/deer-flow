@@ -27,7 +27,11 @@ const props = withDefaults(
       wrapperClass?: HTMLAttributes["class"];
     }
   >(),
-  { autoFocus: true },
+  {
+    autoFocus: true,
+    class: undefined,
+    wrapperClass: undefined,
+  },
 );
 const emits = defineEmits<{ "update:modelValue": [value: string] }>();
 

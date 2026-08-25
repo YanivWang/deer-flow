@@ -29,7 +29,12 @@ const props = withDefaults(
       orientation?: "vertical" | "horizontal" | "both";
     }
   >(),
-  { type: "hover", orientation: "vertical" },
+  {
+    type: "hover",
+    orientation: "vertical",
+    class: undefined,
+    viewportClass: undefined,
+  },
 );
 
 const forwarded = useForwardProps(props);

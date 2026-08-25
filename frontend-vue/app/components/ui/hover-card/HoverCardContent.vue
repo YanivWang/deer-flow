@@ -26,7 +26,10 @@ defineOptions({ inheritAttrs: false });
 
 const props = withDefaults(
   defineProps<HoverCardContentProps & { class?: HTMLAttributes["class"] }>(),
-  { sideOffset: 4 },
+  {
+    sideOffset: 4,
+    class: undefined,
+  },
 );
 const emits = defineEmits<{
   escapeKeyDown: [event: KeyboardEvent];

@@ -39,7 +39,11 @@ const props = withDefaults(
       modal?: boolean;
     }
   >(),
-  { modal: true },
+  {
+    modal: true,
+    class: undefined,
+    overlayClass: undefined,
+  },
 );
 const emits = defineEmits<AlertDialogContentEmits>();
 

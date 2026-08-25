@@ -27,7 +27,11 @@ const props = withDefaults(
       size?: ButtonVariants["size"];
     }
   >(),
-  { variant: "default", size: "default" },
+  {
+    variant: "default",
+    size: "default",
+    class: undefined,
+  },
 );
 const forwarded = useForwardProps(props);
 const delegated = computed(() => {

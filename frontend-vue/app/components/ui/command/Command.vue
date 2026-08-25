@@ -21,7 +21,11 @@ import { cn } from "@/lib/utils";
 
 const props = withDefaults(
   defineProps<ListboxRootProps & { class?: HTMLAttributes["class"] }>(),
-  { highlightOnHover: true, selectionBehavior: "replace" },
+  {
+    highlightOnHover: true,
+    selectionBehavior: "replace",
+    class: undefined,
+  },
 );
 const emits = defineEmits<ListboxRootEmits>();
 

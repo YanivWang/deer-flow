@@ -28,7 +28,11 @@ defineOptions({ inheritAttrs: false });
 
 const props = withDefaults(
   defineProps<SelectContentProps & { class?: HTMLAttributes["class"] }>(),
-  { position: "popper", sideOffset: 4 },
+  {
+    position: "popper",
+    sideOffset: 4,
+    class: undefined,
+  },
 );
 const emits = defineEmits<SelectContentEmits>();
 
