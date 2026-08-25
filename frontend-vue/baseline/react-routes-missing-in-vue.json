@@ -1,9 +1,0 @@
-{
-  "$comment": "React 有、Vue 还没有的路由。这不是豁免——它们都要做，这里只是让「还差哪几条」变成可执行的事实而不是记忆。这份清单只能缩短：做出一条就删一条。新增一条缺失会让 tests/parity/product-surface.test.ts 立刻变红；反过来，某条已经做出来却还留在这里，同样变红，防止清单退化成一张可以无限延期的待办。",
-  "routes": [
-    "/[lang]/docs/[[...mdxPath]]",
-    "/blog/[[...mdxPath]]",
-    "/blog/posts",
-    "/blog/tags/[tag]"
-  ]
-}

@@ -3,10 +3,12 @@
   【架构位置】     L3
   【主要导出】     / 页面
   【依赖关系】     shared/showcase · Vue-owned static demo assets
-  【边界与注意】   ⚠️ 未对齐：这是 Vue 自写的占位页，不是 React 落地页的实现。
-                   React 的 `/` 由 Header/Hero/CaseStudy/Skills/Sandbox/WhatsNew/
-                   Community/Footer 组成，见 frontend/src/app/page.tsx。营销页
-                   曾被列为豁免，现已取消——这里是待办，不是终态。
+  【边界与注意】   营销落地页，内容**双向豁免**：既不复刻 React 的 Header/Hero/
+                   CaseStudy/Skills/Sandbox/WhatsNew/Community/Footer
+                   （frontend/src/app/page.tsx），也不因为「React 没有这个 UI」
+                   被反向清理删掉——/pricing 与 /about 就是被单向规则删掉的。
+                   豁免的定义在 baseline/react-parity-scope.json 的
+                   contentExemptRoutes，不在本注释里。
 -->
 
 <script setup lang="ts">

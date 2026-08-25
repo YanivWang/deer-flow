@@ -9,12 +9,21 @@
 
 ## 与 React 的对齐范围
 
-**没有豁免项。** 目标是完全平替：React 有的 Vue 都要有，**React 没有的 Vue 不许有**。
+对齐范围**只覆盖产品面**。范围内的判据是双向的：**React 有的 Vue 都要有，React 没有的
+Vue 不许有。** 后半句是最容易漏掉的一半——此前的规则只写了前半句，于是 Vue 自造的错误
+提示、自加的 aria-label、以及被重新措辞的整组 artifact 面板文案，在所有门禁全绿的情况
+下长期存在：门禁只比对了「React 有、Vue 无」这一个方向。差异必须**双向**枚举。
 
-后半句是这一节最容易漏掉的一半。此前的规则只写了「不要因为 React 有就搬进 Vue」，
-没写反向；于是 Vue 自造的错误提示、自加的 aria-label、以及被重新措辞的整组
-artifact 面板文案，在所有门禁全绿的情况下长期存在——门禁只比对了「React 有、
-Vue 无」这一个方向。差异必须**双向**枚举。
+豁免项**不写在这里**。它们是数据，写在 `baseline/react-parity-scope.json`，由
+`tests/parity/product-surface.test.ts` 读取并在过期时变红。上一版豁免是本文件的一节
+散文；那节被整段删除之后，`/pricing` 与 `/about` 当场被判成违规删掉，而没有任何门禁
+能说出那是一次决定还是一次事故。散文改不出这个性质，数据可以。
+
+当前豁免的是营销落地页 `/` 的**内容**（双向：Vue 保留自己的入口页，既不复刻 React 的
+落地页，也不因为「React 没有这个 UI」被反向清理删掉）、Nextra 内容站的四条路由，以及
+整站无后端的静态回放部署模式。准确定义、边界情形和过期判据都在那份 JSON 里，它同时钉
+住两件反直觉的事：`/showcase/[thread_id]` **在**对齐范围内，而 React 里零消费者的死代码
+不是豁免、是**禁止移植**。
 
 ### 三处只能对齐可观察行为
 
@@ -23,15 +32,15 @@ Vue 无」这一个方向。差异必须**双向**枚举。
 
 - **Next Route Handler ↔ Nitro server route**：判据是同样的 URL、method、
   状态码、响应体与错误形状。React 侧每有一个 route handler，Vue 就要有一条对应的
-  HTTP 行为。
+  HTTP 行为——静态回放模式下的那些除外，它们属于豁免的部署模式。
 - **图标库与组件库内部 DOM**：React 用 lucide-react + shadcn(radix)，Vue 用
   lucide-vue-next + reka-ui。判据是 role、accessible name、层级、顺序、可聚焦性
   与键盘行为一致；不比 class 名、包装元素和 primitive 内部结构。
 - **React Context/hook ↔ Vue composable 的写法**：判据是它们产生的状态转换与
   副作用时机一致。
 
-除此之外没有第四处。「landing 只是营销页」「docs 站是 Nextra 的」「那个组件反正
-没人用」都不构成跳过的理由。
+这三处是**判据的换算**，不是豁免；豁免只有 `baseline/react-parity-scope.json` 里那些。
+「那个组件反正没人用」尤其不构成理由——按双向判据，没人用的组件搬进 Vue 是新增差异。
 
 ### 严格对齐的内容
 
