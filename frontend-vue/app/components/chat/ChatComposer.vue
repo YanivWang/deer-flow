@@ -359,6 +359,65 @@ function selectModel(model: Model) {
     ),
   );
 }
+/* 推理强度是 mode 之外的**第二个**选择器，不是 mode 的显示名。
+   mode 只给出一个起点（flash→minimal、thinking→low、pro→medium、ultra→high），
+   用户可以脱离它单独覆盖；覆盖值由 normalizeComposerContext 原样提交。
+   与 React 一致：只有模型声明 supports_reasoning_effort 且当前不是 flash 时出现——
+   flash 的语义就是不推理，给它一个强度选择器没有意义。 */
+const supportsReasoningEffort = computed(
+  () => selectedModel.value?.supports_reasoning_effort === true,
+);
+const reasoningEfforts = computed(() => [
+  {
+    id: "minimal" as const,
+    label: $i18n.t.value.inputBox.reasoningEffortMinimal,
+    description: $i18n.t.value.inputBox.reasoningEffortMinimalDescription,
+  },
+  {
+    id: "low" as const,
+    label: $i18n.t.value.inputBox.reasoningEffortLow,
+    description: $i18n.t.value.inputBox.reasoningEffortLowDescription,
+  },
+  {
+    id: "medium" as const,
+    label: $i18n.t.value.inputBox.reasoningEffortMedium,
+    description: $i18n.t.value.inputBox.reasoningEffortMediumDescription,
+  },
+  {
+    id: "high" as const,
+    label: $i18n.t.value.inputBox.reasoningEffortHigh,
+    description: $i18n.t.value.inputBox.reasoningEffortHighDescription,
+  },
+]);
+/* 未设置时落在 medium：与 React 的 `medium || !reasoning_effort` 同一条分支，
+   否则触发器会在用户还没选过时显示空值。 */
+const selectedReasoningEffort = computed(() => {
+  const effort = props.context?.reasoning_effort;
+  return effort === "minimal" || effort === "low" || effort === "high"
+    ? effort
+    : "medium";
+});
+const activeReasoningEffort = computed(
+  () =>
+    reasoningEfforts.value.find(
+      (candidate) => candidate.id === selectedReasoningEffort.value,
+    ) ?? reasoningEfforts.value[2]!,
+);
+
+function selectReasoningEffort(id: string) {
+  const effort = reasoningEfforts.value.find(
+    (candidate) => candidate.id === id,
+  );
+  if (!effort) return;
+  emit(
+    "contextChange",
+    normalizeComposerContext(
+      { ...props.context, reasoning_effort: effort.id },
+      selectedModel.value,
+    ),
+  );
+}
+
 function selectModeById(id: string) {
   const mode = availableModes.value.find((candidate) => candidate.id === id);
   if (!mode) return;
@@ -1214,6 +1273,43 @@ defineExpose({ replaceDraft, offerFollowup });
                     }}</span>
                     <span class="text-muted-foreground block text-xs">{{
                       mode.description
+                    }}</span>
+                  </span>
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu
+            v-if="supportsReasoningEffort && selectedMode !== 'flash'"
+          >
+            <DropdownMenuTrigger>
+              <button
+                type="button"
+                data-testid="composer-reasoning-effort-trigger"
+                class="hover:bg-accent hidden h-8 rounded-md px-2 text-xs sm:inline-flex sm:items-center"
+                :disabled="disabled"
+              >
+                {{ $i18n.t.value.inputBox.reasoningEffort }}:
+                {{ activeReasoningEffort.label }}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="top" class="w-72">
+              <DropdownMenuRadioGroup
+                :model-value="selectedReasoningEffort"
+                @update:model-value="selectReasoningEffort(String($event))"
+              >
+                <DropdownMenuRadioItem
+                  v-for="effort in reasoningEfforts"
+                  :key="effort.id"
+                  :value="effort.id"
+                  class="py-2"
+                >
+                  <span class="block">
+                    <span class="block text-sm font-medium">{{
+                      effort.label
+                    }}</span>
+                    <span class="text-muted-foreground block text-xs">{{
+                      effort.description
                     }}</span>
                   </span>
                 </DropdownMenuRadioItem>

@@ -106,6 +106,48 @@ async function openWorkspace(
   });
 }
 
+test("lets the reasoning effort be overridden independently of the mode", async ({
+  page,
+}) => {
+  // mode 只给出一个起点，effort 是它旁边的第二个选择器。没有这个控件时 pro 模式
+  // 的用户永远只能跑 medium——四档强度的文案在词典里翻译好了，界面上没有出口。
+  await openWorkspace(page, "/workspace/chats/new");
+
+  const modeTrigger = page.getByTestId("composer-mode-trigger");
+  await modeTrigger.click();
+  await page.getByRole("menuitemradio").nth(2).click(); // pro
+
+  const effortTrigger = page.getByTestId("composer-reasoning-effort-trigger");
+  // 用户没显式选过时落在 medium，与 React 的 `medium || !reasoning_effort` 同一分支。
+  await expect(effortTrigger).toHaveText(/Reasoning Effort:\s*Medium/);
+
+  await effortTrigger.click();
+  const options = page.getByRole("menuitemradio");
+  await expect(options).toHaveCount(4);
+  await expect(options.first()).toContainText("Retrieval + Direct Output");
+  await options.last().click();
+  await expect(effortTrigger).toHaveText(/Reasoning Effort:\s*High/);
+});
+
+test("hides the reasoning effort control in flash mode", async ({ page }) => {
+  // flash 的语义就是不推理，给它一个强度选择器没有意义（与 React 同条件）。
+  await openWorkspace(page, "/workspace/chats/new");
+
+  // 显式切到 flash，而不是假设它是默认值——默认模式由本地设置决定，会漂。
+  await page.getByTestId("composer-mode-trigger").click();
+  await page.getByRole("menuitemradio").first().click();
+  await expect(page.getByTestId("composer-mode-trigger")).toHaveText("Flash");
+  await expect(
+    page.getByTestId("composer-reasoning-effort-trigger"),
+  ).toHaveCount(0);
+
+  await page.getByTestId("composer-mode-trigger").click();
+  await page.getByRole("menuitemradio").nth(1).click(); // thinking
+  await expect(
+    page.getByTestId("composer-reasoning-effort-trigger"),
+  ).toBeVisible();
+});
+
 test("explains the active mode on hover without hiding the mode menu", async ({
   page,
 }) => {

@@ -991,7 +991,7 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 95,
+  "unusedTotal": 87,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.createPageSubtitle",
@@ -1032,14 +1032,6 @@
     "inputBox.goalLengthCounter",
     "inputBox.inputPolishNoChanges",
     "inputBox.pleaseWaitStreaming",
-    "inputBox.reasoningEffortHigh",
-    "inputBox.reasoningEffortHighDescription",
-    "inputBox.reasoningEffortLow",
-    "inputBox.reasoningEffortLowDescription",
-    "inputBox.reasoningEffortMedium",
-    "inputBox.reasoningEffortMediumDescription",
-    "inputBox.reasoningEffortMinimal",
-    "inputBox.reasoningEffortMinimalDescription",
     "inputBox.searchModels",
     "inputBox.suggestionPlaceholderRequired",
     "inputBox.voiceInputStop",
