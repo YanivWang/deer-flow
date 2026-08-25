@@ -763,6 +763,17 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
       });
     }
     if (route.request().method() === "DELETE") {
+      // Same `require_existing=True` ownership guard as the `/api/threads`
+      // handler below. Vue's thread client deletes through this LangGraph
+      // path, so leaving it permissive here made a duplicate delete look
+      // successful in the one place it actually happens.
+      if (!matchingThread) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ detail: `Thread ${threadId} not found` }),
+        });
+      }
       threads = threads.filter((thread) => thread.thread_id !== threadId);
       return route.fulfill({
         status: 204,

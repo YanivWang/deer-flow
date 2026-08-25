@@ -709,15 +709,23 @@ test.describe("Thread history", () => {
     page,
   }) => {
     mockLangGraphAPI(page);
-    await page.route(/\/api\/threads\/[^/]+$/, (route) => {
-      if (route.request().method() === "DELETE") {
-        return route.fulfill({
-          status: 500,
-          contentType: "application/json",
-          body: JSON.stringify({ detail: "Local cleanup failed" }),
-        });
+    // 删除一个 thread 只允许发**一次** DELETE。这里数请求而不是 stub 一个
+    // 失败响应：Vue 的 thread client 走 `/api/langgraph/threads/{id}`，
+    // 而此处原来那条 `/\/api\/threads\/[^/]+$/` 的 500 stub 压根匹配不上，
+    // 于是这个用例长期看起来在测「本地清理失败仍能恢复」，实际什么都没测。
+    // 计数同时挡住回归：多出来的第二次删除会被 Gateway 的
+    // `require_existing=True` 判成 404，而级联删除对 404 是幂等吞掉的，
+    // 只有请求数能把它暴露出来。
+    const deleteRequests: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "DELETE" &&
+        /\/api\/(?:langgraph\/)?threads\/[^/]+$/.test(
+          new URL(request.url()).pathname,
+        )
+      ) {
+        deleteRequests.push(request.url());
       }
-      return route.fallback();
     });
 
     await page.goto("/workspace/chats/new");
@@ -747,6 +755,7 @@ test.describe("Thread history", () => {
     await expect(page.getByText("Previous question")).toHaveCount(0);
     await expect(page.getByText("Hello from DeerFlow!")).toHaveCount(0);
     await expect(page.getByPlaceholder(/how can i assist you/i)).toBeVisible();
+    expect(deleteRequests).toHaveLength(1);
 
     await page.goto(`/workspace/chats/${MOCK_THREAD_ID}`);
     await page.waitForURL("**/workspace/chats/new");
