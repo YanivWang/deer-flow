@@ -1,9 +1,9 @@
 # DeerFlow 启动入口
 
-所有根命令都在仓库根目录执行：
+所有根命令都在仓库根目录执行——下文的 `cd` 都相对该目录：
 
 ```bash
-cd /Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow
+cd /path/to/deer-flow
 ```
 
 DeerFlow 包含一个 Gateway 和两个完整前端：
@@ -151,7 +151,7 @@ make dev-dual
 终端 1，启动 Gateway：
 
 ```bash
-cd /Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow/backend
+cd backend
 make install
 make dev
 ```
@@ -159,7 +159,7 @@ make dev
 终端 2，启动 Vue：
 
 ```bash
-cd /Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow/frontend-vue
+cd frontend-vue
 make install
 make dev
 ```
