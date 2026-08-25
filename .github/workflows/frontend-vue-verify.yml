@@ -72,6 +72,13 @@ jobs:
         working-directory: frontend-vue
         run: make verify
 
+      # Not part of `make verify`, so nothing ran it: it stayed red across
+      # several commits before anyone noticed. It reuses the build `verify`
+      # just produced.
+      - name: Enforce client asset budgets
+        working-directory: frontend-vue
+        run: make asset-budget
+
       - name: Audit dependency advisories
         working-directory: frontend-vue
         run: make audit
@@ -89,8 +96,13 @@ jobs:
         run: make e2e-install
 
       # Every suite that needs no backend process: product contracts, auth UI,
-      # visual snapshots, the same-origin proxy and the real chunked-SSE gate.
-      # Each suite builds once, instead of rebuilding per --grep slice.
+      # the same-origin proxy and the real chunked-SSE gate. Each suite builds
+      # once, instead of rebuilding per --grep slice.
+      #
+      # e2e-visual is deliberately NOT part of e2e-mock: the screenshot
+      # baselines are `-darwin` only and this runner is Linux. The Makefile
+      # target carries the same note. Landing it here needs `-linux` baselines
+      # generated in a container and checked in first.
       - name: Run every suite that needs no backend
         working-directory: frontend-vue
         run: make e2e-mock
