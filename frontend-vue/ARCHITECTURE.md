@@ -122,6 +122,12 @@ GFM/math/streaming 插件和 Streamdown 等价组件，防止调用点漏传插�
 图表（mermaid）由 `MermaidDiagram.vue` 触发，公式排版（KaTeX，约 264 KB raw）由
 `core/markdown/math.ts` 的 `containsMath` 判定后动态 import。判据宁可多报不可漏报——
 多报只是白下一次，漏报是公式永远渲染不出来且不报错。
+第四个是 artifacts 面板：`AgentChat.vue` 用 `defineAsyncComponent` 引入 `ArtifactPanel`。
+它本来就在 `v-if` 后面，但静态 import 会把 `ArtifactPreview` → `rawHtmlRehypePlugins`
+→ `rehype-raw` → **parse5** 整棵树放进聊天首屏，而消息路径从不渲染 raw HTML
+（见 `core/markdown/plugins.ts` 文件头：DeerFlow 整条替换了 Streamdown 默认链，
+raw HTML 由 `remarkHtmlToText` 降级成转义文本）。parse5 一个包就占 `vendor-markdown`
+源码体积的 24.8%。
 `thread.values.todos` 与最终 token usage 仍由 thread snapshot/API 提供。Gateway feedback 字段和 core
 API 可继续无损存在，但当前 React 消息调用点没有启用该入口，因此 Vue 不显示点赞/踩，也不建立
 只由 Vue 触发的 feedback mutation。

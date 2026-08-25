@@ -6,7 +6,14 @@
   【依赖关系】     useThreadStream · MessageList · ChatComposer · workspace panels
   【边界与注意】   集成根而非 L2 组件；artifact/sidecar/browser 接线不得反向进入通用层。
 */
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import {
+  computed,
+  defineAsyncComponent,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
 import { Bot, CalendarClock, Menu, PlusSquare } from "lucide-vue-next";
 
@@ -17,7 +24,6 @@ import ContextUsageBadge from "@/components/workspace/ContextUsageBadge.vue";
 import TodoList from "@/components/workspace/TodoList.vue";
 import TokenUsageIndicator from "@/components/chat/TokenUsageIndicator.vue";
 import WorkspacePanels from "@/components/workspace/WorkspacePanels.vue";
-import ArtifactPanel from "@/components/workspace/artifacts/ArtifactPanel.vue";
 import ArtifactTrigger from "@/components/workspace/artifacts/ArtifactTrigger.vue";
 import BrowserPanel from "@/components/workspace/browser-view/BrowserPanel.vue";
 import BrowserTrigger from "@/components/workspace/browser-view/BrowserTrigger.vue";
@@ -80,6 +86,22 @@ import {
   reconcileBrowserMessageFrame,
   type BrowserViewFrame,
 } from "@/core/browser/frame";
+
+/*
+  Artifacts 面板按需加载。它已经在 `v-if` 后面——面板关着时一个 DOM 都不渲染，
+  但静态 import 让它的整棵依赖树进了聊天首屏，其中最重的是 `ArtifactPreview`
+  经 `rawHtmlRehypePlugins` 拉来的 `rehype-raw` → **parse5**：一个完整的 HTML
+  解析器，实测占 `vendor-markdown` chunk 源码体积的 24.8%（276,427 B），加上它
+  的 `entities`（70,037 B）与 hast 转换层接近三分之一。而消息渲染路径**从不
+  使用 raw HTML**——`plugins.ts` 的文件头就写着这件事：DeerFlow 消息路径整条
+  替换了 Streamdown 默认链，raw HTML 走 `remarkHtmlToText` 变成转义文本。
+  换句话说，每个只是来聊天的用户都在为产物预览的 HTML 解析器付费。
+
+  面板由用户点击打开，这时再取 chunk 与 CodeBlock/Mermaid/KaTeX 是同一套做法。
+*/
+const ArtifactPanel = defineAsyncComponent(
+  () => import("@/components/workspace/artifacts/ArtifactPanel.vue"),
+);
 
 const props = defineProps<{
   agentName?: string | null;
