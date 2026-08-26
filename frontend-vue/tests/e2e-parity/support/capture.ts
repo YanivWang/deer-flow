@@ -1,7 +1,7 @@
 /*
   【文件职责】     在一个应用上跑完一个场景，取下可比对的样本：可访问性树 + API 请求序列。
   【架构位置】     对照测试基础设施
-  【主要导出】     ParityCapture · normalizeRequest · captureScenario
+  【主要导出】     ParityCapture · normalizeRequest · sampleGeometry · captureScenario
   【依赖关系】     ./scenarios · ../../../scripts/lib/aria-parity.mjs · @playwright/test
   【边界与注意】   取样只保留两边都会发的**产品请求**：`/api/` 下面的那些。框架自己的
                    资源与载荷请求（Next 的 `_next` 与 RSC、Nuxt 的 `_nuxt` 与 payload）
@@ -56,6 +56,8 @@ export type ParityCapture = {
  *
  * 只取用户能看见的量：位置、尺寸、前景/背景色、字号。不取 class、不取内边距的
  * 具体来源、也不取组件库的包装层——那些是 ARCHITECTURE 里只对齐可观察行为的地方。
+ *
+ * `x` / `y` 是**未滚动布局里的文档坐标**，不是视口坐标，见 sampleGeometry。
  */
 export type GeometrySample = {
   x: number;
@@ -129,7 +131,32 @@ export function targetLabel(target: ParityTarget): string {
   return `text:${String(target.text)}`;
 }
 
-async function sampleGeometry(
+/**
+ * 取每个锚点的几何与色板。
+ *
+ * 位置量的是**布局**，不是滚动状态——这是它与 `getBoundingClientRect()` 的全部区别。
+ *
+ * rect 给的是视口坐标，等于把祖先容器滚了多少也一起量了进去。实测：
+ * `thread-history-mermaid` 的锚点在 stick-to-bottom 的会话流里，React 侧同一份布局
+ * 量出来的 y 在 3/3/2/1/-1/4 之间跳（2026-08-26 单日统计 3,2,3,2,3,3,2,2），因为
+ * mermaid 图是异步渲染的，内容高度一变容器就重新贴底；Vue 侧那条流没溢出，恒为 72。
+ * 台账里那条 `Δ69` 因此**整条都是滚动状态**，与布局无关，却让门禁约一半概率变红。
+ *
+ * 所以把祖先链上每一层的 scrollLeft/scrollTop 加回去：容器滚多少，元素的视口坐标
+ * 就少多少，两者相加恒等于未滚动布局里的文档坐标。页面级滚动也在这条链上
+ * （documentElement.scrollTop 就是 scrollY），不用另外加。
+ *
+ * **不是**「相对最近可滚动祖先的内容原点」。那个写法量过，它换来的东西更糟：
+ * 参照系变成各应用自己的 DOM。实测同一次取样里，mermaid 锚点 React 的最近可滚动
+ * 祖先是会话流那个 div、Vue 那条流没溢出于是退回文档，两边的 x 明明都是 375.5，
+ * 相对坐标却差 256；`integrations` 的 "Lark / Feishu CLI" 同样差 381，
+ * `scheduled-tasks` 的 "Daily summary" 差 360。对照比的是两个应用，参照系必须与
+ * 应用无关——文档原点是，最近可滚动祖先不是。
+ *
+ * 「量出来与滚到哪里无关」这条判据由 diff.spec.ts 的滚动不变性用例实测钉住，
+ * 不是这里的注释说了算。
+ */
+export async function sampleGeometry(
   page: Page,
   scenario: ParityScenario,
 ): Promise<Record<string, GeometrySample | null>> {
@@ -142,6 +169,27 @@ async function sampleGeometry(
     const locator = locateTarget(page, step.target).first();
     samples[label] = await locator
       .evaluate(async (element) => {
+        /** 未滚动布局里的文档坐标 + 尺寸。见函数头。 */
+        const layoutBox = () => {
+          const rect = element.getBoundingClientRect();
+          let scrolledLeft = 0;
+          let scrolledTop = 0;
+          for (
+            let ancestor = element.parentElement;
+            ancestor;
+            ancestor = ancestor.parentElement
+          ) {
+            scrolledLeft += ancestor.scrollLeft;
+            scrolledTop += ancestor.scrollTop;
+          }
+          return {
+            x: rect.x + scrolledLeft,
+            y: rect.y + scrolledTop,
+            width: rect.width,
+            height: rect.height,
+          };
+        };
+
         /*
           先等布局停下来再量。
 
@@ -151,13 +199,17 @@ async function sampleGeometry(
 
           判据是「连续两帧盒模型不变」，不是「等固定毫秒」：固定等待在慢机器上
           仍然会量到中间态，只是概率低一点，而低概率的假差异比高概率的更难查。
+
+          等的是**布局**盒模型。此前这里比的是视口 rect，于是在 stick-to-bottom
+          的容器里它永远等不到「不再变」——变的是滚动而不是布局，加长判据
+          （试过连续 3 帧、6 帧）自然也不收敛。
         */
         const frame = () =>
           new Promise<void>((resolve) =>
             requestAnimationFrame(() => resolve()),
           );
         const boxOf = () => {
-          const { x, y, width, height } = element.getBoundingClientRect();
+          const { x, y, width, height } = layoutBox();
           return `${x}|${y}|${width}|${height}`;
         };
         let previous = boxOf();
@@ -169,7 +221,7 @@ async function sampleGeometry(
           previous = current;
         }
 
-        const rect = element.getBoundingClientRect();
+        const box = layoutBox();
         const style = globalThis.getComputedStyle(element);
         const round = (value: number) => Math.round(value * 10) / 10;
         /*
@@ -193,10 +245,10 @@ async function sampleGeometry(
           return `rgba(${r},${g},${b},${a})`;
         };
         return {
-          x: round(rect.x),
-          y: round(rect.y),
-          width: round(rect.width),
-          height: round(rect.height),
+          x: round(box.x),
+          y: round(box.y),
+          width: round(box.width),
+          height: round(box.height),
           color: toRgba(style.color),
           background: toRgba(style.backgroundColor),
           fontSize: style.fontSize,

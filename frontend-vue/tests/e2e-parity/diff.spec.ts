@@ -24,12 +24,18 @@ import { dirname } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 import { diffAriaLines } from "../../scripts/lib/aria-parity.mjs";
-import { captureScenario, type GeometrySample } from "./support/capture";
+import {
+  captureScenario,
+  sampleGeometry,
+  type GeometrySample,
+} from "./support/capture";
 import { PARITY_CONTEXT_OPTIONS } from "./support/context-options";
 import { reactAppPresent } from "./support/react-preview";
 import {
   DEFAULT_DIMENSION,
   PARITY_SCENARIOS,
+  locateTarget,
+  runScenario,
   type ParityDimension,
 } from "./support/scenarios";
 
@@ -58,10 +64,14 @@ type DiffEntry = {
  * 不能要求逐像素相等：两边的 primitive 各有自己的内边距与边框实现，那正是
  * ARCHITECTURE 里只对齐可观察行为的三处之一。但也不能没有判据。
  *
- * 2px 是先定后测的。测完的事实是：当前 22 处几何差异里最小的 |Δ| 是 8px，
- * 最大 88.2px，**2~8px 这一档一条都没有**——也就是说这个阈值现在没有压住任何
- * 贴边的东西，它挡掉的只会是真正的零头。哪天有差异落进这一档，要做的是回去看
- * 那一处，而不是顺手把数字调大。
+ * 2px 是先定后测的，数字一直没动过；下面这组事实随台账重测一次。当前 32 处位置/
+ * 尺寸差异里最小的 |Δ| 是 4px（channels 的两行、browser-feature 的宽高），最大 528px，
+ * **2~4px 这一档一条都没有**——也就是说这个阈值仍然没有压住任何贴边的东西，它挡掉的
+ * 只会是真正的零头。哪天有差异落进这一档，要做的是回去看那一处，而不是顺手把数字调大。
+ *
+ * 阈值挡掉的零头现在有一处有名有姓：artifact 面板那条路径的锚点，React 的布局位置是
+ * 193、Vue 是 192（React 侧那个 `overflow:hidden` 的行容器内容高 52、盒子高 50，
+ * 被滚了 1px）。此前两边都量成 192，因为视口坐标把那 1px 滚动一起量了进去。
  */
 const GEOMETRY_TOLERANCE_PX = 2;
 
@@ -241,4 +251,79 @@ test("同一应用两次取样的请求序列", async ({ browser }) => {
       `${name} 两次取样的请求序列不同：顺序判据在收紧之前必须先稳定。`,
     ).toEqual(rounds[0]);
   }
+});
+
+/*
+  几何取样只量布局、不量滚动状态——这条判据由这里实测，不由 capture.ts 的注释保证。
+
+  这个场景是选出来的，不是随手挑的：它的锚点在 stick-to-bottom 的会话流里，是全部
+  34 个样本中取样时刻**滚动量最大**的一个——实测 React 侧那条流被滚了 32~81px 不等
+  （连跑五次量到 75/76/76/75/33），Vue 侧那条流没溢出、恒为 0；其余样本里最大的
+  滚动量只有 artifact 面板那 1px。用没滚动的场景写这条用例会恒绿，也就什么都没测。
+
+  所以还要断言这次实验真的把锚点挪动过：滚到顶与滚到底的**视口**坐标必须不同。
+  否则哪天两边都不再溢出，这条用例会安静地退化成一句空话，而不是红。
+*/
+const SCROLL_INVARIANT_SCENARIO = "thread-history-mermaid";
+
+async function scrollEverything(page: Page, where: "top" | "bottom") {
+  await page.evaluate((target) => {
+    for (const node of document.querySelectorAll("*")) {
+      if (node.scrollHeight > node.clientHeight)
+        node.scrollTop = target === "top" ? 0 : node.scrollHeight;
+      if (node.scrollWidth > node.clientWidth)
+        node.scrollLeft = target === "top" ? 0 : node.scrollWidth;
+    }
+    globalThis.scrollTo(0, target === "top" ? 0 : document.body.scrollHeight);
+  }, where);
+  // 贴底的容器会在下一帧回弹，等它落定再量。
+  await page.waitForTimeout(200);
+}
+
+test("锚点的几何与滚到哪里无关", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const scenario = PARITY_SCENARIOS.find(
+    (entry) => entry.id === SCROLL_INVARIANT_SCENARIO,
+  );
+  expect(scenario, `场景目录里没有 ${SCROLL_INVARIANT_SCENARIO}`).toBeDefined();
+  const anchor = scenario!.settle.find((step) => step.kind === "visible");
+  expect(anchor, "这个场景没有可见锚点，量不了几何").toBeDefined();
+
+  let moved = false;
+  for (const [name, base] of [
+    ["vue", VUE_APP],
+    ["react", REACT_APP],
+  ] as const) {
+    const context = await browser.newContext(PARITY_CONTEXT_OPTIONS);
+    const page: Page = await context.newPage();
+    await runScenario(page, base, scenario!, DEFAULT_DIMENSION);
+    await page.waitForTimeout(700);
+
+    const locator = locateTarget(page, anchor!.target).first();
+    const viewportY = () =>
+      locator.evaluate(
+        (element) => Math.round(element.getBoundingClientRect().y * 10) / 10,
+      );
+
+    await scrollEverything(page, "top");
+    const atTop = await sampleGeometry(page, scenario!);
+    const viewportAtTop = await viewportY();
+
+    await scrollEverything(page, "bottom");
+    const atBottom = await sampleGeometry(page, scenario!);
+    const viewportAtBottom = await viewportY();
+
+    if (viewportAtTop !== viewportAtBottom) moved = true;
+    expect(
+      atBottom,
+      `${name} 的锚点几何随滚动位置变了：取样量到的是滚动状态，不是布局。`,
+    ).toEqual(atTop);
+    await context.close();
+  }
+
+  expect(
+    moved,
+    `两个应用滚到顶与滚到底时锚点都没动过：${SCROLL_INVARIANT_SCENARIO} 已经不再有` +
+      `被滚动的容器，这条用例现在是空的，得换一个真会滚的场景。`,
+  ).toBe(true);
 });
