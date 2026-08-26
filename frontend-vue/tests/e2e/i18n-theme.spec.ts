@@ -63,6 +63,8 @@ test("locale switch updates an open dialog, product surfaces, future errors and 
   await dialog.getByRole("button", { name: zhCN.common.close }).click();
   await expect(page.getByPlaceholder(zhCN.inputBox.placeholder)).toBeVisible();
   await expect(page.getByLabel(zhCN.browser.trigger)).toBeVisible();
+  // 面板不会自己打开（React 只在流式写入途中才自动打开），点一下产物路径。
+  await page.getByText(ARTIFACT_PATH).click();
   await expect(page.getByLabel(zhCN.clipboard.copyToClipboard)).toBeVisible();
   const sidebar = page.locator("#workspace-sidebar");
   await expect(
@@ -81,10 +83,10 @@ test("locale switch updates an open dialog, product surfaces, future errors and 
     });
   });
   /*
-    这条线程带 write_file 产物，面板自动打开，于是侧栏被收起——React 在
-    artifacts context 的 select() 里做的就是这件事。会话列表在收起态下不渲染
-    （React 的 WorkspaceSidebar 直接 `{isSidebarOpen && <RecentChatList />}`），
-    所以要先把侧栏展开回来。收起态的触发器要悬停头部才出现。
+    上面点开了产物，于是侧栏被收起——React 在 artifacts context 的 select() 里做的
+    就是这件事。会话列表在收起态下不渲染（React 的 WorkspaceSidebar 直接
+    `{isSidebarOpen && <RecentChatList />}`），所以要先把侧栏展开回来。
+    收起态的触发器要悬停头部才出现。
   */
   const sidebarPanel = page.locator("#workspace-sidebar");
   await sidebarPanel.locator('[data-sidebar="header"]').hover();

@@ -152,11 +152,21 @@ test.describe("Vue artifacts panel resize", () => {
       .toBeGreaterThan(widthAfterDrag - 20);
   });
 
-  test("history auto-opens the artifact and native splitpanes keyboard resizing works", async ({
+  test("history does not auto-open, and native splitpanes keyboard resizing works", async ({
     page,
   }) => {
-    const panel = page.locator("#artifacts");
-    await expect(panel).toBeVisible({ timeout: 15_000 });
+    /*
+      历史线程**不会**自动打开面板：React 只在这一轮还在流式、且 write_file 尚未返回
+      时才自动打开，或者最后一步是成功的 finalize_artifact_write
+      （frontend/src/components/workspace/messages/message-group.tsx 的 autoOpenArtifactUrl）。
+      这条 fixture 是「write_file + OK 结果」的历史记录，两个条件都不满足。
+    */
+    await expect(page.getByText(ARTIFACT_PATH)).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.locator("#artifacts")).toBeHidden();
+
+    const panel = await ensureArtifactOpen(page);
     await expect(panel.getByText("report.html")).toBeVisible();
 
     const separator = page.getByRole("separator");

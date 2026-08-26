@@ -195,6 +195,122 @@ test.describe("artifacts accessibility shape", () => {
     ).toHaveAccessibleName("");
   });
 
+  test("a finished write_file in history does not open the panel by itself", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page, {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Finished draft",
+          messages: [
+            {
+              type: "human",
+              id: "done-human",
+              content: [{ type: "text", text: "Create a report artifact" }],
+            },
+            {
+              type: "ai",
+              id: "done-ai",
+              content: "",
+              tool_calls: [
+                {
+                  id: "done-write",
+                  name: "write_file",
+                  args: {
+                    description: "Writing report artifact",
+                    path: WRITE_FILE_PATH,
+                    content: "<!doctype html><html><body>ok</body></html>",
+                  },
+                },
+              ],
+            },
+            {
+              type: "tool",
+              id: "done-tool",
+              name: "write_file",
+              tool_call_id: "done-write",
+              content: "OK",
+            },
+          ],
+        },
+      ],
+    });
+    await page.goto(`/workspace/chats/${MOCK_THREAD_ID}`);
+    await expect(page.getByText(WRITE_FILE_PATH)).toBeVisible({
+      timeout: 15_000,
+    });
+
+    /*
+      React 只在两种情况下自动打开：这一轮**还在流式**且 write_file 尚未返回，
+      或者最后一步是成功的 finalize_artifact_write
+      （messages/message-group.tsx 的 autoOpenArtifactUrl）。翻一条跑完的历史线程
+      两条都不满足，面板不该自己弹出来——它一弹出来还会顺手把侧栏收起，用户什么
+      都没点，工作区却换了个样子。
+    */
+    await expect(page.locator("#artifacts")).toBeHidden();
+    await expect(page.locator("#workspace-sidebar")).toHaveCSS(
+      "width",
+      "256px",
+    );
+  });
+
+  test("a successful finalize_artifact_write does open the panel by itself", async ({
+    page,
+  }) => {
+    await page.route("**/api/threads/*/artifacts/**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/markdown",
+        body: "# finalized",
+      }),
+    );
+    mockLangGraphAPI(page, {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Finalized artifact",
+          artifacts: [ARTIFACT_PATH],
+          messages: [
+            {
+              type: "human",
+              id: "final-human",
+              content: [{ type: "text", text: "Create a markdown report" }],
+            },
+            {
+              type: "ai",
+              id: "final-ai",
+              content: "",
+              tool_calls: [
+                {
+                  id: "final-write",
+                  name: "finalize_artifact_write",
+                  args: {
+                    description: "Finalizing report",
+                    path: ARTIFACT_PATH,
+                  },
+                },
+              ],
+            },
+            {
+              type: "tool",
+              id: "final-tool",
+              name: "finalize_artifact_write",
+              tool_call_id: "final-write",
+              content: "OK",
+            },
+          ],
+        },
+      ],
+    });
+    await page.goto(`/workspace/chats/${MOCK_THREAD_ID}`);
+
+    // 这一支 React 不要求还在流式：产物已经落地，面板自己打开。
+    const panel = page.locator("#artifacts");
+    await expect(panel).toBeVisible({ timeout: 15_000 });
+    await expect(panel.getByText("report.md")).toBeVisible();
+  });
+
   test("the write_file step is one clickable region, not a pair of buttons", async ({
     page,
   }) => {

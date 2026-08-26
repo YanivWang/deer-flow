@@ -59,7 +59,7 @@ import {
   isAuthDisabledMode,
 } from "@/core/auth/auth-disabled-user";
 import { DEFAULT_MAX_SUGGESTIONS } from "@/core/suggestions/api";
-import type { Message } from "@/core/types/message";
+import type { Message, ToolCall } from "@/core/types/message";
 import {
   selectContextUsage,
   threadTokenUsageToTokenUsage,
@@ -645,33 +645,55 @@ function quotePrompt(contexts: SidecarContext[]): Message {
 
 let completionNotificationTimer: ReturnType<typeof setTimeout> | undefined;
 const lastAutoOpenedArtifact = ref<string | null>(null);
+/*
+  自动打开只发生在两种情况，与 React 的 ToolCall 一一对应
+  （frontend/src/components/workspace/messages/message-group.tsx 的
+  `autoOpenArtifactUrl`）：
+
+    - 这一轮**正在流式**、最后一个工具调用是 write_file / str_replace、而且它还没
+      返回——用户在看模型现场写这个文件；
+    - 最后一个工具调用是 finalize_artifact_write 且结果成功——产物已经落地。
+
+  两条判据都少不得。原来这里扫全部消息、只要见到 write_file 就设 target，于是
+  **打开任何一条带 write_file 的历史线程都会自动展开面板并收起侧栏**，而 React 那边
+  `isLoading` 为假、`finalizedArtifactPath` 为空，什么都不会发生。
+
+  「最后一个」是 React 的 `isLast`：它只把每个 group 的最后一个工具步骤标成 isLast，
+  而整条消息流里的最后一个工具调用，正是最后那个有工具调用的 group 的最后一步。
+*/
 const autoOpenArtifact = computed(() => {
   const messages = stream.messages.value;
-  let target: string | null = null;
+  let lastCall: ToolCall | undefined;
+  let lastCallMessageId: string | undefined;
   for (const message of messages) {
     if (message.type !== "ai") continue;
     for (const call of message.tool_calls ?? []) {
-      const path = call.args?.path;
-      if (
-        (call.name === "write_file" || call.name === "str_replace") &&
-        typeof path === "string"
-      ) {
-        target = buildWriteFileArtifactURL({
-          filepath: path,
-          messageId: message.id,
-          toolCallId: call.id,
-        });
-      }
-      if (call.name === "finalize_artifact_write" && typeof path === "string") {
-        const result = messages.find(
-          (candidate) =>
-            candidate.type === "tool" && candidate.tool_call_id === call.id,
-        );
-        if (result && messageText(result).trim() === "OK") target = path;
-      }
+      lastCall = call;
+      lastCallMessageId = message.id;
     }
   }
-  return target;
+  const path = lastCall?.args?.path;
+  if (!lastCall || typeof path !== "string") return null;
+
+  const result = messages.find(
+    (candidate) =>
+      candidate.type === "tool" && candidate.tool_call_id === lastCall.id,
+  );
+  if (lastCall.name === "finalize_artifact_write") {
+    // React 的 isSuccessfulToolResult：trimStart().startsWith("OK")。
+    return result && messageText(result).trimStart().startsWith("OK")
+      ? path
+      : null;
+  }
+  if (lastCall.name !== "write_file" && lastCall.name !== "str_replace") {
+    return null;
+  }
+  if (!stream.isStreaming.value || result) return null;
+  return buildWriteFileArtifactURL({
+    filepath: path,
+    messageId: lastCallMessageId,
+    toolCallId: lastCall.id,
+  });
 });
 watch(
   autoOpenArtifact,
