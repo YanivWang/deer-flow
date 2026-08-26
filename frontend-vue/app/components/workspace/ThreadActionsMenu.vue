@@ -8,6 +8,7 @@
 */
 import { ref } from "vue";
 import {
+  Download,
   FileJson,
   FileText,
   MoreHorizontal,
@@ -22,6 +23,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getAPIClient } from "@/core/api/api-client";
@@ -112,17 +116,25 @@ async function exportConversation(format: ThreadExportFormat) {
         <MoreHorizontal :size="16" />
       </button>
     </DropdownMenuTrigger>
+    <!--
+      顺序、分隔线位置和「导出」那一层子菜单都照 React 的 RecentChatList
+      （frontend/src/components/workspace/recent-chat-list.tsx）：
+      置顶 → 重命名 → 分享 → 导出(子菜单) → 分隔线 → 删除，**只有一条分隔线**。
+      原来是「重命名 → 置顶 → 分隔线 → 分享 → 导出 md → 导出 json → 分隔线 → 删除」：
+      顺序不同、多一条分隔线，而且把子菜单摊平成两个平级项——读屏器在 React 上听到
+      的是「导出，子菜单」，在 Vue 上听到的是两个并列动作，菜单的形状根本不是一个。
+      现有对照场景没有一条会点开这个菜单，所以台账一条都报不出来。
+    -->
     <DropdownMenuContent align="end" class="min-w-48">
-      <DropdownMenuItem @select="emit('rename')">
-        <Pencil :size="14" /> {{ $i18n.t.value.common.rename }}
-      </DropdownMenuItem>
       <DropdownMenuItem @select="emit('togglePin')">
         <Pin :size="14" />
         {{
           pinned ? $i18n.t.value.chats.unpinChat : $i18n.t.value.chats.pinChat
         }}
       </DropdownMenuItem>
-      <DropdownMenuSeparator />
+      <DropdownMenuItem @select="emit('rename')">
+        <Pencil :size="14" /> {{ $i18n.t.value.common.rename }}
+      </DropdownMenuItem>
       <DropdownMenuItem
         as="button"
         data-testid="thread-share"
@@ -131,23 +143,30 @@ async function exportConversation(format: ThreadExportFormat) {
       >
         <Share2 :size="14" /> {{ $i18n.t.value.common.share }}
       </DropdownMenuItem>
-      <DropdownMenuItem
-        as="button"
-        data-testid="thread-export-markdown"
-        :disabled="Boolean(exporting)"
-        @select="exportConversation('markdown')"
-      >
-        <FileText :size="14" />
-        {{ $i18n.t.value.common.exportAsMarkdown }}
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        as="button"
-        data-testid="thread-export-json"
-        :disabled="Boolean(exporting)"
-        @select="exportConversation('json')"
-      >
-        <FileJson :size="14" /> {{ $i18n.t.value.common.exportAsJSON }}
-      </DropdownMenuItem>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <Download :size="14" /> {{ $i18n.t.value.common.export }}
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>
+          <DropdownMenuItem
+            as="button"
+            data-testid="thread-export-markdown"
+            :disabled="Boolean(exporting)"
+            @select="exportConversation('markdown')"
+          >
+            <FileText :size="14" />
+            {{ $i18n.t.value.common.exportAsMarkdown }}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            as="button"
+            data-testid="thread-export-json"
+            :disabled="Boolean(exporting)"
+            @select="exportConversation('json')"
+          >
+            <FileJson :size="14" /> {{ $i18n.t.value.common.exportAsJSON }}
+          </DropdownMenuItem>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
       <DropdownMenuSeparator />
       <DropdownMenuItem
         as="button"

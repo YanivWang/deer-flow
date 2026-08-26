@@ -1288,10 +1288,7 @@ export const zhCN: Translations = {
     light: "浅色",
     dark: "深色",
     language: "语言",
-    renameChat: "重命名对话",
-    chatTitle: "对话标题",
     deleteConversationFailed: "删除对话失败。",
-    renameThreadFailed: "重命名对话失败。",
     tryAgain: "重试",
   },
   markdown: {

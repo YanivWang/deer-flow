@@ -116,6 +116,117 @@ test.describe("thread list accessibility shape", () => {
     await expect(page.locator("main time")).toHaveCount(0);
   });
 
+  /*
+    行操作菜单的形状：顺序、分隔线条数、以及「导出」是**一层子菜单**而不是两个平级
+    动作。现有对照场景没有一条会点开这个菜单，所以台账报不出来——这里是它唯一的守卫。
+  */
+  test("the row action menu keeps React's order, single separator and export submenu", async ({
+    page,
+  }) => {
+    mockTwoThreads(page);
+    await page.goto("/workspace/chats/new");
+
+    const row = page
+      .locator('[data-sidebar="menu-item"]')
+      .filter({ hasText: "Newest chat" })
+      .first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await row.hover();
+    await row.getByRole("button", { name: "More" }).click();
+
+    const menu = page.getByRole("menu").first();
+    await expect(menu.getByRole("menuitem")).toHaveText([
+      "Pin chat",
+      "Rename",
+      "Share",
+      "Export",
+      "Delete",
+    ]);
+    await expect(menu.getByRole("separator")).toHaveCount(1);
+
+    // 导出是子菜单：展开前两个格式都不在树里。
+    await expect(
+      page.getByRole("menuitem", { name: "Export as Markdown" }),
+    ).toHaveCount(0);
+    const exportTrigger = menu.getByRole("menuitem", {
+      name: "Export",
+      exact: true,
+    });
+    await expect(exportTrigger).toHaveAttribute("aria-haspopup", "menu");
+    await exportTrigger.click();
+    await expect(
+      page.getByRole("menuitem", { name: "Export as Markdown" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("menuitem", { name: "Export as JSON" }),
+    ).toBeVisible();
+  });
+
+  /*
+    删掉「我正看着的那条」有三种成立方式，第三种最容易漏：停在 /chats/new 时，
+    页面展示的就是最新那条的延续。React 在这三种情况下都会重置会话并 **replace**
+    到新会话页——push 的话，按一下后退就回到一个已经不存在的线程。
+  */
+  test("deleting the newest thread from /chats/new resets and replaces the URL", async ({
+    page,
+  }) => {
+    mockTwoThreads(page);
+    await page.goto("/workspace/chats/new");
+    await expect(page.getByRole("link", { name: "Newest chat" })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const before = page.url();
+    const row = page
+      .locator('[data-sidebar="menu-item"]')
+      .filter({ hasText: "Newest chat" })
+      .first();
+    await row.hover();
+    await row.getByRole("button", { name: "More" }).click();
+    await page.getByRole("menuitem", { name: "Delete" }).click();
+
+    await expect(page.getByRole("link", { name: "Newest chat" })).toHaveCount(
+      0,
+    );
+    await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
+
+    // replace 而不是 push：历史里没有多出一条，后退不会回到删除前的那一屏。
+    await page.goBack();
+    await expect(page).not.toHaveURL(before);
+  });
+
+  test("the rename dialog is named the way React names it", async ({
+    page,
+  }) => {
+    mockTwoThreads(page);
+    await page.goto("/workspace/chats/new");
+
+    const row = page
+      .locator('[data-sidebar="menu-item"]')
+      .filter({ hasText: "Newest chat" })
+      .first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await row.hover();
+    await row.getByRole("button", { name: "More" }).click();
+    await page.getByRole("menuitem", { name: "Rename" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Rename" });
+    await expect(dialog).toBeVisible();
+    // React 的输入框只有 placeholder：没有 aria-label，也没有 sr-only 描述。
+    const input = dialog.getByPlaceholder("Rename");
+    await expect(input).toHaveValue("Newest chat");
+
+    /*
+      比的不是"有没有 aria-describedby"——radix 和 reka 都**无条件**在 DialogContent
+      上写这个属性（radix 还会为此在控制台警告），所以两边都有。比的是它指向的元素
+      在不在：React 的重命名对话框没有描述，Vue 原来补了一句 sr-only，读屏器会多念
+      一句 React 不会念的话。
+    */
+    const describedBy = await dialog.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    await expect(page.locator(`[id="${describedBy}"]`)).toHaveCount(0);
+  });
+
   test("the sidebar row is a muted single-line label inside the link, not the whole row", async ({
     page,
   }) => {

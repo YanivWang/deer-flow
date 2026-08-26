@@ -48,6 +48,19 @@ async function openMenu(wrapper: ReturnType<typeof mount>) {
   await flushPromises();
 }
 
+/*
+  两个导出格式住在「导出」子菜单里（React 的 DropdownMenuSub），不展开就不在 DOM 里。
+  这一步不是测试的仪式：它就是这个菜单和一排平级动作的区别。
+*/
+async function openExportSubmenu() {
+  const trigger = document.querySelector<HTMLElement>(
+    '[data-slot="dropdown-menu-sub-trigger"]',
+  );
+  if (!trigger) throw new Error("export submenu trigger not rendered");
+  trigger.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  await flushPromises();
+}
+
 beforeEach(() => {
   document.body.innerHTML = "";
   mocks.clipboard.mockReset().mockResolvedValue(true);
@@ -94,6 +107,7 @@ describe("ThreadActionsMenu", () => {
   it("loads real thread state before export and surfaces request/download failures", async () => {
     const { wrapper, toast } = mountMenu();
     await openMenu(wrapper);
+    await openExportSubmenu();
     document
       .querySelector<HTMLButtonElement>(
         '[data-testid="thread-export-markdown"]',
@@ -111,6 +125,7 @@ describe("ThreadActionsMenu", () => {
       throw new Error("download blocked");
     });
     await openMenu(wrapper);
+    await openExportSubmenu();
     document
       .querySelector<HTMLButtonElement>('[data-testid="thread-export-json"]')!
       .click();

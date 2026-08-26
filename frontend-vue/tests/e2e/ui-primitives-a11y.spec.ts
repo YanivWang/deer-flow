@@ -154,7 +154,12 @@ test("thread rename is a labelled modal that keeps a failed write visible", asyn
   await row.getByRole("button", { name: "More" }).click();
   await page.getByRole("menuitem", { name: "Rename" }).click();
 
-  const dialog = page.getByRole("dialog", { name: "Rename chat" });
+  /*
+    对话框叫 "Rename"，不是 "Rename chat"：React 的 DialogTitle 就是
+    `t.common.rename`。输入框也只有 placeholder，没有 aria-label——补一个名字是更好
+    的可访问性，但那样两个应用的这个对话框叫两个名字。
+  */
+  const dialog = page.getByRole("dialog", { name: "Rename" });
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAttribute("aria-modal", "true");
   await expect(dialog.locator(":focus")).toHaveCount(1);

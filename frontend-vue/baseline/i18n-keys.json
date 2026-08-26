@@ -1,7 +1,7 @@
 {
   "$comment": "词典 key 基线。由 `make i18n-refresh` 生成。趁词典还是上游原样时取（06 §M1 1d）——此后 key 新增/删除或 unused 集漂移，`make i18n-check` 立刻报出来。",
   "source": "app/core/i18n/locales/en-US.ts",
-  "total": 973,
+  "total": 970,
   "keys": [
     "agents.agentCreated",
     "agents.agentCreatedPendingRefresh",
@@ -401,14 +401,11 @@
     "messages.toolResult",
     "messages.tryAgain",
     "navigation.appearance",
-    "navigation.chatTitle",
     "navigation.closeSidebar",
     "navigation.dark",
     "navigation.deleteConversationFailed",
     "navigation.language",
     "navigation.light",
-    "navigation.renameChat",
-    "navigation.renameThreadFailed",
     "navigation.settingsAndMore",
     "navigation.tryAgain",
     "navigation.workspace",
@@ -977,7 +974,7 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 75,
+  "unusedTotal": 74,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.createPageSubtitle",
@@ -996,7 +993,6 @@
     "chats.pinChatFailed",
     "citations.copiedReference",
     "common.editRerunWarning",
-    "common.renameFailed",
     "conversation.branchCreated",
     "conversation.branchFailed",
     "conversation.noMessages",

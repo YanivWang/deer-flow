@@ -34,7 +34,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -55,7 +54,9 @@ import {
   pathOfThread,
   titleOfThread,
 } from "@/core/threads/utils";
+import type { AgentThread } from "@/core/threads/types";
 import { visibleFocusableWithin } from "@/lib/focusable";
+import { useWorkspaceToast } from "@/core/workspace-shell/toast";
 
 const route = useRoute();
 const router = useRouter();
@@ -63,6 +64,7 @@ const { $i18n } = useNuxtApp();
 const threads = useThreads();
 const features = useAgentsApiEnabled();
 const settingsDialog = useSettingsDialog();
+const toast = useWorkspaceToast();
 const sentinel = ref<HTMLElement | null>(null);
 const sidebarElement = ref<HTMLElement | null>(null);
 const collapsed = ref(false);
@@ -84,9 +86,8 @@ const settingsOpen = ref(false);
 const settingsTrigger = ref<HTMLButtonElement | null>(null);
 const renameThreadId = ref<string | null>(null);
 const renameTitle = ref("");
-const renameError = ref<string | null>(null);
 const deleteError = ref<string | null>(null);
-const failedDeleteThreadId = ref<string | null>(null);
+const failedDeleteThread = ref<AgentThread | null>(null);
 const deletingThreadId = ref<string | null>(null);
 let observer: IntersectionObserver | null = null;
 let focusBeforeMobileOpen: HTMLElement | null = null;
@@ -244,17 +245,52 @@ function startNewChat() {
   globalThis.dispatchEvent(new CustomEvent("deerflow:new-chat"));
 }
 
-async function removeThread(threadId: string) {
+/*
+  「删掉的是不是我正看着的那条」有三种成立方式，照 React 的 handleDelete
+  （frontend/src/components/workspace/recent-chat-list.tsx）：路由参数就是它、
+  当前路径就是它的路径、**或者**停在 /chats/new 而它是列表里最新的一条。
+  第三种最容易漏：新会话页此时展示的就是最新那条的延续，删掉它却不重置，
+  用户会对着一个已经不存在的线程继续输入。
+
+  判定必须在 await 之前做完——删完之后列表已经变了，`threads[0]` 不再是刚才那条。
+  目标路径也不能写死 /workspace/chats/new：在 agent 会话里要回到那个 agent 的新会话页。
+*/
+function isCurrentThread(thread: AgentThread) {
+  const threadPath = pathOfThread(thread);
+  const newThreadPath = nextThreadPath();
+  return (
+    thread.thread_id === route.params.thread_id ||
+    threadPath === route.path ||
+    (route.path === newThreadPath &&
+      threads.threads[0]?.thread_id === thread.thread_id)
+  );
+}
+
+function nextThreadPath() {
+  const agentName = route.params.agent_name;
+  return pathOfThread("new", {
+    agent_name: typeof agentName === "string" ? agentName : undefined,
+  });
+}
+
+async function removeThread(thread: AgentThread) {
+  const threadId = thread.thread_id;
   if (deletingThreadId.value) return;
-  const active = route.path.endsWith(`/${threadId}`);
+  const active = isCurrentThread(thread);
+  const nextPath = nextThreadPath();
   deleteError.value = null;
-  failedDeleteThreadId.value = null;
+  failedDeleteThread.value = null;
   deletingThreadId.value = threadId;
   try {
     await threads.remove(threadId);
-    if (active) await router.push("/workspace/chats/new");
+    if (active) {
+      // 先重置会话状态再换 URL，与 React 的 resetThreadChatAfterDelete + replace 同序。
+      globalThis.dispatchEvent(new CustomEvent("deerflow:new-chat"));
+      // replace 而不是 push：删完再按后退不该回到一个已经不存在的线程。
+      await router.replace(nextPath);
+    }
   } catch (cause) {
-    failedDeleteThreadId.value = threadId;
+    failedDeleteThread.value = thread;
     deleteError.value =
       cause instanceof ThreadCascadeDeleteError
         ? cause.message
@@ -270,20 +306,25 @@ function beginRename(threadId: string) {
   const thread = threads.threads.find((item) => item.thread_id === threadId);
   renameThreadId.value = threadId;
   renameTitle.value = thread ? displayThreadTitle(thread) : "";
-  renameError.value = null;
 }
 
+/*
+  失败走 toast，不是对话框里的内联错误——React 的 handleRenameSubmit 就是
+  `toast.error(error.message || t.common.renameFailed)`，对话框保持打开、内容不变。
+  内联错误看起来更贴心，但那样 Vue 的这个对话框比 React 多一个 alert 节点，
+  而这份对照的判据是双向的。
+*/
 async function submitRename() {
   if (!renameThreadId.value || !renameTitle.value.trim()) return;
-  renameError.value = null;
   try {
     await threads.rename(renameThreadId.value, renameTitle.value.trim());
     renameThreadId.value = null;
   } catch (cause) {
-    renameError.value =
-      cause instanceof Error
+    toast.error(
+      cause instanceof Error && cause.message
         ? cause.message
-        : $i18n.t.value.navigation.renameThreadFailed;
+        : $i18n.t.value.common.renameFailed,
+    );
   }
 }
 
@@ -570,7 +611,7 @@ function openSettingsDialog(section: "appearance" | "about") {
                           !threads.isPinned(thread),
                         )
                       "
-                      @delete="removeThread(thread.thread_id)"
+                      @delete="removeThread(thread)"
                     />
                   </li>
                 </template>
@@ -608,11 +649,11 @@ function openSettingsDialog(section: "appearance" | "about") {
     >
       <p>{{ deleteError }}</p>
       <button
-        v-if="failedDeleteThreadId"
+        v-if="failedDeleteThread"
         type="button"
         class="mt-1 underline"
         :disabled="Boolean(deletingThreadId)"
-        @click="removeThread(failedDeleteThreadId)"
+        @click="removeThread(failedDeleteThread)"
       >
         {{ $i18n.t.value.navigation.tryAgain }}
       </button>
@@ -730,21 +771,21 @@ function openSettingsDialog(section: "appearance" | "about") {
     @update:open="!$event && (renameThreadId = null)"
   >
     <DialogContent class="sm:max-w-sm">
+      <!--
+        标题、输入框的名字来源和"没有描述"都照 React 的重命名对话框：标题是
+        `common.rename`（"Rename"，不是"Rename chat"），输入框**只有 placeholder**、
+        没有 aria-label 也没有 sr-only 描述。给它补一个名字是更好的可访问性，
+        但那样两个应用的对话框叫两个名字、输入框念两句话，对照永远对不上。
+      -->
       <form class="grid gap-4" @submit.prevent="submitRename">
         <DialogHeader>
-          <DialogTitle>{{ $i18n.t.value.navigation.renameChat }}</DialogTitle>
-          <DialogDescription class="sr-only">
-            {{ $i18n.t.value.navigation.chatTitle }}
-          </DialogDescription>
+          <DialogTitle>{{ $i18n.t.value.common.rename }}</DialogTitle>
         </DialogHeader>
         <input
           v-model="renameTitle"
-          :aria-label="$i18n.t.value.navigation.chatTitle"
+          :placeholder="$i18n.t.value.common.rename"
           class="border-input w-full rounded-md border px-3 py-2"
         />
-        <p v-if="renameError" role="alert" class="text-sm text-red-600">
-          {{ renameError }}
-        </p>
         <DialogFooter>
           <Button variant="outline" @click="renameThreadId = null">
             {{ $i18n.t.value.common.cancel }}

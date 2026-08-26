@@ -17,6 +17,7 @@ import { removeDeletedThreadCaches } from "@/core/threads/cache-invalidation";
 import {
   fetchInfiniteThreadsPage,
   getInfiniteThreadsNextPageParam,
+  INFINITE_THREADS_PAGE_SIZE,
   INFINITE_THREADS_QUERY_KEY_PREFIX,
   mapInfiniteThreadsCache,
   type InfiniteThreadsParams,
@@ -38,10 +39,16 @@ import {
 import { getSessionComposerDraftStorage } from "@/core/threads/composer-draft";
 import { clearComposerDrafts } from "@/core/threads/composer-draft-lifecycle";
 
+/*
+  四个字段，与 React 的 useInfiniteThreads 默认参数逐字相同
+  （frontend/src/core/threads/hooks.ts）。原来多要了一个 `status`，而列表这条路径上
+  没有任何消费者读它——多要一个字段不会报错，只会让两个应用向 Gateway 要的东西不一样，
+  而这份差异藏在 POST body 里，对照取样只比 method+path+query，永远看不见。
+*/
 const THREAD_LIST_PARAMS: InfiniteThreadsParams = {
   sortBy: "updated_at",
   sortOrder: "desc",
-  select: ["thread_id", "updated_at", "values", "metadata", "status"],
+  select: ["thread_id", "updated_at", "values", "metadata"],
 };
 
 /** The single Vue Query owner for server thread-list state. */
@@ -61,6 +68,7 @@ export function useThreads() {
         apiClient,
         { ...THREAD_LIST_PARAMS, signal },
         Number(pageParam),
+        INFINITE_THREADS_PAGE_SIZE,
       ),
     /*
       **只传两个参数。** 直接把函数交给 Vue Query，它会按

@@ -1346,10 +1346,7 @@ export const enUS: Translations = {
     light: "Light",
     dark: "Dark",
     language: "Language",
-    renameChat: "Rename chat",
-    chatTitle: "Chat title",
     deleteConversationFailed: "Failed to delete conversation.",
-    renameThreadFailed: "Failed to rename thread.",
     tryAgain: "Try again",
   },
   markdown: {

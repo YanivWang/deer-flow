@@ -13,6 +13,9 @@ export { default as DropdownMenuLabel } from "./DropdownMenuLabel.vue";
 export { default as DropdownMenuRadioGroup } from "./DropdownMenuRadioGroup.vue";
 export { default as DropdownMenuRadioItem } from "./DropdownMenuRadioItem.vue";
 export { default as DropdownMenuSeparator } from "./DropdownMenuSeparator.vue";
+export { default as DropdownMenuSub } from "./DropdownMenuSub.vue";
+export { default as DropdownMenuSubContent } from "./DropdownMenuSubContent.vue";
+export { default as DropdownMenuSubTrigger } from "./DropdownMenuSubTrigger.vue";
 export { default as DropdownMenuTrigger } from "./DropdownMenuTrigger.vue";
 
 /** Radio group 的值类型；调用方不必为了一个类型再去 import reka-ui。 */

@@ -192,7 +192,12 @@ test("sidebar share/export and chats updated time use the real browser boundarie
     await page.evaluate(() => Reflect.get(globalThis, "__wp11Copied")),
   ).toBe(`https://deer-flow-v2.vercel.app/workspace/chats/${THREAD_ID}`);
 
+  /*
+    「导出」是一层子菜单（React 的 DropdownMenuSub），两个格式在里面——不先展开就
+    点不到。这一步不是测试的仪式，它正是这个菜单和一排平级动作的区别。
+  */
   await row.getByRole("button", { name: "More" }).click();
+  await page.getByRole("menuitem", { name: "Export", exact: true }).click();
   const download = page.waitForEvent("download");
   await page.getByTestId("thread-export-markdown").click();
   expect((await download).suggestedFilename()).toBe("WP 11 conversation.md");
@@ -219,6 +224,7 @@ test("sidebar share/export and chats updated time use the real browser boundarie
     }),
   );
   await row.getByRole("button", { name: "More" }).click();
+  await page.getByRole("menuitem", { name: "Export", exact: true }).click();
   await page.getByTestId("thread-export-json").click();
   await expect(
     page.getByRole("alert").filter({ hasText: "thread state unavailable" }),

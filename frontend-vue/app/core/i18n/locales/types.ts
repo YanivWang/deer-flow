@@ -1086,10 +1086,7 @@ export interface Translations {
     light: string;
     dark: string;
     language: string;
-    renameChat: string;
-    chatTitle: string;
     deleteConversationFailed: string;
-    renameThreadFailed: string;
     tryAgain: string;
   };
 

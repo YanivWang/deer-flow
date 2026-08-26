@@ -34,7 +34,7 @@ describe("locale contract", () => {
       "sidecar.placeholder",
       "channels.connectionExpired",
       "messages.actions.copyResponse",
-      "navigation.renameChat",
+      "navigation.deleteConversationFailed",
       "markdown.unsafeLink",
       "login.serviceUnavailableTitle",
     ];
