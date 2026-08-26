@@ -4,6 +4,10 @@
   【主要导出】     默认 ComposerSurface 组件
   【依赖关系】     Tailwind :has() · data-slot=input-group-control
   【边界与注意】   子输入控件不拥有外框；仅标记的 focus-visible 控件驱动 surface ring。
+                   role="group" 来自 React 的 InputGroup（frontend/src/components/ui/
+                   input-group.tsx）：整个输入框在可访问性树里是一个分组，读屏器因此能
+                   把「附件 / 语音 / 模式 / 模型 / 提交」当成同一组控件报出来，而不是一串
+                   散落在页面上的按钮。
 -->
 
 <script setup lang="ts">
@@ -25,7 +29,12 @@ const classes = computed(() =>
 </script>
 
 <template>
-  <div data-slot="input-group" :data-testid="testId" :class="classes">
+  <div
+    role="group"
+    data-slot="input-group"
+    :data-testid="testId"
+    :class="classes"
+  >
     <slot />
   </div>
 </template>

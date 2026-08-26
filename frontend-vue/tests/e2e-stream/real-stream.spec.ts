@@ -45,7 +45,7 @@ test.describe("真流 gate", () => {
     await textarea.press("Enter");
 
     const answer = page.locator(
-      '[data-testid="message-list"] li[data-role="ai"]',
+      '[data-testid="message-list"] > [data-role="ai"]',
     );
     await expect(answer).toContainText("Streaming paragraph 18", {
       timeout: 20_000,
@@ -79,7 +79,7 @@ test.describe("真流 gate", () => {
     await textarea.press("Enter");
 
     const answer = page.locator(
-      '[data-testid="message-list"] li[data-role="ai"]',
+      '[data-testid="message-list"] > [data-role="ai"]',
     );
     await expect(answer).toContainText("Streaming paragraph 10", {
       timeout: 20_000,
@@ -118,7 +118,7 @@ test.describe("真流 gate", () => {
     await textarea.fill("Build a deck");
     await textarea.press("Enter");
 
-    const items = page.locator('[data-testid="message-list"] li');
+    const items = page.locator('[data-testid="message-list"] > [data-role]');
     await expect(items).toHaveCount(2, { timeout: 20_000 });
     // 正面特征：**五片拼起来的全文**。任何一片被覆盖而不是追加，
     // 这里都会拿到一个截断的字符串，而截断的字符串同样「非空」。
@@ -135,7 +135,7 @@ test.describe("真流 gate", () => {
     await textarea.fill("Build a deck");
     await textarea.press("Enter");
 
-    const items = page.locator('[data-testid="message-list"] li');
+    const items = page.locator('[data-testid="message-list"] > [data-role]');
     await expect(items).toHaveCount(2, { timeout: 20_000 });
     // 假 Gateway 在**每一片之前**都发一条 `: keep-alive`。它必须在传输层
     // 就被吃掉（05 L9）；漏进 reducer 会多出若干条空消息。
@@ -192,7 +192,7 @@ test.describe("真流 gate", () => {
 
     // 第二条：续传**真的带了游标**。假 Gateway 把收到的 Last-Event-ID
     // 回显成一条消息；拿到 `resumed@none` 就说明是从头重放而不是续传。
-    const items = page.locator('[data-testid="message-list"] li');
+    const items = page.locator('[data-testid="message-list"] > [data-role]');
     await expect(items.filter({ hasText: "resumed@e8" })).toHaveCount(1, {
       timeout: 20_000,
     });

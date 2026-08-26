@@ -86,13 +86,31 @@ export function useChannelConnections(options: {
     enabled: queryEnabled,
     queryFn: ({ signal }) => listChannelProviders({ signal }),
   });
+  const providers = computed(() => providersQuery.data.value?.providers ?? []);
+  /*
+    没有任何启用的 provider 时**不问** connections。
+
+    React 的侧栏根本不发这个请求：它直接读 provider.connection_status
+    （frontend/src/components/workspace/channels/workspace-channels-list.tsx）。
+    本仓刻意不走那条路——tests/unit/channels/channel-state.test.ts 钉住了
+    「connections 响应才是用户连接状态的真相，provider.connection_status 可能是陈的」，
+    照抄会把一个已知会过期的状态搬回侧栏。
+
+    但「不能靠 provider 状态」不等于「任何时候都要问一遍」：一个 provider 都没启用时，
+    connections 没有任何东西可以解释，这次请求纯属浪费——每开一个 workspace 页面都发一次。
+    于是判据变成「有 provider 才问 connections」，既保住状态真相，也不再无条件多打一次后端。
+  */
+  const connectionsEnabled = computed(
+    () =>
+      queryEnabled.value &&
+      providers.value.some((provider) => provider.enabled),
+  );
   const connectionsQuery = useQuery({
     queryKey: computed(() => channelKeys.connections(currentScope.value)),
-    enabled: queryEnabled,
+    enabled: connectionsEnabled,
     queryFn: ({ signal }) => listChannelConnections({ signal }),
   });
 
-  const providers = computed(() => providersQuery.data.value?.providers ?? []);
   const connections = computed(() => connectionsQuery.data.value ?? []);
   const providerViews = computed(() =>
     buildChannelProviderViews(providers.value, connections.value),
@@ -353,7 +371,9 @@ export function useChannelConnections(options: {
     providerViews,
     connectFlows,
     loaded: computed(
-      () => providersQuery.isFetched.value && connectionsQuery.isFetched.value,
+      () =>
+        providersQuery.isFetched.value &&
+        (!connectionsEnabled.value || connectionsQuery.isFetched.value),
     ),
     loading: computed(
       () =>

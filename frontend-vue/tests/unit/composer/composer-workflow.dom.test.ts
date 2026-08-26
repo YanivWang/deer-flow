@@ -453,7 +453,7 @@ describe("composer submission and stale lifecycle", () => {
     );
   });
 
-  it("invalidates polish and goal results when a run is stopped or the route changes", async () => {
+  it("invalidates polish and goal results when polishing is cancelled or the route changes", async () => {
     let resolvePolish!: (value: {
       rewritten_text: string;
       changed: boolean;
@@ -470,8 +470,18 @@ describe("composer submission and stale lifecycle", () => {
     const textarea = wrapper.get("textarea[name='message']");
     await textarea.setValue("Polish me");
     await wrapper.get("[data-testid='polish-input-button']").trigger("click");
-    await wrapper.setProps({ streaming: true });
-    await wrapper.get("button[aria-label='Stop']").trigger("click");
+
+    /*
+      润色进行中整个输入框是锁住的，提交/停止按钮也一样——React 的 composerLocked
+      就包含 polishingInput。所以放弃一次在途润色的唯一入口是那颗取消按钮，
+      不是「停止」。
+    */
+    expect(
+      wrapper.get("button[type='submit']").attributes("disabled"),
+    ).toBeDefined();
+    await wrapper
+      .get("[data-testid='cancel-polish-input-button']")
+      .trigger("click");
     resolvePolish({ rewritten_text: "Stale polish", changed: true });
     await flushPromises();
     expect((textarea.element as HTMLTextAreaElement).value).toBe("Polish me");

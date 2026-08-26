@@ -105,7 +105,10 @@ test.describe("Vue artifacts panel resize", () => {
     await dragPanel(separator, 500);
 
     await expect(panel).toBeHidden();
-    await expect(separator).toBeHidden();
+    // 关掉之后分隔线**留在树里**并标 disabled（与 React 的 ResizableHandle 一致），
+    // 只是画不出来也拖不动；把它整个摘掉，读屏器就再也说不出这里本来有一条分隔线。
+    await expect(separator).toHaveAttribute("aria-disabled", "true");
+    await expect(separator).toHaveCSS("opacity", "0");
     await page.getByText(ARTIFACT_PATH).click();
     await expect(panel).toBeVisible();
 
@@ -125,6 +128,7 @@ test.describe("Vue artifacts panel resize", () => {
     await expect(panel).toBeVisible();
     await expect(panel.getByText("report.html")).toBeVisible();
     await expect(separator).toBeVisible();
+    await expect(separator).not.toHaveAttribute("aria-disabled", "true");
   });
 
   test("a released width is kept when the panel is reopened", async ({

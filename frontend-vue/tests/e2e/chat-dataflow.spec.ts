@@ -178,7 +178,7 @@ test.describe("数据流 gate", () => {
       stream_mode: ["values", "messages-tuple", "updates", "custom"],
     });
 
-    const items = page.locator('[data-testid="message-list"] li');
+    const items = page.locator('[data-testid="message-list"] > [data-role]');
     await expect(items).toHaveCount(2, { timeout: 20_000 });
     // 正面特征：顺序本身。断言「两条都在」的话，顺序没恢复也会绿。
     await expect(items.nth(0)).toHaveAttribute("data-role", "human");
@@ -203,10 +203,9 @@ test.describe("数据流 gate", () => {
     await expect(textarea).toBeVisible({ timeout: 20_000 });
     await textarea.fill("Build a deck");
     await textarea.press("Enter");
-    await expect(page.locator('[data-testid="message-list"] li')).toHaveCount(
-      2,
-      { timeout: 20_000 },
-    );
+    await expect(
+      page.locator('[data-testid="message-list"] > [data-role]'),
+    ).toHaveCount(2, { timeout: 20_000 });
 
     const createSeq = sent.find(
       (e) => e.method === "POST" && /\/runs\/stream(\?|$)/.test(e.url),
@@ -229,7 +228,7 @@ test.describe("数据流 gate", () => {
     await mockGateway(page);
     await page.goto(`/workspace/chats/${THREAD_ID}`);
 
-    const items = page.locator('[data-testid="message-list"] li');
+    const items = page.locator('[data-testid="message-list"] > [data-role]');
     await expect(items).toHaveCount(2, { timeout: 20_000 });
     await expect(items.nth(0)).toContainText("Build a deck");
     await expect(items.nth(1)).toContainText("Reading the skill");
@@ -248,7 +247,7 @@ test.describe("数据流 gate", () => {
     const stop = page.getByRole("button", { name: "Stop" });
     await expect(stop).toBeVisible({ timeout: 20_000 });
     await stop.click();
-    await expect(page.getByRole("button", { name: "Send" })).toBeVisible({
+    await expect(page.getByRole("button", { name: "Submit" })).toBeVisible({
       timeout: 20_000,
     });
   });

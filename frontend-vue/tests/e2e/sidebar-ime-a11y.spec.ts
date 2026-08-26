@@ -44,14 +44,13 @@ test("desktop collapse persists an exact path/max-age cookie and survives reload
 }) => {
   await openWorkspace(page);
   const sidebar = page.locator("#workspace-sidebar");
-  const collapse = page.getByRole("button", { name: "Collapse sidebar" });
+  // 名字恒为 "Toggle Sidebar"（React 的 SidebarTrigger 同样如此），所以定位靠
+  // data-sidebar 而不是靠随状态变化的可访问名。
+  const collapse = sidebar.locator('[data-sidebar="trigger"]');
 
   await expect(sidebar).toHaveCSS("width", "256px");
   await collapse.click();
   await expect(sidebar).toHaveCSS("width", "48px");
-  await expect(
-    page.getByRole("button", { name: "Expand sidebar" }),
-  ).toHaveAttribute("aria-expanded", "false");
 
   const cookie = (await context.cookies()).find(
     (candidate) => candidate.name === "sidebar_state",
@@ -64,7 +63,7 @@ test("desktop collapse persists an exact path/max-age cookie and survives reload
 
   await page.reload();
   await expect(sidebar).toHaveCSS("width", "48px");
-  await page.getByRole("button", { name: "Expand sidebar" }).click();
+  await sidebar.locator('[data-sidebar="trigger"]').click();
   await expect(sidebar).toHaveCSS("width", "256px");
   expect(
     (await context.cookies()).find(
@@ -102,7 +101,8 @@ test("mobile drawer is modal, traps focus, closes by Escape/backdrop and restore
 
   const dialog = page.getByRole("dialog", { name: "Workspace navigation" });
   await expect(dialog).toHaveAttribute("aria-modal", "true");
-  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  // 触发器不带 aria-expanded（与 React 的 SidebarTrigger 一致），抽屉开合看抽屉本身：
+  // 关着的时候它整棵子树都不在 DOM 里。
   await expect(dialog.locator(":focus")).toHaveCount(1);
 
   // 循环边界取抽屉里**实际**第一个/最后一个可聚焦元素，而不是写死某个控件名：
@@ -119,14 +119,14 @@ test("mobile drawer is modal, traps focus, closes by Escape/backdrop and restore
   await expect(last).toBeFocused();
 
   await page.keyboard.press("Escape");
-  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
 
   await trigger.click();
   await page.getByRole("button", { name: "Close sidebar" }).click({
     position: { x: 380, y: 820 },
   });
-  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
 });
 
@@ -146,28 +146,35 @@ test("mobile ignores the desktop collapsed cookie and closes after route navigat
 
   await dialog.getByRole("link", { name: "Scheduled tasks" }).click();
   await expect(page).toHaveURL(/\/workspace\/scheduled-tasks$/);
-  await expect(page.locator("#workspace-sidebar")).not.toHaveAttribute(
-    "role",
-    "dialog",
-  );
-  await expect(page.locator("#workspace-sidebar")).not.toHaveAttribute(
-    "data-mobile",
-    "true",
-  );
+  // 窄屏关抽屉 = 侧栏整棵子树离开 DOM（React 的移动端 Sheet 同样如此），
+  // 而不是留在原地把 role 摘掉。
+  await expect(page.locator("#workspace-sidebar")).toHaveCount(0);
 });
 
-test("keyboard focus has a visible global outline and sidebar controls expose aria state", async ({
+/*
+  触发器的名字**不随收起态变化**，也不带 aria-expanded —— 与 React 的 SidebarTrigger
+  一致。同名的第二个控件是贴边的 rail，它 tabindex="-1"：两个同名同功能的按钮都进
+  Tab 序列，键盘用户会连续听到两次一模一样的「Toggle Sidebar」。
+*/
+test("keyboard focus has a visible global outline and the rail stays out of tab order", async ({
   page,
 }) => {
   await openWorkspace(page);
-  const collapse = page.getByRole("button", { name: "Collapse sidebar" });
+  const sidebar = page.locator("#workspace-sidebar");
+  const collapse = sidebar.locator('[data-sidebar="trigger"]');
   await collapse.focus();
   await page.keyboard.press("Shift+Tab");
   await page.keyboard.press("Tab");
   await expect(collapse).toBeFocused();
   await expect(collapse).toHaveCSS("outline-style", "solid");
-  await expect(collapse).toHaveAttribute("aria-controls", "workspace-sidebar");
-  await expect(collapse).toHaveAttribute("aria-expanded", "true");
+  await expect(collapse).toHaveAttribute("aria-label", "Toggle Sidebar");
+  await expect(collapse).not.toHaveAttribute("aria-expanded", /.*/);
+
+  const rail = sidebar.locator('[data-sidebar="rail"]');
+  await expect(rail).toHaveAttribute("aria-label", "Toggle Sidebar");
+  await expect(rail).toHaveAttribute("tabindex", "-1");
+  await rail.click();
+  await expect(sidebar).toHaveCSS("width", "48px");
 });
 
 test("context usage stays mounted and never retains another thread's value", async ({

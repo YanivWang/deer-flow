@@ -22,10 +22,19 @@
 | 品牌与技术术语     | 产品需要显示的值仍通过词典管理；source guard 只精确词法豁免品牌、单键快捷键及 `API`/`HTML`/`OIDC` 等纯技术缩写 | 无按组件或目录放行                       |
 | 协议与内部标识     | HTTP method、MIME、事件名、路由、test id 等不进入 UI sink                                                      | 不翻译、不误报                           |
 | 测试专用页面       | 只允许上面两个精确 `__m0` fixture                                                                              | 2 个排除项可由 inventory 审计            |
+| Primitive 可访问名 | `primitives.*` 四条在两份 locale 里**同为英文**，因为 React 的 vendored primitive 就没把它们接进词典           | 见下方说明，不是漏翻                     |
+
+`primitives.toggleSidebar` / `submit` / `stop` / `notifications` 是唯一一组
+「中文词典里写英文」的 key。它们对应 React 侧写死在 primitive 里的可访问名——
+shadcn sidebar 的 `Toggle Sidebar`、ai-elements prompt-input 的 `Submit`/`Stop`、
+sonner 的 `Notifications alt+T`；实测中文界面下 React 读屏器念的也是这几串英文。
+对照门禁的判据是「两个应用听到同一句」，各自翻译反而会让同一个控件在两边有两个名字。
+放进词典而不是写死在 SFC 里，是为了让这条决定留在一个能被 review、也能在上游接入
+i18n 之后一次性翻掉的位置。
 
 ## Key 与 unused baseline
 
-`en-US` 和 `zh-CN` 当前各有 985 个完全一致的 leaf key。
+`en-US` 和 `zh-CN` 当前各有 987 个完全一致的 leaf key。
 `baseline/i18n-keys.json` 同时固定精确 key 集合和 87 个已审阅 unused key；
 新增、删除、新增 unused 或旧 key 意外恢复使用都会使
 `i18n-check`、`i18n-diff` 或 `i18n-unused` 失败。只有审阅精确 diff 与真实消费者后，

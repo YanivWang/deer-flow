@@ -6,14 +6,7 @@
   【依赖关系】     skills/uploads/models/goal APIs · composer draft · AgentChat
   【边界与注意】   props/events 是当前宿主接线面；通用 composer 行为由 E 组合同约束。
 */
-import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  watch,
-} from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
 import {
   ArrowUp,
@@ -39,13 +32,14 @@ import {
   clearComposerDraft,
   getSessionComposerDraftStorage,
 } from "@/core/threads/composer-draft";
+import { canPolishInput } from "@/core/input-polish/can-polish";
 import { polishInputDraft } from "@/core/input-polish/api";
 import { RESERVED_SLASH_SKILL_NAMES } from "@/core/skills/slash";
 import { findSuggestionTemplatePlaceholder } from "@/core/suggestions/placeholders";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import { isImeComposing } from "@/core/input/ime";
 import { getBackendBaseURL } from "@/core/config";
-import { getUploadLimits, type UploadLimits } from "@/core/uploads/api";
+import { useUploadLimits } from "@/composables/useUploads";
 import {
   formatUploadSize,
   splitUnsupportedUploadFiles,
@@ -106,8 +100,15 @@ const props = withDefaults(
     context?: ThreadRunContextInput;
     goal?: GoalState | null;
     disabled?: boolean;
+    /*
+      只加在输入框外框上的 class。欢迎态的 -translate-y 属于**输入框本身**，不属于
+      整个 composer——React 把它拼进 PromptInput 的 className（见 chat-page.tsx 传给
+      InputBox 的 className 与 input-box.tsx 里 PromptInput 的 cn(...)），于是输入框往上
+      挪、下面的建议行与免责声明留在原地。挂到根节点上会把整叠一起搬走，间距就不对了。
+    */
+    surfaceClass?: string;
   }>(),
-  { showWelcomeSuggestions: true },
+  { showWelcomeSuggestions: true, surfaceClass: "" },
 );
 const { $i18n } = useNuxtApp();
 const queryClient = useQueryClient();
@@ -123,7 +124,18 @@ const emit = defineEmits<{
 const input = ref("");
 const selectedSkill = ref<string | null>(null);
 const selectedFiles = ref<File[]>([]);
-const limits = ref<UploadLimits | undefined>();
+/*
+  限额走 Vue Query，不再在 onMounted 里裸调一次 getUploadLimits。
+
+  React 用的就是 useUploadLimits（frontend/src/core/uploads/hooks.ts），键是
+  ["uploads","limits",threadId]。本仓这一处原来绕开了缓存，于是同一条 thread 的限额
+  会被问两遍——输入框一次、sidecar 会话一次，两次问的是同一个 id、拿到的是同一份答案。
+  换成同一个 owner 之后它们共享一次请求，也共享 60s 的 staleTime。
+*/
+const limitsQuery = useUploadLimits(() =>
+  props.disabled ? "" : props.targetThreadId,
+);
+const limits = computed(() => limitsQuery.data.value);
 const suggestionIndex = ref(0);
 const polishOriginal = ref<string | null>(null);
 const polishing = ref(false);
@@ -163,7 +175,23 @@ const selectedModel = computed(() => {
     props.defaultModelName,
   );
 });
-const selectedMode = computed(() => String(props.context?.mode ?? "flash"));
+/*
+  「用户真的选过的模式」与「兜底展示用的模式」是两件事，React 也把它们分开
+  （frontend/src/components/workspace/input-box.tsx）：触发器上的文字与菜单里的勾
+  都直接读 context.mode，没选过就**什么都不显示**；只有 hover 说明用 flash 兜底。
+
+  Vue 原来只有一个带兜底的 selectedMode，于是一个从没被选中、也从没发给后端的
+  「Flash」被同时写在按钮上和菜单里——界面在替用户回答一个他没回答过的问题。
+*/
+const MODE_IDS = ["flash", "thinking", "pro", "ultra"] as const;
+const explicitMode = computed(() => {
+  const mode = props.context?.mode;
+  return typeof mode === "string" &&
+    (MODE_IDS as readonly string[]).includes(mode)
+    ? mode
+    : "";
+});
+const selectedMode = computed(() => explicitMode.value || "flash");
 const modes = computed(() => [
   {
     id: "flash",
@@ -270,6 +298,25 @@ const suggestions = computed(() => {
   return [...skillOptions, ...commands];
 });
 
+/*
+  润色按钮的可用性判据，与 React 的 inputPolishDisabled 一一对应
+  （frontend/src/components/workspace/input-box.tsx）。撤销态是唯一的例外：
+  已经润色过之后，即使正在流式输出、即使草稿被清空，「撤销」也必须还能按，
+  否则用户没有回到原文的路。
+*/
+const polishUndoAvailable = computed(
+  () => !polishing.value && polishOriginal.value !== null,
+);
+const polishDisabled = computed(
+  () =>
+    props.disabled === true ||
+    polishing.value ||
+    (!polishUndoAvailable.value &&
+      (props.streaming === true ||
+        slashQuery.value !== null ||
+        !canPolishInput(input.value))),
+);
+
 function attachmentKey(file: File) {
   const current = attachmentKeys.get(file);
   if (current !== undefined) return current;
@@ -314,15 +361,6 @@ watch(selectedSkill, async () => {
 });
 watch(suggestions, () => {
   suggestionIndex.value = 0;
-});
-
-onMounted(async () => {
-  if (props.disabled) return;
-  try {
-    limits.value = await getUploadLimits(props.targetThreadId);
-  } catch {
-    limits.value = undefined;
-  }
 });
 
 watch(
@@ -988,6 +1026,15 @@ function resolveFollowup(action: "append" | "replace" | "cancel") {
     : value;
   void nextTick(() => submit());
 }
+/*
+  流式输出期间这个按钮仍然是 type="submit"（与 React 一致），所以停止分支必须自己
+  拦下表单提交，否则「停止」会顺手再发一条空消息。
+*/
+function onSubmitButtonClick(event: MouseEvent) {
+  if (!props.streaming) return;
+  event.preventDefault();
+  stopRun();
+}
 function stopRun() {
   compactGeneration += 1;
   compactController?.abort();
@@ -1072,10 +1119,16 @@ defineExpose({ replaceDraft, offerFollowup });
         @clear="emit('clearReferences')"
       />
       <ComposerSurface
-        :class="polishing ? 'ring-primary/25 shadow-lg ring-1' : ''"
+        :class="
+          [surfaceClass, polishing ? 'ring-primary/25 shadow-lg ring-1' : '']
+            .filter(Boolean)
+            .join(' ')
+        "
       >
+        <!-- header / footer 都是 React 的 InputGroupAddon，role="group"。 -->
         <div
           v-if="selectedFiles.length || polishing"
+          role="group"
           data-slot="input-group-header"
           :data-testid="
             selectedFiles.length ? 'composer-attachments' : undefined
@@ -1124,7 +1177,7 @@ defineExpose({ replaceDraft, offerFollowup });
             :aria-label="$i18n.t.value.inputBox.placeholder"
             :placeholder="$i18n.t.value.inputBox.placeholder"
             rows="1"
-            class="field-sizing-content max-h-48 min-h-6! w-full min-w-0 resize-none bg-transparent p-0! text-sm leading-6! outline-none focus-visible:ring-0 focus-visible:outline-none"
+            class="field-sizing-content max-h-48 min-h-6! w-full min-w-0 resize-none bg-transparent p-0! text-base leading-6! outline-none focus-visible:ring-0 focus-visible:outline-none md:text-sm"
             :disabled="disabled || polishing || compactPending"
             @keydown="onKeydown"
             @compositionstart="compositionActive = true"
@@ -1151,7 +1204,7 @@ defineExpose({ replaceDraft, offerFollowup });
             {{ suggestion.label }}
           </button>
         </div>
-        <div data-slot="input-group-footer">
+        <div role="group" data-slot="input-group-footer">
           <div class="relative">
             <Tooltip>
               <TooltipTrigger>
@@ -1178,12 +1231,18 @@ defineExpose({ replaceDraft, offerFollowup });
                 }}
               </TooltipContent>
             </Tooltip>
+            <!--
+              hidden 而不是 sr-only。React 的同一个 input 也带 aria-label，但它是
+              display:none（frontend/src/components/ai-elements/prompt-input.tsx 的
+              className="hidden"），因此**不进**可访问性树。sr-only 会让读屏器在纸夹
+              按钮旁边再念出一个同义的「上传文件」按钮，多出一个并不存在的入口。
+            -->
             <input
               ref="fileInput"
               type="file"
               multiple
               :aria-label="$i18n.t.value.inputBox.uploadFiles"
-              class="sr-only"
+              class="hidden"
               @change="chooseFiles"
             />
           </div>
@@ -1225,12 +1284,13 @@ defineExpose({ replaceDraft, offerFollowup });
             v-else
             data-testid="polish-input-button"
             type="button"
-            class="text-muted-foreground hover:bg-accent flex h-8 items-center gap-1 rounded-md px-2 text-xs"
+            class="text-muted-foreground hover:bg-accent flex h-8 items-center gap-1 rounded-md px-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
             :aria-label="
               polishOriginal === null
                 ? $i18n.t.value.inputBox.inputPolish
                 : $i18n.t.value.inputBox.inputPolishUndo
             "
+            :disabled="polishDisabled"
             @click="polish"
           >
             <WandSparkles :size="14" />
@@ -1252,13 +1312,13 @@ defineExpose({ replaceDraft, offerFollowup });
                   data-testid="composer-mode-trigger"
                   class="hover:bg-accent h-8 rounded-md px-2 text-xs"
                 >
-                  {{ activeMode.label }}
+                  {{ explicitMode ? activeMode.label : "" }}
                 </button>
               </ModeHoverGuide>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top" class="w-72">
               <DropdownMenuRadioGroup
-                :model-value="selectedMode"
+                :model-value="explicitMode"
                 @update:model-value="selectModeById(String($event))"
               >
                 <DropdownMenuRadioItem
@@ -1280,7 +1340,7 @@ defineExpose({ replaceDraft, offerFollowup });
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu
-            v-if="supportsReasoningEffort && selectedMode !== 'flash'"
+            v-if="supportsReasoningEffort && explicitMode !== 'flash'"
           >
             <DropdownMenuTrigger>
               <button
@@ -1321,45 +1381,52 @@ defineExpose({ replaceDraft, offerFollowup });
             :selected-model="selectedModel"
             @select="selectModel"
           />
+          <!--
+            发送与停止是**同一个**按钮，和 React 的 PromptInputSubmit 一样：
+            换的是可访问名和图标，不是元素。拆成两个 v-if 分支的话，开始流式输出的
+            那一刻焦点所在的按钮被卸载，键盘用户会被丢回 body——而「按回车发出去、
+            再按空格停下」正是最常见的一条键盘路径。
+
+            空草稿**不**禁用：React 只在 composerLocked（外部 disabled / 正在润色）
+            时禁用。禁用一个看得见的提交按钮会让读屏器连它为什么不能按都说不出来，
+            而空提交本来就被 submit() 挡住了。
+          -->
           <button
-            v-if="streaming"
-            type="button"
-            class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full"
-            :aria-label="$i18n.t.value.inputBox.stop"
-            @click="stopRun"
-          >
-            <Square :size="12" class="fill-current" />
-          </button>
-          <button
-            v-else
             type="submit"
             class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full disabled:opacity-50"
-            :aria-label="$i18n.t.value.inputBox.send"
-            :disabled="
-              disabled ||
-              compactPending ||
-              submissionPending ||
-              (!input.trim() && selectedFiles.length === 0)
+            :aria-label="
+              streaming
+                ? $i18n.t.value.primitives.stop
+                : $i18n.t.value.primitives.submit
             "
+            :disabled="disabled || polishing"
+            @click="onSubmitButtonClick"
           >
-            <ArrowUp :size="16" />
-            <span aria-hidden="true" class="sr-only">{{
-              $i18n.t.value.inputBox.submit
-            }}</span>
+            <Square v-if="streaming" :size="12" class="fill-current" />
+            <ArrowUp v-else :size="16" />
           </button>
         </div>
       </ComposerSurface>
     </form>
-    <WelcomeSuggestionList
+    <!--
+      建议行外面这层 `pt-2` 是 React 的（input-box.tsx 里
+      `<div className="flex items-center justify-center pt-2">`）。它不是装饰：
+      欢迎态的整叠是**贴着底边**排的，少这 8px，上面的输入框就整体下移 8px。
+    -->
+    <div
       v-if="
         isWelcome &&
         showWelcomeSuggestions !== false &&
         !selectedSkill &&
         suggestions.length === 0
       "
-      :disabled="disabled"
-      @select="selectWelcomeSuggestion"
-    />
+      class="flex items-center justify-center pt-2"
+    >
+      <WelcomeSuggestionList
+        :disabled="disabled"
+        @select="selectWelcomeSuggestion"
+      />
+    </div>
     <div
       v-if="!isWelcome"
       data-testid="composer-bottom-background"

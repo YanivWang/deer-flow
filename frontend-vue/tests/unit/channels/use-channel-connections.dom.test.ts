@@ -122,7 +122,6 @@ describe("useChannelConnections", () => {
       enabled: boolean;
       providers: ChannelProvider[];
     }>();
-    const connectionsA = deferred<ChannelConnection[]>();
     const connectionsB = deferred<ChannelConnection[]>();
     const providerSignals: AbortSignal[] = [];
     const connectionSignals: AbortSignal[] = [];
@@ -137,32 +136,67 @@ describe("useChannelConnections", () => {
     api.listChannelConnections.mockImplementation(
       ({ signal }: { signal: AbortSignal }) => {
         connectionSignals.push(signal);
-        return connectionSignals.length === 1
-          ? connectionsA.promise
-          : connectionsB.promise;
+        return connectionsB.promise;
       },
     );
     const scope = ref("user-a");
     const { queryClient, wrapper } = mountOwner(scope);
 
     await vi.waitFor(() => expect(providerSignals).toHaveLength(1));
+    // providers 还没落地，就还没有任何 provider 需要解释状态——此时不问 connections。
+    expect(connectionSignals).toHaveLength(0);
     scope.value = "user-b";
     await nextTick();
     await vi.waitFor(() => expect(providerSignals).toHaveLength(2));
     expect(providerSignals[0]?.aborted).toBe(true);
-    expect(connectionSignals[0]?.aborted).toBe(true);
 
     providersB.resolve({ enabled: true, providers: [provider()] });
+    await vi.waitFor(() => expect(connectionSignals).toHaveLength(1));
     connectionsB.resolve([connection()]);
     await vi.waitFor(() => expect(wrapper.text()).toBe("slack:connected"));
     providersA.resolve({ enabled: true, providers: [] });
-    connectionsA.resolve([]);
     await Promise.resolve();
     await nextTick();
 
     expect(wrapper.text()).toBe("slack:connected");
     expect(queryClient.getQueryData(channelKeys.connections("user-b"))).toEqual(
       [connection()],
+    );
+    wrapper.unmount();
+    queryClient.clear();
+  });
+
+  /*
+    connections 请求自己也要跟着 scope 走。上一条用例里它压根没发出来（providers
+    还在途），所以中止路径要单独测：providers 先落地、connections 在途，这时切用户。
+  */
+  it("aborts an in-flight connections request when the user scope changes", async () => {
+    const connectionsA = deferred<ChannelConnection[]>();
+    const connectionSignals: AbortSignal[] = [];
+    api.listChannelProviders.mockResolvedValue({
+      enabled: true,
+      providers: [provider()],
+    });
+    api.listChannelConnections.mockImplementation(
+      ({ signal }: { signal: AbortSignal }) => {
+        connectionSignals.push(signal);
+        return connectionSignals.length === 1
+          ? connectionsA.promise
+          : Promise.resolve([connection()]);
+      },
+    );
+    const scope = ref("user-a");
+    const { queryClient, wrapper } = mountOwner(scope);
+
+    await vi.waitFor(() => expect(connectionSignals).toHaveLength(1));
+    scope.value = "user-b";
+    await nextTick();
+    await vi.waitFor(() => expect(connectionSignals[0]?.aborted).toBe(true));
+
+    connectionsA.resolve([]);
+    await vi.waitFor(() => expect(wrapper.text()).toBe("slack:connected"));
+    expect(queryClient.getQueryData(channelKeys.connections("user-a"))).toBe(
+      undefined,
     );
     wrapper.unmount();
     queryClient.clear();

@@ -5,6 +5,9 @@
   【主要导出】     默认 ContextUsageBadge 组件
   【依赖关系】     thread token usage 派生值 · AgentChat
   【边界与注意】   保留 H7/H8；绑定 DeerFlow token usage 响应。
+                   占位态与读数态**都**是 role="status"：React 的占位分支同样带
+                   role="status"（frontend/src/components/workspace/context-usage-badge.tsx），
+                   少了它，读屏器在「还没有用量数据」这一段时间里根本听不到这个控件存在。
 */
 import { computed } from "vue";
 import { Gauge } from "lucide-vue-next";
@@ -29,6 +32,7 @@ const formatted = computed(() => {
 <template>
   <div
     v-if="formatted === null"
+    role="status"
     data-context-usage-placeholder="true"
     :aria-label="$i18n.t.value.contextUsage.title"
     :title="$i18n.t.value.contextUsage.title"

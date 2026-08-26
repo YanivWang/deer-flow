@@ -7,7 +7,7 @@
 -->
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { Pane, Splitpanes, type SplitpanesResizedPayload } from "splitpanes";
 
 const props = defineProps<{
@@ -24,6 +24,7 @@ const MIN_OPEN_SIZE = 20;
 const MAX_OPEN_SIZE = 72;
 const COLLAPSE_THRESHOLD = 8;
 
+const root = ref<HTMLElement | null>(null);
 const mainRegion = ref<HTMLElement | null>(null);
 const panelRegion = ref<HTMLElement | null>(null);
 
@@ -49,6 +50,24 @@ function onResized(payload: SplitpanesResizedPayload) {
   else emit("update:panelSize", clampOpenSize(finalSize));
 }
 
+/*
+  splitpanes 是在挂载后用 createElement 直接插入 splitter 的，模板上没有它，
+  aria-disabled 只能在这里补。React 那边由 react-resizable-panels 自己写
+  （dist 里的 `"aria-disabled": n || void 0`），语义一致：关着的分隔线是 disabled，
+  不是消失。
+*/
+function syncSplitterDisabled() {
+  const splitter = root.value?.querySelector(".splitpanes__splitter");
+  if (!splitter) return;
+  if (props.open) splitter.removeAttribute("aria-disabled");
+  else splitter.setAttribute("aria-disabled", "true");
+}
+onMounted(async () => {
+  await nextTick();
+  syncSplitterDisabled();
+});
+watch(() => props.open, syncSplitterDisabled, { flush: "post" });
+
 watch(
   () => props.open,
   async (open) => {
@@ -67,7 +86,7 @@ watch(
 </script>
 
 <template>
-  <div class="size-full min-h-0 min-w-0 overflow-hidden">
+  <div ref="root" class="size-full min-h-0 min-w-0 overflow-hidden">
     <Splitpanes
       class="workspace-panels size-full min-h-0 min-w-0"
       :class="{ 'workspace-panels--closed': !open }"
@@ -147,9 +166,15 @@ watch(
   outline-offset: 2px;
 }
 
+/*
+  关着的时候只是**看不见**，不是不存在：React 的 ResizableHandle 在右侧面板关闭时
+  传 disabled，元素照样留在树里，读屏器听到的是一个 disabled 的 separator
+  （frontend/src/components/workspace/chats/chat-box.tsx）。visibility: hidden 会把它
+  整个从可访问性树里摘掉，于是「这里有一条可以拖的分隔线、现在不能拖」这句话没人说得出来。
+*/
 .workspace-panels--closed :deep(.splitpanes__splitter) {
   pointer-events: none;
-  visibility: hidden;
+  opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

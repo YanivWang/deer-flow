@@ -14,6 +14,14 @@ export interface Translations {
     localName: string;
   };
 
+  // Primitive-layer accessible names (English in every locale; see the locale files)
+  primitives: {
+    toggleSidebar: string;
+    submit: string;
+    stop: string;
+    notifications: string;
+  };
+
   // Common
   common: {
     home: string;
@@ -1084,8 +1092,6 @@ export interface Translations {
 
   navigation: {
     workspace: string;
-    expandSidebar: string;
-    collapseSidebar: string;
     closeSidebar: string;
     pinnedChat: string;
     channel: (label: string) => string;

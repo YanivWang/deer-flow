@@ -2,717 +2,109 @@
   "$comment": "React 与 Vue 在每个对照场景上的双向差异。这份清单只能缩短：修好一条就从这里删一条，新出现一条会让 e2e-parity 立刻红。空数组是目标状态，不是「还没测」。刷新用 make parity-accept，刷新前先逐条看清楚是修好了还是新坏了。键是 场景/断点/主题/语言；aria* 是可访问性树的双向逐行差异，requests* 是产品 API 请求的多重集差异，geometry 是锚点的盒模型与色板差异。",
   "entries": {
     "chat/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
-        "- text: 👋 Hello, again!"
-      ],
-      "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list",
-        "- list \"Notification\"",
-        "- listitem",
-        "- log \"Conversation\":",
-        "- navigation:",
-        "- text: Hello, again!",
-        "- text: New chat",
-        "- text: Recent chats"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=257 Vue=281 Δ24"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "chat/desktop/light/zh-CN": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"优化输入\" [disabled]",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"上下文窗口\"",
-        "- text: 👋 你好，欢迎回来！"
-      ],
-      "ariaOnlyVue": [
-        "- button \"上传文件\"",
-        "- button \"优化输入\"",
-        "- button \"发送\" [disabled]",
-        "- button \"收起侧栏\" [expanded]",
-        "- button \"闪速\"",
-        "- complementary:",
-        "- list",
-        "- list \"通知\"",
-        "- listitem",
-        "- log \"对话\":",
-        "- navigation:",
-        "- text: 你好，欢迎回来！",
-        "- text: 新对话",
-        "- text: 最近的对话"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=257 Vue=281 Δ24"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "chat/desktop/dark/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
-        "- text: 👋 Hello, again!"
-      ],
-      "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list",
-        "- list \"Notification\"",
-        "- listitem",
-        "- log \"Conversation\":",
-        "- navigation:",
-        "- text: Hello, again!",
-        "- text: New chat",
-        "- text: Recent chats"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=257 Vue=281 Δ24"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "chat/desktop/dark/zh-CN": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"优化输入\" [disabled]",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"上下文窗口\"",
-        "- text: 👋 你好，欢迎回来！"
-      ],
-      "ariaOnlyVue": [
-        "- button \"上传文件\"",
-        "- button \"优化输入\"",
-        "- button \"发送\" [disabled]",
-        "- button \"收起侧栏\" [expanded]",
-        "- button \"闪速\"",
-        "- complementary:",
-        "- list",
-        "- list \"通知\"",
-        "- listitem",
-        "- log \"对话\":",
-        "- navigation:",
-        "- text: 你好，欢迎回来！",
-        "- text: 新对话",
-        "- text: 最近的对话"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=257 Vue=281 Δ24"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "chat/tablet/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
-        "- text: 👋 Hello, again!"
-      ],
-      "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list",
-        "- list \"Notification\"",
-        "- listitem",
-        "- log \"Conversation\":",
-        "- navigation:",
-        "- text: Hello, again!",
-        "- text: New chat",
-        "- text: Recent chats"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=357 Vue=381 Δ24"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "chat/tablet/light/zh-CN": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"优化输入\" [disabled]",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"上下文窗口\"",
-        "- text: 👋 你好，欢迎回来！"
-      ],
-      "ariaOnlyVue": [
-        "- button \"上传文件\"",
-        "- button \"优化输入\"",
-        "- button \"发送\" [disabled]",
-        "- button \"收起侧栏\" [expanded]",
-        "- button \"闪速\"",
-        "- complementary:",
-        "- list",
-        "- list \"通知\"",
-        "- listitem",
-        "- log \"对话\":",
-        "- navigation:",
-        "- text: 你好，欢迎回来！",
-        "- text: 新对话",
-        "- text: 最近的对话"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=369 Vue=393 Δ24"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "chat/tablet/dark/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
-        "- text: 👋 Hello, again!"
-      ],
-      "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list",
-        "- list \"Notification\"",
-        "- listitem",
-        "- log \"Conversation\":",
-        "- navigation:",
-        "- text: Hello, again!",
-        "- text: New chat",
-        "- text: Recent chats"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=357 Vue=381 Δ24"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "chat/tablet/dark/zh-CN": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"优化输入\" [disabled]",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"上下文窗口\"",
-        "- text: 👋 你好，欢迎回来！"
-      ],
-      "ariaOnlyVue": [
-        "- button \"上传文件\"",
-        "- button \"优化输入\"",
-        "- button \"发送\" [disabled]",
-        "- button \"收起侧栏\" [expanded]",
-        "- button \"闪速\"",
-        "- complementary:",
-        "- list",
-        "- list \"通知\"",
-        "- listitem",
-        "- log \"对话\":",
-        "- navigation:",
-        "- text: 你好，欢迎回来！",
-        "- text: 新对话",
-        "- text: 最近的对话"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=369 Vue=393 Δ24"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "chat/mobile/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- group:",
-        "- group:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- status \"Context window\"",
-        "- text: 👋 Hello, again!"
-      ],
-      "ariaOnlyVue": [
-        "- /url: /workspace/agents",
-        "- /url: /workspace/chats",
-        "- /url: /workspace/chats/new",
-        "- /url: /workspace/scheduled-tasks",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Settings and more\"",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- link \"Agents\":",
-        "- link \"Chats\":",
-        "- link \"New chat\":",
-        "- link \"Scheduled tasks\":",
-        "- list",
-        "- list \"Notification\"",
-        "- list:",
-        "- listitem",
-        "- log \"Conversation\":",
-        "- navigation:",
-        "- text: DeerFlow",
-        "- text: Hello, again!",
-        "- text: New chat",
-        "- text: Recent chats"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=211 Vue=275 Δ64",
-        "selector:textarea fontSize React=16px Vue=14px"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "chat/mobile/light/zh-CN": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"优化输入\" [disabled]",
-        "- group:",
-        "- group:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- status \"上下文窗口\"",
-        "- text: 👋 你好，欢迎回来！"
-      ],
-      "ariaOnlyVue": [
-        "- /url: /workspace/agents",
-        "- /url: /workspace/chats",
-        "- /url: /workspace/chats/new",
-        "- /url: /workspace/scheduled-tasks",
-        "- button \"上传文件\"",
-        "- button \"优化输入\"",
-        "- button \"切换侧边栏\"",
-        "- button \"发送\" [disabled]",
-        "- button \"设置和更多\"",
-        "- button \"闪速\"",
-        "- complementary:",
-        "- link \"定时任务\":",
-        "- link \"对话\":",
-        "- link \"新对话\":",
-        "- link \"智能体\":",
-        "- list",
-        "- list \"通知\"",
-        "- list:",
-        "- listitem",
-        "- log \"对话\":",
-        "- navigation:",
-        "- text: DeerFlow",
-        "- text: 你好，欢迎回来！",
-        "- text: 新对话",
-        "- text: 最近的对话"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=211 Vue=275 Δ64",
-        "selector:textarea fontSize React=16px Vue=14px"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "chat/mobile/dark/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- group:",
-        "- group:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- status \"Context window\"",
-        "- text: 👋 Hello, again!"
-      ],
-      "ariaOnlyVue": [
-        "- /url: /workspace/agents",
-        "- /url: /workspace/chats",
-        "- /url: /workspace/chats/new",
-        "- /url: /workspace/scheduled-tasks",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Settings and more\"",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- link \"Agents\":",
-        "- link \"Chats\":",
-        "- link \"New chat\":",
-        "- link \"Scheduled tasks\":",
-        "- list",
-        "- list \"Notification\"",
-        "- list:",
-        "- listitem",
-        "- log \"Conversation\":",
-        "- navigation:",
-        "- text: DeerFlow",
-        "- text: Hello, again!",
-        "- text: New chat",
-        "- text: Recent chats"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=211 Vue=275 Δ64",
-        "selector:textarea fontSize React=16px Vue=14px"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "chat/mobile/dark/zh-CN": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"优化输入\" [disabled]",
-        "- group:",
-        "- group:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- status \"上下文窗口\"",
-        "- text: 👋 你好，欢迎回来！"
-      ],
-      "ariaOnlyVue": [
-        "- /url: /workspace/agents",
-        "- /url: /workspace/chats",
-        "- /url: /workspace/chats/new",
-        "- /url: /workspace/scheduled-tasks",
-        "- button \"上传文件\"",
-        "- button \"优化输入\"",
-        "- button \"切换侧边栏\"",
-        "- button \"发送\" [disabled]",
-        "- button \"设置和更多\"",
-        "- button \"闪速\"",
-        "- complementary:",
-        "- link \"定时任务\":",
-        "- link \"对话\":",
-        "- link \"新对话\":",
-        "- link \"智能体\":",
-        "- list",
-        "- list \"通知\"",
-        "- list:",
-        "- listitem",
-        "- log \"对话\":",
-        "- navigation:",
-        "- text: DeerFlow",
-        "- text: 你好，欢迎回来！",
-        "- text: 新对话",
-        "- text: 最近的对话"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=211 Vue=275 Δ64",
-        "selector:textarea fontSize React=16px Vue=14px"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "sidebar/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
-        "- text: 👋 Hello, again!"
-      ],
-      "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list",
-        "- list \"Notification\"",
-        "- listitem",
-        "- log \"Conversation\":",
-        "- navigation:",
-        "- text: Hello, again!",
-        "- text: New chat",
-        "- text: Recent chats"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:[data-sidebar='sidebar'] a[href='/workspace/agents'] y React=128 Vue=120 Δ-8",
-        "selector:[data-sidebar='sidebar'] a[href='/workspace/chats'] y React=92 Vue=84 Δ-8"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "thread-history/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
-        "- text: 👋 Hello, again!"
-      ],
-      "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:",
-        "- text: Hello, again!",
-        "- text: New chat"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
       "geometry": [
         "text:First conversation x React=16 Vue=8 Δ-8",
-        "text:First conversation y React=294 Vue=264 Δ-30",
+        "text:First conversation y React=294 Vue=272 Δ-22",
         "text:First conversation width React=114.8 Vue=203 Δ88.2",
         "text:First conversation height React=20 Vue=32 Δ12",
         "text:First conversation color React=rgba(115,115,115,255) Vue=rgba(10,10,10,255)",
         "text:Second conversation x React=16 Vue=8 Δ-8",
-        "text:Second conversation y React=258 Vue=228 Δ-30",
+        "text:Second conversation y React=258 Vue=236 Δ-22",
         "text:Second conversation width React=135.4 Vue=203 Δ67.6",
         "text:Second conversation height React=20 Vue=32 Δ12",
         "text:Second conversation color React=rgba(115,115,115,255) Vue=rgba(10,10,10,255)"
@@ -720,90 +112,31 @@
     },
     "agent-chat/desktop/light/en-US": {
       "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
         "- paragraph: A test agent for E2E tests",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
-        "- text: test-agent",
         "- text: test-agent"
       ],
       "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list",
-        "- list \"Notification\"",
-        "- listitem",
-        "- log \"Conversation\":",
-        "- navigation:",
         "- paragraph: Welcome to 🦌 DeerFlow, an open source super agent. With built-in and custom skills, DeerFlow helps you search on the web, analyze data, and generate artifacts like slides, web pages and do almost anything.",
-        "- text: Hello, again!",
-        "- text: Recent chats",
-        "- text: test-agent New chat"
+        "- text: 👋 Hello, again!"
       ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=257 Vue=281 Δ24"
-      ]
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "agents-feature-disabled/desktop/light/en-US": {
       "ariaOnlyReact": [
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
         "- paragraph: Agents feature is not enabled",
-        "- paragraph: This feature is not enabled on this server. Please contact your administrator.",
-        "- region \"Notifications alt+T\""
+        "- paragraph: This feature is not enabled on this server. Please contact your administrator."
       ],
       "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
-        "- complementary:",
         "- heading \"Agents\" [level=1]",
-        "- list \"Notification\"",
-        "- listitem",
-        "- navigation:",
         "- paragraph:",
         "- paragraph: Create and manage custom agents with specialized prompts and capabilities.",
         "- strong: Agents feature is not enabled",
-        "- text: Recent chats",
         "- text: This feature is not enabled on this server. Please contact your administrator."
       ],
       "requestsOnlyReact": [],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections",
-        "POST /api/langgraph/threads/search"
-      ],
+      "requestsOnlyVue": [],
       "geometry": [
         "text:/contact your administrator|联系管理员/i x React=544 Vue=280 Δ-264",
         "text:/contact your administrator|联系管理员/i y React=428 Vue=105 Δ-323",
@@ -816,51 +149,20 @@
       "ariaOnlyReact": [
         "- button",
         "- button",
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log:",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
         "- text: Previous question"
       ],
       "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
         "- button \"Copy message\"",
         "- button \"Copy response\"",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:",
         "- paragraph: Previous question"
       ],
       "requestsOnlyReact": [
-        "GET /api/features",
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
-        "GET /api/channels/connections",
         "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
         "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/runs/state-00000000-0000-0000-0000-000000000001/workspace-changes?include_diff=false&include_files=true",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/uploads/limits",
-        "POST /api/langgraph/threads/search"
+        "GET /api/threads/00000000-0000-0000-0000-000000000001/runs/state-00000000-0000-0000-0000-000000000001/workspace-changes?include_diff=false&include_files=true"
       ],
       "geometry": [
         "testId:browser-trigger x React=1127.7 Vue=1140.8 Δ13.1",
@@ -870,58 +172,18 @@
       ]
     },
     "thread-list-pin/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
-        "- text: 👋 Hello, again!"
-      ],
-      "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:",
-        "- text: Hello, again!",
-        "- text: New chat"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
       "geometry": [
         "text:Newest chat x React=16 Vue=8 Δ-8",
-        "text:Newest chat y React=258 Vue=228 Δ-30",
+        "text:Newest chat y React=258 Vue=236 Δ-22",
         "text:Newest chat width React=80.5 Vue=203 Δ122.5",
         "text:Newest chat height React=20 Vue=32 Δ12",
         "text:Newest chat color React=rgba(115,115,115,255) Vue=rgba(10,10,10,255)",
         "text:Older chat x React=16 Vue=8 Δ-8",
-        "text:Older chat y React=294 Vue=264 Δ-30",
+        "text:Older chat y React=294 Vue=272 Δ-22",
         "text:Older chat width React=67.6 Vue=203 Δ135.4",
         "text:Older chat height React=20 Vue=32 Δ12",
         "text:Older chat color React=rgba(115,115,115,255) Vue=rgba(10,10,10,255)"
@@ -933,8 +195,6 @@
         "- /url: /workspace/chats",
         "- /url: https://github.com/bytedance/deer-flow",
         "- button \"Load older chats\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
         "- link \"Chats\":",
         "- link \"Conversation 001 about 1 year ago\":",
         "- link \"Conversation 002 about 1 year ago\":",
@@ -989,25 +249,14 @@
         "- link \"Workspace\":",
         "- link:",
         "- list:",
-        "- list:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
         "- listitem:",
         "- listitem:",
         "- main:",
         "- main:",
         "- navigation \"breadcrumb\":",
-        "- region \"Notifications alt+T\"",
         "- searchbox \"Search chats\""
       ],
       "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
-        "- complementary:",
         "- heading \"Chats\" [level=1]",
         "- link \"Conversation 001 Updated last year\":",
         "- link \"Conversation 002 Updated last year\":",
@@ -1059,9 +308,7 @@
         "- link \"Conversation 048 Updated last year\":",
         "- link \"Conversation 049 Updated last year\":",
         "- link \"Conversation 050 Updated last year\":",
-        "- list \"Notification\"",
         "- listitem",
-        "- navigation:",
         "- text: Conversation 001",
         "- text: Conversation 002",
         "- text: Conversation 003",
@@ -1165,115 +412,38 @@
         "- time: Updated last year"
       ],
       "requestsOnlyReact": [],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
+      "requestsOnlyVue": [],
       "geometry": [
         "text:Conversation 001 x React=16 Vue=8 Δ-8",
-        "text:Conversation 001 y React=258 Vue=228 Δ-30",
+        "text:Conversation 001 y React=258 Vue=236 Δ-22",
         "text:Conversation 001 width React=112.4 Vue=203 Δ90.6",
         "text:Conversation 001 height React=20 Vue=32 Δ12",
         "text:Conversation 001 color React=rgba(115,115,115,255) Vue=rgba(10,10,10,255)"
       ]
     },
     "ui-polish-mobile/mobile/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- group:",
-        "- group:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- status \"Context window\"",
-        "- text: 👋 Hello, again!"
-      ],
-      "ariaOnlyVue": [
-        "- /url: /workspace/agents",
-        "- /url: /workspace/chats",
-        "- /url: /workspace/chats/new",
-        "- /url: /workspace/scheduled-tasks",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Settings and more\"",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- link \"Agents\":",
-        "- link \"Chats\":",
-        "- link \"New chat\":",
-        "- link \"Scheduled tasks\":",
-        "- list",
-        "- list \"Notification\"",
-        "- list:",
-        "- listitem",
-        "- log \"Conversation\":",
-        "- navigation:",
-        "- text: DeerFlow",
-        "- text: Hello, again!",
-        "- text: New chat",
-        "- text: Recent chats"
-      ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "selector:textarea y React=211 Vue=275 Δ64",
-        "selector:textarea fontSize React=16px Vue=14px"
-      ]
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "user-message-plain-text/desktop/light/en-US": {
       "ariaOnlyReact": [
         "- button",
         "- button",
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log:",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
         "- text: \"#include <stdio.h>\""
       ],
       "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
         "- button \"Copy message\"",
         "- button \"Copy response\"",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:",
         "- paragraph: \"#include <stdio.h>\""
       ],
       "requestsOnlyReact": [
-        "GET /api/features",
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
-        "GET /api/channels/connections",
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/uploads/limits",
-        "POST /api/langgraph/threads/search"
+        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
       "geometry": []
     },
@@ -1292,7 +462,6 @@
         "- listitem:",
         "- listitem:",
         "- navigation:",
-        "- region \"Notifications alt+T\"",
         "- text: Integrations Connect third-party tools and work platforms so agents can use them directly.",
         "- text: Lark / Feishu CLI Install the official Lark/Feishu agent skills and let agents use Lark after authorization.",
         "- text: Skill pack Pending Not installed Gateway CLI Pending lark-cli is not on PATH Auth Pending Not connected Sandbox runtime Pending The provisioner has no lark-cli init image configured (LARK_CLI_INIT_IMAGE)."
@@ -1315,12 +484,8 @@
         "- text: Sandbox runtime",
         "- text: Skill pack Pending"
       ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
       "geometry": [
         "role:dialog[Settings] x React=64 Vue=192 Δ128",
         "role:dialog[Settings] y React=100 Vue=40 Δ-60",
@@ -1338,51 +503,22 @@
         "- button",
         "- button",
         "- button",
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- log:",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
         "- text: First question",
         "- text: Second question"
       ],
       "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
         "- button \"Copy message\"",
         "- button \"Copy message\"",
         "- button \"Copy response\"",
         "- button \"Copy response\"",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:",
         "- paragraph: First question",
         "- paragraph: Second question"
       ],
       "requestsOnlyReact": [
-        "GET /api/features",
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
-        "GET /api/channels/connections",
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/uploads/limits",
-        "POST /api/langgraph/threads/search"
+        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
       "geometry": [
         "text:First answer y React=164 Vue=152 Δ-12"
@@ -1391,50 +527,19 @@
     "subtask-card/desktop/light/en-US": {
       "ariaOnlyReact": [
         "- button",
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log:",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
         "- text: Executing subtask",
         "- text: Start a subtask and then stop before the task tool returns."
       ],
       "ariaOnlyVue": [
         "- article:",
-        "- button \"Collapse sidebar\" [expanded]",
         "- button \"Copy message\"",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:",
         "- paragraph: Start a subtask and then stop before the task tool returns."
       ],
       "requestsOnlyReact": [
-        "GET /api/features",
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
-        "GET /api/channels/connections",
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/uploads/limits",
-        "POST /api/langgraph/threads/search"
+        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
       "geometry": [
         "text:Research stopped reload regression x React=418.5 Vue=412.5 Δ-6",
@@ -1447,25 +552,12 @@
       "ariaOnlyReact": [
         "- button",
         "- button",
-        "- button",
-        "- button",
         "- button \"Close\"",
         "- button \"Copy to clipboard\"",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
+        "- complementary:",
         "- group:",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- log:",
-        "- main:",
         "- radio",
         "- radio [checked]",
-        "- region \"Notifications alt+T\"",
-        "- status \"Context window\"",
         "- text: Create a report artifact",
         "- text: DF",
         "- text: Writing report artifact /artifact-fixtures/report.html",
@@ -1475,36 +567,27 @@
         "- /url: /workspace/chats/00000000-0000-0000-0000-000000000001",
         "- button \"/artifact-fixtures/report.html\"",
         "- button \"Close artifacts\"",
-        "- button \"Collapse sidebar\" [expanded]",
         "- button \"Copy artifact\"",
         "- button \"Copy message\"",
-        "- button \"Flash\"",
         "- button \"More\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
         "- button \"Settings and more\"",
         "- button \"Show code\"",
-        "- button \"Upload files\"",
+        "- button \"Toggle Sidebar\"",
         "- button \"Writing report artifact\"",
         "- dialog \"Artifacts\":",
         "- link \"Artifact preview\":",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:",
+        "- list:",
+        "- listitem:",
         "- paragraph: Create a report artifact",
         "- strong: report.html",
         "- text: DeerFlow",
         "- text: Recent chats"
       ],
       "requestsOnlyReact": [
-        "GET /api/features",
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
-        "GET /api/channels/connections",
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/uploads/limits",
-        "POST /api/langgraph/threads/search"
+        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
       "geometry": [
         "text:/artifact-fixtures/report.html x React=122 Vue=469.5 Δ347.5",
@@ -1515,25 +598,12 @@
       "ariaOnlyReact": [
         "- button",
         "- button",
-        "- button",
-        "- button",
         "- button \"Close\"",
         "- button \"Copy to clipboard\"",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
+        "- complementary:",
         "- group:",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- log:",
-        "- main:",
         "- radio",
         "- radio [checked]",
-        "- region \"Notifications alt+T\"",
-        "- status \"Context window\"",
         "- text: Create a report artifact",
         "- text: DF",
         "- text: Writing report artifact /artifact-fixtures/report.html",
@@ -1543,36 +613,27 @@
         "- /url: /workspace/chats/00000000-0000-0000-0000-000000000001",
         "- button \"/artifact-fixtures/report.html\"",
         "- button \"Close artifacts\"",
-        "- button \"Collapse sidebar\" [expanded]",
         "- button \"Copy artifact\"",
         "- button \"Copy message\"",
-        "- button \"Flash\"",
         "- button \"More\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
         "- button \"Settings and more\"",
         "- button \"Show code\"",
-        "- button \"Upload files\"",
+        "- button \"Toggle Sidebar\"",
         "- button \"Writing report artifact\"",
         "- dialog \"Artifacts\":",
         "- link \"Artifact panel resize\":",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:",
+        "- list:",
+        "- listitem:",
         "- paragraph: Create a report artifact",
         "- strong: report.html",
         "- text: DeerFlow",
         "- text: Recent chats"
       ],
       "requestsOnlyReact": [
-        "GET /api/features",
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
-        "GET /api/channels/connections",
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/uploads/limits",
-        "POST /api/langgraph/threads/search"
+        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
       "geometry": [
         "text:/artifact-fixtures/report.html x React=122 Vue=469.5 Δ347.5",
@@ -1599,8 +660,6 @@
         "- button \"Once\"",
         "- button \"Paused\"",
         "- button \"Reuse thread\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
         "- button \"Weekly report\"",
         "- combobox",
         "- combobox: Daily",
@@ -1608,18 +667,10 @@
         "- link \"Workspace\":",
         "- link:",
         "- list:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
         "- listitem:",
         "- listitem:",
         "- main:",
         "- navigation \"breadcrumb\":",
-        "- region \"Notifications alt+T\"",
         "- text: \"Context mode: Fresh thread Last thread: — Schedule: Recurring Next run: 07/02/2026, 01:00 AM Last run: — Last run id: — Last error: — Summarize thread\"",
         "- text: \"Create scheduled task Quick create:\"",
         "- text: 0 runs No runs yet",
@@ -1631,7 +682,6 @@
         "- 'button \"🏷️ GitHub Issue triage Triage a repo''s open issues (fill in {{repo}})\"'",
         "- alert: Scheduled task not found",
         "- article:",
-        "- button \"Collapse sidebar\" [expanded]",
         "- button \"Create\"",
         "- button \"Daily summary Recurring · UTC Enabled\"",
         "- button \"📅 Weekly report Compile a weekly summary, every Monday\"",
@@ -1642,7 +692,6 @@
         "- combobox \"Filter by status\":",
         "- combobox \"Repeat\":",
         "- combobox \"Timezone\": UTC",
-        "- complementary:",
         "- definition: \"0\"",
         "- definition: Every day at 09:00 (UTC)",
         "- definition: Fresh thread",
@@ -1657,9 +706,6 @@
         "- heading \"0 runs\" [level=3]",
         "- heading \"Create scheduled task\" [level=2]",
         "- heading \"Daily summary\" [level=2]",
-        "- list \"Notification\"",
-        "- listitem",
-        "- navigation:",
         "- option \"All statuses\" [selected]",
         "- option \"All types\" [selected]",
         "- option \"Cancelled\"",
@@ -1698,7 +744,6 @@
         "- text: Minute",
         "- text: Prompt",
         "- text: Quick create",
-        "- text: Recent chats",
         "- text: Repeat",
         "- text: Task title",
         "- text: Time",
@@ -1708,10 +753,8 @@
         "GET /api/scheduled-tasks/task-1/runs"
       ],
       "requestsOnlyVue": [
-        "GET /api/channels/connections",
         "GET /api/scheduled-tasks/task-1",
-        "GET /api/scheduled-tasks/task-1/runs?limit=50&offset=0",
-        "POST /api/langgraph/threads/search"
+        "GET /api/scheduled-tasks/task-1/runs?limit=50&offset=0"
       ],
       "geometry": [
         "role:button[/Daily summary/i] x React=384 Vue=280 Δ-104",
@@ -1722,8 +765,6 @@
     },
     "channels/desktop/light/en-US": {
       "ariaOnlyReact": [
-        "- button",
-        "- button",
         "- button \"Connected\"",
         "- button \"Connected\"",
         "- button \"Connected\"",
@@ -1732,14 +773,6 @@
         "- button \"Connected\"",
         "- button \"Connected\"",
         "- button \"Connected\"",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
         "- list:",
         "- listitem:",
         "- listitem:",
@@ -1749,18 +782,7 @@
         "- listitem:",
         "- listitem:",
         "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
-        "- text: Channels",
-        "- text: 👋 Hello, again!"
+        "- text: Channels"
       ],
       "ariaOnlyVue": [
         "- article:",
@@ -1771,7 +793,6 @@
         "- article:",
         "- article:",
         "- article:",
-        "- button \"Collapse sidebar\" [expanded]",
         "- button \"Connect\"",
         "- button \"Connect\"",
         "- button \"Connect\"",
@@ -1780,33 +801,18 @@
         "- button \"Connect\"",
         "- button \"Connect\"",
         "- button \"Connect\"",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- heading \"Channels\" [level=3]",
-        "- list",
-        "- list \"Notification\"",
-        "- listitem",
-        "- log \"Conversation\":",
-        "- navigation:",
-        "- text: Hello, again!",
-        "- text: New chat",
-        "- text: Recent chats"
+        "- heading \"Channels\" [level=3]"
       ],
-      "requestsOnlyReact": [
-        "GET /api/features"
-      ],
+      "requestsOnlyReact": [],
       "requestsOnlyVue": [
         "GET /api/channels/connections"
       ],
       "geometry": [
         "text:DingTalk x React=44 Vue=40 Δ-4",
-        "text:DingTalk y React=474 Vue=454 Δ-20",
+        "text:DingTalk y React=474 Vue=462 Δ-12",
         "text:DingTalk width React=91 Vue=99 Δ8",
         "text:Telegram x React=44 Vue=40 Δ-4",
-        "text:Telegram y React=298 Vue=278 Δ-20",
+        "text:Telegram y React=298 Vue=286 Δ-12",
         "text:Telegram width React=91 Vue=99 Δ8"
       ]
     },
@@ -1816,22 +822,14 @@
         "- button",
         "- button",
         "- button",
-        "- button",
-        "- button",
         "- button \"Branch conversation\"",
         "- button \"Copy Code\":",
         "- button \"Download diagram\":",
         "- button \"Edit and rerun\"",
-        "- button \"Polish input\" [disabled]",
         "- button \"Reset zoom and pan\":",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
         "- button \"View fullscreen\":",
         "- button \"Zoom in\":",
         "- button \"Zoom out\":",
-        "- group:",
-        "- group:",
         "- img",
         "- img",
         "- img",
@@ -1839,96 +837,41 @@
         "- img",
         "- img",
         "- img \"Mermaid chart\":",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log:",
-        "- main:",
         "- paragraph: Response in thread Mermaid history",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
         "- text: Previous question",
         "- text: mermaid"
       ],
       "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
-        "- button \"Copy response\"",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:"
+        "- button \"Copy response\""
       ],
       "requestsOnlyReact": [
-        "GET /api/features",
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
-        "GET /api/channels/connections",
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/uploads/limits",
-        "POST /api/langgraph/threads/search"
+        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
       "geometry": [
-        "text:Here is a relationship diagram. y React=2 Vue=72 Δ70"
+        "text:Here is a relationship diagram. y React=3 Vue=72 Δ69"
       ]
     },
     "workspace-changes/desktop/light/en-US": {
       "ariaOnlyReact": [
         "- button",
         "- button",
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log:",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
         "- text: +8 -2 outputs/report.md +1 -1",
         "- text: Create a report"
       ],
       "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
         "- button \"Copy message\"",
         "- button \"Copy response\"",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:",
         "- paragraph: Create a report",
         "- text: +8-2 outputs/report.md Modified +1-1"
       ],
       "requestsOnlyReact": [
-        "GET /api/features",
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
-        "GET /api/channels/connections",
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/uploads/limits",
-        "POST /api/langgraph/threads/search"
+        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
       "geometry": [
         "text:I updated the workspace report. y React=164 Vue=152 Δ-12"
@@ -1938,49 +881,18 @@
       "ariaOnlyReact": [
         "- button",
         "- button",
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log:",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
         "- text: Who are you?"
       ],
       "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
         "- button \"Copy message\"",
         "- button \"Copy response\"",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:",
         "- paragraph: Who are you?"
       ],
       "requestsOnlyReact": [
-        "GET /api/features",
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
-        "GET /api/channels/connections",
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/uploads/limits",
-        "POST /api/langgraph/threads/search"
+        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
       "geometry": [
         "text:I am DeerFlow, an open-source super agent. y React=244 Vue=218.7 Δ-25.3"
@@ -1990,49 +902,18 @@
       "ariaOnlyReact": [
         "- button",
         "- button",
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log:",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- separator [disabled]",
-        "- status \"Context window\"",
         "- text: Create a markdown report"
       ],
       "ariaOnlyVue": [
-        "- button \"Collapse sidebar\" [expanded]",
         "- button \"Copy message\"",
         "- button \"Copy response\"",
-        "- button \"Flash\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
-        "- button \"Upload files\"",
-        "- complementary:",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:",
         "- paragraph: Create a markdown report"
       ],
       "requestsOnlyReact": [
-        "GET /api/features",
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
-        "GET /api/channels/connections",
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/uploads/limits",
-        "POST /api/langgraph/threads/search"
+        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
       "geometry": [
         "testId:artifact-trigger x React=1158.2 Vue=1177.8 Δ19.6",
@@ -2047,61 +928,33 @@
         "- button",
         "- button",
         "- button",
-        "- button",
-        "- button",
-        "- button \"Polish input\" [disabled]",
-        "- button \"Submit\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Toggle Sidebar\"",
-        "- group:",
-        "- group:",
+        "- complementary:",
         "- heading \"Artifacts\" [level=2]",
         "- link \"Download\":",
         "- list:",
-        "- list:",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- log:",
         "- main:",
-        "- main:",
-        "- region \"Notifications alt+T\"",
-        "- status \"Context window\"",
         "- text: Create a markdown report",
         "- text: batched-report.md Markdown file"
       ],
       "ariaOnlyVue": [
         "- alert: Path must start with /mnt/user-data",
         "- button \"Close artifacts\"",
-        "- button \"Collapse sidebar\" [expanded]",
         "- button \"Copy artifact\"",
         "- button \"Copy message\"",
         "- button \"Copy response\"",
         "- button \"Download artifact\"",
-        "- button \"Flash\"",
         "- button \"Open artifact\"",
-        "- button \"Polish input\"",
-        "- button \"Send\" [disabled]",
         "- button \"Show preview\"",
-        "- button \"Upload files\"",
         "- combobox \"Select artifact\": batched-report.md",
         "- dialog \"Artifacts\":",
-        "- list \"Notification\"",
-        "- log \"Conversation\":",
-        "- navigation:",
         "- paragraph: Create a markdown report"
       ],
       "requestsOnlyReact": [
-        "GET /api/features",
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
-        "GET /api/channels/connections",
         "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/artifacts/artifact-fixtures/batched-report.md",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/uploads/limits",
-        "POST /api/langgraph/threads/search"
+        "GET /api/threads/00000000-0000-0000-0000-000000000001/artifacts/artifact-fixtures/batched-report.md"
       ],
       "geometry": [
         "testId:artifact-trigger x React=749 Vue=768.5 Δ19.5",

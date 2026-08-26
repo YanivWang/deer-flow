@@ -221,7 +221,7 @@ test("composer model selector is a menu whose current model is announced", async
     );
   });
 
-  const trigger = page.getByTestId("composer-model-selector").locator("button");
+  const trigger = page.getByTestId("composer-model-selector");
   await expect(trigger).toBeVisible({ timeout: 15_000 });
   await expect(trigger).toHaveAttribute("aria-haspopup", "menu");
   await trigger.click();

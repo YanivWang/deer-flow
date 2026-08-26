@@ -37,7 +37,7 @@ import { useThreadStream } from "@/composables/useThreadStream";
 import { useThreads } from "@/composables/useThreads";
 import { useNotifications } from "@/composables/useNotifications";
 import { useSuggestionsConfig } from "@/composables/useSuggestionsConfig";
-import { useWorkspaceFeatures } from "@/composables/useWorkspaceFeatures";
+import { useBrowserControlEnabled } from "@/composables/useWorkspaceFeatures";
 import { useAuthSession } from "@/composables/useAuthSession";
 import { useModels } from "@/composables/useModels";
 import { useThreadSettings } from "@/composables/useThreadSettings";
@@ -116,7 +116,7 @@ const queryClient = useQueryClient();
 const isDemo = computed(
   () => props.demo === true || route.query.mock === "true",
 );
-const features = useWorkspaceFeatures({ enabled: !isDemo.value });
+const features = useBrowserControlEnabled({ enabled: !isDemo.value });
 const notifications = useNotifications();
 const authDisabled = isAuthDisabledMode();
 const auth = useAuthSession({
@@ -187,7 +187,6 @@ const maxSuggestions = computed(
 const composer = ref<InstanceType<typeof ChatComposer> | null>(null);
 const failedSend = ref<{ text: string; files: FileInMessage[] } | null>(null);
 const mainTailRequest = ref(0);
-const mobileSidebarOpen = ref(false);
 const threadTokenUsageQuery = useThreadTokenUsage(routeThreadId, {
   enabled: computed(() => !isDemo.value),
 });
@@ -429,10 +428,29 @@ const artifactPanel = useArtifactsPanel({
   authoritativeArtifacts,
   historyLoading: stream.isHistoryLoading,
 });
-const sidecar = useSidecar({ parentThreadId: streamThreadId, context });
+/*
+  Sidecar 的父 thread 用**草稿 id**，不是 streamThreadId。
+
+  streamThreadId 在 /chats/new 上刻意是 null——后端还没有这条 thread，拉历史会 404
+  （React 用 `threadId: isNewThread ? undefined : threadId` 表达同一件事）。但 sidecar
+  的父级不是「要拉历史的那条 thread」，而是「这一页代表的那次会话」，React 传的正是
+  同一个客户端生成的 id（frontend/src/components/workspace/chats/chat-page.tsx 的
+  `<SidecarProvider parentThreadId={threadId}>`），上传限额两边也已经用的是它。
+
+  用 null 的代价不是少发一个请求，而是 sidecar 生命周期在新会话页上根本没装上：
+  父级一旦从 null 变成真 id，恢复流程才第一次跑起来，中间这段时间侧边会话的状态是
+  未定义的。
+*/
+const sidecarParentThreadId = computed(() =>
+  isDemo.value ? null : (routeThreadId.value ?? draftThreadId.value),
+);
+const sidecar = useSidecar({
+  parentThreadId: sidecarParentThreadId,
+  context,
+});
 const sidecarReady = ref(false);
 const sidecarSession = useSidecarSession({
-  parentThreadId: streamThreadId,
+  parentThreadId: sidecarParentThreadId,
   parentMessages: () => demoMessages.value ?? stream.messages.value,
   sidecarThreadId: sidecar.sidecarThreadId,
   references: sidecar.activeReferences,
@@ -721,6 +739,18 @@ const currentTitle = computed(() => {
       ?.values.title ?? $i18n.t.value.pages.newChat
   );
 });
+/*
+  头部上真正显示出来的标题。currentTitle 带「新对话」兜底，那是给标签页用的；
+  头部只显示会话真的有的标题（React 的 ThreadTitle 就是这样）。
+*/
+const headerTitle = computed(() => {
+  if (isDemo.value && demoTitle.value) return demoTitle.value;
+  if (!routeThreadId.value) return "";
+  return (
+    threads.threads.find((thread) => thread.thread_id === routeThreadId.value)
+      ?.values.title ?? ""
+  );
+});
 const currentThread = computed(() => {
   const threadId = routeThreadId.value;
   if (!threadId) return null;
@@ -749,11 +779,6 @@ function startAgentChat() {
   if (!props.agentName) return;
   void router.push(
     `/workspace/agents/${encodeURIComponent(props.agentName)}/chats/new`,
-  );
-}
-function updateSidebarState(event: Event) {
-  mobileSidebarOpen.value = Boolean(
-    (event as CustomEvent<{ open?: boolean }>).detail?.open,
   );
 }
 function messageText(message: Message) {
@@ -1067,9 +1092,6 @@ function resetNewChat() {
   draftThreadId.value = globalThis.crypto.randomUUID();
 }
 onMounted(() => globalThis.addEventListener("deerflow:new-chat", resetNewChat));
-onMounted(() =>
-  globalThis.addEventListener("deerflow:sidebar-state", updateSidebarState),
-);
 let bootstrapAgentName: string | null = null;
 watch(
   [
@@ -1187,9 +1209,6 @@ watch(
 onUnmounted(() =>
   globalThis.removeEventListener("deerflow:new-chat", resetNewChat),
 );
-onUnmounted(() =>
-  globalThis.removeEventListener("deerflow:sidebar-state", updateSidebarState),
-);
 onUnmounted(() => {
   agentRequest += 1;
   clearTimeout(completionNotificationTimer);
@@ -1229,13 +1248,17 @@ onUnmounted(() => {
               : ''
           "
         >
+          <!--
+            名字与状态都照 React 的 SidebarTrigger（frontend/src/components/ui/sidebar.tsx）：
+            一个 sr-only 的 "Toggle Sidebar"，**没有** aria-expanded / aria-controls。
+            侧栏在移动端是一个会被卸载的抽屉，触发器指着一个此刻并不存在的 id，
+            aria-controls 是断的；expanded 也只能描述抽屉，描述不了桌面端的收起态。
+          -->
           <button
             v-if="!isDemo"
             type="button"
             data-sidebar="trigger"
-            :aria-label="$i18n.t.value.shortcuts.toggleSidebar"
-            aria-controls="workspace-sidebar"
-            :aria-expanded="mobileSidebarOpen"
+            :aria-label="$i18n.t.value.primitives.toggleSidebar"
             class="hover:bg-accent flex size-8 items-center justify-center rounded-md md:hidden"
             @click="toggleSidebar"
           >
@@ -1252,8 +1275,15 @@ onUnmounted(() => {
               {{ agent?.name ?? agentName }}
             </span>
           </div>
+          <!--
+            没有真实标题就**不渲染**任何文字，与 React 的 ThreadTitle 一致
+            （frontend/src/components/workspace/thread-title.tsx 的
+            `if (!thread.values?.title) return null`）。「新对话」只是标签页标题的
+            兜底，不是这条会话的名字——把它画在头部，读屏器会把每一个空会话都念成
+            一条叫「新对话」的记录。容器保留，占位由它负责。
+          -->
           <div class="min-w-0 flex-1 truncate text-sm font-medium">
-            {{ currentTitle }}
+            {{ headerTitle }}
           </div>
           <button
             v-if="agentName && !bootstrap"
@@ -1344,240 +1374,278 @@ onUnmounted(() => {
             @open="showArtifacts"
           />
         </header>
-        <MessageList
-          :class="isWelcomeMode ? '' : 'pt-10'"
-          :messages="visibleMessages"
-          :raw-messages="demoMessages ?? stream.messages.value"
-          :streaming="stream.isStreaming.value"
-          :loading="stream.isHistoryLoading.value"
-          :thread-id="routeThreadId"
-          :artifact-paths="artifactPanel.artifacts.value"
-          :is-mock="isDemo"
-          :subtasks="stream.subtasks.value"
-          :active-run-id="stream.activeRunId.value"
-          :has-more-history="stream.hasMoreHistory.value"
-          :history-loading-more="stream.isHistoryLoadingMore.value"
-          :history-error="stream.historyError.value"
-          :thread-error="stream.error.value"
-          :submit-human-input="respondHumanInput"
-          :token-usage-inline-mode="
-            modelCatalog.tokenUsageEnabled.value
-              ? settings.tokenUsage.inlineMode
-              : 'off'
-          "
-          :tail-request="mainTailRequest"
-          :interactive="!isDemo"
-          selection-mode="main"
-          test-id="main-message-list"
-          @artifact="openArtifact"
-          @browser="openBrowserFrame"
-          @selection-ask="askInSidecar"
-          @selection-add="addToConversation"
-          @branch="branch"
-          @regenerate="regenerate"
-          @edit="beginEdit"
-          @human-input="respondHumanInput"
-          @load-more-history="stream.loadMoreHistory()"
-        />
-        <div
-          v-if="editState"
-          class="border-border bg-background absolute right-0 bottom-36 left-0 z-40 mx-auto w-full max-w-xl rounded-xl border p-3 shadow-lg"
-        >
-          <textarea
-            v-model="editState.text"
-            rows="3"
-            class="border-input w-full rounded-md border p-2"
+        <!--
+          内层还有一个 main：React 的 SidebarInset 是外层 main，ChatPage 自己再开一个
+          （frontend/src/components/workspace/chats/chat-page.tsx）。头部浮在上面、
+          不属于对话本身，所以 main 从消息流开始——读屏器的「跳到主内容」应当落在对话，
+          而不是落在标题栏。
+        -->
+        <main class="flex min-h-0 max-w-full grow flex-col">
+          <MessageList
+            :class="isWelcomeMode ? '' : 'pt-10'"
+            :messages="visibleMessages"
+            :raw-messages="demoMessages ?? stream.messages.value"
+            :streaming="stream.isStreaming.value"
+            :loading="stream.isHistoryLoading.value"
+            :thread-id="routeThreadId"
+            :artifact-paths="artifactPanel.artifacts.value"
+            :is-mock="isDemo"
+            :subtasks="stream.subtasks.value"
+            :active-run-id="stream.activeRunId.value"
+            :has-more-history="stream.hasMoreHistory.value"
+            :history-loading-more="stream.isHistoryLoadingMore.value"
+            :history-error="stream.historyError.value"
+            :thread-error="stream.error.value"
+            :submit-human-input="respondHumanInput"
+            :token-usage-inline-mode="
+              modelCatalog.tokenUsageEnabled.value
+                ? settings.tokenUsage.inlineMode
+                : 'off'
+            "
+            :tail-request="mainTailRequest"
+            :interactive="!isDemo"
+            selection-mode="main"
+            test-id="main-message-list"
+            @artifact="openArtifact"
+            @browser="openBrowserFrame"
+            @selection-ask="askInSidecar"
+            @selection-add="addToConversation"
+            @branch="branch"
+            @regenerate="regenerate"
+            @edit="beginEdit"
+            @human-input="respondHumanInput"
+            @load-more-history="stream.loadMoreHistory()"
           />
-          <div class="mt-2 flex justify-end gap-2">
-            <button
-              type="button"
-              class="rounded border px-3 py-1"
-              @click="editState = null"
-            >
-              {{ $i18n.t.value.common.cancel }}
-            </button>
-            <button
-              type="button"
-              class="bg-primary text-primary-foreground rounded px-3 py-1"
-              @click="updateAndRerun"
-            >
-              {{ $i18n.t.value.common.updateAndRerun }}
-            </button>
-          </div>
-        </div>
-        <p
-          v-if="stream.llmRetry.value"
-          data-testid="llm-retry-status"
-          role="status"
-          class="absolute right-4 bottom-48 z-40 max-w-md rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-700 shadow"
-        >
-          {{ stream.llmRetry.value.message }}
-        </p>
-        <p
-          v-if="warnings.length"
-          role="status"
-          class="absolute right-4 bottom-36 z-40 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-700 shadow"
-        >
-          {{ warnings.at(-1) }}
-          <button
-            v-if="failedSend"
-            type="button"
-            class="ml-2 underline"
-            @click="retrySend"
-          >
-            {{ $i18n.t.value.navigation.tryAgain }}
-          </button>
-        </p>
-        <div
-          v-if="bootstrap && creation.status.value === 'error'"
-          data-testid="agent-creation-error"
-          role="alert"
-          class="absolute right-4 bottom-36 left-4 z-40 mx-auto max-w-xl rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 shadow"
-        >
-          <strong>{{ $i18n.t.value.agents.creationError }}:</strong>
-          {{ creation.error.value }}
-          <button type="button" class="ml-2 underline" @click="creation.retry">
-            {{ $i18n.t.value.agents.retry }}
-          </button>
-        </div>
-        <div
-          class="right-0 bottom-0 left-0 z-30 flex justify-center px-3 sm:px-4"
-          :class="isWelcomeMode ? 'absolute' : 'relative shrink-0 pb-4'"
-        >
           <div
-            class="relative w-full"
-            :class="[
-              isWelcomeMode
-                ? 'max-w-[var(--container-width-sm)] -translate-y-[calc(50vh-96px)]'
-                : 'max-w-[var(--container-width-md)]',
-            ]"
+            v-if="editState"
+            class="border-border bg-background absolute right-0 bottom-36 left-0 z-40 mx-auto w-full max-w-xl rounded-xl border p-3 shadow-lg"
           >
-            <section
-              v-if="
-                bootstrap &&
-                creation.status.value === 'created' &&
-                creation.agent.value
-              "
-              data-testid="agent-created"
-              class="bg-background mx-auto w-full max-w-lg rounded-xl border p-6 text-center shadow-sm"
-            >
-              <div class="text-3xl" aria-hidden="true">✓</div>
-              <h2 class="mt-2 text-xl font-semibold">
-                {{ $i18n.t.value.agents.agentCreated }}
-              </h2>
-              <p class="text-muted-foreground mt-2 text-sm">
-                {{ creation.agent.value.name }} ·
-                {{ creation.agent.value.description }}
-              </p>
-              <div class="mt-5 flex flex-wrap justify-center gap-2">
-                <NuxtLink
-                  :to="`/workspace/agents/${encodeURIComponent(creation.agent.value.name)}/chats/new`"
-                  class="bg-primary text-primary-foreground rounded-md px-3 py-2 text-sm"
-                >
-                  {{ $i18n.t.value.agents.startChatting }}
-                </NuxtLink>
-                <NuxtLink
-                  to="/workspace/agents"
-                  class="rounded-md border px-3 py-2 text-sm"
-                >
-                  {{ $i18n.t.value.agents.backToGallery }}
-                </NuxtLink>
-              </div>
-            </section>
-            <div
-              v-if="
-                isWelcomeMode &&
-                !(bootstrap && creation.status.value === 'created')
-              "
-              class="mx-auto flex w-full flex-col items-center justify-center gap-2 px-4 py-4 text-center sm:px-8"
-            >
-              <div
-                class="flex flex-wrap items-center justify-center gap-2 text-2xl font-bold"
-              >
-                <span aria-hidden="true">👋</span>
-                <AuroraText :colors="welcomeColors">
-                  {{ $i18n.t.value.welcome.greeting }}
-                </AuroraText>
-              </div>
-              <p
-                class="text-muted-foreground max-w-full text-sm whitespace-pre-line"
-              >
-                {{ $i18n.t.value.welcome.description }}
-              </p>
-            </div>
-            <div
-              v-if="
-                !isWelcomeMode && (followupsLoading || followups.length > 0)
-              "
-              v-show="!(bootstrap && creation.status.value === 'created')"
-              data-slot="suggestions-list"
-              class="mb-2 flex w-full flex-wrap justify-center gap-2"
-            >
-              <span
-                v-if="followupsLoading"
-                class="text-muted-foreground bg-background/80 rounded-full border px-4 py-1.5 text-xs backdrop-blur-sm"
-              >
-                {{ $i18n.t.value.inputBox.followupLoading }}
-              </span>
+            <textarea
+              v-model="editState.text"
+              rows="3"
+              class="border-input w-full rounded-md border p-2"
+            />
+            <div class="mt-2 flex justify-end gap-2">
               <button
-                v-for="suggestion in followups"
-                :key="suggestion"
                 type="button"
-                class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-3 py-1.5 text-xs"
-                @click="composer?.offerFollowup(suggestion)"
+                class="rounded border px-3 py-1"
+                @click="editState = null"
               >
-                {{ suggestion }}
+                {{ $i18n.t.value.common.cancel }}
               </button>
               <button
-                v-if="followups.length"
                 type="button"
-                :aria-label="$i18n.t.value.common.close"
-                class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-2.5 py-1.5 text-xs"
-                @click="followups = []"
+                class="bg-primary text-primary-foreground rounded px-3 py-1"
+                @click="updateAndRerun"
               >
-                ×
+                {{ $i18n.t.value.common.updateAndRerun }}
               </button>
             </div>
-            <TodoList
-              v-if="
-                authoritativeTodos.length &&
-                !(bootstrap && creation.status.value === 'created')
-              "
-              :todos="authoritativeTodos"
-              class="mb-2"
-            />
-            <ChatComposer
-              v-if="!(bootstrap && creation.status.value === 'created')"
-              ref="composer"
-              :thread-key="routeThreadId ?? 'new'"
-              :target-thread-id="routeThreadId ?? draftThreadId"
-              :user-id="currentUserId"
-              :agent-name="agentName"
-              :default-model-name="agent?.model"
-              :model-selection-ready="agentResolved"
-              :streaming="stream.isStreaming.value"
-              :uploading="localUploading"
-              :is-welcome="isWelcomeMode"
-              :show-welcome-suggestions="route.query.mode !== 'skill'"
-              :prompt-history="promptHistory"
-              :ensure-thread="ensureThread"
-              :submit-message="send"
-              :references="sidecar.conversationQuotes.value"
-              :context="context"
-              :goal="activeGoal"
-              :disabled="isDemo"
-              @send="send"
-              @stop="stopRun"
-              @uploading-change="
-                localUploading = $event;
-                stream.isUploading.value = $event;
-              "
-              @clear-references="sidecar.clearConversationQuotes()"
-              @context-change="updateContext"
-              @goal-change="localGoal = $event"
-            />
           </div>
-        </div>
+          <p
+            v-if="stream.llmRetry.value"
+            data-testid="llm-retry-status"
+            role="status"
+            class="absolute right-4 bottom-48 z-40 max-w-md rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-700 shadow"
+          >
+            {{ stream.llmRetry.value.message }}
+          </p>
+          <p
+            v-if="warnings.length"
+            role="status"
+            class="absolute right-4 bottom-36 z-40 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-700 shadow"
+          >
+            {{ warnings.at(-1) }}
+            <button
+              v-if="failedSend"
+              type="button"
+              class="ml-2 underline"
+              @click="retrySend"
+            >
+              {{ $i18n.t.value.navigation.tryAgain }}
+            </button>
+          </p>
+          <div
+            v-if="bootstrap && creation.status.value === 'error'"
+            data-testid="agent-creation-error"
+            role="alert"
+            class="absolute right-4 bottom-36 left-4 z-40 mx-auto max-w-xl rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 shadow"
+          >
+            <strong>{{ $i18n.t.value.agents.creationError }}:</strong>
+            {{ creation.error.value }}
+            <button
+              type="button"
+              class="ml-2 underline"
+              @click="creation.retry"
+            >
+              {{ $i18n.t.value.agents.retry }}
+            </button>
+          </div>
+          <div
+            class="right-0 bottom-0 left-0 z-30 flex justify-center px-3 sm:px-4"
+            :class="isWelcomeMode ? 'absolute' : 'relative shrink-0 pb-4'"
+          >
+            <!--
+            欢迎态把输入框抬到视口中线：窄屏减 48px、sm 以上减 96px，与 React 的
+            `-translate-y-[calc(50vh-48px)] sm:-translate-y-[calc(50vh-96px)]` 同一组
+            数字。只写 96px 的话，窄屏上输入框会比 React 低 48px——两边看起来是同一个
+            布局，量出来不是。
+          -->
+            <div
+              class="relative w-full"
+              :class="[
+                isWelcomeMode
+                  ? 'max-w-[var(--container-width-sm)] -translate-y-[calc(50vh-48px)] sm:-translate-y-[calc(50vh-96px)]'
+                  : 'max-w-[var(--container-width-md)]',
+              ]"
+            >
+              <section
+                v-if="
+                  bootstrap &&
+                  creation.status.value === 'created' &&
+                  creation.agent.value
+                "
+                data-testid="agent-created"
+                class="bg-background mx-auto w-full max-w-lg rounded-xl border p-6 text-center shadow-sm"
+              >
+                <div class="text-3xl" aria-hidden="true">✓</div>
+                <h2 class="mt-2 text-xl font-semibold">
+                  {{ $i18n.t.value.agents.agentCreated }}
+                </h2>
+                <p class="text-muted-foreground mt-2 text-sm">
+                  {{ creation.agent.value.name }} ·
+                  {{ creation.agent.value.description }}
+                </p>
+                <div class="mt-5 flex flex-wrap justify-center gap-2">
+                  <NuxtLink
+                    :to="`/workspace/agents/${encodeURIComponent(creation.agent.value.name)}/chats/new`"
+                    class="bg-primary text-primary-foreground rounded-md px-3 py-2 text-sm"
+                  >
+                    {{ $i18n.t.value.agents.startChatting }}
+                  </NuxtLink>
+                  <NuxtLink
+                    to="/workspace/agents"
+                    class="rounded-md border px-3 py-2 text-sm"
+                  >
+                    {{ $i18n.t.value.agents.backToGallery }}
+                  </NuxtLink>
+                </div>
+              </section>
+              <!--
+              欢迎语是**浮在**输入框上方的一层，不占布局：React 把它作为 extraHeader
+              放进一对 absolute 容器里（frontend/src/components/workspace/input-box.tsx），
+              外层贴住输入框顶边、内层用 bottom-0 把内容顶到边线之上。
+              留在文档流里的话，问候语有多高，输入框就被往下推多少——同一块屏幕上
+              两个应用的输入框会差出一行的位置，而这正是几何比对量到的那 24px。
+            -->
+              <div
+                v-if="
+                  isWelcomeMode &&
+                  !(bootstrap && creation.status.value === 'created')
+                "
+                class="absolute top-0 right-0 left-0 z-10"
+              >
+                <div
+                  class="absolute right-0 bottom-0 left-0 mx-auto flex w-full flex-col items-center justify-center gap-2 px-4 py-4 text-center sm:px-8"
+                >
+                  <div
+                    class="flex flex-wrap items-center justify-center gap-2 text-2xl font-bold"
+                  >
+                    <!--
+                  这个 👋 **不能** aria-hidden：React 的 Welcome 把它当成正文
+                  （frontend/src/components/workspace/welcome.tsx 里它只是一个普通
+                  div），于是读屏器读到的是「👋 Hello, again!」。藏掉它，两边听到的
+                  欢迎语就不是同一句。
+                -->
+                    <span>👋</span>
+                    <AuroraText :colors="welcomeColors">
+                      {{ $i18n.t.value.welcome.greeting }}
+                    </AuroraText>
+                  </div>
+                  <p
+                    class="text-muted-foreground max-w-full text-sm whitespace-pre-line"
+                  >
+                    {{ $i18n.t.value.welcome.description }}
+                  </p>
+                </div>
+              </div>
+              <div
+                v-if="
+                  !isWelcomeMode && (followupsLoading || followups.length > 0)
+                "
+                v-show="!(bootstrap && creation.status.value === 'created')"
+                data-slot="suggestions-list"
+                class="mb-2 flex w-full flex-wrap justify-center gap-2"
+              >
+                <span
+                  v-if="followupsLoading"
+                  class="text-muted-foreground bg-background/80 rounded-full border px-4 py-1.5 text-xs backdrop-blur-sm"
+                >
+                  {{ $i18n.t.value.inputBox.followupLoading }}
+                </span>
+                <button
+                  v-for="suggestion in followups"
+                  :key="suggestion"
+                  type="button"
+                  class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-3 py-1.5 text-xs"
+                  @click="composer?.offerFollowup(suggestion)"
+                >
+                  {{ suggestion }}
+                </button>
+                <button
+                  v-if="followups.length"
+                  type="button"
+                  :aria-label="$i18n.t.value.common.close"
+                  class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-2.5 py-1.5 text-xs"
+                  @click="followups = []"
+                >
+                  ×
+                </button>
+              </div>
+              <TodoList
+                v-if="
+                  authoritativeTodos.length &&
+                  !(bootstrap && creation.status.value === 'created')
+                "
+                :todos="authoritativeTodos"
+                class="mb-2"
+              />
+              <ChatComposer
+                v-if="!(bootstrap && creation.status.value === 'created')"
+                ref="composer"
+                :surface-class="
+                  isWelcomeMode ? '-translate-y-2 sm:-translate-y-4' : ''
+                "
+                :thread-key="routeThreadId ?? 'new'"
+                :target-thread-id="routeThreadId ?? draftThreadId"
+                :user-id="currentUserId"
+                :agent-name="agentName"
+                :default-model-name="agent?.model"
+                :model-selection-ready="agentResolved"
+                :streaming="stream.isStreaming.value"
+                :uploading="localUploading"
+                :is-welcome="isWelcomeMode"
+                :show-welcome-suggestions="route.query.mode !== 'skill'"
+                :prompt-history="promptHistory"
+                :ensure-thread="ensureThread"
+                :submit-message="send"
+                :references="sidecar.conversationQuotes.value"
+                :context="context"
+                :goal="activeGoal"
+                :disabled="isDemo"
+                @send="send"
+                @stop="stopRun"
+                @uploading-change="
+                  localUploading = $event;
+                  stream.isUploading.value = $event;
+                "
+                @clear-references="sidecar.clearConversationQuotes()"
+                @context-change="updateContext"
+                @goal-change="localGoal = $event"
+              />
+            </div>
+          </div>
+        </main>
       </section>
     </template>
     <template #panel>

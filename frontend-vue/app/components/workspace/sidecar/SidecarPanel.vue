@@ -423,8 +423,14 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
+/*
+  用 :deep()——`.sidecar-model-control` 落在 ComposerModelSelector 内部的触发器按钮上，
+  不是它的根节点，拿不到本组件的 scope 属性（那个组件把 attrs 显式绑到按钮上，
+  原因见它的文件头）。不加 :deep() 这条规则就一条元素也选不中，窄面板里模型名会
+  把工具条挤出去。
+*/
 @media (max-width: 999px) {
-  .sidecar-model-control {
+  :deep(.sidecar-model-control) {
     display: none;
   }
 }

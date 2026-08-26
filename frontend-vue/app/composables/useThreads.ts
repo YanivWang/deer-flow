@@ -62,7 +62,16 @@ export function useThreads() {
         { ...THREAD_LIST_PARAMS, signal },
         Number(pageParam),
       ),
-    getNextPageParam: getInfiniteThreadsNextPageParam,
+    /*
+      **只传两个参数。** 直接把函数交给 Vue Query，它会按
+      `(lastPage, allPages, lastPageParam, allPageParams)` 调用，第三个实参落进
+      本函数的 `pageSize`——于是 `pageSize` 变成上一页的 offset（首屏是 0），
+      `lastPage.length < pageSize` 永远为假，「还有下一页」永远为真。
+      表现是每次加载完列表都会再多问一页，问回来是空的，谁也看不出哪里不对。
+      React 那边写的就是显式的两参箭头函数（frontend/src/core/threads/hooks.ts）。
+    */
+    getNextPageParam: (lastPage, allPages) =>
+      getInfiniteThreadsNextPageParam(lastPage, allPages),
   });
 
   const threads = computed(() => {

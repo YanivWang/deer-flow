@@ -28,12 +28,23 @@ afterEach(() => {
 });
 
 describe("composer model selector", () => {
+  /*
+    没有选中模型时触发器**仍然**渲染，只是没有名字——与 React 的
+    ModelSelectorTrigger 一致。藏掉它会让工具条控件数随后端返回什么而变。
+  */
+  it("keeps the trigger mounted and unnamed before a model resolves", () => {
+    const wrapper = mount(ComposerModelSelector, { props: { models } });
+    const button = wrapper.get("button");
+    expect(button.attributes("aria-label")).toBeUndefined();
+    expect(button.text()).toBe("");
+  });
+
   it("uses the React responsive width contract and keeps truncation on the text only", () => {
     const wrapper = mount(ComposerModelSelector, {
       props: { models, selectedModel: models[0] },
     });
 
-    const button = wrapper.get("button[aria-label='MiniMax CN / MiniMax-M3']");
+    const button = wrapper.get("button");
     expect(button.classes()).toEqual(
       expect.arrayContaining(["min-w-0", "max-w-40", "px-2.5", "sm:max-w-56"]),
     );
@@ -46,7 +57,7 @@ describe("composer model selector", () => {
       attachTo: document.body,
       props: { models, selectedModel: models[0] },
     });
-    const trigger = wrapper.get("button[aria-label='MiniMax CN / MiniMax-M3']");
+    const trigger = wrapper.get("button");
 
     // 菜单内容 portal 到 body：开合、方向键、Escape 与焦点归还都归 primitive，
     // 所以断言走 document 而不是 wrapper 子树。

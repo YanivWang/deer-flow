@@ -67,6 +67,35 @@ describe("WorkspaceToaster", () => {
     wrapper.unmount();
     toast.clear();
   });
+
+  /*
+    与 React 用的 sonner 同一个形状：region 常驻、列表按需。常驻的 region 是
+    live region 的挂载点——它要是随 toast 一起出现，读屏器根本来不及播报第一条。
+  */
+  it("keeps the live region mounted and the list only while toasts exist", async () => {
+    const { wrapper, toast } = mountWithToast(WorkspaceToaster);
+    const region = document.querySelector<HTMLElement>(
+      '[aria-label="Notifications alt+T"]',
+    )!;
+    expect(region.tagName).toBe("SECTION");
+    expect(region.getAttribute("aria-live")).toBe("polite");
+    expect(document.querySelector("ol")).toBeNull();
+
+    toast.success("Copied");
+    await flushPromises();
+    const list = document.querySelector<HTMLElement>("ol")!;
+    expect(list).not.toBeNull();
+
+    // 可访问名里写了 alt+T，热键就必须真的把焦点送进列表。
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { altKey: true, code: "KeyT" }),
+    );
+    await flushPromises();
+    expect(document.activeElement).toBe(list);
+
+    wrapper.unmount();
+    toast.clear();
+  });
 });
 
 describe("CommandPalette", () => {

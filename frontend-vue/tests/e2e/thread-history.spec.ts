@@ -850,7 +850,7 @@ test.describe("Thread history", () => {
       page.getByText("What might be the trends and opportunities in 2026?"),
     ).toBeVisible();
     await expect(page.locator("[data-sidebar='sidebar']")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Submit" })).toBeDisabled();
     await expect(page.getByTestId("browser-trigger")).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: "Scheduled tasks" }),

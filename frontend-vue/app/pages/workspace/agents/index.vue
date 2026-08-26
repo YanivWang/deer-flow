@@ -12,12 +12,12 @@ import AgentCard from "@/components/workspace/agents/AgentCard.vue";
 import AgentSettingsDialog from "@/components/workspace/agents/AgentSettingsDialog.vue";
 import { useAgents } from "@/composables/useAgents";
 import { useModels } from "@/composables/useModels";
-import { useWorkspaceFeatures } from "@/composables/useWorkspaceFeatures";
+import { useAgentsApiEnabled } from "@/composables/useWorkspaceFeatures";
 import type { Agent, UpdateAgentRequest } from "@/core/agents/types";
 
 definePageMeta({ layout: "workspace" });
 const { $i18n } = useNuxtApp();
-const features = useWorkspaceFeatures();
+const features = useAgentsApiEnabled();
 const featureEnabled = computed(
   () => features.loaded.value && features.agentsApiEnabled.value,
 );

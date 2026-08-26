@@ -143,7 +143,7 @@ describe("persisted message surfaces", () => {
     expect(
       wrapper
         .get("[data-testid='message-list']")
-        .findAll(":scope > li")
+        .findAll(":scope > [data-role]")
         .every((item) => item.attributes("data-role")),
     ).toBe(true);
 
@@ -169,7 +169,7 @@ describe("persisted message surfaces", () => {
     expect(list.element.children).toHaveLength(50);
     expect(
       [...list.element.children].every(
-        (item) => item.tagName === "LI" && item.getAttribute("data-role"),
+        (item) => item.tagName === "DIV" && item.getAttribute("data-role"),
       ),
     ).toBe(true);
   });

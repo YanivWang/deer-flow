@@ -778,7 +778,6 @@ onUnmounted(() => {
   <div
     :data-testid="testId"
     role="log"
-    :aria-label="$i18n.t.value.messages.conversation"
     class="min-h-0 flex-1 transition-[padding]"
   >
     <div
@@ -830,15 +829,21 @@ onUnmounted(() => {
         data-testid="message-list-content"
         class="mx-auto w-full max-w-[var(--container-width-md)] px-4 pt-8 pb-[72px]"
       >
-        <ul
+        <!--
+          消息流是 div 不是 ul：React 的 ConversationContent
+          （frontend/src/components/ai-elements/conversation.tsx）就是一个纯 div，
+          于是它在可访问性树里什么都不留下。这里若用 ul/li，空会话会凭空多出一个
+          list、有消息时每条又多一个 listitem——读屏器会把一段对话读成一份清单。
+        -->
+        <div
           data-testid="message-list"
           :style="{
             paddingTop: `${virtualTopHeight}px`,
             paddingBottom: `${virtualBottomHeight}px`,
           }"
-          class="flex w-full list-none flex-col gap-8"
+          class="flex w-full flex-col gap-8"
         >
-          <li
+          <div
             v-for="entry in renderedGroups"
             :key="entry.group.id ?? entry.index"
             :data-index="entry.index"
@@ -1088,8 +1093,8 @@ onUnmounted(() => {
               <Clock3 :size="16" />
               <span>{{ durationLabel(duration.durationSeconds) }}</span>
             </div>
-          </li>
-        </ul>
+          </div>
+        </div>
         <div
           v-if="streaming && !hasActiveAssistantText"
           role="status"

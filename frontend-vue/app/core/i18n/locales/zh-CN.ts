@@ -25,6 +25,25 @@ export const zhCN: Translations = {
     localName: "中文",
   },
 
+  /*
+    Primitive 层的可访问名。**两份词典里的值刻意相同**，都是英文。
+
+    React 把这几串写死在 vendored primitive 里、没有接进词典：shadcn sidebar 的
+    "Toggle Sidebar"（frontend/src/components/ui/sidebar.tsx）、ai-elements
+    prompt-input 的 "Submit"/"Stop"、sonner 的 containerAriaLabel + 热键后缀。
+    实测中文界面下 React 读屏器听到的也是这几串英文。对齐的判据是「两边听到同一句」，
+    所以这里照抄，而不是各自翻译——一边中文一边英文，就不是同一个控件了。
+
+    放进词典而不是写死在 SFC 里，是为了让这个决定留在一个能被 review、能被一次性
+    翻掉的地方：上游哪天把它们接进自己的 i18n，改这四行即可。
+  */
+  primitives: {
+    toggleSidebar: "Toggle Sidebar",
+    submit: "Submit",
+    stop: "Stop",
+    notifications: "Notifications alt+T",
+  },
+
   // Common
   common: {
     home: "首页",
@@ -1276,8 +1295,6 @@ export const zhCN: Translations = {
   },
   navigation: {
     workspace: "工作区导航",
-    expandSidebar: "展开侧栏",
-    collapseSidebar: "收起侧栏",
     closeSidebar: "关闭侧栏",
     pinnedChat: "已置顶对话",
     channel: (label) => `${label} 渠道`,
