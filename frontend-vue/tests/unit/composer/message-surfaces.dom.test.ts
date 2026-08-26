@@ -147,7 +147,9 @@ describe("persisted message surfaces", () => {
         .every((item) => item.attributes("data-role")),
     ).toBe(true);
 
-    await wrapper.get("button[aria-label='Copy response']").trigger("click");
+    // 复制按钮没有可访问名（React 的 CopyButton 也没有），所以按位置取：
+    // 它是这一排动作里的第一颗。
+    await actions.findAll("button")[0]!.trigger("click");
     expect(globalThis.navigator.clipboard.writeText).toHaveBeenCalledWith(
       expect.stringContaining("Answer"),
     );

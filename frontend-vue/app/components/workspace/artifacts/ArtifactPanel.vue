@@ -7,7 +7,7 @@
   【边界与注意】   drafts/离开决策由父层唯一 owner 持有；本组件只拥有当前 path 的短生命周期 I/O。
 */
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { Eye, X } from "lucide-vue-next";
+import { Code2, Eye, X } from "lucide-vue-next";
 
 import ArtifactActions from "./ArtifactActions.vue";
 import ArtifactEditor from "./ArtifactEditor.vue";
@@ -475,26 +475,52 @@ onBeforeUnmount(() => {
         :options="options"
         @select="emit('select', $event)"
       />
-      <strong v-else class="min-w-0 flex-1 truncate text-sm">{{
-        filename
-      }}</strong>
-      <button
+      <!--
+        write_file 草稿的标题是**普通文字**，不是 strong：React 这一支渲染的是
+        `<div className="px-2">{getFileName(filepath)}</div>`
+        （frontend/src/components/workspace/artifacts/artifact-file-detail.tsx 的
+        isWriteFile 分支）。strong 会让读屏器把文件名念成强调内容。
+      -->
+      <div v-else class="min-w-0 flex-1 truncate px-2 text-sm font-medium">
+        {{ filename }}
+      </div>
+      <!--
+        代码 / 预览是一对**单选**，不是一颗会变名字的开关。
+
+        React 用 ToggleGroup type="single"，也就是一个 group 里两个 radio，当前档位
+        标 checked（同上文件的 ArtifactHeader）。原来的写法一颗按钮两种名字：读屏器
+        每次切换都会重念一遍控件，而且用户听不到「一共有两档、现在在第几档」。
+        两个 radio 都只有图标、没有可访问名——React 的 ToggleGroupItem 里就只有一个
+        图标，这一点也照抄。
+      -->
+      <div
         v-if="
           policy.kind === 'text' &&
           ['html', 'markdown'].includes(policy.language) &&
           previewAllowed
         "
-        type="button"
-        :aria-label="
-          viewMode === 'preview'
-            ? $i18n.t.value.artifacts.actions.showCode
-            : $i18n.t.value.artifacts.actions.showPreview
-        "
-        class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-        @click="viewMode = viewMode === 'preview' ? 'code' : 'preview'"
+        role="group"
+        class="flex items-center gap-0"
       >
-        <Eye :size="15" />
-      </button>
+        <button
+          type="button"
+          role="radio"
+          :aria-checked="viewMode === 'code'"
+          class="hover:bg-accent flex size-8 items-center justify-center rounded-md rounded-r-none border"
+          @click="viewMode = 'code'"
+        >
+          <Code2 class="size-4" />
+        </button>
+        <button
+          type="button"
+          role="radio"
+          :aria-checked="viewMode === 'preview'"
+          class="hover:bg-accent flex size-8 items-center justify-center rounded-md rounded-l-none border border-l-0"
+          @click="viewMode = 'preview'"
+        >
+          <Eye class="size-4" />
+        </button>
+      </div>
       <ArtifactActions
         :can-edit="canEdit"
         :editing="editing"
@@ -518,7 +544,7 @@ onBeforeUnmount(() => {
       />
       <button
         type="button"
-        :aria-label="$i18n.t.value.artifacts.actions.close"
+        :aria-label="$i18n.t.value.common.close"
         class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
         @click="emit('close')"
       >

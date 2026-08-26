@@ -63,7 +63,7 @@ test("locale switch updates an open dialog, product surfaces, future errors and 
   await dialog.getByRole("button", { name: zhCN.common.close }).click();
   await expect(page.getByPlaceholder(zhCN.inputBox.placeholder)).toBeVisible();
   await expect(page.getByLabel(zhCN.browser.trigger)).toBeVisible();
-  await expect(page.getByLabel(zhCN.artifacts.actions.copy)).toBeVisible();
+  await expect(page.getByLabel(zhCN.clipboard.copyToClipboard)).toBeVisible();
   const sidebar = page.locator("#workspace-sidebar");
   await expect(
     sidebar.getByRole("link", { name: zhCN.sidebar.agents }),
@@ -80,6 +80,15 @@ test("locale switch updates an open dialog, product surfaces, future errors and 
       value: { writeText: async () => Promise.reject(new Error("denied")) },
     });
   });
+  /*
+    这条线程带 write_file 产物，面板自动打开，于是侧栏被收起——React 在
+    artifacts context 的 select() 里做的就是这件事。会话列表在收起态下不渲染
+    （React 的 WorkspaceSidebar 直接 `{isSidebarOpen && <RecentChatList />}`），
+    所以要先把侧栏展开回来。收起态的触发器要悬停头部才出现。
+  */
+  const sidebarPanel = page.locator("#workspace-sidebar");
+  await sidebarPanel.locator('[data-sidebar="header"]').hover();
+  await sidebarPanel.locator('[data-sidebar="trigger"]').click();
   const row = page
     .locator('[data-sidebar="menu-item"]')
     .filter({ hasText: "dynamic title" });

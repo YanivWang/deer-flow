@@ -142,9 +142,11 @@ test("keeps artifact trigger after stream values omit artifacts", async ({
 
   await artifactTrigger.click();
 
-  const artifactsPanel = page.locator("#artifacts");
-  await expect(artifactsPanel.getByText("report.md")).toBeVisible();
-  await artifactsPanel.getByText("report.md").click();
+  // 入口只开面板，不替用户选文件：先落在清单上，点开才进详情。
+  const overview = page.getByTestId("artifact-overview");
+  await expect(overview.getByText("report.md")).toBeVisible();
+  await overview.getByText("report.md").click();
 
+  const artifactsPanel = page.locator("#artifacts");
   await expect(artifactsPanel.getByRole("combobox")).toContainText("report.md");
 });

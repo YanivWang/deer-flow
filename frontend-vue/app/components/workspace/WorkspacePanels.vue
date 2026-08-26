@@ -7,7 +7,14 @@
 -->
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
 import { Pane, Splitpanes, type SplitpanesResizedPayload } from "splitpanes";
 
 const props = defineProps<{
@@ -27,6 +34,26 @@ const COLLAPSE_THRESHOLD = 8;
 const root = ref<HTMLElement | null>(null);
 const mainRegion = ref<HTMLElement | null>(null);
 const panelRegion = ref<HTMLElement | null>(null);
+
+/*
+  地标还是对话框，取决于断点。
+
+  React 用两套实现：宽屏是 `<aside id="artifacts">`，**没有 role**，所以读屏器
+  听到的是一个 complementary 地标，聊天区依然可达；窄屏才换成 Sheet，也就是一个
+  真的模态 dialog（frontend/src/components/workspace/chats/chat-box.tsx 的
+  `if (isMobile)` 分支）。两边给的语义不同不是疏忽——宽屏面板是并排的第二栏，
+  把它报成 dialog 等于告诉用户「其余内容现在不可用」，而它明明可用。
+
+  断点用 JS 判定而不是只靠 CSS：role 是属性不是样式，媒体查询改不了它。
+  SSR 阶段当作宽屏，与 React 的 useIsMobile 在服务端按桌面渲染一致。
+*/
+const NARROW_QUERY = "(max-width: 767px)";
+const isNarrow = ref(false);
+let narrowMedia: MediaQueryList | null = null;
+function syncNarrow(event: MediaQueryList | MediaQueryListEvent) {
+  isNarrow.value = event.matches;
+}
+const asDialog = computed(() => props.open && isNarrow.value);
 
 const sideSize = computed(() =>
   props.open ? clampOpenSize(props.panelSize) : 0,
@@ -63,8 +90,16 @@ function syncSplitterDisabled() {
   else splitter.setAttribute("aria-disabled", "true");
 }
 onMounted(async () => {
+  narrowMedia = globalThis.matchMedia?.(NARROW_QUERY) ?? null;
+  if (narrowMedia) {
+    syncNarrow(narrowMedia);
+    narrowMedia.addEventListener("change", syncNarrow);
+  }
   await nextTick();
   syncSplitterDisabled();
+});
+onBeforeUnmount(() => {
+  narrowMedia?.removeEventListener("change", syncNarrow);
 });
 watch(() => props.open, syncSplitterDisabled, { flush: "post" });
 
@@ -114,8 +149,8 @@ watch(
       >
         <aside
           ref="panelRegion"
-          :role="open ? 'dialog' : undefined"
-          :aria-label="open ? panelLabel : undefined"
+          :role="asDialog ? 'dialog' : undefined"
+          :aria-label="asDialog ? panelLabel : undefined"
           :aria-hidden="!open"
           :inert="!open"
           class="size-full min-h-0 min-w-0 overflow-hidden"

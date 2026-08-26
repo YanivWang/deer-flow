@@ -175,6 +175,22 @@ export function useArtifactsPanel(options: {
     return true;
   }
 
+  /*
+    选中 artifact 会把侧栏收起。
+
+    这是 React 的行为，写在 artifacts context 的 `select()` 里
+    （frontend/src/components/workspace/artifacts/context.tsx 调
+    `useSidebar().setOpen(false)`）：右侧面板一展开，聊天区就被挤到只剩一半，
+    收起侧栏是把宽度还给正文。自动选中也照收——React 那边没有分支。
+
+    用事件而不是直接改状态：侧栏的收起态由 ThreadSidebar 拥有（连同它的
+    cookie 持久化），而这个 composable 住在 chat 页里。
+  */
+  function collapseSidebar() {
+    if (!import.meta.client) return;
+    globalThis.dispatchEvent(new CustomEvent("deerflow:collapse-sidebar"));
+  }
+
   function select(path: string, automatic = false) {
     if (automatic && !autoSelect.value) return false;
     if (
@@ -191,6 +207,7 @@ export function useArtifactsPanel(options: {
       }
     }
     if (!automatic) autoSelect.value = false;
+    collapseSidebar();
     if (!automatic || autoOpen.value) setOpen(true);
     return true;
   }

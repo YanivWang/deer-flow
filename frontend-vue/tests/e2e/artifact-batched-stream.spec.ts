@@ -287,10 +287,13 @@ test("fails closed for Office/archive files and requires a full D3-valid HTML re
   });
 
   await page.goto(`/workspace/chats/${POLICY_THREAD_ID}`);
+  // 头部入口只把面板打开，不替用户选文件（React 的 ArtifactTrigger 同理），
+  // 所以要先从清单里点开一个才进详情。
   await page.getByTestId("artifact-trigger").click();
+  await page.getByTestId("artifact-overview").getByText("report.docx").click();
   const panel = page.locator("#artifacts");
   await expect(panel.getByText("Download-only file.")).toBeVisible();
-  await expect(panel.getByLabel("Edit artifact")).toHaveCount(0);
+  await expect(panel.getByLabel("Edit", { exact: true })).toHaveCount(0);
 
   await panel.getByRole("combobox").click();
   await panel.getByRole("option", { name: "bundle.zip" }).click();
@@ -339,8 +342,9 @@ test("uses the same dirty guard for file switch and panel close", async ({
 
   await page.goto(`/workspace/chats/${DIRTY_THREAD_ID}`);
   await page.getByTestId("artifact-trigger").click();
+  await page.getByTestId("artifact-overview").getByText("first.txt").click();
   const panel = page.locator("#artifacts");
-  await panel.getByLabel("Edit artifact").click();
+  await panel.getByLabel("Edit", { exact: true }).click();
   await artifactEditorInput(panel).fill("dirty draft");
 
   page.once("dialog", (dialog) => dialog.dismiss());
@@ -350,6 +354,6 @@ test("uses the same dirty guard for file switch and panel close", async ({
   await expect(panel.getByRole("combobox")).toContainText("first.txt");
 
   page.once("dialog", (dialog) => dialog.accept());
-  await panel.getByLabel("Close artifacts").click();
+  await panel.getByLabel("Close", { exact: true }).click();
   await expect(panel).toBeHidden();
 });

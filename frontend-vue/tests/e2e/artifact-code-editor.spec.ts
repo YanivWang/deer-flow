@@ -89,7 +89,7 @@ async function openEditor(
   await expect(page.getByText(basename)).toBeVisible({ timeout: 15_000 });
   await page.getByText(basename).first().click();
   const panel = page.locator("#artifacts");
-  await panel.getByLabel("Edit artifact").click();
+  await panel.getByLabel("Edit", { exact: true }).click();
   const editor = artifactEditorInput(panel);
   await expect(editor).toBeVisible();
   return { panel, editor, puts };
@@ -168,10 +168,10 @@ test.describe("artifact code editor", () => {
 
     await editor.press(`${mod}+a`);
     await editor.pressSequentially("value = 1\n");
-    await expect(panel.getByLabel("Save artifact")).toBeEnabled();
+    await expect(panel.getByLabel("Save", { exact: true })).toBeEnabled();
 
     await editor.press(`${mod}+s`);
-    await expect(panel.getByLabel("Edit artifact")).toBeVisible();
+    await expect(panel.getByLabel("Edit", { exact: true })).toBeVisible();
 
     expect(puts).toHaveLength(1);
     expect(puts[0]?.url).toContain(

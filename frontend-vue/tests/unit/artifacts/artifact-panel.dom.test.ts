@@ -191,9 +191,7 @@ describe("ArtifactPanel", () => {
       false,
     );
     expect(wrapper.text()).toContain("Download-only file");
-    expect(wrapper.find("button[aria-label='Edit artifact']").exists()).toBe(
-      false,
-    );
+    expect(wrapper.find("button[aria-label='Edit']").exists()).toBe(false);
     expect(mocks.save).not.toHaveBeenCalled();
     wrapper.unmount();
   });
@@ -285,11 +283,11 @@ describe("ArtifactPanel", () => {
     const textPanel = mountPanel("/mnt/user-data/outputs/report.txt");
     await flushPromises();
     await textPanel.wrapper
-      .get("button[aria-label='Copy artifact']")
+      .get("button[aria-label='Copy to clipboard']")
       .trigger("click");
     expect(mocks.copy).toHaveBeenCalledWith("copy me");
     await textPanel.wrapper
-      .get("button[aria-label='Open artifact']")
+      .get("button[aria-label='Open in new window']")
       .trigger("click");
     await flushPromises();
     expect(textPanel.wrapper.get("[role='alert']").text()).toContain(
@@ -300,9 +298,9 @@ describe("ArtifactPanel", () => {
 
     const nonAdmin = mountPanel("/mnt/user-data/outputs/tool.skill");
     await flushPromises();
-    expect(
-      nonAdmin.wrapper.find("button[aria-label='Install skill']").exists(),
-    ).toBe(false);
+    expect(nonAdmin.wrapper.find("button[aria-label='Install']").exists()).toBe(
+      false,
+    );
     nonAdmin.wrapper.unmount();
 
     mocks.install.mockResolvedValueOnce({
@@ -313,9 +311,7 @@ describe("ArtifactPanel", () => {
     const admin = mountPanel("/mnt/user-data/outputs/tool.skill", {
       isAdmin: true,
     });
-    await admin.wrapper
-      .get("button[aria-label='Install skill']")
-      .trigger("click");
+    await admin.wrapper.get("button[aria-label='Install']").trigger("click");
     await flushPromises();
     expect(mocks.install).toHaveBeenCalledWith({
       thread_id: "thread-1",
@@ -337,9 +333,9 @@ describe("ArtifactPanel", () => {
     });
     const { wrapper } = mountPanel("/mnt/user-data/outputs/report.txt");
     await flushPromises();
-    await wrapper.get("button[aria-label='Edit artifact']").trigger("click");
+    await wrapper.get("button[aria-label='Edit']").trigger("click");
     await typeInEditor(wrapper, "saved");
-    await wrapper.get("button[aria-label='Save artifact']").trigger("click");
+    await wrapper.get("button[aria-label='Save']").trigger("click");
     await flushPromises();
 
     expect(mocks.save).toHaveBeenCalledWith({
@@ -364,9 +360,9 @@ describe("ArtifactPanel", () => {
       );
       const { wrapper } = mountPanel("/mnt/user-data/outputs/report.txt");
       await flushPromises();
-      await wrapper.get("button[aria-label='Edit artifact']").trigger("click");
+      await wrapper.get("button[aria-label='Edit']").trigger("click");
       await typeInEditor(wrapper, "my draft");
-      await wrapper.get("button[aria-label='Save artifact']").trigger("click");
+      await wrapper.get("button[aria-label='Save']").trigger("click");
       await flushPromises();
 
       expect(wrapper.get("[role='alert']").text()).toContain(
@@ -384,18 +380,16 @@ describe("ArtifactPanel", () => {
     );
     const { wrapper } = mountPanel("/mnt/user-data/outputs/report.txt");
     await flushPromises();
-    await wrapper.get("button[aria-label='Edit artifact']").trigger("click");
+    await wrapper.get("button[aria-label='Edit']").trigger("click");
     await typeInEditor(wrapper, "my draft");
-    await wrapper.get("button[aria-label='Save artifact']").trigger("click");
+    await wrapper.get("button[aria-label='Save']").trigger("click");
     await flushPromises();
 
     expect(wrapper.get("[role='alert']").text()).toContain("revision changed");
     expect(
-      wrapper.get("button[aria-label='Save artifact']").attributes("disabled"),
+      wrapper.get("button[aria-label='Save']").attributes("disabled"),
     ).toBeDefined();
-    await wrapper
-      .get("button[aria-label='Discard artifact changes']")
-      .trigger("click");
+    await wrapper.get("button[aria-label='Discard changes']").trigger("click");
     expect(wrapper.find("[data-testid='artifact-editor']").exists()).toBe(
       false,
     );
@@ -417,14 +411,10 @@ describe("ArtifactPanel", () => {
       streaming: true,
     });
     await flushPromises();
-    await active.wrapper
-      .get("button[aria-label='Edit artifact']")
-      .trigger("click");
+    await active.wrapper.get("button[aria-label='Edit']").trigger("click");
     await typeInEditor(active.wrapper, "blocked");
     expect(
-      active.wrapper
-        .get("button[aria-label='Save artifact']")
-        .attributes("disabled"),
+      active.wrapper.get("button[aria-label='Save']").attributes("disabled"),
     ).toBeDefined();
     expect(mocks.save).not.toHaveBeenCalled();
     active.wrapper.unmount();
@@ -435,13 +425,9 @@ describe("ArtifactPanel", () => {
       .mockResolvedValueOnce(loaded("new server"));
     const stale = mountPanel("/mnt/user-data/outputs/old.txt");
     await flushPromises();
-    await stale.wrapper
-      .get("button[aria-label='Edit artifact']")
-      .trigger("click");
+    await stale.wrapper.get("button[aria-label='Edit']").trigger("click");
     await typeInEditor(stale.wrapper, "old draft");
-    await stale.wrapper
-      .get("button[aria-label='Save artifact']")
-      .trigger("click");
+    await stale.wrapper.get("button[aria-label='Save']").trigger("click");
     stale.selected.value = "/mnt/user-data/outputs/new.txt";
     await flushPromises();
     resolveSave({ sha256: "c".repeat(64) });

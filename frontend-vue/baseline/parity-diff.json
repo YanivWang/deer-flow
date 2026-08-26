@@ -146,16 +146,8 @@
       ]
     },
     "browser-feature/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- text: Previous question"
-      ],
-      "ariaOnlyVue": [
-        "- button \"Copy message\"",
-        "- button \"Copy response\"",
-        "- paragraph: Previous question"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
@@ -429,16 +421,8 @@
       "geometry": []
     },
     "user-message-plain-text/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- text: \"#include <stdio.h>\""
-      ],
-      "ariaOnlyVue": [
-        "- button \"Copy message\"",
-        "- button \"Copy response\"",
-        "- paragraph: \"#include <stdio.h>\""
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
@@ -498,22 +482,8 @@
       ]
     },
     "branch-thread/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button",
-        "- button",
-        "- text: First question",
-        "- text: Second question"
-      ],
-      "ariaOnlyVue": [
-        "- button \"Copy message\"",
-        "- button \"Copy message\"",
-        "- button \"Copy response\"",
-        "- button \"Copy response\"",
-        "- paragraph: First question",
-        "- paragraph: Second question"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
@@ -526,14 +496,10 @@
     },
     "subtask-card/desktop/light/en-US": {
       "ariaOnlyReact": [
-        "- button",
-        "- text: Executing subtask",
-        "- text: Start a subtask and then stop before the task tool returns."
+        "- text: Executing subtask"
       ],
       "ariaOnlyVue": [
-        "- article:",
-        "- button \"Copy message\"",
-        "- paragraph: Start a subtask and then stop before the task tool returns."
+        "- article:"
       ],
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
@@ -549,96 +515,26 @@
       ]
     },
     "artifact-preview/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Close\"",
-        "- button \"Copy to clipboard\"",
-        "- complementary:",
-        "- group:",
-        "- radio",
-        "- radio [checked]",
-        "- text: Create a report artifact",
-        "- text: DF",
-        "- text: Writing report artifact /artifact-fixtures/report.html",
-        "- text: report.html"
-      ],
-      "ariaOnlyVue": [
-        "- /url: /workspace/chats/00000000-0000-0000-0000-000000000001",
-        "- button \"/artifact-fixtures/report.html\"",
-        "- button \"Close artifacts\"",
-        "- button \"Copy artifact\"",
-        "- button \"Copy message\"",
-        "- button \"More\"",
-        "- button \"Settings and more\"",
-        "- button \"Show code\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Writing report artifact\"",
-        "- dialog \"Artifacts\":",
-        "- link \"Artifact preview\":",
-        "- list:",
-        "- listitem:",
-        "- paragraph: Create a report artifact",
-        "- strong: report.html",
-        "- text: DeerFlow",
-        "- text: Recent chats"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
         "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
-      "geometry": [
-        "text:/artifact-fixtures/report.html x React=122 Vue=469.5 Δ347.5",
-        "text:/artifact-fixtures/report.html y React=192 Vue=164 Δ-28"
-      ]
+      "geometry": []
     },
     "artifact-panel-resize/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- button \"Close\"",
-        "- button \"Copy to clipboard\"",
-        "- complementary:",
-        "- group:",
-        "- radio",
-        "- radio [checked]",
-        "- text: Create a report artifact",
-        "- text: DF",
-        "- text: Writing report artifact /artifact-fixtures/report.html",
-        "- text: report.html"
-      ],
-      "ariaOnlyVue": [
-        "- /url: /workspace/chats/00000000-0000-0000-0000-000000000001",
-        "- button \"/artifact-fixtures/report.html\"",
-        "- button \"Close artifacts\"",
-        "- button \"Copy artifact\"",
-        "- button \"Copy message\"",
-        "- button \"More\"",
-        "- button \"Settings and more\"",
-        "- button \"Show code\"",
-        "- button \"Toggle Sidebar\"",
-        "- button \"Writing report artifact\"",
-        "- dialog \"Artifacts\":",
-        "- link \"Artifact panel resize\":",
-        "- list:",
-        "- listitem:",
-        "- paragraph: Create a report artifact",
-        "- strong: report.html",
-        "- text: DeerFlow",
-        "- text: Recent chats"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
         "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
-      "geometry": [
-        "text:/artifact-fixtures/report.html x React=122 Vue=469.5 Δ347.5",
-        "text:/artifact-fixtures/report.html y React=192 Vue=164 Δ-28"
-      ]
+      "geometry": []
     },
     "scheduled-tasks/desktop/light/en-US": {
       "ariaOnlyReact": [
@@ -821,7 +717,6 @@
         "- application:",
         "- button",
         "- button",
-        "- button",
         "- button \"Branch conversation\"",
         "- button \"Copy Code\":",
         "- button \"Download diagram\":",
@@ -841,9 +736,7 @@
         "- text: Previous question",
         "- text: mermaid"
       ],
-      "ariaOnlyVue": [
-        "- button \"Copy response\""
-      ],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
@@ -856,15 +749,9 @@
     },
     "workspace-changes/desktop/light/en-US": {
       "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- text: +8 -2 outputs/report.md +1 -1",
-        "- text: Create a report"
+        "- text: +8 -2 outputs/report.md +1 -1"
       ],
       "ariaOnlyVue": [
-        "- button \"Copy message\"",
-        "- button \"Copy response\"",
-        "- paragraph: Create a report",
         "- text: +8-2 outputs/report.md Modified +1-1"
       ],
       "requestsOnlyReact": [
@@ -878,16 +765,8 @@
       ]
     },
     "streaming-reasoning-order/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- text: Who are you?"
-      ],
-      "ariaOnlyVue": [
-        "- button \"Copy message\"",
-        "- button \"Copy response\"",
-        "- paragraph: Who are you?"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
@@ -899,69 +778,26 @@
       ]
     },
     "artifact-stream-state/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- button",
-        "- button",
-        "- text: Create a markdown report"
-      ],
-      "ariaOnlyVue": [
-        "- button \"Copy message\"",
-        "- button \"Copy response\"",
-        "- paragraph: Create a markdown report"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
         "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
-      "geometry": [
-        "testId:artifact-trigger x React=1158.2 Vue=1177.8 Δ19.6",
-        "testId:artifact-trigger width React=104.8 Vue=85.3 Δ-19.5",
-        "testId:artifact-trigger height React=36 Vue=32 Δ-4",
-        "testId:artifact-trigger fontSize React=14px Vue=12px"
-      ]
+      "geometry": []
     },
     "artifact-batched-stream/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- /url: /api/threads/00000000-0000-0000-0000-000000000001/artifacts/artifact-fixtures/batched-report.md?download=true",
-        "- button",
-        "- button",
-        "- button",
-        "- complementary:",
-        "- heading \"Artifacts\" [level=2]",
-        "- link \"Download\":",
-        "- list:",
-        "- main:",
-        "- text: Create a markdown report",
-        "- text: batched-report.md Markdown file"
-      ],
-      "ariaOnlyVue": [
-        "- alert: Path must start with /mnt/user-data",
-        "- button \"Close artifacts\"",
-        "- button \"Copy artifact\"",
-        "- button \"Copy message\"",
-        "- button \"Copy response\"",
-        "- button \"Download artifact\"",
-        "- button \"Open artifact\"",
-        "- button \"Show preview\"",
-        "- combobox \"Select artifact\": batched-report.md",
-        "- dialog \"Artifacts\":",
-        "- paragraph: Create a markdown report"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
       "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/artifacts/artifact-fixtures/batched-report.md"
+        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
       ],
-      "geometry": [
-        "testId:artifact-trigger x React=749 Vue=768.5 Δ19.5",
-        "testId:artifact-trigger width React=104.8 Vue=85.3 Δ-19.5",
-        "testId:artifact-trigger height React=36 Vue=32 Δ-4",
-        "testId:artifact-trigger fontSize React=14px Vue=12px"
-      ]
+      "geometry": []
     }
   }
 }

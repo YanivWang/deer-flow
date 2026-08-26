@@ -1040,21 +1040,13 @@ export interface Translations {
   artifacts: {
     actions: {
       select: string;
-      edit: string;
-      save: string;
-      discard: string;
-      exit: string;
-      copy: string;
-      open: string;
-      download: string;
-      install: string;
-      close: string;
       loadFull: string;
-      showCode: string;
-      showPreview: string;
       removeFile: (filename: string) => string;
     };
     previewTitle: string;
+    noSelectionTitle: string;
+    noSelectionDescription: string;
+    fileTypeLabel: (type: string) => string;
     editorLabel: string;
     loadFailed: string;
     saveFailed: string;
@@ -1082,7 +1074,6 @@ export interface Translations {
     loadingEarlier: string;
     tryAgain: string;
     actions: {
-      copyMessage: string;
       editAndRerun: string;
       copyResponse: string;
       branch: string;

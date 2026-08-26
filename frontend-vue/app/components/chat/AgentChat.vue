@@ -24,6 +24,7 @@ import ContextUsageBadge from "@/components/workspace/ContextUsageBadge.vue";
 import TodoList from "@/components/workspace/TodoList.vue";
 import TokenUsageIndicator from "@/components/chat/TokenUsageIndicator.vue";
 import WorkspacePanels from "@/components/workspace/WorkspacePanels.vue";
+import ArtifactOverview from "@/components/workspace/artifacts/ArtifactOverview.vue";
 import ArtifactTrigger from "@/components/workspace/artifacts/ArtifactTrigger.vue";
 import BrowserPanel from "@/components/workspace/browser-view/BrowserPanel.vue";
 import BrowserTrigger from "@/components/workspace/browser-view/BrowserTrigger.vue";
@@ -517,11 +518,18 @@ watch(
   },
   { immediate: true },
 );
+/*
+  artifacts 面板开着就是开着，与「有没有选中文件」无关。
+
+  React 的 activeRightPanel 只看 artifactsOpen（frontend/src/components/workspace/chats/chat-box.tsx），
+  没选中文件时面板落在文件清单上，而不是不开。原来这里多要一个 selectedArtifact，
+  于是头部入口必须先替用户选一个文件，面板才肯出现——那正是下面 showArtifacts()
+  里那段自动选中的由来。
+*/
 const activePanel = computed<"artifacts" | "sidecar" | "browser" | null>(() => {
   if (browserOpen.value && browserEnabled.value) return "browser";
   if (sidecar.open.value) return "sidecar";
-  if (artifactPanel.open.value && artifactPanel.selectedArtifact.value)
-    return "artifacts";
+  if (artifactPanel.open.value) return "artifacts";
   return null;
 });
 const panelOpen = computed(() => activePanel.value !== null);
@@ -576,15 +584,13 @@ function askInSidecar(payload: {
   sidecar.openContext(next);
 }
 
+/*
+  只开面板，不替用户选文件——React 的 ArtifactTrigger 就只有
+  `sidecar?.close(); setArtifactsOpen(true);`
+  （frontend/src/components/workspace/artifacts/artifact-trigger.tsx）。
+  自动选中看起来省一步，代价是面板会去拉那个文件的内容，用户并没有要求它这么做。
+*/
 function showArtifacts() {
-  const first = artifactPanel.artifacts.value[0];
-  if (
-    !artifactPanel.selectedArtifact.value &&
-    first &&
-    !artifactPanel.select(first)
-  ) {
-    return;
-  }
   if (!artifactPanel.setOpen(true)) return;
   browserOpen.value = false;
   sidecar.close();
@@ -1649,6 +1655,18 @@ onUnmounted(() => {
       </section>
     </template>
     <template #panel>
+      <ArtifactOverview
+        v-if="
+          activePanel === 'artifacts' &&
+          routeThreadId &&
+          !artifactPanel.selectedArtifact.value
+        "
+        :thread-id="routeThreadId"
+        :artifacts="artifactPanel.artifacts.value"
+        :is-mock="isDemo"
+        @close="artifactPanel.close()"
+        @select="openArtifact($event)"
+      />
       <ArtifactPanel
         v-if="
           activePanel === 'artifacts' &&

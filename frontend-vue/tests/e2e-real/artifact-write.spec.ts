@@ -164,7 +164,7 @@ test("real Gateway streams a write-file draft into the artifact panel", async ({
   await expect(
     formalPanel.getByText("server baseline", { exact: true }),
   ).toBeVisible({ timeout: 30_000 });
-  await formalPanel.getByLabel("Edit artifact").click();
+  await formalPanel.getByLabel("Edit", { exact: true }).click();
   await artifactEditorInput(formalPanel).fill("vue draft survives");
 
   const concurrentPut = await context.request.put(noteUrl, {
@@ -179,7 +179,7 @@ test("real Gateway streams a write-file draft into the artifact panel", async ({
       response.request().method() === "PUT" &&
       response.url().includes("/artifacts/mnt/user-data/outputs/note.txt"),
   );
-  await formalPanel.getByLabel("Save artifact").click();
+  await formalPanel.getByLabel("Save", { exact: true }).click();
   const conflictResponse = await conflictResponsePromise;
   expect(conflictResponse.status()).toBe(412);
   expect(conflictResponse.request().postDataJSON()).toEqual({
@@ -192,7 +192,7 @@ test("real Gateway streams a write-file draft into the artifact panel", async ({
   await expect(artifactEditorInput(formalPanel)).toHaveText(
     "vue draft survives",
   );
-  await formalPanel.getByLabel("Discard artifact changes").click();
+  await formalPanel.getByLabel("Discard changes", { exact: true }).click();
 
   const uploads = [
     {
@@ -231,7 +231,9 @@ test("real Gateway streams a write-file draft into the artifact panel", async ({
     await selectPresentedArtifact(page, threadId, path);
     const policyPanel = page.locator("#artifacts");
     await expect(policyPanel.getByText("Download-only file.")).toBeVisible();
-    await expect(policyPanel.getByLabel("Edit artifact")).toHaveCount(0);
+    await expect(policyPanel.getByLabel("Edit", { exact: true })).toHaveCount(
+      0,
+    );
     await expect(policyPanel.getByTestId("artifact-editor")).toHaveCount(0);
     expect(artifactGets.some((url) => url.includes(file.name))).toBe(false);
   }

@@ -110,6 +110,18 @@ function toggleSidebar() {
   }
 }
 
+/*
+  收起（不是切换）。React 在选中 artifact 时调 `useSidebar().setOpen(false)`
+  （frontend/src/components/workspace/artifacts/context.tsx），也就是把桌面侧栏
+  收起并写进同一个 cookie；`openMobile` 不受影响。这里照同样的语义实现，
+  用一个**独立**事件而不是给 toggle 加参数：一个叫 toggle 的事件有时不切换，
+  是下一个读者最容易读错的那种代码。
+*/
+function collapseSidebar() {
+  if (collapsed.value) return;
+  setCollapsed(true);
+}
+
 function onWindowKeydown(event: KeyboardEvent) {
   if (event.key === "Escape" && mobileOpen.value) {
     event.preventDefault();
@@ -156,6 +168,7 @@ onMounted(() => {
     ?.slice(SIDEBAR_COOKIE.length + 1);
   if (persisted === "false") collapsed.value = true;
   globalThis.addEventListener("deerflow:toggle-sidebar", toggleSidebar);
+  globalThis.addEventListener("deerflow:collapse-sidebar", collapseSidebar);
   globalThis.addEventListener("keydown", onWindowKeydown);
   void threads.loadInitial();
   observer = new IntersectionObserver(
@@ -171,6 +184,7 @@ onUnmounted(() => {
   narrowMedia?.removeEventListener("change", syncNarrow);
   observer?.disconnect();
   globalThis.removeEventListener("deerflow:toggle-sidebar", toggleSidebar);
+  globalThis.removeEventListener("deerflow:collapse-sidebar", collapseSidebar);
   globalThis.removeEventListener("keydown", onWindowKeydown);
 });
 
@@ -280,14 +294,29 @@ function openSettingsDialog(section: "appearance" | "about") {
     ]"
     @keydown="keepMobileFocus"
   >
-    <div class="flex h-12 shrink-0 items-center justify-between px-2">
+    <!--
+      收起态换的是**整块**头部，不是给同一块加几个 class：React 的 WorkspaceHeader
+      在 collapsed 分支里渲染的是「DF + 悬停才出现的触发器」，展开分支才是
+      「DeerFlow + 常驻触发器」（frontend/src/components/workspace/workspace-header.tsx）。
+      触发器在收起态是 display:none 直到悬停，所以它此时**不在可访问性树里**——
+      不是看不见而已。
+    -->
+    <div
+      data-sidebar="header"
+      class="group/workspace-header flex h-12 shrink-0 items-center px-2"
+      :class="sidebarExpanded ? 'justify-between' : 'justify-center'"
+    >
       <div
         v-if="sidebarExpanded"
         class="text-primary cursor-default px-2 font-serif text-base"
       >
         DeerFlow
       </div>
-      <span v-else class="text-primary mx-auto font-serif">DF</span>
+      <span
+        v-else
+        class="text-primary font-serif group-hover/workspace-header:hidden"
+        >DF</span
+      >
       <!--
         名字恒为 "Toggle Sidebar"，也不带 aria-expanded：React 的 SidebarTrigger
         就是一个 sr-only 的固定名字。名字随收起态在"收起/展开"之间来回换，读屏器
@@ -296,7 +325,12 @@ function openSettingsDialog(section: "appearance" | "about") {
       <button
         type="button"
         data-sidebar="trigger"
-        class="hover:bg-sidebar-accent hidden size-8 items-center justify-center rounded-md md:flex"
+        class="hover:bg-sidebar-accent size-8 items-center justify-center rounded-md"
+        :class="
+          sidebarExpanded
+            ? 'hidden md:flex'
+            : 'hidden md:group-hover/workspace-header:flex'
+        "
         :aria-label="$i18n.t.value.primitives.toggleSidebar"
         @click="setCollapsed(!collapsed)"
       >
@@ -486,14 +520,18 @@ function openSettingsDialog(section: "appearance" | "about") {
       <li data-sidebar="menu-item">
         <DropdownMenu v-model:open="settingsOpen">
           <DropdownMenuTrigger>
+            <!--
+              名字只来自可见文字，不额外挂 aria-label / title：React 的
+              WorkspaceNavMenu 给这颗按钮的全部内容就是收起时一个图标、展开时
+              图标 + "Settings and more" 文本（frontend/src/components/workspace/workspace-nav-menu.tsx），
+              没有 sr-only 也没有 tooltip prop。补上名字听起来更好，但那样两个
+              应用在收起态念出来的东西不一样，而这份对照要求它们一样。
+            -->
             <button
               ref="settingsTrigger"
               type="button"
+              data-testid="workspace-nav-menu-trigger"
               class="text-muted-foreground hover:bg-sidebar-accent flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm"
-              :title="
-                collapsed ? $i18n.t.value.workspace.settingsAndMore : undefined
-              "
-              :aria-label="$i18n.t.value.workspace.settingsAndMore"
             >
               <Settings :size="16" class="shrink-0" />
               <span v-if="sidebarExpanded">{{

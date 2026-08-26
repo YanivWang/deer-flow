@@ -30,7 +30,7 @@ describe("locale contract", () => {
       "scheduledTasks.errors.loadRuns",
       "settings.appearance.systemDescription",
       "browser.urlPlaceholder",
-      "artifacts.actions.copy",
+      "artifacts.actions.select",
       "sidecar.placeholder",
       "channels.connectionExpired",
       "messages.actions.copyResponse",

@@ -63,6 +63,12 @@ test("desktop collapse persists an exact path/max-age cookie and survives reload
 
   await page.reload();
   await expect(sidebar).toHaveCSS("width", "48px");
+  // 收起态下触发器是 display:none，悬停头部才出现——React 的 WorkspaceHeader
+  // 在 collapsed 分支里用的就是 `hidden group-hover/workspace-header:block`
+  // （frontend/src/components/workspace/workspace-header.tsx）。所以先把头部
+  // 悬停出来，再点。
+  const header = sidebar.locator('[data-sidebar="header"]');
+  await header.hover();
   await sidebar.locator('[data-sidebar="trigger"]').click();
   await expect(sidebar).toHaveCSS("width", "256px");
   expect(

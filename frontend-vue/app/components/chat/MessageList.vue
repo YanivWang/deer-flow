@@ -843,6 +843,14 @@ onUnmounted(() => {
           }"
           class="flex w-full flex-col gap-8"
         >
+          <!--
+            人类消息也要 relative。少了它，那排「复制 / 编辑并重跑」的绝对定位工具条
+            就不再挂在这条气泡下面，而是挂在最近的定位祖先——整个 `section#chat`——上，
+            于是它跑到聊天区右下角，并且比聊天区多出 28px。后果不只是位置错：那 28px
+            让本该 overflow:hidden 的面板变得可滚动，一次焦点变化就能把整个聊天区
+            往上推 28px。React 的 AIElementMessage 两种角色都是 `relative w-full`
+            （frontend/src/components/workspace/messages/message-list-item.tsx）。
+          -->
           <div
             v-for="entry in renderedGroups"
             :key="entry.group.id ?? entry.index"
@@ -853,7 +861,7 @@ onUnmounted(() => {
             :data-role="entry.group.type === 'human' ? 'human' : 'ai'"
             :class="
               entry.group.type === 'human'
-                ? 'is-user group bg-secondary ml-auto w-fit max-w-full rounded-lg px-4 py-3 whitespace-pre-wrap'
+                ? 'is-user group bg-secondary relative ml-auto w-fit max-w-full rounded-lg px-4 py-3 whitespace-pre-wrap'
                 : 'group relative w-full'
             "
             @mouseup="onSelection(entry.index)"
@@ -904,7 +912,17 @@ onUnmounted(() => {
                   :thread-id="threadId"
                   :is-mock="isMock"
                 />
-                <p>{{ stripUploadedFilesTag(text(message)) }}</p>
+                <!--
+                  用 div 而不是 p：React 的人类消息是
+                  `<div className="wrap-break-word whitespace-pre-wrap">`
+                  （frontend/src/components/workspace/messages/message-list-item.tsx
+                  的 HumanMessageText）。输入框里打的是纯文本，不是一段文章——
+                  报成 paragraph，读屏器的「按段落浏览」会把每一条提问都当成正文段落，
+                  而 React 那边不会。
+                -->
+                <div class="wrap-break-word whitespace-pre-wrap">
+                  {{ stripUploadedFilesTag(text(message)) }}
+                </div>
                 <ReferenceAttachment
                   :references="messageReferences(message)"
                   test-id="message-reference-attachment"
@@ -913,9 +931,16 @@ onUnmounted(() => {
                 <div
                   class="text-muted-foreground absolute right-0 -bottom-7 flex gap-2 text-xs opacity-0 transition-opacity group-hover:opacity-100"
                 >
+                  <!--
+                    复制按钮**没有**可访问名：React 的 CopyButton 只有一个图标 +
+                    一个 tooltip，没有 aria-label、也没有 sr-only 文本
+                    （frontend/src/components/workspace/copy-button.tsx）。
+                    同一排里的「编辑并重跑」在 React 那边是有 aria-label 的，
+                    所以这不是「React 全都没写」，是这一颗确实没有。补上名字会让
+                    两个应用在同一颗按钮上念出不同的东西，而这份对照要求它们一样。
+                  -->
                   <button
                     type="button"
-                    :aria-label="$i18n.t.value.messages.actions.copyMessage"
                     @click="
                       copyMessage(
                         message.id ?? `human:${entry.index}`,

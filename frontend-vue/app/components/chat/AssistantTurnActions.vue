@@ -4,8 +4,13 @@
   【主要导出】     默认 AssistantTurnActions 组件
   【依赖关系】     Button L2 · Tooltip L2 · lucide-vue-next
   【边界与注意】   只拥有动作呈现与事件转发；动作可用性与业务执行仍由 MessageList 决定。
-                   图标按钮的 aria-label 与 tooltip 文案是同一份：tooltip 是给鼠标用户
-                   补上可见名字，不是可访问名字的来源，所以 aria-label 不能因此去掉。
+                   分支与重新生成的 aria-label 与 tooltip 文案是同一份：tooltip 是给鼠标
+                   用户补上可见名字，不是可访问名字的来源，所以 aria-label 不能因此去掉。
+                   复制是例外，且是照着 React 抄的例外：React 的 CopyButton
+                   （frontend/src/components/workspace/copy-button.tsx）只有图标和 tooltip，
+                   同一个文件里的「编辑并重跑」却写了 aria-label——所以它不是「React
+                   一律不写」，是这一颗确实没有名字。两个应用必须念出同一句，
+                   这里就跟着不写。
 -->
 
 <script setup lang="ts">
@@ -49,12 +54,7 @@ const emit = defineEmits<{
     >
       <Tooltip>
         <TooltipTrigger>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            :aria-label="copyLabel"
-            @click="emit('copy')"
-          >
+          <Button variant="ghost" size="icon-sm" @click="emit('copy')">
             <Check v-if="copied" class="text-green-500" />
             <Copy v-else />
           </Button>

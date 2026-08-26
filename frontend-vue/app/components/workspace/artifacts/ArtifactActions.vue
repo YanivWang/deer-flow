@@ -5,6 +5,13 @@
   【主要导出】     默认 ArtifactActions 组件
   【依赖关系】     ArtifactPanel
   【边界与注意】   只表达已判定的能力；HTTP、权限、revision 与 stale 仍由父层 owner 处理。
+                   名字用通用词典键（common.* / clipboard.* / artifactEditing.*），不是
+                   artifact 专有的一套。React 的 ArtifactAction 把 tooltip 原样写进
+                   sr-only，而它传的就是这些通用键
+                   （frontend/src/components/workspace/artifacts/artifact-file-detail.tsx），
+                   所以这里念出来的是 "Copy to clipboard" 而不是 "Copy artifact"。
+                   同一个动作在两个应用里必须叫同一个名字，否则一份共用的读屏脚本
+                   在其中一边找不到控件。
 */
 import {
   Copy,
@@ -46,7 +53,7 @@ const emit = defineEmits<{
   <button
     v-if="canEdit && !editing"
     type="button"
-    :aria-label="$i18n.t.value.artifacts.actions.edit"
+    :aria-label="$i18n.t.value.common.edit"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
     @click="emit('edit')"
   >
@@ -55,7 +62,7 @@ const emit = defineEmits<{
   <template v-if="editing">
     <button
       type="button"
-      :aria-label="$i18n.t.value.artifacts.actions.save"
+      :aria-label="$i18n.t.value.common.save"
       class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
       :disabled="streaming || saving || !dirty || conflict"
       @click="emit('save')"
@@ -65,7 +72,7 @@ const emit = defineEmits<{
     <button
       v-if="dirty"
       type="button"
-      :aria-label="$i18n.t.value.artifacts.actions.discard"
+      :aria-label="$i18n.t.value.artifactEditing.discard"
       class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
       @click="emit('discard')"
     >
@@ -73,7 +80,7 @@ const emit = defineEmits<{
     </button>
     <button
       type="button"
-      :aria-label="$i18n.t.value.artifacts.actions.exit"
+      :aria-label="$i18n.t.value.artifactEditing.exit"
       class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
       @click="emit('exit')"
     >
@@ -83,7 +90,7 @@ const emit = defineEmits<{
   <button
     v-if="canCopy"
     type="button"
-    :aria-label="$i18n.t.value.artifacts.actions.copy"
+    :aria-label="$i18n.t.value.clipboard.copyToClipboard"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
     @click="emit('copy')"
   >
@@ -92,7 +99,7 @@ const emit = defineEmits<{
   <button
     v-if="canOpen"
     type="button"
-    :aria-label="$i18n.t.value.artifacts.actions.open"
+    :aria-label="$i18n.t.value.common.openInNewWindow"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
     @click="emit('open')"
   >
@@ -101,7 +108,7 @@ const emit = defineEmits<{
   <button
     v-if="canDownload"
     type="button"
-    :aria-label="$i18n.t.value.artifacts.actions.download"
+    :aria-label="$i18n.t.value.common.download"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
     @click="emit('download')"
   >
@@ -110,7 +117,7 @@ const emit = defineEmits<{
   <button
     v-if="canInstall"
     type="button"
-    :aria-label="$i18n.t.value.artifacts.actions.install"
+    :aria-label="$i18n.t.value.common.install"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
     :disabled="installing"
     @click="emit('install')"

@@ -215,24 +215,28 @@ const browserPreviewURL = computed(() => {
 </script>
 
 <template>
+  <!--
+    整步可点，但**步骤本身不是控件**。
+
+    React 的 ChainOfThoughtStep 是一个带 onClick 的 div，标签是 div、路径是
+    Badge（span），两者都不是 button
+    （frontend/src/components/ai-elements/chain-of-thought.tsx 与
+    workspace/messages/message-group.tsx 的 write_file 分支）。Vue 这边原来把
+    标签和路径各做成一个 button：可访问性树里因此多出两颗按钮，而且两个
+    inline-flex 按钮会排在同一行——路径不再另起一行，量出来是它比 React 靠右 347px。
+  -->
   <div
     class="text-muted-foreground fade-in-0 slide-in-from-top-2 flex gap-2 text-sm"
+    :class="artifactTarget ? 'cursor-pointer' : undefined"
     :data-tool-name="name"
+    @click="artifactTarget && emit('artifact', artifactTarget)"
   >
     <div class="relative mt-0.5 shrink-0">
       <component :is="icon" :size="16" />
       <div class="bg-border absolute top-7 bottom-0 left-1/2 -mx-px w-px" />
     </div>
     <div class="min-w-0 flex-1 space-y-2 overflow-hidden">
-      <button
-        v-if="artifactTarget"
-        type="button"
-        class="hover:text-foreground text-left"
-        @click="emit('artifact', artifactTarget)"
-      >
-        {{ label }}
-      </button>
-      <div v-else>{{ label }}</div>
+      <div>{{ label }}</div>
 
       <div
         v-if="name === 'web_search' && webSearchResults.length"
@@ -290,17 +294,10 @@ const browserPreviewURL = computed(() => {
         {{ filePath }}
       </span>
 
-      <button
-        v-else-if="filePath && artifactTarget"
-        type="button"
-        class="bg-secondary text-secondary-foreground inline-flex max-w-full rounded-md px-2 py-0.5 text-left text-xs font-normal break-all"
-        @click="emit('artifact', artifactTarget)"
-      >
-        {{ filePath }}
-      </button>
       <span
         v-else-if="filePath && icon === NotebookPen"
         class="bg-secondary text-secondary-foreground inline-flex max-w-full rounded-md px-2 py-0.5 text-xs font-normal break-all"
+        :class="artifactTarget ? 'cursor-pointer' : undefined"
       >
         {{ filePath }}
       </span>

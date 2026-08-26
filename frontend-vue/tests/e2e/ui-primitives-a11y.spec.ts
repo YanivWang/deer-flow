@@ -51,7 +51,7 @@ test("settings dialog traps focus, closes on Escape, and returns focus to its tr
 }) => {
   await openWorkspace(page);
 
-  const trigger = page.locator('button[aria-label="Settings and more"]');
+  const trigger = page.getByTestId("workspace-nav-menu-trigger");
   await trigger.click();
   const menu = page.getByRole("menu");
   await expect(menu).toBeVisible();
@@ -82,8 +82,10 @@ test("settings-and-more menu is a real menu: arrow keys move, Escape restores fo
   await openWorkspace(page);
 
   // 菜单打开时整页背景（含触发器）被标记 aria-hidden——这是模态菜单该有的样子，
-  // 但也意味着 getByRole 在打开期间找不到触发器，所以这里按属性定位。
-  const trigger = page.locator('button[aria-label="Settings and more"]');
+  // 但也意味着 getByRole 在打开期间找不到触发器，所以这里按 testid 定位。
+  // 收起态下这颗按钮**没有**可访问名（React 的 WorkspaceNavMenu 只给它一个图标），
+  // 按名字定位会随侧栏状态时有时无。
+  const trigger = page.getByTestId("workspace-nav-menu-trigger");
   await expect(trigger).toHaveAttribute("aria-haspopup", "menu");
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
 
@@ -241,22 +243,33 @@ test("assistant actions keep their accessible name and gain a hover tooltip", as
 }) => {
   await openWorkspace(page, `/workspace/chats/${MOCK_THREAD_ID}`);
 
-  const copy = page
+  const branch = page
     .getByTestId("assistant-turn-actions")
-    .getByRole("button", { name: /copy/i })
+    .getByRole("button", { name: /branch/i })
     .first();
-  await expect(copy).toBeVisible();
+  await expect(branch).toBeVisible();
 
   // tooltip 只是补充：可访问名字仍然来自按钮自己的 aria-label，
   // 否则关掉 tooltip 的读屏器就读不到这个按钮是干什么的。
-  const label = await copy.getAttribute("aria-label");
+  const label = await branch.getAttribute("aria-label");
   expect(label?.trim()).toBeTruthy();
 
-  await copy.hover();
+  await branch.hover();
   const tooltip = page.locator('[data-slot="tooltip-content"]');
   await expect(tooltip.first()).toBeVisible({ timeout: 5_000 });
   await expect(tooltip.first()).toContainText(label!);
   // 读屏器读到的那份是 Reka 嵌在里面的 visually-hidden role="tooltip"：
   // 视觉层本身不承担语义。它被 1px clip 起来，所以按属性定位而不是按 role。
   await expect(tooltip.locator('[role="tooltip"]').first()).toHaveText(label!);
+
+  // 复制是这一排里唯一**没有**可访问名的一颗，因为 React 的 CopyButton 就没有
+  // （frontend/src/components/workspace/copy-button.tsx 只给了 tooltip）。
+  // 钉住这件事，免得下一次「顺手补个 aria-label」把两个应用又拆开。
+  const copy = page
+    .getByTestId("assistant-turn-actions")
+    .getByRole("button")
+    .first();
+  await expect(copy).toBeVisible();
+  expect(await copy.getAttribute("aria-label")).toBeNull();
+  await expect(copy).toHaveAccessibleName("");
 });
