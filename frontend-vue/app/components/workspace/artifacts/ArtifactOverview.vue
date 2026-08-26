@@ -17,21 +17,11 @@
                    不是笔误——补成 li 会让两边的列表语义对不上。
 */
 import { computed } from "vue";
-import {
-  BookOpenText,
-  Compass,
-  Download,
-  FileCode,
-  FileCog,
-  FilePlay,
-  FileText,
-  Files,
-  Image as ImageIcon,
-  X,
-} from "lucide-vue-next";
+import { Download, Files, X } from "lucide-vue-next";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
+  artifactFileIcon,
   artifactFileName,
   artifactTypeDisplayName,
 } from "@/core/artifacts/display";
@@ -44,81 +34,12 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ close: []; select: [path: string] }>();
 
-const CODE_EXTENSIONS = new Set([
-  "js",
-  "jsx",
-  "ts",
-  "tsx",
-  "mjs",
-  "cjs",
-  "css",
-  "scss",
-  "less",
-  "vue",
-  "svelte",
-  "py",
-  "java",
-  "kt",
-  "go",
-  "rs",
-  "rb",
-  "php",
-  "sh",
-  "bash",
-  "json",
-  "yaml",
-  "yml",
-  "toml",
-  "xml",
-  "sql",
-  "c",
-  "h",
-  "cpp",
-  "cs",
-]);
-const IMAGE_EXTENSIONS = new Set([
-  "jpg",
-  "jpeg",
-  "png",
-  "gif",
-  "bmp",
-  "tiff",
-  "ico",
-  "webp",
-  "svg",
-  "heic",
-]);
-const MEDIA_EXTENSIONS = new Set([
-  "mp3",
-  "wav",
-  "ogg",
-  "aac",
-  "m4a",
-  "flac",
-  "wma",
-  "aiff",
-  "ape",
-  "mp4",
-  "mov",
-  "m4v",
-]);
-
-function iconOf(filepath: string) {
-  const extension = (filepath.split(".").pop() ?? "").toLowerCase();
-  if (extension === "skill") return FileCog;
-  if (extension === "html") return Compass;
-  if (extension === "txt" || extension === "md") return BookOpenText;
-  if (IMAGE_EXTENSIONS.has(extension)) return ImageIcon;
-  if (MEDIA_EXTENSIONS.has(extension)) return FilePlay;
-  return CODE_EXTENSIONS.has(extension) ? FileCode : FileText;
-}
-
 const entries = computed(() =>
   props.artifacts.map((filepath) => ({
     filepath,
     name: artifactFileName(filepath),
     type: artifactTypeDisplayName(filepath),
-    icon: iconOf(filepath),
+    icon: artifactFileIcon(filepath),
     downloadURL: urlOfArtifact({
       filepath,
       threadId: props.threadId,

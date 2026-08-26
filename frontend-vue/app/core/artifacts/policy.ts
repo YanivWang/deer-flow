@@ -128,11 +128,22 @@ export function classifyArtifact(
   const extension = extensionOf(filepath);
   const common = { filepath, source, isMock: metadata.isMock === true };
 
+  /*
+    `.skill` 是**目录形态的包**，里面有一份 SKILL.md，所以它按 markdown 预览，
+    不是按"不能预览的归档"。React 就是这么判的：`isSkillFile` 直接返回
+    `{ isCodeFile: true, language: "markdown" }`，loader 再把 URL 补上 `/SKILL.md`
+    （frontend/src/components/workspace/artifacts/artifact-file-detail.tsx 与
+    core/artifacts/loader.ts）。Vue 原来把它归到 skill-archive、只给一句"可下载"，
+    于是用户点开一个技能包什么也看不到。
+
+    `source` 仍然是 skill-archive——安装入口靠它，而且它也不能编辑
+    （canSaveArtifactText 只认 formal）。
+  */
   if (source === "skill-archive") {
     return {
       ...common,
-      kind: "skill-archive",
-      language: null,
+      kind: "text",
+      language: "markdown",
       previewKind: null,
     };
   }
@@ -191,10 +202,5 @@ export function canInstallSkillArtifact(
   policy: ArtifactPolicy,
   options: { isAdmin: boolean },
 ) {
-  return (
-    policy.kind === "skill-archive" &&
-    policy.source === "skill-archive" &&
-    !policy.isMock &&
-    options.isAdmin
-  );
+  return policy.source === "skill-archive" && !policy.isMock && options.isAdmin;
 }

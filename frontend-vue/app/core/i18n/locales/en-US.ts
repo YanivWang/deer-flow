@@ -1309,7 +1309,6 @@ export const enUS: Translations = {
     noSelectionTitle: "No artifact selected",
     noSelectionDescription: "Select an artifact to view its details",
     fileTypeLabel: (type) => `${type} file`,
-    editorLabel: "Artifact editor",
     loadFailed: "Failed to load artifact",
     saveFailed: "Save failed",
     copyFailed: "Unable to copy artifact content.",
@@ -1317,10 +1316,7 @@ export const enUS: Translations = {
     openFailed: "Failed to open artifact.",
     downloadFailed: "Failed to download artifact.",
     loading: "Loading artifact…",
-    downloadOnlyDescription:
-      "Download-only file. This type is not loaded as text or opened in the editor.",
-    skillArchiveDescription:
-      "Skill archive. Download it or install it with an administrator account.",
+    cannotPreview: "This file type cannot be previewed in the browser.",
   },
   messages: {
     conversation: "Conversation",

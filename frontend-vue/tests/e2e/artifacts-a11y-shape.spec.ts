@@ -379,6 +379,77 @@ test.describe("artifacts accessibility shape", () => {
     );
   });
 
+  test("the html preview inlines its resources and keeps scroll across rebuilds", async ({
+    page,
+  }) => {
+    const HTML_PATH = "/mnt/user-data/outputs/page.html";
+    const IMAGE_PATH = "/mnt/user-data/outputs/pic.png";
+    const pixel = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "base64",
+    );
+    let imageRequests = 0;
+    await page.route("**/api/threads/*/artifacts/**", (route) => {
+      const url = decodeURIComponent(route.request().url());
+      if (url.includes("pic.png")) {
+        imageRequests += 1;
+        return route.fulfill({
+          status: 200,
+          contentType: "image/png",
+          body: pixel,
+        });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        headers: { ETag: `"${"c".repeat(64)}"` },
+        body: `<!doctype html><html><body><img src="pic.png" /><p>preview</p></body></html>`,
+      });
+    });
+    mockLangGraphAPI(page, {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Html preview",
+          artifacts: [HTML_PATH, IMAGE_PATH],
+          messages: [
+            {
+              type: "human",
+              id: "html-human",
+              content: [{ type: "text", text: "Build a page" }],
+            },
+            { type: "ai", id: "html-ai", content: "Built it." },
+          ],
+        },
+      ],
+    });
+    await page.goto(`/workspace/chats/${MOCK_THREAD_ID}`);
+    await page.getByTestId("artifact-trigger").click();
+    await page.getByTestId("artifact-overview").getByText("page.html").click();
+
+    const frame = page.locator("iframe[title='Artifact preview']");
+    await expect(frame).toBeVisible();
+
+    /*
+      预览走的是 blob URL，不是 srcdoc。这不是实现口味：sandbox 没有 allow-same-origin，
+      srcdoc 的 iframe 是不透明源，里面对 /api/threads/…/artifacts/… 的请求带不上
+      cookie，私有产物里的图片一律 401。React 因此先把同源产物取下来内联成 data URL
+      （frontend/src/components/workspace/artifacts/artifact-file-detail.tsx）。
+    */
+    await expect(frame).toHaveAttribute("src", /^blob:/);
+    await expect(frame).not.toHaveAttribute("srcdoc", /.*/);
+    // 图片是被**外层**取走内联的，所以它至少被请求过一次。
+    await expect.poll(() => imageRequests).toBeGreaterThan(0);
+
+    // 注入的滚动恢复脚本随内容一起进 blob，流式重建时位置才不会归零。
+    const previewHtml = await frame.evaluate(async (element) => {
+      const src = (element as HTMLIFrameElement).src;
+      return await (await fetch(src)).text();
+    });
+    expect(previewHtml).toContain("deerflow-artifact-preview-scroll");
+    expect(previewHtml).toContain("data:image/png;base64,");
+  });
+
   test("the user bubble owns its own hover toolbar", async ({ page }) => {
     await openThreadWithArtifacts(page);
 

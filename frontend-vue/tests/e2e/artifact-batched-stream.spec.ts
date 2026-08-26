@@ -292,12 +292,12 @@ test("fails closed for Office/archive files and requires a full D3-valid HTML re
   await page.getByTestId("artifact-trigger").click();
   await page.getByTestId("artifact-overview").getByText("report.docx").click();
   const panel = page.locator("#artifacts");
-  await expect(panel.getByText("Download-only file.")).toBeVisible();
+  await expect(panel.getByTestId("artifact-download-fallback")).toBeVisible();
   await expect(panel.getByLabel("Edit", { exact: true })).toHaveCount(0);
 
   await panel.getByRole("combobox").click();
   await panel.getByRole("option", { name: "bundle.zip" }).click();
-  await expect(panel.getByText("Download-only file.")).toBeVisible();
+  await expect(panel.getByTestId("artifact-download-fallback")).toBeVisible();
   expect(nonTextLoads).toBe(0);
 
   await panel.getByRole("combobox").click();

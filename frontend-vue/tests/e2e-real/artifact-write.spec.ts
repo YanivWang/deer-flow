@@ -230,7 +230,9 @@ test("real Gateway streams a write-file draft into the artifact panel", async ({
     const path = `/mnt/user-data/uploads/${file.name}`;
     await selectPresentedArtifact(page, threadId, path);
     const policyPanel = page.locator("#artifacts");
-    await expect(policyPanel.getByText("Download-only file.")).toBeVisible();
+    await expect(
+      policyPanel.getByTestId("artifact-download-fallback"),
+    ).toBeVisible();
     await expect(policyPanel.getByLabel("Edit", { exact: true })).toHaveCount(
       0,
     );

@@ -862,7 +862,30 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         },
       ],
     },
+    /*
+      正文只回一段并声明总长度，两个应用都会进入**截断**分支：提示条、
+      「加载完整文件」、以及截断时代码区的渲染方式。此前没有任何样本走到这里，
+      而 React 在截断时还会把代码/预览开关整个收起来（canPreview && !truncated）。
+    */
+    routes: [
+      {
+        pattern: "**/api/threads/*/artifacts/**",
+        status: 206,
+        contentType: "text/markdown",
+        headers: {
+          "Content-Range": "bytes 0-31/2097152",
+          ETag: `"${"b".repeat(64)}"`,
+        },
+        json: "# report\n\nfirst chunk of a long file",
+      },
+    ],
     settle: [{ kind: "visible", target: { testId: "artifact-trigger" } }],
+    steps: [
+      { kind: "click", target: { testId: "artifact-trigger" } },
+      { kind: "visible", target: { text: "report.md" } },
+      { kind: "click", target: { text: "report.md" } },
+      { kind: "visible", target: { role: "button", name: "Load full file" } },
+    ],
   },
   {
     id: "artifact-batched-stream",
@@ -875,7 +898,20 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
           thread_id: MOCK_THREAD_ID,
           title: "Artifact batched stream",
           updated_at: "2026-06-06T12:00:00Z",
-          artifacts: ["/artifact-fixtures/batched-report.md"],
+          /*
+            路径必须落在 /mnt/user-data/outputs/ 下，两个应用的编辑门槛都要求它
+            （React 的 canEditOpenedArtifact 与 Vue 的 canSaveArtifactText 同一条规则）。
+
+            另外两个文件是为了走到详情面板剩下的两条分支：图片走浏览器媒体预览，
+            .docx 走「不能预览」的下载回退。它们和 markdown 那条一起挂在同一个线程上，
+            靠头部的文件下拉切换——这是唯一不用新增场景 id 就能覆盖到的走法。
+          */
+          artifacts: [
+            "/mnt/user-data/outputs/batched-report.md",
+            "/mnt/user-data/outputs/diagram.png",
+            "/mnt/user-data/outputs/report.docx",
+            "/mnt/user-data/outputs/helper.skill",
+          ],
           messages: [
             {
               type: "human",
@@ -916,6 +952,29 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       // 不用文件下拉当锚点——它**没有可访问名**（照 React 的 SelectTrigger），
       // 按名字根本定位不到。
       { kind: "visible", target: { role: "button", name: "Download" } },
+      // 再点进编辑态：编辑器、保存/退出/放弃，以及「有未保存的改动」那条播报，
+      // 此前一条样本都走不到。上面的 ETag 就是为这一步准备的——没有 revision，
+      // 两个应用都不会显示编辑入口。
+      // 名字用锚定正则：`name: "Edit"` 是子串匹配，会先命中消息工具条上的
+      // "Edit and rerun"，一路点进消息编辑态。
+      { kind: "click", target: { role: "button", name: /^Edit$/ } },
+      { kind: "visible", target: { role: "button", name: "Exit editing" } },
+      { kind: "click", target: { role: "button", name: "Exit editing" } },
+      /*
+        文件下拉**没有可访问名**（照 React 的 SelectTrigger），只能按选择器定位；
+        `[role="combobox"]` 是两个应用共有的表达。切到图片走媒体预览分支，
+        再切到 .docx 走下载回退分支。
+      */
+      { kind: "click", target: { selector: '[role="combobox"]' } },
+      { kind: "click", target: { role: "option", name: "diagram.png" } },
+      { kind: "visible", target: { selector: 'img[alt="diagram.png"]' } },
+      { kind: "click", target: { selector: '[role="combobox"]' } },
+      { kind: "click", target: { role: "option", name: "report.docx" } },
+      { kind: "visible", target: { text: "Word file" } },
+      // 最后切到 .skill：replay Gateway 的用户是管理员，所以安装入口在两边都该出现。
+      { kind: "click", target: { selector: '[role="combobox"]' } },
+      { kind: "click", target: { role: "option", name: "helper.skill" } },
+      { kind: "visible", target: { role: "button", name: "Install" } },
     ],
   },
 ];

@@ -204,7 +204,9 @@ describe("ArtifactPanel", () => {
     expect(wrapper.find("[data-testid='artifact-editor']").exists()).toBe(
       false,
     );
-    expect(wrapper.text()).toContain("Download-only file");
+    expect(wrapper.text()).toContain(
+      "This file type cannot be previewed in the browser.",
+    );
     expect(wrapper.find("button[aria-label='Edit']").exists()).toBe(false);
     expect(mocks.save).not.toHaveBeenCalled();
     wrapper.unmount();

@@ -1251,7 +1251,6 @@ export const zhCN: Translations = {
     noSelectionTitle: "未选择产物",
     noSelectionDescription: "选择一个产物以查看详情",
     fileTypeLabel: (type) => `${type} 文件`,
-    editorLabel: "产物编辑器",
     loadFailed: "加载产物失败",
     saveFailed: "保存失败",
     copyFailed: "无法复制产物内容。",
@@ -1259,9 +1258,7 @@ export const zhCN: Translations = {
     openFailed: "打开产物失败。",
     downloadFailed: "下载产物失败。",
     loading: "正在加载产物…",
-    downloadOnlyDescription:
-      "此文件仅支持下载，不会作为文本加载，也不会在编辑器中打开。",
-    skillArchiveDescription: "这是技能归档文件，可下载，或由管理员账号安装。",
+    cannotPreview: "这种文件类型无法在浏览器里预览。",
   },
   messages: {
     conversation: "对话",

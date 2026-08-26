@@ -180,8 +180,10 @@ const previewAllowed = computed(() => {
   }
   return policy.value.language === "markdown" || htmlPreviewAllowed.value;
 });
-const canCopy = computed(
-  () => policy.value.kind === "text" && !truncated.value && !loading.value,
+// React 的渲染条件是「是不是代码/文本文件」，禁用条件才是「有没有内容 / 截断了没有」。
+const canCopy = computed(() => policy.value.kind === "text");
+const copyDisabled = computed(
+  () => !content.value || truncated.value || loading.value,
 );
 const hasGatewayArtifact = computed(
   () => policy.value.source !== "write-file-draft",
@@ -530,7 +532,8 @@ onBeforeUnmount(() => {
         v-if="
           policy.kind === 'text' &&
           ['html', 'markdown'].includes(policy.language) &&
-          previewAllowed
+          previewAllowed &&
+          !truncated
         "
         role="group"
         class="flex items-center gap-0"
@@ -554,6 +557,28 @@ onBeforeUnmount(() => {
           <Eye class="size-4" />
         </button>
       </div>
+      <!--
+        编辑态的状态要**播报**，不能只在按钮的禁用态里体现。React 在头部放了一个
+        `aria-live="polite"` 的 span：保存中 / 远端已变 / 有未保存的改动
+        （frontend/src/components/workspace/artifacts/artifact-file-detail.tsx）。
+        Vue 原来一个都没有——`artifactEditing.{saving,conflictShort,unsaved}` 三个键
+        在词典里躺着、从没被渲染过，于是读屏用户改完文件既听不到"有未保存的改动"，
+        也听不到"这个文件在你编辑期间被别人改了"。
+      -->
+      <span
+        v-if="saving || dirty || activeDraft.conflict"
+        aria-live="polite"
+        class="text-muted-foreground max-w-32 truncate text-xs"
+        :class="activeDraft.conflict ? 'text-destructive' : ''"
+      >
+        {{
+          saving
+            ? $i18n.t.value.artifactEditing.saving
+            : activeDraft.conflict
+              ? $i18n.t.value.artifactEditing.conflictShort
+              : $i18n.t.value.artifactEditing.unsaved
+        }}
+      </span>
       <ArtifactActions
         :can-edit="canEdit"
         :editing="editing"
@@ -562,6 +587,7 @@ onBeforeUnmount(() => {
         :streaming="streaming"
         :saving="saving"
         :can-copy="canCopy"
+        :copy-disabled="copyDisabled"
         :can-open="hasGatewayArtifact"
         :can-download="hasGatewayArtifact"
         :can-install="canInstall"
@@ -656,6 +682,7 @@ onBeforeUnmount(() => {
         :filename="filename"
         :content="content"
         :url="sourceUrl"
+        :download-url="downloadUrl"
         :content-url="contentUrl"
         :view-mode="viewMode"
         :html-preview-allowed="htmlPreviewAllowed"

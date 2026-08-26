@@ -38,7 +38,13 @@ describe("classifyArtifact", () => {
     ["blob.bin", "download-only", null],
     ["mystery.custom", "download-only", null],
     ["README", "download-only", null],
-    ["tool.skill", "skill-archive", null],
+    /*
+      `.skill` 按 **markdown** 分类，不是"不能预览的归档"：它是一个目录，里面有一份
+      SKILL.md，loader 会把 URL 补上那一段。React 的 isSkillFile 分支同样直接返回
+      markdown（frontend/src/components/workspace/artifacts/artifact-file-detail.tsx）。
+      它仍然不能编辑，靠的是 source 而不是 kind。
+    */
+    ["tool.skill", "text", "markdown"],
   ])("classifies %s as %s", (name, kind, detail) => {
     const policy = classifyArtifact(`/mnt/user-data/outputs/${name}`);
     expect(policy.kind).toBe(kind);
@@ -71,6 +77,7 @@ describe("classifyArtifact", () => {
     expect(formal.source).toBe("formal");
     expect(draft.source).toBe("write-file-draft");
     expect(skill.source).toBe("skill-archive");
+    expect(canSaveArtifactText(skill, { hasRevision: true })).toBe(false);
     expect(canSaveArtifactText(formal, { hasRevision: true })).toBe(true);
     expect(canSaveArtifactText(draft, { hasRevision: true })).toBe(false);
     expect(canSaveArtifactText(mock, { hasRevision: true })).toBe(false);

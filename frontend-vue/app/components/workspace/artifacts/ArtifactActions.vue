@@ -32,6 +32,7 @@ defineProps<{
   streaming: boolean;
   saving: boolean;
   canCopy: boolean;
+  copyDisabled: boolean;
   canOpen: boolean;
   canDownload: boolean;
   canInstall: boolean;
@@ -69,8 +70,8 @@ const emit = defineEmits<{
     >
       <Save :size="15" />
     </button>
+    <!-- 放弃在编辑态**恒显**，不看 dirty：React 的三颗（保存/退出/放弃）是一组。 -->
     <button
-      v-if="dirty"
       type="button"
       :aria-label="$i18n.t.value.artifactEditing.discard"
       class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
@@ -87,9 +88,15 @@ const emit = defineEmits<{
       <X :size="15" />
     </button>
   </template>
+  <!--
+    复制在截断或空内容时是**禁用**，不是消失——React 渲染它并传 disabled
+    （artifact-file-detail.tsx 的 `disabled={!content || truncated}`）。控件时有时无，
+    读屏器每次都要重新数一遍这排按钮。编辑态下这几颗则整体不渲染（React 的 `!isEditing`）。
+  -->
   <button
-    v-if="canCopy"
+    v-if="canCopy && !editing"
     type="button"
+    :disabled="copyDisabled"
     :aria-label="$i18n.t.value.clipboard.copyToClipboard"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
     @click="emit('copy')"
@@ -97,7 +104,7 @@ const emit = defineEmits<{
     <Copy :size="15" />
   </button>
   <button
-    v-if="canOpen"
+    v-if="canOpen && !editing"
     type="button"
     :aria-label="$i18n.t.value.common.openInNewWindow"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
@@ -106,7 +113,7 @@ const emit = defineEmits<{
     <ExternalLink :size="15" />
   </button>
   <button
-    v-if="canDownload"
+    v-if="canDownload && !editing"
     type="button"
     :aria-label="$i18n.t.value.common.download"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
@@ -115,7 +122,7 @@ const emit = defineEmits<{
     <Download :size="15" />
   </button>
   <button
-    v-if="canInstall"
+    v-if="canInstall && !editing"
     type="button"
     :aria-label="$i18n.t.value.common.install"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"

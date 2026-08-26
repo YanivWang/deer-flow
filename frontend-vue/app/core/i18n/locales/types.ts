@@ -1047,7 +1047,6 @@ export interface Translations {
     noSelectionTitle: string;
     noSelectionDescription: string;
     fileTypeLabel: (type: string) => string;
-    editorLabel: string;
     loadFailed: string;
     saveFailed: string;
     copyFailed: string;
@@ -1055,8 +1054,7 @@ export interface Translations {
     openFailed: string;
     downloadFailed: string;
     loading: string;
-    downloadOnlyDescription: string;
-    skillArchiveDescription: string;
+    cannotPreview: string;
   };
 
   messages: {

@@ -99,13 +99,20 @@ describe("对照场景覆盖率", () => {
       class 名与组件库内部结构是 ARCHITECTURE 明写「只对齐可观察行为」的地方，
       用它们定位等于把 reka 与 radix 的实现差异写进场景，场景会在两边都不稳定。
     */
+    /*
+      先把属性值摘掉再判。属性值里出现点是正常的——`img[alt="diagram.png"]` 定位的是
+      React 与 Vue 都写了的 alt 文本，不是 class。不摘的话这条守卫会把它误判成
+      class 选择器，而它挡的本来就不是这个。
+    */
+    const withoutAttributeValues = (selector: string) =>
+      selector.replaceAll(/=\s*(['"])(?:\\.|(?!\1).)*\1/g, "=…");
     const offenders: string[] = [];
     for (const scenario of PARITY_SCENARIOS) {
       for (const step of [...scenario.settle, ...(scenario.steps ?? [])]) {
         if (!("target" in step)) continue;
         if (
           "selector" in step.target &&
-          /\.[a-z-]|\[class/i.test(step.target.selector)
+          /\.[a-z-]|\[class/i.test(withoutAttributeValues(step.target.selector))
         ) {
           offenders.push(`${scenario.id}: ${step.target.selector}`);
         }

@@ -96,12 +96,17 @@ async function openEditor(
 }
 
 test.describe("artifact code editor", () => {
-  test("opens a labelled, focused editor with rendered syntax tokens", async ({
+  test("opens an unnamed, focused editor with rendered syntax tokens", async ({
     page,
   }) => {
     const { editor } = await openEditor(page);
 
-    await expect(editor).toHaveAttribute("aria-label", "Artifact editor");
+    /*
+      编辑区**没有可访问名**：React 的 CodeEditor 不传 aria-label，CodeMirror 那个
+      textbox 在树里就是一个没有名字的输入框
+      （frontend/src/components/workspace/code-editor.tsx）。
+    */
+    await expect(editor).not.toHaveAttribute("aria-label", /.*/);
     await expect(editor).toHaveAttribute("contenteditable", "true");
     // autofocus 属于编辑器：点了 Edit 之后还要再点一次正文才能打字，等于没进编辑态。
     await expect(editor).toBeFocused();

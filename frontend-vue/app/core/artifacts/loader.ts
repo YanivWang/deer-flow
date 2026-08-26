@@ -48,7 +48,16 @@ export async function loadArtifactContent({
   full?: boolean;
   signal?: AbortSignal;
 }) {
-  const url = urlOfArtifact({ filepath, threadId, isMock });
+  /*
+    `.skill` 是一个目录：真正能读的是它里面的 SKILL.md。React 的 loader 同样在这里
+    补这一段（frontend/src/core/artifacts/loader.ts）。不补的话请求打在目录上，
+    技能包的预览永远是空的。
+  */
+  const url = urlOfArtifact({
+    filepath: filepath.endsWith(".skill") ? `${filepath}/SKILL.md` : filepath,
+    threadId,
+    isMock,
+  });
   const response = await fetch(url, {
     cache: "no-store",
     headers: full
