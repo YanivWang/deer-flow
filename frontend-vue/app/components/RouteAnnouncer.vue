@@ -12,6 +12,17 @@
                    结构；ARCHITECTURE 的判据是可观察行为，可访问性树里能观察到的
                    就是一个 role=alert 的实时区域。
 
+                   **已知差异（窄屏、模态面板打开时）：** React 这个播报器会从可访问性树里
+                   消失，Vue 的还在。根因量清楚了，两边都不是产品决定：Radix 的 hideOthers
+                   把 `<body>` 的直接子节点逐个标 aria-hidden，而 Next 的播报器正是 body 的
+                   子节点、且实时区域藏在 shadow root 里（宿主本身没有 aria-live，所以不被
+                   「实时区域豁免」放过）；Reka 的 hideOthers 只从对话框往上走到 workspace
+                   外壳那层就停了，够不到播报器。实测把 aria-live 挪进内层、再把整块
+                   Teleport 到 body，都不能让 Reka 藏住它——它根本不在那条行走路径上。
+                   影响：模态打开期间的路由播报，React 静音、Vue 不静音；而模态开着时
+                   本来就不会换路由。留在 baseline/parity-diff.json 里，
+                   见 artifact-preview/mobile 的那一条 `- alert`。
+
                    播报名的取法与 Next 一致：`document.title` → `h1` 文本 → pathname，
                    且**只有名字变了才播报**。少了这个判断，同名页面之间跳转会让读屏
                    重复念同一句话。实测本仓当前每条路由的 title 都是 "DeerFlow"，

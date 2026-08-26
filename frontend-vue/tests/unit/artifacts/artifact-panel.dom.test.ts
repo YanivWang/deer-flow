@@ -24,6 +24,20 @@ import { useArtifactDraft } from "@/composables/useArtifactDraft";
 import { ArtifactActionError } from "@/core/artifacts/actions";
 import { ArtifactRequestError } from "@/core/artifacts/api";
 
+/*
+  「加载完整文件」是一颗**只有可见文字**的按钮，没有 aria-label——React 的截断提示条
+  用的就是 `<Button size="sm" variant="outline">{t.artifactPreview.loadFullFile}</Button>`
+  （frontend/src/components/workspace/artifacts/artifact-file-detail.tsx）。
+  所以这里按文字找，不按 aria-label 找。
+*/
+function loadFullButton(wrapper: VueWrapper) {
+  const button = wrapper
+    .findAll("button")
+    .find((candidate) => candidate.text() === "Load full file");
+  if (!button) throw new Error("找不到「加载完整文件」按钮");
+  return button;
+}
+
 const mocks = vi.hoisted(() => ({
   load: vi.fn(),
   loadTool: vi.fn(),
@@ -217,7 +231,7 @@ describe("ArtifactPanel", () => {
     expect(wrapper.find("[data-testid='artifact-editor']").exists()).toBe(
       false,
     );
-    await wrapper.get("button[aria-label='Load full file']").trigger("click");
+    await loadFullButton(wrapper).trigger("click");
     await flushPromises();
     expect(mocks.load).toHaveBeenLastCalledWith(
       expect.objectContaining({ full: true }),

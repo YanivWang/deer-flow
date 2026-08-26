@@ -79,6 +79,14 @@ export type ParityRouteOverride = {
   pattern: string;
   status?: number;
   json: unknown;
+  /*
+    artifact 的**正文**不是 JSON。用 application/json 端上去，两个应用都会渲染一串
+    带引号的 JSON 字面量——比出来的仍然一致，但比的是夹具而不是产品。
+    ETag 同理：artifact 的 revision 走它，没有 ETag 两个应用都看不到编辑入口，
+    于是「编辑这一整块」被静默排除在对照之外。
+  */
+  contentType?: string;
+  headers?: Record<string, string>;
 };
 
 export type ParityScenario = {
@@ -117,8 +125,12 @@ export async function applyScenarioBackend(
     await page.route(override.pattern, (route) =>
       route.fulfill({
         status: override.status ?? 200,
-        contentType: "application/json",
-        body: JSON.stringify(override.json),
+        contentType: override.contentType ?? "application/json",
+        headers: override.headers,
+        body:
+          typeof override.json === "string" && override.contentType
+            ? override.json
+            : JSON.stringify(override.json),
       }),
     );
   }
@@ -564,6 +576,15 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       { kind: "click", target: { text: ARTIFACT_PATH } },
       { kind: "visible", target: { text: "report.html" } },
     ],
+    /*
+      窄屏也跑一份。React 在 isMobile 分支把右侧面板整个换成 Sheet，也就是一个真的
+      模态 dialog（chats/chat-box.tsx）——那是与宽屏 complementary 完全不同的语义，
+      不跑窄屏就等于没比过其中一半。
+    */
+    dimensions: [
+      DEFAULT_DIMENSION,
+      { viewport: "mobile", theme: "light", locale: "en-US" },
+    ],
   },
   {
     id: "artifact-panel-resize",
@@ -870,7 +891,31 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         },
       ],
     },
+    /*
+      正文与 ETag 都要给：没有正文两个应用各自报错（错误处理是另一处差异，会盖住
+      这里要比的东西），没有 ETag 两边都拿不到 revision，于是编辑入口在两侧都不出现，
+      「详情面板有哪些动作」这一整块就静默地没被比过。
+    */
+    routes: [
+      {
+        pattern: "**/api/threads/*/artifacts/**",
+        contentType: "text/markdown",
+        headers: { ETag: `"${"a".repeat(64)}"` },
+        json: "# batched report\n\nbody",
+      },
+    ],
     settle: [{ kind: "visible", target: { testId: "artifact-trigger" } }],
-    steps: [{ kind: "click", target: { testId: "artifact-trigger" } }],
+    steps: [
+      { kind: "click", target: { testId: "artifact-trigger" } },
+      { kind: "visible", target: { text: "batched-report.md" } },
+      // 从清单点进详情：这一支覆盖的是**正式产物**的详情面板（文件下拉、
+      // 打开/下载/编辑动作、代码/预览切换），write-file 草稿那一支由
+      // artifact-preview 覆盖。
+      { kind: "click", target: { text: "batched-report.md" } },
+      // 详情面板独有的锚点：清单那一支的下载是 link，只有详情面板里它是 button。
+      // 不用文件下拉当锚点——它**没有可访问名**（照 React 的 SelectTrigger），
+      // 按名字根本定位不到。
+      { kind: "visible", target: { role: "button", name: "Download" } },
+    ],
   },
 ];

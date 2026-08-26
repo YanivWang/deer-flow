@@ -42,6 +42,7 @@ export const zhCN: Translations = {
     submit: "Submit",
     stop: "Stop",
     notifications: "Notifications alt+T",
+    loadingPanel: "Loading panel…",
   },
 
   // Common
@@ -589,6 +590,7 @@ export const zhCN: Translations = {
   workspace: {
     officialWebsite: "访问 DeerFlow 官方网站",
     githubTooltip: "访问 DeerFlow 的 GitHub 仓库",
+    sidePanelDescription: "浏览本次会话的侧边面板。",
     settingsAndMore: "设置和更多",
     visitGithub: "在 GitHub 上查看 DeerFlow",
     reportIssue: "报告问题",
@@ -1243,8 +1245,6 @@ export const zhCN: Translations = {
   },
   artifacts: {
     actions: {
-      select: "选择产物",
-      loadFull: "加载完整文件",
       removeFile: (filename) => `移除 ${filename}`,
     },
     previewTitle: "产物预览",
@@ -1259,8 +1259,6 @@ export const zhCN: Translations = {
     openFailed: "打开产物失败。",
     downloadFailed: "下载产物失败。",
     loading: "正在加载产物…",
-    previewedBytes: (current, total) => `已预览 ${current} / ${total} 字节`,
-    unknownTotalBytes: "未知总量",
     downloadOnlyDescription:
       "此文件仅支持下载，不会作为文本加载，也不会在编辑器中打开。",
     skillArchiveDescription: "这是技能归档文件，可下载，或由管理员账号安装。",

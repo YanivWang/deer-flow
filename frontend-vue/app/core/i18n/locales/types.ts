@@ -20,6 +20,7 @@ export interface Translations {
     submit: string;
     stop: string;
     notifications: string;
+    loadingPanel: string;
   };
 
   // Common
@@ -496,6 +497,7 @@ export interface Translations {
   workspace: {
     officialWebsite: string;
     githubTooltip: string;
+    sidePanelDescription: string;
     settingsAndMore: string;
     visitGithub: string;
     reportIssue: string;
@@ -1039,8 +1041,6 @@ export interface Translations {
 
   artifacts: {
     actions: {
-      select: string;
-      loadFull: string;
       removeFile: (filename: string) => string;
     };
     previewTitle: string;
@@ -1055,8 +1055,6 @@ export interface Translations {
     openFailed: string;
     downloadFailed: string;
     loading: string;
-    previewedBytes: (current: string, total: string) => string;
-    unknownTotalBytes: string;
     downloadOnlyDescription: string;
     skillArchiveDescription: string;
   };

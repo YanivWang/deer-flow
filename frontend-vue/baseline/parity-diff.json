@@ -525,6 +525,19 @@
       ],
       "geometry": []
     },
+    "artifact-preview/mobile/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [
+        "- alert"
+      ],
+      "requestsOnlyReact": [
+        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
+      ],
+      "requestsOnlyVue": [
+        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
+      ],
+      "geometry": []
+    },
     "artifact-panel-resize/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],

@@ -311,6 +311,58 @@ test.describe("artifacts accessibility shape", () => {
     await expect(panel.getByText("report.md")).toBeVisible();
   });
 
+  test("narrow screens swap the panel for a real modal sheet", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    // 用草稿那一支：面板里只有详情，不会再多一个清单自己的 "Artifacts" 标题，
+    // 断言才能落在 Sheet 的标题上。
+    await openThreadWithWriteFile(page);
+    const path = page.getByText(WRITE_FILE_PATH);
+    await expect(path).toBeVisible({ timeout: 15_000 });
+    await path.click();
+
+    /*
+      窄屏是 Sheet，不是铺满屏幕的同一个 aside——React 的 isMobile 分支换的是整套实现
+      （chats/chat-box.tsx）。Sheet 是真模态：面板之外的内容被标成不可达。原来 Vue 只是
+      把侧栏 fixed 铺满，读屏器还能从"抽屉"里走回背后的对话。
+    */
+    const dialog = page.getByRole("dialog", { name: "Artifacts" });
+    await expect(dialog).toBeVisible();
+    // 标题与说明都在，只是 sr-only：React 的 SheetHeader 就是这个形状。
+    await expect(
+      dialog.getByRole("heading", { name: "Artifacts", level: 2 }),
+    ).toBeAttached();
+    await expect(
+      dialog.getByText("Browse the side panel for this conversation."),
+    ).toBeAttached();
+    // 宽屏那套的两个锚点在窄屏都不该存在。
+    await expect(page.locator("aside#artifacts")).toHaveCount(0);
+    await expect(page.getByRole("complementary")).toHaveCount(0);
+    /*
+      背后的对话不可达。断言走**角色**而不是属性选择器：aria-hidden 的元素还在 DOM 里，
+      `getByPlaceholder` 照样找得到，只有按角色查询才反映读屏器真正能到达什么。
+    */
+    await expect(page.getByRole("log")).toHaveCount(0);
+    await expect(
+      page.getByRole("textbox", { name: /how can i assist you/i }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Submit" })).toHaveCount(0);
+  });
+
+  test("the panel keeps sidecar above browser above artifacts", async ({
+    page,
+  }) => {
+    await openThreadWithArtifacts(page);
+    await page.getByTestId("artifact-trigger").click();
+    await expect(page.getByTestId("artifact-overview")).toBeVisible();
+
+    // React 的 activeRightPanel 顺序是 sidecar > browser > artifacts
+    // （chats/chat-box.tsx）。浏览器面板一开就盖住 artifacts。
+    await page.getByTestId("browser-trigger").click();
+    await expect(page.getByTestId("artifact-overview")).toHaveCount(0);
+  });
+
   test("the write_file step is one clickable region, not a pair of buttons", async ({
     page,
   }) => {

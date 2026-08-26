@@ -42,6 +42,7 @@ export const enUS: Translations = {
     submit: "Submit",
     stop: "Stop",
     notifications: "Notifications alt+T",
+    loadingPanel: "Loading panel…",
   },
 
   // Common
@@ -616,6 +617,7 @@ export const enUS: Translations = {
   workspace: {
     officialWebsite: "DeerFlow's official website",
     githubTooltip: "DeerFlow on GitHub",
+    sidePanelDescription: "Browse the side panel for this conversation.",
     settingsAndMore: "Settings and more",
     visitGithub: "DeerFlow on GitHub",
     reportIssue: "Report an issue",
@@ -1301,8 +1303,6 @@ export const enUS: Translations = {
   },
   artifacts: {
     actions: {
-      select: "Select artifact",
-      loadFull: "Load full file",
       removeFile: (filename) => `Remove ${filename}`,
     },
     previewTitle: "Artifact preview",
@@ -1317,9 +1317,6 @@ export const enUS: Translations = {
     openFailed: "Failed to open artifact.",
     downloadFailed: "Failed to download artifact.",
     loading: "Loading artifact…",
-    previewedBytes: (current, total) =>
-      `Previewed ${current} of ${total} bytes`,
-    unknownTotalBytes: "unknown",
     downloadOnlyDescription:
       "Download-only file. This type is not loaded as text or opened in the editor.",
     skillArchiveDescription:

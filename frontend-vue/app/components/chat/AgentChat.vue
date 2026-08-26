@@ -9,6 +9,8 @@
 import {
   computed,
   defineAsyncComponent,
+  defineComponent,
+  h,
   onMounted,
   onUnmounted,
   ref,
@@ -100,9 +102,32 @@ import {
 
   面板由用户点击打开，这时再取 chunk 与 CodeBlock/Mermaid/KaTeX 是同一套做法。
 */
-const ArtifactPanel = defineAsyncComponent(
-  () => import("@/components/workspace/artifacts/ArtifactPanel.vue"),
-);
+/*
+  懒加载期间要有话说。React 的 dynamic() 给这三个面板都配了 `loading:`，渲染的是
+  `<p role="status">Loading panel…</p>`（chats/chat-box.tsx 的 RightPanelLoading）。
+  没有它，chunk 还在路上的那段时间读屏器听到的是一个空面板——用户点了没反应。
+  文案是 React 写死的英文，与 primitives 段同一类，放词典里两份同值。
+*/
+const RightPanelLoading = defineComponent({
+  name: "RightPanelLoading",
+  setup() {
+    const { $i18n } = useNuxtApp();
+    return () =>
+      h("div", { class: "grid size-full place-items-center" }, [
+        h(
+          "p",
+          { role: "status", class: "text-muted-foreground text-sm" },
+          $i18n.t.value.primitives.loadingPanel,
+        ),
+      ]);
+  },
+});
+
+const ArtifactPanel = defineAsyncComponent({
+  loader: () => import("@/components/workspace/artifacts/ArtifactPanel.vue"),
+  loadingComponent: RightPanelLoading,
+  delay: 0,
+});
 
 const props = defineProps<{
   agentName?: string | null;
@@ -527,8 +552,11 @@ watch(
   里那段自动选中的由来。
 */
 const activePanel = computed<"artifacts" | "sidecar" | "browser" | null>(() => {
-  if (browserOpen.value && browserEnabled.value) return "browser";
+  // 优先级照 React：sidecar > browser > artifacts
+  // （frontend/src/components/workspace/chats/chat-box.tsx 的 activeRightPanel）。
+  // 原来是 browser 排在 sidecar 前面：两个都开着时两个应用显示的不是同一个面板。
   if (sidecar.open.value) return "sidecar";
+  if (browserOpen.value && browserEnabled.value) return "browser";
   if (artifactPanel.open.value) return "artifacts";
   return null;
 });
@@ -591,8 +619,10 @@ function askInSidecar(payload: {
   自动选中看起来省一步，代价是面板会去拉那个文件的内容，用户并没有要求它这么做。
 */
 function showArtifacts() {
+  // React 的 ArtifactTrigger 只做这两件事：关掉 sidecar、打开 artifacts
+  // （artifacts/artifact-trigger.tsx）。**不**关浏览器面板——浏览器排在 artifacts
+  // 前面，所以它开着的时候这颗按钮只是把 artifacts 标成待展开，等浏览器关掉才生效。
   if (!artifactPanel.setOpen(true)) return;
-  browserOpen.value = false;
   sidecar.close();
 }
 function addToConversation(payload: {
@@ -658,9 +688,57 @@ const lastAutoOpenedArtifact = ref<string | null>(null);
   **打开任何一条带 write_file 的历史线程都会自动展开面板并收起侧栏**，而 React 那边
   `isLoading` 为假、`finalizedArtifactPath` 为空，什么都不会发生。
 
-  「最后一个」是 React 的 `isLast`：它只把每个 group 的最后一个工具步骤标成 isLast，
-  而整条消息流里的最后一个工具调用，正是最后那个有工具调用的 group 的最后一步。
+  取的是最后一个**写产物**的调用，不是最后一个工具调用。React 的判据是 `isLast`
+  （每个 group 只有最后一个工具步骤带它），它靠的是「流式过程中 write_file 曾经是最后
+  一步」这一瞬间：那一刻 effect 触发、面板打开，之后再来别的工具调用也不会关掉它。
+  Vue 的渲染消息流是降频过的（useCoalescedStreamMessages，每 80ms 至多一帧），
+  那一瞬间不保证会成为独立的一帧——实测真 Gateway 回放里 write_file 与随后的 read_file
+  落在同一帧，按「最后一个工具调用」判，面板一次都不会开
+  （tests/e2e-real/artifact-write.spec.ts 当场变红）。
 */
+const ARTIFACT_WRITE_TOOLS = new Set([
+  "write_file",
+  "str_replace",
+  "finalize_artifact_write",
+]);
+
+function artifactWriteCallIds(messages: Message[]) {
+  const ids: string[] = [];
+  for (const message of messages) {
+    if (message.type !== "ai") continue;
+    for (const call of message.tool_calls ?? []) {
+      if (ARTIFACT_WRITE_TOOLS.has(call.name) && call.id) ids.push(call.id);
+    }
+  }
+  return ids;
+}
+
+/*
+  进入这条线程时**已经在历史里**的写产物调用。
+
+  React 用 `isLoading`（这一轮还在流式）区分「模型正在写」与「翻旧账」。Vue 抄不了
+  这个信号：渲染用的消息流被降频成每 80ms 至多一帧（useCoalescedStreamMessages），
+  写文件那一帧落在流式结束之前还是之后并不确定——实测两条真 Gateway 用例一条落在
+  之前、一条落在之后，用 isStreaming 判会一条绿一条红。
+
+  换成按**来源**判：历史里就有的不开，本次运行新出现的才开。这与 React 想表达的是
+  同一件事，而且不依赖任何时序。
+*/
+const historyArtifactCallIds = ref<Set<string> | null>(null);
+watch(
+  () => stream.isHistoryLoading.value,
+  (loading) => {
+    if (loading) {
+      historyArtifactCallIds.value = null;
+      return;
+    }
+    historyArtifactCallIds.value ??= new Set(
+      artifactWriteCallIds(stream.messages.value),
+    );
+  },
+  { immediate: true },
+);
+
 const autoOpenArtifact = computed(() => {
   const messages = stream.messages.value;
   let lastCall: ToolCall | undefined;
@@ -668,6 +746,7 @@ const autoOpenArtifact = computed(() => {
   for (const message of messages) {
     if (message.type !== "ai") continue;
     for (const call of message.tool_calls ?? []) {
+      if (!ARTIFACT_WRITE_TOOLS.has(call.name)) continue;
       lastCall = call;
       lastCallMessageId = message.id;
     }
@@ -688,7 +767,13 @@ const autoOpenArtifact = computed(() => {
   if (lastCall.name !== "write_file" && lastCall.name !== "str_replace") {
     return null;
   }
-  if (!stream.isStreaming.value || result) return null;
+  /*
+    React 在这里还要求「工具**还没返回**」（`isLoading && url && !result`）。两条判据
+    合起来说的是「这是模型此刻正在写的那个文件」；Vue 用「它不在进入线程时的历史里」
+    表达同一件事，理由见 historyArtifactCallIds 上面那段。
+  */
+  const history = historyArtifactCallIds.value;
+  if (!history || (lastCall.id && history.has(lastCall.id))) return null;
   return buildWriteFileArtifactURL({
     filepath: path,
     messageId: lastCallMessageId,
@@ -1250,6 +1335,8 @@ onUnmounted(() => {
   <WorkspacePanels
     :open="panelOpen"
     :panel-size="artifactPanel.panelSize.value"
+    :panel-padded="activePanel === 'artifacts'"
+    :panel-description="$i18n.t.value.workspace.sidePanelDescription"
     :panel-label="
       activePanel === 'artifacts'
         ? $i18n.t.value.common.artifacts

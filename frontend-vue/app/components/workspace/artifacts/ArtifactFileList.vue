@@ -5,6 +5,11 @@
   【主要导出】     默认 ArtifactFileList 组件
   【依赖关系】     ArtifactPanel
   【边界与注意】   只发出选择意图；dirty 决策由上层 useArtifactDraft 唯一处理。
+                   触发器**没有** aria-label：React 用的是 Radix SelectTrigger，它的
+                   可访问名来自里面的 SelectValue，也就是当前选中的文件名
+                   （frontend/src/components/workspace/artifacts/artifact-file-detail.tsx）。
+                   额外挂一个 "Select artifact" 会让读屏器先念控件名再念文件名，
+                   而 React 那边只念文件名。
 */
 import { ref } from "vue";
 
@@ -24,7 +29,6 @@ function select(path: string) {
       type="button"
       role="combobox"
       :aria-expanded="open"
-      :aria-label="$i18n.t.value.artifacts.actions.select"
       class="hover:bg-accent block h-8 w-full truncate rounded px-2 text-left text-sm font-medium"
       @click="open = !open"
     >

@@ -7,7 +7,9 @@
   【边界与注意】   drafts/离开决策由父层唯一 owner 持有；本组件只拥有当前 path 的短生命周期 I/O。
 */
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { Code2, Eye, X } from "lucide-vue-next";
+import { Code2, Download, Eye, X } from "lucide-vue-next";
+
+import { Button, buttonVariants } from "@/components/ui/button";
 
 import ArtifactActions from "./ArtifactActions.vue";
 import ArtifactEditor from "./ArtifactEditor.vue";
@@ -58,7 +60,17 @@ const fullContentLoaded = ref(false);
 const previewBytes = ref<number>();
 const totalBytes = ref<number>();
 const loading = ref(false);
+/** 「正在加载完整文件」是一个**独立**的中间态，React 单独渲染一行提示。 */
+const loadingFull = ref(false);
 const error = ref("");
+/*
+  **加载失败**与**动作失败**是两回事，渲染方式也不同：
+  React 把预览失败渲染成内容区里的一段固定说明 + 下载入口（ArtifactPreviewError），
+  而保存冲突这类动作失败留在头部下方当 alert 播报。原来 Vue 把两者塞进同一个 ref、
+  一律弹成 alert，于是 Gateway 的原始错误串（"Path must start with /mnt/user-data"）
+  被当成产品文案念给用户听。
+*/
+const loadError = ref("");
 const notice = ref("");
 const viewMode = ref<"code" | "preview">("code");
 const saving = ref(false);
@@ -188,6 +200,7 @@ function resetTransientState() {
   previewBytes.value = undefined;
   totalBytes.value = undefined;
   error.value = "";
+  loadError.value = "";
   notice.value = "";
   viewMode.value = "code";
 }
@@ -197,6 +210,7 @@ async function load(full = false) {
   const selected = props.selected;
   const threadId = props.threadId;
   error.value = "";
+  loadError.value = "";
   notice.value = "";
 
   if (policy.value.source === "write-file-draft") {
@@ -255,7 +269,7 @@ async function load(full = false) {
       !disposed &&
       !(reason instanceof DOMException && reason.name === "AbortError")
     ) {
-      error.value =
+      loadError.value =
         reason instanceof Error
           ? reason.message
           : $i18n.t.value.artifacts.loadFailed;
@@ -445,7 +459,30 @@ async function installArtifactSkill() {
 }
 
 async function loadFull() {
-  await load(true);
+  loadingFull.value = true;
+  try {
+    await load(true);
+  } finally {
+    if (!disposed) loadingFull.value = false;
+  }
+}
+
+/*
+  与 React 的 formatArtifactBytes 同形（artifact-file-detail.tsx）：B / KiB / MiB，
+  一位小数。原来这里把原始字节数直接念出来，两个应用同一份文件说出的话完全不同。
+*/
+/** React 的同名兜底：后端没报 previewBytes 时按默认预览窗口显示。 */
+const DEFAULT_PREVIEW_WINDOW = "1 MiB";
+const previewedSize = computed(
+  () => formatArtifactBytes(previewBytes.value) ?? DEFAULT_PREVIEW_WINDOW,
+);
+const totalSize = computed(() => formatArtifactBytes(totalBytes.value));
+
+function formatArtifactBytes(bytes: number | undefined) {
+  if (bytes === undefined) return undefined;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
 }
 
 onBeforeUnmount(() => {
@@ -461,11 +498,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section
-    id="artifacts"
-    class="flex size-full min-h-0 flex-col"
-    aria-hidden="false"
-  >
+  <section class="flex size-full min-h-0 flex-col">
     <header
       class="border-border flex h-12 shrink-0 items-center gap-2 border-b px-3"
     >
@@ -556,8 +589,58 @@ onBeforeUnmount(() => {
       {{ error }}
     </p>
     <p v-if="notice" role="status" class="px-4 pt-3 text-sm">{{ notice }}</p>
+    <!--
+      截断提示条照 React 的 ArtifactContent 头部
+      （frontend/src/components/workspace/artifacts/artifact-file-detail.tsx）：
+      一句 `artifactPreview.limited` + 一颗**只有可见文字**的按钮（没有 aria-label）。
+      字节数要格式化成 KiB / MiB，不是把原始数字念出来——Vue 原来用的是另一套
+      `artifacts.previewedBytes` 文案（"Previewed 1048576 of 2097152 bytes"），
+      而 `artifactPreview` 段本来就是从 React 逐字抄过来的，只是一直没人用。
+    -->
+    <div
+      v-if="truncated"
+      class="border-border bg-muted/40 flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2 text-sm"
+    >
+      <span class="text-muted-foreground">
+        {{ $i18n.t.value.artifactPreview.limited(previewedSize, totalSize) }}
+      </span>
+      <Button size="sm" variant="outline" :disabled="loading" @click="loadFull">
+        {{ $i18n.t.value.artifactPreview.loadFullFile }}
+      </Button>
+    </div>
+    <div
+      v-if="loadingFull"
+      class="border-border text-muted-foreground flex shrink-0 items-center gap-2 border-b px-4 py-2 text-sm"
+    >
+      {{ $i18n.t.value.artifactPreview.loadingFullFile }}
+    </div>
     <div class="relative min-h-0 flex-1 overflow-auto">
-      <p v-if="loading" class="text-muted-foreground p-4 text-sm">
+      <!--
+        预览失败给的是一句固定说明 + 一个下载入口，不是把后端的错误串原样弹成 alert。
+        React 的 ArtifactPreviewError 就是这个形状（同上文件）：用户要的是「还能怎么
+        拿到这个文件」，而不是一句 "Path must start with /mnt/user-data"。
+      -->
+      <div
+        v-if="loadError"
+        class="flex size-full items-center justify-center p-6"
+        data-testid="artifact-preview-error"
+      >
+        <div class="flex max-w-sm flex-col items-center gap-4 text-center">
+          <p class="text-muted-foreground text-sm">
+            {{ $i18n.t.value.artifactPreview.previewFailed }}
+          </p>
+          <a
+            :href="downloadUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            :class="buttonVariants()"
+          >
+            <Download class="size-4" />
+            {{ $i18n.t.value.common.download }}
+          </a>
+        </div>
+      </div>
+      <p v-else-if="loading" class="text-muted-foreground p-4 text-sm">
         {{ $i18n.t.value.artifacts.loading }}
       </p>
       <ArtifactEditor
@@ -577,30 +660,6 @@ onBeforeUnmount(() => {
         :view-mode="viewMode"
         :html-preview-allowed="htmlPreviewAllowed"
       />
-      <div
-        v-if="truncated"
-        class="border-border bg-background sticky right-0 bottom-0 left-0 flex items-center justify-between border-t px-4 py-3 text-sm"
-      >
-        <span class="text-muted-foreground">
-          {{
-            $i18n.t.value.artifacts.previewedBytes(
-              String(previewBytes),
-              totalBytes === null
-                ? $i18n.t.value.artifacts.unknownTotalBytes
-                : String(totalBytes),
-            )
-          }}
-        </span>
-        <button
-          type="button"
-          :aria-label="$i18n.t.value.artifacts.actions.loadFull"
-          class="rounded border px-3 py-1.5"
-          :disabled="loading"
-          @click="loadFull"
-        >
-          {{ $i18n.t.value.artifacts.actions.loadFull }}
-        </button>
-      </div>
     </div>
   </section>
 </template>

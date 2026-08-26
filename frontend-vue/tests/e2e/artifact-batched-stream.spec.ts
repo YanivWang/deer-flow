@@ -302,12 +302,14 @@ test("fails closed for Office/archive files and requires a full D3-valid HTML re
 
   await panel.getByRole("combobox").click();
   await panel.getByRole("option", { name: "large.html" }).click();
-  await expect(panel.getByLabel("Load full file")).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "Load full file" }),
+  ).toBeVisible();
   await expect(panel.locator("iframe[title='Artifact preview']")).toHaveCount(
     0,
   );
   await expect(panel.getByTestId("artifact-editor")).toHaveCount(0);
-  await panel.getByLabel("Load full file").click();
+  await panel.getByRole("button", { name: "Load full file" }).click();
   await expect(panel.locator("iframe[title='Artifact preview']")).toBeVisible();
 });
 

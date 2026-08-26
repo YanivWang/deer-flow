@@ -167,7 +167,13 @@ test("empty chat", async ({ page }) => {
     scrollWidth: element.scrollWidth,
   }));
   expect(modelGeometry.maxWidth).toBe("224px");
-  expect(modelGeometry.clientWidth).toBeGreaterThan(160);
+  /*
+    这个下限只是「按钮没有被压扁」的粗判据，真正的保证是下面那条
+    `scrollWidth <= clientWidth`（名字没被截断）。数字从 160 降到 150：wave 1 为了对齐
+    React，把模型触发器外面那层容器去掉了（行内块的行盒会多出几个 px），按钮因此比
+    录基线时窄了 5px。实测 155，名字仍然完整。
+  */
+  expect(modelGeometry.clientWidth).toBeGreaterThan(150);
   expect(modelGeometry.scrollWidth).toBeLessThanOrEqual(
     modelGeometry.clientWidth,
   );

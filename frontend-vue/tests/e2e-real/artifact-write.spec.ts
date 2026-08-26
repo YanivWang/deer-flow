@@ -260,7 +260,9 @@ test("real Gateway streams a write-file draft into the artifact panel", async ({
     "/mnt/user-data/uploads/large.html",
   );
   const htmlPanel = page.locator("#artifacts");
-  await expect(htmlPanel.getByLabel("Load full file")).toBeVisible();
+  await expect(
+    htmlPanel.getByRole("button", { name: "Load full file" }),
+  ).toBeVisible();
   await expect(
     htmlPanel.locator("iframe[title='Artifact preview']"),
   ).toHaveCount(0);
