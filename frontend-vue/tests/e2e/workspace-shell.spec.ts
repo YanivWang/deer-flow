@@ -157,8 +157,18 @@ test("sidebar share/export and chats updated time use the real browser boundarie
 }) => {
   mockThreads(page);
   await page.goto("/workspace/chats");
-  await expect(page.getByRole("heading", { name: "Chats" })).toBeVisible();
-  await expect(page.getByText(/Updated [45] minutes ago/)).toBeVisible();
+  /*
+    列表页的标题来自面包屑，不是 h1——React 的 ChatsPage 只把标题写进 document.title，
+    页面里唯一说得出"你在哪儿"的是 WorkspaceContainer 的面包屑。相对时间的措辞由
+    date-fns 给出（"5 minutes ago"），不再包一层"Updated ..."：React 那边渲染的就是
+    formatTimeAgo 的原样输出，多包一层，两个应用的链接可访问名就不是同一句话。
+  */
+  const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
+  await expect(
+    breadcrumb.getByRole("link", { name: "Workspace" }),
+  ).toBeVisible();
+  await expect(breadcrumb.getByRole("link", { name: "Chats" })).toBeVisible();
+  await expect(page.getByText(/^[45] minutes ago$/)).toBeVisible();
 
   await page.evaluate(() => {
     Object.defineProperty(navigator, "clipboard", {

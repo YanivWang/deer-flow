@@ -1,0 +1,257 @@
+/*
+  【文件职责】     钉住会话列表域在可访问性树里的形状：列表页的面包屑外壳、一行是不是
+                   一个链接、相对时间的措辞、搜索框的角色，以及侧栏会话行的盒模型与配色。
+  【架构位置】     产品合同套件（tests/e2e，自带 route mock）
+  【主要导出】     无；Playwright 用例
+  【边界与注意】   与 chat-a11y-shape / artifacts-a11y-shape 同一个理由：这些形状是照着
+                   `frontend/src/app/workspace/chats/page.tsx`、
+                   `frontend/src/components/workspace/recent-chat-list.tsx` 与
+                   `workspace-container.tsx` 对齐出来的，而验证它们的 e2e-parity 需要
+                   兄弟应用 ../frontend 在 checkout 里，本仓的常规门禁不依赖它。
+                   不在这里再钉一份的话，一个只跑本仓门禁的改动可以把它们逐条改回去
+                   而全绿。
+
+                   钉的是角色、可访问名、结构与尺寸合同，不是 class 名。侧栏那几个
+                   数字（16 / 20 / muted）是**相对量**：标题 span 从行的左内边距起算、
+                   只有一行文字高、用次要前景色——它们区分的是「标题是行里的一个
+                   元素」和「标题就是整行」，后者是这一轮修掉的那个形状。
+*/
+
+import { expect, test, type Page } from "@playwright/test";
+
+import { mockLangGraphAPI, MOCK_THREAD_ID } from "./utils/mock-api";
+
+const SECOND_THREAD_ID = "00000000-0000-0000-0000-0000000000b2";
+
+/** 一年前，正好落进 date-fns 的 aboutXYears 分桶。 */
+const ONE_YEAR_AGO = new Date(
+  Date.now() - 370 * 24 * 60 * 60 * 1000,
+).toISOString();
+
+function mockTwoThreads(page: Page) {
+  mockLangGraphAPI(page, {
+    threads: [
+      {
+        thread_id: MOCK_THREAD_ID,
+        title: "Newest chat",
+        updated_at: ONE_YEAR_AGO,
+      },
+      {
+        thread_id: SECOND_THREAD_ID,
+        title: "Older chat",
+        updated_at: new Date(
+          Date.now() - 371 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+      },
+    ],
+  });
+}
+
+test.describe("thread list accessibility shape", () => {
+  test("the list page sits in the workspace breadcrumb shell", async ({
+    page,
+  }) => {
+    mockTwoThreads(page);
+    await page.goto("/workspace/chats");
+
+    const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
+    await expect(breadcrumb).toBeVisible({ timeout: 15_000 });
+    // 两段都是链接：React 在 segments.length >= 2 时不把当前页降级成 BreadcrumbPage。
+    const crumbs = breadcrumb.getByRole("listitem");
+    await expect(crumbs).toHaveCount(2);
+    await expect(crumbs.nth(0).getByRole("link")).toHaveAttribute(
+      "href",
+      "/workspace",
+    );
+    await expect(crumbs.nth(1).getByRole("link")).toHaveAttribute(
+      "href",
+      "/workspace/chats",
+    );
+
+    // GitHub 入口是一个**匿名**链接：内容只有一个 aria-hidden 的图标。
+    const github = page.locator(
+      'header a[href="https://github.com/bytedance/deer-flow"]',
+    );
+    await expect(github).toBeVisible();
+    await expect(github).toHaveAccessibleName("");
+
+    // 列表页自己再套一层 main（React 的 WorkspaceBody + page 的 <main>）。
+    expect(await page.locator("main").count()).toBeGreaterThanOrEqual(2);
+
+    // 列表页没有 h1：能说出"你在哪儿"的只有面包屑。
+    await expect(page.getByRole("heading", { name: "Chats" })).toHaveCount(0);
+  });
+
+  test("search is a searchbox, not a plain textbox", async ({ page }) => {
+    mockTwoThreads(page);
+    await page.goto("/workspace/chats");
+
+    await expect(
+      page.getByRole("searchbox", { name: "Search chats" }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByRole("textbox", { name: "Search chats" }),
+    ).toHaveCount(0);
+  });
+
+  test("a row is one link whose name carries the date-fns relative time", async ({
+    page,
+  }) => {
+    mockTwoThreads(page);
+    await page.goto("/workspace/chats");
+
+    const row = page
+      .locator("main")
+      .locator(`a[href='/workspace/chats/${MOCK_THREAD_ID}']`);
+    await expect(row).toBeVisible({ timeout: 15_000 });
+
+    /*
+      名字是标题 + 相对时间**一整句**。措辞用 date-fns 的 "about 1 year ago"：
+      Intl.RelativeTimeFormat 会给出 "last year"，两个应用就不是同一句话了。
+    */
+    await expect(row).toHaveAccessibleName("Newest chat about 1 year ago");
+
+    // 时间不是 <time>：那会在树里多出一个 time 节点，并把标题挤成独立的 text 节点。
+    await expect(row.locator("time")).toHaveCount(0);
+    await expect(page.locator("main time")).toHaveCount(0);
+  });
+
+  test("the sidebar row is a muted single-line label inside the link, not the whole row", async ({
+    page,
+  }) => {
+    mockTwoThreads(page);
+    await page.goto("/workspace/chats/new");
+
+    const link = page
+      .locator('[data-sidebar="menu-item"]')
+      .locator(`a[href='/workspace/chats/${MOCK_THREAD_ID}']`);
+    await expect(link).toBeVisible({ timeout: 15_000 });
+    const label = link.getByText("Newest chat");
+
+    const shape = await label.evaluate((element) => {
+      const link = element.closest("a")!;
+      const labelRect = element.getBoundingClientRect();
+      const linkRect = link.getBoundingClientRect();
+      return {
+        insetFromLink: Math.round(labelRect.x - linkRect.x),
+        labelHeight: Math.round(labelRect.height),
+        linkHeight: Math.round(linkRect.height),
+        shrinksToText: labelRect.width < linkRect.width - 24,
+        color: globalThis.getComputedStyle(element).color,
+        ...probeColors(element),
+      };
+
+      /*
+        `--muted-foreground` / `--foreground` 的**记法**在两个应用里不同
+        （lab() 与 oklch()），直接比字符串比的是记法不是颜色。让浏览器自己把 var()
+        解析成计算颜色再比，比的就是最终呈现的那个颜色。
+      */
+      function probeColors(anchor: Element) {
+        const probe = document.createElement("span");
+        anchor.append(probe);
+        probe.style.color = "var(--muted-foreground)";
+        const mutedColor = globalThis.getComputedStyle(probe).color;
+        probe.style.color = "var(--foreground)";
+        const foregroundColor = globalThis.getComputedStyle(probe).color;
+        probe.remove();
+        return { mutedColor, foregroundColor };
+      }
+    });
+
+    // 行是 h-8、内边距 8px；标题只占一行文字，宽度收缩到文字本身。
+    expect(shape.linkHeight).toBe(32);
+    expect(shape.insetFromLink).toBe(8);
+    expect(shape.labelHeight).toBe(20);
+    expect(shape.shrinksToText).toBe(true);
+
+    // 颜色来自次要前景色，不是正文前景色。
+    expect(shape.color).toBe(shape.mutedColor);
+    expect(shape.color).not.toBe(shape.foregroundColor);
+  });
+});
+
+function manyThreads(count: number) {
+  return Array.from({ length: count }, (_, index) => {
+    const padded = String(index + 1).padStart(3, "0");
+    return {
+      thread_id: `00000000-0000-0000-0000-0000000${padded.padStart(5, "0")}`,
+      title: `Conversation ${padded}`,
+      updated_at: new Date(
+        Date.UTC(2025, 5, 30, 12, 0, 0) - index * 60_000,
+      ).toISOString(),
+    };
+  });
+}
+
+test.describe("thread list accessibility shape (long lists)", () => {
+  test("the sidebar list has no empty listitem and offers an explicit load-more", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page, { threads: manyThreads(120) });
+    await page.goto("/workspace/chats/new");
+
+    const menu = page.locator(
+      '[data-sidebar="group-content"] [data-sidebar="menu"]',
+    );
+    await expect(menu.getByRole("listitem")).toHaveCount(50, {
+      timeout: 15_000,
+    });
+
+    /*
+      哨兵是 aria-hidden 的 div，不是空 li——一个 1px 高的空 li 在可访问性树里
+      仍然是一个真实的 listitem，读屏器会念出「第 51 项，共 51 项」。
+    */
+    const sentinel = page.getByTestId("recent-chat-list-sentinel");
+    await expect(sentinel).toHaveAttribute("aria-hidden", "true");
+    expect(await sentinel.evaluate((element) => element.tagName)).toBe("DIV");
+
+    // 「加载更早的对话」是列表的直接子节点，不是列表项。
+    const loadMore = page.getByRole("button", { name: "Load older chats" });
+    await expect(loadMore).toBeVisible();
+    expect(
+      await loadMore.evaluate((element) => element.closest("li") === null),
+    ).toBe(true);
+  });
+  /*
+    60 条是 React 的切换点（VIRTUALIZATION_THRESHOLD）。50 条那一页仍然全量渲染，
+    所以上面那条用例数得出 50 个 listitem；翻到第二页之后两个列表都进入虚拟化，
+    DOM 里只剩视口附近那十几行。不虚拟化的话，两个应用的可访问性树在同一份数据上
+    一个报十几项、一个报一百项——读屏器念出的「共 N 项」和 Tab 序列长度都不一样。
+  */
+  test("both lists virtualize once the second page crosses the threshold", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page, { threads: manyThreads(120) });
+    await page.goto("/workspace/chats");
+
+    const rows = page.locator("main a[href^='/workspace/chats/']");
+    await expect(rows).toHaveCount(50, { timeout: 15_000 });
+
+    await page.getByTestId("chats-page-sentinel").scrollIntoViewIfNeeded();
+    await expect(
+      page.locator("main").getByText("Conversation 051"),
+    ).toBeVisible({ timeout: 15_000 });
+
+    // 100 条数据，DOM 里远少于 100 行。
+    await expect.poll(() => rows.count(), { timeout: 15_000 }).toBeLessThan(60);
+    expect(await rows.count()).toBeGreaterThan(0);
+
+    // 撑开的高度按全部 100 行算，滚动条长度才是对的。
+    const listHeight = await page
+      .locator("main [data-index]")
+      .first()
+      .evaluate((element) =>
+        Math.round(element.parentElement!.getBoundingClientRect().height),
+      );
+    expect(listHeight).toBeGreaterThan(100 * 60);
+
+    // 侧栏同一份数据，同样只渲染视口附近那几行。
+    const sidebarRows = page.locator(
+      '[data-sidebar="group-content"] [data-sidebar="menu-item"]',
+    );
+    await expect
+      .poll(() => sidebarRows.count(), { timeout: 15_000 })
+      .toBeLessThan(60);
+    expect(await sidebarRows.count()).toBeGreaterThan(0);
+  });
+});

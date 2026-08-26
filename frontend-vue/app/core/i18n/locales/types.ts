@@ -21,6 +21,8 @@ export interface Translations {
     stop: string;
     notifications: string;
     loadingPanel: string;
+    channel: (label: string) => string;
+    breadcrumb: string;
   };
 
   // Common
@@ -533,7 +535,6 @@ export interface Translations {
     pinChatFailed: string;
     noMessagesToExport: string;
     shareFailed: string;
-    updatedAt: (value: string) => string;
   };
 
   // Sidecar
@@ -1080,8 +1081,6 @@ export interface Translations {
   navigation: {
     workspace: string;
     closeSidebar: string;
-    pinnedChat: string;
-    channel: (label: string) => string;
     settingsAndMore: string;
     appearance: string;
     light: string;

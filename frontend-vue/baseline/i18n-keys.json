@@ -1,7 +1,7 @@
 {
   "$comment": "词典 key 基线。由 `make i18n-refresh` 生成。趁词典还是上游原样时取（06 §M1 1d）——此后 key 新增/删除或 unused 集漂移，`make i18n-check` 立刻报出来。",
   "source": "app/core/i18n/locales/en-US.ts",
-  "total": 974,
+  "total": 973,
   "keys": [
     "agents.agentCreated",
     "agents.agentCreatedPendingRefresh",
@@ -182,7 +182,6 @@
     "chats.searchChats",
     "chats.shareFailed",
     "chats.unpinChat",
-    "chats.updatedAt",
     "citations.citeCount",
     "citations.copiedReference",
     "citations.copyReference",
@@ -402,14 +401,12 @@
     "messages.toolResult",
     "messages.tryAgain",
     "navigation.appearance",
-    "navigation.channel",
     "navigation.chatTitle",
     "navigation.closeSidebar",
     "navigation.dark",
     "navigation.deleteConversationFailed",
     "navigation.language",
     "navigation.light",
-    "navigation.pinnedChat",
     "navigation.renameChat",
     "navigation.renameThreadFailed",
     "navigation.settingsAndMore",
@@ -419,6 +416,8 @@
     "pages.chats",
     "pages.newChat",
     "pages.untitled",
+    "primitives.breadcrumb",
+    "primitives.channel",
     "primitives.loadingPanel",
     "primitives.notifications",
     "primitives.stop",
@@ -978,7 +977,7 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 79,
+  "unusedTotal": 75,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.createPageSubtitle",
@@ -994,12 +993,9 @@
     "channels.connectedAs",
     "channels.reconnect",
     "channels.unconfigured",
-    "chats.loadMoreToSearch",
-    "chats.loadOlderChats",
     "chats.pinChatFailed",
     "citations.copiedReference",
     "common.editRerunWarning",
-    "common.home",
     "common.renameFailed",
     "conversation.branchCreated",
     "conversation.branchFailed",
@@ -1057,7 +1053,6 @@
     "uploads.uploadingFiles",
     "welcome.createYourOwnSkill",
     "welcome.createYourOwnSkillDescription",
-    "workspace.githubTooltip",
     "workspace.logout"
   ]
 }

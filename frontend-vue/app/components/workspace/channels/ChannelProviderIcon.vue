@@ -9,17 +9,25 @@
 import { MessageCircle } from "lucide-vue-next";
 import BuzzProviderIcon from "./BuzzProviderIcon.vue";
 
-const props = defineProps<{ provider: string }>();
+/*
+  `size` 覆盖的是图标本身的尺寸类，不用 class 透传：每个分支的根元素上都写着一个
+  `size-*`，透传进来的 `size-4` 与它同权重，最终哪个生效由 Tailwind 产出的 CSS
+  顺序决定而不是这里的写法——那种「大部分时候看起来对」的绑定是最难查的一类。
+  React 侧同样是把尺寸当参数传给 ChannelProviderIcon（className="size-4"）。
+*/
+const props = withDefaults(defineProps<{ provider: string; size?: string }>(), {
+  size: "size-5",
+});
 const provider = computed(() => props.provider.toLowerCase());
 </script>
 
 <template>
-  <BuzzProviderIcon v-if="provider === 'buzz'" class="size-5" />
+  <BuzzProviderIcon v-if="provider === 'buzz'" :class="size" />
   <svg
     v-else-if="provider === 'telegram'"
     viewBox="0 0 24 24"
     aria-hidden="true"
-    class="size-5"
+    :class="size"
   >
     <circle cx="12" cy="12" r="11" fill="#2AABEE" />
     <path
@@ -31,7 +39,7 @@ const provider = computed(() => props.provider.toLowerCase());
     v-else-if="provider === 'slack'"
     viewBox="0 0 256 256"
     aria-hidden="true"
-    class="size-5"
+    :class="size"
   >
     <path
       fill="#E01E5A"
@@ -54,7 +62,7 @@ const provider = computed(() => props.provider.toLowerCase());
     v-else-if="provider === 'discord'"
     viewBox="0 0 24 24"
     aria-hidden="true"
-    class="size-5"
+    :class="size"
   >
     <circle cx="12" cy="12" r="11" fill="#5865F2" />
     <path
@@ -66,7 +74,7 @@ const provider = computed(() => props.provider.toLowerCase());
     v-else-if="provider === 'feishu'"
     viewBox="0 0 24 24"
     aria-hidden="true"
-    class="size-5"
+    :class="size"
   >
     <rect
       x="1.25"
@@ -95,7 +103,7 @@ const provider = computed(() => props.provider.toLowerCase());
     v-else-if="provider === 'dingtalk'"
     viewBox="0 0 1024 1024"
     aria-hidden="true"
-    class="size-5"
+    :class="size"
   >
     <g transform="translate(512 512) scale(1.35) translate(-512 -512)">
       <path
@@ -108,7 +116,7 @@ const provider = computed(() => props.provider.toLowerCase());
     v-else-if="provider === 'wechat'"
     viewBox="0 0 24 24"
     aria-hidden="true"
-    class="size-5"
+    :class="size"
   >
     <circle cx="12" cy="12" r="11" fill="#07C160" />
     <path
@@ -125,7 +133,7 @@ const provider = computed(() => props.provider.toLowerCase());
     v-else-if="provider === 'wecom'"
     viewBox="0 0 24 24"
     aria-hidden="true"
-    class="size-5"
+    :class="size"
   >
     <rect
       x="1.25"
@@ -142,5 +150,5 @@ const provider = computed(() => props.provider.toLowerCase());
       d="M17.3 8.2A8.8 8.8 0 0 0 10 2a10.3 10.3 0 0 0-7.7 3.1A7.7 7.7 0 0 0 0 10.7c0 1.5.4 3 1.3 4.3.5.8 1.3 1.7 2.1 2.3L3 18.9c-.1.5-.3 1.3.2 1.5.3.2.7 0 .9 0l2.8-1.5c1 .3 2 .5 3 .5.8 0 1.7-.1 2.5-.3a3.1 3.1 0 0 1-.9-1.8 9 9 0 0 1-2.6 0 8.3 8.3 0 0 1-3.3-1l-.5.3.2-.9-1-.8a6.4 6.4 0 0 1-2.3-4.2c0-3.6 3.5-6.5 8-6.5s8 2.9 8 6.1a3.1 3.1 0 0 1 2 0c0-.7-.2-1.4-.7-2.1Zm4.1 7-.1-.1a4.2 4.2 0 0 1-1.2-2.3l-.1-.3a1.4 1.4 0 1 0-1.6 1.7 4.2 4.2 0 0 1 2.4 1.3c.2.2.4.2.6 0 .1-.1.1-.2 0-.3Zm-1 4.3c-.2.1-.4.1-.5 0-.2-.1-.2-.3 0-.5a4.3 4.3 0 0 0 1.4-2.5 1.4 1.4 0 1 1 1.6 1.7 4.2 4.2 0 0 0-2.5 1.3Zm-4.4-1 .2.1a4.2 4.2 0 0 1 1.2 2.3l.1.3a1.4 1.4 0 1 0 1.6-1.7 4.2 4.2 0 0 1-2.5-1.3c-.2-.2-.4-.2-.5 0-.1.1-.1.2-.1.3Zm1-4.4c.2-.1.4-.1.5 0 .2.2.2.3 0 .5a4.3 4.3 0 0 0-1.3 2.5 1.4 1.4 0 1 1-1.7-1.7 4.2 4.2 0 0 0 2.5-1.3Z"
     />
   </svg>
-  <MessageCircle v-else aria-hidden="true" class="size-5" />
+  <MessageCircle v-else aria-hidden="true" :class="size" />
 </template>

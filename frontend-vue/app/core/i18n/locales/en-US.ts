@@ -43,6 +43,8 @@ export const enUS: Translations = {
     stop: "Stop",
     notifications: "Notifications alt+T",
     loadingPanel: "Loading panel…",
+    channel: (label) => `${label} channel`,
+    breadcrumb: "breadcrumb",
   },
 
   // Common
@@ -654,7 +656,6 @@ export const enUS: Translations = {
     pinChatFailed: "Failed to update pinned chat",
     noMessagesToExport: "This conversation has no messages to export.",
     shareFailed: "Failed to share conversation.",
-    updatedAt: (value) => `Updated ${value}`,
   },
 
   // Sidecar
@@ -1340,8 +1341,6 @@ export const enUS: Translations = {
   navigation: {
     workspace: "Workspace navigation",
     closeSidebar: "Close sidebar",
-    pinnedChat: "Pinned chat",
-    channel: (label) => `${label} channel`,
     settingsAndMore: "Settings and more",
     appearance: "Appearance",
     light: "Light",

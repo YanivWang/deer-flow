@@ -27,6 +27,9 @@ import {
 
 import ChannelConnections from "@/components/workspace/channels/ChannelConnections.vue";
 import ThreadActionsMenu from "@/components/workspace/ThreadActionsMenu.vue";
+import ThreadChannelBadge from "@/components/workspace/ThreadChannelBadge.vue";
+import ThreadChannelIcon from "@/components/workspace/ThreadChannelIcon.vue";
+import VirtualThreadList from "@/components/workspace/VirtualThreadList.vue";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -173,10 +176,10 @@ onMounted(() => {
   void threads.loadInitial();
   observer = new IntersectionObserver(
     (entries) => {
-      if (entries.some((entry) => entry.isIntersecting))
+      if (threads.canLoadMore && entries.some((entry) => entry.isIntersecting))
         void threads.loadMore();
     },
-    { rootMargin: "40px" },
+    { rootMargin: "120px 0px 120px 0px" },
   );
   if (sentinel.value) observer.observe(sentinel.value);
 });
@@ -212,6 +215,29 @@ watch(() => route.fullPath, closeMobileSidebar);
 function isActive(path: string) {
   return route.path === path;
 }
+
+/*
+  侧栏显示的行 = 前 200 条（threads.displayedThreads）**加上当前打开的那条**，
+  哪怕它已经掉出上限之外。React 的 RecentChatList 就是这么补的：翻得足够深再点开
+  一条老会话，不补的话侧栏里没有任何一行是高亮的，用户看不出自己在哪儿。
+*/
+const sidebarThreads = computed(() => {
+  const activeId = route.params.thread_id;
+  if (typeof activeId !== "string" || !activeId) {
+    return threads.displayedThreads;
+  }
+  if (
+    threads.displayedThreads.some((thread) => thread.thread_id === activeId)
+  ) {
+    return threads.displayedThreads;
+  }
+  const active = threads.threads.find(
+    (thread) => thread.thread_id === activeId,
+  );
+  return active
+    ? [...threads.displayedThreads, active]
+    : threads.displayedThreads;
+});
 
 function startNewChat() {
   mobileOpen.value = false;
@@ -301,205 +327,280 @@ function openSettingsDialog(section: "appearance" | "about") {
       触发器在收起态是 display:none 直到悬停，所以它此时**不在可访问性树里**——
       不是看不见而已。
     -->
-    <div
-      data-sidebar="header"
-      class="group/workspace-header flex h-12 shrink-0 items-center px-2"
-      :class="sidebarExpanded ? 'justify-between' : 'justify-center'"
-    >
+    <div data-sidebar="header" class="flex flex-col gap-2 px-2">
       <div
-        v-if="sidebarExpanded"
-        class="text-primary cursor-default px-2 font-serif text-base"
+        class="group/workspace-header flex h-12 shrink-0 items-center"
+        :class="sidebarExpanded ? 'justify-between' : 'justify-center'"
       >
-        DeerFlow
-      </div>
-      <span
-        v-else
-        class="text-primary font-serif group-hover/workspace-header:hidden"
-        >DF</span
-      >
-      <!--
+        <div
+          v-if="sidebarExpanded"
+          class="text-primary cursor-default px-2 font-serif text-base"
+        >
+          DeerFlow
+        </div>
+        <span
+          v-else
+          class="text-primary font-serif group-hover/workspace-header:hidden"
+          >DF</span
+        >
+        <!--
         名字恒为 "Toggle Sidebar"，也不带 aria-expanded：React 的 SidebarTrigger
         就是一个 sr-only 的固定名字。名字随收起态在"收起/展开"之间来回换，读屏器
         每次折叠都会重念一遍按钮，用户听到的是控件变了，其实只是状态变了。
       -->
-      <button
-        type="button"
-        data-sidebar="trigger"
-        class="hover:bg-sidebar-accent size-8 items-center justify-center rounded-md"
-        :class="
-          sidebarExpanded
-            ? 'hidden md:flex'
-            : 'hidden md:group-hover/workspace-header:flex'
-        "
-        :aria-label="$i18n.t.value.primitives.toggleSidebar"
-        @click="setCollapsed(!collapsed)"
+        <button
+          type="button"
+          data-sidebar="trigger"
+          class="hover:bg-sidebar-accent size-8 items-center justify-center rounded-md"
+          :class="
+            sidebarExpanded
+              ? 'hidden md:flex'
+              : 'hidden md:group-hover/workspace-header:flex'
+          "
+          :aria-label="$i18n.t.value.primitives.toggleSidebar"
+          @click="setCollapsed(!collapsed)"
+        >
+          <ChevronsRight v-if="collapsed" :size="16" />
+          <ChevronsLeft v-else :size="16" />
+        </button>
+      </div>
+      <!--
+        「新对话」和上面那条标题栏同属 SidebarHeader，中间隔 gap-2（8px）：React 把
+        两者一起交给 SidebarHeader（frontend/src/components/workspace/workspace-sidebar.tsx），
+        那是 `flex flex-col gap-2 p-2`，再被页面的 `py-0` 抹掉上下内边距。
+        原来两块是平级兄弟、靠第一组 ul 的 pt-2 凑出这 8px，凑得出位置凑不出结构——
+        侧栏一旦要整体滚动，靠 padding 拼出来的间距会跟着一起错位。
+      -->
+      <ul
+        data-sidebar="menu"
+        class="flex w-full min-w-0 flex-col gap-1 text-sm"
       >
-        <ChevronsRight v-if="collapsed" :size="16" />
-        <ChevronsLeft v-else :size="16" />
-      </button>
+        <li data-sidebar="menu-item">
+          <NuxtLink
+            data-sidebar="menu-button"
+            to="/workspace/chats/new"
+            :data-active="isActive('/workspace/chats/new')"
+            class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground flex h-8 items-center gap-2 rounded-md px-2 font-medium"
+            :title="collapsed ? $i18n.t.value.sidebar.newChat : undefined"
+            @click="startNewChat"
+          >
+            <MessageSquarePlus :size="16" class="shrink-0" />
+            <span v-if="sidebarExpanded">{{
+              $i18n.t.value.sidebar.newChat
+            }}</span>
+          </NuxtLink>
+        </li>
+      </ul>
     </div>
     <!--
-      两组菜单的内外边距照 React 的 SidebarHeader / SidebarGroup 取：
-      头部与「新对话」之间是 gap-2（8px），第二组菜单上面只有 pt-1（4px）。
-      原来把 8px 放在第一组的下边、上边留 0，整条导航就整体上移 4px——
-      看起来只是"间距差不多"，量出来是每一个入口都不在 React 的位置上。
-    -->
-    <ul data-sidebar="menu" class="space-y-1 px-2 pt-2 text-sm">
-      <li data-sidebar="menu-item">
-        <NuxtLink
-          data-sidebar="menu-button"
-          to="/workspace/chats/new"
-          :data-active="isActive('/workspace/chats/new')"
-          class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground flex h-8 items-center gap-2 rounded-md px-2 font-medium"
-          :title="collapsed ? $i18n.t.value.sidebar.newChat : undefined"
-          @click="startNewChat"
-        >
-          <MessageSquarePlus :size="16" class="shrink-0" />
-          <span v-if="sidebarExpanded">{{
-            $i18n.t.value.sidebar.newChat
-          }}</span>
-        </NuxtLink>
-      </li>
-    </ul>
-    <ul data-sidebar="menu" class="space-y-1 px-2 pt-1 pb-2 text-sm">
-      <li data-sidebar="menu-item">
-        <NuxtLink
-          data-sidebar="menu-button"
-          class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground flex h-8 items-center gap-2 rounded-md px-2"
-          :data-active="
-            route.path.startsWith('/workspace/chats') &&
-            !isActive('/workspace/chats/new')
-          "
-          to="/workspace/chats"
-          :title="collapsed ? $i18n.t.value.sidebar.chats : undefined"
-        >
-          <MessagesSquare :size="16" class="shrink-0" />
-          <span v-if="sidebarExpanded">{{ $i18n.t.value.sidebar.chats }}</span>
-        </NuxtLink>
-      </li>
-      <li data-sidebar="menu-item">
-        <NuxtLink
-          v-if="features.agentsApiEnabled.value"
-          data-sidebar="menu-button"
-          class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground flex h-8 items-center gap-2 rounded-md px-2"
-          :data-active="route.path.startsWith('/workspace/agents')"
-          to="/workspace/agents"
-          :title="collapsed ? $i18n.t.value.sidebar.agents : undefined"
-        >
-          <Bot :size="16" class="shrink-0" />
-          <span v-if="sidebarExpanded">{{ $i18n.t.value.sidebar.agents }}</span>
-        </NuxtLink>
-        <div v-else class="group relative">
-          <button
-            type="button"
-            :aria-label="$i18n.t.value.sidebar.agents"
-            aria-disabled="true"
-            aria-describedby="agents-disabled-description"
-            class="text-muted-foreground hover:bg-sidebar-accent flex h-8 w-full items-center gap-2 rounded-md px-2"
-          >
-            <Bot :size="16" class="shrink-0" />
-            <span v-if="sidebarExpanded">{{
-              $i18n.t.value.sidebar.agents
-            }}</span>
-          </button>
-          <span id="agents-disabled-description" class="sr-only">{{
-            $i18n.t.value.sidebar.agentsDisabledTooltip
-          }}</span>
-          <!--
-          这里刻意**不**换成 Tooltip primitive。禁用入口的原因必须对键盘和读屏器
-          恒定可见，所以它挂在一个常驻的 aria-describedby 上；Reka 的 tooltip 只在
-          打开时才写 aria-describedby，as-child 合并会把这条常驻关联覆盖成 undefined。
-          悬停浮层在这里只是视觉补充，用 CSS 就够。
-        -->
-          <span
-            aria-hidden="true"
-            class="bg-popover text-popover-foreground absolute top-full left-2 z-50 hidden rounded-md border px-2 py-1 text-xs whitespace-nowrap shadow group-focus-within:block group-hover:block"
-            >{{ $i18n.t.value.sidebar.agentsDisabledTooltip }}</span
-          >
-        </div>
-      </li>
-      <li data-sidebar="menu-item">
-        <NuxtLink
-          data-sidebar="menu-button"
-          to="/workspace/scheduled-tasks"
-          class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent flex h-8 items-center gap-2 rounded-md px-2"
-          :data-active="route.path.startsWith('/workspace/scheduled-tasks')"
-          :title="collapsed ? $i18n.t.value.sidebar.scheduledTasks : undefined"
-        >
-          <CalendarClock :size="16" class="shrink-0" />
-          <span v-if="sidebarExpanded">{{
-            $i18n.t.value.sidebar.scheduledTasks
-          }}</span>
-        </NuxtLink>
-      </li>
-    </ul>
+      导航、渠道、最近的对话住在**同一个可滚动容器**里，组与组之间 gap-2——这是
+      React 的 SidebarContent（`flex min-h-0 flex-1 flex-col gap-2 overflow-auto`）。
 
-    <ChannelConnections v-if="sidebarExpanded" />
-
-    <!--
-      一条会话都没有的时候，标题和列表**都不渲染**——React 的 RecentChatList 在
-      threads.length === 0 时直接 return null。留一个空标题加一个空 ul，读屏器会
-      念出「最近的对话，列表，0 项」，而屏幕上其实什么都没有。
+      原来只有「最近的对话」那个 ul 自己 overflow-y-auto，导航入口固定在上方不动。
+      看起来更好用，但那不是 React 的行为：会话多到要滚动时，React 会把导航一起滚走。
+      更要紧的是位置——少了组间那 8px，整块「最近的对话」比 React 高 8px，再加上
+      标题没有按 SidebarGroupLabel 的 h-8 + 组内边距排，每一行会话都落在错的 y 上。
     -->
     <div
-      v-if="sidebarExpanded && threads.displayedThreads.length"
-      class="text-muted-foreground px-4 py-2 text-xs font-medium"
+      data-sidebar="content"
+      class="flex min-h-0 flex-1 flex-col gap-2 overflow-auto"
     >
-      {{ $i18n.t.value.sidebar.recentChats }}
-    </div>
-    <ul
-      v-if="sidebarExpanded && threads.displayedThreads.length"
-      data-sidebar="menu"
-      class="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-4"
-    >
-      <li
-        v-for="thread in threads.displayedThreads"
-        :key="thread.thread_id"
-        data-sidebar="menu-item"
-        class="group hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent relative flex items-center rounded-md"
+      <div
+        data-sidebar="group"
+        class="relative flex w-full min-w-0 flex-col p-2 pt-1"
       >
-        <NuxtLink
-          data-sidebar="menu-button"
-          :to="pathOfThread(thread)"
-          class="min-w-0 flex-1 truncate px-2 py-1.5 text-sm"
-          :data-active="isActive(pathOfThread(thread))"
+        <ul
+          data-sidebar="menu"
+          class="flex w-full min-w-0 flex-col gap-1 text-sm"
         >
-          <span
-            v-if="threads.isPinned(thread)"
-            :aria-label="$i18n.t.value.navigation.pinnedChat"
-            class="mr-1 inline-block align-middle"
-            ><Pin :size="12"
-          /></span>
-          {{ displayThreadTitle(thread) }}
-          <span
-            v-if="channelSourceOfThread(thread)"
-            :aria-label="
-              $i18n.t.value.navigation.channel(
-                channelSourceOfThread(thread)?.label ?? '',
-              )
-            "
-            class="ml-1 text-xs"
-            >{{ channelSourceOfThread(thread)?.label }}</span
-          >
-        </NuxtLink>
-        <ThreadActionsMenu
-          :thread="thread"
-          :pinned="threads.isPinned(thread)"
-          :deleting="deletingThreadId === thread.thread_id"
-          @rename="beginRename(thread.thread_id)"
-          @toggle-pin="
-            threads.setPinned(thread.thread_id, !threads.isPinned(thread))
-          "
-          @delete="removeThread(thread.thread_id)"
-        />
-      </li>
-      <li
-        v-if="threads.hasMore"
-        ref="sentinel"
-        data-testid="recent-chat-list-sentinel"
-        class="h-1"
-      />
-    </ul>
+          <li data-sidebar="menu-item">
+            <NuxtLink
+              data-sidebar="menu-button"
+              class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground flex h-8 items-center gap-2 rounded-md px-2"
+              :data-active="
+                route.path.startsWith('/workspace/chats') &&
+                !isActive('/workspace/chats/new')
+              "
+              to="/workspace/chats"
+              :title="collapsed ? $i18n.t.value.sidebar.chats : undefined"
+            >
+              <MessagesSquare :size="16" class="shrink-0" />
+              <span v-if="sidebarExpanded">{{
+                $i18n.t.value.sidebar.chats
+              }}</span>
+            </NuxtLink>
+          </li>
+          <li data-sidebar="menu-item">
+            <NuxtLink
+              v-if="features.agentsApiEnabled.value"
+              data-sidebar="menu-button"
+              class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground flex h-8 items-center gap-2 rounded-md px-2"
+              :data-active="route.path.startsWith('/workspace/agents')"
+              to="/workspace/agents"
+              :title="collapsed ? $i18n.t.value.sidebar.agents : undefined"
+            >
+              <Bot :size="16" class="shrink-0" />
+              <span v-if="sidebarExpanded">{{
+                $i18n.t.value.sidebar.agents
+              }}</span>
+            </NuxtLink>
+            <div v-else class="group relative">
+              <button
+                type="button"
+                :aria-label="$i18n.t.value.sidebar.agents"
+                aria-disabled="true"
+                aria-describedby="agents-disabled-description"
+                class="text-muted-foreground hover:bg-sidebar-accent flex h-8 w-full items-center gap-2 rounded-md px-2"
+              >
+                <Bot :size="16" class="shrink-0" />
+                <span v-if="sidebarExpanded">{{
+                  $i18n.t.value.sidebar.agents
+                }}</span>
+              </button>
+              <span id="agents-disabled-description" class="sr-only">{{
+                $i18n.t.value.sidebar.agentsDisabledTooltip
+              }}</span>
+              <!--
+                这里刻意**不**换成 Tooltip primitive。禁用入口的原因必须对键盘和读屏器
+                恒定可见，所以它挂在一个常驻的 aria-describedby 上；Reka 的 tooltip 只在
+                打开时才写 aria-describedby，as-child 合并会把这条常驻关联覆盖成 undefined。
+                悬停浮层在这里只是视觉补充，用 CSS 就够。
+              -->
+              <span
+                aria-hidden="true"
+                class="bg-popover text-popover-foreground absolute top-full left-2 z-50 hidden rounded-md border px-2 py-1 text-xs whitespace-nowrap shadow group-focus-within:block group-hover:block"
+                >{{ $i18n.t.value.sidebar.agentsDisabledTooltip }}</span
+              >
+            </div>
+          </li>
+          <li data-sidebar="menu-item">
+            <NuxtLink
+              data-sidebar="menu-button"
+              to="/workspace/scheduled-tasks"
+              class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent flex h-8 items-center gap-2 rounded-md px-2"
+              :data-active="route.path.startsWith('/workspace/scheduled-tasks')"
+              :title="
+                collapsed ? $i18n.t.value.sidebar.scheduledTasks : undefined
+              "
+            >
+              <CalendarClock :size="16" class="shrink-0" />
+              <span v-if="sidebarExpanded">{{
+                $i18n.t.value.sidebar.scheduledTasks
+              }}</span>
+            </NuxtLink>
+          </li>
+        </ul>
+      </div>
+
+      <ChannelConnections v-if="sidebarExpanded" />
+
+      <!--
+        一条会话都没有的时候，标题和列表**都不渲染**——React 的 RecentChatList 在
+        threads.length === 0 时直接 return null。留一个空标题加一个空 ul，读屏器会
+        念出「最近的对话，列表，0 项」，而屏幕上其实什么都没有。
+      -->
+      <div
+        v-if="sidebarExpanded && sidebarThreads.length"
+        data-sidebar="group"
+        class="relative flex w-full min-w-0 flex-col p-2"
+      >
+        <div
+          data-sidebar="group-label"
+          class="text-sidebar-foreground/70 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium"
+        >
+          {{ $i18n.t.value.sidebar.recentChats }}
+        </div>
+        <div data-sidebar="group-content" class="w-full text-sm">
+          <ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1">
+            <!--
+              按钮和哨兵是 ul 的**非 li 子节点**，与 React 一样：它们不是列表项，
+              包进 li 会让读屏器把「加载更早的对话」念成第 51 个会话。哨兵还要
+              aria-hidden——一个 1px 高的空 li 在可访问性树里是一个真实的 listitem。
+            -->
+            <div
+              class="flex w-full flex-col gap-1"
+              style="overflow-anchor: none"
+            >
+              <VirtualThreadList
+                :estimate-size="36"
+                :gap="4"
+                :items="sidebarThreads"
+                scroll-parent-selector='[data-sidebar="content"]'
+              >
+                <template #default="{ thread }">
+                  <li data-sidebar="menu-item" class="group/menu-item relative">
+                    <!--
+                      标题包在一个 `min-w-0 truncate` 的 span 里，链接自己是
+                      `w-full ... p-2 pr-8` 的 h-8 行——这是 React 的
+                      SidebarMenuButton 加上 group-has-[menu-action] 的 pr-8。
+                      原来标题是链接的裸文本、操作菜单是同一行的 flex 兄弟，于是
+                      「会话标题」这个可视元素量出来是整行：撑满 203px、高 32px、
+                      用前景色。React 那一份是文字宽度、20px 高、muted 色。
+                    -->
+                    <NuxtLink
+                      data-sidebar="menu-button"
+                      :to="pathOfThread(thread)"
+                      :data-active="isActive(pathOfThread(thread))"
+                      class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground peer/menu-button flex h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-md p-2 pr-8 text-left text-sm whitespace-nowrap"
+                    >
+                      <ThreadChannelIcon
+                        :source="channelSourceOfThread(thread)"
+                      />
+                      <Pin
+                        v-if="threads.isPinned(thread)"
+                        aria-hidden="true"
+                        class="text-muted-foreground size-3.5 shrink-0"
+                      />
+                      <span class="min-w-0 truncate">{{
+                        displayThreadTitle(thread)
+                      }}</span>
+                      <ThreadChannelBadge
+                        :source="channelSourceOfThread(thread)"
+                        class="ml-auto h-5 max-w-14 shrink-0 px-1.5 text-[10px]"
+                      />
+                    </NuxtLink>
+                    <ThreadActionsMenu
+                      :thread="thread"
+                      :pinned="threads.isPinned(thread)"
+                      :deleting="deletingThreadId === thread.thread_id"
+                      @rename="beginRename(thread.thread_id)"
+                      @toggle-pin="
+                        threads.setPinned(
+                          thread.thread_id,
+                          !threads.isPinned(thread),
+                        )
+                      "
+                      @delete="removeThread(thread.thread_id)"
+                    />
+                  </li>
+                </template>
+              </VirtualThreadList>
+              <template v-if="threads.hasMore && threads.canLoadMore">
+                <button
+                  type="button"
+                  data-testid="recent-chat-list-load-more"
+                  :disabled="threads.loadingMore"
+                  class="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground mx-2 my-1 inline-flex h-8 w-[calc(100%-1rem)] items-center justify-center rounded-md px-3 text-xs disabled:pointer-events-none disabled:opacity-50"
+                  @click="threads.loadMore()"
+                >
+                  {{
+                    threads.loadingMore
+                      ? $i18n.t.value.chats.loadingMore
+                      : $i18n.t.value.chats.loadOlderChats
+                  }}
+                </button>
+                <div
+                  ref="sentinel"
+                  aria-hidden="true"
+                  data-testid="recent-chat-list-sentinel"
+                  class="h-px w-full"
+                />
+              </template>
+            </div>
+          </ul>
+        </div>
+      </div>
+    </div>
     <div
       v-if="sidebarExpanded && deleteError"
       role="alert"

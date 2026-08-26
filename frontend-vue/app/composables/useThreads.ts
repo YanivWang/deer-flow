@@ -28,11 +28,11 @@ import {
   ThreadCascadeDeleteError,
 } from "@/core/threads/delete";
 import { patchThreadMetadata } from "@/core/threads/api";
+import { buildThreadListView } from "@/core/threads/thread-list-model";
 import { mergeThreadSnapshot } from "@/core/threads/thread-snapshot";
 import type { AgentThread } from "@/core/threads/types";
 import {
   isThreadPinned,
-  sortPinnedThreads,
   THREAD_PINNED_METADATA_KEY,
 } from "@/core/threads/utils";
 import { getSessionComposerDraftStorage } from "@/core/threads/composer-draft";
@@ -74,7 +74,14 @@ export function useThreads() {
       getInfiniteThreadsNextPageParam(lastPage, allPages),
   });
 
-  const threads = computed(() => {
+  /*
+    去重与排序、以及侧栏可见条数的上限，都走 core/threads/thread-list-model 的
+    同一份规则（React 的 buildThreadListModel）。`threads` 是全量（列表页用），
+    `displayedThreads` 是置顶 + 前 200 条（侧栏用），`canLoadMore` 是侧栏那颗
+    「加载更早的对话」按钮的出现条件之一——超过上限之后再翻页也不会有新行出现，
+    所以按钮要收起来。
+  */
+  const view = computed(() => {
     const byId = new Map<string, AgentThread>();
     for (const page of query.data.value?.pages ?? []) {
       for (const thread of page) {
@@ -84,9 +91,10 @@ export function useThreads() {
         );
       }
     }
-    return [...byId.values()];
+    return buildThreadListView([...byId.values()]);
   });
-  const displayedThreads = computed(() => sortPinnedThreads(threads.value));
+  const threads = computed(() => view.value.threads);
+  const displayedThreads = computed(() => view.value.displayedThreads);
   let initialLoadRequested = false;
 
   async function loadInitial(force = false) {
@@ -239,7 +247,9 @@ export function useThreads() {
     threads,
     displayedThreads,
     hasMore: computed(() => Boolean(query.hasNextPage.value)),
+    canLoadMore: computed(() => view.value.canLoadMore),
     loading: computed(() => query.isFetching.value),
+    loadingMore: computed(() => query.isFetchingNextPage.value),
     error: query.error,
     loadInitial,
     loadMore,

@@ -1,5 +1,5 @@
 /* red/green contract for thread share/export and updated time. */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { downloadAsFile } from "@/core/threads/export";
 import {
@@ -77,17 +77,41 @@ describe("thread export", () => {
   });
 });
 
+/*
+  措辞逐字钉住 React 的 formatTimeAgo：两个应用用同一个 date-fns，所以「about 1 year
+  ago」这类带 about 的分桶也必须一模一样。这里刻意同时钉 5 分钟（无 about）和 1 年
+  （有 about）两档——只钉分钟档的话，换成自己分桶的实现也能通过，而那正是这次修掉的
+  那个 bug。
+*/
 describe("updated_at presentation", () => {
   const now = new Date("2026-08-23T12:00:00.000Z");
 
-  it("formats an ISO timestamp using timezone-safe elapsed time", () => {
-    expect(
-      formatThreadUpdatedTime("2026-08-23T11:55:00.000Z", now, "en-US"),
-    ).toBe("5 minutes ago");
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it("returns null for missing or invalid timestamps", () => {
-    expect(formatThreadUpdatedTime(undefined, now, "en-US")).toBeNull();
-    expect(formatThreadUpdatedTime("not-a-date", now, "en-US")).toBeNull();
+  it("formats an ISO timestamp using timezone-safe elapsed time", () => {
+    expect(formatThreadUpdatedTime("2026-08-23T11:55:00.000Z", "en-US")).toBe(
+      "5 minutes ago",
+    );
+  });
+
+  it("keeps date-fns' approximate wording for the coarse buckets", () => {
+    expect(formatThreadUpdatedTime("2025-06-30T12:00:00.000Z", "en-US")).toBe(
+      "about 1 year ago",
+    );
+    expect(formatThreadUpdatedTime("2025-06-30T12:00:00.000Z", "zh-CN")).toBe(
+      "大约 1 年前",
+    );
+  });
+
+  it("returns null for a missing timestamp and a dash for an invalid one", () => {
+    expect(formatThreadUpdatedTime(undefined, "en-US")).toBeNull();
+    expect(formatThreadUpdatedTime("", "en-US")).toBeNull();
+    expect(formatThreadUpdatedTime("not-a-date", "en-US")).toBe("-");
   });
 });

@@ -43,6 +43,8 @@ export const zhCN: Translations = {
     stop: "Stop",
     notifications: "Notifications alt+T",
     loadingPanel: "Loading panel…",
+    channel: (label) => `${label} channel`,
+    breadcrumb: "breadcrumb",
   },
 
   // Common
@@ -626,7 +628,6 @@ export const zhCN: Translations = {
     pinChatFailed: "更新对话置顶状态失败",
     noMessagesToExport: "此对话没有可导出的消息。",
     shareFailed: "分享对话失败。",
-    updatedAt: (value) => `更新于${value}`,
   },
 
   // Sidecar
@@ -1282,8 +1283,6 @@ export const zhCN: Translations = {
   navigation: {
     workspace: "工作区导航",
     closeSidebar: "关闭侧栏",
-    pinnedChat: "已置顶对话",
-    channel: (label) => `${label} 渠道`,
     settingsAndMore: "设置及更多",
     appearance: "外观",
     light: "浅色",

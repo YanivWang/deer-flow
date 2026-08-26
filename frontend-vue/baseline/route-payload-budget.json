@@ -9,9 +9,9 @@
         "brotli": 131200
       },
       "prefetch": {
-        "files": 26,
-        "raw": 374000,
-        "brotli": 103300
+        "files": 30,
+        "raw": 406000,
+        "brotli": 114000
       }
     },
     "/login": {
@@ -21,9 +21,9 @@
         "brotli": 121900
       },
       "prefetch": {
-        "files": 31,
-        "raw": 412000,
-        "brotli": 115000
+        "files": 35,
+        "raw": 444000,
+        "brotli": 126000
       }
     },
     "/workspace/chats/new": {
@@ -33,9 +33,9 @@
         "brotli": 290600
       },
       "prefetch": {
-        "files": 31,
-        "raw": 412000,
-        "brotli": 115000
+        "files": 35,
+        "raw": 444000,
+        "brotli": 126000
       }
     }
   },
@@ -45,5 +45,5 @@
     "sequenceDiagram"
   ],
   "$criticalPathComment": "关键路径禁入的重量级渲染器，用**库本体**特征串识别，不是包名——包名会以动态 import 引用的形式出现在同步 chunk 里，按包名判会全是误报。三个标记都已核对：KaTeX parse error 只在 katex 本体，getSingletonHighlighter 只在 shiki 本体，sequenceDiagram 只在 mermaid 本体。检查覆盖 critical ∪ prefetch：投机下载同样是用户付的流量。",
-  "$measured": "2026-08-25 实测（critical / prefetch）：/ 29 files 378,532 raw 124,974 br 与 24 files 356,739 raw 98,423 br；/login 24 / 349,610 / 116,121 与 29 / 392,884 / 109,563；/workspace/chats/new 35 / 969,744 / 276,787 与 29 / 392,884 / 109,563。预算 = 实测值 + 约 5% 余量。"
+  "$measured": "2026-08-26 实测（critical / prefetch）：/ 30 files 378,519 raw 125,379 br 与 28 / 386,303 / 108,224；/login 25 / 349,597 / 116,539 与 33 / 422,448 / 119,366；/workspace/chats/new 37 / 998,886 / 286,782 与 33 / 422,448 / 119,366。预算 = 实测值 + 约 5% 余量（文件数 + 2）。这一轮只抬了 **prefetch**：会话列表页接上了 React 一直就有的两样东西——date-fns（相对时间措辞）与 @tanstack/vue-virtual（长列表虚拟化，React 是 @tanstack/react-virtual），外加 WorkspaceContainer / ScrollArea / tooltip / 渠道图标。Vue 之前更轻，是因为它少做了这些事，不是因为它更省。critical 三条路由一格都没有变大（/ 与 /login 的 critical 文件数还各少一个），新增的字节全部落在最低优先级的投机下载里。"
 }

@@ -98,10 +98,16 @@ async function exportConversation(format: ThreadExportFormat) {
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger>
+      <!--
+        绝对定位，压在会话行的右侧内边距上——这是 React 的 SidebarMenuAction
+        （frontend/src/components/ui/sidebar.tsx），行本身用 `pr-8` 给它让位。
+        原来它是同一行里的 flex 兄弟，于是链接被挤成 `flex-1`：会话标题量出来是
+        「整行减去按钮」而不是文字本身，宽度、高度、颜色三项全落在 React 之外。
+      -->
       <button
         type="button"
         :aria-label="$i18n.t.value.common.more"
-        class="mr-1 rounded px-2 py-1 opacity-0 group-hover:opacity-100 focus:opacity-100 data-[state=open]:opacity-100"
+        class="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 opacity-0 group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 focus:opacity-100 data-[state=open]:opacity-100"
       >
         <MoreHorizontal :size="16" />
       </button>
