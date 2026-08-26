@@ -328,6 +328,24 @@ async function submitRename() {
   }
 }
 
+/*
+  置顶失败要说出来。原来模板里直接写 `threads.setPinned(...)`——一个没人 await、
+  也没人 catch 的 Promise：后端拒绝时界面什么都不显示，控制台多一条 unhandled
+  rejection，用户只看到那一行没有置顶，不知道是没生效还是自己没点中。
+  React 的 handleTogglePin 就是 `toast.error(err.message || t.chats.pinChatFailed)`。
+*/
+async function togglePinned(thread: AgentThread) {
+  try {
+    await threads.setPinned(thread.thread_id, !threads.isPinned(thread));
+  } catch (cause) {
+    toast.error(
+      cause instanceof Error && cause.message
+        ? cause.message
+        : $i18n.t.value.chats.pinChatFailed,
+    );
+  }
+}
+
 function openSettingsDialog(section: "appearance" | "about") {
   settingsOpen.value = false;
   settingsDialog.show(section, { returnFocus: settingsTrigger.value });
@@ -605,12 +623,7 @@ function openSettingsDialog(section: "appearance" | "about") {
                       :pinned="threads.isPinned(thread)"
                       :deleting="deletingThreadId === thread.thread_id"
                       @rename="beginRename(thread.thread_id)"
-                      @toggle-pin="
-                        threads.setPinned(
-                          thread.thread_id,
-                          !threads.isPinned(thread),
-                        )
-                      "
+                      @toggle-pin="togglePinned(thread)"
                       @delete="removeThread(thread)"
                     />
                   </li>

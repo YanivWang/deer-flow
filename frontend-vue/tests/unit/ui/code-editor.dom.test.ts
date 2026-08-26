@@ -15,12 +15,20 @@ import { tags } from "@lezer/highlight";
 
 import { CodeEditor } from "@/components/ui/code-editor";
 
+/*
+  等到布局真的挂上，判据是**时间**而不是"drain 多少次微任务"。
+  `flushPromises()` 只清微任务队列，既不推进定时器也不等下一帧；CodeMirror 的挂载
+  在忙碌的机器上完全可能在 50 次 drain 之后才发生，于是这里抛出一个和真实原因毫不
+  相干的错误。实测：这条用例在 `make verify` 与并发构建同时跑时偶发变红，单独跑必过。
+*/
 async function viewOf(wrapper: VueWrapper): Promise<EditorView> {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
+  const deadline = Date.now() + 5_000;
+  do {
     const view = EditorView.findFromDOM(wrapper.element as HTMLElement);
     if (view) return view;
     await flushPromises();
-  }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  } while (Date.now() < deadline);
   throw new Error("editor did not mount");
 }
 

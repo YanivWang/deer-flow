@@ -53,12 +53,6 @@ const toast = useWorkspaceToast();
 const exporting = ref<ThreadExportFormat | null>(null);
 const sharing = ref(false);
 
-function messageOf(error: unknown, fallback: string) {
-  return error instanceof Error && error.message.trim()
-    ? error.message
-    : fallback;
-}
-
 async function shareThread() {
   if (sharing.value) return;
   sharing.value = true;
@@ -66,11 +60,14 @@ async function shareThread() {
     const url = buildThreadShareUrl(props.thread, globalThis.location.origin);
     const copied = await writeTextToClipboard(url);
     if (!copied) {
-      throw new Error($i18n.t.value.clipboard.failedToCopyToClipboard);
+      toast.error($i18n.t.value.clipboard.failedToCopyToClipboard);
+      return;
     }
     toast.success($i18n.t.value.clipboard.linkCopied);
-  } catch (error) {
-    toast.error(messageOf(error, $i18n.t.value.chats.shareFailed));
+  } catch {
+    // 剪贴板失败恒念同一句，不把底层错误原文抛给用户——React 的两条失败路径
+    // （didCopy 为假、以及 API 直接 reject）用的都是这一条。
+    toast.error($i18n.t.value.clipboard.failedToCopyToClipboard);
   } finally {
     sharing.value = false;
   }
@@ -84,15 +81,17 @@ async function exportConversation(format: ThreadExportFormat) {
       getAPIClient(),
       props.thread.thread_id,
     );
+    // 空会话是一条**正常**分支，不是失败：判据是长度，不是错误消息长什么样。
+    if (messages.length === 0) {
+      toast.error($i18n.t.value.conversation.noMessages);
+      return;
+    }
     exportThread(props.thread, messages, format);
     toast.success($i18n.t.value.common.exportSuccess);
-  } catch (error) {
-    const message = messageOf(error, $i18n.t.value.common.exportFailed);
-    toast.error(
-      /no messages to export/i.test(message)
-        ? $i18n.t.value.chats.noMessagesToExport
-        : message,
-    );
+  } catch {
+    // 失败恒念同一句：React 的 catch 是裸的 `t.common.exportFailed`，不透传
+    // Gateway 的 detail。把后端原文端到用户面前，两个应用念的就不是一句话了。
+    toast.error($i18n.t.value.common.exportFailed);
   } finally {
     exporting.value = null;
   }

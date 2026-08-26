@@ -38,7 +38,12 @@ describe("thread share", () => {
 });
 
 describe("thread export", () => {
-  it("loads messages from the real thread-state client and rejects empty state", async () => {
+  /*
+    空会话**返回空数组**，不抛异常。原来这里抛一个写死英文句子的 Error、调用方再用
+    正则匹配那句话来分支——判据变成"错误消息长什么样"，上游改一个词就静默失效。
+    React 那边是直接 `messages.length === 0`。
+  */
+  it("loads messages from the real thread-state client and reports empty state as empty", async () => {
     const getState = vi.fn().mockResolvedValue({
       values: { messages: [{ id: "m-1", type: "human", content: "hello" }] },
     });
@@ -48,7 +53,7 @@ describe("thread export", () => {
     getState.mockResolvedValueOnce({ values: { messages: [] } });
     await expect(
       loadThreadExportMessages({ threads: { getState } }, "t-1"),
-    ).rejects.toThrow("no messages");
+    ).resolves.toEqual([]);
   });
 
   it("always removes the anchor and revokes the object URL when click throws", () => {

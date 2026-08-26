@@ -130,9 +130,14 @@ describe("ThreadActionsMenu", () => {
       .querySelector<HTMLButtonElement>('[data-testid="thread-export-json"]')!
       .click();
     await flushPromises();
+    /*
+      失败恒念 `common.exportFailed`，不透传底层错误原文——React 的 catch 是裸的
+      `toast.error(t.common.exportFailed)`。原文更好查问题，但那样两个应用在同一个
+      失败上念的不是一句话。
+    */
     expect(toast.toasts.value.at(-1)).toMatchObject({
       kind: "error",
-      message: "download blocked",
+      message: enUS.common.exportFailed,
     });
     wrapper.unmount();
     toast.clear();

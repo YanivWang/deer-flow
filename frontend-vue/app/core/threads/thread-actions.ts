@@ -33,14 +33,19 @@ type ThreadStateClient = {
   };
 };
 
+/**
+ * 取出可导出的消息。**空列表就返回空列表**，不抛异常。
+ *
+ * 原来这里在空的时候抛一个写死英文句子的 Error，调用方再拿正则去匹配那句话，
+ * 决定该念哪一条文案。两处都不对：core 层出现用户可见的英文字面量，而分支判据
+ * 变成"错误消息长什么样"——上游哪天改一个词，那条分支就静默失效，没有任何门禁会红。
+ * React 那边就是一个 `messages.length === 0` 的直接判断
+ * （frontend/src/components/workspace/recent-chat-list.tsx 的 handleExport）。
+ */
 export async function loadThreadExportMessages(
   client: ThreadStateClient,
   threadId: string,
 ) {
   const state = await client.threads.getState(threadId);
-  const messages = state.values?.messages ?? [];
-  if (messages.length === 0) {
-    throw new Error("This conversation has no messages to export.");
-  }
-  return messages;
+  return state.values?.messages ?? [];
 }

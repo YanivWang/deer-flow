@@ -533,8 +533,6 @@ export interface Translations {
     pinChat: string;
     unpinChat: string;
     pinChatFailed: string;
-    noMessagesToExport: string;
-    shareFailed: string;
   };
 
   // Sidecar

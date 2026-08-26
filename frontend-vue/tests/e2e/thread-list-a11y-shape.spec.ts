@@ -195,6 +195,63 @@ test.describe("thread list accessibility shape", () => {
     await expect(page).not.toHaveURL(before);
   });
 
+  /*
+    置顶失败必须说出来。原来模板里是一个没人 await、也没人 catch 的 Promise：
+    后端拒绝时界面毫无反应，只在控制台留一条 unhandled rejection——用户看到那一行
+    没置顶，不知道是没生效还是自己没点中。
+  */
+  test("a rejected pin surfaces a message instead of failing silently", async ({
+    page,
+  }) => {
+    mockTwoThreads(page);
+    await page.route(`**/api/langgraph/threads/${MOCK_THREAD_ID}`, (route) =>
+      route.request().method() === "PATCH"
+        ? route.fulfill({ status: 503, json: { detail: "pin rejected" } })
+        : route.fallback(),
+    );
+    await page.goto("/workspace/chats/new");
+
+    const row = page
+      .locator('[data-sidebar="menu-item"]')
+      .filter({ hasText: "Newest chat" })
+      .first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await row.hover();
+    await row.getByRole("button", { name: "More" }).click();
+    await page.getByRole("menuitem", { name: "Pin chat" }).click();
+
+    await expect(page.getByRole("alert").first()).toBeVisible();
+  });
+
+  /*
+    空会话导出不是"失败"，是一条正常分支：React 用 `messages.length === 0` 判，
+    念的是 `conversation.noMessages`。Vue 原来靠正则匹配错误消息的英文原文来分支。
+  */
+  test("exporting an empty conversation reports it as empty, not as a failure", async ({
+    page,
+  }) => {
+    mockTwoThreads(page);
+    await page.route(
+      `**/api/langgraph/threads/${MOCK_THREAD_ID}/state`,
+      (route) => route.fulfill({ json: { values: { messages: [] } } }),
+    );
+    await page.goto("/workspace/chats/new");
+
+    const row = page
+      .locator('[data-sidebar="menu-item"]')
+      .filter({ hasText: "Newest chat" })
+      .first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await row.hover();
+    await row.getByRole("button", { name: "More" }).click();
+    await page.getByRole("menuitem", { name: "Export", exact: true }).click();
+    await page.getByTestId("thread-export-markdown").click();
+
+    await expect(
+      page.getByRole("alert").filter({ hasText: "No messages yet" }),
+    ).toBeVisible();
+  });
+
   test("the rename dialog is named the way React names it", async ({
     page,
   }) => {

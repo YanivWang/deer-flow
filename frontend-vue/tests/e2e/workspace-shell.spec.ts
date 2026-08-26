@@ -226,8 +226,15 @@ test("sidebar share/export and chats updated time use the real browser boundarie
   await row.getByRole("button", { name: "More" }).click();
   await page.getByRole("menuitem", { name: "Export", exact: true }).click();
   await page.getByTestId("thread-export-json").click();
+  /*
+    导出失败恒念 `common.exportFailed`，不透传 Gateway 的 detail——React 的 catch
+    是裸的 `toast.error(t.common.exportFailed)`。把后端原文端到用户面前更好查问题，
+    但那样两个应用在同一个 503 上念的不是一句话。
+  */
   await expect(
-    page.getByRole("alert").filter({ hasText: "thread state unavailable" }),
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Failed to export conversation" }),
   ).toBeVisible();
 });
 

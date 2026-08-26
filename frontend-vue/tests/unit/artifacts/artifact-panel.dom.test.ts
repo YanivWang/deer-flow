@@ -100,14 +100,21 @@ async function warmCodeEditorModules() {
   ]);
 }
 
+/*
+  判据是**时间**而不是"drain 多少次微任务"，理由同 tests/unit/ui/code-editor.dom.test.ts：
+  `flushPromises()` 不推进定时器也不等下一帧，机器一忙就会在 CodeMirror 真正挂上之前
+  数完 50 次，然后抛一个和真实原因毫不相干的错误。
+*/
 async function editorView(wrapper: VueWrapper): Promise<EditorView> {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
     const host = wrapper.find("[data-testid='artifact-editor']");
     const view = host.exists()
       ? EditorView.findFromDOM(host.element as HTMLElement)
       : null;
     if (view) return view;
     await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 5));
   }
   throw new Error("artifact editor did not mount");
 }
