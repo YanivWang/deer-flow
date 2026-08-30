@@ -551,6 +551,8 @@ export const enUS: Translations = {
     pinChat: "Pin chat",
     unpinChat: "Unpin chat",
     pinChatFailed: "Failed to update pinned chat",
+    deleteChatFailed: "Failed to delete conversation.",
+    tryAgain: "Try again",
   },
 
   // Sidecar

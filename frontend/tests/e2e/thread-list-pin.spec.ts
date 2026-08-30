@@ -90,3 +90,64 @@ test("server-side search keeps old pinned chats in the first page", async ({
     .poll(async () => (await recentChatTitles(page)).slice(0, 2))
     .toEqual(["Old pinned chat", "Recent chat 1"]);
 });
+
+/*
+  Deleting a conversation is destructive, and it used to fail silently:
+  `useDeleteThread` had no `onError`, so a rejected delete left the row in place
+  and said nothing — indistinguishable from the click not registering.
+  The Vue app pins the same contract in
+  `frontend-vue/tests/e2e/thread-list-a11y-shape.spec.ts`.
+*/
+test("a rejected delete says so and offers a retry, instead of doing nothing", async ({
+  page,
+}) => {
+  mockLangGraphAPI(page, {
+    threads: [
+      {
+        thread_id: NEWEST_THREAD_ID,
+        title: "Newest chat",
+        updated_at: "2026-07-04T10:00:00Z",
+      },
+    ],
+  });
+  let attempts = 0;
+  await page.route(
+    `**/api/langgraph/threads/${NEWEST_THREAD_ID}`,
+    async (route) => {
+      if (route.request().method() !== "DELETE") {
+        return route.fallback();
+      }
+      attempts += 1;
+      // 403, not 503: the SDK's AsyncCaller retries 5xx with backoff, so a 503
+      // only surfaces as an error many seconds later. A permission denial is
+      // both realistic and immediate.
+      return route.fulfill({
+        status: 403,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "delete rejected" }),
+      });
+    },
+  );
+
+  await page.goto("/workspace/chats/new");
+  const item = page
+    .locator(
+      `a[data-sidebar="menu-button"][href="/workspace/chats/${NEWEST_THREAD_ID}"]`,
+    )
+    .locator("xpath=..");
+  await expect(item).toBeVisible({ timeout: 15_000 });
+  await item.hover();
+  await item.getByRole("button", { name: "More" }).click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
+
+  await expect.poll(() => attempts).toBe(1);
+
+  const alert = page.getByTestId("delete-chat-error");
+  await expect(alert).toBeVisible();
+  await expect(alert).toHaveRole("alert");
+  // The row is still there — the failure did not masquerade as a success.
+  await expect(item).toBeVisible();
+
+  await alert.getByRole("button", { name: "Try again" }).click();
+  await expect.poll(() => attempts).toBe(2);
+});

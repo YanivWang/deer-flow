@@ -120,7 +120,14 @@ describe("真实 create 流", () => {
       (_, i) => bytes.slice(i * stride, i * stride + stride),
     );
     expect(namesOf(await read(chunks))).toEqual(namesOf(await read([CREATE])));
-  });
+    /*
+      显式超时，不吃 vitest 的 5 秒默认值。这条用例是整个套件里最贵的一条，而且是
+      故意的：65,536 个单字节 chunk 加一遍 2.1MB 定长切，空载实测 1,388ms，同文件
+      另外 8 条加起来 44ms。5 秒只留了 3.6 倍余量，而单测常常与 e2e/parity 抢机器
+      ——2026-08-30 一天之内就因此在 `make verify` 里假红了两次（两次都是并发跑别的
+      套件时），单独重跑必过。把余量按这条用例真实的量级定成 20 倍。
+    */
+  }, 30_000);
 
   it("按 CRLF 重放也得到同一批帧（经代理后可能变成 CRLF）", async () => {
     const crlf = CREATE.replaceAll("\n", "\r\n");

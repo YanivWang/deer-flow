@@ -224,6 +224,47 @@ test.describe("thread list accessibility shape", () => {
   });
 
   /*
+    删除是破坏性操作，失败必须说话：不说的话，那一行还在，看起来就像"点了没反应"。
+    React 的 useDeleteThread 原本没有 onError（完全静默），这条守卫与
+    frontend/tests/e2e/thread-list-pin.spec.ts 里的同名用例是同一份合同。
+  */
+  test("a rejected delete says so and offers a retry, instead of doing nothing", async ({
+    page,
+  }) => {
+    mockTwoThreads(page);
+    let attempts = 0;
+    await page.route(`**/api/langgraph/threads/${MOCK_THREAD_ID}`, (route) => {
+      if (route.request().method() !== "DELETE") return route.fallback();
+      attempts += 1;
+      // 403 而不是 503：React 那边的 SDK AsyncCaller 会退避重试 5xx，两个应用的夹具
+      // 要用同一个不可重试的状态码才是同一份合同。
+      return route.fulfill({
+        status: 403,
+        json: { detail: "delete rejected" },
+      });
+    });
+    await page.goto("/workspace/chats/new");
+
+    const row = page
+      .locator('[data-sidebar="menu-item"]')
+      .filter({ hasText: "Newest chat" })
+      .first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await row.hover();
+    await row.getByRole("button", { name: "More" }).click();
+    await page.getByRole("menuitem", { name: "Delete" }).click();
+
+    const alert = page.getByTestId("delete-chat-error");
+    await expect(alert).toBeVisible();
+    await expect(alert).toHaveRole("alert");
+    // 行还在——失败没有假装成功。
+    await expect(row).toBeVisible();
+
+    await alert.getByRole("button", { name: "Try again" }).click();
+    await expect.poll(() => attempts).toBe(2);
+  });
+
+  /*
     空会话导出不是"失败"，是一条正常分支：React 用 `messages.length === 0` 判，
     念的是 `conversation.noMessages`。Vue 原来靠正则匹配错误消息的英文原文来分支。
   */

@@ -658,6 +658,7 @@ function openSettingsDialog(section: "appearance" | "about") {
     <div
       v-if="sidebarExpanded && deleteError"
       role="alert"
+      data-testid="delete-chat-error"
       class="border-destructive/30 bg-destructive/5 text-destructive mx-2 mb-2 rounded-md border p-2 text-xs"
     >
       <p>{{ deleteError }}</p>

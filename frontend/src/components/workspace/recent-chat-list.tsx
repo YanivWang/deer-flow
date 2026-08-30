@@ -43,6 +43,7 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { resetThreadChatAfterDelete } from "@/components/workspace/chats/use-thread-chat";
 import { getAPIClient } from "@/core/api";
@@ -127,7 +128,14 @@ export function RecentChatList() {
     threadListModel.canLoadMore,
   ]);
 
-  const { mutate: deleteThread } = useDeleteThread();
+  const { state: sidebarState, openMobile } = useSidebar();
+  const sidebarExpanded = sidebarState === "expanded" || openMobile;
+  // Deleting a conversation is destructive and used to fail silently: the row
+  // stayed, nothing was said, and the click looked like it had done nothing.
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [failedDeleteThread, setFailedDeleteThread] =
+    useState<AgentThread | null>(null);
+  const { mutate: deleteThread, isPending: isDeleting } = useDeleteThread();
   const { mutate: renameThread } = useRenameThread();
   const { mutate: updatePinnedThread } = usePinThread();
 
@@ -150,25 +158,36 @@ export function RecentChatList() {
         threadPath === currentPathname ||
         (isNewThreadPath && threads[0]?.thread_id === thread.thread_id);
 
-      deleteThread({
-        threadId: thread.thread_id,
-        onRemoteDeleted: isCurrentThread
-          ? () => {
-              resetThreadChatAfterDelete({
-                deletedThreadId: thread.thread_id,
-                nextPath: nextThreadPath,
-                force: true,
-              });
-              void router.replace(nextThreadPath);
-            }
-          : undefined,
-      });
+      setDeleteError(null);
+      setFailedDeleteThread(null);
+      deleteThread(
+        {
+          threadId: thread.thread_id,
+          onRemoteDeleted: isCurrentThread
+            ? () => {
+                resetThreadChatAfterDelete({
+                  deletedThreadId: thread.thread_id,
+                  nextPath: nextThreadPath,
+                  force: true,
+                });
+                void router.replace(nextThreadPath);
+              }
+            : undefined,
+        },
+        {
+          onError: (error: Error) => {
+            setFailedDeleteThread(thread);
+            setDeleteError(error.message || t.chats.deleteChatFailed);
+          },
+        },
+      );
     },
     [
       agentNameFromPath,
       deleteThread,
       pathname,
       router,
+      t.chats.deleteChatFailed,
       threadIdFromPath,
       threads,
     ],
@@ -436,6 +455,27 @@ export function RecentChatList() {
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
+
+      {/* A failed delete has to say so — the row is still there either way. */}
+      {sidebarExpanded && deleteError && (
+        <div
+          role="alert"
+          data-testid="delete-chat-error"
+          className="border-destructive/30 bg-destructive/5 text-destructive mx-2 mb-2 rounded-md border p-2 text-xs"
+        >
+          <p>{deleteError}</p>
+          {failedDeleteThread && (
+            <button
+              type="button"
+              className="mt-1 underline"
+              disabled={isDeleting}
+              onClick={() => handleDelete(failedDeleteThread)}
+            >
+              {t.chats.tryAgain}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Rename Dialog */}
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>

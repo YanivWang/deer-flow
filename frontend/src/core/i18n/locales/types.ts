@@ -443,6 +443,8 @@ export interface Translations {
     pinChat: string;
     unpinChat: string;
     pinChatFailed: string;
+    deleteChatFailed: string;
+    tryAgain: string;
   };
 
   // Sidecar
