@@ -100,3 +100,57 @@ test("a transient probe failure never throws the user out of the thread", async 
     new RegExp(`/workspace/chats/${MOCK_THREAD_ID}`),
   );
 });
+
+/*
+  打开线程时 `/state` 一次都不该发（wave 7）。
+
+  两个路由返回的 `values` 是同一份东西：后端两边都走
+  `accessor.aget(config)` 取同一个最新快照，再用同一个
+  `serialize_channel_values_for_api` 序列化，连 accessor 都是同一个
+  （`build_thread_checkpoint_state_accessor` = 查 assistant_id + 
+  `build_checkpoint_state_accessor`，而 `GET /{id}` 把这两步内联了）。
+  实测（replay Gateway 上写过一次 state 因而有 checkpoint 的线程）两边的
+  `values` 键集与 JSON 完全相等，于是原先那句
+  `{ ...metadata.values, ...state.values }` 是拿一份值盖它自己。
+
+  这条守卫钉的是「没有人再发那次重复往返」。它必须与上面三条并存：
+  那三条钉的是 `/state` 404 时的行为，删掉调用之后它们照样绿——
+  只有计数才看得见这次多余的请求。
+*/
+test("opening a thread does not re-fetch the state route", async ({ page }) => {
+  const stateRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/\/threads\/[^/]+\/state(\?|$)/.test(request.url())) {
+      stateRequests.push(`${request.method()} ${request.url()}`);
+    }
+  });
+
+  mockLangGraphAPI(page, {
+    threads: [
+      {
+        thread_id: MOCK_THREAD_ID,
+        title: "Checkpointed thread",
+        messages: [
+          { type: "human", id: "s-h", content: ALPHA },
+          { type: "ai", id: "s-a", content: "ALPHA reply" },
+        ],
+      },
+    ],
+  });
+
+  await page.goto(`/workspace/chats/${MOCK_THREAD_ID}`);
+  await expect(page.getByText(ALPHA, { exact: false }).first()).toBeVisible({
+    timeout: 15_000,
+  });
+  // 探测是 onMounted 里的一次 await，首屏可见之后它早已发出；再多等一会儿，
+  // 免得把「还没发」错当成「不发」。
+  await page.waitForTimeout(1_000);
+
+  expect(stateRequests).toEqual([]);
+
+  // 标题仍然到得了侧栏——`values` 是从 `GET /threads/{id}` 来的，
+  // 不是从被删掉的那次 `/state`。
+  await expect(
+    page.getByRole("link", { name: "Checkpointed thread" }).first(),
+  ).toBeVisible();
+});

@@ -332,6 +332,45 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
     values: { title: thread.title ?? "Untitled", goal: thread.goal ?? null },
   });
 
+  /**
+   * 一条线程的**完整 channel values**——`GET /threads/{id}` 与
+   * `GET /threads/{id}/state` 返回的是同一份。
+   *
+   * 后端两个路由都走同一个 accessor 的 `aget(config)` 取同一个最新快照，
+   * 再用同一个 `serialize_channel_values_for_api` 序列化；实测（replay Gateway）
+   * 两边的键集与 JSON 完全相等。而 `POST /threads/search` 不一样，它只返回
+   * `{"title": display_name}` 这一个投影字段。
+   *
+   * 这里把「完整」抽成一个函数，就是为了让这条后端事实在 mock 里也是结构性的：
+   * 此前 `GET /threads/{id}` 复用了 search 的投影，于是它比真后端少了
+   * `messages` 与 `artifacts`——只要有人不再额外取一次 `/state`，
+   * artifact 面板在 mock 下就会凭空消失，而真后端下不会。
+   */
+  const threadChannelValues = (thread: MockThread | undefined) => ({
+    title: thread?.title ?? "Untitled",
+    goal: thread?.goal ?? null,
+    messages: thread
+      ? (thread.messages ?? [
+          {
+            type: "human",
+            id: `msg-human-${thread.thread_id}`,
+            content: [{ type: "text", text: "Previous question" }],
+          },
+          {
+            type: "ai",
+            id: `msg-ai-${thread.thread_id}`,
+            content: `Response in thread ${thread.title ?? thread.thread_id}`,
+          },
+        ])
+      : [],
+    artifacts: thread?.artifacts ?? [],
+  });
+
+  const threadGetResult = (thread: MockThread) => ({
+    ...threadSearchResult(thread),
+    values: threadChannelValues(thread),
+  });
+
   const threadUpdatedAt = (thread: MockThread) =>
     Date.parse(thread.updated_at ?? "2025-01-01T00:00:00Z") || 0;
 
@@ -781,7 +820,7 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(threadSearchResult(matchingThread)),
+        body: JSON.stringify(threadGetResult(matchingThread)),
       });
     }
     if (route.request().method() === "PATCH") {
@@ -1134,25 +1173,8 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
-          values: {
-            title: matchingThread?.title ?? "Untitled",
-            goal: matchingThread?.goal ?? null,
-            messages: matchingThread
-              ? (matchingThread.messages ?? [
-                  {
-                    type: "human",
-                    id: `msg-human-${matchingThread.thread_id}`,
-                    content: [{ type: "text", text: "Previous question" }],
-                  },
-                  {
-                    type: "ai",
-                    id: `msg-ai-${matchingThread.thread_id}`,
-                    content: `Response in thread ${matchingThread.title ?? matchingThread.thread_id}`,
-                  },
-                ])
-              : [],
-            artifacts: matchingThread?.artifacts ?? [],
-          },
+          // 与 `GET /threads/{id}` 同源，理由见 `threadChannelValues`。
+          values: threadChannelValues(matchingThread),
           next: [],
           metadata: {},
           created_at: "2025-01-01T00:00:00Z",

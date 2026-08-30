@@ -145,8 +145,24 @@ test("admin completes real scoped multi-account lifecycle through the Vue UI", a
   };
   expect(connect).toMatchObject({ expires_in: 600, url: null });
   expect(connect.instruction).toContain(`/connect ${connect.code}`);
+  /*
+    这一条**不能**从 `settings`（`getByRole("dialog", { name: "Settings" })`）往下找。
+
+    点完「Add account」之后「Connect channel」对话框会盖上来，一旦它挂载，设置对话框
+    就被正确地标成 `aria-hidden`——于是整棵子树离开可访问性树，任何 `getByRole` 都
+    再也匹配不到，报的是「element(s) not found」而不是「不是 disabled」。断言与对话框
+    挂载之间是竞态：机器闲时断言先跑（绿），机器忙时对话框先挂载（红）。
+    实测过一次：六个 e2e 套件连着跑时红，单独跑三条全绿。
+
+    换成按 DOM 找——`getByTestId` 是属性匹配、`locator("button")` 是选择器、
+    `hasText` 是文本内容，三者都不走可访问性树，因此与 `aria-hidden` 无关。
+    断言本身不变，仍然是「等待期间这颗按钮是 disabled」。
+  */
   await expect(
-    slackPanel.getByRole("button", { name: "Add account" }),
+    page
+      .getByTestId("channel-provider-slack")
+      .locator("button")
+      .filter({ hasText: /^Add account$/ }),
   ).toBeDisabled();
 
   const completed = await context.request.post(

@@ -137,14 +137,8 @@
     "browser-feature/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
-      "requestsOnlyReact": [
-        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
-      ],
-      "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state",
-        "GET /api/threads/00000000-0000-0000-0000-000000000001/runs/state-00000000-0000-0000-0000-000000000001/workspace-changes?include_diff=false&include_files=true"
-      ],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
       "geometry": [
         "testId:browser-trigger x React=1127.7 Vue=1140.8 Δ13.1",
         "testId:browser-trigger width React=36 Vue=32 Δ-4",
@@ -179,9 +173,7 @@
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
-      "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
-      ],
+      "requestsOnlyVue": [],
       "geometry": []
     },
     "integrations/desktop/light/en-US": {
@@ -204,9 +196,7 @@
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
-      "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
-      ],
+      "requestsOnlyVue": [],
       "geometry": [
         "text:First answer y React=164 Vue=152 Δ-12"
       ]
@@ -221,9 +211,7 @@
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
-      "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
-      ],
+      "requestsOnlyVue": [],
       "geometry": [
         "text:Research stopped reload regression x React=418.5 Vue=412.5 Δ-6",
         "text:Research stopped reload regression y React=199 Vue=169 Δ-30",
@@ -237,9 +225,7 @@
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
-      "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
-      ],
+      "requestsOnlyVue": [],
       "geometry": []
     },
     "artifact-preview/mobile/light/en-US": {
@@ -248,9 +234,7 @@
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
-      "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
-      ],
+      "requestsOnlyVue": [],
       "geometry": []
     },
     "artifact-panel-resize/desktop/light/en-US": {
@@ -259,9 +243,7 @@
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
-      "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
-      ],
+      "requestsOnlyVue": [],
       "geometry": []
     },
     "scheduled-tasks/desktop/light/en-US": {
@@ -320,9 +302,7 @@
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
-      "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
-      ],
+      "requestsOnlyVue": [],
       "geometry": [
         "text:Here is a relationship diagram. y React=84 Vue=72 Δ-12"
       ]
@@ -337,9 +317,7 @@
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
-      "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
-      ],
+      "requestsOnlyVue": [],
       "geometry": [
         "text:I updated the workspace report. y React=164 Vue=152 Δ-12"
       ]
@@ -350,9 +328,7 @@
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
-      "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
-      ],
+      "requestsOnlyVue": [],
       "geometry": [
         "text:I am DeerFlow, an open-source super agent. y React=244 Vue=218.7 Δ-25.3"
       ]
@@ -363,9 +339,7 @@
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
-      "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
-      ],
+      "requestsOnlyVue": [],
       "geometry": []
     },
     "artifact-batched-stream/desktop/light/en-US": {
@@ -374,9 +348,7 @@
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],
-      "requestsOnlyVue": [
-        "GET /api/langgraph/threads/00000000-0000-0000-0000-000000000001/state"
-      ],
+      "requestsOnlyVue": [],
       "geometry": []
     }
   }

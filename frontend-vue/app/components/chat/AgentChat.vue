@@ -1284,33 +1284,44 @@ onMounted(async () => {
 });
 onMounted(async () => {
   if (!initialRouteThreadId || isDemo.value) return;
-  // 元数据和 checkpoint 分开判：上下文压缩之后 `/state` 404 是常态，
-  // 它只影响能不能补全列表快照，**不能**参与「线程是否存在」的判断。
-  // 用 allSettled 而不是 all，就是为了让这两条结论互不牵连。
-  const [metadata, state] = await Promise.allSettled([
-    getAPIClient().threads.get(initialRouteThreadId),
-    getAPIClient().threads.getState(initialRouteThreadId),
-  ]);
-  if (metadata.status === "fulfilled") {
-    threads.upsert({
-      ...metadata.value,
-      values: {
-        ...metadata.value.values,
-        ...(state.status === "fulfilled" ? state.value.values : {}),
-      },
-    });
+  /*
+    只探 `GET /threads/{id}`：**它自己就带着 checkpoint 的 values**，再取一次
+    `/state` 拿到的是同一份东西。
+
+    这不是推断，是读后端加实测的结论。两个路由都走 `accessor.aget(config)` 取
+    同一个最新快照，再用同一个 `serialize_channel_values_for_api` 序列化：
+    `GET /{id}` 里的 `values=serialize_channel_values_for_api(snapshot.values)`
+    与 `GET /{id}/state` 里的那一行逐字相同，连 accessor 都是同一个——
+    `build_thread_checkpoint_state_accessor` 就是把 assistant_id 查出来再调
+    `build_checkpoint_state_accessor`，而 `GET /{id}` 是把这两步内联了。
+    实测（replay Gateway，写过一次 state 因而有 checkpoint 的线程）：两边的
+    `values` 键集与 JSON 都完全相等。
+
+    于是原先那句 `{ ...metadata.values, ...state.values }` 是拿一份值盖它自己，
+    两条分支都是 no-op：
+    - 有 checkpoint：两边同值，合并结果不变；
+    - 没有 checkpoint（上下文压缩之后）：`/state` 404，`GET /{id}` 仍然 200
+      并返回空快照的 values，合并结果同样不变。
+    删掉之后每次打开线程少一次完全重复的往返。
+
+    另外，`/state` 从来就没参与过「线程是否存在」的判断——那条判据在
+    core/threads/thread-presence.ts 里，读的只有这一次元数据探测的错误码。
+  */
+  try {
+    const metadata = await getAPIClient().threads.get(initialRouteThreadId);
+    threads.upsert(metadata);
     threadPresence.value = {
       threadId: initialRouteThreadId,
       presence: "present",
     };
-    return;
+  } catch (error) {
+    // 探测失败本身不构成「不存在」：只有 403/404 才是。其余错误留在 unknown，
+    // 于是一次瞬时 5xx 不会把用户连人带对话踢回新会话。
+    threadPresence.value = {
+      threadId: initialRouteThreadId,
+      presence: isThreadMissingError(error) ? "missing" : "unknown",
+    };
   }
-  // 探测失败本身不构成「不存在」：只有 403/404 才是。其余错误留在 unknown，
-  // 于是一次瞬时 5xx 不会把用户连人带对话踢回新会话。
-  threadPresence.value = {
-    threadId: initialRouteThreadId,
-    presence: isThreadMissingError(metadata.reason) ? "missing" : "unknown",
-  };
 });
 watch(
   [() => props.agentName, isDemo],

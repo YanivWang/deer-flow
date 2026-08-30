@@ -20,6 +20,12 @@ import { defineComponent, h, onErrorCaptured, ref, watch } from "vue";
 import { describe, expect, it, vi } from "vitest";
 
 import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue";
+// 静态导入，不要写成用例体里的 `await import(...)`：这个 barrel 会把 shiki、
+// mermaid、katex 一起拉进来，而动态导入的那几百毫秒是**算在用例自己的 5s 超时
+// 里**的。M5 那条用例本来就要跑满 4.9s，于是套件并行起来时它会偶发超时——
+// 实测过一次（wave 7 的 `make verify`：5093ms / 5000ms），单独跑却是绿的。
+// 挪到模块顶层之后，加载开销落在文件的 import 阶段，不再占用任何用例的预算。
+import { richContentComponents } from "@/components/markdown/components";
 import { appRemarkPlugins } from "@/core/markdown/plugins";
 
 const PIPELINE = {
@@ -125,8 +131,7 @@ describe("watch 惰性", () => {
       props: {
         content: "```ts\nconst x = 1;\n```",
         ...PIPELINE,
-        components: (await import("@/components/markdown/components"))
-          .richContentComponents as unknown as Record<string, unknown>,
+        components: richContentComponents as unknown as Record<string, unknown>,
       },
     });
 

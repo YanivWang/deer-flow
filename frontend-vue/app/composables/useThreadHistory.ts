@@ -21,7 +21,9 @@ import { fetch } from "@/core/api/fetcher";
 import { readGatewayResponseError } from "@/core/api/errors";
 import { getBackendBaseURL } from "@/core/config";
 import {
+  buildThreadCheckpointSeedUrl,
   buildThreadMessagesPageUrl,
+  checkpointSeedRows,
   flattenThreadHistoryPages,
   getThreadHistoryNextPageParam,
   parseThreadMessagesPageResponse,
@@ -78,23 +80,21 @@ export function useThreadHistory(
       const page = parseThreadMessagesPageResponse(await response.json());
       if (page.data.length > 0 || pageParam !== null) return page;
 
-      const stateResponse = await fetch(
-        `${getBackendBaseURL()}/api/langgraph/threads/${encodeURIComponent(toValue(threadId))}/state`,
-        { method: "GET", signal },
+      // 事件库这条线程一条都没有——退回最新 checkpoint。判据与取数理由都在
+      // `buildThreadCheckpointSeedUrl` / `checkpointSeedRows` 的注释里。
+      const seedResponse = await fetch(
+        buildThreadCheckpointSeedUrl(getBackendBaseURL(), toValue(threadId)),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ limit: 1 }),
+          signal,
+        },
       );
-      if (!stateResponse.ok) return page;
-      const state = (await stateResponse.json()) as {
-        values?: { messages?: import("@/core/types/message").Message[] };
-      };
-      const messages = state.values?.messages ?? [];
+      if (!seedResponse.ok) return page;
       return {
-        data: messages.map((content, index) => ({
-          run_id: `state-${toValue(threadId)}`,
-          seq: index + 1,
-          content,
-          metadata: { caller: "lead_agent" },
-          created_at: new Date(0).toISOString(),
-        })),
+        data: checkpointSeedRows(await seedResponse.json()),
         has_more: false,
         next_before_seq: null,
       };
