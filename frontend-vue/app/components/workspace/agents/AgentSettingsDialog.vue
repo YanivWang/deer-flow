@@ -142,6 +142,7 @@ function save() {
           </span>
           <Select v-model="model" :disabled="pending || modelsLoading">
             <SelectTrigger
+              class="w-full"
               data-testid="agent-settings-model"
               aria-labelledby="agent-settings-model-label"
             >
@@ -206,6 +207,7 @@ function save() {
           </span>
           <Select v-model="thinking" :disabled="pending">
             <SelectTrigger
+              class="w-full"
               data-testid="agent-settings-thinking"
               aria-labelledby="agent-settings-thinking-label"
             >
@@ -231,6 +233,7 @@ function save() {
           </span>
           <Select v-model="reasoningEffort" :disabled="pending">
             <SelectTrigger
+              class="w-full"
               data-testid="agent-settings-reasoning"
               aria-labelledby="agent-settings-reasoning-label"
             >
