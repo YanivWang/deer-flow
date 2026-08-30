@@ -203,7 +203,8 @@ async function onRuntimeConfigSubmit(
         >
           <ChannelProviderIcon
             :provider="provider.provider"
-            size="size-5 shrink-0"
+            size="size-5"
+            class="shrink-0"
           />
           <span class="min-w-0 flex-1 truncate text-sm font-medium">
             {{ provider.display_name }}
