@@ -4,10 +4,18 @@
   【主要导出】     create/provide/useWorkspaceToast
   【依赖关系】     Vue ref/provide/inject
   【边界与注意】   每个 workspace layout 只创建一次；卸载时 clear，避免残留 timer。
+
+                   kind 与 React 用的 sonner 一一对应（success/error/info）；WorkspaceToaster
+                   只把 error 播成 assertive，其余都是 polite。
+
+                   show 接受一个已存在的 id 就地更新那一条，而不是再插一条：多步流程
+                   （Lark 授权轮询）会对同一句提示反复改写「还在等待 / 已完成」，各插一条
+                   会在屏幕上堆出一摞历史，读屏器也会把过期状态重播一遍。id 已经过期
+                   （超时消失或被 dismiss）时退化成新增，这样调用方不需要自己记生死。
 */
 import { inject, provide, ref, type InjectionKey, type Ref } from "vue";
 
-export type WorkspaceToastKind = "success" | "error";
+export type WorkspaceToastKind = "success" | "error" | "info";
 
 export type WorkspaceToast = {
   id: number;
@@ -22,11 +30,17 @@ export interface ToastTimer {
 
 export interface WorkspaceToastStore {
   toasts: Ref<WorkspaceToast[]>;
-  success(message: string): number;
-  error(message: string): number;
+  success(message: string, options?: WorkspaceToastOptions): number;
+  error(message: string, options?: WorkspaceToastOptions): number;
+  info(message: string, options?: WorkspaceToastOptions): number;
   dismiss(id: number): void;
   clear(): void;
 }
+
+export type WorkspaceToastOptions = {
+  /** 就地更新这一条；它已经不在了就新增一条。 */
+  id?: number;
+};
 
 const browserTimer: ToastTimer = {
   set: (callback, delayMs) => window.setTimeout(callback, delayMs),
@@ -52,13 +66,34 @@ export function createWorkspaceToastStore(options?: {
     toasts.value = toasts.value.filter((toast) => toast.id !== id);
   }
 
-  function show(kind: WorkspaceToastKind, message: string) {
-    const id = ++nextId;
-    toasts.value = [...toasts.value, { id, kind, message }];
+  function schedule(id: number) {
+    const existing = timers.get(id);
+    if (existing !== undefined) timer.clear(existing);
     timers.set(
       id,
       timer.set(() => dismiss(id), durationMs),
     );
+  }
+
+  function show(
+    kind: WorkspaceToastKind,
+    message: string,
+    options?: WorkspaceToastOptions,
+  ) {
+    const target = options?.id;
+    if (
+      target !== undefined &&
+      toasts.value.some((item) => item.id === target)
+    ) {
+      toasts.value = toasts.value.map((item) =>
+        item.id === target ? { ...item, kind, message } : item,
+      );
+      schedule(target);
+      return target;
+    }
+    const id = ++nextId;
+    toasts.value = [...toasts.value, { id, kind, message }];
+    schedule(id);
     return id;
   }
 
@@ -70,8 +105,9 @@ export function createWorkspaceToastStore(options?: {
 
   return {
     toasts,
-    success: (message) => show("success", message),
-    error: (message) => show("error", message),
+    success: (message, options) => show("success", message, options),
+    error: (message, options) => show("error", message, options),
+    info: (message, options) => show("info", message, options),
     dismiss,
     clear,
   };

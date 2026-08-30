@@ -66,14 +66,19 @@ describe("SettingsDialog", () => {
 
     const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
     expect(dialog.getAttribute("aria-labelledby")).toBeTruthy();
-    expect(dialog.getAttribute("aria-describedby")).toBeTruthy();
+    /*
+      对照 React settings-dialog.tsx 的 aria-describedby={undefined}：描述是
+      可见正文，不做对话框的可访问描述，读屏器打开时只念标题。
+    */
+    expect(dialog.getAttribute("aria-describedby")).toBeNull();
     expect(
       document.getElementById(dialog.getAttribute("aria-labelledby")!)
         ?.textContent,
     ).toBe("Settings");
 
+    // React 把关闭按钮的名字写死成 "Close"，两边听到同一句（见 primitives.close）。
     const close = document.querySelector<HTMLButtonElement>(
-      '[aria-label="Close Settings"]',
+      '[aria-label="Close"]',
     )!;
     close.focus();
     close.dispatchEvent(

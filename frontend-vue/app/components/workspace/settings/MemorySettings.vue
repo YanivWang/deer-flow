@@ -10,6 +10,7 @@
 import { computed, reactive, ref } from "vue";
 
 import SettingsActionDialog from "@/components/workspace/settings/SettingsActionDialog.vue";
+import SettingsSection from "@/components/workspace/settings/SettingsSection.vue";
 import { useMemory } from "@/composables/useMemory";
 import {
   parseMemoryImportText,
@@ -260,194 +261,201 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <section class="space-y-5" data-testid="memory-settings">
-    <header>
-      <h2 class="text-lg font-semibold">{{ t.settings.memory.title }}</h2>
-      <p class="text-muted-foreground text-sm">
-        {{ t.settings.memory.description }}
+  <SettingsSection
+    data-testid="memory-settings"
+    :title="t.settings.memory.title"
+    :description="t.settings.memory.description"
+  >
+    <div class="space-y-5">
+      <p v-if="owner.loading.value" class="text-muted-foreground text-sm">
+        {{ t.common.loading }}
       </p>
-    </header>
-
-    <p v-if="owner.loading.value" class="text-muted-foreground text-sm">
-      {{ t.common.loading }}
-    </p>
-    <p v-else-if="owner.error.value" role="alert" class="text-sm text-red-600">
-      {{ errorMessage(owner.error.value, t.settings.memory.empty) }}
-    </p>
-    <template v-else-if="owner.memory.value">
-      <div class="space-y-3">
-        <div class="flex flex-col gap-2 sm:flex-row">
-          <input
-            v-model="query"
-            type="search"
-            :placeholder="t.settings.memory.searchPlaceholder"
-            class="border-input min-w-0 flex-1 rounded-md border px-3 py-2"
-            data-testid="memory-search"
-          />
-          <div class="flex gap-1" role="group">
+      <p
+        v-else-if="owner.error.value"
+        role="alert"
+        class="text-sm text-red-600"
+      >
+        {{ errorMessage(owner.error.value, t.settings.memory.empty) }}
+      </p>
+      <template v-else-if="owner.memory.value">
+        <div class="space-y-3">
+          <div class="flex flex-col gap-2 sm:flex-row">
+            <input
+              v-model="query"
+              type="search"
+              :placeholder="t.settings.memory.searchPlaceholder"
+              class="border-input min-w-0 flex-1 rounded-md border px-3 py-2"
+              data-testid="memory-search"
+            />
+            <div class="flex gap-1" role="group">
+              <button
+                v-for="option in ['all', 'facts', 'summaries'] as const"
+                :key="option"
+                type="button"
+                class="rounded-md border px-3 py-2 text-sm"
+                :class="filter === option ? 'bg-accent' : ''"
+                @click="filter = option"
+              >
+                {{
+                  option === "all"
+                    ? t.settings.memory.filterAll
+                    : option === "facts"
+                      ? t.settings.memory.filterFacts
+                      : t.settings.memory.filterSummaries
+                }}
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
             <button
-              v-for="option in ['all', 'facts', 'summaries'] as const"
-              :key="option"
               type="button"
               class="rounded-md border px-3 py-2 text-sm"
-              :class="filter === option ? 'bg-accent' : ''"
-              @click="filter = option"
+              :disabled="owner.importDocument.isPending.value"
+              data-testid="memory-import-open"
+              @click="importInput?.click()"
             >
-              {{
-                option === "all"
-                  ? t.settings.memory.filterAll
-                  : option === "facts"
-                    ? t.settings.memory.filterFacts
-                    : t.settings.memory.filterSummaries
-              }}
+              {{ t.settings.memory.importButton }}
+            </button>
+            <input
+              ref="importInput"
+              type="file"
+              accept=".json,application/json"
+              class="hidden"
+              data-testid="memory-import-file"
+              @change="selectImport"
+            />
+            <button
+              type="button"
+              class="rounded-md border px-3 py-2 text-sm"
+              :disabled="owner.exportDocument.isPending.value"
+              @click="exportDocument"
+            >
+              {{ t.settings.memory.exportButton }}
+            </button>
+            <button
+              type="button"
+              class="rounded-md border px-3 py-2 text-sm"
+              data-testid="memory-add-fact"
+              @click="openCreateFact"
+            >
+              {{ t.settings.memory.addFact }}
+            </button>
+            <button
+              type="button"
+              class="ml-auto rounded-md bg-red-600 px-3 py-2 text-sm text-white"
+              data-testid="memory-clear-open"
+              @click="
+                clearError = '';
+                clearDialogOpen = true;
+              "
+            >
+              {{ t.settings.memory.clearAll }}
             </button>
           </div>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            class="rounded-md border px-3 py-2 text-sm"
-            :disabled="owner.importDocument.isPending.value"
-            data-testid="memory-import-open"
-            @click="importInput?.click()"
-          >
-            {{ t.settings.memory.importButton }}
-          </button>
-          <input
-            ref="importInput"
-            type="file"
-            accept=".json,application/json"
-            class="hidden"
-            data-testid="memory-import-file"
-            @change="selectImport"
-          />
-          <button
-            type="button"
-            class="rounded-md border px-3 py-2 text-sm"
-            :disabled="owner.exportDocument.isPending.value"
-            @click="exportDocument"
-          >
-            {{ t.settings.memory.exportButton }}
-          </button>
-          <button
-            type="button"
-            class="rounded-md border px-3 py-2 text-sm"
-            data-testid="memory-add-fact"
-            @click="openCreateFact"
-          >
-            {{ t.settings.memory.addFact }}
-          </button>
-          <button
-            type="button"
-            class="ml-auto rounded-md bg-red-600 px-3 py-2 text-sm text-white"
-            data-testid="memory-clear-open"
-            @click="
-              clearError = '';
-              clearDialogOpen = true;
-            "
-          >
-            {{ t.settings.memory.clearAll }}
-          </button>
-        </div>
-        <p v-if="importError" role="alert" class="text-sm text-red-600">
-          {{ importError }}
-        </p>
-        <p v-if="pageError" role="alert" class="text-sm text-red-600">
-          {{ pageError }}
-        </p>
-      </div>
-
-      <p
-        v-if="visible.empty"
-        class="text-muted-foreground rounded-md border border-dashed p-4 text-sm"
-        data-testid="memory-empty"
-      >
-        {{ t.settings.memory.memoryFullyEmpty }}
-      </p>
-      <p
-        v-else-if="visible.noMatches"
-        class="text-muted-foreground rounded-md border border-dashed p-4 text-sm"
-        data-testid="memory-no-matches"
-      >
-        {{ t.settings.memory.noMatches }}
-      </p>
-
-      <div
-        v-if="filter !== 'facts' && visible.summaries.length"
-        class="space-y-3"
-      >
-        <p class="text-muted-foreground text-sm">
-          {{ t.settings.memory.summaryReadOnly }}
-        </p>
-        <article
-          v-for="entry in visible.summaries"
-          :key="entry.key"
-          class="rounded-md border p-3"
-          data-testid="memory-summary"
-        >
-          <h3 class="font-medium">{{ entry.title }}</h3>
-          <p class="mt-1 text-sm whitespace-pre-wrap">{{ entry.summary }}</p>
-          <p v-if="entry.updatedAt" class="text-muted-foreground mt-2 text-xs">
-            {{ t.common.lastUpdated }}: {{ entry.updatedAt }}
+          <p v-if="importError" role="alert" class="text-sm text-red-600">
+            {{ importError }}
           </p>
-        </article>
-      </div>
+          <p v-if="pageError" role="alert" class="text-sm text-red-600">
+            {{ pageError }}
+          </p>
+        </div>
 
-      <div v-if="filter !== 'summaries'" class="space-y-2">
-        <h3 class="font-medium">{{ t.settings.memory.markdown.facts }}</h3>
         <p
-          v-if="visible.facts.length === 0 && !visible.noMatches"
-          class="text-muted-foreground text-sm"
+          v-if="visible.empty"
+          class="text-muted-foreground rounded-md border border-dashed p-4 text-sm"
+          data-testid="memory-empty"
         >
-          {{ t.settings.memory.noFacts }}
+          {{ t.settings.memory.memoryFullyEmpty }}
         </p>
-        <article
-          v-for="fact in visible.facts"
-          :key="fact.id"
-          class="flex items-start justify-between gap-3 rounded-md border p-3"
-          :data-testid="`memory-fact-${fact.id}`"
+        <p
+          v-else-if="visible.noMatches"
+          class="text-muted-foreground rounded-md border border-dashed p-4 text-sm"
+          data-testid="memory-no-matches"
         >
-          <div class="min-w-0">
-            <p class="text-sm break-words">{{ fact.content }}</p>
-            <p class="text-muted-foreground mt-1 text-xs">
-              {{ t.settings.memory.markdown.table.category }}:
-              {{ fact.category }} · {{ t.settings.memory.factConfidenceLabel }}:
-              {{ fact.confidence }} ·
-              {{ t.settings.memory.markdown.table.createdAt }}:
-              {{ fact.createdAt || "-" }} ·
-              {{ t.settings.memory.markdown.table.source }}:
-              {{
-                fact.source === "manual"
-                  ? t.settings.memory.manualFactSource
-                  : fact.source
-              }}
+          {{ t.settings.memory.noMatches }}
+        </p>
+
+        <div
+          v-if="filter !== 'facts' && visible.summaries.length"
+          class="space-y-3"
+        >
+          <p class="text-muted-foreground text-sm">
+            {{ t.settings.memory.summaryReadOnly }}
+          </p>
+          <article
+            v-for="entry in visible.summaries"
+            :key="entry.key"
+            class="rounded-md border p-3"
+            data-testid="memory-summary"
+          >
+            <h3 class="font-medium">{{ entry.title }}</h3>
+            <p class="mt-1 text-sm whitespace-pre-wrap">{{ entry.summary }}</p>
+            <p
+              v-if="entry.updatedAt"
+              class="text-muted-foreground mt-2 text-xs"
+            >
+              {{ t.common.lastUpdated }}: {{ entry.updatedAt }}
             </p>
-          </div>
-          <div class="flex shrink-0 gap-2">
-            <button
-              type="button"
-              class="text-sm underline"
-              :aria-label="`${t.common.edit}: ${fact.content}`"
-              @click="openEditFact(fact)"
-            >
-              {{ t.common.edit }}
-            </button>
-            <button
-              type="button"
-              class="text-sm text-red-600 underline"
-              :aria-label="`${t.common.delete}: ${fact.content}`"
-              @click="openDelete(fact)"
-            >
-              {{ t.common.delete }}
-            </button>
-          </div>
-        </article>
-      </div>
-    </template>
-    <p v-else class="text-muted-foreground text-sm">
-      {{ t.settings.memory.empty }}
-    </p>
-  </section>
+          </article>
+        </div>
+
+        <div v-if="filter !== 'summaries'" class="space-y-2">
+          <h3 class="font-medium">{{ t.settings.memory.markdown.facts }}</h3>
+          <p
+            v-if="visible.facts.length === 0 && !visible.noMatches"
+            class="text-muted-foreground text-sm"
+          >
+            {{ t.settings.memory.noFacts }}
+          </p>
+          <article
+            v-for="fact in visible.facts"
+            :key="fact.id"
+            class="flex items-start justify-between gap-3 rounded-md border p-3"
+            :data-testid="`memory-fact-${fact.id}`"
+          >
+            <div class="min-w-0">
+              <p class="text-sm break-words">{{ fact.content }}</p>
+              <p class="text-muted-foreground mt-1 text-xs">
+                {{ t.settings.memory.markdown.table.category }}:
+                {{ fact.category }} ·
+                {{ t.settings.memory.factConfidenceLabel }}:
+                {{ fact.confidence }} ·
+                {{ t.settings.memory.markdown.table.createdAt }}:
+                {{ fact.createdAt || "-" }} ·
+                {{ t.settings.memory.markdown.table.source }}:
+                {{
+                  fact.source === "manual"
+                    ? t.settings.memory.manualFactSource
+                    : fact.source
+                }}
+              </p>
+            </div>
+            <div class="flex shrink-0 gap-2">
+              <button
+                type="button"
+                class="text-sm underline"
+                :aria-label="`${t.common.edit}: ${fact.content}`"
+                @click="openEditFact(fact)"
+              >
+                {{ t.common.edit }}
+              </button>
+              <button
+                type="button"
+                class="text-sm text-red-600 underline"
+                :aria-label="`${t.common.delete}: ${fact.content}`"
+                @click="openDelete(fact)"
+              >
+                {{ t.common.delete }}
+              </button>
+            </div>
+          </article>
+        </div>
+      </template>
+      <p v-else class="text-muted-foreground text-sm">
+        {{ t.settings.memory.empty }}
+      </p>
+    </div>
+  </SettingsSection>
 
   <SettingsActionDialog
     :open="pendingImport !== null"

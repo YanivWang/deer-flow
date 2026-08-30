@@ -516,9 +516,71 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     title: "设置里的集成页",
     backend: "mock",
     path: "/workspace/chats/new?settings=integrations",
+    /*
+      喂一份**混合**状态,而不是 replay Gateway 那份全 Pending 的默认值。
+
+      默认值只走得到「什么都没装」这一支:四格全 Pending、下一步是「先装技能包」、
+      权限面板与换应用面板都不渲染、安装按钮写 Install。这个域真正长代码的地方
+      全在另一侧——已装/CLI 就绪/已授权之后才出现的那些分支。台账对它们一行都报不出来,
+      不是因为两边一致,是因为取样根本走不到。
+
+      这一份同时点亮:已装版本行 + 可更新提示 + 运行时版本不匹配、权限面板(22 个域
+      按钮与自定义 scope)、换应用按钮、连接成功的下一步 Alert、授权格的 **verified**
+      分支(念账号名而不是「已为 X 配置」)、以及 sandbox runtime 格**没有就绪**时的
+      Pending 徽标——四格里另外三格都是 Ready,只有它是 Pending,一格漏了徽标就会显出来。
+
+      注意这里量的是「两个应用拿同一份响应会不会渲染成同一个样子」,所以不能把状态
+      写成两边各自的期望值;它就是 Gateway 契约里的一种真实状态。
+    */
+    routes: [
+      {
+        pattern: "**/api/integrations/lark/status",
+        json: {
+          installed: true,
+          version: "v1.0.65",
+          manifest_version: "v1.0.65",
+          latest_available_version: "v1.0.70",
+          runtime_version_mismatch: true,
+          app_configured: true,
+          app_id: "cli_parity_mock",
+          app_brand: "feishu",
+          skills_expected: 27,
+          skills_installed: 4,
+          installed_skills: ["lark-doc", "lark-im", "lark-shared", "lark-sheets"],
+          enabled_skills: ["lark-doc", "lark-im", "lark-shared", "lark-sheets"],
+          install_path: "/mock/integrations/skills/lark-cli",
+          cli: {
+            available: true,
+            path: "/usr/bin/lark-cli",
+            version: "lark-cli version v1.0.65",
+            error: null,
+          },
+          auth: {
+            status: "authenticated",
+            message: "Lark authorization is live-verified.",
+            user: "Alice",
+            verified: true,
+          },
+          sandbox_runtime_mode: "init-container",
+          sandbox_runtime_ready: false,
+          sandbox_runtime_detail:
+            "The provisioner has no lark-cli init image configured (LARK_CLI_INIT_IMAGE).",
+        },
+      },
+    ],
+    /*
+      锚点必须与语言无关,否则加不了 zh-CN 维度:对话框标题在中文下是「设置」,
+      卡片标题是「Lark / 飞书 CLI」(两个应用的词典里都翻译了,不是漏翻)。
+      改用两边都有的结构锚点——`[data-slot=card-title]` 是 shadcn CardTitle 的合同,
+      本仓的 CardTitle 逐行照抄了它。
+    */
     settle: [
-      { kind: "visible", target: { role: "dialog", name: "Settings" } },
-      { kind: "visible", target: { text: "Lark / Feishu CLI" } },
+      { kind: "visible", target: { selector: "[role=dialog]" } },
+      { kind: "visible", target: { selector: '[data-slot="card-title"]' } },
+    ],
+    dimensions: [
+      DEFAULT_DIMENSION,
+      { viewport: "desktop", theme: "light", locale: "zh-CN" },
     ],
   },
   {

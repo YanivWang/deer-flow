@@ -16,11 +16,13 @@ export interface Translations {
 
   // Primitive-layer accessible names (English in every locale; see the locale files)
   primitives: {
+    close: string;
     toggleSidebar: string;
     submit: string;
     stop: string;
     notifications: string;
     loadingPanel: string;
+    loadingSettingsPage: string;
     channel: (label: string) => string;
     breadcrumb: string;
   };
@@ -831,10 +833,6 @@ export interface Translations {
       connected: string;
       loadFailed: string;
       adminRequired: string;
-      installFailed: string;
-      authorizationFailed: string;
-      connectionFailed: string;
-      appSwitchFailed: string;
       lark: {
         title: string;
         description: string;

@@ -20,8 +20,9 @@
                    外壳那层就停了，够不到播报器。实测把 aria-live 挪进内层、再把整块
                    Teleport 到 body，都不能让 Reka 藏住它——它根本不在那条行走路径上。
                    影响：模态打开期间的路由播报，React 静音、Vue 不静音；而模态开着时
-                   本来就不会换路由。留在 baseline/parity-diff.json 里，
-                   见 artifact-preview/mobile 的那一条 `- alert`。
+                   本来就不会换路由。留在 baseline/parity-diff.json 里，见
+                   artifact-preview/mobile 与 integrations 两条 `- alert`——后者是
+                   设置对话框对齐之后，这个场景里唯一剩下的一行。
 
                    播报名的取法与 Next 一致：`document.title` → `h1` 文本 → pathname，
                    且**只有名字变了才播报**。少了这个判断，同名页面之间跳转会让读屏

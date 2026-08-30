@@ -9,6 +9,7 @@
 
 import { computed, ref } from "vue";
 
+import SettingsSection from "./SettingsSection.vue";
 import { Switch } from "@/components/ui/switch";
 import { useMCPConfig } from "@/composables/useMCPConfig";
 import { useSettingsPermissions } from "@/composables/useSettingsPermissions";
@@ -53,84 +54,85 @@ async function toggle(name: string, enabled: boolean) {
 </script>
 
 <template>
-  <section class="space-y-4" data-testid="tool-settings">
-    <div>
-      <h2 class="text-lg font-semibold">{{ t.settings.tools.title }}</h2>
-      <p class="text-muted-foreground text-sm">
-        {{ t.settings.tools.description }}
-      </p>
-    </div>
-
-    <p
-      v-if="access.permissions.value.state === 'loading'"
-      class="text-muted-foreground text-sm"
-    >
-      {{ t.common.loading }}
-    </p>
-    <p
-      v-else-if="access.permissions.value.state === 'unavailable'"
-      role="alert"
-      class="rounded-md bg-red-50 p-3 text-sm text-red-700"
-      data-testid="settings-session-unavailable"
-    >
-      {{ t.settings.sessionUnavailable }}
-    </p>
-    <p
-      v-else-if="access.permissions.value.adminRequired || actualAdminRequired"
-      class="rounded-md bg-amber-50 p-3 text-sm text-amber-800"
-      data-testid="mcp-admin-required"
-    >
-      {{ t.settings.tools.adminRequired }}
-    </p>
-    <template v-else>
-      <p v-if="mcp.loading.value" class="text-muted-foreground text-sm">
+  <SettingsSection
+    data-testid="tool-settings"
+    :title="t.settings.tools.title"
+    :description="t.settings.tools.description"
+  >
+    <div class="space-y-4">
+      <p
+        v-if="access.permissions.value.state === 'loading'"
+        class="text-muted-foreground text-sm"
+      >
         {{ t.common.loading }}
       </p>
       <p
-        v-else-if="mcp.error.value"
+        v-else-if="access.permissions.value.state === 'unavailable'"
         role="alert"
         class="rounded-md bg-red-50 p-3 text-sm text-red-700"
+        data-testid="settings-session-unavailable"
       >
-        {{ errorMessage(mcp.error.value) }}
+        {{ t.settings.sessionUnavailable }}
       </p>
       <p
-        v-if="actionError"
-        role="alert"
-        class="rounded-md bg-red-50 p-3 text-sm text-red-700"
-        data-testid="mcp-action-error"
-      >
-        {{ actionError }}
-      </p>
-      <p
-        v-if="
-          !mcp.loading.value &&
-          !mcp.error.value &&
-          Object.keys(mcp.config.value?.mcp_servers ?? {}).length === 0
+        v-else-if="
+          access.permissions.value.adminRequired || actualAdminRequired
         "
-        class="text-muted-foreground rounded-md border p-4 text-sm"
+        class="rounded-md bg-amber-50 p-3 text-sm text-amber-800"
+        data-testid="mcp-admin-required"
       >
-        {{ t.settings.tools.empty }}
+        {{ t.settings.tools.adminRequired }}
       </p>
-      <div
-        v-for="(server, name) in mcp.config.value?.mcp_servers ?? {}"
-        :key="name"
-        class="border-border flex items-center justify-between border-b py-3"
-        :data-testid="`mcp-${String(name)}`"
-      >
-        <div>
-          <div class="font-medium">{{ name }}</div>
-          <div class="text-muted-foreground text-xs">
-            {{ server.description }}
+      <template v-else>
+        <p v-if="mcp.loading.value" class="text-muted-foreground text-sm">
+          {{ t.common.loading }}
+        </p>
+        <p
+          v-else-if="mcp.error.value"
+          role="alert"
+          class="rounded-md bg-red-50 p-3 text-sm text-red-700"
+        >
+          {{ errorMessage(mcp.error.value) }}
+        </p>
+        <p
+          v-if="actionError"
+          role="alert"
+          class="rounded-md bg-red-50 p-3 text-sm text-red-700"
+          data-testid="mcp-action-error"
+        >
+          {{ actionError }}
+        </p>
+        <p
+          v-if="
+            !mcp.loading.value &&
+            !mcp.error.value &&
+            Object.keys(mcp.config.value?.mcp_servers ?? {}).length === 0
+          "
+          class="text-muted-foreground rounded-md border p-4 text-sm"
+        >
+          {{ t.settings.tools.empty }}
+        </p>
+        <div
+          v-for="(server, name) in mcp.config.value?.mcp_servers ?? {}"
+          :key="name"
+          class="border-border flex items-center justify-between border-b py-3"
+          :data-testid="`mcp-${String(name)}`"
+        >
+          <div>
+            <div class="font-medium">{{ name }}</div>
+            <div class="text-muted-foreground text-xs">
+              {{ server.description }}
+            </div>
           </div>
+          <Switch
+            :aria-label="String(name)"
+            :model-value="server.enabled"
+            :disabled="!access.canManageMcp.value || mcp.pending.value"
+            :data-pending="pendingName === name || undefined"
+            @update:model-value="toggle(String(name), $event)"
+          />
         </div>
-        <Switch
-          :aria-label="String(name)"
-          :model-value="server.enabled"
-          :disabled="!access.canManageMcp.value || mcp.pending.value"
-          :data-pending="pendingName === name || undefined"
-          @update:model-value="toggle(String(name), $event)"
-        />
-      </div>
-    </template>
-  </section>
+      </template>
+    </div>
+  </SettingsSection>
 </template>

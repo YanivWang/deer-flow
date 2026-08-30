@@ -28,9 +28,11 @@ export const enUS: Translations = {
   /*
     Primitive 层的可访问名。**两份词典里的值刻意相同**，都是英文。
 
-    React 把这几串写死在 vendored primitive 里、没有接进词典：shadcn sidebar 的
-    "Toggle Sidebar"（frontend/src/components/ui/sidebar.tsx）、ai-elements
-    prompt-input 的 "Submit"/"Stop"、sonner 的 containerAriaLabel + 热键后缀。
+    React 把这几串写死在 vendored primitive 里、没有接进词典：shadcn dialog 关闭
+    按钮的 "Close"（frontend/src/components/ui/dialog.tsx 里的 sr-only span）、
+    shadcn sidebar 的 "Toggle Sidebar"（frontend/src/components/ui/sidebar.tsx）、
+    ai-elements prompt-input 的 "Submit"/"Stop"、sonner 的 containerAriaLabel + 热键后缀，
+    以及 settings-dialog.tsx 里九个 section 懒加载时那句 "Loading…"。
     实测中文界面下 React 读屏器听到的也是这几串英文。对齐的判据是「两边听到同一句」，
     所以这里照抄，而不是各自翻译——一边中文一边英文，就不是同一个控件了。
 
@@ -38,11 +40,13 @@ export const enUS: Translations = {
     翻掉的地方：上游哪天把它们接进自己的 i18n，改这四行即可。
   */
   primitives: {
+    close: "Close",
     toggleSidebar: "Toggle Sidebar",
     submit: "Submit",
     stop: "Stop",
     notifications: "Notifications alt+T",
     loadingPanel: "Loading panel…",
+    loadingSettingsPage: "Loading…",
     channel: (label) => `${label} channel`,
     breadcrumb: "breadcrumb",
   },
@@ -985,10 +989,6 @@ export const enUS: Translations = {
       connected: "Connected",
       loadFailed: "Failed to load integration status",
       adminRequired: "Admin privileges are required to install integrations.",
-      installFailed: "Installation failed",
-      authorizationFailed: "Authorization failed",
-      connectionFailed: "Connection failed",
-      appSwitchFailed: "App switch failed",
       lark: {
         title: "Lark / Feishu CLI",
         description:

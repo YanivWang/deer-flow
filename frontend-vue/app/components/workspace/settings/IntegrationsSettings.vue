@@ -3,12 +3,53 @@
   【文件职责】     管理 Lark/飞书集成的安装、App 配置、授权与凭证切换流程。
   【架构位置】     L3
   【主要导出】     默认 IntegrationsSettings 组件
-  【依赖关系】     Vue-owned Lark flow API · i18n · clipboard
-  【边界与注意】   流程以 generation 拦截过期响应，并在用户动作同步预开窗口；不依赖
-                   React DOM，也不通过 sleep、重试测试或延迟产品行为解决时序。
+  【依赖关系】     Vue-owned Lark flow API · workspace toast · i18n · clipboard · ui/{card,alert,badge,input,button}
+  【边界与注意】   逐行对照 React integrations-settings-page.tsx。流程以 generation 拦截
+                   过期响应，并在用户动作同步预开窗口；不依赖 React DOM，也不通过 sleep、
+                   重试测试或延迟产品行为解决时序。
+
+                   反馈一律走 workspace toaster，与 React 的 sonner 同一个位置：
+                   此前这里把成功/失败渲染成面板内的 role=status / role=alert 段落，
+                   于是同一句话在两个应用里出现在不同的地方、带不同的角色。留在面板里的
+                   只有 React 也留在面板里的那一处——状态**加载**失败的 destructive Alert。
+
+                   六个 pending 标志分开存，不能并成一个 busy：React 每个 mutation 各有
+                   isPending，按钮的转圈、文案与禁用各自读其中一个。合成一个的代价实测
+                   过——换应用凭据时会弹出「正在安装技能包」。
+
+                   React 还额外用 NEXT_PUBLIC_STATIC_WEBSITE_ONLY 关掉这几个按钮；
+                   静态整站模式按对齐范围双向豁免，这里不复刻。
 */
 import { computed, onMounted, onUnmounted, ref } from "vue";
+import { useQueryClient } from "@tanstack/vue-query";
+import {
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  PlugZap,
+  RefreshCw,
+  XCircle,
+} from "lucide-vue-next";
 
+import LarkStatusItem from "./LarkStatusItem.vue";
+import SettingsSection from "./SettingsSection.vue";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { useAuthSession } from "@/composables/useAuthSession";
+import { SKILLS_QUERY_KEY } from "@/composables/useSkillsCatalog";
+import {
+  AUTH_DISABLED_USER,
+  isAuthDisabledMode,
+} from "@/core/auth/auth-disabled-user";
 import { writeTextToClipboard } from "@/core/clipboard";
 import {
   completeLarkAuthorization,
@@ -19,17 +60,21 @@ import {
   setLarkAppCredentials,
   startLarkAuthorization,
   startLarkConfiguration,
-  type LarkAuthStartRequest,
-  type LarkAuthStartResponse,
-  type LarkBrand,
-  type LarkConfigStartResponse,
-} from "@/core/integrations/lark/flow";
-import type { LarkIntegrationStatus } from "@/core/integrations/lark/types";
+} from "@/core/integrations/lark/api";
+import type {
+  LarkAuthStartRequest,
+  LarkAuthStartResponse,
+  LarkConfigStartResponse,
+  LarkIntegrationStatus,
+} from "@/core/integrations/lark/types";
+import { useWorkspaceToast } from "@/core/workspace-shell/toast";
+import { cn } from "@/lib/utils";
 
 type PendingFlow =
   | ({ kind: "config" } & LarkConfigStartResponse)
   | ({ kind: "auth" } & LarkAuthStartResponse);
 
+/** 对照 `lark-cli auth login --domain`（业务域 + all）。 */
 const DOMAINS = [
   "calendar",
   "im",
@@ -55,128 +100,197 @@ const DOMAINS = [
   "all",
 ] as const;
 
+const AUTOMATIC_LARK_AUTH_WAIT_SECONDS = 8;
+
 const { $i18n } = useNuxtApp();
 const copy = computed(() => $i18n.t.value);
 const larkCopy = computed(() => copy.value.settings.integrations.lark);
+const toast = useWorkspaceToast();
+const queryClient = useQueryClient();
+const authDisabled = isAuthDisabledMode();
+const auth = useAuthSession({ enabled: computed(() => !authDisabled) });
+const isAdmin = computed(() => {
+  if (authDisabled) return AUTH_DISABLED_USER.system_role === "admin";
+  const session = auth.session.value;
+  return (
+    session?.tag === "authenticated" && session.user.system_role === "admin"
+  );
+});
 
 const status = ref<LarkIntegrationStatus | null>(null);
 const loading = ref(true);
 const fetching = ref(false);
-const busy = ref(false);
-const notice = ref<string | null>(null);
-const error = ref<string | null>(null);
+/** 状态**加载**失败；mutation 的失败走 toast，与 React 的 useQuery error 同义。 */
+const loadError = ref<string | null>(null);
+const installPending = ref(false);
+const startConfigPending = ref(false);
+const completeConfigPending = ref(false);
+const startAuthPending = ref(false);
+const completeAuthPending = ref(false);
+const switchAppPending = ref(false);
+const checkingConnection = ref(false);
 const selectedDomains = ref<string[]>([]);
 const customScope = ref("");
 const pendingFlow = ref<PendingFlow | null>(null);
-const checkingConnection = ref(false);
-/* 这两个状态不能并进 `busy`。`busy` 是「有请求在飞」的通用锁，四条流程共用；
-   而安装中和等待授权要各自渲染自己的说明块，共用一个标志就会在换应用凭据时
-   弹出「正在安装技能包」。 */
-const installing = ref(false);
-const awaitingAuth = ref(false);
 const showChangeApp = ref(false);
 const changeAppId = ref("");
 const changeAppSecret = ref("");
-const changeAppBrand = ref<LarkBrand>("feishu");
+const changeAppBrand = ref<"feishu" | "lark">("feishu");
 const browserWindow = ref<Window | null>(null);
 const authRequest = ref<LarkAuthStartRequest>({ recommend: false });
+/** 授权流程只占一条 toast，反复改写它而不是每轮插一条。 */
+let authToastId: number | null = null;
+/*
+  在飞的状态回读。React 在 beginFlow 里 queryClient.cancelQueries（react-query 把
+  AbortSignal 交给 queryFn），少了它，一次开始得更早、回来得更晚的 status 会把新流程
+  刚写进去的状态覆盖回旧的。这里用同一个手段：一个 controller，开新流程就 abort。
+*/
+let statusAbort: AbortController | null = null;
 let clientGeneration = 0;
 let authAttempt = 0;
 let authDeadline = 0;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
+const connectBusy = computed(
+  () =>
+    startConfigPending.value ||
+    completeConfigPending.value ||
+    startAuthPending.value ||
+    completeAuthPending.value ||
+    switchAppPending.value,
+);
+const integrationBusy = computed(
+  () =>
+    connectBusy.value ||
+    checkingConnection.value ||
+    pendingFlow.value !== null ||
+    installPending.value,
+);
 const credentialsConfigured = computed(
   () => status.value?.auth.status === "authenticated",
 );
 const connected = computed(
   () => credentialsConfigured.value && status.value?.auth.verified === true,
 );
-const integrationBusy = computed(
-  () => busy.value || checkingConnection.value || pendingFlow.value !== null,
-);
+/*
+  sandbox runtime 这一行只在 sandbox 真的跑 lark-cli 时才有意义
+  （AIO / provisioner 模式报的 mode 不是 "none"）。
+*/
 const showSandboxRuntime = computed(
-  () => status.value?.sandbox_runtime_mode !== "none",
+  () => !!status.value && status.value.sandbox_runtime_mode !== "none",
 );
-const connectLabel = computed(() => {
+const trimmedCustomScope = computed(() => customScope.value.trim());
+const hasAdditionalPermissionRequest = computed(
+  () => selectedDomains.value.length > 0 || trimmedCustomScope.value.length > 0,
+);
+const installDisabled = computed(() => !isAdmin.value || integrationBusy.value);
+const authActionDisabled = computed(
+  () =>
+    !status.value?.installed ||
+    !status.value.cli.available ||
+    integrationBusy.value,
+);
+const connectButtonLabel = computed(() => {
   if (checkingConnection.value) return larkCopy.value.checkingConnection;
-  if (busy.value) return larkCopy.value.preparingAuthorization;
-  if (credentialsConfigured.value && hasAdditionalPermissions.value)
+  if (connectBusy.value) return larkCopy.value.authStarting;
+  if (credentialsConfigured.value && hasAdditionalPermissionRequest.value)
     return larkCopy.value.requestPermissions;
   return credentialsConfigured.value
     ? larkCopy.value.connectedAction
     : larkCopy.value.connect;
 });
-const hasAdditionalPermissions = computed(
-  () => selectedDomains.value.length > 0 || customScope.value.trim().length > 0,
+const permissionDomains = computed(() =>
+  DOMAINS.map((id) => ({
+    id,
+    label: larkCopy.value.authDomains[id].label,
+    description: larkCopy.value.authDomains[id].description,
+  })),
 );
 const statusCards = computed(() => {
-  if (!status.value) return [];
+  const current = status.value;
+  if (!current) return [];
   return [
     {
       label: larkCopy.value.skillPack,
-      ok: status.value.installed,
-      value: status.value.installed
+      ok: current.installed,
+      value: current.installed
         ? larkCopy.value.skillsInstalled(
-            status.value.skills_installed,
-            status.value.skills_expected,
+            current.skills_installed,
+            current.skills_expected,
           )
         : larkCopy.value.notInstalled,
     },
     {
       label: larkCopy.value.gatewayCli,
-      ok: status.value.cli.available,
-      value: status.value.cli.available
-        ? (status.value.cli.version ??
-          copy.value.settings.integrations.available)
-        : (status.value.cli.error ??
-          copy.value.settings.integrations.unavailable),
+      ok: current.cli.available,
+      value: current.cli.available
+        ? (current.cli.version ?? copy.value.settings.integrations.available)
+        : (current.cli.error ?? copy.value.settings.integrations.unavailable),
     },
     {
       label: larkCopy.value.auth,
       ok: connected.value,
-      value: credentialsConfigured.value
-        ? status.value.auth.user
-          ? larkCopy.value.authConfiguredFor(status.value.auth.user)
-          : larkCopy.value.authConfigured
-        : larkCopy.value.authNotConfigured,
+      value:
+        current.auth.status === "authenticated"
+          ? current.auth.verified
+            ? (current.auth.user ?? copy.value.settings.integrations.connected)
+            : current.auth.user
+              ? larkCopy.value.authConfiguredFor(current.auth.user)
+              : larkCopy.value.authConfigured
+          : larkCopy.value.authNotConfigured,
     },
   ];
 });
-const sandboxRuntimeLabel = computed(() => {
+const sandboxRuntimeValue = computed(() => {
   const current = status.value;
-  if (!current?.sandbox_runtime_ready)
+  if (!current) return "";
+  if (!current.sandbox_runtime_ready)
     return (
-      current?.sandbox_runtime_detail ?? larkCopy.value.sandboxRuntimeNotReady
+      current.sandbox_runtime_detail ?? larkCopy.value.sandboxRuntimeNotReady
     );
-  if (current.sandbox_runtime_mode === "init-container")
-    return larkCopy.value.sandboxRuntimeInitContainer;
   if (current.sandbox_runtime_mode === "broker")
     return larkCopy.value.sandboxRuntimeBroker;
+  if (current.sandbox_runtime_mode === "init-container")
+    return larkCopy.value.sandboxRuntimeInitContainer;
   return larkCopy.value.sandboxRuntimeGatewayDownload;
 });
-const nextStepTitle = computed(() => {
-  if (!status.value?.installed) return larkCopy.value.installNextTitle;
-  if (!status.value.cli.available) return larkCopy.value.cliNextTitle;
-  if (connected.value) return larkCopy.value.connectedTitle;
-  if (credentialsConfigured.value) return larkCopy.value.configuredTitle;
-  return larkCopy.value.authNextTitle;
+const nextStep = computed(() => {
+  const current = status.value;
+  if (!current?.installed)
+    return {
+      icon: null,
+      title: larkCopy.value.installNextTitle,
+      description: larkCopy.value.installNextDescription,
+    };
+  if (!current.cli.available)
+    return {
+      icon: null,
+      title: larkCopy.value.cliNextTitle,
+      description: larkCopy.value.cliNextDescription,
+    };
+  if (connected.value)
+    return {
+      icon: CheckCircle2,
+      title: larkCopy.value.connectedTitle,
+      description: larkCopy.value.connectedDescription,
+    };
+  if (credentialsConfigured.value)
+    return {
+      icon: CheckCircle2,
+      title: larkCopy.value.configuredTitle,
+      description: larkCopy.value.configuredDescription,
+    };
+  return {
+    icon: ExternalLink,
+    title: larkCopy.value.authNextTitle,
+    description: larkCopy.value.authNextDescription,
+  };
 });
-/* 与 nextStepTitle 同一组分支。标题只说「现在处于哪一步」，说明才回答
-   「我该做什么、要等多久」——只渲染标题等于把这一页的操作指引整段丢掉。 */
-const nextStepDescription = computed(() => {
-  if (!status.value?.installed) return larkCopy.value.installNextDescription;
-  if (!status.value.cli.available) return larkCopy.value.cliNextDescription;
-  if (connected.value) return larkCopy.value.connectedDescription;
-  if (credentialsConfigured.value) return larkCopy.value.configuredDescription;
-  return larkCopy.value.authNextDescription;
-});
-/* 待办流程的标题与说明。auth 分支在等待授权回调期间要换成 waiting 文案，
-   否则用户看到的仍是「打开链接」，而链接已经打开、系统正在轮询。 */
 const pendingFlowTitle = computed(() => {
   const pending = pendingFlow.value;
   if (!pending) return "";
   if (pending.kind === "config") return larkCopy.value.openConnectionLinkTitle;
-  return awaitingAuth.value
+  return completeAuthPending.value
     ? larkCopy.value.waitingAuthTitle
     : larkCopy.value.openAuthLinkTitle;
 });
@@ -185,25 +299,23 @@ const pendingFlowDescription = computed(() => {
   if (!pending) return "";
   if (pending.kind === "config")
     return larkCopy.value.openConnectionLinkDescription;
-  return awaitingAuth.value
+  return completeAuthPending.value
     ? larkCopy.value.waitingAuthDescription
     : larkCopy.value.openAuthLinkDescription;
 });
-
-/* manifest 版本优先于运行时版本：技能包声明的版本才是用户「装了哪一版」的答案，
-   `version` 是回退。 */
+/** manifest 版本优先：技能包声明的版本才是「装了哪一版」，`version` 是回退。 */
 const installedVersion = computed(() =>
   status.value ? (status.value.manifest_version ?? status.value.version) : null,
 );
-/* 只有确实更新时才提示。上游有版本号但与已装版本相同时不算可更新。 */
+/** 只有确实更新时才提示；上游版本号与已装版本相同不算可更新。 */
 const updateAvailableVersion = computed(() => {
   const latest = status.value?.latest_available_version;
   if (!latest || latest === installedVersion.value) return null;
   return latest;
 });
 
-function domainLabel(domain: (typeof DOMAINS)[number]) {
-  return larkCopy.value.authDomains[domain].label;
+function describeError(cause: unknown) {
+  return cause instanceof Error ? cause.message : String(cause);
 }
 
 function clearRetry() {
@@ -215,8 +327,13 @@ function beginFlow() {
   clearRetry();
   authAttempt += 1;
   clientGeneration += 1;
+  statusAbort?.abort();
+  statusAbort = null;
+  if (authToastId !== null) {
+    toast.dismiss(authToastId);
+    authToastId = null;
+  }
   pendingFlow.value = null;
-  error.value = null;
   return clientGeneration;
 }
 
@@ -252,7 +369,7 @@ function buildAuthRequest(): LarkAuthStartRequest {
     : [...new Set(selectedDomains.value)];
   const scopes = [
     ...new Set(
-      customScope.value
+      trimmedCustomScope.value
         .split(/[\s,]+/)
         .map((item) => item.trim())
         .filter(Boolean),
@@ -266,7 +383,6 @@ function buildAuthRequest(): LarkAuthStartRequest {
 }
 
 function toggleDomain(domain: string) {
-  if (integrationBusy.value) return;
   if (domain === "all") {
     selectedDomains.value = selectedDomains.value.includes("all")
       ? []
@@ -282,39 +398,41 @@ function toggleDomain(domain: string) {
 async function load(initial = false, propagate = false) {
   if (initial) loading.value = true;
   else fetching.value = true;
-  error.value = null;
+  const controller = new AbortController();
+  statusAbort = controller;
   try {
-    status.value = await loadLarkIntegrationStatus();
+    status.value = await loadLarkIntegrationStatus(controller.signal);
+    loadError.value = null;
   } catch (cause) {
-    error.value =
-      cause instanceof Error
-        ? cause.message
-        : copy.value.settings.integrations.loadFailed;
+    // 取消不是失败：react-query 也不会把 cancel 当成 query error 报出来。
+    if (controller.signal.aborted) return;
+    loadError.value = describeError(cause);
     if (propagate) throw cause;
   } finally {
+    if (statusAbort === controller) statusAbort = null;
     loading.value = false;
     fetching.value = false;
   }
 }
 
 async function install() {
-  busy.value = true;
-  installing.value = true;
-  error.value = null;
+  installPending.value = true;
   try {
     const result = await installLarkIntegration();
     status.value = result.status;
-    notice.value = result.message;
+    // React 在 onSuccess 里 invalidate 这两份 server state：状态回读一次，
+    // 技能索引标脏，切到 Skills 面板时才看得到新装的 lark-* 技能。
+    await queryClient.invalidateQueries({ queryKey: SKILLS_QUERY_KEY });
+    toast.success(result.message);
+    await load();
   } catch (cause) {
-    error.value =
-      cause instanceof LarkIntegrationRequestError && cause.isAdminRequired
-        ? copy.value.settings.integrations.adminRequired
-        : cause instanceof Error
-          ? cause.message
-          : copy.value.settings.integrations.installFailed;
+    if (cause instanceof LarkIntegrationRequestError && cause.isAdminRequired) {
+      toast.error(copy.value.settings.integrations.adminRequired);
+      return;
+    }
+    toast.error(describeError(cause));
   } finally {
-    busy.value = false;
-    installing.value = false;
+    installPending.value = false;
   }
 }
 
@@ -324,7 +442,11 @@ function scheduleAuthRetry(
   attempt: number,
 ) {
   clearRetry();
-  if (!active(generation) || Date.now() >= authDeadline) return;
+  if (!active(generation)) return;
+  if (Date.now() >= authDeadline) {
+    toast.info(larkCopy.value.authorizationStillPending);
+    return;
+  }
   retryTimer = setTimeout(
     () => void completeAuth(result, generation, attempt, true),
     1500,
@@ -337,25 +459,31 @@ async function completeAuth(
   attempt: number,
   automatic: boolean,
 ) {
-  awaitingAuth.value = true;
+  const options = authToastId === null ? undefined : { id: authToastId };
+  completeAuthPending.value = true;
   try {
     const completed = await completeLarkAuthorization({
       device_code: result.device_code,
       generation: result.generation,
-      ...(automatic ? { wait_timeout_seconds: 8 } : {}),
+      ...(automatic
+        ? { wait_timeout_seconds: AUTOMATIC_LARK_AUTH_WAIT_SECONDS }
+        : {}),
     });
     if (!active(generation) || attempt !== authAttempt) return;
     status.value = completed.status;
-    notice.value = completed.status.auth.verified
-      ? larkCopy.value.connectedTitle
-      : completed.message;
     if (completed.success) {
       clearRetry();
+      toast.success(completed.message, options);
+      authToastId = null;
       pendingFlow.value = null;
       browserWindow.value = null;
-    } else if (automatic) {
-      scheduleAuthRetry(result, generation, attempt);
+      return;
     }
+    toast.info(
+      completed.message || larkCopy.value.authorizationStillPending,
+      options,
+    );
+    if (automatic) scheduleAuthRetry(result, generation, attempt);
   } catch (cause) {
     if (!active(generation) || attempt !== authAttempt) return;
     if (
@@ -363,19 +491,17 @@ async function completeAuth(
       cause instanceof LarkIntegrationRequestError &&
       cause.status === 504
     ) {
-      notice.value = larkCopy.value.authorizationStillPending;
+      toast.info(larkCopy.value.authorizationStillPending, options);
       scheduleAuthRetry(result, generation, attempt);
       return;
     }
-    error.value =
-      cause instanceof Error
-        ? cause.message
-        : copy.value.settings.integrations.authorizationFailed;
+    toast.error(describeError(cause), options);
+    authToastId = null;
   } finally {
     // 只有还属于当前流程的这一轮才有资格改状态：授权是带重试的轮询，
     // 上一轮迟到的 finally 会把正在等待的那一轮标记成不在等待。
     if (active(generation) && attempt === authAttempt) {
-      awaitingAuth.value = false;
+      completeAuthPending.value = false;
     }
   }
 }
@@ -385,7 +511,7 @@ async function startAuth(
   target: Window | null,
   serverGeneration?: string,
 ) {
-  busy.value = true;
+  startAuthPending.value = true;
   try {
     const result = await startLarkAuthorization({
       ...authRequest.value,
@@ -394,7 +520,8 @@ async function startAuth(
     if (!active(generation)) return;
     pendingFlow.value = { kind: "auth", ...result };
     openUrl(result.verification_url, target);
-    notice.value = larkCopy.value.authStarted;
+    authToastId = toast.info(larkCopy.value.authStarted);
+    clearRetry();
     authAttempt += 1;
     const attempt = authAttempt;
     authDeadline = Date.now() + Math.max(result.expires_in ?? 300, 30) * 1000;
@@ -402,42 +529,41 @@ async function startAuth(
   } catch (cause) {
     if (!active(generation)) return;
     closeBrowser(target);
-    error.value =
-      cause instanceof Error
-        ? cause.message
-        : copy.value.settings.integrations.connectionFailed;
+    toast.error(describeError(cause));
   } finally {
-    if (active(generation)) busy.value = false;
+    if (active(generation)) startAuthPending.value = false;
   }
 }
 
 async function startRegistration(
-  brand: LarkBrand,
+  brand: "feishu" | "lark",
   generation: number,
   target: Window | null,
 ) {
-  busy.value = true;
+  startConfigPending.value = true;
   try {
-    const result = await startLarkConfiguration(brand);
+    const result = await startLarkConfiguration({ brand });
     if (!active(generation)) return;
     pendingFlow.value = { kind: "config", ...result };
     openUrl(result.verification_url, target);
-    notice.value = larkCopy.value.connectionStarted;
+    toast.success(larkCopy.value.connectionStarted);
   } catch (cause) {
     if (!active(generation)) return;
     closeBrowser(target);
-    error.value =
-      cause instanceof Error
-        ? cause.message
-        : copy.value.settings.integrations.connectionFailed;
+    toast.error(describeError(cause));
   } finally {
-    if (active(generation)) busy.value = false;
+    if (active(generation)) startConfigPending.value = false;
   }
 }
 
 async function connect() {
   if (!status.value) return;
   authRequest.value = buildAuthRequest();
+  /*
+    在点击手势内同步预开空白页。这里不能相信缓存里的授权状态：`authenticated`
+    可能已在服务端过期，若等 refetch 回来再 window.open，就已经脱离用户手势、
+    会被浏览器拦掉。先开、用不上再关，弹窗才稳。
+  */
   const target = preopenBrowser();
   const generation = beginFlow();
   checkingConnection.value = true;
@@ -446,8 +572,10 @@ async function connect() {
     if (!active(generation) || !status.value) return;
     if (status.value.app_configured) await startAuth(generation, target);
     else await startRegistration("feishu", generation, target);
-  } catch {
-    if (active(generation)) closeBrowser(target);
+  } catch (cause) {
+    if (!active(generation)) return;
+    closeBrowser(target);
+    toast.error(describeError(cause));
   } finally {
     if (active(generation)) checkingConnection.value = false;
   }
@@ -457,7 +585,7 @@ async function continueConfiguration() {
   const pending = pendingFlow.value;
   if (!pending || pending.kind !== "config") return;
   const generation = clientGeneration;
-  busy.value = true;
+  completeConfigPending.value = true;
   try {
     const configured = await completeLarkConfiguration({
       device_code: pending.device_code,
@@ -468,25 +596,27 @@ async function continueConfiguration() {
     });
     if (!active(generation)) return;
     status.value = configured.status;
+    toast.success(larkCopy.value.connectionReady);
     pendingFlow.value = null;
-    notice.value = larkCopy.value.connectionReady;
     await startAuth(generation, browserWindow.value, configured.generation);
   } catch (cause) {
-    if (active(generation))
-      error.value =
-        cause instanceof Error
-          ? cause.message
-          : copy.value.settings.integrations.connectionFailed;
+    if (!active(generation)) return;
+    pendingFlow.value = null;
+    toast.error(describeError(cause));
   } finally {
-    if (active(generation)) busy.value = false;
+    if (active(generation)) completeConfigPending.value = false;
   }
 }
 
 async function switchApp() {
+  /*
+    与 connect 同一条约束：切换 POST 解析之后才轮到浏览器授权，那时再开窗口
+    已经不在手势里。所以在这里同步预开。
+  */
   authRequest.value = buildAuthRequest();
   const target = preopenBrowser();
   const generation = beginFlow();
-  busy.value = true;
+  switchAppPending.value = true;
   try {
     const result = await setLarkAppCredentials({
       app_id: changeAppId.value.trim(),
@@ -495,19 +625,17 @@ async function switchApp() {
     });
     if (!active(generation)) return;
     status.value = result.status;
+    toast.success(larkCopy.value.changeAppSwitched);
     changeAppSecret.value = "";
     showChangeApp.value = false;
-    notice.value = larkCopy.value.changeAppSwitched;
+    // 新 app 还没有用户授权，直接把浏览器授权推下去，让这次切换落到可用状态。
     await startAuth(generation, target, result.generation);
   } catch (cause) {
     if (!active(generation)) return;
     closeBrowser(target);
-    error.value =
-      cause instanceof Error
-        ? cause.message
-        : copy.value.settings.integrations.appSwitchFailed;
+    toast.error(describeError(cause));
   } finally {
-    if (active(generation)) busy.value = false;
+    if (active(generation)) switchAppPending.value = false;
   }
 }
 
@@ -519,12 +647,11 @@ function reRegister() {
 }
 
 async function copyLink() {
-  if (!pendingFlow.value) return;
-  notice.value = (await writeTextToClipboard(
-    pendingFlow.value.verification_url,
-  ))
-    ? copy.value.clipboard.copiedToClipboard
-    : copy.value.clipboard.failedToCopyToClipboard;
+  const pending = pendingFlow.value;
+  if (!pending) return;
+  if (await writeTextToClipboard(pending.verification_url))
+    toast.success(copy.value.clipboard.copiedToClipboard);
+  else toast.error(copy.value.clipboard.failedToCopyToClipboard);
 }
 
 function manualComplete() {
@@ -539,208 +666,181 @@ onMounted(() => void load(true));
 onUnmounted(() => {
   clientGeneration += 1;
   clearRetry();
+  statusAbort?.abort();
+  statusAbort = null;
 });
 </script>
 
 <template>
-  <section class="space-y-4">
-    <div class="rounded-xl border">
-      <header class="flex items-start justify-between gap-4 border-b p-5">
+  <SettingsSection
+    :title="copy.settings.integrations.title"
+    :description="copy.settings.integrations.description"
+  >
+    <Card>
+      <CardHeader>
         <div class="flex items-center gap-3">
           <div class="bg-primary/10 text-primary rounded-lg p-2">
-            <span
-              class="flex size-5 items-center justify-center"
-              aria-hidden="true"
-              >⚡</span
-            >
+            <PlugZap class="size-5" />
           </div>
           <div>
-            <h2 class="font-semibold">{{ larkCopy.title }}</h2>
-            <p class="text-muted-foreground text-sm">
-              {{ larkCopy.description }}
-            </p>
+            <CardTitle>{{ larkCopy.title }}</CardTitle>
+            <CardDescription>{{ larkCopy.description }}</CardDescription>
           </div>
         </div>
-        <button
-          type="button"
-          class="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm"
-          :disabled="fetching"
-          @click="load()"
-        >
-          <span
-            aria-hidden="true"
-            class="inline-flex size-4 items-center justify-center"
-            :class="fetching ? 'animate-spin' : ''"
-            >↻</span
+        <CardAction>
+          <Button
+            variant="outline"
+            size="sm"
+            :disabled="fetching"
+            @click="load()"
           >
-          {{ copy.settings.integrations.refresh }}
-        </button>
-      </header>
-      <div class="space-y-4 p-5">
-        <p v-if="loading" class="text-muted-foreground text-sm">
+            <RefreshCw :class="cn('size-4', fetching && 'animate-spin')" />
+            {{ copy.settings.integrations.refresh }}
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent class="space-y-4">
+        <div v-if="loading" class="text-muted-foreground text-sm">
           {{ copy.common.loading }}
-        </p>
-        <p
-          v-if="error"
-          role="alert"
-          class="flex gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700"
-        >
-          <span aria-hidden="true">×</span>{{ error }}
-        </p>
-        <p
-          v-if="notice"
-          role="status"
-          data-sonner-toast
-          class="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700"
-        >
-          {{ notice }}
-        </p>
-
-        <template v-if="status">
+        </div>
+        <Alert v-else-if="loadError" variant="destructive">
+          <XCircle />
+          <AlertTitle>{{ copy.settings.integrations.loadFailed }}</AlertTitle>
+          <AlertDescription>{{ loadError }}</AlertDescription>
+        </Alert>
+        <template v-else-if="status">
           <div
-            class="grid gap-3"
-            :class="showSandboxRuntime ? 'md:grid-cols-4' : 'md:grid-cols-3'"
+            :class="
+              cn(
+                'grid gap-3',
+                showSandboxRuntime ? 'md:grid-cols-4' : 'md:grid-cols-3',
+              )
+            "
           >
-            <div
+            <LarkStatusItem
               v-for="item in statusCards"
               :key="item.label"
-              class="rounded-lg border p-3"
-            >
-              <div
-                class="mb-2 flex items-center justify-between gap-2 text-sm font-medium"
-              >
-                {{ item.label }}
-                <span
-                  class="flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
-                  ><span aria-hidden="true">{{ item.ok ? "✓" : "×" }}</span
-                  >{{
-                    item.ok
-                      ? copy.settings.integrations.ready
-                      : copy.settings.integrations.pending
-                  }}</span
-                >
-              </div>
-              <p class="text-muted-foreground text-sm break-words">
-                {{ item.value }}
-              </p>
-            </div>
-            <div v-if="showSandboxRuntime" class="rounded-lg border p-3">
-              <div class="mb-2 text-sm font-medium">
-                {{ larkCopy.sandboxRuntime }}
-              </div>
-              <p class="text-muted-foreground text-sm">
-                {{ sandboxRuntimeLabel }}
-              </p>
-            </div>
+              :label="item.label"
+              :ok="item.ok"
+              :value="item.value"
+            />
+            <LarkStatusItem
+              v-if="showSandboxRuntime"
+              :label="larkCopy.sandboxRuntime"
+              :ok="status.sandbox_runtime_ready"
+              :value="sandboxRuntimeValue"
+            />
           </div>
 
           <div
             v-if="status.installed"
             class="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"
           >
-            <span v-if="installedVersion">{{
-              larkCopy.installedVersion(installedVersion)
-            }}</span>
-            <span v-if="updateAvailableVersion" class="text-amber-600">
+            <span>{{ larkCopy.installedVersion(installedVersion ?? "") }}</span>
+            <span
+              v-if="updateAvailableVersion"
+              class="text-amber-600 dark:text-amber-500"
+            >
               {{ larkCopy.updateAvailable(updateAvailableVersion) }}
             </span>
-            <span v-if="status.runtime_version_mismatch" class="text-amber-600">
+            <span
+              v-if="status.runtime_version_mismatch"
+              class="text-amber-600 dark:text-amber-500"
+            >
               {{ larkCopy.runtimeVersionMismatch }}
             </span>
           </div>
 
-          <div class="rounded-lg border p-3 text-sm">
-            <strong>{{ nextStepTitle }}</strong>
-            <p class="text-muted-foreground mt-1">{{ nextStepDescription }}</p>
-          </div>
-
-          <div v-if="installing" class="rounded-lg border p-3 text-sm">
-            <div class="font-medium">{{ larkCopy.installingTitle }}</div>
-            <p class="text-muted-foreground mt-1">
-              {{ larkCopy.installingDescription }}
-            </p>
-          </div>
+          <Alert>
+            <component :is="nextStep.icon" v-if="nextStep.icon" />
+            <AlertTitle>{{ nextStep.title }}</AlertTitle>
+            <AlertDescription>{{ nextStep.description }}</AlertDescription>
+          </Alert>
 
           <div
             v-if="status.installed && status.cli.available"
             class="rounded-lg border p-3"
           >
-            <div class="text-sm font-medium">
-              {{ larkCopy.permissionTitle }}
+            <div class="space-y-1">
+              <div class="text-sm font-medium">
+                {{ larkCopy.permissionTitle }}
+              </div>
+              <p class="text-muted-foreground text-sm">
+                {{ larkCopy.permissionDescription }}
+              </p>
             </div>
-            <p class="text-muted-foreground text-sm">
-              {{ larkCopy.permissionDescription }}
-            </p>
             <div class="mt-3 flex flex-wrap gap-2">
-              <button
-                v-for="domain in DOMAINS"
-                :key="domain"
-                type="button"
-                class="rounded-md border px-3 py-1.5 text-sm capitalize"
-                :class="
-                  selectedDomains.includes(domain)
-                    ? 'bg-primary text-primary-foreground'
-                    : ''
+              <Button
+                v-for="domain in permissionDomains"
+                :key="domain.id"
+                size="sm"
+                :variant="
+                  selectedDomains.includes(domain.id) ? 'default' : 'outline'
                 "
                 :disabled="integrationBusy"
-                :aria-pressed="selectedDomains.includes(domain)"
-                @click="toggleDomain(domain)"
+                :title="domain.description"
+                @click="toggleDomain(domain.id)"
               >
-                {{ domainLabel(domain) }}
-              </button>
+                {{ domain.label }}
+              </Button>
             </div>
-            <input
-              v-model="customScope"
-              :aria-label="larkCopy.customScopeLabel"
-              :placeholder="larkCopy.customScopePlaceholder"
-              class="border-input mt-3 w-full rounded-md border px-3 py-2 text-sm"
-              :disabled="integrationBusy"
-            />
-            <p class="text-muted-foreground mt-1 text-xs">
-              {{ larkCopy.customScopeDescription }}
-            </p>
+            <div class="mt-3 space-y-1">
+              <Input
+                v-model="customScope"
+                :disabled="integrationBusy"
+                :placeholder="larkCopy.customScopePlaceholder"
+                :aria-label="larkCopy.customScopeLabel"
+              />
+              <p class="text-muted-foreground text-xs">
+                {{ larkCopy.customScopeDescription }}
+              </p>
+            </div>
           </div>
 
-          <div class="flex flex-wrap gap-2">
-            <button
-              type="button"
-              class="bg-primary text-primary-foreground rounded-md px-3 py-2 text-sm"
-              :disabled="integrationBusy"
-              @click="install"
-            >
+          <div class="flex flex-wrap items-center gap-2">
+            <Button :disabled="installDisabled" @click="install">
+              <RefreshCw v-if="installPending" class="size-4 animate-spin" />
               {{
-                status.installed
-                  ? copy.settings.integrations.reinstall
-                  : copy.settings.integrations.install
+                installPending
+                  ? copy.settings.integrations.installing
+                  : status.installed
+                    ? copy.settings.integrations.reinstall
+                    : copy.settings.integrations.install
               }}
-            </button>
-            <button
-              type="button"
-              class="rounded-md border px-3 py-2 text-sm"
-              :disabled="
-                !status.installed || !status.cli.available || integrationBusy
-              "
+            </Button>
+            <Button
+              variant="outline"
+              :disabled="authActionDisabled"
               @click="connect"
             >
-              {{ connectLabel }}
-            </button>
-            <button
+              <RefreshCw
+                v-if="connectBusy || checkingConnection"
+                class="size-4 animate-spin"
+              />
+              {{ connectButtonLabel }}
+            </Button>
+            <Button
               v-if="
                 status.installed &&
                 status.cli.available &&
                 status.app_configured
               "
-              type="button"
-              class="hover:bg-accent rounded-md px-3 py-2 text-sm"
+              variant="ghost"
               :disabled="integrationBusy"
               @click="showChangeApp = !showChangeApp"
             >
               {{ larkCopy.changeAppButton }}
-            </button>
+            </Button>
+            <span v-if="!isAdmin" class="text-muted-foreground text-sm">
+              {{ copy.settings.integrations.adminRequired }}
+            </span>
           </div>
 
-          <div v-if="showChangeApp" class="space-y-3 rounded-lg border p-3">
-            <div>
+          <div
+            v-if="showChangeApp && status.installed && status.cli.available"
+            class="space-y-3 rounded-lg border p-3"
+          >
+            <div class="space-y-1">
               <div class="text-sm font-medium">
                 {{ larkCopy.changeAppTitle }}
               </div>
@@ -748,44 +848,41 @@ onUnmounted(() => {
                 {{ larkCopy.changeAppDescription }}
               </p>
             </div>
-            <div class="flex gap-2">
-              <button
+            <div class="flex flex-wrap gap-2">
+              <Button
                 v-for="brand in ['feishu', 'lark'] as const"
                 :key="brand"
-                type="button"
-                class="rounded-md border px-3 py-1.5 text-sm capitalize"
-                :class="
-                  changeAppBrand === brand
-                    ? 'bg-primary text-primary-foreground'
-                    : ''
-                "
+                size="sm"
+                :variant="changeAppBrand === brand ? 'default' : 'outline'"
+                :disabled="integrationBusy"
                 @click="changeAppBrand = brand"
               >
                 {{
                   brand === "feishu" ? larkCopy.brandFeishu : larkCopy.brandLark
                 }}
-              </button>
+              </Button>
             </div>
-            <input
-              v-model="changeAppId"
-              :aria-label="larkCopy.changeAppIdLabel"
-              :placeholder="larkCopy.changeAppIdLabel"
-              class="border-input w-full rounded-md border px-3 py-2"
-            />
-            <input
-              v-model="changeAppSecret"
-              type="password"
-              :aria-label="larkCopy.changeAppSecretLabel"
-              :placeholder="larkCopy.changeAppSecretLabel"
-              class="border-input w-full rounded-md border px-3 py-2"
-            />
-            <p class="text-muted-foreground text-xs">
-              {{ larkCopy.changeAppAuthResetNote }}
-            </p>
+            <div class="space-y-2">
+              <Input
+                v-model="changeAppId"
+                :disabled="integrationBusy"
+                :placeholder="larkCopy.changeAppIdLabel"
+                :aria-label="larkCopy.changeAppIdLabel"
+              />
+              <Input
+                v-model="changeAppSecret"
+                type="password"
+                :disabled="integrationBusy"
+                :placeholder="larkCopy.changeAppSecretLabel"
+                :aria-label="larkCopy.changeAppSecretLabel"
+              />
+              <p class="text-muted-foreground text-xs">
+                {{ larkCopy.changeAppAuthResetNote }}
+              </p>
+            </div>
             <div class="flex flex-wrap gap-2">
-              <button
-                type="button"
-                class="bg-primary text-primary-foreground rounded-md px-3 py-2 text-sm"
+              <Button
+                size="sm"
                 :disabled="
                   integrationBusy ||
                   !changeAppId.trim() ||
@@ -793,69 +890,98 @@ onUnmounted(() => {
                 "
                 @click="switchApp"
               >
-                {{ busy ? larkCopy.authStarting : larkCopy.changeAppSubmit }}
-              </button>
-              <button
-                type="button"
-                class="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                <RefreshCw
+                  v-if="switchAppPending"
+                  class="size-4 animate-spin"
+                />
+                {{ larkCopy.changeAppSubmit }}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
                 :disabled="integrationBusy"
                 @click="reRegister"
               >
-                <span aria-hidden="true">↗</span>
+                <ExternalLink class="size-4" />
                 {{ larkCopy.changeAppReRegister }}
-              </button>
+              </Button>
             </div>
           </div>
 
-          <div
-            v-if="pendingFlow"
-            class="space-y-3 rounded-lg border p-3 text-sm"
-          >
-            <div class="flex items-center gap-2 font-medium">
-              <span aria-hidden="true">↗</span>{{ pendingFlowTitle }}
-            </div>
-            <p class="text-muted-foreground">{{ pendingFlowDescription }}</p>
-            <div class="bg-muted rounded-md px-3 py-2 text-xs break-all">
-              {{ pendingFlow.verification_url }}
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <a
-                :href="pendingFlow.verification_url"
-                target="_blank"
-                rel="noreferrer"
-                class="bg-primary text-primary-foreground flex items-center gap-2 rounded-md px-3 py-2"
-                ><span aria-hidden="true">↗</span>
-                {{ larkCopy.openAuthLink }}</a
-              >
-              <button
-                type="button"
-                class="flex items-center gap-2 rounded-md border px-3 py-2"
-                @click="copyLink"
-              >
-                <span aria-hidden="true">⧉</span> {{ larkCopy.copyAuthLink }}
-              </button>
-              <button
-                v-if="pendingFlow.kind === 'config'"
-                type="button"
-                class="rounded-md border px-3 py-2"
-                :disabled="busy"
-                @click="continueConfiguration"
-              >
-                {{ larkCopy.continueAuth }}
-              </button>
-              <button
-                v-else
-                type="button"
-                class="bg-primary text-primary-foreground rounded-md px-3 py-2"
-                :disabled="busy"
-                @click="manualComplete"
-              >
-                {{ larkCopy.completeAuth }}
-              </button>
-            </div>
-          </div>
+          <Alert v-if="installPending">
+            <RefreshCw class="size-4 animate-spin" />
+            <AlertTitle>{{ larkCopy.installingTitle }}</AlertTitle>
+            <AlertDescription>
+              {{ larkCopy.installingDescription }}
+            </AlertDescription>
+          </Alert>
+
+          <Alert v-if="pendingFlow">
+            <ExternalLink />
+            <AlertTitle>{{ pendingFlowTitle }}</AlertTitle>
+            <AlertDescription>
+              <div class="space-y-3">
+                <p>{{ pendingFlowDescription }}</p>
+                <div
+                  class="bg-muted text-foreground rounded-md px-3 py-2 text-xs break-all"
+                >
+                  {{ pendingFlow.verification_url }}
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <a
+                    :href="pendingFlow.verification_url"
+                    target="_blank"
+                    rel="noreferrer"
+                    :class="buttonVariants({ size: 'sm' })"
+                  >
+                    <ExternalLink class="size-4" />
+                    {{ larkCopy.openAuthLink }}
+                  </a>
+                  <Button size="sm" variant="outline" @click="copyLink">
+                    <Copy class="size-4" />
+                    {{ larkCopy.copyAuthLink }}
+                  </Button>
+                  <Button
+                    v-if="pendingFlow.kind === 'config'"
+                    size="sm"
+                    variant="outline"
+                    :disabled="completeConfigPending"
+                    @click="continueConfiguration"
+                  >
+                    <RefreshCw
+                      v-if="completeConfigPending"
+                      class="size-4 animate-spin"
+                    />
+                    {{
+                      completeConfigPending
+                        ? larkCopy.preparingAuthorization
+                        : larkCopy.continueAuth
+                    }}
+                  </Button>
+                  <Button
+                    v-else
+                    size="sm"
+                    :disabled="completeAuthPending"
+                    @click="manualComplete"
+                  >
+                    {{
+                      completeAuthPending
+                        ? larkCopy.completingAuth
+                        : larkCopy.completeAuth
+                    }}
+                  </Button>
+                </div>
+                <p
+                  v-if="pendingFlow.expires_in !== null"
+                  class="text-muted-foreground text-xs"
+                >
+                  {{ larkCopy.authExpiresIn(pendingFlow.expires_in) }}
+                </p>
+              </div>
+            </AlertDescription>
+          </Alert>
         </template>
-      </div>
-    </div>
-  </section>
+      </CardContent>
+    </Card>
+  </SettingsSection>
 </template>

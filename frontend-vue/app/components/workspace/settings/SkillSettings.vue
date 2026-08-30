@@ -9,6 +9,7 @@
 
 import { computed, ref } from "vue";
 
+import SettingsSection from "./SettingsSection.vue";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSettingsDialog } from "@/composables/useSettingsDialog";
@@ -62,97 +63,99 @@ async function createSkill() {
 </script>
 
 <template>
-  <section class="space-y-4" data-testid="skill-settings">
-    <header class="flex items-start justify-between gap-4">
-      <div>
-        <h2 class="text-lg font-semibold">{{ t.settings.skills.title }}</h2>
-        <p class="text-muted-foreground text-sm">
-          {{ t.settings.skills.description }}
-        </p>
+  <SettingsSection
+    data-testid="skill-settings"
+    :title="t.settings.skills.title"
+    :description="t.settings.skills.description"
+  >
+    <div class="space-y-4">
+      <div class="flex items-start justify-end gap-4">
+        <button
+          type="button"
+          class="bg-primary text-primary-foreground rounded-md px-3 py-2"
+          data-testid="create-skill"
+          @click="createSkill"
+        >
+          {{ t.settings.skills.createSkill }}
+        </button>
       </div>
-      <button
-        type="button"
-        class="bg-primary text-primary-foreground rounded-md px-3 py-2"
-        data-testid="create-skill"
-        @click="createSkill"
-      >
-        {{ t.settings.skills.createSkill }}
-      </button>
-    </header>
 
-    <p
-      v-if="access.permissions.value.state === 'loading'"
-      class="text-muted-foreground text-sm"
-    >
-      {{ t.common.loading }}
-    </p>
-    <p
-      v-else-if="access.permissions.value.state === 'unavailable'"
-      role="alert"
-      class="rounded-md bg-red-50 p-3 text-sm text-red-700"
-      data-testid="settings-session-unavailable"
-    >
-      {{ t.settings.sessionUnavailable }}
-    </p>
-    <template v-else>
       <p
-        v-if="access.permissions.value.adminRequired"
-        class="rounded-md bg-amber-50 p-3 text-sm text-amber-800"
-        data-testid="skills-admin-required"
+        v-if="access.permissions.value.state === 'loading'"
+        class="text-muted-foreground text-sm"
       >
-        {{ t.settings.skills.adminRequired }}
-      </p>
-      <Tabs v-model="filter">
-        <TabsList :aria-label="t.settings.skills.title">
-          <TabsTrigger
-            v-for="kind in ['public', 'custom'] as const"
-            :key="kind"
-            :value="kind"
-          >
-            {{ kind === "public" ? t.common.public : t.common.custom }}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-      <p v-if="skills.loading.value" class="text-muted-foreground text-sm">
         {{ t.common.loading }}
       </p>
-      <p v-if="skills.error.value" role="alert" class="text-sm text-red-600">
-        {{ errorMessage(skills.error.value) }}
-      </p>
       <p
-        v-if="actionError"
+        v-else-if="access.permissions.value.state === 'unavailable'"
         role="alert"
-        class="text-sm text-red-600"
-        data-testid="skill-action-error"
+        class="rounded-md bg-red-50 p-3 text-sm text-red-700"
+        data-testid="settings-session-unavailable"
       >
-        {{ actionError }}
+        {{ t.settings.sessionUnavailable }}
       </p>
-      <p
-        v-if="
-          !skills.loading.value && !skills.error.value && filtered.length === 0
-        "
-        class="text-muted-foreground rounded-md border p-4 text-sm"
-      >
-        {{ t.settings.skills.emptyTitle }}
-      </p>
-      <div
-        v-for="skill in filtered"
-        :key="skill.name"
-        class="border-border flex items-center justify-between gap-4 rounded-md border p-3"
-        :data-testid="`skill-${skill.name}`"
-      >
-        <div class="min-w-0">
-          <div class="font-medium">{{ skill.name }}</div>
-          <p class="text-muted-foreground text-sm">{{ skill.description }}</p>
+      <template v-else>
+        <p
+          v-if="access.permissions.value.adminRequired"
+          class="rounded-md bg-amber-50 p-3 text-sm text-amber-800"
+          data-testid="skills-admin-required"
+        >
+          {{ t.settings.skills.adminRequired }}
+        </p>
+        <Tabs v-model="filter">
+          <TabsList :aria-label="t.settings.skills.title">
+            <TabsTrigger
+              v-for="kind in ['public', 'custom'] as const"
+              :key="kind"
+              :value="kind"
+            >
+              {{ kind === "public" ? t.common.public : t.common.custom }}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <p v-if="skills.loading.value" class="text-muted-foreground text-sm">
+          {{ t.common.loading }}
+        </p>
+        <p v-if="skills.error.value" role="alert" class="text-sm text-red-600">
+          {{ errorMessage(skills.error.value) }}
+        </p>
+        <p
+          v-if="actionError"
+          role="alert"
+          class="text-sm text-red-600"
+          data-testid="skill-action-error"
+        >
+          {{ actionError }}
+        </p>
+        <p
+          v-if="
+            !skills.loading.value &&
+            !skills.error.value &&
+            filtered.length === 0
+          "
+          class="text-muted-foreground rounded-md border p-4 text-sm"
+        >
+          {{ t.settings.skills.emptyTitle }}
+        </p>
+        <div
+          v-for="skill in filtered"
+          :key="skill.name"
+          class="border-border flex items-center justify-between gap-4 rounded-md border p-3"
+          :data-testid="`skill-${skill.name}`"
+        >
+          <div class="min-w-0">
+            <div class="font-medium">{{ skill.name }}</div>
+            <p class="text-muted-foreground text-sm">{{ skill.description }}</p>
+          </div>
+          <Switch
+            :aria-label="skill.name"
+            :model-value="skill.enabled"
+            :disabled="!access.canManageSkills.value || skills.pending.value"
+            :data-pending="pendingName === skill.name || undefined"
+            @update:model-value="toggle(skill, $event)"
+          />
         </div>
-        <Switch
-          :aria-label="skill.name"
-          :model-value="skill.enabled"
-          :disabled="!access.canManageSkills.value || skills.pending.value"
-          :data-pending="pendingName === skill.name || undefined"
-          @update:model-value="toggle(skill, $event)"
-        />
-      </div>
-    </template>
-  </section>
+      </template>
+    </div>
+  </SettingsSection>
 </template>

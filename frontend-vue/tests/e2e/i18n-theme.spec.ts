@@ -60,7 +60,13 @@ test("locale switch updates an open dialog, product surfaces, future errors and 
       ?.value,
   ).toBe("zh-CN");
 
-  await dialog.getByRole("button", { name: zhCN.common.close }).click();
+  /*
+    关闭按钮的名字**在中文界面下也是英文**：React 把它写死在 shadcn dialog 里，
+    对齐的判据是两边听到同一句（见 primitives.close 的词典注释）。
+  */
+  await dialog
+    .getByRole("button", { name: zhCN.primitives.close, exact: true })
+    .click();
   await expect(page.getByPlaceholder(zhCN.inputBox.placeholder)).toBeVisible();
   await expect(page.getByLabel(zhCN.browser.trigger)).toBeVisible();
   // 面板不会自己打开（React 只在流式写入途中才自动打开），点一下产物路径。

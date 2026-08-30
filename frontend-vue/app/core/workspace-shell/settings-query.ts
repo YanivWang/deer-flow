@@ -4,6 +4,11 @@
   【主要导出】     SETTINGS_SECTIONS · readSettingsSection · buildSettingsCloseLocation
   【依赖关系】     SettingsSection · vue-router types
   【边界与注意】   保留其他 query/hash；组件用 push 形成可回放 history。
+
+                   数组顺序就是导航里的显示顺序，逐项对照 React
+                   frontend/src/components/workspace/settings/settings-dialog.tsx 的 sections。
+                   对照台账按多重集比可访问性树，顺序天然测不出来——所以这一行只能靠
+                   人盯着两边看，改动前先回那个文件核一遍。
 */
 import type { SettingsSection } from "@/composables/useSettingsDialog";
 import type { LocationQueryRaw, RouteLocationRaw } from "vue-router";
@@ -12,11 +17,11 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   "account",
   "appearance",
   "notification",
+  "channels",
+  "integrations",
+  "memory",
   "tools",
   "skills",
-  "memory",
-  "integrations",
-  "channels",
   "about",
 ];
 

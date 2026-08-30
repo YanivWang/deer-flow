@@ -1,3 +1,13 @@
+/*
+  【文件职责】     钉住 Lark 集成传输层的七个端点：URL、方法、请求体与错误分类。
+  【架构位置】     unit test
+  【主要导出】     无；Vitest cases
+  【边界与注意】   这个域**只有一个**传输层（app/core/integrations/lark/api.ts）。
+                   此前还并存一个 flow.ts，产品用后者、这份测试盯前者，于是「测试全绿」
+                   与「产品能跑」是两件互不相干的事：api.ts 的契约停在没有 `generation`
+                   的旧版，而 Gateway 早就靠它拒绝过期流程了。合并之后每个端点都带上
+                   generation 断言，正是为了让那种漂移一次就红。
+*/
 import { beforeEach, describe, expect, vi, test } from "vitest";
 
 vi.mock("@/core/api/fetcher", () => ({
@@ -15,6 +25,7 @@ import {
   installLarkIntegration,
   LarkIntegrationRequestError,
   loadLarkIntegrationStatus,
+  setLarkAppCredentials,
   startLarkAuthorization,
   startLarkConfiguration,
 } from "@/core/integrations/lark/api";
@@ -64,8 +75,10 @@ describe("lark integration api", () => {
       sandbox_runtime_mode: "init-container",
       sandbox_runtime_ready: false,
     });
+    // signal 一路透传：调用方要能取消一次在飞的状态回读（见 IntegrationsSettings 的 beginFlow）。
     expect(mockedFetch).toHaveBeenCalledWith(
       "/backend/api/integrations/lark/status",
+      { signal: undefined },
     );
   });
 
@@ -172,6 +185,7 @@ describe("lark integration api", () => {
       jsonResponse(200, {
         verification_url: "https://open.feishu.cn/page/cli?user_code=config",
         device_code: "config-device-code",
+        generation: "config-generation",
         expires_in: 600,
         interval: 5,
         user_code: "config",
@@ -182,6 +196,7 @@ describe("lark integration api", () => {
     await expect(startLarkConfiguration({ brand: "feishu" })).resolves.toEqual({
       verification_url: "https://open.feishu.cn/page/cli?user_code=config",
       device_code: "config-device-code",
+      generation: "config-generation",
       expires_in: 600,
       interval: 5,
       user_code: "config",
@@ -202,6 +217,7 @@ describe("lark integration api", () => {
       jsonResponse(200, {
         success: true,
         message: "Lark/Feishu connection setup completed.",
+        generation: "config-generation",
         status: {
           installed: true,
           version: "v1.0.65",
@@ -234,12 +250,14 @@ describe("lark integration api", () => {
     await expect(
       completeLarkConfiguration({
         device_code: "config-device-code",
+        generation: "config-generation",
         brand: "feishu",
         interval: 5,
         expires_in: 600,
       }),
     ).resolves.toMatchObject({
       success: true,
+      generation: "config-generation",
       status: { app_configured: true, app_id: "cli_mock" },
     });
     expect(mockedFetch).toHaveBeenCalledWith(
@@ -249,6 +267,7 @@ describe("lark integration api", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           device_code: "config-device-code",
+          generation: "config-generation",
           brand: "feishu",
           interval: 5,
           expires_in: 600,
@@ -292,7 +311,10 @@ describe("lark integration api", () => {
     );
 
     await expect(
-      completeLarkAuthorization({ device_code: "device-code" }),
+      completeLarkAuthorization({
+        device_code: "device-code",
+        generation: "auth-generation",
+      }),
     ).resolves.toMatchObject({
       success: true,
       status: { auth: { status: "authenticated", user: "Alice" } },
@@ -302,7 +324,70 @@ describe("lark integration api", () => {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ device_code: "device-code" }),
+        body: JSON.stringify({
+          device_code: "device-code",
+          generation: "auth-generation",
+        }),
+      },
+    );
+  });
+
+  test("switches the configured app credentials", async () => {
+    mockedFetch.mockResolvedValueOnce(
+      jsonResponse(200, {
+        success: true,
+        message: "Lark/Feishu app switched.",
+        generation: "switched-generation",
+        status: {
+          installed: true,
+          version: "v1.0.65",
+          manifest_version: "v1.0.65",
+          latest_available_version: "v1.0.65",
+          runtime_version_mismatch: false,
+          app_configured: true,
+          app_id: "cli_switched",
+          app_brand: "lark",
+          skills_expected: 27,
+          skills_installed: 1,
+          installed_skills: ["lark-doc"],
+          enabled_skills: ["lark-doc"],
+          install_path: "/tmp/lark-cli",
+          cli: {
+            available: true,
+            path: "/usr/bin/lark-cli",
+            version: "v1.0.65",
+            error: null,
+          },
+          auth: {
+            status: "not_authorized",
+            message: "not authorized",
+            user: null,
+          },
+        },
+      }),
+    );
+
+    await expect(
+      setLarkAppCredentials({
+        app_id: "cli_switched",
+        app_secret: "secret",
+        brand: "lark",
+      }),
+    ).resolves.toMatchObject({
+      // 换 App 会作废旧授权，所以调用方必须拿到新的 generation 再去发起授权。
+      generation: "switched-generation",
+      status: { app_id: "cli_switched", app_brand: "lark" },
+    });
+    expect(mockedFetch).toHaveBeenCalledWith(
+      "/backend/api/integrations/lark/config/credentials",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          app_id: "cli_switched",
+          app_secret: "secret",
+          brand: "lark",
+        }),
       },
     );
   });

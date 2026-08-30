@@ -185,54 +185,22 @@
       "geometry": []
     },
     "integrations/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- alert: Install the official skill pack first After installation, /lark-doc, /lark-im, /lark-sheets and related skills appear in the skill index.",
-        "- button \"Close\"",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- navigation:",
-        "- text: Integrations Connect third-party tools and work platforms so agents can use them directly.",
-        "- text: Lark / Feishu CLI Install the official Lark/Feishu agent skills and let agents use Lark after authorization.",
-        "- text: Skill pack Pending Not installed Gateway CLI Pending lark-cli is not on PATH Auth Pending Not connected Sandbox runtime Pending The provisioner has no lark-cli init image configured (LARK_CLI_INIT_IMAGE)."
-      ],
+      "ariaOnlyReact": [],
       "ariaOnlyVue": [
-        "- alert",
-        "- button \"Close Settings\"",
-        "- complementary:",
-        "- heading \"Lark / Feishu CLI\" [level=2]",
-        "- heading \"Settings\" [level=1]",
-        "- paragraph: After installation, /lark-doc, /lark-im, /lark-sheets and related skills appear in the skill index.",
-        "- paragraph: Install the official Lark/Feishu agent skills and let agents use Lark after authorization.",
-        "- paragraph: Not connected",
-        "- paragraph: Not installed",
-        "- paragraph: The provisioner has no lark-cli init image configured (LARK_CLI_INIT_IMAGE).",
-        "- paragraph: lark-cli is not on PATH",
-        "- strong: Install the official skill pack first",
-        "- text: Auth Pending",
-        "- text: Gateway CLI Pending",
-        "- text: Sandbox runtime",
-        "- text: Skill pack Pending"
+        "- alert"
       ],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "role:dialog[Settings] x React=64 Vue=192 Δ128",
-        "role:dialog[Settings] y React=100 Vue=40 Δ-60",
-        "role:dialog[Settings] width React=1152 Vue=896 Δ-256",
-        "role:dialog[Settings] height React=600 Vue=720 Δ120",
-        "text:Lark / Feishu CLI x React=423 Vue=478 Δ55",
-        "text:Lark / Feishu CLI y React=305 Vue=86 Δ-219",
-        "text:Lark / Feishu CLI width React=544.6 Vue=424.3 Δ-120.3",
-        "text:Lark / Feishu CLI height React=16 Vue=24 Δ8"
-      ]
+      "geometry": []
+    },
+    "integrations/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [
+        "- alert"
+      ],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "branch-thread/desktop/light/en-US": {
       "ariaOnlyReact": [],

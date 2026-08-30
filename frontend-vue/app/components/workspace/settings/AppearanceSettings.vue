@@ -6,6 +6,7 @@
   【依赖关系】     i18n · color mode · settings store
   【边界与注意】   应用设置接线，不属于 L2。
 */
+import SettingsSection from "./SettingsSection.vue";
 import type { Locale } from "@/core/i18n/locale";
 import { enUS } from "@/core/i18n/locales/en-US";
 import { zhCN } from "@/core/i18n/locales/zh-CN";
@@ -36,15 +37,12 @@ function setLocale(event: Event) {
 </script>
 
 <template>
-  <section class="space-y-8">
-    <div>
-      <h2 class="text-lg font-semibold">
-        {{ $i18n.t.value.settings.appearance.themeTitle }}
-      </h2>
-      <p class="text-muted-foreground text-sm">
-        {{ $i18n.t.value.settings.appearance.themeDescription }}
-      </p>
-      <div class="mt-3 grid gap-3 sm:grid-cols-3">
+  <div class="space-y-8">
+    <SettingsSection
+      :title="$i18n.t.value.settings.appearance.themeTitle"
+      :description="$i18n.t.value.settings.appearance.themeDescription"
+    >
+      <div class="grid gap-3 sm:grid-cols-3">
         <button
           v-for="option in themeOptions"
           :key="option.value"
@@ -64,22 +62,20 @@ function setLocale(event: Event) {
           </span>
         </button>
       </div>
-    </div>
-    <div>
-      <h2 class="text-lg font-semibold">
-        {{ $i18n.t.value.settings.appearance.languageTitle }}
-      </h2>
-      <p class="text-muted-foreground text-sm">
-        {{ $i18n.t.value.settings.appearance.languageDescription }}
-      </p>
+    </SettingsSection>
+
+    <SettingsSection
+      :title="$i18n.t.value.settings.appearance.languageTitle"
+      :description="$i18n.t.value.settings.appearance.languageDescription"
+    >
       <select
         :value="$i18n.locale.value"
-        class="border-input mt-3 rounded-md border px-3 py-2"
+        class="border-input rounded-md border px-3 py-2"
         @change="setLocale"
       >
         <option value="en-US">{{ enUS.locale.localName }}</option>
         <option value="zh-CN">{{ zhCN.locale.localName }}</option>
       </select>
-    </div>
-  </section>
+    </SettingsSection>
+  </div>
 </template>

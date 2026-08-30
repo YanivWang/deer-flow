@@ -9,6 +9,7 @@
 import { onMounted, ref } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
 
+import SettingsSection from "./SettingsSection.vue";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import { clearAuthenticatedClientState } from "@/core/auth/client-state";
 import type { User } from "@/core/auth/types";
@@ -95,89 +96,99 @@ async function logout() {
 </script>
 
 <template>
-  <section class="space-y-8">
-    <div>
-      <h2 class="text-lg font-semibold">
-        {{ $i18n.t.value.settings.account.profileTitle }}
-      </h2>
-      <dl class="mt-3 grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2 text-sm">
-        <dt class="text-muted-foreground">
-          {{ $i18n.t.value.settings.account.email }}
-        </dt>
-        <dd>{{ user?.email ?? "—" }}</dd>
-        <dt class="text-muted-foreground">
-          {{ $i18n.t.value.settings.account.role }}
-        </dt>
-        <dd class="capitalize">{{ user?.system_role ?? "—" }}</dd>
-        <template v-if="user?.oauth_provider">
+  <div class="space-y-8">
+    <SettingsSection :title="$i18n.t.value.settings.account.profileTitle">
+      <div class="space-y-2">
+        <dl class="grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2 text-sm">
           <dt class="text-muted-foreground">
-            {{ $i18n.t.value.settings.account.ssoProvider }}
+            {{ $i18n.t.value.settings.account.email }}
           </dt>
-          <dd class="capitalize">{{ user.oauth_provider }}</dd>
-        </template>
-      </dl>
-    </div>
-    <form
+          <dd>{{ user?.email ?? "—" }}</dd>
+          <dt class="text-muted-foreground">
+            {{ $i18n.t.value.settings.account.role }}
+          </dt>
+          <dd class="capitalize">{{ user?.system_role ?? "—" }}</dd>
+          <template v-if="user?.oauth_provider">
+            <dt class="text-muted-foreground">
+              {{ $i18n.t.value.settings.account.ssoProvider }}
+            </dt>
+            <dd class="capitalize">{{ user.oauth_provider }}</dd>
+          </template>
+        </dl>
+      </div>
+    </SettingsSection>
+
+    <SettingsSection
       v-if="!user?.oauth_provider"
-      class="max-w-sm space-y-3"
-      @submit.prevent="changePassword"
+      :title="$i18n.t.value.settings.account.changePasswordTitle"
+      :description="$i18n.t.value.settings.account.changePasswordDescription"
     >
-      <h2 class="text-lg font-semibold">
-        {{ $i18n.t.value.settings.account.changePasswordTitle }}
-      </h2>
-      <input
-        v-model="currentPassword"
-        type="password"
-        required
-        :placeholder="$i18n.t.value.settings.account.currentPassword"
-        class="border-input w-full rounded-md border px-3 py-2"
-      />
-      <input
-        v-model="newPassword"
-        type="password"
-        required
-        minlength="8"
-        :placeholder="$i18n.t.value.settings.account.newPassword"
-        class="border-input w-full rounded-md border px-3 py-2"
-      />
-      <input
-        v-model="confirmPassword"
-        type="password"
-        required
-        minlength="8"
-        :placeholder="$i18n.t.value.settings.account.confirmNewPassword"
-        class="border-input w-full rounded-md border px-3 py-2"
-      />
-      <p v-if="error" role="alert" class="text-sm text-red-600">{{ error }}</p>
-      <p v-if="message" role="status" class="text-sm text-emerald-700">
-        {{ message }}
-      </p>
-      <button
-        type="submit"
-        class="rounded-md border px-3 py-2"
-        :disabled="busy"
-      >
+      <form class="max-w-sm space-y-3" @submit.prevent="changePassword">
+        <input
+          v-model="currentPassword"
+          type="password"
+          required
+          :placeholder="$i18n.t.value.settings.account.currentPassword"
+          class="border-input w-full rounded-md border px-3 py-2"
+        />
+        <input
+          v-model="newPassword"
+          type="password"
+          required
+          minlength="8"
+          :placeholder="$i18n.t.value.settings.account.newPassword"
+          class="border-input w-full rounded-md border px-3 py-2"
+        />
+        <input
+          v-model="confirmPassword"
+          type="password"
+          required
+          minlength="8"
+          :placeholder="$i18n.t.value.settings.account.confirmNewPassword"
+          class="border-input w-full rounded-md border px-3 py-2"
+        />
+        <p v-if="error" role="alert" class="text-sm text-red-600">
+          {{ error }}
+        </p>
+        <p v-if="message" role="status" class="text-sm text-emerald-700">
+          {{ message }}
+        </p>
+        <button
+          type="submit"
+          class="rounded-md border px-3 py-2"
+          :disabled="busy"
+        >
+          {{
+            busy
+              ? $i18n.t.value.settings.account.updating
+              : $i18n.t.value.settings.account.updatePassword
+          }}
+        </button>
+      </form>
+    </SettingsSection>
+    <SettingsSection
+      v-else
+      :title="$i18n.t.value.settings.account.changePasswordTitle"
+      :description="$i18n.t.value.settings.account.ssoPasswordDescription"
+    >
+      <p class="text-muted-foreground text-sm">
         {{
-          busy
-            ? $i18n.t.value.settings.account.updating
-            : $i18n.t.value.settings.account.updatePassword
+          $i18n.t.value.settings.account.ssoPasswordMessage.replace(
+            "{provider}",
+            user.oauth_provider,
+          )
         }}
+      </p>
+    </SettingsSection>
+
+    <SettingsSection title="" description="">
+      <button
+        type="button"
+        class="rounded-md bg-red-600 px-3 py-2 text-white"
+        @click="logout"
+      >
+        {{ $i18n.t.value.settings.account.signOut }}
       </button>
-    </form>
-    <p v-else class="text-muted-foreground text-sm">
-      {{
-        $i18n.t.value.settings.account.ssoPasswordMessage.replace(
-          "{provider}",
-          user.oauth_provider,
-        )
-      }}
-    </p>
-    <button
-      type="button"
-      class="rounded-md bg-red-600 px-3 py-2 text-white"
-      @click="logout"
-    >
-      {{ $i18n.t.value.settings.account.signOut }}
-    </button>
-  </section>
+    </SettingsSection>
+  </div>
 </template>

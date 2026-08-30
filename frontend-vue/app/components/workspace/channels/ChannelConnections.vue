@@ -21,6 +21,7 @@ import { computed, ref } from "vue";
 
 import ChannelProviderIcon from "./ChannelProviderIcon.vue";
 import ChannelRuntimeConfigDialog from "./ChannelRuntimeConfigDialog.vue";
+import SettingsSection from "@/components/workspace/settings/SettingsSection.vue";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -221,124 +222,127 @@ function connectLabel(view: ChannelProviderView) {
 </script>
 
 <template>
-  <section
+  <SettingsSection
     v-if="
       channels.enabled.value ||
       channels.providerViews.value.length ||
       channels.error.value ||
       actionError
     "
-    class="space-y-3"
+    :title="$i18n.t.value.settings.channels.title"
+    :description="$i18n.t.value.settings.channels.description"
   >
-    <p
-      v-if="channels.error.value || actionError"
-      role="alert"
-      class="px-2 text-sm text-red-600"
-    >
-      {{ actionError || channels.error.value?.message }}
-    </p>
+    <div class="space-y-3">
+      <p
+        v-if="channels.error.value || actionError"
+        role="alert"
+        class="px-2 text-sm text-red-600"
+      >
+        {{ actionError || channels.error.value?.message }}
+      </p>
 
-    <article
-      v-for="view in channels.providerViews.value"
-      :key="view.provider.provider"
-      class="border-border border-b py-3 last:border-0"
-      :data-testid="`channel-provider-${view.provider.provider}`"
-    >
-      <div class="flex items-center justify-between gap-3">
-        <ChannelProviderIcon
-          :provider="view.provider.provider"
-          class="shrink-0"
-        />
-        <div class="min-w-0 flex-1">
-          <div class="truncate text-sm font-medium">
-            {{ view.provider.display_name }}
+      <article
+        v-for="view in channels.providerViews.value"
+        :key="view.provider.provider"
+        class="border-border border-b py-3 last:border-0"
+        :data-testid="`channel-provider-${view.provider.provider}`"
+      >
+        <div class="flex items-center justify-between gap-3">
+          <ChannelProviderIcon
+            :provider="view.provider.provider"
+            class="shrink-0"
+          />
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-sm font-medium">
+              {{ view.provider.display_name }}
+            </div>
+            <p class="text-muted-foreground text-xs">
+              {{
+                text.descriptions[view.provider.provider] ??
+                view.provider.display_name
+              }}
+            </p>
+            <span
+              class="text-muted-foreground text-xs"
+              :data-testid="`channel-status-${view.provider.provider}`"
+            >
+              {{ providerStatusLabel(view) }}
+            </span>
           </div>
-          <p class="text-muted-foreground text-xs">
-            {{
-              text.descriptions[view.provider.provider] ??
-              view.provider.display_name
-            }}
-          </p>
-          <span
+          <div class="flex shrink-0 flex-wrap justify-end gap-1">
+            <button
+              type="button"
+              class="h-8 w-24 rounded-md border px-2 text-xs"
+              :disabled="channels.isProviderPending(view.provider.provider)"
+              :title="view.provider.unavailable_reason || undefined"
+              @click="connectProvider(view.provider)"
+            >
+              {{ connectLabel(view) }}
+            </button>
+            <button
+              v-if="
+                view.provider.configured &&
+                providerCanEditRuntimeConfig(view.provider)
+              "
+              type="button"
+              class="rounded-md border px-2 py-1 text-xs"
+              :disabled="channels.isProviderPending(view.provider.provider)"
+              @click="beginSetup(view.provider)"
+            >
+              {{ text.modify }}
+            </button>
+            <button
+              v-if="isAdmin && view.provider.configured"
+              type="button"
+              class="rounded-md border px-2 py-1 text-xs text-red-600"
+              :disabled="channels.isProviderPending(view.provider.provider)"
+              :aria-label="`${text.removeProviderConfig}: ${view.provider.display_name}`"
+              @click="removingProvider = view.provider"
+            >
+              {{ text.removeProviderConfig }}
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-3 space-y-2 pl-8">
+          <h4 class="text-xs font-medium">{{ text.accounts }}</h4>
+          <p
+            v-if="view.connections.length === 0"
             class="text-muted-foreground text-xs"
-            :data-testid="`channel-status-${view.provider.provider}`"
           >
-            {{ providerStatusLabel(view) }}
-          </span>
-        </div>
-        <div class="flex shrink-0 flex-wrap justify-end gap-1">
-          <button
-            type="button"
-            class="h-8 w-24 rounded-md border px-2 text-xs"
-            :disabled="channels.isProviderPending(view.provider.provider)"
-            :title="view.provider.unavailable_reason || undefined"
-            @click="connectProvider(view.provider)"
+            {{ text.noAccounts }}
+          </p>
+          <div
+            v-for="connection in view.connections"
+            :key="connection.id"
+            class="bg-muted/40 flex items-center justify-between gap-3 rounded-md px-3 py-2"
+            :data-testid="`channel-connection-${connection.id}`"
           >
-            {{ connectLabel(view) }}
-          </button>
-          <button
-            v-if="
-              view.provider.configured &&
-              providerCanEditRuntimeConfig(view.provider)
-            "
-            type="button"
-            class="rounded-md border px-2 py-1 text-xs"
-            :disabled="channels.isProviderPending(view.provider.provider)"
-            @click="beginSetup(view.provider)"
-          >
-            {{ text.modify }}
-          </button>
-          <button
-            v-if="isAdmin && view.provider.configured"
-            type="button"
-            class="rounded-md border px-2 py-1 text-xs text-red-600"
-            :disabled="channels.isProviderPending(view.provider.provider)"
-            :aria-label="`${text.removeProviderConfig}: ${view.provider.display_name}`"
-            @click="removingProvider = view.provider"
-          >
-            {{ text.removeProviderConfig }}
-          </button>
-        </div>
-      </div>
-
-      <div class="mt-3 space-y-2 pl-8">
-        <h4 class="text-xs font-medium">{{ text.accounts }}</h4>
-        <p
-          v-if="view.connections.length === 0"
-          class="text-muted-foreground text-xs"
-        >
-          {{ text.noAccounts }}
-        </p>
-        <div
-          v-for="connection in view.connections"
-          :key="connection.id"
-          class="bg-muted/40 flex items-center justify-between gap-3 rounded-md px-3 py-2"
-          :data-testid="`channel-connection-${connection.id}`"
-        >
-          <div class="min-w-0">
-            <div class="truncate text-xs font-medium">
-              {{ getChannelConnectionLabel(connection) }}
+            <div class="min-w-0">
+              <div class="truncate text-xs font-medium">
+                {{ getChannelConnectionLabel(connection) }}
+              </div>
+              <div class="text-muted-foreground text-xs">
+                {{ statusLabel(connection.status) }}
+              </div>
             </div>
-            <div class="text-muted-foreground text-xs">
-              {{ statusLabel(connection.status) }}
-            </div>
+            <button
+              v-if="connection.status !== 'revoked'"
+              type="button"
+              class="rounded-md border px-2 py-1 text-xs"
+              :disabled="channels.isConnectionPending(connection.id)"
+              :aria-label="
+                text.disconnectAccount(getChannelConnectionLabel(connection))
+              "
+              @click="disconnectConnection(connection)"
+            >
+              {{ text.disconnect }}
+            </button>
           </div>
-          <button
-            v-if="connection.status !== 'revoked'"
-            type="button"
-            class="rounded-md border px-2 py-1 text-xs"
-            :disabled="channels.isConnectionPending(connection.id)"
-            :aria-label="
-              text.disconnectAccount(getChannelConnectionLabel(connection))
-            "
-            @click="disconnectConnection(connection)"
-          >
-            {{ text.disconnect }}
-          </button>
         </div>
-      </div>
-    </article>
-  </section>
+      </article>
+    </div>
+  </SettingsSection>
 
   <ChannelRuntimeConfigDialog
     :provider="editing"

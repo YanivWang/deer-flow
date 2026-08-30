@@ -320,11 +320,15 @@ test.describe("Integrations settings", () => {
         generation: "config-generation",
         wait_timeout_seconds: 8,
       });
-    await expect(
-      dialog
-        .getByRole("status")
-        .getByText("Lark authorization is live-verified"),
-    ).toBeVisible();
+    /*
+      成功提示落在 workspace toaster 里，不在面板内——与 React 的 sonner 同一个位置。
+      念的是 Gateway 回的那句话，不是本地词典：授权到底成了什么样由服务端说了算。
+      同一条 toast 被就地改写（先是「已打开授权页」，再变成完成），所以那句等待文案
+      不该还留在页面上。
+    */
+    await expect(page.getByTestId("workspace-toaster")).toContainText(
+      "Lark/Feishu authorization completed.",
+    );
     await expect(
       page.getByText("Authorization page opened. Waiting for completion..."),
     ).toHaveCount(0);

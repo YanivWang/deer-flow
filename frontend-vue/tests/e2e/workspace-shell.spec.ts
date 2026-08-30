@@ -101,7 +101,8 @@ test("settings deep link traps focus and back/forward replays only settings quer
     dialog.getByRole("button", { name: "Appearance" }),
   ).toBeFocused();
 
-  const close = dialog.getByRole("button", { name: "Close Settings" });
+  // React 的 shadcn dialog 把关闭按钮的名字写死成 "Close"，Vue 照抄（primitives.close）。
+  const close = dialog.getByRole("button", { name: "Close", exact: true });
   await close.focus();
   await page.keyboard.press("Tab");
   await expect(dialog.locator(":focus")).toHaveCount(1);

@@ -1,3 +1,12 @@
+/*
+  【文件职责】     冻结 Gateway Lark 集成契约的响应与请求形状。
+  【架构位置】     L3
+  【主要导出】     LarkIntegrationStatus 及各步流程的 request/response 类型
+  【依赖关系】     无运行时依赖
+  【边界与注意】   逐行对照 React frontend/src/core/integrations/lark/types.ts。
+                   `generation` 不是可选的装饰：Gateway 用它拒绝过期流程，
+                   少一个字段就等于把「换了 App 之后旧授权还能落地」放了进来。
+*/
 export interface LarkCliProbe {
   available: boolean;
   path: string | null;
@@ -52,11 +61,13 @@ export interface LarkAuthStartRequest {
   recommend?: boolean;
   domains?: string[];
   scope?: string | null;
+  generation?: string;
 }
 
 export interface LarkAuthStartResponse {
   verification_url: string;
   device_code: string;
+  generation: string;
   expires_in: number | null;
   user_code: string | null;
   hint: string | null;
@@ -69,6 +80,7 @@ export interface LarkConfigStartRequest {
 export interface LarkConfigStartResponse {
   verification_url: string;
   device_code: string;
+  generation: string;
   expires_in: number | null;
   interval: number | null;
   user_code: string | null;
@@ -77,19 +89,28 @@ export interface LarkConfigStartResponse {
 
 export interface LarkConfigCompleteRequest {
   device_code: string;
+  generation: string;
   brand: "feishu" | "lark";
   interval: number | null;
   expires_in: number | null;
 }
 
+export interface LarkConfigCredentialsRequest {
+  app_id: string;
+  app_secret: string;
+  brand: "feishu" | "lark";
+}
+
 export interface LarkConfigCompleteResponse {
   success: boolean;
   message: string;
+  generation: string;
   status: LarkIntegrationStatus;
 }
 
 export interface LarkAuthCompleteRequest {
   device_code: string;
+  generation: string;
   wait_timeout_seconds?: number;
 }
 

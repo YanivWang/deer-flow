@@ -8,6 +8,7 @@
 */
 import { onBeforeUnmount, ref } from "vue";
 
+import SettingsSection from "./SettingsSection.vue";
 import { Switch } from "@/components/ui/switch";
 import { useNotifications } from "@/composables/useNotifications";
 import {
@@ -45,22 +46,32 @@ function sendTestNotification() {
 </script>
 
 <template>
-  <section class="space-y-4">
-    <div>
-      <h2 class="text-lg font-semibold">
-        {{ $i18n.t.value.settings.notification.title }}
-      </h2>
-      <p class="text-muted-foreground text-sm">
-        {{ $i18n.t.value.settings.notification.description }}
-      </p>
-    </div>
-    <p
-      v-if="!notifications.supported.value"
-      class="text-muted-foreground text-sm"
-    >
+  <SettingsSection
+    v-if="!notifications.supported.value"
+    :title="$i18n.t.value.settings.notification.title"
+    :description="$i18n.t.value.settings.notification.description"
+  >
+    <p class="text-muted-foreground text-sm">
       {{ $i18n.t.value.settings.notification.notSupported }}
     </p>
-    <template v-else>
+  </SettingsSection>
+  <SettingsSection v-else :title="$i18n.t.value.settings.notification.title">
+    <template #description>
+      <div class="flex items-center gap-2">
+        <div>{{ $i18n.t.value.settings.notification.description }}</div>
+        <div>
+          <Switch
+            :aria-label="$i18n.t.value.settings.notification.title"
+            :model-value="
+              notifications.permission.value === 'granted' && enabled
+            "
+            :disabled="notifications.permission.value !== 'granted'"
+            @update:model-value="toggle"
+          />
+        </div>
+      </div>
+    </template>
+    <div class="flex flex-col gap-4">
       <button
         v-if="notifications.permission.value === 'default'"
         type="button"
@@ -70,28 +81,23 @@ function sendTestNotification() {
         {{ $i18n.t.value.settings.notification.requestPermission }}
       </button>
       <p
-        v-else-if="notifications.permission.value === 'denied'"
+        v-if="notifications.permission.value === 'denied'"
         class="rounded-md border border-amber-300 p-3 text-sm"
       >
         {{ $i18n.t.value.settings.notification.deniedHint }}
       </p>
-      <div class="flex items-center gap-3 text-sm">
-        <Switch
-          :aria-label="$i18n.t.value.settings.notification.title"
-          :model-value="notifications.permission.value === 'granted' && enabled"
-          :disabled="notifications.permission.value !== 'granted'"
-          @update:model-value="toggle"
-        />
-        {{ $i18n.t.value.settings.notification.title }}
-      </div>
-      <button
+      <div
         v-if="notifications.permission.value === 'granted' && enabled"
-        type="button"
-        class="rounded-md border px-3 py-2"
-        @click="sendTestNotification"
+        class="flex flex-col gap-4"
       >
-        {{ $i18n.t.value.settings.notification.testButton }}
-      </button>
-    </template>
-  </section>
+        <button
+          type="button"
+          class="rounded-md border px-3 py-2"
+          @click="sendTestNotification"
+        >
+          {{ $i18n.t.value.settings.notification.testButton }}
+        </button>
+      </div>
+    </div>
+  </SettingsSection>
 </template>
