@@ -261,6 +261,8 @@ const loadError = computed(() => {
             v-model:edit-draft="editDraft"
             :task="selectedTask"
             :runs="runsQuery.runs.value"
+            :runs-has-more="Boolean(runsQuery.hasNextPage.value)"
+            :runs-loading-more="runsQuery.isFetchingNextPage.value"
             :editing="editing"
             :update-pending="mutations.update.isPending.value"
             @toggle-edit="editing = !editing"
@@ -269,6 +271,7 @@ const loadError = computed(() => {
             @resume="runAction('resume')"
             @trigger="runAction('trigger')"
             @delete="deleteOpen = true"
+            @load-more-runs="runsQuery.loadMore()"
           />
           <div v-else class="text-muted-foreground text-sm">
             {{ $i18n.t.value.scheduledTasks.detail.noSelection }}

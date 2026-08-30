@@ -48,6 +48,7 @@ import {
 import {
   detectBrowserTimezone,
   timezoneOptions,
+  withCurrentTimezone,
   type ScheduleValue,
 } from "@/core/scheduled-tasks/schedule";
 
@@ -89,6 +90,10 @@ const runAtLocal = ref(
     : "",
 );
 const timezone = ref(props.initial.timezone || detectBrowserTimezone());
+// 候选里必须有当前值，否则触发器显示为空，见 schedule.ts 文件头。
+const timezoneChoices = computed(() =>
+  withCurrentTimezone(TIMEZONE_OPTIONS, timezone.value),
+);
 
 watch(
   [scheduleType, preset, parts, runAtLocal, timezone],
@@ -304,7 +309,7 @@ const inputClass =
       </SelectTrigger>
       <SelectContent>
         <SelectItem
-          v-for="option in TIMEZONE_OPTIONS"
+          v-for="option in timezoneChoices"
           :key="option"
           :value="option"
         >

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -108,6 +108,11 @@ export default function ScheduledTasksPage() {
   const selectedTask =
     filteredData.find((task) => task.id === selectedTaskId) ?? filteredData[0];
   const taskRunsQuery = useScheduledTaskRuns(selectedTask?.id);
+  // Runs arrive one page at a time; render everything loaded so far.
+  const taskRuns = useMemo(
+    () => (taskRunsQuery.data?.pages ?? []).flat(),
+    [taskRunsQuery.data],
+  );
   const createTask = useCreateScheduledTask();
   const updateTask = useUpdateScheduledTask(selectedTask?.id ?? "");
   const pauseTask = usePauseScheduledTask();
@@ -525,22 +530,22 @@ export default function ScheduledTasksPage() {
                     </Button>
                   </div>
                   <div data-testid="scheduled-task-runs">
-                    {(taskRunsQuery.data ?? []).length === 1
+                    {taskRuns.length === 1
                       ? st.detail.runsCountOne.replace(
                           "{count}",
-                          String((taskRunsQuery.data ?? []).length),
+                          String(taskRuns.length),
                         )
                       : st.detail.runsCount.replace(
                           "{count}",
-                          String((taskRunsQuery.data ?? []).length),
+                          String(taskRuns.length),
                         )}
                   </div>
                   <div
                     className="flex flex-col gap-2"
                     data-testid="scheduled-task-run-list"
                   >
-                    {(taskRunsQuery.data ?? []).length > 0 ? (
-                      (taskRunsQuery.data ?? []).map((run) => (
+                    {taskRuns.length > 0 ? (
+                      taskRuns.map((run) => (
                         <div
                           key={run.id}
                           className="rounded-md border p-3 text-sm"
@@ -565,6 +570,19 @@ export default function ScheduledTasksPage() {
                       </div>
                     )}
                   </div>
+                  {taskRunsQuery.hasNextPage && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      data-testid="scheduled-task-load-more-runs"
+                      onClick={() => void taskRunsQuery.fetchNextPage()}
+                      disabled={taskRunsQuery.isFetchingNextPage}
+                    >
+                      {taskRunsQuery.isFetchingNextPage
+                        ? st.detail.loadingMore
+                        : st.detail.loadMore}
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="text-muted-foreground text-sm">

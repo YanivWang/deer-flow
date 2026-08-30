@@ -675,15 +675,22 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
     return route.fallback();
   });
 
-  void page.route("**/api/scheduled-tasks/*/runs", (route) => {
+  // Runs are requested with `?limit=&offset=`, and a Playwright glob matches the
+  // query string too — `**/api/scheduled-tasks/*/runs` matches nothing once the
+  // page paginates.  Anchor on `/runs` followed by `?` or end-of-string, the same
+  // way the thread-runs route below does.
+  void page.route(/\/api\/scheduled-tasks\/[^/]+\/runs(\?|$)/, (route) => {
     if (route.request().method() === "GET") {
-      const taskId = decodeURIComponent(
-        new URL(route.request().url()).pathname.split("/").at(-2) ?? "",
-      );
+      const url = new URL(route.request().url());
+      const taskId = decodeURIComponent(url.pathname.split("/").at(-2) ?? "");
+      const limit = Number(url.searchParams.get("limit") ?? "50");
+      const offset = Number(url.searchParams.get("offset") ?? "0");
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(mutableTaskRuns[taskId] ?? []),
+        body: JSON.stringify(
+          (mutableTaskRuns[taskId] ?? []).slice(offset, offset + limit),
+        ),
       });
     }
     return route.fallback();

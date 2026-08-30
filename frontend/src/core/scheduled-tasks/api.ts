@@ -36,9 +36,14 @@ export async function fetchThreadScheduledTasks(
 
 export async function fetchScheduledTaskRuns(
   taskId: string,
+  options: { limit?: number; offset?: number } = {},
 ): Promise<ScheduledTaskRun[]> {
+  const params = new URLSearchParams({
+    limit: String(options.limit ?? 50),
+    offset: String(options.offset ?? 0),
+  });
   const response = await fetch(
-    scheduledTasksUrl(`/${encodeURIComponent(taskId)}/runs`),
+    scheduledTasksUrl(`/${encodeURIComponent(taskId)}/runs?${params}`),
   );
   if (!response.ok) {
     await throwGatewayApiError(

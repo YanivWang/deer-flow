@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -177,6 +177,19 @@ export function ScheduledTaskScheduleInput({
     });
   }
 
+  // `Intl.supportedValuesOf("timeZone")` does not contain "UTC", while
+  // `resolvedOptions().timeZone` returns exactly that on a UTC host — and a
+  // stored task may carry any zone the Gateway accepted. A value with no
+  // matching item renders the trigger blank, so keep the current one in the
+  // list instead of dropping it.
+  const timezoneChoices = useMemo(
+    () =>
+      timezone && !TIMEZONE_OPTIONS.includes(timezone)
+        ? [timezone, ...TIMEZONE_OPTIONS]
+        : TIMEZONE_OPTIONS,
+    [timezone],
+  );
+
   const preview = describeSchedule(
     { scheduleType, preset, parts, runAtLocal, timezone },
     schedLocale,
@@ -314,7 +327,7 @@ export function ScheduledTaskScheduleInput({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {TIMEZONE_OPTIONS.map((tzOption) => (
+          {timezoneChoices.map((tzOption) => (
             <SelectItem key={tzOption} value={tzOption}>
               {tzOption}
             </SelectItem>

@@ -13,6 +13,7 @@ import { mount } from "@vue/test-utils";
 import { defineComponent, h, nextTick, ref } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useScheduledTaskRuns } from "@/composables/useScheduledTasks";
+import type { ScheduledTaskRun } from "@/core/scheduled-tasks/types";
 
 const api = vi.hoisted(() => ({
   fetchScheduledTaskRuns: vi.fn(),
@@ -71,6 +72,43 @@ describe("useScheduledTaskRuns", () => {
     await nextTick();
 
     expect(wrapper.text()).toBe("run-b");
+    wrapper.unmount();
+    queryClient.clear();
+  });
+
+  it("keeps one in-flight loadMore instead of queueing a second page", async () => {
+    const pages: Record<number, ScheduledTaskRun[]> = {
+      0: Array.from({ length: 50 }, (_, index) => ({
+        id: `run-${index}`,
+      })) as ScheduledTaskRun[],
+      50: [{ id: "run-50" }] as ScheduledTaskRun[],
+    };
+    const offsets: number[] = [];
+    api.fetchScheduledTaskRuns.mockImplementation(
+      (_taskId: string, options: { offset?: number }) => {
+        offsets.push(options.offset ?? 0);
+        return Promise.resolve(pages[options.offset ?? 0] ?? []);
+      },
+    );
+    let state!: ReturnType<typeof useScheduledTaskRuns>;
+    const Host = defineComponent({
+      setup() {
+        state = useScheduledTaskRuns(ref("task-a"));
+        return () => h("div", String(state.runs.value.length));
+      },
+    });
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = mount(Host, {
+      global: { plugins: [[VueQueryPlugin, { queryClient }]] },
+    });
+    await vi.waitFor(() => expect(wrapper.text()).toBe("50"));
+
+    await Promise.all([state.loadMore(), state.loadMore()]);
+    await vi.waitFor(() => expect(wrapper.text()).toBe("51"));
+    expect(offsets).toEqual([0, 50]);
+
     wrapper.unmount();
     queryClient.clear();
   });

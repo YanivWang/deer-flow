@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useI18n } from "@/core/i18n/hooks";
@@ -33,10 +38,25 @@ export function useThreadScheduledTasks(threadId: string | null | undefined) {
   });
 }
 
+/** The Gateway's own default page size for `GET /scheduled-tasks/{id}/runs`. */
+export const SCHEDULED_TASK_RUNS_PAGE_SIZE = 50;
+
+// Runs are paginated. Asking for one page and rendering its length as the run
+// count reports "50 runs" for a task that has hundreds, with no way to reach
+// the rest — the page said the history was complete when it was not.
 export function useScheduledTaskRuns(taskId: string | null | undefined) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ["scheduled-tasks", "runs", taskId],
-    queryFn: () => fetchScheduledTaskRuns(taskId ?? ""),
+    queryFn: ({ pageParam }) =>
+      fetchScheduledTaskRuns(taskId ?? "", {
+        limit: SCHEDULED_TASK_RUNS_PAGE_SIZE,
+        offset: pageParam,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length === SCHEDULED_TASK_RUNS_PAGE_SIZE
+        ? pages.reduce((count, page) => count + page.length, 0)
+        : undefined,
     enabled: Boolean(taskId),
     refetchInterval: 15000,
     refetchIntervalInBackground: false,

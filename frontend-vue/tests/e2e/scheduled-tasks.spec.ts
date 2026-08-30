@@ -245,14 +245,18 @@ function mockWP07Gateway(
     void page.route(`**/api/scheduled-tasks/*/${action}`, handleTaskRoute);
   }
 
-  // glob 末尾没有通配查询串：页面发的是一条**不带查询串**的 runs 请求，而 Playwright 的
-  // glob 会连查询串一起匹配，所以带通配查询串的那一版现在一条都拦不到——请求会穿过
-  // mock 打到真后端上去。
-  void page.route("**/api/scheduled-tasks/*/runs", (route) => {
+  // 用正则不用 glob：Playwright 的 glob 会连查询串一起匹配，而 runs 带 limit/offset，
+  // 于是 `**` 那一版一条都拦不到——请求会穿过 mock 打到真后端上去。
+  void page.route(/\/api\/scheduled-tasks\/[^/]+\/runs(\?|$)/, (route) => {
     if (route.request().method() !== "GET") return route.fallback();
     const url = new URL(route.request().url());
     const taskId = decodeURIComponent(url.pathname.split("/").at(-2) ?? "");
-    return route.fulfill({ status: 200, json: runs[taskId] ?? [] });
+    const limit = Number(url.searchParams.get("limit") ?? "50");
+    const offset = Number(url.searchParams.get("offset") ?? "0");
+    return route.fulfill({
+      status: 200,
+      json: (runs[taskId] ?? []).slice(offset, offset + limit),
+    });
   });
 }
 
@@ -492,11 +496,11 @@ test.describe("Vue scheduled tasks", () => {
     ).toHaveCount(3);
   });
 
-  test("runs are one unpaginated request, with no load-more affordance", async ({
+  test("runs paginate with limit/offset and never stop silently at fifty", async ({
     page,
   }) => {
     mockWP07Gateway(page, { scheduledTasks: [task("paged")] });
-    const runsUrls: string[] = [];
+    const offsets: number[] = [];
     const runs = Array.from({ length: 55 }, (_, index) => ({
       id: `run-${index}`,
       task_id: "paged",
@@ -510,14 +514,15 @@ test.describe("Vue scheduled tasks", () => {
       finished_at: "2026-07-01T00:01:00+00:00",
       created_at: "2026-07-01T00:00:00+00:00",
     }));
-    // Gateway 自己的 limit=50 默认值决定返回多少；前端一个参数都不加。
-    await page.route("**/api/scheduled-tasks/paged/runs", (route) => {
+    await page.route(/\/api\/scheduled-tasks\/paged\/runs(\?|$)/, (route) => {
       const url = new URL(route.request().url());
-      runsUrls.push(`${url.pathname}${url.search}`);
+      const limit = Number(url.searchParams.get("limit"));
+      const offset = Number(url.searchParams.get("offset"));
+      offsets.push(offset);
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(runs.slice(0, 50)),
+        body: JSON.stringify(runs.slice(offset, offset + limit)),
       });
     });
 
@@ -525,7 +530,15 @@ test.describe("Vue scheduled tasks", () => {
     await expect(
       page.locator('[data-testid^="scheduled-task-run-run-"]'),
     ).toHaveCount(50);
-    expect(runsUrls).toEqual(["/api/scheduled-tasks/paged/runs"]);
+    // 满页就意味着还有下一页：这时候「50 runs」不是历史的全部。
+    await page.getByTestId("scheduled-task-load-more-runs").click();
+    await expect(
+      page.locator('[data-testid^="scheduled-task-run-run-"]'),
+    ).toHaveCount(55);
+    await expect(page.getByTestId("scheduled-task-runs")).toContainText(
+      "55 runs",
+    );
+    expect(offsets).toEqual([0, 50]);
     await expect(page.getByTestId("scheduled-task-load-more-runs")).toHaveCount(
       0,
     );

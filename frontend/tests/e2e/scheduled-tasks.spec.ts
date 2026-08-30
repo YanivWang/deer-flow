@@ -161,6 +161,89 @@ test("trigger shows a run entry in the detail pane", async ({ page }) => {
   ).toBeVisible();
 });
 
+// `Intl.supportedValuesOf("timeZone")` does not list "UTC", but a UTC host's
+// `resolvedOptions().timeZone` is exactly that. Without the current value in the
+// option list the Select trigger renders blank.
+test.describe("on a UTC host", () => {
+  test.use({ timezoneId: "UTC" });
+
+  test("timezone select shows the detected zone instead of nothing", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page, { threads: [], scheduledTasks: [] });
+    await page.goto("/workspace/scheduled-tasks");
+    await expect(page.getByTestId("schedule-timezone")).toHaveText("UTC");
+    await expect(page.getByTestId("schedule-preview")).toContainText("(UTC)");
+  });
+});
+
+test("run history paginates instead of stopping silently at one page", async ({
+  page,
+}) => {
+  mockLangGraphAPI(page, {
+    threads: [],
+    scheduledTasks: [
+      {
+        id: "task-1",
+        thread_id: "thread-1",
+        title: "Busy task",
+        prompt: "Summarize thread",
+        schedule_type: "cron",
+        schedule_spec: { cron: "0 9 * * *" },
+        timezone: "UTC",
+        status: "enabled",
+        next_run_at: "2026-07-02T01:00:00+00:00",
+        last_run_at: null,
+        last_run_id: null,
+        last_error: null,
+        run_count: 55,
+        created_at: "2026-07-01T00:00:00+00:00",
+        updated_at: "2026-07-01T00:00:00+00:00",
+      },
+    ],
+  });
+
+  const offsets: number[] = [];
+  const runs = Array.from({ length: 55 }, (_, index) => ({
+    id: `run-${index}`,
+    task_id: "task-1",
+    thread_id: `thread-${index}`,
+    run_id: `gateway-run-${index}`,
+    scheduled_for: "2026-07-01T00:00:00+00:00",
+    trigger: index % 2 ? "scheduled" : "manual",
+    status: "success",
+    error: null,
+    started_at: "2026-07-01T00:00:00+00:00",
+    finished_at: "2026-07-01T00:01:00+00:00",
+    created_at: "2026-07-01T00:00:00+00:00",
+  }));
+  await page.route(/\/api\/scheduled-tasks\/task-1\/runs(\?|$)/, (route) => {
+    const url = new URL(route.request().url());
+    const limit = Number(url.searchParams.get("limit"));
+    const offset = Number(url.searchParams.get("offset"));
+    offsets.push(offset);
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(runs.slice(offset, offset + limit)),
+    });
+  });
+
+  await page.goto("/workspace/scheduled-tasks");
+  await expect(page.getByTestId("scheduled-task-runs")).toContainText(
+    "50 runs",
+  );
+  // A full page means there is more history; "50 runs" is not the total yet.
+  await page.getByTestId("scheduled-task-load-more-runs").click();
+  await expect(page.getByTestId("scheduled-task-runs")).toContainText(
+    "55 runs",
+  );
+  expect(offsets).toEqual([0, 50]);
+  await expect(page.getByTestId("scheduled-task-load-more-runs")).toHaveCount(
+    0,
+  );
+});
+
 test("detail pane falls back to a visible task after filters hide the selected task", async ({
   page,
 }) => {

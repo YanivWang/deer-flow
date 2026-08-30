@@ -42,6 +42,8 @@ import type {
 const props = defineProps<{
   task: ScheduledTask;
   runs: ScheduledTaskRun[];
+  runsHasMore: boolean;
+  runsLoadingMore: boolean;
   editing: boolean;
   editDraft: ScheduledTaskDraft;
   updatePending: boolean;
@@ -54,6 +56,7 @@ const emit = defineEmits<{
   resume: [];
   trigger: [];
   delete: [];
+  loadMoreRuns: [];
 }>();
 const { $i18n } = useNuxtApp();
 
@@ -185,6 +188,11 @@ const editTextareaClass =
       </Button>
     </div>
 
-    <ScheduledTaskRunList :runs="runs" />
+    <ScheduledTaskRunList
+      :runs="runs"
+      :has-more="runsHasMore"
+      :loading-more="runsLoadingMore"
+      @load-more="emit('loadMoreRuns')"
+    />
   </div>
 </template>

@@ -191,6 +191,23 @@ test.describe("scheduled tasks a11y shape", () => {
     );
   });
 
+  /*
+    专门在 TZ=UTC 下跑：`Intl.supportedValuesOf("timeZone")` 不含 "UTC"，而这台机器的
+    `resolvedOptions().timeZone` 正是 "UTC"。候选里不补当前值，触发器就是空的。
+  */
+  test.describe("on a UTC host", () => {
+    test.use({ timezoneId: "UTC" });
+
+    test("shows the detected zone instead of an empty trigger", async ({
+      page,
+    }) => {
+      await open(page);
+      const form = page.getByTestId("scheduled-task-create-form");
+      await expect(form.getByTestId("schedule-timezone")).toHaveText("UTC");
+      await expect(form.getByTestId("schedule-preview")).toContainText("(UTC)");
+    });
+  });
+
   test("one-time swaps the whole cron block for a datetime input", async ({
     page,
   }) => {

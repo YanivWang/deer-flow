@@ -323,6 +323,8 @@ export interface Translations {
       runsCount: string;
       runsCountOne: string;
       noRuns: string;
+      loadMore: string;
+      loadingMore: string;
       noSelection: string;
       filteredByThread: string;
       loadFailed: string;

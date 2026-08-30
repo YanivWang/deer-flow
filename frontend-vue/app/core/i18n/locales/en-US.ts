@@ -412,6 +412,8 @@ export const enUS: Translations = {
       runsCount: "{count} runs",
       runsCountOne: "{count} run",
       noRuns: "No runs yet",
+      loadMore: "Load more runs",
+      loadingMore: "Loading more…",
       noSelection: "No scheduled task selected",
       filteredByThread: "Filtered by thread: {id}",
       loadFailed: "Failed to load scheduled tasks",

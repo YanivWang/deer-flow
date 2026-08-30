@@ -4,8 +4,7 @@
   【主要导出】     无；Vitest cases
   【依赖关系】     core/scheduled-tasks/api · mocked fetcher
   【边界与注意】   不对 Gateway 增加 interval/enabled/schedule_type PATCH 等字段。
-                   runs 是**不带查询串**的一次取数：Gateway 自己的 limit=50 / offset=0
-                   默认值决定返回多少，前端不再加分页参数（对照见 useScheduledTasks.ts）。
+                   runs 走 limit/offset 分页，两个应用同一个页大小（见 useScheduledTasks.ts）。
 */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetch } from "@/core/api/fetcher";
@@ -55,16 +54,28 @@ function response(body: unknown, status = 200): Response {
 describe("scheduled-task API", () => {
   beforeEach(() => mockedFetch.mockReset());
 
-  it("fetches runs with an escaped id and no pagination query", async () => {
+  it("fetches a bounded runs page with an escaped id and an offset", async () => {
     const signal = new AbortController().signal;
     mockedFetch.mockResolvedValueOnce(response([]));
 
-    await fetchScheduledTaskRuns("task / one", { signal });
+    await fetchScheduledTaskRuns("task / one", {
+      limit: 25,
+      offset: 50,
+      signal,
+    });
 
-    expect(String(mockedFetch.mock.calls[0]?.[0])).toMatch(
-      /\/api\/scheduled-tasks\/task%20%2F%20one\/runs$/,
+    expect(String(mockedFetch.mock.calls[0]?.[0])).toContain(
+      "/api/scheduled-tasks/task%20%2F%20one/runs?limit=25&offset=50",
     );
     expect(mockedFetch.mock.calls[0]?.[1]?.signal).toBe(signal);
+  });
+
+  it("falls back to the Gateway's own first page when unbounded", async () => {
+    mockedFetch.mockResolvedValueOnce(response([]));
+    await fetchScheduledTaskRuns("task-1");
+    expect(String(mockedFetch.mock.calls[0]?.[0])).toContain(
+      "/runs?limit=50&offset=0",
+    );
   });
 
   it("uses the exact mutation methods and bodies", async () => {

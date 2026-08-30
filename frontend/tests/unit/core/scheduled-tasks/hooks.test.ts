@@ -7,6 +7,7 @@ rs.mock("@/core/api/fetcher", () => ({
 import { fetch } from "@/core/api/fetcher";
 import {
   createScheduledTask,
+  fetchScheduledTaskRuns,
   fetchScheduledTasks,
   type ScheduledTaskPayload,
 } from "@/core/scheduled-tasks/api";
@@ -97,6 +98,22 @@ describe("scheduled tasks api", () => {
     const body = call?.[1]?.body as string;
     expect(JSON.parse(body)).toEqual(payload);
     expect(result).toEqual(SAMPLE_TASK);
+  });
+
+  it("fetchScheduledTaskRuns asks for one bounded page", async () => {
+    mockedFetch.mockResolvedValue(jsonResponse([]));
+
+    await fetchScheduledTaskRuns("task / one", { limit: 25, offset: 50 });
+    await fetchScheduledTaskRuns("task-1");
+
+    expect(String(mockedFetch.mock.calls[0]?.[0] as string)).toContain(
+      "/api/scheduled-tasks/task%20%2F%20one/runs?limit=25&offset=50",
+    );
+    // Unbounded callers still get an explicit page, matching the Gateway's own
+    // defaults, so the request is the same shape on every page.
+    expect(String(mockedFetch.mock.calls[1]?.[0] as string)).toContain(
+      "/runs?limit=50&offset=0",
+    );
   });
 
   it("throws an Error carrying backend detail on failure", async () => {

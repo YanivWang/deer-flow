@@ -19,13 +19,19 @@
                    都不轮询，只在 selection 变化时抓一次详情。轮询补上之后，详情请求就是
                    纯粹的多余。
 
-                   runs 也不再分页。React 只发一次不带参数的 `GET …/runs`，由 Gateway
-                   的 limit=50 / offset=0 默认值决定返回多少；Vue 原来用 infinite query
-                   带 `?limit=50&offset=0` 并给出「加载更多」。那是 React 没有的能力，
-                   两个应用在超过 50 条历史的任务上会给出不同的界面，而这个仓库的判据是
-                   Vue 要能原样替掉 React。
+                   runs 分页。Gateway 的 `GET …/runs` 默认只返回 50 条，把这一页的长度
+                   当成运行总数，就会在一个跑过几百次的任务上显示「50 runs」并且没有任何
+                   办法看到其余的——页面在说历史已经完整，而它不是。React 原来就是这么
+                   做的，同一份分页已经同步到 frontend/src/core/scheduled-tasks/hooks.ts，
+                   两边同一个页大小、同一个 getNextPageParam。
 */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/vue-query";
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
 
 import {
@@ -42,10 +48,16 @@ import {
   type ScheduledTaskUpdatePayload,
 } from "@/core/scheduled-tasks/api";
 import { scheduledTaskKeys } from "@/core/scheduled-tasks/query-keys";
-import type { ScheduledTask } from "@/core/scheduled-tasks/types";
+import type {
+  ScheduledTask,
+  ScheduledTaskRun,
+} from "@/core/scheduled-tasks/types";
 
 /** 与 React 的 `refetchInterval: 15000` 同一个值。 */
 const POLL_INTERVAL_MS = 15_000;
+
+/** Gateway 自己对 `GET …/runs` 的默认页大小，与 React 的同名常量一致。 */
+const RUNS_PAGE_SIZE = 50;
 
 export function useScheduledTasks(threadId: MaybeRefOrGetter<string | null>) {
   const queryKey = computed(() => {
@@ -72,17 +84,52 @@ export function useScheduledTasks(threadId: MaybeRefOrGetter<string | null>) {
 }
 
 export function useScheduledTaskRuns(taskId: MaybeRefOrGetter<string | null>) {
-  const query = useQuery({
+  const query = useInfiniteQuery<
+    ScheduledTaskRun[],
+    Error,
+    InfiniteData<ScheduledTaskRun[], number>,
+    readonly unknown[],
+    number
+  >({
     queryKey: computed(() => scheduledTaskKeys.runs(toValue(taskId) ?? "")),
     enabled: computed(() => Boolean(toValue(taskId))),
-    queryFn: ({ queryKey, signal }) =>
-      fetchScheduledTaskRuns(String(queryKey[2]), { signal }),
+    initialPageParam: 0,
+    queryFn: ({ queryKey, pageParam, signal }) =>
+      fetchScheduledTaskRuns(String(queryKey[2]), {
+        limit: RUNS_PAGE_SIZE,
+        offset: pageParam,
+        signal,
+      }),
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length === RUNS_PAGE_SIZE
+        ? pages.reduce((count, page) => count + page.length, 0)
+        : undefined,
     refetchInterval: POLL_INTERVAL_MS,
     refetchIntervalInBackground: false,
   });
+
+  // 连点两下「加载更多」只发一次请求：fetchNextPage 在飞行中时不再排队。
+  let loadMorePromise: ReturnType<typeof query.fetchNextPage> | null = null;
+  function loadMore() {
+    if (
+      loadMorePromise ||
+      query.isFetchingNextPage.value ||
+      !query.hasNextPage.value
+    ) {
+      return loadMorePromise ?? Promise.resolve();
+    }
+    loadMorePromise = query.fetchNextPage().finally(() => {
+      loadMorePromise = null;
+    });
+    return loadMorePromise;
+  }
+
   return {
     ...query,
-    runs: computed(() => query.data.value ?? []),
+    runs: computed(() =>
+      (query.data.value?.pages ?? []).flatMap((page) => page),
+    ),
+    loadMore,
   };
 }
 

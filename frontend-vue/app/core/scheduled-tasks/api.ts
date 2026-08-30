@@ -3,8 +3,7 @@
   【架构位置】     L3 scheduled-task API boundary
   【主要导出】     ScheduledTaskCreatePayload · ScheduledTaskUpdatePayload · scheduled-task API functions
   【依赖关系】     core api fetcher/errors/config · scheduled-task types
-  【边界与注意】   Gateway 只支持 once/cron；PATCH 不发送 schedule_type；runs 不带分页参数，
-                   用 Gateway 自己的 limit=50/offset=0 默认值（对照见 hooks 侧注释）。
+  【边界与注意】   Gateway 只支持 once/cron；PATCH 不发送 schedule_type；runs 走 limit/offset。
 */
 import { throwGatewayApiError } from "@/core/api/errors";
 import { fetch } from "@/core/api/fetcher";
@@ -72,10 +71,14 @@ export async function fetchThreadScheduledTasks(
 
 export async function fetchScheduledTaskRuns(
   taskId: string,
-  options: RequestOptions = {},
+  options: RequestOptions & { limit?: number; offset?: number } = {},
 ): Promise<ScheduledTaskRun[]> {
+  const params = new URLSearchParams({
+    limit: String(options.limit ?? 50),
+    offset: String(options.offset ?? 0),
+  });
   const response = await fetch(
-    scheduledTasksUrl(`/${encodeURIComponent(taskId)}/runs`),
+    scheduledTasksUrl(`/${encodeURIComponent(taskId)}/runs?${params}`),
     { signal: options.signal },
   );
   if (!response.ok) {

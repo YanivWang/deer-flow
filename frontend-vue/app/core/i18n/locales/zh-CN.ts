@@ -396,6 +396,8 @@ export const zhCN: Translations = {
       runsCount: "{count} 次运行",
       runsCountOne: "{count} 次运行",
       noRuns: "暂无运行",
+      loadMore: "加载更多运行记录",
+      loadingMore: "正在加载更多…",
       noSelection: "未选择定时任务",
       filteredByThread: "按线程筛选：{id}",
       loadFailed: "加载定时任务失败",
