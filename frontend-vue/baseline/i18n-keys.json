@@ -950,7 +950,7 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 72,
+  "unusedTotal": 71,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.createPageSubtitle",
@@ -965,7 +965,6 @@
     "artifactEditing.saved",
     "channels.connectedAs",
     "channels.reconnect",
-    "channels.unconfigured",
     "citations.copiedReference",
     "common.editRerunWarning",
     "common.preview",

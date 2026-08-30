@@ -63,6 +63,14 @@ type ConnectionVariables = {
 export function useChannelConnections(options: {
   scopeKey: MaybeRefOrGetter<string>;
   enabled: MaybeRefOrGetter<boolean>;
+  /**
+   * 是否**在首屏就**拉一遍 connections。默认拉；侧栏传 false。
+   *
+   * 关掉的只是那一次预取，不是 connections 本身：connect 之后的 refreshScope 与
+   * bind 轮询照样直接调 listChannelConnections，写回的仍是同一个 query key，
+   * 所以设置页与侧栏同时挂着时读到的是同一份数据。
+   */
+  withConnections?: MaybeRefOrGetter<boolean>;
   pollIntervalMs?: number;
 }) {
   const queryClient = useQueryClient();
@@ -88,21 +96,21 @@ export function useChannelConnections(options: {
   });
   const providers = computed(() => providersQuery.data.value?.providers ?? []);
   /*
-    没有任何启用的 provider 时**不问** connections。
+    谁需要 connections，谁才拉。
 
-    React 的侧栏根本不发这个请求：它直接读 provider.connection_status
-    （frontend/src/components/workspace/channels/workspace-channels-list.tsx）。
-    本仓刻意不走那条路——tests/unit/channels/channel-state.test.ts 钉住了
-    「connections 响应才是用户连接状态的真相，provider.connection_status 可能是陈的」，
-    照抄会把一个已知会过期的状态搬回侧栏。
+    侧栏一行一个 provider、一个按钮，React 的 WorkspaceChannelsList 从头到尾只读
+    provider.connection_status，**不发**这个请求；设置页要列出每个账号，才需要行本身。
+    此前本仓两边都拉，理由写在 core/channels/state.ts 里的「provider 状态可能是陈的」，
+    而那条理由是错的——见那个文件现在的头注释。于是每打开一个 workspace 页面，都为
+    一份侧栏根本不看的数据多打一次后端。
 
-    但「不能靠 provider 状态」不等于「任何时候都要问一遍」：一个 provider 都没启用时，
-    connections 没有任何东西可以解释，这次请求纯属浪费——每开一个 workspace 页面都发一次。
-    于是判据变成「有 provider 才问 connections」，既保住状态真相，也不再无条件多打一次后端。
+    再叠一层：一个启用的 provider 都没有时，connections 没有任何东西可以解释，
+    这次请求纯属浪费。
   */
   const connectionsEnabled = computed(
     () =>
       queryEnabled.value &&
+      (toValue(options.withConnections) ?? true) &&
       providers.value.some((provider) => provider.enabled),
   );
   const connectionsQuery = useQuery({

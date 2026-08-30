@@ -317,57 +317,18 @@
       "geometry": []
     },
     "channels/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- button \"Connected\"",
-        "- button \"Connected\"",
-        "- button \"Connected\"",
-        "- button \"Connected\"",
-        "- button \"Connected\"",
-        "- button \"Connected\"",
-        "- button \"Connected\"",
-        "- button \"Connected\"",
-        "- list:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- listitem:",
-        "- text: Channels"
-      ],
-      "ariaOnlyVue": [
-        "- article:",
-        "- article:",
-        "- article:",
-        "- article:",
-        "- article:",
-        "- article:",
-        "- article:",
-        "- article:",
-        "- button \"Connect\"",
-        "- button \"Connect\"",
-        "- button \"Connect\"",
-        "- button \"Connect\"",
-        "- button \"Connect\"",
-        "- button \"Connect\"",
-        "- button \"Connect\"",
-        "- button \"Connect\"",
-        "- heading \"Channels\" [level=3]"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [],
-      "requestsOnlyVue": [
-        "GET /api/channels/connections"
-      ],
-      "geometry": [
-        "text:DingTalk x React=44 Vue=40 Δ-4",
-        "text:DingTalk y React=474 Vue=470 Δ-4",
-        "text:DingTalk width React=91 Vue=99 Δ8",
-        "text:Telegram x React=44 Vue=40 Δ-4",
-        "text:Telegram y React=298 Vue=294 Δ-4",
-        "text:Telegram width React=91 Vue=99 Δ8"
-      ]
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "channels/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
     },
     "thread-history-mermaid/desktop/light/en-US": {
       "ariaOnlyReact": [

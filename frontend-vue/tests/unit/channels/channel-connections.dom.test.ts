@@ -114,7 +114,6 @@ function mountSettings(owner = createOwner()) {
   ownerFactory.mockReturnValue(owner);
   const wrapper = mount(ChannelConnections, {
     attachTo: document.body,
-    props: { variant: "settings" },
     global: {
       stubs: { ChannelProviderIcon: true },
     },

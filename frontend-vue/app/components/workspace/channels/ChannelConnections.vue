@@ -1,15 +1,26 @@
 <script setup lang="ts">
 /*
-  【文件职责】     展示用户 channel instances，并编排连接、配置、单连接与管理员 provider 删除。
+  【文件职责】     设置页的 channel 面板：每个 provider 的账号列表、连接、配置与管理员删除。
   【架构位置】     L3 product UI
   【主要导出】     默认 ChannelConnections 组件
-  【依赖关系】     useChannelConnections · auth session · channels helpers · ui/dialog · ui/alert-dialog
-  【边界与注意】   connections 是状态真相；provider 删除是全局管理员动作，不能伪装成用户断开。
+  【依赖关系】     useChannelConnections · auth session · ChannelRuntimeConfigDialog · ui/dialog · ui/alert-dialog
+  【边界与注意】   侧栏是另一个组件（WorkspaceChannelsList.vue），不要再把两者合成一个 variant——
+                   理由写在那个文件的头注释里。
+
+                   这里比 React 的 channels-settings-page.tsx 多出多账号列表、逐账号断开与
+                   管理员删 provider 配置三件事，是刻意保留的：tests/e2e-channels/channels.spec.ts
+                   拿真实 Gateway 钉住了这条生命周期。
+
+                   connections 是这个面板的状态真相（一个 provider 可以挂多个账号，
+                   provider.connection_status 只能表达其中最新的一行）；一行都没有时
+                   才回落到 provider.connection_status，见 core/channels/state.ts。
+                   provider 删除是全局管理员动作，不能伪装成用户断开。
 */
 
 import { computed, ref } from "vue";
 
 import ChannelProviderIcon from "./ChannelProviderIcon.vue";
+import ChannelRuntimeConfigDialog from "./ChannelRuntimeConfigDialog.vue";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -22,7 +33,6 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -48,6 +58,7 @@ import {
 } from "@/core/channels/provider-state";
 import {
   getChannelConnectionLabel,
+  getChannelProviderStatusKey,
   type ChannelProviderView,
 } from "@/core/channels/state";
 import type {
@@ -56,10 +67,6 @@ import type {
   ChannelProviderId,
   ChannelRuntimeConfigValues,
 } from "@/core/channels/types";
-
-withDefaults(defineProps<{ variant?: "sidebar" | "settings" }>(), {
-  variant: "sidebar",
-});
 
 const { $i18n } = useNuxtApp();
 const text = computed(() => $i18n.t.value.channels);
@@ -83,7 +90,6 @@ const channels = useChannelConnections({
 });
 
 const editing = ref<ChannelProvider | null>(null);
-const values = ref<ChannelRuntimeConfigValues>({});
 const actionError = ref<string | null>(null);
 const activeConnectProvider = ref<ChannelProviderId | null>(null);
 const removingProvider = ref<ChannelProvider | null>(null);
@@ -103,12 +109,22 @@ function statusLabel(status: string) {
   if (status === "pending") return labels.pending;
   if (status === "revoked") return labels.revoked;
   if (status === "not_connected") return labels.notConnected;
+  if (status === "disabled") return labels.disabled;
+  if (status === "unconfigured") return labels.unconfigured;
+  if (status === "unavailable") return labels.unavailableShort;
   return status.replaceAll("_", " ");
+}
+
+/*
+  provider 那一行走 React 的优先级（停用/未配置/不可用先于连接状态）；
+  账号那一行不走——账号只有它自己的绑定状态，provider 的运行时状况在上面已经说过一次了。
+*/
+function providerStatusLabel(view: ChannelProviderView) {
+  return statusLabel(getChannelProviderStatusKey(view));
 }
 
 function beginSetup(provider: ChannelProvider) {
   editing.value = provider;
-  values.value = { ...(provider.credential_values ?? {}) };
   actionError.value = null;
 }
 
@@ -142,9 +158,11 @@ async function connectProvider(
   }
 }
 
-async function saveRuntimeConfig() {
-  const provider = editing.value;
-  if (!provider || channels.isProviderPending(provider.provider)) return;
+async function saveRuntimeConfig(
+  provider: ChannelProvider,
+  values: ChannelRuntimeConfigValues,
+) {
+  if (channels.isProviderPending(provider.provider)) return;
   const hasActiveConnection = channels.connections.value.some(
     (connection) =>
       connection.provider === provider.provider &&
@@ -153,7 +171,7 @@ async function saveRuntimeConfig() {
   const connectWindow = hasActiveConnection ? null : prepareWindow(provider);
   actionError.value = null;
   try {
-    const next = await channels.configure(provider.provider, values.value);
+    const next = await channels.configure(provider.provider, values);
     editing.value = null;
     if (!hasActiveConnection) await connectProvider(next, connectWindow);
     else closeConnectWindow(connectWindow);
@@ -200,14 +218,6 @@ function connectLabel(view: ChannelProviderView) {
     ? text.value.addAccount
     : text.value.connect;
 }
-
-const dialogTitle = computed(() => {
-  const provider = editing.value;
-  if (!provider) return "";
-  return provider.configured
-    ? text.value.setupEditTitle(provider.display_name)
-    : text.value.setupTitle(provider.display_name);
-});
 </script>
 
 <template>
@@ -218,15 +228,8 @@ const dialogTitle = computed(() => {
       channels.error.value ||
       actionError
     "
-    :class="variant === 'settings' ? 'space-y-3' : 'space-y-1'"
+    class="space-y-3"
   >
-    <h3
-      v-if="variant === 'sidebar'"
-      class="text-muted-foreground px-2 pt-2 text-xs font-medium"
-    >
-      {{ text.title }}
-    </h3>
-
     <p
       v-if="channels.error.value || actionError"
       role="alert"
@@ -238,18 +241,10 @@ const dialogTitle = computed(() => {
     <article
       v-for="view in channels.providerViews.value"
       :key="view.provider.provider"
-      class="border-border"
+      class="border-border border-b py-3 last:border-0"
       :data-testid="`channel-provider-${view.provider.provider}`"
-      :class="variant === 'settings' ? 'border-b py-3 last:border-0' : ''"
     >
-      <div
-        class="flex items-center justify-between gap-3"
-        :class="
-          variant === 'sidebar'
-            ? 'hover:bg-sidebar-accent rounded-md px-2 py-1'
-            : ''
-        "
-      >
+      <div class="flex items-center justify-between gap-3">
         <ChannelProviderIcon
           :provider="view.provider.provider"
           class="shrink-0"
@@ -258,21 +253,17 @@ const dialogTitle = computed(() => {
           <div class="truncate text-sm font-medium">
             {{ view.provider.display_name }}
           </div>
-          <p
-            v-if="variant === 'settings'"
-            class="text-muted-foreground text-xs"
-          >
+          <p class="text-muted-foreground text-xs">
             {{
               text.descriptions[view.provider.provider] ??
               view.provider.display_name
             }}
           </p>
           <span
-            v-if="variant === 'settings'"
             class="text-muted-foreground text-xs"
             :data-testid="`channel-status-${view.provider.provider}`"
           >
-            {{ statusLabel(view.status) }}
+            {{ providerStatusLabel(view) }}
           </span>
         </div>
         <div class="flex shrink-0 flex-wrap justify-end gap-1">
@@ -287,7 +278,6 @@ const dialogTitle = computed(() => {
           </button>
           <button
             v-if="
-              variant === 'settings' &&
               view.provider.configured &&
               providerCanEditRuntimeConfig(view.provider)
             "
@@ -299,7 +289,7 @@ const dialogTitle = computed(() => {
             {{ text.modify }}
           </button>
           <button
-            v-if="variant === 'settings' && isAdmin && view.provider.configured"
+            v-if="isAdmin && view.provider.configured"
             type="button"
             class="rounded-md border px-2 py-1 text-xs text-red-600"
             :disabled="channels.isProviderPending(view.provider.provider)"
@@ -311,7 +301,7 @@ const dialogTitle = computed(() => {
         </div>
       </div>
 
-      <div v-if="variant === 'settings'" class="mt-3 space-y-2 pl-8">
+      <div class="mt-3 space-y-2 pl-8">
         <h4 class="text-xs font-medium">{{ text.accounts }}</h4>
         <p
           v-if="view.connections.length === 0"
@@ -350,58 +340,13 @@ const dialogTitle = computed(() => {
     </article>
   </section>
 
-  <Dialog :open="editing !== null" @update:open="!$event && (editing = null)">
-    <DialogContent v-if="editing" :close-label="text.cancel">
-      <form class="grid gap-4" @submit.prevent="saveRuntimeConfig">
-        <DialogHeader>
-          <DialogTitle>{{ dialogTitle }}</DialogTitle>
-          <DialogDescription>
-            {{ editing.unavailable_reason || text.setupDescription }}
-          </DialogDescription>
-        </DialogHeader>
-        <div class="space-y-3">
-          <label
-            v-for="field in editing.credential_fields"
-            :key="field.name"
-            class="block text-sm"
-          >
-            <span class="mb-1 block">{{ field.label }}</span>
-            <input
-              v-model="values[field.name]"
-              type="text"
-              :required="field.required"
-              :aria-label="field.label"
-              autocomplete="off"
-              data-lpignore="true"
-              data-1p-ignore="true"
-              class="border-input w-full rounded-md border px-3 py-2"
-              :class="field.type === 'password' ? 'channel-secret-input' : ''"
-            />
-          </label>
-        </div>
-        <DialogFooter>
-          <DialogClose>
-            <Button type="button" variant="outline">{{ text.cancel }}</Button>
-          </DialogClose>
-          <Button
-            type="submit"
-            :disabled="channels.isProviderPending(editing.provider)"
-          >
-            {{
-              channels.connections.value.some(
-                (connection) =>
-                  connection.provider === editing?.provider &&
-                  (connection.status === "connected" ||
-                    connection.status === "pending"),
-              )
-                ? text.saveChanges
-                : text.saveAndConnect
-            }}
-          </Button>
-        </DialogFooter>
-      </form>
-    </DialogContent>
-  </Dialog>
+  <ChannelRuntimeConfigDialog
+    :provider="editing"
+    :open="editing !== null"
+    :submitting="editing ? channels.isProviderPending(editing.provider) : false"
+    @update:open="!$event && (editing = null)"
+    @submit="saveRuntimeConfig"
+  />
 
   <Dialog
     :open="Boolean(activeConnectProvider && activeFlow)"
@@ -460,9 +405,3 @@ const dialogTitle = computed(() => {
     </AlertDialogContent>
   </AlertDialog>
 </template>
-
-<style scoped>
-.channel-secret-input {
-  -webkit-text-security: disc;
-}
-</style>

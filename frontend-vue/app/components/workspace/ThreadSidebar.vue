@@ -25,7 +25,7 @@ import {
   Settings2,
 } from "lucide-vue-next";
 
-import ChannelConnections from "@/components/workspace/channels/ChannelConnections.vue";
+import WorkspaceChannelsList from "@/components/workspace/channels/WorkspaceChannelsList.vue";
 import ThreadActionsMenu from "@/components/workspace/ThreadActionsMenu.vue";
 import ThreadChannelBadge from "@/components/workspace/ThreadChannelBadge.vue";
 import ThreadChannelIcon from "@/components/workspace/ThreadChannelIcon.vue";
@@ -551,7 +551,7 @@ function openSettingsDialog(section: "appearance" | "about") {
         </ul>
       </div>
 
-      <ChannelConnections v-if="sidebarExpanded" />
+      <WorkspaceChannelsList v-if="sidebarExpanded" />
 
       <!--
         一条会话都没有的时候，标题和列表**都不渲染**——React 的 RecentChatList 在

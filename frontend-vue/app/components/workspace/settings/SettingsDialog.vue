@@ -174,7 +174,6 @@ function onOpenChange(open: boolean) {
           />
           <ChannelConnections
             v-else-if="settings.section.value === 'channels'"
-            variant="settings"
           />
           <ToolSettings v-else-if="settings.section.value === 'tools'" />
           <SkillSettings v-else-if="settings.section.value === 'skills'" />
