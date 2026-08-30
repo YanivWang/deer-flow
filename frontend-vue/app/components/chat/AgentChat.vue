@@ -21,6 +21,7 @@ import { Bot, CalendarClock, Menu, PlusSquare } from "lucide-vue-next";
 
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
+import { buttonVariants } from "@/components/ui/button";
 import AuroraText from "@/components/ui/effects/AuroraText.vue";
 import ContextUsageBadge from "@/components/workspace/ContextUsageBadge.vue";
 import TodoList from "@/components/workspace/TodoList.vue";
@@ -1412,13 +1413,24 @@ onUnmounted(() => {
               $i18n.t.value.agents.newChat
             }}</span>
           </button>
+          <!--
+            outline / sm 的按钮外观加一段 `hidden sm:inline` 的文字，不是一颗纯图标的
+            方按钮：React 的 ThreadScheduledTasksLink 就是
+            `<Button variant="outline" size="sm" asChild>` 包一个带同名 span 的链接
+            （frontend/src/components/workspace/thread-scheduled-tasks-link.tsx）。
+            两边的可访问名都来自 aria-label，所以这处差异在可访问性树上看不见——
+            看得见的是宽屏上一个念得出名字的按钮 vs 一个只有图标的方块。
+          -->
           <NuxtLink
             v-if="routeThreadId && !agentName && !isDemo"
             :to="`/workspace/scheduled-tasks?thread_id=${encodeURIComponent(routeThreadId)}`"
             :aria-label="$i18n.t.value.sidebar.scheduledTasks"
-            class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
+            :class="buttonVariants({ variant: 'outline', size: 'sm' })"
           >
             <CalendarClock :size="16" />
+            <span class="hidden sm:inline">{{
+              $i18n.t.value.sidebar.scheduledTasks
+            }}</span>
           </NuxtLink>
           <TokenUsageIndicator
             v-if="!isDemo && modelCatalog.tokenUsageEnabled.value"

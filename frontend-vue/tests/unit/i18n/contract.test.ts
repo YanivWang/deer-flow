@@ -27,7 +27,7 @@ describe("locale contract", () => {
     const paths = [
       "inputBox.placeholder",
       "agents.creationError",
-      "scheduledTasks.errors.loadRuns",
+      "scheduledTasks.errors.trigger",
       "settings.appearance.systemDescription",
       "browser.urlPlaceholder",
       "artifacts.noSelectionDescription",

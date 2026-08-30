@@ -4,13 +4,14 @@
   【主要导出】     无；Vitest cases
   【依赖关系】     core/scheduled-tasks/api · mocked fetcher
   【边界与注意】   不对 Gateway 增加 interval/enabled/schedule_type PATCH 等字段。
+                   runs 是**不带查询串**的一次取数：Gateway 自己的 limit=50 / offset=0
+                   默认值决定返回多少，前端不再加分页参数（对照见 useScheduledTasks.ts）。
 */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetch } from "@/core/api/fetcher";
 import {
   createScheduledTask,
   deleteScheduledTask,
-  fetchScheduledTask,
   fetchScheduledTaskRuns,
   pauseScheduledTask,
   resumeScheduledTask,
@@ -54,27 +55,16 @@ function response(body: unknown, status = 200): Response {
 describe("scheduled-task API", () => {
   beforeEach(() => mockedFetch.mockReset());
 
-  it("fetches one detail and a bounded runs page with offset", async () => {
+  it("fetches runs with an escaped id and no pagination query", async () => {
     const signal = new AbortController().signal;
-    mockedFetch
-      .mockResolvedValueOnce(response(TASK))
-      .mockResolvedValueOnce(response([]));
+    mockedFetch.mockResolvedValueOnce(response([]));
 
-    await fetchScheduledTask("task / one", { signal });
-    await fetchScheduledTaskRuns("task / one", {
-      limit: 25,
-      offset: 50,
-      signal,
-    });
+    await fetchScheduledTaskRuns("task / one", { signal });
 
-    expect(String(mockedFetch.mock.calls[0]?.[0])).toContain(
-      "/api/scheduled-tasks/task%20%2F%20one",
+    expect(String(mockedFetch.mock.calls[0]?.[0])).toMatch(
+      /\/api\/scheduled-tasks\/task%20%2F%20one\/runs$/,
     );
     expect(mockedFetch.mock.calls[0]?.[1]?.signal).toBe(signal);
-    expect(String(mockedFetch.mock.calls[1]?.[0])).toContain(
-      "/runs?limit=25&offset=50",
-    );
-    expect(mockedFetch.mock.calls[1]?.[1]?.signal).toBe(signal);
   });
 
   it("uses the exact mutation methods and bodies", async () => {
@@ -89,9 +79,8 @@ describe("scheduled-task API", () => {
       timezone: "UTC",
     });
     await updateScheduledTask("task-1", {
-      context_mode: "reuse_thread",
-      thread_id: "thread-1",
       title: "Updated",
+      prompt: "Updated prompt",
       schedule_spec: { cron: "0 10 * * *" },
       timezone: "Asia/Shanghai",
     });
@@ -112,6 +101,7 @@ describe("scheduled-task API", () => {
       String(mockedFetch.mock.calls[1]?.[1]?.body),
     ) as Record<string, unknown>;
     expect(patchBody).not.toHaveProperty("schedule_type");
+    expect(patchBody).not.toHaveProperty("thread_id");
     expect(patchBody).not.toHaveProperty("enabled");
     expect(patchBody).not.toHaveProperty("non_interactive");
   });

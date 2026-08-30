@@ -3,7 +3,8 @@
   【架构位置】     L3 scheduled-task API boundary
   【主要导出】     ScheduledTaskCreatePayload · ScheduledTaskUpdatePayload · scheduled-task API functions
   【依赖关系】     core api fetcher/errors/config · scheduled-task types
-  【边界与注意】   Gateway 只支持 once/cron；PATCH 不发送 schedule_type；runs 使用 limit/offset。
+  【边界与注意】   Gateway 只支持 once/cron；PATCH 不发送 schedule_type；runs 不带分页参数，
+                   用 Gateway 自己的 limit=50/offset=0 默认值（对照见 hooks 侧注释）。
 */
 import { throwGatewayApiError } from "@/core/api/errors";
 import { fetch } from "@/core/api/fetcher";
@@ -17,7 +18,7 @@ type RequestOptions = {
 
 export type ScheduledTaskCreatePayload = {
   context_mode: "fresh_thread_per_run" | "reuse_thread";
-  thread_id?: string;
+  thread_id?: string | null;
   title: string;
   prompt: string;
   schedule_type: "once" | "cron";
@@ -25,16 +26,9 @@ export type ScheduledTaskCreatePayload = {
   timezone: string;
 };
 
+/** PATCH 不带 thread_id / schedule_type：与 React 的同名类型同一份取舍。 */
 export type ScheduledTaskUpdatePayload = Partial<
-  Pick<
-    ScheduledTaskCreatePayload,
-    | "context_mode"
-    | "thread_id"
-    | "title"
-    | "prompt"
-    | "schedule_spec"
-    | "timezone"
-  >
+  Omit<ScheduledTaskCreatePayload, "thread_id" | "schedule_type">
 >;
 
 /** Kept for callers that only need the create contract. */
@@ -76,33 +70,12 @@ export async function fetchThreadScheduledTasks(
   return response.json();
 }
 
-export async function fetchScheduledTask(
-  taskId: string,
-  options: RequestOptions = {},
-): Promise<ScheduledTask> {
-  const response = await fetch(
-    scheduledTasksUrl(`/${encodeURIComponent(taskId)}`),
-    { signal: options.signal },
-  );
-  if (!response.ok) {
-    await throwGatewayApiError(
-      response,
-      `Failed to load scheduled task: ${response.statusText}`,
-    );
-  }
-  return response.json();
-}
-
 export async function fetchScheduledTaskRuns(
   taskId: string,
-  options: RequestOptions & { limit?: number; offset?: number } = {},
+  options: RequestOptions = {},
 ): Promise<ScheduledTaskRun[]> {
-  const params = new URLSearchParams({
-    limit: String(options.limit ?? 50),
-    offset: String(options.offset ?? 0),
-  });
   const response = await fetch(
-    scheduledTasksUrl(`/${encodeURIComponent(taskId)}/runs?${params}`),
+    scheduledTasksUrl(`/${encodeURIComponent(taskId)}/runs`),
     { signal: options.signal },
   );
   if (!response.ok) {

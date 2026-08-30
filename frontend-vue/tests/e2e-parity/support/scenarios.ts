@@ -609,12 +609,29 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     title: "定时任务列表",
     backend: "mock",
     path: "/workspace/scheduled-tasks",
+    /*
+      夹具刻意不是「一个全新的任务」。这一页有好几支只由**数据**决定的分叉，一次
+      页面加载就能全部走到，不需要任何交互，也就不引入任何时序：
+
+      - `context_mode: reuse_thread` 走详情里 `Thread:` 那一支（fresh 模式走的是
+        `Last thread:`，两者二选一）；
+      - `last_run_at` / `last_run_id` / `last_error` 都不为空，于是时间戳格式、id
+        与失败原因都进树，而不是三个 `—`；
+      - 第二个任务是 `once` + `paused`，列表行的措辞「One-time · Paused」才有样本；
+      - 预置两条运行（一条成功一条失败），运行列表、`trigger · status` 的措辞、
+        run id、计划时刻与错误行才有样本——否则永远只比得到「No runs yet」。
+
+      再跑一份 zh-CN：这一页的词典两边逐字相同，但「用的是不是同一个 key」只有
+      换一种语言才看得出来，时间戳的 locale 分支同理。
+    */
     mock: {
       threads: [],
       scheduledTasks: [
         {
           id: "task-1",
           thread_id: "thread-1",
+          context_mode: "reuse_thread",
+          last_thread_id: "thread-9",
           title: "Daily summary",
           prompt: "Summarize thread",
           schedule_type: "cron",
@@ -622,6 +639,23 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
           timezone: "UTC",
           status: "enabled",
           next_run_at: "2026-07-02T01:00:00+00:00",
+          last_run_at: "2026-07-01T01:00:00+00:00",
+          last_run_id: "run-42",
+          last_error: "Upstream model timed out",
+          run_count: 2,
+          created_at: "2026-07-01T00:00:00+00:00",
+          updated_at: "2026-07-01T00:00:00+00:00",
+        },
+        {
+          id: "task-2",
+          thread_id: null,
+          title: "One-off cleanup",
+          prompt: "Clean up the workspace",
+          schedule_type: "once",
+          schedule_spec: { run_at: "2026-08-01T09:00:00+00:00" },
+          timezone: "UTC",
+          status: "paused",
+          next_run_at: "2026-08-01T09:00:00+00:00",
           last_run_at: null,
           last_run_id: null,
           last_error: null,
@@ -630,9 +664,43 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
           updated_at: "2026-07-01T00:00:00+00:00",
         },
       ],
+      scheduledTaskRuns: {
+        "task-1": [
+          {
+            id: "run-b",
+            task_id: "task-1",
+            thread_id: "thread-1",
+            run_id: "run-42",
+            scheduled_for: "2026-07-01T01:00:00+00:00",
+            trigger: "scheduled",
+            status: "failed",
+            error: "Upstream model timed out",
+            started_at: "2026-07-01T01:00:01+00:00",
+            finished_at: "2026-07-01T01:00:30+00:00",
+            created_at: "2026-07-01T01:00:00+00:00",
+          },
+          {
+            id: "run-a",
+            task_id: "task-1",
+            thread_id: "thread-1",
+            run_id: null,
+            scheduled_for: "2026-06-30T01:00:00+00:00",
+            trigger: "manual",
+            status: "success",
+            error: null,
+            started_at: "2026-06-30T01:00:01+00:00",
+            finished_at: "2026-06-30T01:00:20+00:00",
+            created_at: "2026-06-30T01:00:00+00:00",
+          },
+        ],
+      },
     },
     settle: [
       { kind: "visible", target: { role: "button", name: /Daily summary/i } },
+    ],
+    dimensions: [
+      DEFAULT_DIMENSION,
+      { viewport: "desktop", theme: "light", locale: "zh-CN" },
     ],
   },
   {

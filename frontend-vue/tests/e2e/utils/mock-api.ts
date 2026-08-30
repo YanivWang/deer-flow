@@ -68,6 +68,20 @@ export type MockSkill = {
   enabled?: boolean;
 };
 
+export type MockScheduledTaskRun = {
+  id: string;
+  task_id: string;
+  thread_id: string | null;
+  run_id: string | null;
+  scheduled_for: string;
+  trigger: "scheduled" | "manual";
+  status: "queued" | "running" | "success" | "failed" | "skipped";
+  error: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+};
+
 export type MockAPIOptions = {
   threads?: MockThread[];
   agents?: MockAgent[];
@@ -92,6 +106,8 @@ export type MockAPIOptions = {
     created_at: string;
     updated_at: string;
   }>;
+  /** 按 task id 预置的运行历史；不给就是空的，只有 trigger 才会长出一条。 */
+  scheduledTaskRuns?: Record<string, MockScheduledTaskRun[]>;
   uploadLimits?: {
     max_files: number;
     max_file_size: number;
@@ -247,22 +263,13 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
   const skills = options?.skills ?? DEFAULT_SKILLS;
   const scheduledTasks = options?.scheduledTasks ?? [];
   let mutableScheduledTasks = [...scheduledTasks];
-  const mutableTaskRuns: Record<
-    string,
-    Array<{
-      id: string;
-      task_id: string;
-      thread_id: string | null;
-      run_id: string | null;
-      scheduled_for: string;
-      trigger: "scheduled" | "manual";
-      status: "queued" | "running" | "success" | "failed" | "skipped";
-      error: string | null;
-      started_at: string | null;
-      finished_at: string | null;
-      created_at: string;
-    }>
-  > = {};
+  const mutableTaskRuns: Record<string, MockScheduledTaskRun[]> =
+    Object.fromEntries(
+      Object.entries(options?.scheduledTaskRuns ?? {}).map(([taskId, runs]) => [
+        taskId,
+        [...runs],
+      ]),
+    );
   const uploadLimits = options?.uploadLimits ?? {
     max_files: 10,
     max_file_size: 50 * 1024 * 1024,
@@ -563,6 +570,34 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
 
   void page.route("**/api/scheduled-tasks/*", (route) => {
     const request = route.request();
+    /*
+      GET 也要接住。此前只处理 PATCH/DELETE，GET 走 route.fallback()——在 e2e-parity
+      里那不是「没人请求」，而是**真的发出去了**，落到同一端口上的 replay Gateway，
+      拿回一条 404 "Scheduled task not found"。共享 mock 的判据是两个应用拿到逐字节
+      相同的响应，漏掉一个方法就等于让被测应用去问别的后端。
+    */
+    if (request.method() === "GET") {
+      const taskId = decodeURIComponent(
+        new URL(request.url()).pathname.split("/").at(-1) ?? "",
+      );
+      const task = mutableScheduledTasks.find(
+        (candidate) => candidate.id === taskId,
+      );
+      return route.fulfill({
+        status: task ? 200 : 404,
+        contentType: "application/json",
+        body: JSON.stringify(
+          task
+            ? {
+                context_mode: "fresh_thread_per_run",
+                last_thread_id: null,
+                ...task,
+                thread_id: task.thread_id ?? null,
+              }
+            : { detail: "Scheduled task not found" },
+        ),
+      });
+    }
     if (request.method() === "PATCH") {
       const taskId = decodeURIComponent(
         new URL(request.url()).pathname.split("/").at(-1) ?? "",

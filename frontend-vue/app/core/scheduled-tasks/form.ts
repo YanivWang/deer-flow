@@ -1,15 +1,28 @@
 /*
-  【文件职责】     Scheduled-task 表单状态、Gateway payload 与 DST 严格转换的纯逻辑。
+  【文件职责】     Scheduled-task 表单草稿、可提交判定与 Gateway payload 的纯逻辑。
   【架构位置】     L3 scheduled-task application core
   【主要导出】     ScheduledTaskDraft 与 create/edit/recipe/payload 转换函数
-  【依赖关系】     cron · recipes · schedule · types · api payload types
-  【边界与注意】   Gateway 仅支持 once/cron；fresh payload 不携带 thread_id；PATCH 不携带 schedule_type。
+  【依赖关系】     recipes · schedule · types · api payload types
+  【边界与注意】   Gateway 仅支持 once/cron；PATCH 只带 title/prompt/schedule_spec/timezone。
+
+                   这里**不做校验**，也不抛异常。能不能提交由
+                   `isScheduledTaskDraftComplete` 这一条谓词回答，它就是 React 那颗
+                   Create 按钮 `disabled` 的取值；除此之外的输入（cron 语法、已经过去
+                   的 run_at、不认识的时区）一律发给 Gateway，由 422 的 detail 回来。
+
+                   此前 Vue 在这一层额外拦了三种情况（本地时间在该时区不存在、run_at
+                   不在将来、时区不认识），每种带一句写死的英文文案。它们看起来是更好的
+                   表单，但两个应用在同一次误操作上会说不同的话，而且那三句文案不在词典
+                   里、不参与翻译。
+
+                   `run_at` 在 draft 里就是 **UTC ISO**（ScheduleInput 已经转好），
+                   所以 payload 直接搬运。`thread_id` 在 fresh 模式下显式发 `null` 而不是
+                   省略——React 就是这么发的，Gateway 两种都接受，但"发了什么"是可比的。
 */
 import type {
   ScheduledTaskCreatePayload,
   ScheduledTaskUpdatePayload,
 } from "./api";
-import { utcToZonedLocalInput, zonedLocalToUtcIso } from "./cron";
 import type { Recipe } from "./recipes";
 import type { ScheduleValue } from "./schedule";
 import type { ScheduledTask } from "./types";
@@ -24,34 +37,6 @@ export type ScheduledTaskDraft = {
   schedule: ScheduleValue;
 };
 
-export type PayloadBuildOptions = {
-  now?: Date;
-};
-
-export class ScheduledTaskFormError extends Error {
-  constructor(
-    readonly code:
-      | "invalid_datetime"
-      | "invalid_timezone"
-      | "missing_thread"
-      | "past_datetime"
-      | "schedule_type_changed"
-      | "required",
-    message: string,
-  ) {
-    super(message);
-    this.name = "ScheduledTaskFormError";
-  }
-}
-
-function browserTimezone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  } catch {
-    return "UTC";
-  }
-}
-
 function cloneSchedule(schedule: ScheduleValue): ScheduleValue {
   return {
     schedule_type: schedule.schedule_type,
@@ -60,11 +45,14 @@ function cloneSchedule(schedule: ScheduleValue): ScheduleValue {
   };
 }
 
+/**
+ * 新建表单的初始草稿。
+ *
+ * `timezone` 是空串，不是浏览器时区：ScheduleInput 挂载时会把检测到的时区发回来
+ * （见该组件文件头），与 React 的 `createSchedule.timezone = ""` 一致。
+ */
 export function createScheduledTaskDraft(
-  options: {
-    routeThreadId?: string | null;
-    browserTimezone?: string;
-  } = {},
+  options: { routeThreadId?: string | null } = {},
 ): ScheduledTaskDraft {
   const routeThreadId = options.routeThreadId?.trim() ?? "";
   return {
@@ -75,22 +63,13 @@ export function createScheduledTaskDraft(
     schedule: {
       schedule_type: "cron",
       schedule_spec: { cron: "0 9 * * *" },
-      timezone: options.browserTimezone || browserTimezone(),
+      timezone: "",
     },
   };
 }
 
 export function draftForScheduledTask(task: ScheduledTask): ScheduledTaskDraft {
-  const scheduleSpec = { ...task.schedule_spec } as {
-    cron?: string;
-    run_at?: string;
-  };
-  if (task.schedule_type === "once" && scheduleSpec.run_at) {
-    scheduleSpec.run_at = utcToZonedLocalInput(
-      scheduleSpec.run_at,
-      task.timezone,
-    );
-  }
+  const spec = task.schedule_spec as { cron?: string; run_at?: string };
   return {
     contextMode: task.context_mode,
     threadId: task.thread_id ?? "",
@@ -98,162 +77,67 @@ export function draftForScheduledTask(task: ScheduledTask): ScheduledTaskDraft {
     prompt: task.prompt,
     schedule: {
       schedule_type: task.schedule_type,
-      schedule_spec: scheduleSpec,
-      timezone: task.timezone,
+      schedule_spec: {
+        cron: typeof spec.cron === "string" ? spec.cron : undefined,
+        run_at: typeof spec.run_at === "string" ? spec.run_at : undefined,
+      },
+      timezone: task.timezone || "UTC",
     },
   };
 }
 
+/**
+ * 应用一个 recipe。
+ *
+ * 只改 title / prompt / schedule / contextMode，**不清空** threadId：React 的
+ * `applyRecipe` 没碰 `targetThreadId`，用户切回 reuse 时之前填的线程还在。
+ */
 export function applyScheduledTaskRecipe(
   draft: ScheduledTaskDraft,
   recipe: Recipe,
   localizedTitle: string,
 ): ScheduledTaskDraft {
-  const schedule = cloneSchedule(recipe.schedule);
-  schedule.timezone = schedule.timezone || draft.schedule.timezone;
   return {
+    ...draft,
     contextMode: "fresh_thread_per_run",
-    threadId: "",
     title: localizedTitle,
     prompt: recipe.prompt,
-    schedule,
+    schedule: cloneSchedule(recipe.schedule),
   };
 }
 
-function assertLocalDateTime(value: string): void {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value.trim());
-  if (!match) {
-    throw new ScheduledTaskFormError(
-      "invalid_datetime",
-      "Run time must be a valid local date and time.",
-    );
-  }
-  const [, year, month, day, hour, minute] = match.map(Number);
-  const checked = new Date(Date.UTC(year!, month! - 1, day!, hour!, minute!));
-  if (
-    checked.getUTCFullYear() !== year ||
-    checked.getUTCMonth() + 1 !== month ||
-    checked.getUTCDate() !== day ||
-    checked.getUTCHours() !== hour ||
-    checked.getUTCMinutes() !== minute
-  ) {
-    throw new ScheduledTaskFormError(
-      "invalid_datetime",
-      "Run time must be a valid local date and time.",
-    );
-  }
-}
-
-export function zonedLocalToUtcIsoStrict(
-  localValue: string,
-  timezone: string,
-): string {
-  const normalized = localValue.trim();
-  assertLocalDateTime(normalized);
-  let utcIso: string;
-  try {
-    utcIso = zonedLocalToUtcIso(normalized, timezone);
-    if (utcToZonedLocalInput(utcIso, timezone) !== normalized) {
-      throw new ScheduledTaskFormError(
-        "invalid_datetime",
-        `The selected local time does not exist in ${timezone}.`,
-      );
-    }
-  } catch (cause) {
-    if (cause instanceof ScheduledTaskFormError) throw cause;
-    throw new ScheduledTaskFormError(
-      "invalid_timezone",
-      `Unknown timezone: ${timezone}.`,
-    );
-  }
-  return utcIso;
-}
-
-function basePayload(draft: ScheduledTaskDraft): {
-  context_mode: ScheduledTaskContextMode;
-  thread_id?: string;
-  title: string;
-  prompt: string;
-  timezone: string;
-} {
-  const title = draft.title.trim();
-  const prompt = draft.prompt.trim();
-  if (!title || !prompt) {
-    throw new ScheduledTaskFormError(
-      "required",
-      "Title and prompt are required.",
-    );
-  }
-  const payload = {
-    context_mode: draft.contextMode,
-    title,
-    prompt,
-    timezone: draft.schedule.timezone.trim(),
-  } as {
-    context_mode: ScheduledTaskContextMode;
-    thread_id?: string;
-    title: string;
-    prompt: string;
-    timezone: string;
-  };
-  if (draft.contextMode === "reuse_thread") {
-    const threadId = draft.threadId.trim();
-    if (!threadId) {
-      throw new ScheduledTaskFormError(
-        "missing_thread",
-        "A thread is required when reusing context.",
-      );
-    }
-    payload.thread_id = threadId;
-  }
-  return payload;
-}
-
-function scheduleSpec(
+/** React 那颗 Create 按钮 `disabled` 的反面，pending 由调用方另外并上。 */
+export function isScheduledTaskDraftComplete(
   draft: ScheduledTaskDraft,
-  now: Date,
-): Record<string, unknown> {
-  if (draft.schedule.schedule_type === "cron") {
-    return { cron: (draft.schedule.schedule_spec.cron ?? "").trim() };
-  }
-  const runAt = zonedLocalToUtcIsoStrict(
-    draft.schedule.schedule_spec.run_at ?? "",
-    draft.schedule.timezone,
-  );
-  if (new Date(runAt).getTime() <= now.getTime()) {
-    throw new ScheduledTaskFormError(
-      "past_datetime",
-      "Run time must be in the future.",
-    );
-  }
-  return { run_at: runAt };
+): boolean {
+  const hasSchedule =
+    Boolean(draft.schedule.schedule_spec.cron) ||
+    Boolean(draft.schedule.schedule_spec.run_at);
+  if (!draft.title || !draft.prompt || !hasSchedule) return false;
+  return draft.contextMode !== "reuse_thread" || Boolean(draft.threadId);
 }
 
 export function buildScheduledTaskCreatePayload(
   draft: ScheduledTaskDraft,
-  options: PayloadBuildOptions = {},
 ): ScheduledTaskCreatePayload {
-  const base = basePayload(draft);
   return {
-    ...base,
+    context_mode: draft.contextMode,
+    thread_id: draft.contextMode === "reuse_thread" ? draft.threadId : null,
+    title: draft.title,
+    prompt: draft.prompt,
     schedule_type: draft.schedule.schedule_type,
-    schedule_spec: scheduleSpec(draft, options.now ?? new Date()),
+    schedule_spec: draft.schedule.schedule_spec,
+    timezone: draft.schedule.timezone || "UTC",
   };
 }
 
 export function buildScheduledTaskUpdatePayload(
   draft: ScheduledTaskDraft,
-  task: ScheduledTask,
-  options: PayloadBuildOptions = {},
 ): ScheduledTaskUpdatePayload {
-  if (draft.schedule.schedule_type !== task.schedule_type) {
-    throw new ScheduledTaskFormError(
-      "schedule_type_changed",
-      "The schedule type cannot be changed while editing.",
-    );
-  }
   return {
-    ...basePayload(draft),
-    schedule_spec: scheduleSpec(draft, options.now ?? new Date()),
+    title: draft.title,
+    prompt: draft.prompt,
+    schedule_spec: draft.schedule.schedule_spec,
+    timezone: draft.schedule.timezone || "UTC",
   };
 }

@@ -1,102 +1,67 @@
 <script setup lang="ts">
 /*
-  【文件职责】     Scheduled-task run 全字段列表与 limit/offset 继续加载控件。
+  【文件职责】     Scheduled-task 运行条数与运行历史列表。
   【架构位置】     L3 presentational component
   【主要导出】     默认 ScheduledTaskRunList
-  【依赖关系】     scheduled-tasks/types · app i18n
-  【边界与注意】   只显示 composable 已分页加载的数据；不把首 50 条伪装成完整历史。
+  【依赖关系】     scheduled-tasks types/format · app i18n
+  【边界与注意】   一条运行显示四样东西：`trigger · status`、run id、计划时刻、以及
+                   失败时的 error。**没有字段名**——React 那边这四行都是裸值，加上
+                   「Scheduled for」「Run ID」这类 `<dt>` 会让读屏器多念一倍的词。
+
+                   条数与列表是两个平级的块，不是一个 `<section>` 里的标题加正文：
+                   包起来会多出一层 region，标题变成 heading，而 React 那两处都是
+                   普通 div。
 */
+import {
+  formatScheduledTaskTimestamp,
+  SCHEDULED_TASK_NONE,
+} from "@/core/scheduled-tasks/format";
 import type { ScheduledTaskRun } from "@/core/scheduled-tasks/types";
 
-defineProps<{
-  runs: ScheduledTaskRun[];
-  loading: boolean;
-  loadingMore: boolean;
-  hasMore: boolean;
-  error?: string | null;
-}>();
-const emit = defineEmits<{ loadMore: [] }>();
+const props = defineProps<{ runs: ScheduledTaskRun[] }>();
 const { $i18n } = useNuxtApp();
 
-function formatTimestamp(value: string | null): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat($i18n.locale.value, {
-    dateStyle: "medium",
-    timeStyle: "medium",
-  }).format(date);
+const countLabel = computed(() => {
+  const labels = $i18n.t.value.scheduledTasks.detail;
+  const template =
+    props.runs.length === 1 ? labels.runsCountOne : labels.runsCount;
+  return template.replace("{count}", String(props.runs.length));
+});
+
+function runSummary(run: ScheduledTaskRun): string {
+  const labels = $i18n.t.value.scheduledTasks;
+  return `${labels.runTrigger[run.trigger]} · ${labels.runStatus[run.status]}`;
+}
+
+function timestamp(value: string | null): string {
+  return formatScheduledTaskTimestamp(value, $i18n.locale.value);
 }
 </script>
 
 <template>
-  <section data-testid="scheduled-task-runs" class="space-y-3">
-    <h3 class="font-medium">
-      {{
-        runs.length === 1
-          ? $i18n.t.value.scheduledTasks.detail.runsCountOne.replace(
-              "{count}",
-              String(runs.length),
-            )
-          : $i18n.t.value.scheduledTasks.detail.runsCount.replace(
-              "{count}",
-              String(runs.length),
-            )
-      }}
-    </h3>
-    <p v-if="error" role="alert" class="text-sm text-red-700">{{ error }}</p>
-    <p v-if="loading" role="status" class="text-muted-foreground text-sm">
-      {{ $i18n.t.value.scheduledTasks.detail.loadingRuns }}
-    </p>
-    <p v-else-if="runs.length === 0" class="text-muted-foreground text-sm">
-      {{ $i18n.t.value.scheduledTasks.detail.noRuns }}
-    </p>
-    <div data-testid="scheduled-task-run-list" class="space-y-2">
-      <article
+  <div data-testid="scheduled-task-runs">{{ countLabel }}</div>
+  <div class="flex flex-col gap-2" data-testid="scheduled-task-run-list">
+    <template v-if="runs.length > 0">
+      <div
         v-for="run in runs"
         :key="run.id"
         :data-testid="`scheduled-task-run-${run.id}`"
-        class="bg-muted/60 rounded-lg p-3 text-sm"
+        class="rounded-md border p-3 text-sm"
       >
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <strong>{{
-            $i18n.t.value.scheduledTasks.runTrigger[run.trigger]
-          }}</strong>
-          <span>{{ $i18n.t.value.scheduledTasks.runStatus[run.status] }}</span>
+        <div class="font-medium">{{ runSummary(run) }}</div>
+        <div class="text-muted-foreground text-xs">
+          {{ run.run_id ?? SCHEDULED_TASK_NONE }}
         </div>
-        <dl
-          class="text-muted-foreground mt-2 grid gap-x-3 gap-y-1 text-xs sm:grid-cols-[auto_1fr]"
-        >
-          <dt>{{ $i18n.t.value.scheduledTasks.runFields.scheduledFor }}</dt>
-          <dd>{{ formatTimestamp(run.scheduled_for) }}</dd>
-          <dt>{{ $i18n.t.value.scheduledTasks.runFields.startedAt }}</dt>
-          <dd>{{ formatTimestamp(run.started_at) }}</dd>
-          <dt>{{ $i18n.t.value.scheduledTasks.runFields.finishedAt }}</dt>
-          <dd>{{ formatTimestamp(run.finished_at) }}</dd>
-          <dt>{{ $i18n.t.value.scheduledTasks.runFields.threadId }}</dt>
-          <dd class="break-all">{{ run.thread_id }}</dd>
-          <dt>{{ $i18n.t.value.scheduledTasks.runFields.runId }}</dt>
-          <dd class="break-all">{{ run.run_id ?? "—" }}</dd>
-          <template v-if="run.error">
-            <dt>{{ $i18n.t.value.scheduledTasks.runFields.error }}</dt>
-            <dd class="break-words text-red-700">{{ run.error }}</dd>
-          </template>
-        </dl>
-      </article>
+        <div class="text-muted-foreground text-xs">
+          {{ timestamp(run.scheduled_for) }}
+        </div>
+        <div v-if="run.error" class="text-destructive text-xs">
+          {{ run.error }}
+        </div>
+      </div>
+    </template>
+    <div v-else class="text-muted-foreground text-sm">
+      {{ $i18n.t.value.scheduledTasks.detail.noRuns }}
     </div>
-    <button
-      v-if="hasMore"
-      type="button"
-      data-testid="scheduled-task-load-more-runs"
-      class="w-full rounded-md border px-3 py-2 text-sm"
-      :disabled="loadingMore"
-      @click="emit('loadMore')"
-    >
-      {{
-        loadingMore
-          ? $i18n.t.value.scheduledTasks.detail.loadingMore
-          : $i18n.t.value.scheduledTasks.detail.loadMore
-      }}
-    </button>
-  </section>
+  </div>
 </template>

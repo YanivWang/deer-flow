@@ -4,6 +4,9 @@
   【主要导出】     无；Vitest cases
   【依赖关系】     @tanstack/vue-query · composables/useScheduledTasks
   【边界与注意】   不使用组件级 timer；poll 归 query observer，unmount 后必须停止。
+                   轮询是**固定 15 秒、与运行状态无关**的，与 React 的
+                   `refetchInterval: 15000` 同一个值——此前只在有 queued/running 的运行时
+                   才以 2 秒轮询，那是 Vue 独有的一套节奏。
 */
 import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query";
 import { mount } from "@vue/test-utils";
@@ -72,14 +75,15 @@ describe("useScheduledTaskRuns", () => {
     queryClient.clear();
   });
 
-  it("polls only while an active run is visible and stops after unmount", async () => {
+  it("polls every 15s even with no active run, and stops after unmount", async () => {
     vi.useFakeTimers();
+    // 全部已结束：旧实现在这种数据上根本不轮询。
     api.fetchScheduledTaskRuns.mockResolvedValue([
-      { id: "run-active", task_id: "task-a", status: "running" },
+      { id: "run-done", task_id: "task-a", status: "success" },
     ]);
     const Host = defineComponent({
       setup() {
-        useScheduledTaskRuns(ref("task-a"), { pollIntervalMs: 1000 });
+        useScheduledTaskRuns(ref("task-a"));
         return () => h("div");
       },
     });
@@ -92,11 +96,11 @@ describe("useScheduledTaskRuns", () => {
     await vi.waitFor(() =>
       expect(api.fetchScheduledTaskRuns).toHaveBeenCalledTimes(1),
     );
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(15_000);
     expect(api.fetchScheduledTaskRuns).toHaveBeenCalledTimes(2);
 
     wrapper.unmount();
-    await vi.advanceTimersByTimeAsync(5000);
+    await vi.advanceTimersByTimeAsync(60_000);
     expect(api.fetchScheduledTaskRuns).toHaveBeenCalledTimes(2);
     queryClient.clear();
   });

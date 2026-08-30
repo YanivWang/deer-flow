@@ -1,9 +1,15 @@
 /*
-  【文件职责】     Vue-owned scheduled-task 产品交互、payload、筛选、分页与错误 E2E。
+  【文件职责】     Vue-owned scheduled-task 产品交互、payload、筛选与错误 E2E。
   【架构位置】     Playwright contract
   【主要导出】     Playwright scenarios
   【依赖关系】     shared mock Gateway · Vue scheduled-task page/components
   【边界与注意】   Mock 只验证确定性 UI/HTTP 边界；真实 FastAPI 语义由 wp07-real-backend suite 证明。
+
+                   这里守的是**交互之后**的分支——e2e-parity 的样本只是一次页面加载，
+                   点开编辑、切筛选、触发一次运行、以及各种失败路径它都到不了；而
+                   e2e-parity 需要兄弟 React 应用才能跑，本模块的常规门禁不依赖它。
+                   所以每条断言都写成 React 那边的形状：控件类型（按钮还是下拉）、
+                   失败走 toast 还是内联、运行中的任务是否禁用动作。
 */
 import { expect, test, type Page, type Route } from "@playwright/test";
 
@@ -239,22 +245,29 @@ function mockWP07Gateway(
     void page.route(`**/api/scheduled-tasks/*/${action}`, handleTaskRoute);
   }
 
-  void page.route("**/api/scheduled-tasks/*/runs?*", (route) => {
+  // glob 末尾没有通配查询串：页面发的是一条**不带查询串**的 runs 请求，而 Playwright 的
+  // glob 会连查询串一起匹配，所以带通配查询串的那一版现在一条都拦不到——请求会穿过
+  // mock 打到真后端上去。
+  void page.route("**/api/scheduled-tasks/*/runs", (route) => {
     if (route.request().method() !== "GET") return route.fallback();
     const url = new URL(route.request().url());
     const taskId = decodeURIComponent(url.pathname.split("/").at(-2) ?? "");
-    const limit = Number(url.searchParams.get("limit") ?? "50");
-    const offset = Number(url.searchParams.get("offset") ?? "0");
-    return route.fulfill({
-      status: 200,
-      json: (runs[taskId] ?? []).slice(offset, offset + limit),
-    });
+    return route.fulfill({ status: 200, json: runs[taskId] ?? [] });
   });
 }
 
 async function fillRequiredCreate(page: Page, title = "Created task") {
-  await page.getByTestId("scheduled-task-title").fill(title);
-  await page.getByTestId("scheduled-task-prompt").fill("Created prompt");
+  await page.getByTestId("scheduled-task-title").first().fill(title);
+  await page
+    .getByTestId("scheduled-task-prompt")
+    .first()
+    .fill("Created prompt");
+}
+
+/** Reka 的 Select 是自定义 listbox：先开触发器，再点选项，没有 selectOption。 */
+async function chooseOption(page: Page, testId: string, option: string) {
+  await page.getByTestId(testId).click();
+  await page.getByRole("option", { name: option, exact: true }).click();
 }
 
 test.describe("Vue scheduled tasks", () => {
@@ -270,17 +283,19 @@ test.describe("Vue scheduled tasks", () => {
       `/workspace/scheduled-tasks?thread_id=${encodeURIComponent(MOCK_THREAD_ID)}`,
     );
     await expect(page.getByTestId("scheduled-task-item-scoped")).toBeVisible();
-    await expect(page.getByTestId("scheduled-task-context-mode")).toHaveValue(
-      "reuse_thread",
-    );
+    // context mode 是两颗按钮，选中的那颗是 default 变体——不是一个 <select>。
+    await expect(
+      page.getByTestId("scheduled-task-context-reuse"),
+    ).toHaveAttribute("data-variant", "default");
     await expect(page.getByTestId("scheduled-task-thread-id")).toHaveValue(
       MOCK_THREAD_ID,
     );
 
-    await page
-      .getByTestId("scheduled-task-context-mode")
-      .selectOption("fresh_thread_per_run");
+    await page.getByTestId("scheduled-task-context-fresh").click();
     await expect(page.getByTestId("scheduled-task-thread-id")).toHaveCount(0);
+    await expect(
+      page.getByTestId("scheduled-task-context-fresh"),
+    ).toHaveAttribute("data-variant", "default");
   });
 
   test("recipe and custom cron submit the exact fresh-thread Gateway payload", async ({
@@ -298,25 +313,29 @@ test.describe("Vue scheduled tasks", () => {
     });
 
     await page.goto("/workspace/scheduled-tasks");
+    // recipe 按钮的可访问名只有标题，emoji 与描述都不进名字。
+    await expect(
+      page.getByRole("button", { name: "GitHub Issue triage", exact: true }),
+    ).toBeVisible();
     await page.getByTestId("scheduled-task-recipe-issues").click();
     await expect(page.getByTestId("scheduled-task-prompt")).toHaveValue(
       /\{\{repo\}\}/,
     );
-    await page.getByTestId("scheduled-task-cron-preset").selectOption("custom");
+    await chooseOption(page, "schedule-preset", "Custom cron");
     await page.getByTestId("scheduled-task-custom-cron").fill("15 8 * * 1");
     await page.getByTestId("scheduled-task-submit").click();
 
-    await expect(page.getByTestId("scheduled-task-feedback")).toContainText(
-      "created",
-    );
+    await expect(
+      page.getByRole("button", { name: /GitHub Issue triage/ }).last(),
+    ).toBeVisible();
     expect(payload).toMatchObject({
       context_mode: "fresh_thread_per_run",
+      thread_id: null,
       title: "GitHub Issue triage",
       schedule_type: "cron",
       schedule_spec: { cron: "15 8 * * 1" },
     });
     expect(payload?.timezone).toEqual(expect.any(String));
-    expect(payload).not.toHaveProperty("thread_id");
     expect(payload).not.toHaveProperty("enabled");
     expect(payload).not.toHaveProperty("non_interactive");
   });
@@ -337,14 +356,18 @@ test.describe("Vue scheduled tasks", () => {
 
     await page.goto("/workspace/scheduled-tasks");
     await fillRequiredCreate(page, "DST once");
-    await page.getByRole("button", { name: "One-time" }).click();
-    await page.getByTestId("scheduled-task-timezone").fill("America/New_York");
+    await page
+      .getByTestId("scheduled-task-create-form")
+      .getByRole("button", { name: "One-time" })
+      .click();
+    await chooseOption(page, "schedule-timezone", "America/New_York");
     await page.getByTestId("scheduled-task-run-at").fill("2027-03-14T03:30");
     await page.getByTestId("scheduled-task-submit").click();
 
-    await expect(page.getByTestId("scheduled-task-feedback")).toContainText(
-      "created",
-    );
+    await expect(
+      page.getByRole("button", { name: /DST once/ }).last(),
+    ).toBeVisible();
+    // 墙上时间 → UTC 的换算发生在 ScheduleInput 里，与 React 同一处边界。
     expect(payload).toMatchObject({
       schedule_type: "once",
       schedule_spec: { run_at: "2027-03-14T07:30:00+00:00" },
@@ -352,7 +375,7 @@ test.describe("Vue scheduled tasks", () => {
     });
   });
 
-  test("edit, pause, resume, trigger, run detail, and confirmed delete complete the lifecycle", async ({
+  test("edit stays inside the detail pane and keeps its unsaved text", async ({
     page,
   }) => {
     mockWP07Gateway(page, {
@@ -362,17 +385,37 @@ test.describe("Vue scheduled tasks", () => {
     const detail = page.getByTestId("scheduled-task-detail");
 
     await detail.getByRole("button", { name: "Edit" }).click();
+    // 编辑块在详情**里面**：上面的字段和下面的动作按钮都还在。
+    await expect(detail.getByTestId("scheduled-task-edit-form")).toBeVisible();
+    await expect(detail).toContainText("Context mode:");
+    await expect(detail.getByRole("button", { name: "Pause" })).toBeVisible();
+    await expect(detail.getByTestId("scheduled-task-runs")).toBeVisible();
     await expect(
-      page
+      detail
         .getByTestId("scheduled-task-edit-form")
         .getByRole("button", { name: "One-time" }),
-    ).toBeDisabled();
-    await page.getByTestId("scheduled-task-title").nth(1).fill("Edited task");
-    await page
-      .getByTestId("scheduled-task-prompt")
-      .nth(1)
-      .fill("Edited prompt");
-    await page.getByTestId("scheduled-task-submit").nth(1).click();
+    ).toHaveCount(0);
+
+    const editTitle = detail.getByTestId("scheduled-task-title");
+    await editTitle.fill("Half-typed title");
+    await detail.getByRole("button", { name: "Cancel edit" }).click();
+    await detail.getByRole("button", { name: "Edit" }).click();
+    await expect(editTitle).toHaveValue("Half-typed title");
+  });
+
+  test("pause, resume, trigger, run detail, and confirmed delete complete the lifecycle", async ({
+    page,
+  }) => {
+    mockWP07Gateway(page, {
+      scheduledTasks: [task("lifecycle", { title: "Lifecycle task" })],
+    });
+    await page.goto("/workspace/scheduled-tasks");
+    const detail = page.getByTestId("scheduled-task-detail");
+
+    await detail.getByRole("button", { name: "Edit" }).click();
+    await detail.getByTestId("scheduled-task-title").fill("Edited task");
+    await detail.getByTestId("scheduled-task-prompt").fill("Edited prompt");
+    await detail.getByTestId("scheduled-task-submit").click();
     await expect(detail.getByText("Edited task")).toBeVisible();
 
     await detail.getByRole("button", { name: "Pause" }).click();
@@ -381,12 +424,16 @@ test.describe("Vue scheduled tasks", () => {
     await expect(detail.getByRole("button", { name: "Pause" })).toBeVisible();
 
     await page.getByTestId("scheduled-task-trigger").click();
+    await expect(page.getByTestId("scheduled-task-runs")).toContainText(
+      "1 run",
+    );
     const run = page.getByTestId("scheduled-task-run-task-run-lifecycle");
-    await expect(run).toContainText("manual");
-    await expect(run).toContainText("Success");
-    await expect(run).toContainText("Scheduled for");
-    await expect(run).toContainText("Thread ID");
-    await expect(run).toContainText("Run ID");
+    await expect(run).toContainText("manual · Success");
+    await expect(run).toContainText("run-lifecycle");
+    // 一条运行只有四行裸值，没有 Scheduled for / Thread ID / Run ID 这些字段名。
+    await expect(run).not.toContainText("Scheduled for");
+    await expect(run).not.toContainText("Thread ID");
+    await expect(run).not.toContainText("Run ID");
 
     await page.getByTestId("scheduled-task-delete").click();
     await expect(
@@ -398,7 +445,7 @@ test.describe("Vue scheduled tasks", () => {
     );
   });
 
-  test("all six statuses and both schedule types filter with deterministic selection", async ({
+  test("filters are the eight buttons React ships, and selection falls back", async ({
     page,
   }) => {
     const statuses: TaskStatus[] = [
@@ -419,26 +466,37 @@ test.describe("Vue scheduled tasks", () => {
       ),
     });
     await page.goto("/workspace/scheduled-tasks");
+    const filters = page.getByTestId("scheduled-task-filters");
+    await expect(filters.getByRole("button")).toHaveCount(8);
+    // Gateway 有六种状态，但 React 只给了五颗状态按钮。
+    await expect(
+      filters.getByTestId("scheduled-task-status-filter-running"),
+    ).toHaveCount(0);
+    await expect(
+      filters.getByTestId("scheduled-task-status-filter-cancelled"),
+    ).toHaveCount(0);
+
     await page.getByTestId("scheduled-task-item-paused").click();
-    await page
-      .getByTestId("scheduled-task-status-filter")
-      .selectOption("enabled");
+    await expect(page.getByTestId("scheduled-task-detail")).toContainText(
+      "paused task",
+    );
+    await page.getByTestId("scheduled-task-status-filter-enabled").click();
     await expect(page.getByTestId("scheduled-task-item-enabled")).toBeVisible();
     await expect(page.getByTestId("scheduled-task-detail")).toContainText(
       "enabled task",
     );
-    await page.getByTestId("scheduled-task-status-filter").selectOption("all");
-    await page.getByTestId("scheduled-task-type-filter").selectOption("once");
+    await page.getByTestId("scheduled-task-status-filter-all").click();
+    await page.getByTestId("scheduled-task-type-filter-once").click();
     await expect(
       page.getByTestId("scheduled-task-list").locator("button"),
     ).toHaveCount(3);
   });
 
-  test("runs use limit/offset pagination and never stop silently at fifty", async ({
+  test("runs are one unpaginated request, with no load-more affordance", async ({
     page,
   }) => {
     mockWP07Gateway(page, { scheduledTasks: [task("paged")] });
-    const offsets: number[] = [];
+    const runsUrls: string[] = [];
     const runs = Array.from({ length: 55 }, (_, index) => ({
       id: `run-${index}`,
       task_id: "paged",
@@ -452,15 +510,14 @@ test.describe("Vue scheduled tasks", () => {
       finished_at: "2026-07-01T00:01:00+00:00",
       created_at: "2026-07-01T00:00:00+00:00",
     }));
-    await page.route("**/api/scheduled-tasks/paged/runs?*", (route) => {
+    // Gateway 自己的 limit=50 默认值决定返回多少；前端一个参数都不加。
+    await page.route("**/api/scheduled-tasks/paged/runs", (route) => {
       const url = new URL(route.request().url());
-      const limit = Number(url.searchParams.get("limit"));
-      const offset = Number(url.searchParams.get("offset"));
-      offsets.push(offset);
+      runsUrls.push(`${url.pathname}${url.search}`);
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(runs.slice(offset, offset + limit)),
+        body: JSON.stringify(runs.slice(0, 50)),
       });
     });
 
@@ -468,29 +525,41 @@ test.describe("Vue scheduled tasks", () => {
     await expect(
       page.locator('[data-testid^="scheduled-task-run-run-"]'),
     ).toHaveCount(50);
-    await page.getByTestId("scheduled-task-load-more-runs").click();
-    await expect(
-      page.locator('[data-testid^="scheduled-task-run-run-"]'),
-    ).toHaveCount(55);
-    expect(offsets).toEqual([0, 50]);
+    expect(runsUrls).toEqual(["/api/scheduled-tasks/paged/runs"]);
+    await expect(page.getByTestId("scheduled-task-load-more-runs")).toHaveCount(
+      0,
+    );
     await expect(page.getByTestId("scheduled-task-run-run-0")).toContainText(
       "Interrupted by operator",
     );
   });
 
-  test("running tasks disable conflicting operations", async ({ page }) => {
+  test("a running task keeps its actions enabled and shows the Gateway's 409", async ({
+    page,
+  }) => {
     mockWP07Gateway(page, {
       scheduledTasks: [task("active", { status: "running" })],
     });
+    await page.route("**/api/scheduled-tasks/active/pause", (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Scheduled task has an active run" }),
+      }),
+    );
     await page.goto("/workspace/scheduled-tasks");
     const detail = page.getByTestId("scheduled-task-detail");
+    // React 不做先行禁用；冲突由 Gateway 的 409 拒绝。
     for (const name of ["Edit", "Pause", "Trigger now", "Delete"]) {
-      await expect(detail.getByRole("button", { name })).toBeDisabled();
+      await expect(detail.getByRole("button", { name })).toBeEnabled();
     }
-    await expect(detail).toContainText("active run finishes");
+    await detail.getByRole("button", { name: "Pause" }).click();
+    await expect(page.getByTestId("workspace-toaster")).toContainText(
+      "Scheduled task has an active run",
+    );
   });
 
-  test("Gateway validation detail is shown instead of a fake success", async ({
+  test("Gateway validation detail lands in a toast, not a fake success", async ({
     page,
   }) => {
     mockWP07Gateway(page, { scheduledTasks: [] });
@@ -508,13 +577,16 @@ test.describe("Vue scheduled tasks", () => {
     });
     await page.goto("/workspace/scheduled-tasks");
     await fillRequiredCreate(page, "Invalid cron");
-    await page.getByTestId("scheduled-task-cron-preset").selectOption("custom");
+    await chooseOption(page, "schedule-preset", "Custom cron");
     await page.getByTestId("scheduled-task-custom-cron").fill("bad cron");
     await page.getByTestId("scheduled-task-submit").click();
-    await expect(page.getByTestId("scheduled-task-error")).toContainText(
+    await expect(page.getByTestId("workspace-toaster")).toContainText(
       "Cron expression must have exactly 5 fields",
     );
-    await expect(page.getByTestId("scheduled-task-feedback")).toHaveCount(0);
+    // 表单不清空：失败之后刚才填的东西还在。
+    await expect(page.getByTestId("scheduled-task-title")).toHaveValue(
+      "Invalid cron",
+    );
   });
 
   test("Gateway action failures preserve detail and follow the shared 401 login contract", async ({
@@ -563,7 +635,7 @@ test.describe("Vue scheduled tasks", () => {
     await page.goto("/workspace/scheduled-tasks");
     for (const failure of failures.slice(0, -1)) {
       await page.getByTestId("scheduled-task-trigger").click();
-      await expect(page.getByTestId("scheduled-task-error")).toContainText(
+      await expect(page.getByTestId("workspace-toaster")).toContainText(
         failure.expected,
       );
     }
