@@ -726,13 +726,26 @@ function artifactWriteCallIds(messages: Message[]) {
   同一件事，而且不依赖任何时序。
 */
 const historyArtifactCallIds = ref<Set<string> | null>(null);
+/*
+  快照只在**换一条线程**时作废，不能绑在 isHistoryLoading 上。
+
+  绑在加载状态上时有这么一条路径：`/chats/new` 上发出第一条消息 → 路由拿到真 id →
+  页面为这个新 id 拉一次历史 → isHistoryLoading 变 true → 快照被清成 null →
+  加载结束时用**当时**的 messages 重新取快照，而本次流式产生的 write_file 早就在
+  里面了。于是「模型此刻正在写的这个文件」被判成「历史里本来就有」，面板永远不开。
+  开不开取决于 tool call 与历史加载谁先到——e2e-real 实测约 1/3 的运行里不开，
+  同时打挂 real-backend-render 的截图与 artifact-write 的行为断言。
+
+  `/chats/new` 拿到自己的 id **不是**换线程，是同一段对话拿到了 id，所以那一次不作废。
+*/
+watch(routeThreadId, (threadId, previousThreadId) => {
+  if (previousThreadId == null && threadId) return;
+  historyArtifactCallIds.value = null;
+});
 watch(
   () => stream.isHistoryLoading.value,
   (loading) => {
-    if (loading) {
-      historyArtifactCallIds.value = null;
-      return;
-    }
+    if (loading) return;
     historyArtifactCallIds.value ??= new Set(
       artifactWriteCallIds(stream.messages.value),
     );
