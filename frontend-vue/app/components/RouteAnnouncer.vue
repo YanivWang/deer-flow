@@ -8,21 +8,22 @@
                    都有它，Vue 一条都没有，于是读屏用户在 React 上换页会听到页面名、
                    在 Vue 上什么都听不到。这是 make dom-parity 报出的 `- alert`。
 
-                   **不复制 Next 的 custom element 与 shadow DOM。** 那是框架内部
-                   结构；ARCHITECTURE 的判据是可观察行为，可访问性树里能观察到的
-                   就是一个 role=alert 的实时区域。
+                   **实时区域必须挂在 shadow root 里面，不能挂在宿主上。**
+                   这不是抄 Next 的实现细节，这是唯一能让「模态打开时播报器随其余页面
+                   一起退出可访问性树」成立的做法，而那是可观察行为：
+                   Radix 与 Reka 共用 `aria-hidden` 这个库，它在标记之前先做一次
+                   `parentNode.querySelectorAll('[aria-live], script')`，把命中的节点
+                   **连同它们的整条祖先链**都保下来（库里的注释写着「不该藏实时区域」）。
+                   `querySelectorAll` 不穿透 shadow 边界：Next 的宿主 `<next-route-announcer>`
+                   自己没有 aria-live，于是照常被标 aria-hidden；而把 aria-live 写在
+                   宿主上，就会把 `#__nuxt` 整条链保下来，模态打开时本仓的播报器仍然在树里。
+                   **把 aria-live 换到内层元素也没用**——那仍然是一次普通的后代查询，
+                   照样命中，照样把祖先链保下来。只有 shadow root 躲得开。
+                   （工作区的 toaster 也带 aria-live，两个应用的 toaster 因此都保持可见，
+                   这一条本来就是一致的。）
 
-                   **已知差异（窄屏、模态面板打开时）：** React 这个播报器会从可访问性树里
-                   消失，Vue 的还在。根因量清楚了，两边都不是产品决定：Radix 的 hideOthers
-                   把 `<body>` 的直接子节点逐个标 aria-hidden，而 Next 的播报器正是 body 的
-                   子节点、且实时区域藏在 shadow root 里（宿主本身没有 aria-live，所以不被
-                   「实时区域豁免」放过）；Reka 的 hideOthers 只从对话框往上走到 workspace
-                   外壳那层就停了，够不到播报器。实测把 aria-live 挪进内层、再把整块
-                   Teleport 到 body，都不能让 Reka 藏住它——它根本不在那条行走路径上。
-                   影响：模态打开期间的路由播报，React 静音、Vue 不静音；而模态开着时
-                   本来就不会换路由。留在 baseline/parity-diff.json 里，见
-                   artifact-preview/mobile 与 integrations 两条 `- alert`——后者是
-                   设置对话框对齐之后，这个场景里唯一剩下的一行。
+                   Playwright 的可访问性快照会穿透 open shadow root，所以非模态页面上
+                   两边照样各有一个 `- alert`，与此前一致。
 
                    播报名的取法与 Next 一致：`document.title` → `h1` 文本 → pathname，
                    且**只有名字变了才播报**。少了这个判断，同名页面之间跳转会让读屏
@@ -30,11 +31,19 @@
                    所以它现在什么都不播——React 也一样，等 blog/docs 落地才会有区别。
 
                    首次加载不播报：页面本来就会被读一遍，再播一次是重复。
+
+                   SSR 只渲染空宿主，shadow root 在 onMounted 挂上——Next 的播报器同样
+                   是客户端注入的，服务端两边都没有这个节点。
 */
 import { nextTick, onMounted, ref, watch } from "vue";
 
-const announcement = ref("");
+/** 与 Next 播报器内层元素相同的视觉隐藏样式。 */
+const HIDDEN_STYLE =
+  "position:absolute;border:0;height:1px;margin:-1px;padding:0;width:1px;clip:rect(0,0,0,0);overflow:hidden;white-space:nowrap;overflow-wrap:normal";
+
+const host = ref<HTMLElement | null>(null);
 const previousName = ref<string | null>(null);
+let liveRegion: HTMLParagraphElement | null = null;
 const route = useRoute();
 
 function currentPageName(): string {
@@ -48,6 +57,14 @@ function currentPageName(): string {
 
 onMounted(() => {
   previousName.value = currentPageName();
+  const element = host.value;
+  if (!element || liveRegion) return;
+  const root = element.shadowRoot ?? element.attachShadow({ mode: "open" });
+  liveRegion = document.createElement("p");
+  liveRegion.setAttribute("role", "alert");
+  liveRegion.setAttribute("aria-live", "assertive");
+  liveRegion.setAttribute("style", HIDDEN_STYLE);
+  root.append(liveRegion);
 });
 
 watch(
@@ -58,29 +75,11 @@ watch(
     const name = currentPageName();
     if (!name || name === previousName.value) return;
     previousName.value = name;
-    announcement.value = name;
+    if (liveRegion) liveRegion.textContent = name;
   },
 );
 </script>
 
 <template>
-  <div
-    id="__route-announcer__"
-    role="alert"
-    aria-live="assertive"
-    style="
-      position: absolute;
-      border: 0;
-      height: 1px;
-      margin: -1px;
-      padding: 0;
-      width: 1px;
-      clip: rect(0, 0, 0, 0);
-      overflow: hidden;
-      white-space: nowrap;
-      overflow-wrap: normal;
-    "
-  >
-    {{ announcement }}
-  </div>
+  <div id="__route-announcer__" ref="host" />
 </template>

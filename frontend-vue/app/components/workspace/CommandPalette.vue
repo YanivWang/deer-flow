@@ -155,6 +155,7 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onGlobalKeydown));
     <DialogContent
       overlay-class="bg-black/40"
       class="bg-popover text-popover-foreground top-[20%] w-[min(92vw,560px)] max-w-none translate-y-0 gap-0 overflow-hidden rounded-xl p-0 shadow-2xl sm:max-w-none"
+      :close-label="$i18n.t.value.primitives.close"
       @close-auto-focus="restoreFocus"
     >
       <DialogTitle class="sr-only">
@@ -192,6 +193,7 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onGlobalKeydown));
     <DialogContent
       overlay-class="bg-black/40"
       class="bg-popover text-popover-foreground w-[min(92vw,480px)] rounded-xl p-5 shadow-2xl"
+      :close-label="$i18n.t.value.primitives.close"
       @close-auto-focus="restoreFocus"
     >
       <DialogTitle>

@@ -780,7 +780,15 @@ test.describe("IM channels", () => {
       "Connected",
       { timeout: 10_000 },
     );
-    await connectDialog.getByRole("button", { name: "Close" }).click();
+    /*
+      对话框里现在有两颗 Close:footer 那颗(流程结束后的主按钮)与右上角 primitive
+      的那颗(与 React 每个对话框都有的那颗同源)。这里点的一直是 footer 那颗,
+      按 data-slot 锁定,避免 strict mode 命中两个。
+    */
+    await connectDialog
+      .locator('[data-slot="button"]')
+      .filter({ hasText: /^Close$/ })
+      .click();
     await expect(
       settings.getByTestId("channel-connection-connection-a"),
     ).toContainText("Alice · DeerFlow");

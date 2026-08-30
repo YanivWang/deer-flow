@@ -205,9 +205,15 @@ watch(
     :open="open"
     @update:open="(next: boolean) => next || emit('collapse')"
   >
+    <!--
+      `[&>button]:hidden` 逐字照抄 React chat-box.tsx：窄屏面板自己带关闭控件，
+      primitive 那颗就不该再出现。opt-out 放在与 React 同一层（调用方的 class），
+      而不是给 SheetContent 加一个 React 根本没有的开关。
+    -->
     <SheetContent
       side="right"
-      class="w-[calc(100vw-1rem)] max-w-none gap-0 p-0 sm:max-w-md"
+      :close-label="$i18n.t.value.primitives.close"
+      class="w-[calc(100vw-1rem)] max-w-none gap-0 p-0 sm:max-w-md [&>button]:hidden"
     >
       <!-- 标题与说明只给读屏器，与 React 的 sr-only SheetHeader 一致。 -->
       <SheetHeader class="sr-only">

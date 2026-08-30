@@ -784,7 +784,10 @@ function openSettingsDialog(section: "appearance" | "about") {
     :open="renameThreadId !== null"
     @update:open="!$event && (renameThreadId = null)"
   >
-    <DialogContent class="sm:max-w-sm">
+    <DialogContent
+      class="sm:max-w-sm"
+      :close-label="$i18n.t.value.primitives.close"
+    >
       <!--
         标题、输入框的名字来源和"没有描述"都照 React 的重命名对话框：标题是
         `common.rename`（"Rename"，不是"Rename chat"），输入框**只有 placeholder**、

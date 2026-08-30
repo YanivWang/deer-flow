@@ -1,7 +1,18 @@
+/*
+  Mock-mode fixtures for the Lark integration endpoints.
+
+  Typed against the real contract on purpose: an untyped object literal lets a
+  fixture silently fall behind the API it stands in for. That already happened —
+  every flow response here was missing the required `generation`, which the
+  Gateway uses to reject a superseded flow.
+*/
+import type { LarkConfigCompleteResponse } from "@/core/integrations/lark/types";
+
 export function POST() {
-  return Response.json({
+  const body: LarkConfigCompleteResponse = {
     success: true,
     message: "Lark/Feishu app switched. Reconnect to authorize the new app.",
+    generation: "mock-switched-generation",
     status: {
       installed: true,
       version: "v1.0.65",
@@ -32,5 +43,6 @@ export function POST() {
       sandbox_runtime_ready: false,
       sandbox_runtime_detail: null,
     },
-  });
+  };
+  return Response.json(body);
 }

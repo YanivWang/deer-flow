@@ -546,7 +546,12 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
           app_brand: "feishu",
           skills_expected: 27,
           skills_installed: 4,
-          installed_skills: ["lark-doc", "lark-im", "lark-shared", "lark-sheets"],
+          installed_skills: [
+            "lark-doc",
+            "lark-im",
+            "lark-shared",
+            "lark-sheets",
+          ],
           enabled_skills: ["lark-doc", "lark-im", "lark-shared", "lark-sheets"],
           install_path: "/mock/integrations/skills/lark-cli",
           cli: {

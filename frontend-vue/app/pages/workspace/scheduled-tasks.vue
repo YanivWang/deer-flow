@@ -282,7 +282,10 @@ const loadError = computed(() => {
 
     <!-- 删除二次确认——与 agent 卡片的确认框同一种形状。 -->
     <Dialog v-model:open="deleteOpen">
-      <DialogContent data-testid="scheduled-task-delete-dialog">
+      <DialogContent
+        data-testid="scheduled-task-delete-dialog"
+        :close-label="$i18n.t.value.primitives.close"
+      >
         <DialogHeader>
           <DialogTitle>
             {{ $i18n.t.value.scheduledTasks.actions.delete }}

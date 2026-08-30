@@ -1,7 +1,17 @@
+/*
+  Mock-mode fixtures for the Lark integration endpoints.
+
+  Typed against the real contract on purpose: an untyped object literal lets a
+  fixture silently fall behind the API it stands in for. That already happened —
+  every flow response here was missing the required `generation`, which the
+  Gateway uses to reject a superseded flow.
+*/
+import type { LarkInstallResponse } from "@/core/integrations/lark/types";
+
 const installedSkills = ["lark-doc", "lark-im", "lark-shared", "lark-sheets"];
 
 export function POST() {
-  return Response.json({
+  const body: LarkInstallResponse = {
     success: true,
     installed_skills: installedSkills,
     message: `Installed ${installedSkills.length} Lark/Feishu skills.`,
@@ -35,5 +45,6 @@ export function POST() {
       sandbox_runtime_ready: false,
       sandbox_runtime_detail: null,
     },
-  });
+  };
+  return Response.json(body);
 }

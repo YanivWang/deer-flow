@@ -186,18 +186,14 @@
     },
     "integrations/desktop/light/en-US": {
       "ariaOnlyReact": [],
-      "ariaOnlyVue": [
-        "- alert"
-      ],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
     },
     "integrations/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
-      "ariaOnlyVue": [
-        "- alert"
-      ],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
@@ -248,9 +244,7 @@
     },
     "artifact-preview/mobile/light/en-US": {
       "ariaOnlyReact": [],
-      "ariaOnlyVue": [
-        "- alert"
-      ],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [
         "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
       ],

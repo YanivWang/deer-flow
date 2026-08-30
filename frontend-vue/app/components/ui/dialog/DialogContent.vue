@@ -3,8 +3,13 @@
   【架构位置】     L2
   【主要导出】     DialogContent 组件
   【依赖关系】     Reka DialogContent/DialogClose · DialogOverlay · cn
-  【边界与注意】   关闭按钮只在调用方提供 closeLabel 时渲染——primitive 不持有产品文案，
-                   没有可访问名字的关闭按钮不如不渲染。
+  【边界与注意】   **关闭按钮默认渲染**，与 React 的 shadcn DialogContent 一致
+                   （那边 showCloseButton 默认 true，名字是写死的 sr-only "Close"）。
+                   closeLabel 是**必填 prop**：primitive 不持有产品文案（文案的唯一
+                   owner 是词典，见 primitives.close 那段注释），但"忘了传就静默没有
+                   关闭按钮"是个不该存在的陷阱——这里让 tsc 在编译期把它拦掉，
+                   而不是指望每个调用点自觉。
+                   要显式去掉按钮的（React 只有 sidecar 删除中那一处）传 :show-close="false"。
                    Reka 全库没有一处 aria-modal，Radix 则在 modal content 上写 true。
                    这不是样式差异：读屏器靠它知道背景已经不可达。所以 modal 语义由
                    本层显式补上，而不是指望底座。非模态浮层（Popover）绝不能加。
@@ -38,17 +43,19 @@ const props = withDefaults(
     DialogContentProps & {
       class?: HTMLAttributes["class"];
       overlayClass?: HTMLAttributes["class"];
-      /** 关闭按钮的可访问名字；不传就不渲染关闭按钮。 */
-      closeLabel?: string;
+      /** 关闭按钮的可访问名字。必填：省略它就等于悄悄发布一个关不掉的对话框。 */
+      closeLabel: string;
+      /** 对应 React 的 showCloseButton；默认渲染。 */
+      showClose?: boolean;
       /** 与 Dialog 根的 modal 保持一致；只影响 aria-modal 的声明。 */
       modal?: boolean;
     }
   >(),
   {
     modal: true,
+    showClose: true,
     class: undefined,
     overlayClass: undefined,
-    closeLabel: undefined,
   },
 );
 const emits = defineEmits<DialogContentEmits>();
@@ -59,12 +66,14 @@ const delegated = computed(() => {
     class: _class,
     overlayClass: _overlayClass,
     closeLabel: _closeLabel,
+    showClose: _showClose,
     modal: _modal,
     ...rest
   } = forwarded.value;
   void _class;
   void _overlayClass;
   void _closeLabel;
+  void _showClose;
   void _modal;
   return rest;
 });
@@ -92,7 +101,7 @@ const delegated = computed(() => {
     >
       <slot />
       <DialogClose
-        v-if="props.closeLabel"
+        v-if="props.showClose"
         data-slot="dialog-close"
         :aria-label="props.closeLabel"
         class="ring-offset-background focus-visible:ring-ring absolute top-4 right-4 flex size-7 cursor-pointer items-center justify-center rounded-md opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none"

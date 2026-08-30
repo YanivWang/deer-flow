@@ -223,16 +223,26 @@ function connectLabel(view: ChannelProviderView) {
 
 <template>
   <SettingsSection
-    v-if="
-      channels.enabled.value ||
-      channels.providerViews.value.length ||
-      channels.error.value ||
-      actionError
-    "
     :title="$i18n.t.value.settings.channels.title"
     :description="$i18n.t.value.settings.channels.description"
   >
     <div class="space-y-3">
+      <!--
+        渠道整体停用、或一个可见 provider 都没有时,照 React 渲染一句说明,
+        而不是把整节藏起来。藏起来的代价是用户在设置里找不到「渠道」这一节,
+        以为是自己点错了;React 两个分支用的是同一句 settings.channels.disabled。
+      -->
+      <p
+        v-if="
+          !channels.enabled.value &&
+          !channels.providerViews.value.length &&
+          !channels.error.value &&
+          !actionError
+        "
+        class="text-muted-foreground text-sm"
+      >
+        {{ $i18n.t.value.settings.channels.disabled }}
+      </p>
       <p
         v-if="channels.error.value || actionError"
         role="alert"
@@ -356,7 +366,10 @@ function connectLabel(view: ChannelProviderView) {
     :open="Boolean(activeConnectProvider && activeFlow)"
     @update:open="!$event && closeConnectDialog()"
   >
-    <DialogContent v-if="activeFlow">
+    <DialogContent
+      v-if="activeFlow"
+      :close-label="$i18n.t.value.primitives.close"
+    >
       <DialogHeader>
         <DialogTitle>{{ text.connectTitle }}</DialogTitle>
         <DialogDescription data-testid="channel-connect-state">

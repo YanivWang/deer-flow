@@ -101,18 +101,36 @@ describe("Dialog", () => {
     ).toBe("Panel description");
   });
 
-  it("renders the close button only when the caller supplies its name", async () => {
+  it("renders the close button by default and only drops it when asked", async () => {
+    /*
+      与 React 的 shadcn DialogContent 一致：showCloseButton 默认 true。
+      名字仍然由调用方给（primitive 不持有产品文案），但**给不给**不再是调用方
+      的自由——closeLabel 是必填 prop，忘了传是编译期错误，而不是一个静默发布的、
+      关不掉的对话框。React 全仓只有 sidecar 删除中那一处显式关掉它。
+    */
+    const withClose = await mountPortal(() =>
+      h(Dialog, { open: true }, () => [
+        h(DialogContent, { closeLabel: "Close" }, () => [
+          h(DialogTitle, () => "Default close"),
+          h(DialogDescription, () => "Default close description"),
+        ]),
+      ]),
+    );
+    expect(get('[data-slot="dialog-close"]').getAttribute("aria-label")).toBe(
+      "Close",
+    );
+    // 两个 dialog 都 portal 到 body，先卸载再挂下一个，否则查到的是上一个的按钮。
+    withClose.unmount();
+    await flushPromises();
+
     await mountPortal(() =>
       h(Dialog, { open: true }, () => [
-        h(DialogContent, null, () => [
+        h(DialogContent, { closeLabel: "Close", showClose: false }, () => [
           h(DialogTitle, () => "No close"),
           h(DialogDescription, () => "No close description"),
         ]),
       ]),
     );
-
-    // primitive 不持有产品文案：没有可访问名字就不渲染关闭按钮，
-    // 而不是塞一个写死的英文 "Close"。
     expect(query('[data-slot="dialog-close"]')).toBeNull();
   });
 

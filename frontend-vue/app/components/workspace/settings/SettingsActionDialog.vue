@@ -108,6 +108,7 @@ function onOpenChange(next: boolean) {
   <Dialog v-else :open="props.open" @update:open="onOpenChange">
     <DialogContent
       v-bind="{ ...$attrs, ...describedBy }"
+      :close-label="$i18n.t.value.primitives.close"
       @escape-key-down="props.pending && $event.preventDefault()"
       @pointer-down-outside="props.pending && $event.preventDefault()"
     >

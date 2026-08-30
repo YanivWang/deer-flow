@@ -1,4 +1,14 @@
-const status = {
+/*
+  Mock-mode fixtures for the Lark integration endpoints.
+
+  Typed against the real contract on purpose: an untyped object literal lets a
+  fixture silently fall behind the API it stands in for. That already happened —
+  every flow response here was missing the required `generation`, which the
+  Gateway uses to reject a superseded flow.
+*/
+import type { LarkIntegrationStatus } from "@/core/integrations/lark/types";
+
+const status: LarkIntegrationStatus = {
   installed: false,
   version: "v1.0.65",
   manifest_version: null,

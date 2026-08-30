@@ -3,7 +3,8 @@
   【架构位置】     L2
   【主要导出】     SheetContent 组件
   【依赖关系】     Reka DialogContent/Overlay/Portal/Close · sheetVariants · cn
-  【边界与注意】   关闭按钮只在调用方提供 closeLabel 时渲染，理由同 DialogContent。
+  【边界与注意】   关闭按钮恒定渲染，closeLabel 必填——理由同 DialogContent。
+                   React 的 SheetContent 连 showCloseButton 这个开关都没有，永远有关闭按钮。
                    Reka 全库没有一处 aria-modal，Radix 则在 modal content 上写 true。
                    这不是样式差异：读屏器靠它知道背景已经不可达。所以 modal 语义由
                    本层显式补上，而不是指望底座。非模态浮层（Popover）绝不能加。
@@ -39,7 +40,8 @@ const props = withDefaults(
       class?: HTMLAttributes["class"];
       overlayClass?: HTMLAttributes["class"];
       side?: SheetVariants["side"];
-      closeLabel?: string;
+      /** 关闭按钮的可访问名字。必填，理由见文件头。 */
+      closeLabel: string;
       /** 与 Sheet 根的 modal 保持一致；只影响 aria-modal 的声明。 */
       modal?: boolean;
     }
@@ -49,7 +51,6 @@ const props = withDefaults(
     modal: true,
     class: undefined,
     overlayClass: undefined,
-    closeLabel: undefined,
   },
 );
 const emits = defineEmits<DialogContentEmits>();
@@ -99,7 +100,6 @@ const delegated = computed(() => {
     >
       <slot />
       <DialogClose
-        v-if="props.closeLabel"
         data-slot="sheet-close"
         :aria-label="props.closeLabel"
         class="ring-offset-background focus-visible:ring-ring absolute top-4 right-4 flex size-7 cursor-pointer items-center justify-center rounded-md opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:outline-none"

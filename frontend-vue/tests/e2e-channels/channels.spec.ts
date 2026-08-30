@@ -171,7 +171,14 @@ test("admin completes real scoped multi-account lifecycle through the Vue UI", a
     "Connected",
     { timeout: 10_000 },
   );
-  await connectDialog.getByRole("button", { name: "Close" }).click();
+  /*
+    对话框里有两颗 Close:footer 那颗与右上角 primitive 的那颗（与 React 每个对话框
+    都有的那颗同源）。这里点的一直是 footer 那颗,按 data-slot 锁定。
+  */
+  await connectDialog
+    .locator('[data-slot="button"]')
+    .filter({ hasText: /^Close$/ })
+    .click();
   await expect(
     slackPanel.getByTestId(`channel-connection-${bob.id}`),
   ).toContainText("Bob · DeerFlow E2E");

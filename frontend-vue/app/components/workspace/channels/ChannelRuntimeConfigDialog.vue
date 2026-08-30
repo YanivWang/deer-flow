@@ -82,7 +82,10 @@ function fieldId(field: { name: string }) {
 
 <template>
   <Dialog :open="open" @update:open="emit('update:open', $event)">
-    <DialogContent v-if="provider" :close-label="$i18n.t.value.common.close">
+    <DialogContent
+      v-if="provider"
+      :close-label="$i18n.t.value.primitives.close"
+    >
       <form class="space-y-4" @submit.prevent="onSubmit">
         <DialogHeader>
           <DialogTitle>

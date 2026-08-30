@@ -185,7 +185,7 @@ function canOpen(file: WorkspaceFileChange) {
     <SheetContent
       v-if="summary"
       class="w-[min(92vw,900px)] gap-0 p-0 sm:max-w-none"
-      :close-label="$i18n.t.value.common.close"
+      :close-label="$i18n.t.value.primitives.close"
     >
       <SheetHeader
         class="border-border flex-row items-start gap-3 border-b px-5 py-4 pr-14"

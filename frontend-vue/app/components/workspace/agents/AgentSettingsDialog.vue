@@ -112,6 +112,7 @@ function save() {
   <Dialog :open="true" @update:open="!$event && !pending && emit('cancel')">
     <DialogContent
       class="sm:max-w-md"
+      :close-label="$i18n.t.value.primitives.close"
       @escape-key-down="pending && $event.preventDefault()"
       @pointer-down-outside="$event.preventDefault()"
     >
