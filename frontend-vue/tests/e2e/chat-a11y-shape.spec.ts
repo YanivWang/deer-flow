@@ -12,21 +12,60 @@
 
 import { expect, test } from "@playwright/test";
 
-import { mockLangGraphAPI } from "./utils/mock-api";
+import { handleRunStream, mockLangGraphAPI } from "./utils/mock-api";
 
-async function openNewChat(page: Parameters<typeof mockLangGraphAPI>[0]) {
+type MockPage = Parameters<typeof mockLangGraphAPI>[0];
+
+async function openNewChat(
+  page: MockPage,
+  extraRoutes?: (page: MockPage) => Promise<void>,
+) {
   mockLangGraphAPI(page);
+  await extraRoutes?.(page);
   await page.goto("/workspace/chats/new");
   await expect(page.getByPlaceholder(/how can i assist you/i)).toBeVisible({
     timeout: 15_000,
   });
 }
 
+/*
+  把 create 请求**扣住**，直到用例自己放行。
+
+  夹具的 SSE 是一次性 fulfill 整个 body 的（metadata + values + end 一起到），
+  于是 `creating -> streaming -> completed` 全发生在同一串微任务里，停止按钮只在
+  一两帧里存在过。原来这条用例就靠那一两帧，机器忙的时候 Playwright 的第一次轮询
+  已经晚于整条流跑完，断言拿到的是回到 `Submit` 的按钮，报的是「element(s) not
+  found」——实测在一次满负载的 `make e2e` 里撞到过，单独重复 5 次全绿。
+
+  换成扣住而不是 `setTimeout` 拖慢：拖慢只是把同一个窗口推后 250ms，机器足够忙时
+  照样会飘，而且负向验证做不出来——把 `creating` 从 STREAMING_STATUSES 里删掉，
+  用例仍然能靠后面那一两帧变绿（实测如此）。扣住之后窗口是无限长的，断言的对象也
+  从「某一帧」变成了一条真合同：**create 还没回来时停止按钮就得在**。runner 的
+  `onSessionState` 注释写的正是漏掉这一段的表现——慢连接下停止按钮永远不出现。
+*/
+function gateRunStream(page: MockPage) {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  const gated = async (route: Parameters<typeof handleRunStream>[0]) => {
+    await gate;
+    return handleRunStream(route);
+  };
+  return {
+    install: async (target: MockPage) => {
+      await target.route("**/api/langgraph/threads/*/runs/stream", gated);
+      await target.route("**/api/langgraph/runs/stream", gated);
+    },
+    release: () => release(),
+    page,
+  };
+}
+
 test.describe("chat accessibility shape", () => {
   test("composer submit stays operable on an empty draft and turns into Stop while streaming", async ({
     page,
   }) => {
-    await openNewChat(page);
+    const runStream = gateRunStream(page);
+    await openNewChat(page, runStream.install);
 
     // 名字是写死的 "Submit"（React 的 PromptInputSubmit 不走词典），空草稿**不**禁用：
     // 禁用一个看得见的提交按钮，读屏器连它为什么按不动都说不出来。
@@ -42,6 +81,16 @@ test.describe("chat accessibility shape", () => {
     await expect(page.getByRole("button", { name: "Stop" })).toBeVisible({
       timeout: 20_000,
     });
+    // create 还没回来——这就是 `creating` 段，不是流已经跑起来之后的某一帧。
+    await expect(page.getByText("Hello from DeerFlow!")).toHaveCount(0);
+    await expect(submit).toHaveCount(0);
+
+    runStream.release();
+    await expect(page.getByText("Hello from DeerFlow!")).toBeVisible({
+      timeout: 20_000,
+    });
+    // 流结束后换回同一个按钮的 Submit 名字。
+    await expect(page.getByRole("button", { name: "Submit" })).toBeVisible();
   });
 
   test("polish is disabled until the draft is something a model could rewrite", async ({

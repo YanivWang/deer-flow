@@ -98,6 +98,19 @@ export interface ThreadRunner {
   getWireMessages(): Message[];
   getSessionState(): RunSessionState<DeerFlowRunHandle>;
   isStreaming(): boolean;
+  /**
+   * 打开线程时把最新 checkpoint 落进 store（上游 SDK 的 `initialValues`）。
+   *
+   * **只在 idle 时生效，返回值就是「有没有落下去」。** 这不是防御性编程，
+   * 是种子的语义边界：种子是异步取回来的，它到达时这个 runner 可能已经在跑
+   * 一个 run 了（`/chats/new` 提交之后 threadId 从 null 变成真 id 就是这条路径），
+   * 而 `values` 帧对 reducer 是**全量替换**——晚到的种子会把正在流的消息抹掉。
+   * 上游靠 `values = stream.values ?? historyValues` 这个纯推导天然没有这个问题，
+   * 本仓的种子要进 store，就得把同一条边界显式写出来。
+   *
+   * 切 thread 时调用方会 `reset()`，状态回到 idle，于是下一条线程能重新种。
+   */
+  seedDurableState(values: Record<string, unknown>): boolean;
   subscribe(listener: () => void): () => void;
   submit(input: DeerFlowRunInput): Promise<void>;
   stop(): void;
@@ -107,7 +120,19 @@ export interface ThreadRunner {
   flushNotifications(): void;
 }
 
-const STREAMING_STATUSES = new Set([
+/**
+ * 「这个 run 还在跑」的会话状态集合。
+ *
+ * 导出而不是私有：Vue 侧的 `isStreaming` 读的是响应式的 `sessionStatus` ref，
+ * 不能直接调 `runner.isStreaming()`（那是闭包变量，不进依赖收集），于是它必须
+ * 自己判一次。原先两边各写了一份字面量数组——实测把 runner 这份里的 `creating`
+ * 删掉，整套门禁一条都不红，因为上屏的那份在 composable 里。同一条协议知识写两遍，
+ * 早晚对不上。
+ *
+ * **`creating` 必须在里面**：create 请求已发出、响应还没回来的那一段也算在跑，
+ * 停止按钮要在那时就出现（见 `ThreadRunnerHooks.onSessionState` 的注释）。
+ */
+export const STREAMING_STATUSES: ReadonlySet<string> = new Set([
   "creating",
   "streaming",
   "reconnecting",
@@ -239,6 +264,13 @@ export function createThreadRunner(options: ThreadRunnerOptions): ThreadRunner {
     },
     getSessionState: () => sessionState,
     isStreaming: () => STREAMING_STATUSES.has(sessionState.status),
+    seedDurableState(values) {
+      if (sessionState.status !== "idle") return false;
+      // 与 gap 恢复走同一条路：合成一帧 `values` 交给 reducer。两处必须同形，
+      // 否则「durable state 怎么落地」这件事就有两份实现。
+      store.dispatch({ event: "values", data: JSON.stringify(values) });
+      return true;
+    },
     subscribe: (listener) => store.subscribe(listener),
     submit: consume,
     stop() {

@@ -52,6 +52,8 @@ vi.mock("@/composables/useThreadHistory", () => ({
 
 interface FakeRunner extends ThreadRunner {
   submissions: Parameters<ThreadRunner["submit"]>[0][];
+  /** `seedDurableState` 真正收下的那几帧 checkpoint values。 */
+  seeds: Record<string, unknown>[];
   emitStart(threadId?: string, runId?: string): void;
   emitCustom(data: unknown): void;
   emitUpdate(data: unknown): void;
@@ -77,12 +79,26 @@ function createFakeRunner(
   } as unknown as AgentSnapshot<Record<string, unknown>>;
 
   const submissions: Parameters<ThreadRunner["submit"]>[0][] = [];
+  const seeds: Record<string, unknown>[] = [];
   return {
     submissions,
+    seeds,
     getSnapshot: () => snapshot,
     getWireMessages: () => messages,
     getSessionState: () => ({ status }) as never,
     isStreaming: () => status === "streaming",
+    seedDurableState(values) {
+      // 与真 runner 同形：只在 idle 时收下，返回值就是「有没有落下去」。
+      // `values` 对 reducer 是全量替换，这里照同一语义换掉消息集合，
+      // 于是种子能一路走到 mergeMessages，而不是停在一个只有测试看得见的数组里。
+      if (status !== "idle") return false;
+      seeds.push(values);
+      if (Array.isArray(values.messages)) {
+        messages = values.messages as Message[];
+      }
+      options.onSnapshot?.();
+      return true;
+    },
     subscribe: () => () => {},
     async submit(input) {
       submissions.push(input);
@@ -226,15 +242,28 @@ describe("useThreadStream · K3 编辑并重跑", () => {
 
   it("切换 thread 会取消 prepare，迟到响应不能提交也不能污染新页面", async () => {
     let resolvePrepare!: (response: Response) => void;
-    const fetchMock = vi.fn(
-      () => new Promise<Response>((resolve) => (resolvePrepare = resolve)),
-    );
+    // 打开线程时的 checkpoint 种子也走 fetch，所以这里按 URL 分开：
+    // 只有 prepare 那一条是本用例要悬住的，混在一起数次数会把种子算进去。
+    const prepareCalls: string[] = [];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/history")) {
+        return Promise.resolve(
+          new Response("[]", {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      prepareCalls.push(url);
+      return new Promise<Response>((resolve) => (resolvePrepare = resolve));
+    });
     vi.stubGlobal("fetch", fetchMock);
     const threadId = ref<string | null>("thread-1");
     const ctx = mountStream(threadId);
 
     const first = ctx.api.regenerateMessage("thread-1", "ai-1");
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(prepareCalls).toHaveLength(1));
     await expect(ctx.api.regenerateMessage("thread-1", "ai-1")).resolves.toBe(
       false,
     );
@@ -701,5 +730,191 @@ describe("useThreadStream · new → 真 id 不是「切换 thread」（C9 的�
     ]);
     ctx.wrapper.unmount();
     vi.useRealTimers();
+  });
+});
+
+/*
+  打开线程时的 checkpoint 种子接线（wave 8）。
+
+  上游这一步在 SDK 里：`useStream({ fetchStateHistory: { limit: 1 } })` 每次
+  threadId 变化取一次 `POST /history`，取到的 values 成为
+  `values = stream.values ?? historyValues` 的兜底，于是没有 run 的时候
+  `thread.messages` 就是 checkpoint 的消息。本仓自己实现 runner，这一段就得
+  自己接，接错的两种形状都在下面有对应用例：多发一次请求（对照台账会多一行
+  Vue 独有的 `/history`），以及晚到的种子盖掉正在流的消息。
+*/
+describe("useThreadStream · 打开线程时的 checkpoint 种子", () => {
+  function stubSeed(entries: unknown, extra?: (url: string) => Response) {
+    const urls: string[] = [];
+    const bodies: (string | undefined)[] = [];
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        urls.push(url);
+        if (url.includes("/history")) {
+          bodies.push(init?.body === undefined ? undefined : String(init.body));
+          return new Response(JSON.stringify(entries), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return (
+          extra?.(url) ??
+          new Response("{}", {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          })
+        );
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return { urls, bodies };
+  }
+
+  const SUMMARY_ENTRIES = [
+    {
+      values: {
+        title: "Summarized",
+        messages: [
+          { id: "checkpoint-human", type: "human", content: "old question" },
+          { id: "checkpoint-ai", type: "ai", content: "summary of the turn" },
+        ],
+      },
+    },
+  ];
+
+  it("打开线程时取一次 POST /history{limit:1}，checkpoint 消息进入渲染", async () => {
+    vi.useRealTimers();
+    const { urls, bodies } = stubSeed(SUMMARY_ENTRIES);
+    const ctx = mountStream(ref<string | null>("thread-1"));
+    await flushPromises();
+    await flushPromises();
+
+    const seedUrls = urls.filter((url) => url.includes("/history"));
+    expect(seedUrls).toHaveLength(1);
+    // 路由本身就是判据：`GET /state` 不带 run_id 与 turn_duration。
+    expect(seedUrls[0]).toContain("/api/langgraph/threads/thread-1/history");
+    expect(seedUrls[0]).not.toContain("/state");
+    expect(bodies[0]).toBe(JSON.stringify({ limit: 1 }));
+    expect(ctx.fake.seeds).toHaveLength(1);
+    expect(ctx.api.messages.value.map((m) => m.id)).toEqual([
+      "checkpoint-human",
+      "checkpoint-ai",
+    ]);
+
+    ctx.wrapper.unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it("/chats/new 上不取：还没有这条线程", async () => {
+    vi.useRealTimers();
+    const { urls } = stubSeed(SUMMARY_ENTRIES);
+    const ctx = mountStream(ref<string | null>(null));
+    await flushPromises();
+
+    expect(urls.filter((url) => url.includes("/history"))).toEqual([]);
+
+    ctx.wrapper.unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it("提交之后 URL 才换成真 id 的那条路径上不取（上游的 submittingRef）", async () => {
+    vi.useRealTimers();
+    const { urls } = stubSeed(SUMMARY_ENTRIES);
+    const threadId = ref<string | null>(null);
+    const ctx = mountStream(threadId);
+
+    await ctx.api.sendMessage("thread-1", { text: "Build a deck" });
+    await flushPromises();
+    threadId.value = "thread-1";
+    await flushPromises();
+    await flushPromises();
+
+    // 少了这道守卫，对照台账上会多出一条 Vue 独有的 `POST /history`。
+    expect(urls.filter((url) => url.includes("/history"))).toEqual([]);
+    expect(ctx.fake.seeds).toHaveLength(0);
+
+    ctx.wrapper.unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it("切走之后迟到的种子丢弃，不污染新线程", async () => {
+    vi.useRealTimers();
+    let releaseSeed!: () => void;
+    const seedGate = new Promise<void>((resolve) => (releaseSeed = resolve));
+    const seenThreads: string[] = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (!url.includes("/history")) {
+        return new Response("{}", { status: 200 });
+      }
+      const threadOfUrl = url.includes("thread-1") ? "thread-1" : "thread-2";
+      seenThreads.push(threadOfUrl);
+      if (threadOfUrl === "thread-1") await seedGate;
+      return new Response(
+        JSON.stringify([
+          {
+            values: {
+              messages: [{ id: `${threadOfUrl}-checkpoint`, type: "ai" }],
+            },
+          },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const threadId = ref<string | null>("thread-1");
+    const ctx = mountStream(threadId);
+    await flushPromises();
+    threadId.value = "thread-2";
+    await flushPromises();
+    await flushPromises();
+    releaseSeed();
+    await flushPromises();
+    await flushPromises();
+
+    expect(seenThreads).toEqual(["thread-1", "thread-2"]);
+    // 正面特征是「显示的是 thread-2 的 checkpoint」，不是「没崩」：
+    // 丢弃判据写错时，thread-1 的那一帧会最后落地并把这里换成它。
+    expect(ctx.api.messages.value.map((m) => m.id)).toEqual([
+      "thread-2-checkpoint",
+    ]);
+
+    ctx.wrapper.unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it("没有 checkpoint 时不种：空数组不能当成一帧「清空」", async () => {
+    vi.useRealTimers();
+    stubSeed([]);
+    const ctx = mountStream(ref<string | null>("thread-1"));
+    await flushPromises();
+    await flushPromises();
+
+    expect(ctx.fake.seeds).toEqual([]);
+
+    ctx.wrapper.unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it("种子请求失败时静默降级，历史仍然可用", async () => {
+    vi.useRealTimers();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) =>
+      String(input).includes("/history")
+        ? new Response("{}", { status: 404 })
+        : new Response("{}", { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const ctx = mountStream(ref<string | null>("thread-1"));
+    await flushPromises();
+    await flushPromises();
+
+    expect(ctx.fake.seeds).toEqual([]);
+    // 404 属常态（线程刚建、还没有 checkpoint），不该冒成流错误。
+    expect(ctx.errors).toEqual([]);
+
+    ctx.wrapper.unmount();
+    vi.unstubAllGlobals();
   });
 });

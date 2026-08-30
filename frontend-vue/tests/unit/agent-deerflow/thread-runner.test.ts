@@ -196,3 +196,79 @@ describe("createThreadRunner", () => {
     expect(runner.getSessionState().status).toBe("idle");
   });
 });
+
+/*
+  打开线程时的 checkpoint 种子（wave 8）。
+
+  上游没有对应代码：SDK 的 `values = stream.values ?? historyValues` 是纯推导，
+  种子永远盖不到正在流的消息。本仓的种子要进 store，那条边界就得自己守，
+  于是它是 `seedDurableState` 的**返回值**而不是一句注释。
+*/
+describe("createThreadRunner · checkpoint 种子", () => {
+  it("idle 时收下种子，消息与 durable state 一起落地", () => {
+    const onSnapshot = vi.fn();
+    const runner = runnerFor(STREAM, { onSnapshot });
+
+    expect(
+      runner.seedDurableState({
+        title: "Summarized",
+        messages: [
+          { id: "s1", type: "human", content: "old question" },
+          { id: "s2", type: "ai", content: "summary" },
+        ],
+      }),
+    ).toBe(true);
+
+    expect(runner.getWireMessages().map((m) => m.id)).toEqual(["s1", "s2"]);
+    expect(runner.getSnapshot().state.title).toBe("Summarized");
+    // 消费方靠 onSnapshot 才知道快照换了；不通知的话种子永远不上屏。
+    expect(onSnapshot).toHaveBeenCalled();
+    // 种子不是一次 run：会话状态必须还在 idle，否则停止按钮会凭空出现。
+    expect(runner.getSessionState().status).toBe("idle");
+  });
+
+  it("run 开始之后拒收，晚到的种子不会抹掉流里的消息", async () => {
+    const runner = runnerFor(STREAM);
+    await runner.submit({ threadId: "t-1", payload: {} });
+    expect(runner.getSessionState().status).toBe("completed");
+
+    const accepted = runner.seedDurableState({
+      messages: [{ id: "s1", type: "ai" }],
+    });
+    // 先断实际损失、再断返回值：守卫拿掉时报的是「[s1] 不等于 [m1, m2]」，
+    // 也就是流跑出来的消息被种子抹掉了，而不只是一个布尔值不对。
+    expect(runner.getWireMessages().map((m) => m.id)).toEqual(["m1", "m2"]);
+    expect(accepted).toBe(false);
+  });
+
+  it("reset 之后重新可种：切 thread 走的就是这条路", async () => {
+    const runner = runnerFor(STREAM);
+    await runner.submit({ threadId: "t-1", payload: {} });
+    runner.reset();
+
+    expect(
+      runner.seedDurableState({ messages: [{ id: "s1", type: "ai" }] }),
+    ).toBe(true);
+    expect(runner.getWireMessages().map((m) => m.id)).toEqual(["s1"]);
+  });
+
+  it("种子保留后端写在消息上的 run 身份与运行耗时", () => {
+    const runner = runnerFor(STREAM);
+    runner.seedDurableState({
+      messages: [
+        {
+          id: "s1",
+          type: "ai",
+          content: "a",
+          run_id: "run-a",
+          additional_kwargs: { turn_duration: 12 },
+        },
+      ],
+    });
+    const message = runner.getWireMessages()[0];
+    // `POST /history` 相对 `GET /state` 的全部价值就是这两个字段；
+    // 适配器把它们丢掉的话，换哪条路由都一样。
+    expect(Reflect.get(message ?? {}, "run_id")).toBe("run-a");
+    expect(message?.additional_kwargs?.turn_duration).toBe(12);
+  });
+});

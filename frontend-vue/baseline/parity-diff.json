@@ -113,26 +113,11 @@
       "geometry": []
     },
     "agents-feature-disabled/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- paragraph: Agents feature is not enabled",
-        "- paragraph: This feature is not enabled on this server. Please contact your administrator."
-      ],
-      "ariaOnlyVue": [
-        "- heading \"Agents\" [level=1]",
-        "- paragraph:",
-        "- paragraph: Create and manage custom agents with specialized prompts and capabilities.",
-        "- strong: Agents feature is not enabled",
-        "- text: This feature is not enabled on this server. Please contact your administrator."
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "text:/contact your administrator|联系管理员/i x React=544 Vue=280 Δ-264",
-        "text:/contact your administrator|联系管理员/i y React=428 Vue=105 Δ-323",
-        "text:/contact your administrator|联系管理员/i width React=448 Vue=976 Δ528",
-        "text:/contact your administrator|联系管理员/i height React=40 Vue=98 Δ58",
-        "text:/contact your administrator|联系管理员/i fontSize React=14px Vue=16px"
-      ]
+      "geometry": []
     },
     "browser-feature/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -170,9 +155,7 @@
     "user-message-plain-text/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
-      "requestsOnlyReact": [
-        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
-      ],
+      "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
     },
@@ -193,9 +176,7 @@
     "branch-thread/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
-      "requestsOnlyReact": [
-        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
-      ],
+      "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": [
         "text:First answer y React=164 Vue=152 Δ-12"
@@ -208,9 +189,7 @@
       "ariaOnlyVue": [
         "- article:"
       ],
-      "requestsOnlyReact": [
-        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
-      ],
+      "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": [
         "text:Research stopped reload regression x React=418.5 Vue=412.5 Δ-6",
@@ -222,27 +201,21 @@
     "artifact-preview/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
-      "requestsOnlyReact": [
-        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
-      ],
+      "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
     },
     "artifact-preview/mobile/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
-      "requestsOnlyReact": [
-        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
-      ],
+      "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
     },
     "artifact-panel-resize/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
-      "requestsOnlyReact": [
-        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
-      ],
+      "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
     },
@@ -277,12 +250,8 @@
     "thread-history-mermaid/desktop/light/en-US": {
       "ariaOnlyReact": [
         "- application:",
-        "- button",
-        "- button",
-        "- button \"Branch conversation\"",
         "- button \"Copy Code\":",
         "- button \"Download diagram\":",
-        "- button \"Edit and rerun\"",
         "- button \"Reset zoom and pan\":",
         "- button \"View fullscreen\":",
         "- button \"Zoom in\":",
@@ -294,14 +263,10 @@
         "- img",
         "- img",
         "- img \"Mermaid chart\":",
-        "- paragraph: Response in thread Mermaid history",
-        "- text: Previous question",
         "- text: mermaid"
       ],
       "ariaOnlyVue": [],
-      "requestsOnlyReact": [
-        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
-      ],
+      "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": [
         "text:Here is a relationship diagram. y React=84 Vue=72 Δ-12"
@@ -314,9 +279,7 @@
       "ariaOnlyVue": [
         "- text: +8-2 outputs/report.md Modified +1-1"
       ],
-      "requestsOnlyReact": [
-        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
-      ],
+      "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": [
         "text:I updated the workspace report. y React=164 Vue=152 Δ-12"
@@ -325,9 +288,7 @@
     "streaming-reasoning-order/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
-      "requestsOnlyReact": [
-        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
-      ],
+      "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": [
         "text:I am DeerFlow, an open-source super agent. y React=244 Vue=218.7 Δ-25.3"
@@ -336,18 +297,14 @@
     "artifact-stream-state/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
-      "requestsOnlyReact": [
-        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
-      ],
+      "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
     },
     "artifact-batched-stream/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
-      "requestsOnlyReact": [
-        "POST /api/langgraph/threads/00000000-0000-0000-0000-000000000001/history"
-      ],
+      "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
     }

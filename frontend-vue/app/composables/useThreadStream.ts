@@ -47,11 +47,18 @@ import type {
   ThreadRunner,
   ThreadRunnerOptions,
 } from "@/core/agent-deerflow/thread-runner";
-import { createThreadRunner } from "@/core/agent-deerflow/thread-runner";
+import {
+  createThreadRunner,
+  STREAMING_STATUSES,
+} from "@/core/agent-deerflow/thread-runner";
 import { createDeerFlowRunProtocol } from "@/core/agent-deerflow/run-protocol";
 import { getBackendBaseURL, getLangGraphBaseURL } from "@/core/config";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import { throwGatewayResponseError } from "@/core/api/errors";
+import {
+  buildThreadCheckpointSeedUrl,
+  checkpointSeedValues,
+} from "@/core/threads/checkpoint-seed";
 import {
   createGapRecoveryReset,
   invalidateThreadCaches,
@@ -279,10 +286,10 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     runner.abort();
   });
 
+  // 判据来自 runner（见 STREAMING_STATUSES 的注释）：这里不能直接调
+  // `runner.isStreaming()`，那读的是闭包变量、不进依赖收集，按钮不会更新。
   const isStreaming = computed(() =>
-    ["creating", "streaming", "reconnecting", "stopping"].includes(
-      sessionStatus.value,
-    ),
+    STREAMING_STATUSES.has(sessionStatus.value),
   );
 
   // ---- 历史 --------------------------------------------------------------
@@ -502,6 +509,69 @@ export function useThreadStream(options: UseThreadStreamOptions) {
       previousHumanMessageCount = humanMessageCount.value;
     },
     { flush: "sync" },
+  );
+
+  // ---- checkpoint 种子 ----------------------------------------------------
+  /*
+    打开线程时无条件取一次最新 checkpoint，落进 runner 的 store。
+
+    上游这一步在 SDK 里：`useStream({ fetchStateHistory: { limit: 1 } })` 每次
+    threadId 变化都取一次 `POST /history`，取到的 `values` 成为
+    `values = stream.values ?? historyValues` 的兜底，于是 `thread.messages`
+    在没有 run 的时候**就是 checkpoint 的消息**，再由 `mergeMessages` 覆盖在
+    `/messages/page` 的行上（hooks.ts:2588 的注释：thread.messages take precedence）。
+
+    **不取这一次，两个应用在压缩过的线程上显示的内容就不一样。** 上下文压缩之后
+    checkpoint 持有的是摘要消息，而事件库仍然持有旧的原始消息；上游显示摘要，
+    本仓显示旧原文。`message-merge.ts` 里那一整套「summarized checkpoint /
+    protected message / hidden checkpoint control」早就移植过来了，只是打开线程时
+    没有任何输入喂给它——这一段就是那个缺掉的输入。台账测不到它：默认夹具的
+    `/history` 与 `/messages/page` 返回同一批消息，两条路径的差异要专门造后端状态
+    才看得见（tests/e2e-backend/thread-summarized-checkpoint.spec.ts）。
+
+    `status !== "idle"` 这一道与 `seedDurableState` 里那一道**不是重复**：
+    这里省的是请求（上游 SDK 的 effect 同样有 `submittingRef.current === threadId`
+    就 return，`/chats/new` 提交后 threadId 变成真 id 走的正是这条），
+    那里守的是「晚到的响应不许覆盖正在流的消息」。少任何一道都会有可观察后果：
+    少了这里，对照台账上会多出一条 Vue 独有的 `POST /history`；少了那里，
+    首个回合的流会被自己的种子抹掉。
+  */
+  let checkpointSeedGeneration = 0;
+
+  async function seedThreadCheckpoint(id: string) {
+    const generation = ++checkpointSeedGeneration;
+    let entries: unknown;
+    try {
+      const response = await fetchWithAuth(
+        buildThreadCheckpointSeedUrl(getBackendBaseURL(), id),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ limit: 1 }),
+        },
+      );
+      if (!response.ok) return;
+      entries = await response.json();
+    } catch {
+      // 取不到种子就是「没有种子」，与后端确实没有 checkpoint 同解：
+      // 分页历史仍然完整可用，S8 的「线程是否存在」判据也不读它。
+      return;
+    }
+    // 期间又切了 thread 就丢弃。上游靠 SDK 内部的 `state.key !== key` 做同一件事。
+    if (generation !== checkpointSeedGeneration || threadId.value !== id)
+      return;
+    const values = checkpointSeedValues(entries);
+    if (values) runner.seedDurableState(values);
+  }
+
+  watch(
+    threadId,
+    (id) => {
+      if (id === null || runner.getSessionState().status !== "idle") return;
+      void seedThreadCheckpoint(id);
+    },
+    { immediate: true },
   );
 
   // 历史确认后逐条释放瞬态桥。immediate 见 05 M5：首屏那一批确认不能漏。

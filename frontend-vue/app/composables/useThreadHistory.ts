@@ -12,6 +12,16 @@
                    `threadId` 收 `MaybeRefOrGetter` 而不是 string：查询 key 必须
                    随 thread 变，写成裸 string 的话切 thread 不重新取数——
                    这是 vue-query 与 react-query 最容易踩错的一处差异。
+
+                   **这里没有、也不该有 checkpoint 退路。** 曾经写过一支「第一页为空
+                   就改取 `POST /history`」，那是在 runner 还没有 checkpoint 种子时
+                   的补救。上游 `useThreadHistory`（hooks.ts:2623）是**纯分页**，
+                   checkpoint 由 `useStream` 无条件取一次、经归并覆盖在分页行上。
+                   本仓现在也是这个形状：种子在 `useThreadStream` 里喂进 runner
+                   （见 `@/core/threads/checkpoint-seed`）。把退路留着会有两个后果——
+                   同一条线程发两次 `/history`（实测在 browser-feature 这类空事件库
+                   场景里就是多出来的一条请求），以及退路造出来的行与种子行形状不同，
+                   两条路径各自演化。
 */
 
 import { useInfiniteQuery } from "@tanstack/vue-query";
@@ -21,9 +31,7 @@ import { fetch } from "@/core/api/fetcher";
 import { readGatewayResponseError } from "@/core/api/errors";
 import { getBackendBaseURL } from "@/core/config";
 import {
-  buildThreadCheckpointSeedUrl,
   buildThreadMessagesPageUrl,
-  checkpointSeedRows,
   flattenThreadHistoryPages,
   getThreadHistoryNextPageParam,
   parseThreadMessagesPageResponse,
@@ -77,27 +85,7 @@ export function useThreadHistory(
           "Failed to load thread history.",
         );
       }
-      const page = parseThreadMessagesPageResponse(await response.json());
-      if (page.data.length > 0 || pageParam !== null) return page;
-
-      // 事件库这条线程一条都没有——退回最新 checkpoint。判据与取数理由都在
-      // `buildThreadCheckpointSeedUrl` / `checkpointSeedRows` 的注释里。
-      const seedResponse = await fetch(
-        buildThreadCheckpointSeedUrl(getBackendBaseURL(), toValue(threadId)),
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ limit: 1 }),
-          signal,
-        },
-      );
-      if (!seedResponse.ok) return page;
-      return {
-        data: checkpointSeedRows(await seedResponse.json()),
-        has_more: false,
-        next_before_seq: null,
-      };
+      return parseThreadMessagesPageResponse(await response.json());
     },
     getNextPageParam: getThreadHistoryNextPageParam,
   });

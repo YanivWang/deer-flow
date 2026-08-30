@@ -72,13 +72,34 @@ describe("useThreadHistory on-demand pagination", () => {
 });
 
 /*
-  事件库为空时的退路（wave 7）。
+  分页历史**只做分页**（wave 8）。
 
-  这一支只在 `/messages/page` 的第一页真的是空的时候才走，所以上面那组分页用例
-  一次都没有覆盖到它——它此前既没有守卫路由，也没有守卫 run 身份。
+  wave 7 在这里加过一支「第一页为空就改取 `POST /history`」的退路，因为当时
+  runner 没有 checkpoint 种子，那是拿到 checkpoint 消息的唯一路径。wave 8 把种子
+  按上游的形状放回 `useThreadStream`（无条件取一次，经归并覆盖在分页行上）之后，
+  这条退路既多余又有害：同一条线程会发两次 `/history`，而且退路造出来的行与种子行
+  形状不同。上游 `useThreadHistory`（hooks.ts:2623）本来就没有任何退路。
+
+  所以这一组用例守的是**不做什么**：第一页空了就到此为止。
 */
-describe("useThreadHistory checkpoint fallback", () => {
-  function mountHistory(queryClient: QueryClient) {
+describe("useThreadHistory stays pure pagination", () => {
+  function emptyPage() {
+    return new Response(
+      JSON.stringify({ data: [], has_more: false, next_before_seq: null }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  it("does not fall back to the checkpoint route when the first page is empty", async () => {
+    const urls: string[] = [];
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      urls.push(String(input));
+      return emptyPage();
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     let history: ReturnType<typeof useThreadHistory> | undefined;
     const wrapper = mount(
       defineComponent({
@@ -89,125 +110,16 @@ describe("useThreadHistory checkpoint fallback", () => {
       }),
       { global: { plugins: [[VueQueryPlugin, { queryClient }]] } },
     );
-    return { wrapper, history: () => history };
-  }
 
-  function emptyPage() {
-    return new Response(
-      JSON.stringify({ data: [], has_more: false, next_before_seq: null }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-    );
-  }
-
-  it("falls back to POST /history and keeps the backend's run ids", async () => {
-    const calls: { url: string; method: string; body: unknown }[] = [];
-    fetchMock.mockImplementation(
-      async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        calls.push({
-          url,
-          method: init?.method ?? "GET",
-          body: init?.body === undefined ? undefined : String(init.body),
-        });
-        if (url.includes("/messages/page")) return emptyPage();
-        return new Response(
-          JSON.stringify([
-            {
-              values: {
-                messages: [
-                  {
-                    id: "checkpoint-human",
-                    type: "human",
-                    content: "q",
-                    additional_kwargs: { run_id: "run-a" },
-                  },
-                  {
-                    id: "checkpoint-ai",
-                    type: "ai",
-                    content: "a",
-                    run_id: "run-a",
-                  },
-                ],
-              },
-            },
-          ]),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      },
-    );
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const { wrapper, history } = mountHistory(queryClient);
     await flushPromises();
     await flushPromises();
 
-    const seed = calls.find((call) => !call.url.includes("/messages/page"));
-    // 路由本身就是判据：`/state` 不带 run 身份，换过去这条用例必须红。
-    expect(seed?.url).toContain("/api/langgraph/threads/thread-1/history");
-    expect(seed?.url).not.toContain("/state");
-    expect(seed?.method).toBe("POST");
-    expect(seed?.body).toBe(JSON.stringify({ limit: 1 }));
-
-    expect(history()?.messages.value.map((message) => message.id)).toEqual([
-      "checkpoint-human",
-      "checkpoint-ai",
-    ]);
-    expect(
-      history()?.messages.value.map((message) =>
-        Reflect.get(message, "run_id"),
-      ),
-    ).toEqual(["run-a", "run-a"]);
-
-    wrapper.unmount();
-    queryClient.clear();
-  });
-
-  it("leaves run_id empty when the checkpoint carries none", async () => {
-    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
-      if (String(input).includes("/messages/page")) return emptyPage();
-      return new Response(
-        JSON.stringify([
-          { values: { messages: [{ id: "m", type: "ai", content: "a" }] } },
-        ]),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    });
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const { wrapper, history } = mountHistory(queryClient);
-    await flushPromises();
-    await flushPromises();
-
-    // 造出来的 `state-<threadId>` 会让 WorkspaceChangesBadge 发一条注定 404 的
-    // 请求；空串让它的 `enabled` 停住，与 React 一致。
-    const runIds = history()?.messages.value.map((message) =>
-      Reflect.get(message, "run_id"),
-    );
-    expect(runIds).toEqual([""]);
-    expect(String(runIds?.[0])).not.toContain("state-");
-
-    wrapper.unmount();
-    queryClient.clear();
-  });
-
-  it("keeps the empty page when the checkpoint route fails", async () => {
-    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
-      if (String(input).includes("/messages/page")) return emptyPage();
-      return new Response("{}", { status: 404 });
-    });
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const { wrapper, history } = mountHistory(queryClient);
-    await flushPromises();
-    await flushPromises();
-
-    expect(history()?.messages.value).toEqual([]);
+    expect(urls).toHaveLength(1);
+    expect(urls[0]).toContain("/messages/page");
+    expect(urls.some((url) => url.includes("/history"))).toBe(false);
+    expect(history?.messages.value).toEqual([]);
+    // 空历史仍然要给出结论，否则 S8 的「线程是否存在」判据永远等不到。
+    expect(history?.settled.value).toBe(true);
 
     wrapper.unmount();
     queryClient.clear();

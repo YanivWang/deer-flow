@@ -5,11 +5,18 @@
   【主要导出】     默认 agents page
   【依赖关系】     useAgents · useModels · workspace features · Agent components
   【边界与注意】   feature ready+enabled 才查询；Vue Query 是唯一 server-state owner。
+
+                   flag 关掉时**整页被替换**，页面外壳（标题、页面说明、新建入口）
+                   一起消失——上游把这一支放在 `app/workspace/agents/layout.tsx` 里，
+                   于是它天然替换掉整个页面。原先本仓是「外壳照旧 + 内容区塞一段
+                   带边框的提示」，两边在可访问性树上因此差了 7 行、几何上差了
+                   5 项（居中空态 vs 页面内一段提示）。
 */
 import { computed, ref } from "vue";
 
 import AgentCard from "@/components/workspace/agents/AgentCard.vue";
 import AgentSettingsDialog from "@/components/workspace/agents/AgentSettingsDialog.vue";
+import AgentsFeatureDisabled from "@/components/workspace/agents/AgentsFeatureDisabled.vue";
 import { useAgents } from "@/composables/useAgents";
 import { useModels } from "@/composables/useModels";
 import { useAgentsApiEnabled } from "@/composables/useWorkspaceFeatures";
@@ -20,6 +27,9 @@ const { $i18n } = useNuxtApp();
 const features = useAgentsApiEnabled();
 const featureEnabled = computed(
   () => features.loaded.value && features.agentsApiEnabled.value,
+);
+const featureDisabled = computed(
+  () => features.loaded.value && !features.agentsApiEnabled.value,
 );
 const agentCatalog = useAgents({ enabled: featureEnabled });
 const modelCatalog = useModels({ enabled: featureEnabled });
@@ -83,7 +93,8 @@ async function remove(agent: Agent) {
 </script>
 
 <template>
-  <div class="size-full">
+  <AgentsFeatureDisabled v-if="featureDisabled" />
+  <div v-else class="size-full">
     <section class="flex size-full flex-col">
       <header class="flex items-center justify-between border-b px-6 py-4">
         <div>
@@ -103,17 +114,7 @@ async function remove(agent: Agent) {
       </header>
       <div class="flex-1 overflow-y-auto p-6">
         <p
-          v-if="features.loaded.value && !features.agentsApiEnabled.value"
-          data-testid="agents-feature-disabled"
-          class="text-muted-foreground rounded-xl border p-6"
-        >
-          <strong class="text-foreground block">{{
-            $i18n.t.value.agents.featureDisabledTitle
-          }}</strong>
-          {{ $i18n.t.value.agents.featureDisabledDescription }}
-        </p>
-        <p
-          v-else-if="!features.loaded.value || agentCatalog.loading.value"
+          v-if="!features.loaded.value || agentCatalog.loading.value"
           role="status"
           class="text-muted-foreground"
         >
