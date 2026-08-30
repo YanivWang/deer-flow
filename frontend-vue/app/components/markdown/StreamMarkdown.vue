@@ -44,9 +44,16 @@ import type { PluggableList } from "unified";
 /** Vue 的 `onErrorCaptured` 只有返回 `false` 才阻止继续冒泡（05 M6）。 */
 const STOP_ERROR_PROPAGATION = false;
 
-/** 与上游 `<Streamdown>` 默认 className 一致。 */
+/**
+ * 与上游 `SafeStreamdown` 给出的根 className 一致
+ * （`core/streamdown/components.tsx`：`size-full [&>*:first-child]:mt-0
+ * [&>*:last-child]:mb-0` 叠在 Streamdown 自己的 `space-y-4 whitespace-normal` 上）。
+ *
+ * `size-full` 原来漏了。它在消息流里不改变高度（父不是定高，实测两边这一层都是
+ * 内容高），但缺了它，同一个渲染器换到定高容器里两个应用就不一样了。
+ */
 const ROOT_CLASS =
-  "space-y-4 whitespace-normal [&>*:first-child]:mt-0 [&>*:last-child]:mb-0";
+  "space-y-4 whitespace-normal size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0";
 
 export default defineComponent({
   name: "StreamMarkdown",

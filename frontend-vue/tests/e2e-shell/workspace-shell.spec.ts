@@ -289,6 +289,12 @@ test("real Gateway owns auth, thread state, workspace changes, recovery and brow
   );
 
   await row.getByRole("button", { name: "More" }).click();
+  /*
+    「导出」是一层子菜单（上游的 `DropdownMenuSub`），两个格式在里面——不先展开
+    就点不到。这条用例此前直接点 `thread-export-markdown`，于是永远等到超时；
+    mock 那份（tests/e2e/workspace-shell.spec.ts）一直是先展开的，两边写法分叉了。
+  */
+  await page.getByRole("menuitem", { name: "Export", exact: true }).click();
   const stateRequest = page.waitForResponse(
     (response) =>
       response.request().method() === "GET" &&

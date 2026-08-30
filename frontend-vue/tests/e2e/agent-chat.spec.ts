@@ -147,6 +147,32 @@ test.describe("Agent chat", () => {
     );
   });
 
+  /*
+    agent 会话页的欢迎区念的是 agent 自己，不是通用问候语。
+
+    上游把两者分成两个组件：`/workspace/chats/*` 用 `Welcome`（👋 + DeerFlow 介绍），
+    `/workspace/agents/{name}/chats/*` 用 `AgentWelcome`（agent 名 + 描述）。
+    本仓一个 `AgentChat` 服务两条路由，此前只渲染通用那一支——打开一个自定义 agent
+    的新会话，屏幕上完全看不出这是哪个 agent。所以这条同时断言
+    「该出现的出现了」和「不该出现的没出现」：只断言前者的话，两句都显示也算绿。
+  */
+  test("an agent thread greets with the agent, not the generic welcome", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page, { agents: MOCK_AGENTS });
+    await page.goto("/workspace/agents/test-agent/chats/new");
+
+    // 页头面包屑上也写着 agent 名，所以要锚在欢迎区本身；用 testid 而不是
+    // class，本仓的 e2e 不钉 class。
+    const welcome = page.getByTestId("agent-welcome");
+    await expect(welcome).toBeVisible({ timeout: 15_000 });
+    await expect(
+      welcome.getByText("test-agent", { exact: true }),
+    ).toBeVisible();
+    await expect(welcome.getByText("A test agent for E2E tests")).toBeVisible();
+    await expect(page.getByText("Hello, again!")).toHaveCount(0);
+  });
+
   test("agent gallery page loads and shows agents", async ({ page }) => {
     mockLangGraphAPI(page, { agents: MOCK_AGENTS });
 
@@ -636,10 +662,10 @@ test.describe("Agent chat", () => {
         await expect(
           page.getByPlaceholder("Enter a URL and press Enter"),
         ).toBeVisible();
-        await expect(browserTrigger).toHaveAttribute(
-          "aria-label",
-          "Close browser",
-        );
+        // 打开态的名字是 `common.close`（"Close"），与上游
+        // `browser-trigger.tsx` 的 `t.common.close` 同键。这里曾经是
+        // `browser.close`（"Close browser"）——同一颗按钮两个应用念出不同的话。
+        await expect(browserTrigger).toHaveAttribute("aria-label", "Close");
         await browserTrigger.click();
         await expect(page.getByTestId("browser-panel")).toHaveCount(0);
         await expect(browserTrigger).toHaveAttribute(

@@ -130,14 +130,34 @@ afterEach(() => {
 });
 
 describe("WorkspaceChangesBadge", () => {
-  it("shows truncated summary and every actual file status", async () => {
+  /*
+    S7 的「完整显示 status」落在**展开后的面板**上，不是折叠态那张卡片。
+
+    上游 `workspace-change-badge.tsx` 的 summary 行只有「路径 + 增删数」，
+    `Created` / `Modified` 这些字只在面板里出现；本仓原来两处都写，于是同一行
+    在两个应用里读出来不是同一句（对照台账上的
+    `+8-2 outputs/report.md Modified +1-1`）。这条用例因此拆成两半断言：
+    折叠态该有什么、展开后该有什么。**强度没降**——四个状态词一个都没少，
+    而且多钉住了「折叠态不该有它们」这半边。
+
+    `truncated` 提示留在折叠态：上游没有这一条，是本仓按 S7 有意多做的。
+  */
+  it("keeps status words in the panel and the truncation notice on the card", async () => {
     const wrapper = mountBadge();
     await flushPromises();
     expect(wrapper.text()).toContain("Some changes were truncated");
-    expect(wrapper.text()).toContain("Created");
-    expect(wrapper.text()).toContain("Modified");
-    expect(wrapper.text()).toContain("Deleted");
-    expect(wrapper.text()).toContain("Symlink created");
+    // 折叠态是「路径 + 增删数」，没有状态词。
+    expect(wrapper.text()).not.toContain("Modified");
+    expect(wrapper.text()).not.toContain("Symlink created");
+
+    await wrapper
+      .get("button[data-testid='workspace-changes-open']")
+      .trigger("click");
+    await flushPromises();
+    expect(document.body.textContent).toContain("Created");
+    expect(document.body.textContent).toContain("Modified");
+    expect(document.body.textContent).toContain("Deleted");
+    expect(document.body.textContent).toContain("Symlink created");
     wrapper.unmount();
   });
 

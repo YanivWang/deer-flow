@@ -262,10 +262,14 @@ test("workspace changes exposes truncated/status/reasons and retries detail erro
 
   await page.goto(`/workspace/chats/${THREAD_ID}`);
   await expect(page.getByText("Some changes were truncated.")).toBeVisible();
+  // 折叠态的卡片只有「路径 + 增删数」，状态词在展开后的面板里——上游
+  // `workspace-change-badge.tsx` 的 summary 行就是这样。此前两处都写，
+  // 于是同一行在两个应用里读出来不是同一句。
+  await expect(page.getByText("Modified", { exact: true })).toHaveCount(0);
+  await page.getByTestId("workspace-changes-open").click();
   for (const status of ["Created", "Modified", "Deleted", "Symlink created"]) {
     await expect(page.getByText(status, { exact: true }).first()).toBeVisible();
   }
-  await page.getByTestId("workspace-changes-open").click();
   await expect(
     page.getByRole("alert").filter({ hasText: "workspace snapshot expired" }),
   ).toBeVisible();

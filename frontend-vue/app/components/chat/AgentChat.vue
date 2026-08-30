@@ -19,6 +19,7 @@ import {
 import { useQueryClient } from "@tanstack/vue-query";
 import { Bot, CalendarClock, Menu, PlusSquare } from "lucide-vue-next";
 
+import AgentWelcome from "@/components/chat/AgentWelcome.vue";
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
 import { buttonVariants } from "@/components/ui/button";
@@ -1696,7 +1697,20 @@ onUnmounted(() => {
                 "
                 class="absolute top-0 right-0 left-0 z-10"
               >
+                <!--
+                  agent 会话页与普通聊天页的欢迎区是**两个不同的东西**，上游也是
+                  两个组件（`AgentWelcome` vs `Welcome`）。同一个 AgentChat 服务两条
+                  路由，所以这一支要显式分开；此前只有通用那一支，打开自定义 agent
+                  的新会话时读到的是「👋 Hello, again!」而不是 agent 自己的名字。
+                -->
+                <AgentWelcome
+                  v-if="agentName"
+                  class="absolute right-0 bottom-0 left-0"
+                  :agent="agent"
+                  :agent-name="agentName"
+                />
                 <div
+                  v-else
                   class="absolute right-0 bottom-0 left-0 mx-auto flex w-full flex-col items-center justify-center gap-2 px-4 py-4 text-center sm:px-8"
                 >
                   <div

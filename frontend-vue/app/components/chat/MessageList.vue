@@ -850,6 +850,14 @@ onUnmounted(() => {
             让本该 overflow:hidden 的面板变得可滚动，一次焦点变化就能把整个聊天区
             往上推 28px。React 的 AIElementMessage 两种角色都是 `relative w-full`
             （frontend/src/components/workspace/messages/message-list-item.tsx）。
+
+          **这一层不加 `gap-2`。** 上游把「一个回合」拆成两层：外层
+          `w-full group/assistant-turn` 装 actions 与运行耗时（没有 gap），内层
+          `group flex flex-col gap-2 is-assistant` 才是消息内容。本仓压成了一层，
+          于是给它加 gap 会连 actions / 耗时一起推开 8px——`make e2e` 的
+          「shows a completed run duration once after multi-step history」当场量到
+          `actionsToDuration` 从 8 变 16。gap 要加在**消息内容**那一层，见下面
+          ai 分支外面那个 `flex flex-col gap-2`。
           -->
           <div
             v-for="entry in renderedGroups"
@@ -978,66 +986,85 @@ onUnmounted(() => {
                 </div>
               </template>
               <template v-else-if="message.type === 'ai'">
-                <ReasoningDisclosure
-                  v-if="reasoning(message)"
-                  :content="reasoning(message) ?? ''"
-                  :streaming="streaming && entry.index === groups.length - 1"
-                  :markdown-components="messageMarkdownComponents"
-                />
-                <MessageMarkdown
-                  v-if="text(message)"
-                  :content="text(message)"
-                  :components="messageMarkdownComponents"
-                  :streaming="streaming && entry.index === groups.length - 1"
-                />
-                <CitationSourcesPanel :sources="citations(message)" />
-                <button
-                  v-for="artifact in artifactTargets(message)"
-                  :key="artifact.path"
-                  type="button"
-                  class="border-border bg-muted/30 hover:bg-muted my-2 block max-w-full rounded-lg border px-3 py-2 text-left text-sm break-all"
-                  @click="emit('artifact', artifact.path)"
-                >
-                  {{ artifact.label }}
-                </button>
-                <div
-                  v-for="(call, callIndex) in message.tool_calls ?? []"
-                  :key="subtaskId(call.id, entry.index, callIndex)"
-                  class="my-2 text-sm"
-                >
-                  <template v-if="call.name === 'task'">
-                    <SubtaskCard
-                      :task-id="subtaskId(call.id, entry.index, callIndex)"
-                      :thread-id="threadId"
-                      :run-id="runIdOfGroup(entry.index) ?? activeRunId"
-                      :description="subtaskDescription(call.args)"
-                      :prompt="subtaskPrompt(call.args)"
-                      :live-task="
-                        subtasks?.[subtaskId(call.id, entry.index, callIndex)]
-                      "
-                      :terminal="subtaskTerminal(call.id)"
-                      :pending-status="subtaskPendingStatus(call.id)"
-                      :is-loading="streaming"
-                    />
-                  </template>
-                  <template v-else>
-                    <details class="group/tool">
-                      <summary
-                        class="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-2 py-1.5 transition-colors"
-                      >
-                        <Wrench :size="15" />
-                        <span>{{ toolLabel(call.name) }}</span>
-                      </summary>
-                      <pre
-                        v-if="
-                          call.args &&
-                          Object.keys(call.args).length &&
-                          !ARTIFACT_TOOL_NAMES.has(call.name)
+                <!--
+                  上游的 `MessageContent` 是 `flex … flex-col gap-2`，本仓此前是
+                  block。差的不只是 8px 间隙：block 里相邻兄弟的 margin 会**折叠**，
+                  于是正文那层的 `my-3` 被上面 reasoning 块的下外边距吃掉——同一处
+                  `my-3` 在没有 reasoning 的消息上生效、在有 reasoning 的消息上失效
+                  （对照台账里 branch-thread 归零而 streaming-reasoning-order 纹丝不动，
+                  就是这个）。flex 容器不折叠 margin。
+                -->
+                <div class="flex flex-col gap-2">
+                  <ReasoningDisclosure
+                    v-if="reasoning(message)"
+                    :content="reasoning(message) ?? ''"
+                    :streaming="streaming && entry.index === groups.length - 1"
+                    :markdown-components="messageMarkdownComponents"
+                  />
+                  <!--
+                  `my-3` 是**调用点**给的，不是渲染器自带的：上游
+                  `message-list-item.tsx` 写的是
+                  `<MarkdownContent className="my-3">`，而 reasoning、工具步骤那几个
+                  调用点都没有传。漏掉它的后果是线程里第一条 AI 消息的正文整体上移
+                  12px——对照台账上 branch-thread / workspace-changes /
+                  thread-history-mermaid 三条一模一样的 `y Δ-12` 就是这一处。
+                -->
+                  <MessageMarkdown
+                    v-if="text(message)"
+                    class="my-3"
+                    :content="text(message)"
+                    :components="messageMarkdownComponents"
+                    :streaming="streaming && entry.index === groups.length - 1"
+                  />
+                  <CitationSourcesPanel :sources="citations(message)" />
+                  <button
+                    v-for="artifact in artifactTargets(message)"
+                    :key="artifact.path"
+                    type="button"
+                    class="border-border bg-muted/30 hover:bg-muted my-2 block max-w-full rounded-lg border px-3 py-2 text-left text-sm break-all"
+                    @click="emit('artifact', artifact.path)"
+                  >
+                    {{ artifact.label }}
+                  </button>
+                  <div
+                    v-for="(call, callIndex) in message.tool_calls ?? []"
+                    :key="subtaskId(call.id, entry.index, callIndex)"
+                    class="my-2 text-sm"
+                  >
+                    <template v-if="call.name === 'task'">
+                      <SubtaskCard
+                        :task-id="subtaskId(call.id, entry.index, callIndex)"
+                        :thread-id="threadId"
+                        :run-id="runIdOfGroup(entry.index) ?? activeRunId"
+                        :description="subtaskDescription(call.args)"
+                        :prompt="subtaskPrompt(call.args)"
+                        :live-task="
+                          subtasks?.[subtaskId(call.id, entry.index, callIndex)]
                         "
-                        class="bg-muted text-muted-foreground mt-1 ml-6 max-h-64 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
-                        >{{ JSON.stringify(call.args, null, 2) }}</pre>
-                    </details>
-                  </template>
+                        :terminal="subtaskTerminal(call.id)"
+                        :pending-status="subtaskPendingStatus(call.id)"
+                        :is-loading="streaming"
+                      />
+                    </template>
+                    <template v-else>
+                      <details class="group/tool">
+                        <summary
+                          class="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-2 py-1.5 transition-colors"
+                        >
+                          <Wrench :size="15" />
+                          <span>{{ toolLabel(call.name) }}</span>
+                        </summary>
+                        <pre
+                          v-if="
+                            call.args &&
+                            Object.keys(call.args).length &&
+                            !ARTIFACT_TOOL_NAMES.has(call.name)
+                          "
+                          class="bg-muted text-muted-foreground mt-1 ml-6 max-h-64 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
+                          >{{ JSON.stringify(call.args, null, 2) }}</pre>
+                      </details>
+                    </template>
+                  </div>
                 </div>
               </template>
               <details v-else-if="message.type === 'tool'" class="my-2 text-sm">

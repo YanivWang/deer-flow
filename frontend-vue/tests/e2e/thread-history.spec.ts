@@ -464,6 +464,82 @@ test.describe("Thread history", () => {
     expect(geometry.composerBottomInset).toBe(16);
   });
 
+  /*
+    正文那层的外边距与消息内容层的 gap，都是**调用点/容器**给的，不是渲染器自带的。
+
+    上游 `message-list-item.tsx` 写的是 `<MarkdownContent className="my-3">`
+    （reasoning、工具步骤那几个调用点都不传），而 `MessageContent` 是
+    `flex … flex-col gap-2`。本仓此前两样都没有，后果不是"少一点间距"：
+
+    - 少 `my-3`，线程里第一条 AI 消息的正文整体上移 12px；
+    - 少 `flex`，block 布局里相邻兄弟的 margin 会**折叠**，于是同一处 `my-3`
+      在没有 reasoning 的消息上生效、在有 reasoning 的消息上被吃掉。
+
+    所以这条分开量：容器是 flex、gap 是 8、正文那层上下各 12。四个值各自对应一处
+    改动，都能单独负向验证；合成一个"reasoning 底到正文顶"的距离反而钉不住——
+    12+8 和 20+0 得到同一个和，而后者正是 margin 折叠时的样子。
+
+    **不在这里钉那段距离的绝对值**：实测是 36 而不是 12+8=20，多出来的 16 来自
+    `ReasoningDisclosure` 自己的外边距，那一块还没对着上游对齐（跨应用台账上
+    streaming-reasoning-order 仍有一条 `y Δ-5.3` 就是它的残余）。钉一个还没查清
+    来源的数字，只会在真去对齐 Reasoning 的那一轮变成假红。
+  */
+  test("assistant content stacks with a flex gap and the body keeps its own margin", async ({
+    page,
+  }) => {
+    mockLangGraphAPI(page, {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Reasoning then body",
+          updated_at: "2025-06-03T12:00:00Z",
+          messages: [
+            {
+              type: "human",
+              id: "msg-human-spacing",
+              content: [{ type: "text", text: "Who are you?" }],
+            },
+            {
+              type: "ai",
+              id: "msg-ai-spacing",
+              content: "I am DeerFlow.",
+              additional_kwargs: {
+                reasoning_content: "Listing the core capabilities.",
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    await page.goto(`/workspace/chats/${MOCK_THREAD_ID}`);
+    const body = page.getByText("I am DeerFlow.", { exact: true });
+    await expect(body).toBeVisible({ timeout: 15_000 });
+
+    const spacing = await body.evaluate((node: Element) => {
+      // node 是正文 <p>；它的父级就是 markdown 根容器（带 my-3 的那层）。
+      const markdownRoot = node.parentElement!;
+      const content = markdownRoot.parentElement!;
+      const rootStyle = getComputedStyle(markdownRoot);
+      const contentStyle = getComputedStyle(content);
+      const reasoning = content.firstElementChild!;
+      return {
+        marginTop: rootStyle.marginTop,
+        marginBottom: rootStyle.marginBottom,
+        display: contentStyle.display,
+        gap: contentStyle.rowGap,
+        // reasoning 确实排在正文上面——`gap` 与 `my-3` 之所以成立的前提。
+        reasoningIsFirst: reasoning !== markdownRoot,
+      };
+    });
+
+    expect(spacing.reasoningIsFirst).toBe(true);
+    expect(spacing.display).toBe("flex");
+    expect(spacing.gap).toBe("8px");
+    expect(spacing.marginTop).toBe("12px");
+    expect(spacing.marginBottom).toBe("12px");
+  });
+
   test("input box recalls previous prompts with arrow keys", async ({
     page,
   }) => {

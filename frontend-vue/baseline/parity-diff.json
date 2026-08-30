@@ -100,14 +100,8 @@
       "geometry": []
     },
     "agent-chat/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- paragraph: A test agent for E2E tests",
-        "- text: test-agent"
-      ],
-      "ariaOnlyVue": [
-        "- paragraph: Welcome to 🦌 DeerFlow, an open source super agent. With built-in and custom skills, DeerFlow helps you search on the web, analyze data, and generate artifacts like slides, web pages and do almost anything.",
-        "- text: 👋 Hello, again!"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
@@ -125,10 +119,7 @@
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": [
-        "testId:browser-trigger x React=1127.7 Vue=1140.8 Δ13.1",
-        "testId:browser-trigger width React=36 Vue=32 Δ-4",
-        "testId:browser-trigger height React=36 Vue=32 Δ-4",
-        "testId:browser-trigger fontSize React=14px Vue=16px"
+        "testId:browser-trigger x React=1127.7 Vue=1136.8 Δ9.1"
       ]
     },
     "thread-list-pin/desktop/light/en-US": {
@@ -178,9 +169,7 @@
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "text:First answer y React=164 Vue=152 Δ-12"
-      ]
+      "geometry": []
     },
     "subtask-card/desktop/light/en-US": {
       "ariaOnlyReact": [
@@ -268,22 +257,14 @@
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "text:Here is a relationship diagram. y React=84 Vue=72 Δ-12"
-      ]
+      "geometry": []
     },
     "workspace-changes/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- text: +8 -2 outputs/report.md +1 -1"
-      ],
-      "ariaOnlyVue": [
-        "- text: +8-2 outputs/report.md Modified +1-1"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "text:I updated the workspace report. y React=164 Vue=152 Δ-12"
-      ]
+      "geometry": []
     },
     "streaming-reasoning-order/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -291,7 +272,7 @@
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": [
-        "text:I am DeerFlow, an open-source super agent. y React=244 Vue=218.7 Δ-25.3"
+        "text:I am DeerFlow, an open-source super agent. y React=244 Vue=238.7 Δ-5.3"
       ]
     },
     "artifact-stream-state/desktop/light/en-US": {

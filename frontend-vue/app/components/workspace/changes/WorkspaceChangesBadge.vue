@@ -5,6 +5,18 @@
   【主要导出】     默认 WorkspaceChangesBadge 组件
   【依赖关系】     useWorkspaceChanges · presentation/summary · artifact URL · ui/sheet
   【边界与注意】   server state 仅由 useWorkspaceChanges/TanStack Query 持有。
+
+                   **折叠态那张卡片上没有状态词。** 上游 `workspace-change-badge.tsx`
+                   的 summary 行只有「路径 + 增删数」，`Created` / `Modified` 这些字
+                   只出现在展开后的面板里。S7 要求的「完整显示 status」由面板那一层
+                   满足，卡片上再写一遍是本仓多出来的——它让同一行在两个应用里读出来
+                   不是同一句（对照台账上就是那条
+                   `+8-2 outputs/report.md Modified +1-1`）。
+
+                   增删数两边都是「两个 span」，但上游用 `inline-flex ... gap-1`
+                   而这里原来用 `ml-1`：gap 产生的是**布局间隙**，会进可访问性树的
+                   文本拼接（`+8 -2`），margin 不会（`+8-2`）。看起来只是空格，
+                   读屏器念出来是两个数字还是一个数字。
 */
 import { computed, ref, watch } from "vue";
 import { ArrowUpRight, ExternalLink, FileDiff } from "lucide-vue-next";
@@ -19,6 +31,7 @@ import {
 import { useWorkspaceChanges } from "@/composables/useWorkspaceChanges";
 import { resolveArtifactURL } from "@/core/artifacts/utils";
 import {
+  formatWorkspacePath,
   workspaceChangeReasonKey,
   workspaceChangeStatusKey,
 } from "@/core/workspace-changes/presentation";
@@ -78,12 +91,6 @@ function errorMessage(error: unknown) {
     : $i18n.t.value.workspaceChanges.loadFailed;
 }
 
-function compactPath(path: string) {
-  return path
-    .replace(/^\/mnt\/user-data\/workspace\//, "")
-    .replace(/^\/mnt\/user-data\/outputs\//, "outputs/");
-}
-
 function lineClass(line: string) {
   const type = getWorkspaceChangeLineClass(line);
   if (type === "addition") return "bg-emerald-500/10 text-emerald-700";
@@ -130,52 +137,63 @@ function canOpen(file: WorkspaceFileChange) {
     v-else-if="count > 0 && summary"
     class="border-border/70 bg-muted/20 mt-3 overflow-hidden rounded-xl border"
   >
-    <div class="border-border/70 flex items-center gap-3 border-b p-3">
-      <div
-        class="bg-background/80 flex size-10 shrink-0 items-center justify-center rounded-lg"
-      >
-        <FileDiff class="text-muted-foreground size-4" />
-      </div>
-      <div class="min-w-0 flex-1">
-        <div class="text-foreground text-sm font-semibold">
-          {{ $i18n.t.value.workspaceChanges.editedTitle(count) }}
+    <div
+      class="border-border/70 flex items-center justify-between gap-3 border-b p-3"
+    >
+      <div class="flex min-w-0 items-center gap-2.5">
+        <div
+          class="bg-background/80 flex size-10 shrink-0 items-center justify-center rounded-lg"
+        >
+          <FileDiff class="text-muted-foreground size-4" />
         </div>
-        <p
-          v-if="summary.summary.truncated"
-          class="mt-0.5 text-xs text-amber-700"
-        >
-          {{ $i18n.t.value.workspaceChanges.truncatedSummary }}
-        </p>
-        <button
-          data-testid="workspace-changes-open"
-          type="button"
-          class="text-muted-foreground hover:text-foreground mt-0.5 inline-flex items-center gap-1 text-xs font-medium"
-          @click="open = true"
-        >
-          {{ $i18n.t.value.workspaceChanges.viewChanges }}
-          <ArrowUpRight :size="12" />
-        </button>
+        <div class="min-w-0">
+          <div class="text-foreground text-sm font-semibold">
+            {{ $i18n.t.value.workspaceChanges.editedTitle(count) }}
+          </div>
+          <p
+            v-if="summary.summary.truncated"
+            class="mt-0.5 text-xs text-amber-700"
+          >
+            {{ $i18n.t.value.workspaceChanges.truncatedSummary }}
+          </p>
+          <button
+            data-testid="workspace-changes-open"
+            type="button"
+            class="text-muted-foreground hover:text-foreground mt-0.5 inline-flex items-center gap-1 text-xs font-medium transition-colors"
+            @click="open = true"
+          >
+            {{ $i18n.t.value.workspaceChanges.viewChanges }}
+            <ArrowUpRight :size="12" />
+          </button>
+        </div>
       </div>
-      <span class="shrink-0 text-xs font-semibold tabular-nums">
+      <span
+        class="hidden shrink-0 items-center gap-1 text-xs font-semibold tabular-nums sm:inline-flex"
+      >
         <span class="text-emerald-500">+{{ summary.summary.additions }}</span>
-        <span class="ml-1 text-red-500">-{{ summary.summary.deletions }}</span>
+        <span class="text-red-500">-{{ summary.summary.deletions }}</span>
       </span>
     </div>
     <div class="py-1">
       <div
         v-for="file in sortWorkspaceChanges(summary.files)"
         :key="`${file.status}:${file.path}`"
-        class="flex items-center justify-between gap-3 px-3 py-2.5 text-sm"
+        class="flex items-center justify-between gap-3 px-3 py-2.5"
       >
-        <span class="min-w-0 flex-1 truncate" :title="file.path">
-          {{ compactPath(file.path) }}
-        </span>
-        <span class="text-muted-foreground shrink-0 text-xs">
-          {{ statusText(file) }}
-        </span>
-        <span class="shrink-0 font-semibold tabular-nums">
+        <div class="min-w-0 truncate text-sm" :title="file.path">
+          <span
+            v-if="formatWorkspacePath(file.path).dirname"
+            class="text-muted-foreground"
+            >{{ formatWorkspacePath(file.path).dirname }}/</span
+          ><span class="text-foreground font-medium">{{
+            formatWorkspacePath(file.path).basename
+          }}</span>
+        </div>
+        <span
+          class="inline-flex shrink-0 items-center gap-1 text-sm font-semibold tabular-nums"
+        >
           <span class="text-emerald-500">+{{ file.additions }}</span>
-          <span class="ml-1 text-red-500">-{{ file.deletions }}</span>
+          <span class="text-red-500">-{{ file.deletions }}</span>
         </span>
       </div>
     </div>
