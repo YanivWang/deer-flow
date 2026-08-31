@@ -1915,6 +1915,7 @@ onUnmounted(() => {
         @clear-references="sidecar.clearActiveReferences()"
         @add-reference="sidecar.openContext($event)"
         @close="sidecar.close()"
+        @discard="sidecar.clearThreadAndClose()"
         @deleted="sidecar.clearThreadAndClose()"
       />
       <BrowserPanel

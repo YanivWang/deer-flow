@@ -1111,13 +1111,6 @@ defineExpose({ replaceDraft, offerFollowup });
       :aria-busy="compactPending || submissionPending"
       @submit.prevent="submit"
     >
-      <ReferenceAttachment
-        :references="references ?? []"
-        test-id="conversation-quote-attachment"
-        clearable
-        class="mb-2"
-        @clear="emit('clearReferences')"
-      />
       <ComposerSurface
         :class="
           [surfaceClass, polishing ? 'ring-primary/25 shadow-lg ring-1' : '']
@@ -1127,7 +1120,7 @@ defineExpose({ replaceDraft, offerFollowup });
       >
         <!-- header / footer 都是 React 的 InputGroupAddon，role="group"。 -->
         <div
-          v-if="selectedFiles.length || polishing"
+          v-if="selectedFiles.length || polishing || (references?.length ?? 0)"
           role="group"
           data-slot="input-group-header"
           :data-testid="
@@ -1149,6 +1142,21 @@ defineExpose({ replaceDraft, offerFollowup });
             <span class="size-2 animate-pulse rounded-full bg-current" />
             {{ $i18n.t.value.inputBox.inputPolishing }}
           </div>
+          <!--
+            引文块也在 header 里，排在附件与润色指示之后——上游 input-box.tsx:2229
+            就是这个次序，而那个 header 正是 PromptInputHeader / InputGroupAddon。
+            本仓原来把它放在 ComposerSurface **外面**、靠 `mb-2` 拉开距离。
+            两个 composer 当时都这么写，所以「sidecar 与主输入框等高」这条不变量
+            照样成立；把 sidecar 那份搬进 header 之后它就塌了（sidecar 高 4px：
+            `mb-2` 的 8px 换成了 header 的 `pt-3` 12px）。真正的修法是两处一起搬，
+            而不是把 sidecar 搬回去——上游两处都在 header 里。
+          -->
+          <ReferenceAttachment
+            :references="references ?? []"
+            test-id="conversation-quote-attachment"
+            clearable
+            @clear="emit('clearReferences')"
+          />
         </div>
         <div data-slot="input-group-body">
           <div v-if="selectedSkill" class="flex items-start gap-2">

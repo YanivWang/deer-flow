@@ -68,15 +68,34 @@ function makeSession() {
   };
 }
 
-function mountPanel(session = makeSession()) {
+/*
+  面板通过 useModels 取模型目录（与 ChatComposer / AgentChat 同一个 Vue Query
+  owner），所以挂载必须带上 provider——否则 useQuery 拿不到 client，整棵树在
+  setup 阶段就抛。`retry: false` + mock 掉的 loadModels 保证它不会真的去连 :3000。
+*/
+function queryPlugins() {
+  return [
+    [
+      VueQueryPlugin,
+      {
+        queryClient: new QueryClient({
+          defaultOptions: { queries: { retry: false } },
+        }),
+      },
+    ] as const,
+  ];
+}
+
+function mountPanel(session = makeSession(), references: unknown[] = []) {
   const wrapper = mount(SidecarPanel, {
     props: {
-      references: [],
+      references,
       context: { model_name: "reasoner", mode: "pro" },
       active: true,
       session,
     },
     global: {
+      plugins: queryPlugins() as never,
       stubs: {
         MessageList: MessageListStub,
         ReferenceAttachment: true,
@@ -166,21 +185,39 @@ describe("SidecarPanel session adapter", () => {
       wrapper.get("textarea[name='message']").attributes("data-slot"),
     ).toBe("input-group-control");
     expect(surface.get("[data-slot='input-group-body']").exists()).toBe(true);
-    expect(surface.get("[data-slot='input-group-footer']").exists()).toBe(true);
+    // footer 也是 InputGroupAddon，必须带 role="group"（见 SidecarPanel.vue 那条注释）。
+    const footer = surface.get("[data-slot='input-group-footer']");
+    expect(footer.attributes("role")).toBe("group");
+    /*
+      上游 sidecar 的 composer **没有**免责声明——那一段只在主输入框上
+      （chat-page.tsx）。本仓原来两处都画，于是 sidecar 面板的可访问性树里多出
+      一个 React 没有的 paragraph。这条断言反过来钉住「不许再长回来」。
+    */
     expect(
-      wrapper.get("[data-testid='sidecar-composer-disclaimer']").classes(),
-    ).toEqual(expect.arrayContaining(["absolute", "bottom-0"]));
+      wrapper.find("[data-testid='sidecar-composer-disclaimer']").exists(),
+    ).toBe(false);
+    expect(wrapper.text()).not.toContain(enUS.inputBox.disclaimer);
   });
 
-  it("keeps a stable accessible name while the panel is hidden and reopened", async () => {
+  /*
+    可访问名来自 **placeholder**，不是 aria-label。上游的 PromptInputTextarea 只给
+    placeholder（prompt-input.tsx:963 那一支没有 aria-label），于是读屏器念的是
+    「Ask a deeper follow-up...」——带省略号。本仓原来额外挂了一个
+    `sidecar.inputLabel`（"Ask a deeper follow-up"，没有省略号，而且是本仓自造的
+    词条，上游词典里根本没有这一项），aria-label 一旦存在就顶掉 placeholder，
+    两个应用于是念出两个名字。这条用例保留原来的意图——名字要在面板隐藏再打开
+    之后保持不变——只是把被测的载体换成 placeholder。
+  */
+  it("names the composer by its placeholder, stably across hide and reopen", async () => {
     const { wrapper } = mountPanel();
     const textarea = wrapper.get("textarea[name='message']");
-    expect(textarea.attributes("aria-label")).toBe("Ask a deeper follow-up");
+    expect(textarea.attributes("aria-label")).toBeUndefined();
+    expect(textarea.attributes("placeholder")).toBe(enUS.sidecar.placeholder);
     await wrapper.setProps({ active: false });
     await wrapper.setProps({ active: true });
     expect(
-      wrapper.get("textarea[name='message']").attributes("aria-label"),
-    ).toBe("Ask a deeper follow-up");
+      wrapper.get("textarea[name='message']").attributes("placeholder"),
+    ).toBe(enUS.sidecar.placeholder);
   });
 
   it("runs required-form, false-checkbox, retry, thread-error, and refresh HIL through the sidecar session", async () => {
@@ -286,5 +323,93 @@ describe("SidecarPanel session adapter", () => {
     // 答过之后表单仍然挂着（禁用），不是被一行文字替换掉。
     const answeredOwner = wrapper.get("input[type='text']");
     expect(answeredOwner.attributes("disabled")).toBeDefined();
+  });
+
+  /*
+    头部这一簇钉的是 sidecar-panel.tsx:527 的四条合同。对照场景 `sidecar-chat`
+    只走得到**草稿态**（还没有 sidecar thread），所以「有 thread 时关闭按钮还在不在」
+    这条只能在这里钉——而它恰好是原来那处 v-if/v-else 造成的功能缺失：
+    本仓一旦建出 thread，面板上就再也没有关闭按钮了。
+  */
+  it("always offers close, and only offers delete once a thread exists", async () => {
+    const withThread = mountPanel();
+    expect(
+      withThread.wrapper.find('[data-testid="sidecar-close-button"]').exists(),
+    ).toBe(true);
+    expect(
+      withThread.wrapper.find('[data-testid="sidecar-delete-button"]').exists(),
+    ).toBe(true);
+
+    const draftSession = makeSession();
+    draftSession.threadId.value = null;
+    const draft = mountPanel(draftSession);
+    expect(
+      draft.wrapper.find('[data-testid="sidecar-close-button"]').exists(),
+    ).toBe(true);
+    expect(
+      draft.wrapper.find('[data-testid="sidecar-delete-button"]').exists(),
+    ).toBe(false);
+  });
+
+  it("names the close button with common.close, not the side-chat label", () => {
+    const { wrapper } = mountPanel();
+    const close = wrapper.get('[data-testid="sidecar-close-button"]');
+    expect(close.attributes("aria-label")).toBe(enUS.common.close);
+    expect(close.attributes("aria-label")).not.toBe(enUS.sidecar.close);
+  });
+
+  it("closes an existing side chat but discards a draft that has no thread", async () => {
+    const withThread = mountPanel();
+    await withThread.wrapper
+      .get('[data-testid="sidecar-close-button"]')
+      .trigger("click");
+    expect(withThread.wrapper.emitted("close")).toHaveLength(1);
+    expect(withThread.wrapper.emitted("discard")).toBeUndefined();
+
+    const draftSession = makeSession();
+    draftSession.threadId.value = null;
+    const draft = mountPanel(draftSession);
+    await draft.wrapper
+      .get('[data-testid="sidecar-close-button"]')
+      .trigger("click");
+    expect(draft.wrapper.emitted("discard")).toHaveLength(1);
+    expect(draft.wrapper.emitted("close")).toBeUndefined();
+  });
+
+  it("titles the header with sidecar.title and subtitles it three ways", async () => {
+    const withThread = mountPanel();
+    expect(withThread.wrapper.text()).toContain(enUS.sidecar.title);
+    // 原来这里画的是 emptyTitle——同一颗面板在两个应用里叫的名字不一样。
+    expect(withThread.wrapper.text()).toContain(enUS.sidecar.continuing);
+
+    const draftSession = makeSession();
+    draftSession.threadId.value = null;
+    const draft = mountPanel(draftSession);
+    expect(draft.wrapper.text()).toContain(enUS.sidecar.noContext);
+    expect(draft.wrapper.text()).not.toContain(enUS.sidecar.continuing);
+
+    const quoted = mountPanel(makeSession(), [
+      { id: 1, context: { content: "a" } },
+      { id: 2, context: { content: "b" } },
+    ]).wrapper;
+    expect(quoted.text()).toContain("2 selected text fragments");
+    expect(quoted.text()).not.toContain(enUS.sidecar.continuing);
+  });
+
+  it("shows the empty state instead of the message list until a thread exists", () => {
+    const withThread = mountPanel();
+    expect(withThread.wrapper.findComponent(MessageListStub).exists()).toBe(
+      true,
+    );
+    expect(withThread.wrapper.text()).not.toContain(
+      enUS.sidecar.emptyDescription,
+    );
+
+    const draftSession = makeSession();
+    draftSession.threadId.value = null;
+    const draft = mountPanel(draftSession);
+    expect(draft.wrapper.findComponent(MessageListStub).exists()).toBe(false);
+    expect(draft.wrapper.text()).toContain(enUS.sidecar.emptyTitle);
+    expect(draft.wrapper.text()).toContain(enUS.sidecar.emptyDescription);
   });
 });

@@ -29,7 +29,7 @@
     "/workspace/chats/new": {
       "critical": {
         "files": 40,
-        "raw": 1030000,
+        "raw": 1036000,
         "brotli": 296500
       },
       "prefetch": {

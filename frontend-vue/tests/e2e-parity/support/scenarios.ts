@@ -65,7 +65,23 @@ export type ParityStep =
   | { kind: "hidden"; target: ParityTarget }
   | { kind: "click"; target: ParityTarget }
   | { kind: "fill"; target: ParityTarget; value: string }
-  | { kind: "press"; key: string };
+  | { kind: "press"; key: string }
+  /*
+    在 `scope` 子树里选中一段正文，并派发 mouseup —— 划词工具条的唯一入口。
+
+    为什么必须是一条**新的步骤**而不是既有词汇的组合：选区是浏览器状态，不是
+    DOM 状态，`click` / `press` 都造不出一个 Range 来。sidecar 面板的全部入口都
+    挂在这条工具条上，所以在有这一步之前，`sidecar-chat` 只能挂在 pending 里
+    （理由原文写在 baseline/parity-scenario-coverage.json 的 $pendingReasons）。
+
+    实现照抄 frontend/tests/e2e/sidecar-chat.spec.ts:29 的 selectTextOnPage：
+    走 TreeWalker 找到第一个包含该串的文本节点，建 Range，再在它的父元素上派发
+    一个**真的 MouseEvent**（坑 76 的同一条机制：两个应用的处理器都挂在 mouseup 上，
+    普通 Event 造不出 clientX/clientY，工具条的定位会拿到 0/0）。
+
+    两个应用共用这段代码，因为它只碰浏览器 API，不碰任何一边的实现细节。
+  */
+  | { kind: "select-text"; scope: ParityTarget; text: string };
 
 /**
  * 额外的路由覆盖，写成数据。
@@ -165,6 +181,37 @@ export async function applyDimension(
 
 async function runStep(page: Page, step: ParityStep, timeout: number) {
   if (step.kind === "press") return page.keyboard.press(step.key);
+  if (step.kind === "select-text") {
+    const scope = locateTarget(page, step.scope).first();
+    await scope.waitFor({ state: "visible", timeout });
+    return scope.evaluate((root, targetText) => {
+      globalThis.getSelection?.()?.removeAllRanges();
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let node = walker.nextNode();
+      while (node) {
+        const start = (node.textContent ?? "").indexOf(targetText);
+        if (start >= 0) {
+          const range = document.createRange();
+          range.setStart(node, start);
+          range.setEnd(node, start + targetText.length);
+          const selection = globalThis.getSelection?.();
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+          const rect = range.getBoundingClientRect();
+          node.parentElement?.dispatchEvent(
+            new MouseEvent("mouseup", {
+              bubbles: true,
+              clientX: rect.left + rect.width / 2,
+              clientY: rect.top + rect.height / 2,
+            }),
+          );
+          return;
+        }
+        node = walker.nextNode();
+      }
+      throw new Error(`select-text 找不到这段文字：${targetText}`);
+    }, step.text);
+  }
   const locator = locateTarget(page, step.target).first();
   switch (step.kind) {
     case "visible":
@@ -447,6 +494,66 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       threads: [{ thread_id: MOCK_THREAD_ID, title: "Browser Enabled" }],
     },
     settle: [{ kind: "visible", target: { testId: "browser-trigger" } }],
+  },
+  {
+    /*
+      sidecar 面板的**草稿态**：选中正文 → 点「Ask in side chat」→ 面板打开，
+      但还没有 sidecar thread。这一屏原来两个应用差得最远，而台账一行都没有，
+      因为在这条场景进来之前，sidecar 面板从来没有被取样过。
+
+      **夹具自证**：最后四条 visible 全是被测对象自己的锚点——头部标题、头部副标题、
+      空状态的标题与说明。四条在两个应用上都必须渲染出来，缺一条整轮当场红，
+      不会悄悄退化成「两边都没有、台账照样 0」。挂上去的时候本仓四条全缺
+      （标题读错词条、副标题整行不存在、空状态那一支根本没写），正是它们把
+      SidecarPanel.vue 的四处分叉逼出来的。
+
+      工具条本身**不在取样里**：两个应用点完之后都会把选区清掉
+      （React setSelectionToolbar(null) / 本仓 selection.value = null），
+      所以稳定态里没有它。它自身的差异见提交说明里「台账测不到」那一节。
+    */
+    id: "sidecar-chat",
+    title: "划词开启 side chat 的草稿态",
+    backend: "mock",
+    path: `/workspace/chats/${MOCK_THREAD_ID}`,
+    mock: {
+      threads: [
+        {
+          thread_id: MOCK_THREAD_ID,
+          title: "Main conversation",
+          messages: [
+            {
+              type: "human",
+              id: "parent-human-1",
+              content: [{ type: "text", text: "Plan the feature." }],
+            },
+            {
+              type: "ai",
+              id: "parent-ai-1",
+              content: "Build it as a side conversation.",
+            },
+          ],
+        },
+      ],
+    },
+    settle: [
+      { kind: "visible", target: { text: "Build it as a side conversation." } },
+    ],
+    steps: [
+      {
+        kind: "select-text",
+        scope: { testId: "main-message-list" },
+        text: "Build it as a side conversation.",
+      },
+      { kind: "click", target: { role: "button", name: "Ask in side chat" } },
+      { kind: "visible", target: { testId: "sidecar-panel" } },
+      { kind: "visible", target: { text: "Side chat" } },
+      { kind: "visible", target: { text: "1 selected text fragment" } },
+      { kind: "visible", target: { text: "Ask a follow-up" } },
+      {
+        kind: "visible",
+        target: { text: "Ask a follow-up grounded in the referenced text." },
+      },
+    ],
   },
   {
     id: "thread-list-pin",

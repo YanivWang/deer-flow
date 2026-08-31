@@ -3,13 +3,14 @@
   【文件职责】     组合 live WebSocket 与 static REST 的唯一 browser 控制面板，并映射远端输入。
   【架构位置】     L3
   【主要导出】     默认 BrowserPanel 组件
-  【依赖关系】     useBrowserStream · browser core · browser API · artifact URL · Vue Query
+  【依赖关系】     useBrowserStream · browser core · browser API · artifact URL · ui/conversation · Vue Query
   【边界与注意】   模式由连接/REST 结果推导；不向 Gateway 发明 mode/state 字段，不双发 click。
 */
 import { useMutation } from "@tanstack/vue-query";
 import { ArrowLeft, ArrowRight, Monitor, RefreshCw, X } from "lucide-vue-next";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
+import { ConversationEmptyState } from "@/components/ui/conversation";
 import { resolveArtifactURL } from "@/core/artifacts/utils";
 import type { BrowserViewFrame } from "@/core/browser/frame";
 import {
@@ -464,30 +465,49 @@ onBeforeUnmount(() => {
     </p>
 
     <main
-      ref="stage"
-      data-testid="browser-stage"
-      class="relative min-h-0 flex-1 bg-neutral-950"
-      @mousedown="browserPanel?.focus()"
+      class="relative flex min-h-0 grow flex-col overflow-hidden bg-neutral-950"
     >
-      <img
-        v-if="displayFrameUrl"
-        ref="surface"
-        :src="displayFrameUrl"
-        :alt="authoritativeTitle"
-        draggable="false"
-        class="absolute inset-0 size-full object-contain"
-        @click="clickFrame"
-        @mousemove="moveFrameInput"
-      />
+      <!--
+        舞台是 main 里面单独的一层，不是 main 自己：上游 browser-view-panel.tsx:423
+        把 stageRef / onMouseDown / bg-neutral-900 都挂在这一层，main 只负责
+        `flex-col overflow-hidden` 与更深的 bg-neutral-950。本仓原来把两层压成
+        一个 main，于是**画面背后露出来的是 neutral-950 而不是 neutral-900**。
+        两层的盒子实际重合（main 的唯一 flex 子节点带 grow），所以这不是几何差异，
+        只是底色差一档——台账看不见它：`browser-feature` 只断言触发器可见，
+        从来没打开过面板。
+      -->
       <div
-        v-else
-        class="text-muted-foreground absolute inset-0 grid place-items-center"
+        ref="stage"
+        data-testid="browser-stage"
+        class="relative min-h-0 grow bg-neutral-900"
+        @mousedown="browserPanel?.focus()"
       >
-        {{
-          requestedLive
-            ? $i18n.t.value.browser.connectingFrame
-            : $i18n.t.value.browser.noFrame
-        }}
+        <img
+          v-if="displayFrameUrl"
+          ref="surface"
+          :src="displayFrameUrl"
+          :alt="authoritativeTitle"
+          draggable="false"
+          class="absolute inset-0 size-full cursor-default object-contain object-center"
+          @click="clickFrame"
+          @mousemove="moveFrameInput"
+        />
+        <ConversationEmptyState
+          v-else
+          class="absolute inset-0 m-auto h-fit"
+          :title="
+            requestedLive
+              ? $i18n.t.value.browser.connectingFrame
+              : $i18n.t.value.browser.noFrame
+          "
+          :description="
+            requestedLive
+              ? $i18n.t.value.browser.connectingFrameDescription
+              : $i18n.t.value.browser.noFrameDescription
+          "
+        >
+          <template #icon><Monitor /></template>
+        </ConversationEmptyState>
       </div>
     </main>
   </section>

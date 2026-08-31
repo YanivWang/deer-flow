@@ -284,6 +284,8 @@ const l2Files = [
   "app/components/ui/command/CommandList.vue",
   "app/components/ui/command/CommandShortcut.vue",
   "app/components/ui/command/index.ts",
+  "app/components/ui/conversation/ConversationEmptyState.vue",
+  "app/components/ui/conversation/index.ts",
   "app/components/ui/dialog/Dialog.vue",
   "app/components/ui/dialog/DialogClose.vue",
   "app/components/ui/dialog/DialogContent.vue",

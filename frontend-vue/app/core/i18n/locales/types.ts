@@ -529,7 +529,6 @@ export interface Translations {
     clearReferences: string;
     emptyTitle: string;
     emptyDescription: string;
-    inputLabel: string;
     placeholder: string;
     send: string;
     sendFailed: string;
@@ -1005,7 +1004,9 @@ export interface Translations {
     switchToStatic: string;
     switchToLive: string;
     connectingFrame: string;
+    connectingFrameDescription: string;
     noFrame: string;
+    noFrameDescription: string;
     navigationFailed: (detail: string) => string;
     navigationFailedFallback: string;
   };

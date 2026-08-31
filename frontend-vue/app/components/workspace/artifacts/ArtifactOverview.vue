@@ -3,7 +3,7 @@
   【文件职责】     artifact 面板在**没有选中任何文件**时的样子：文件清单或空状态。
   【架构位置】     L3 extension reference
   【主要导出】     默认 ArtifactOverview 组件
-  【依赖关系】     core/artifacts/display · core/artifacts/utils · AgentChat
+  【依赖关系】     core/artifacts/display · core/artifacts/utils · ui/conversation · AgentChat
   【边界与注意】   这条分支以前 Vue 没有：头部的 artifacts 入口会顺手把第一个文件选中，
                    于是面板直接进详情。React 不选（frontend/src/components/workspace/artifacts/artifact-trigger.tsx
                    只调 setOpen(true)），面板落在这份清单上
@@ -20,6 +20,7 @@ import { computed } from "vue";
 import { Download, Files, X } from "lucide-vue-next";
 
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ConversationEmptyState } from "@/components/ui/conversation";
 import {
   artifactFileIcon,
   artifactFileName,
@@ -65,20 +66,13 @@ const entries = computed(() =>
         <X />
       </Button>
     </div>
-    <div
+    <ConversationEmptyState
       v-if="entries.length === 0"
-      class="flex size-full flex-col items-center justify-center gap-3 p-8 text-center"
+      :title="$i18n.t.value.artifacts.noSelectionTitle"
+      :description="$i18n.t.value.artifacts.noSelectionDescription"
     >
-      <div class="text-muted-foreground"><Files /></div>
-      <div class="space-y-1">
-        <h3 class="text-sm font-medium">
-          {{ $i18n.t.value.artifacts.noSelectionTitle }}
-        </h3>
-        <p class="text-muted-foreground text-sm">
-          {{ $i18n.t.value.artifacts.noSelectionDescription }}
-        </p>
-      </div>
-    </div>
+      <template #icon><Files /></template>
+    </ConversationEmptyState>
     <div
       v-else
       class="flex size-full max-w-[var(--container-width-sm)] flex-col justify-center p-4 pt-8"

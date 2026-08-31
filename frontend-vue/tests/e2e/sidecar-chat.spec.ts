@@ -131,7 +131,43 @@ async function expectSidecarSelectionToolbarActions(page: Page, text: string) {
   throw lastError;
 }
 
+/*
+  侧栏面板由 splitpanes 驱动，`.splitpanes--ready .splitpanes__pane` 带
+  `transition: width .2s ease-out`——面板刚打开的那 200ms 里 form 只有几十像素宽，
+  工具条里的按钮全被 flex 压扁并溢出。
+
+  在此之前这里不需要等：sidecar 面板自己**又发了一次 `GET /api/models`**，
+  「等模型名出现」这一步顺带把动画等完了。那次重复请求已经修掉（改走共享的
+  useModels，与 AgentChat 同一份 Vue Query 缓存），模型名于是第一帧就在，
+  这几个几何断言就直接量在动画中间。
+
+  所以要等的是**布局本身**，不是某个控件出现。连续两次量到同一个宽度才算停。
+*/
+async function waitForSidecarPaneSettled(page: Page) {
+  let previous = -1;
+  await expect
+    .poll(
+      async () => {
+        const width = await page.evaluate(() => {
+          const textarea = Array.from(
+            document.querySelectorAll("textarea"),
+          ).find((element) =>
+            /deeper follow-up/i.test(element.getAttribute("placeholder") ?? ""),
+          );
+          const form = textarea?.closest("form");
+          return form ? Math.round(form.getBoundingClientRect().width) : -1;
+        });
+        const settled = width > 0 && width === previous;
+        previous = width;
+        return settled;
+      },
+      { timeout: 5_000, intervals: [100] },
+    )
+    .toBe(true);
+}
+
 async function expectComposerHeightsEqual(page: Page) {
+  await waitForSidecarPaneSettled(page);
   const metrics = await page.evaluate(() => {
     const findFormByPlaceholder = (pattern: RegExp) => {
       const textarea = Array.from(document.querySelectorAll("textarea")).find(
@@ -161,6 +197,7 @@ async function expectComposerHeightsEqual(page: Page) {
 }
 
 async function expectSidecarModelPinnedToSubmit(page: Page) {
+  await waitForSidecarPaneSettled(page);
   const metrics = await page.evaluate(() => {
     const getComposerMetrics = (placeholderPattern: RegExp) => {
       const textarea = Array.from(document.querySelectorAll("textarea")).find(
@@ -237,6 +274,7 @@ async function expectSidecarModelPinnedToSubmit(page: Page) {
 }
 
 async function expectSidecarModelHiddenWhenCompact(page: Page) {
+  await waitForSidecarPaneSettled(page);
   const metrics = await page.evaluate(() => {
     const sideTextarea = Array.from(document.querySelectorAll("textarea")).find(
       (element) =>

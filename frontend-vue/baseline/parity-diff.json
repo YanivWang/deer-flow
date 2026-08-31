@@ -120,6 +120,13 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
+    "sidecar-chat/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
     "thread-list-pin/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
