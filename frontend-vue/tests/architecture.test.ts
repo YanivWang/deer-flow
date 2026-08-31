@@ -245,6 +245,8 @@ const l2Files = [
   "app/components/ui/button/Button.vue",
   "app/components/ui/button/index.ts",
   "app/components/ui/button/variants.ts",
+  "app/components/ui/sidebar/SidebarTrigger.vue",
+  "app/components/ui/sidebar/index.ts",
   "app/lib/focusable.ts",
   "app/components/ui/alert-dialog/AlertDialog.vue",
   "app/components/ui/alert-dialog/AlertDialogAction.vue",

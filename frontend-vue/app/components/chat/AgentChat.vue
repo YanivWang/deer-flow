@@ -17,13 +17,14 @@ import {
   watch,
 } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
-import { Bot, CalendarClock, Menu, PlusSquare } from "lucide-vue-next";
+import { Bot, CalendarClock, PlusSquare } from "lucide-vue-next";
 
 import AgentWelcome from "@/components/chat/AgentWelcome.vue";
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
 import { buttonVariants } from "@/components/ui/button";
 import AuroraText from "@/components/ui/effects/AuroraText.vue";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import ContextUsageBadge from "@/components/workspace/ContextUsageBadge.vue";
 import TodoList from "@/components/workspace/TodoList.vue";
 import TokenUsageIndicator from "@/components/chat/TokenUsageIndicator.vue";
@@ -44,6 +45,7 @@ import { useNotifications } from "@/composables/useNotifications";
 import { useSuggestionsConfig } from "@/composables/useSuggestionsConfig";
 import { useBrowserControlEnabled } from "@/composables/useWorkspaceFeatures";
 import { useAuthSession } from "@/composables/useAuthSession";
+import { useWorkspaceSidebar } from "@/composables/useWorkspaceSidebar";
 import { useModels } from "@/composables/useModels";
 import { useThreadSettings } from "@/composables/useThreadSettings";
 import { useThreadTokenUsage } from "@/composables/useThreadTokenUsage";
@@ -935,9 +937,13 @@ const headerClass = computed(() =>
   ),
 );
 
-function toggleSidebar() {
-  globalThis.dispatchEvent(new CustomEvent("deerflow:toggle-sidebar"));
-}
+/*
+  触发器现在直接读写共享状态，不再往 window 上发事件：此前这里发出去就不管了，
+  组件**拿不到开合态**，图标只能写死一个 Menu。全局事件仍然保留给真正跨切面的
+  两个调用方（命令面板的 Cmd+B、artifact 面板的收起）。
+*/
+const { open: sidebarOpen, toggleSidebar } = useWorkspaceSidebar();
+
 function startAgentChat() {
   if (!props.agentName) return;
   void router.push(
@@ -1429,16 +1435,13 @@ onUnmounted(() => {
             侧栏在移动端是一个会被卸载的抽屉，触发器指着一个此刻并不存在的 id，
             aria-controls 是断的；expanded 也只能描述抽屉，描述不了桌面端的收起态。
           -->
-          <button
+          <SidebarTrigger
             v-if="!isDemo"
-            type="button"
-            data-sidebar="trigger"
+            :open="sidebarOpen"
             :aria-label="$i18n.t.value.primitives.toggleSidebar"
-            class="hover:bg-accent flex size-8 items-center justify-center rounded-md md:hidden"
+            class="md:hidden"
             @click="toggleSidebar"
-          >
-            <Menu :size="18" />
-          </button>
+          />
           <div
             v-if="agentName"
             class="flex min-w-0 shrink-0 items-center gap-1.5 rounded-md border px-2 py-1"

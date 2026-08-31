@@ -11,8 +11,6 @@ import {
   Bot,
   Bug,
   CalendarClock,
-  ChevronsLeft,
-  ChevronsRight,
   ChevronsUpDown,
   Github,
   Globe,
@@ -45,9 +43,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useSettingsDialog } from "@/composables/useSettingsDialog";
 import { useThreads } from "@/composables/useThreads";
 import { useAgentsApiEnabled } from "@/composables/useWorkspaceFeatures";
+import {
+  SIDEBAR_NARROW_QUERY,
+  useWorkspaceSidebar,
+} from "@/composables/useWorkspaceSidebar";
 import { ThreadCascadeDeleteError } from "@/core/threads/delete";
 import {
   channelSourceOfThread,
@@ -67,21 +70,29 @@ const settingsDialog = useSettingsDialog();
 const toast = useWorkspaceToast();
 const sentinel = ref<HTMLElement | null>(null);
 const sidebarElement = ref<HTMLElement | null>(null);
-const collapsed = ref(false);
-const mobileOpen = ref(false);
 /*
   窄屏由 JS 判定而不是只靠 CSS：React 在移动端把侧栏换成 Sheet，关着时**整棵子树
   都不在 DOM 里**。只用 translate 推出屏幕的话，元素仍然可聚焦、仍然被读屏器遍历——
   用户会 Tab 进一个自己看不见的导航。SSR 阶段当作宽屏，与 React 的 useIsMobile
   在服务端返回 undefined（按桌面渲染）一致，水合后再纠正。
+
+  开合态本身住在 `useWorkspaceSidebar`，不在这个组件里：触发器有三个调用点，
+  另外两个（AgentChat / WorkspaceContainer）此前拿不到这份状态，见那个文件的头注释。
 */
-const isNarrow = ref(false);
-const NARROW_QUERY = "(max-width: 767px)";
+const {
+  collapsed,
+  mobileOpen,
+  isNarrow,
+  open: sidebarOpen,
+  sidebarExpanded,
+  setCollapsed,
+  closeMobileSidebar,
+  toggleSidebar,
+  collapseSidebar,
+  syncNarrow,
+  restoreFromCookie,
+} = useWorkspaceSidebar();
 let narrowMedia: MediaQueryList | null = null;
-function syncNarrow(event: MediaQueryList | MediaQueryListEvent) {
-  isNarrow.value = event.matches;
-}
-const sidebarExpanded = computed(() => !collapsed.value || mobileOpen.value);
 const settingsOpen = ref(false);
 const settingsTrigger = ref<HTMLButtonElement | null>(null);
 const renameThreadId = ref<string | null>(null);
@@ -92,39 +103,8 @@ const deletingThreadId = ref<string | null>(null);
 let observer: IntersectionObserver | null = null;
 let focusBeforeMobileOpen: HTMLElement | null = null;
 
-const SIDEBAR_COOKIE = "sidebar_state";
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const displayThreadTitle = (thread: Parameters<typeof titleOfThread>[0]) =>
   titleOfThread(thread, $i18n.t.value.pages.untitled);
-
-function setCollapsed(value: boolean) {
-  collapsed.value = value;
-  document.cookie = `${SIDEBAR_COOKIE}=${String(!value)}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; samesite=lax`;
-}
-
-function closeMobileSidebar() {
-  mobileOpen.value = false;
-}
-
-function toggleSidebar() {
-  if (globalThis.matchMedia?.("(max-width: 767px)").matches) {
-    mobileOpen.value = !mobileOpen.value;
-  } else {
-    setCollapsed(!collapsed.value);
-  }
-}
-
-/*
-  收起（不是切换）。React 在选中 artifact 时调 `useSidebar().setOpen(false)`
-  （frontend/src/components/workspace/artifacts/context.tsx），也就是把桌面侧栏
-  收起并写进同一个 cookie；`openMobile` 不受影响。这里照同样的语义实现，
-  用一个**独立**事件而不是给 toggle 加参数：一个叫 toggle 的事件有时不切换，
-  是下一个读者最容易读错的那种代码。
-*/
-function collapseSidebar() {
-  if (collapsed.value) return;
-  setCollapsed(true);
-}
 
 function onWindowKeydown(event: KeyboardEvent) {
   if (event.key === "Escape" && mobileOpen.value) {
@@ -161,16 +141,12 @@ function keepMobileFocus(event: KeyboardEvent) {
 }
 
 onMounted(() => {
-  narrowMedia = globalThis.matchMedia?.(NARROW_QUERY) ?? null;
+  narrowMedia = globalThis.matchMedia?.(SIDEBAR_NARROW_QUERY) ?? null;
   if (narrowMedia) {
     syncNarrow(narrowMedia);
     narrowMedia.addEventListener("change", syncNarrow);
   }
-  const persisted = document.cookie
-    .split("; ")
-    .find((part) => part.startsWith(`${SIDEBAR_COOKIE}=`))
-    ?.slice(SIDEBAR_COOKIE.length + 1);
-  if (persisted === "false") collapsed.value = true;
+  restoreFromCookie();
   globalThis.addEventListener("deerflow:toggle-sidebar", toggleSidebar);
   globalThis.addEventListener("deerflow:collapse-sidebar", collapseSidebar);
   globalThis.addEventListener("keydown", onWindowKeydown);
@@ -403,14 +379,16 @@ function openSettingsDialog(section: "appearance" | "about") {
           >DF</span
         >
         <!--
-        名字恒为 "Toggle Sidebar"，也不带 aria-expanded：React 的 SidebarTrigger
-        就是一个 sr-only 的固定名字。名字随收起态在"收起/展开"之间来回换，读屏器
-        每次折叠都会重念一遍按钮，用户听到的是控件变了，其实只是状态变了。
-      -->
-        <button
-          type="button"
-          data-sidebar="trigger"
-          class="hover:bg-sidebar-accent size-8 items-center justify-center rounded-md"
+          名字恒为 "Toggle Sidebar"，也不带 aria-expanded：React 的 SidebarTrigger
+          就是一个 sr-only 的固定名字。名字随收起态在"收起/展开"之间来回换，读屏器
+          每次折叠都会重念一遍按钮，用户听到的是控件变了，其实只是状态变了。
+
+          可见性 class 由调用点给，这也是上游的形状（collapsed 分支传的是
+          `hidden pl-2 group-hover/workspace-header:block`）；盒子、图标、opacity
+          则全部归 primitive，见 ui/sidebar/SidebarTrigger.vue。
+        -->
+        <SidebarTrigger
+          :open="sidebarOpen"
           :class="
             sidebarExpanded
               ? 'hidden md:flex'
@@ -418,10 +396,7 @@ function openSettingsDialog(section: "appearance" | "about") {
           "
           :aria-label="$i18n.t.value.primitives.toggleSidebar"
           @click="setCollapsed(!collapsed)"
-        >
-          <ChevronsRight v-if="collapsed" :size="16" />
-          <ChevronsLeft v-else :size="16" />
-        </button>
+        />
       </div>
       <!--
         「新对话」和上面那条标题栏同属 SidebarHeader，中间隔 gap-2（8px）：React 把

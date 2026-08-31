@@ -25,11 +25,13 @@
 import { ChevronRight } from "lucide-vue-next";
 import { computed } from "vue";
 
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useWorkspaceSidebar } from "@/composables/useWorkspaceSidebar";
 
 const route = useRoute();
 const { $i18n } = useNuxtApp();
@@ -43,9 +45,12 @@ function nameOfSegment(segment: string | undefined) {
   return segment[0]!.toUpperCase() + segment.slice(1);
 }
 
-function toggleSidebar() {
-  globalThis.dispatchEvent(new CustomEvent("deerflow:toggle-sidebar"));
-}
+/*
+  触发器现在直接读写共享状态，不再往 window 上发事件：此前这里发出去就不管了，
+  组件**拿不到开合态**，图标只能写死一个 ChevronRight。全局事件仍然保留给
+  真正跨切面的两个调用方（命令面板的 Cmd+B、artifact 面板的收起）。
+*/
+const { open: sidebarOpen, toggleSidebar } = useWorkspaceSidebar();
 </script>
 
 <template>
@@ -54,15 +59,12 @@ function toggleSidebar() {
       class="top-0 right-0 left-0 z-20 flex h-16 shrink-0 items-center justify-between gap-2 border-b backdrop-blur-sm transition-[width,height] ease-out"
     >
       <div class="flex min-w-0 items-center gap-2 px-2 sm:px-4">
-        <button
-          type="button"
-          data-sidebar="trigger"
-          class="hover:bg-sidebar-accent size-8 items-center justify-center rounded-md md:hidden"
+        <SidebarTrigger
+          :open="sidebarOpen"
+          class="md:hidden"
           :aria-label="$i18n.t.value.primitives.toggleSidebar"
           @click="toggleSidebar"
-        >
-          <ChevronRight :size="16" />
-        </button>
+        />
         <nav :aria-label="$i18n.t.value.primitives.breadcrumb">
           <ol
             class="text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm break-words sm:gap-2.5"
