@@ -1,6 +1,9 @@
 /*
   red/green contract for the workspace-level shell owners.
 */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -10,6 +13,8 @@ import {
 import {
   commandForWorkspaceShortcut,
   isWorkspaceShortcutEditableTarget,
+  OTHER_SHORTCUT_MODIFIERS,
+  shortcutModifierLabels,
 } from "@/core/workspace-shell/shortcuts";
 import {
   buildSettingsCloseLocation,
@@ -98,6 +103,44 @@ describe("workspace shortcuts", () => {
       ),
     ).toEqual([true, true, true, true]);
     expect(isWorkspaceShortcutEditableTarget(document.body)).toBe(false);
+  });
+});
+
+describe("shortcut modifier labels", () => {
+  /*
+    快捷键本身两边都认 Ctrl（上面那组用例钉着），但**标签**此前写死了 ⌘/⇧——
+    Windows 与 Linux 用户会看到一串自己键盘上没有的符号。判据与上游一致：
+    user agent 里有没有 "Mac"。
+  */
+  it("follows the platform the way upstream does", () => {
+    expect(
+      shortcutModifierLabels("Mozilla/5.0 (Macintosh; Intel Mac OS X)"),
+    ).toEqual({ meta: "\u2318", shift: "\u21e7" });
+    expect(
+      shortcutModifierLabels("Mozilla/5.0 (Windows NT 10.0; Win64)"),
+    ).toEqual({ meta: "Ctrl+", shift: "Shift+" });
+    expect(shortcutModifierLabels("Mozilla/5.0 (X11; Linux x86_64)")).toEqual({
+      meta: "Ctrl+",
+      shift: "Shift+",
+    });
+  });
+
+  it("falls back to the non-Mac set when there is no user agent", () => {
+    // SSR 与首帧走这一支，和上游 useState(false) 的起点一致。
+    expect(shortcutModifierLabels(undefined)).toBe(OTHER_SHORTCUT_MODIFIERS);
+  });
+
+  it("leaves no hard-coded modifier glyph in the palette template", () => {
+    /*
+      光有 helper 不够：面板自己写死 ⌘ 的话上面那两条照样绿。
+      `.dom.test.ts` 里 import.meta.url 不是 file: URL，所以走 cwd。
+    */
+    const palette = readFileSync(
+      resolve(process.cwd(), "app/components/workspace/CommandPalette.vue"),
+      "utf8",
+    ).replaceAll(/<!--[\s\S]*?-->|\/\*[\s\S]*?\*\//g, "");
+    expect(palette).not.toMatch(/[\u2318\u21e7]/);
+    expect(palette).toContain("shortcutModifierLabels(");
   });
 });
 

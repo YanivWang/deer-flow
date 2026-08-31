@@ -74,6 +74,37 @@ export function titleOfThread(thread: AgentThread, fallback = "Untitled") {
   return thread.values?.title ?? fallback;
 }
 
+/**
+ * 会话页的浏览器标签标题。
+ *
+ * 与上游 ThreadTitle 的 useEffect 同一条链
+ * （frontend/src/components/workspace/thread-title.tsx）：有标题就用标题，
+ * 没有标题时新会话落「新对话」、已有会话落「未命名」，加载中整条换成
+ * `Loading…`。上游那句 `Loading...` 是写死的英文，和 primitive 的可访问名
+ * 同一类，所以照抄而不进词典；放在这个 .ts 里也就不会被 i18n source guard
+ * 当成漏翻的模板文案。
+ *
+ * 这一条本仓此前**完全没有**：会话页一个 useHead 都不设，标签页永远停在
+ * nuxt.config 的根标题 "DeerFlow"。开着几个会话时分不出哪个是哪个，读屏器
+ * 打开页面时也念不出这条会话的名字。
+ */
+export function documentTitleOfThread(options: {
+  title: string | null | undefined;
+  isNewThread: boolean;
+  isLoading: boolean;
+  appName: string;
+  newChatLabel: string;
+  untitledLabel: string;
+}) {
+  if (options.isLoading) return `Loading... - ${options.appName}`;
+  const name = options.title?.trim()
+    ? options.title
+    : options.isNewThread
+      ? options.newChatLabel
+      : options.untitledLabel;
+  return `${name} - ${options.appName}`;
+}
+
 export function isThreadPinned(thread: Pick<AgentThread, "metadata">) {
   return thread.metadata?.[THREAD_PINNED_METADATA_KEY] === true;
 }

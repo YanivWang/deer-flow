@@ -74,6 +74,7 @@ import {
   type ThreadPresence,
 } from "@/core/threads/thread-presence";
 import type { AgentThread, GoalState } from "@/core/threads/types";
+import { documentTitleOfThread } from "@/core/threads/utils";
 import type { Todo } from "@/core/todos";
 import {
   buildReferenceMessageMetadata,
@@ -91,6 +92,8 @@ import {
   reconcileBrowserMessageFrame,
   type BrowserViewFrame,
 } from "@/core/browser/frame";
+import FlipDisplay from "@/components/ui/effects/FlipDisplay.vue";
+import { cn } from "@/lib/utils";
 
 /*
   Artifacts 面板按需加载。它已经在 `v-if` 后面——面板关着时一个 DOM 都不渲染，
@@ -879,6 +882,25 @@ const headerTitle = computed(() => {
       ?.values.title ?? ""
   );
 });
+/*
+  浏览器标签标题。上游是 ThreadTitle 里那个 useEffect 在写 document.title；
+  本仓此前会话页一个 useHead 都不设，标签页永远停在 nuxt.config 的根标题
+  "DeerFlow"——开着几个会话时分不出哪个是哪个，读屏器打开页面也念不出这条
+  会话的名字。判据在 core/threads/utils.ts 的 documentTitleOfThread。
+
+  喂给它的是 headerTitle（这条会话**真的**有的标题，没有就是空串），兜底由
+  documentTitleOfThread 按新/旧会话去挑，与上游同一条链。
+*/
+useHead(() => ({
+  title: documentTitleOfThread({
+    title: headerTitle.value,
+    isNewThread: routeThreadId.value === null,
+    isLoading: stream.isHistoryLoading.value,
+    appName: $i18n.t.value.pages.appName,
+    newChatLabel: $i18n.t.value.pages.newChat,
+    untitledLabel: $i18n.t.value.pages.untitled,
+  }),
+}));
 const currentThread = computed(() => {
   const threadId = routeThreadId.value;
   if (!threadId) return null;
@@ -898,6 +920,19 @@ const currentThread = computed(() => {
 });
 const isWelcomeMode = computed(
   () => visibleMessages.value.length === 0 && !stream.isHistoryLoading.value,
+);
+/*
+  头部的两态。上游 chat-page.tsx 把这两支写在同一个 cn() 里，欢迎态换掉的是
+  背景与模糊那三条；写成 `class` + `:class` 两个属性的话，`bg-background/80` 与
+  `bg-background/0` 会同时留在 class 上，赢家由样式表顺序决定而不是模板顺序。
+*/
+const headerClass = computed(() =>
+  cn(
+    "absolute top-0 right-0 left-0 z-30 flex h-12 shrink-0 items-center gap-2 px-2 sm:px-4",
+    isWelcomeMode.value
+      ? "bg-background/0 backdrop-blur-none"
+      : "bg-background/80 shadow-xs backdrop-blur",
+  ),
 );
 
 function toggleSidebar() {
@@ -1381,14 +1416,13 @@ onUnmounted(() => {
   >
     <template #main>
       <section id="chat" class="relative flex h-full min-h-0 flex-col">
-        <header
-          class="bg-background/80 absolute top-0 right-0 left-0 z-40 flex h-12 items-center gap-2 px-2 shadow-xs backdrop-blur sm:px-4"
-          :class="
-            isWelcomeMode
-              ? 'bg-background/0 shadow-none backdrop-blur-none'
-              : ''
-          "
-        >
+        <!--
+          `class` + `:class` 拼出来的冲突 Tailwind 类，赢家由样式表顺序决定而不是
+          模板顺序，所以欢迎态那三条覆盖走 cn() 的 computed（headerClass），
+          不写成第二个属性。z-index 与上游一致是 z-30：Vue 此前写的 z-40 会让头部
+          压到 artifact/sidecar 面板那一档之上。
+        -->
+        <header :class="headerClass">
           <!--
             名字与状态都照 React 的 SidebarTrigger（frontend/src/components/ui/sidebar.tsx）：
             一个 sr-only 的 "Toggle Sidebar"，**没有** aria-expanded / aria-controls。
@@ -1423,8 +1457,21 @@ onUnmounted(() => {
             兜底，不是这条会话的名字——把它画在头部，读屏器会把每一个空会话都念成
             一条叫「新对话」的记录。容器保留，占位由它负责。
           -->
-          <div class="min-w-0 flex-1 truncate text-sm font-medium">
-            {{ headerTitle }}
+          <div class="flex min-w-0 flex-1 items-center text-sm font-medium">
+            <!--
+              标题走 FlipDisplay，与上游 ThreadTitle 同构
+              （frontend/src/components/workspace/thread-title.tsx 就是
+              `<FlipDisplay uniqueKey={threadId}>`）。换线程时标题翻页式切换，
+              而不是原地跳变。
+
+              这一层因此**不再** `truncate`：上游的裁剪来自 FlipDisplay 自己的
+              `relative overflow-hidden`，是直接切掉而不是省略号。省略号看着更好，
+              但它会让两边在同一条长标题上画出不同的东西，而这一处并不是 React
+              坏了——是它选的裁剪方式。
+            -->
+            <FlipDisplay v-if="headerTitle" :unique-key="routeThreadId ?? ''">
+              {{ headerTitle }}
+            </FlipDisplay>
           </div>
           <button
             v-if="agentName && !bootstrap"
@@ -1439,92 +1486,100 @@ onUnmounted(() => {
             }}</span>
           </button>
           <!--
-            outline / sm 的按钮外观加一段 `hidden sm:inline` 的文字，不是一颗纯图标的
-            方按钮：React 的 ThreadScheduledTasksLink 就是
-            `<Button variant="outline" size="sm" asChild>` 包一个带同名 span 的链接
-            （frontend/src/components/workspace/thread-scheduled-tasks-link.tsx）。
-            两边的可访问名都来自 aria-label，所以这处差异在可访问性树上看不见——
-            看得见的是宽屏上一个念得出名字的按钮 vs 一个只有图标的方块。
+            右侧控件有一层分组容器，与上游 chat-page.tsx 同构：
+            `<div class="flex shrink-0 items-center gap-2">`。它不改变横向节奏
+            （标题是唯一的 flex-1，容器内外都是同样多个 gap-2），改变的是收缩行为——
+            标题变长时缩的是标题，不是这排按钮。
           -->
-          <NuxtLink
-            v-if="routeThreadId && !agentName && !isDemo"
-            :to="`/workspace/scheduled-tasks?thread_id=${encodeURIComponent(routeThreadId)}`"
-            :aria-label="$i18n.t.value.sidebar.scheduledTasks"
-            :class="buttonVariants({ variant: 'outline', size: 'sm' })"
-          >
-            <CalendarClock :size="16" />
-            <span class="hidden sm:inline">{{
-              $i18n.t.value.sidebar.scheduledTasks
-            }}</span>
-          </NuxtLink>
-          <TokenUsageIndicator
-            v-if="!isDemo && modelCatalog.tokenUsageEnabled.value"
-            :thread-id="routeThreadId"
-            :messages="visibleMessages"
-            :pending-messages="pendingUsageMessages"
-            :backend-usage="persistedTokenUsage"
-            :context-usage="contextUsage"
-            :enabled="modelCatalog.tokenUsageEnabled.value"
-            :preferences="settings.tokenUsage"
-            @preferences-change="updateThreadSettings('tokenUsage', $event)"
-          />
-          <ContextUsageBadge
-            v-else-if="!isDemo"
-            :context-usage="contextUsage"
-          />
-          <button
-            v-if="bootstrap"
-            type="button"
-            data-testid="agent-save"
-            class="rounded-md border px-3 py-1.5 text-xs"
-            :disabled="
-              !bootstrapConversationReady ||
-              stream.isStreaming.value ||
-              creationBusy ||
-              creation.status.value === 'created'
-            "
-            @click="creation.save"
-          >
-            {{
-              creation.status.value === "verifying"
-                ? $i18n.t.value.agents.verifying
-                : creation.status.value === "created"
-                  ? $i18n.t.value.agents.agentCreated
-                  : creation.status.value === "saving" ||
-                      stream.isStreaming.value
-                    ? $i18n.t.value.agents.saving
-                    : $i18n.t.value.agents.save
-            }}
-          </button>
-          <button
-            v-if="!isDemo && sidecar.sidecarThreadId.value && sidecarReady"
-            type="button"
-            data-testid="sidecar-header-trigger"
-            :aria-label="
-              sidecar.open.value
-                ? $i18n.t.value.sidecar.close
-                : $i18n.t.value.sidecar.open
-            "
-            class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
-            @click="toggleSidecar"
-          >
-            ◫
-          </button>
-          <BrowserTrigger
-            v-if="browserEnabled"
-            :open="activePanel === 'browser'"
-            @toggle="toggleBrowser"
-          />
-          <ExportTrigger
-            v-if="routeThreadId && currentThread && !isWelcomeMode && !isDemo"
-            :thread-id="routeThreadId"
-            :thread="currentThread"
-            :messages="visibleMessages"
-          />
-          <ArtifactTrigger
-            :count="artifactPanel.artifacts.value.length"
-            @open="showArtifacts"
-          />
+          <div class="flex shrink-0 items-center gap-2">
+            <!--
+              outline / sm 的按钮外观加一段 `hidden sm:inline` 的文字，不是一颗纯图标的
+              方按钮：React 的 ThreadScheduledTasksLink 就是
+              `<Button variant="outline" size="sm" asChild>` 包一个带同名 span 的链接
+              （frontend/src/components/workspace/thread-scheduled-tasks-link.tsx）。
+              两边的可访问名都来自 aria-label，所以这处差异在可访问性树上看不见——
+              看得见的是宽屏上一个念得出名字的按钮 vs 一个只有图标的方块。
+            -->
+            <NuxtLink
+              v-if="routeThreadId && !agentName && !isDemo"
+              :to="`/workspace/scheduled-tasks?thread_id=${encodeURIComponent(routeThreadId)}`"
+              :aria-label="$i18n.t.value.sidebar.scheduledTasks"
+              :class="buttonVariants({ variant: 'outline', size: 'sm' })"
+            >
+              <CalendarClock :size="16" />
+              <span class="hidden sm:inline">{{
+                $i18n.t.value.sidebar.scheduledTasks
+              }}</span>
+            </NuxtLink>
+            <TokenUsageIndicator
+              v-if="!isDemo && modelCatalog.tokenUsageEnabled.value"
+              :thread-id="routeThreadId"
+              :messages="visibleMessages"
+              :pending-messages="pendingUsageMessages"
+              :backend-usage="persistedTokenUsage"
+              :context-usage="contextUsage"
+              :enabled="modelCatalog.tokenUsageEnabled.value"
+              :preferences="settings.tokenUsage"
+              @preferences-change="updateThreadSettings('tokenUsage', $event)"
+            />
+            <ContextUsageBadge
+              v-else-if="!isDemo"
+              :context-usage="contextUsage"
+            />
+            <button
+              v-if="bootstrap"
+              type="button"
+              data-testid="agent-save"
+              class="rounded-md border px-3 py-1.5 text-xs"
+              :disabled="
+                !bootstrapConversationReady ||
+                stream.isStreaming.value ||
+                creationBusy ||
+                creation.status.value === 'created'
+              "
+              @click="creation.save"
+            >
+              {{
+                creation.status.value === "verifying"
+                  ? $i18n.t.value.agents.verifying
+                  : creation.status.value === "created"
+                    ? $i18n.t.value.agents.agentCreated
+                    : creation.status.value === "saving" ||
+                        stream.isStreaming.value
+                      ? $i18n.t.value.agents.saving
+                      : $i18n.t.value.agents.save
+              }}
+            </button>
+            <button
+              v-if="!isDemo && sidecar.sidecarThreadId.value && sidecarReady"
+              type="button"
+              data-testid="sidecar-header-trigger"
+              :aria-label="
+                sidecar.open.value
+                  ? $i18n.t.value.sidecar.close
+                  : $i18n.t.value.sidecar.open
+              "
+              class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
+              @click="toggleSidecar"
+            >
+              ◫
+            </button>
+            <BrowserTrigger
+              v-if="browserEnabled"
+              :open="activePanel === 'browser'"
+              @toggle="toggleBrowser"
+            />
+            <ExportTrigger
+              v-if="routeThreadId && currentThread && !isWelcomeMode && !isDemo"
+              :thread-id="routeThreadId"
+              :thread="currentThread"
+              :messages="visibleMessages"
+            />
+            <ArtifactTrigger
+              :count="artifactPanel.artifacts.value.length"
+              @open="showArtifacts"
+            />
+          </div>
         </header>
         <!--
           内层还有一个 main：React 的 SidebarInset 是外层 main，ChatPage 自己再开一个

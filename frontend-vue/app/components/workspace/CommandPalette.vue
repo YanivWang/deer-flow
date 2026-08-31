@@ -29,6 +29,9 @@ import { useSettingsDialog } from "@/composables/useSettingsDialog";
 import {
   commandForWorkspaceShortcut,
   isWorkspaceShortcutEditableTarget,
+  OTHER_SHORTCUT_MODIFIERS,
+  shortcutModifierLabels,
+  type ShortcutModifierLabels,
   type WorkspaceShortcutCommand,
 } from "@/core/workspace-shell/shortcuts";
 
@@ -46,24 +49,59 @@ const shortcutsOpen = ref(false);
 const search = ref("");
 let focusBeforeDialog: HTMLElement | null = null;
 
+/*
+  修饰键的写法跟着平台走，与上游同一条判据（见
+  core/workspace-shell/shortcuts.ts）。SSR 与首帧用非 Mac 的一套，挂载后再问
+  navigator——上游的 useState(false) + useEffect 也是这个顺序。
+*/
+const modifiers = ref<ShortcutModifierLabels>(OTHER_SHORTCUT_MODIFIERS);
+onMounted(() => {
+  modifiers.value = shortcutModifierLabels(globalThis.navigator?.userAgent);
+});
 const actions = computed(() => [
   {
     id: "new-chat" as const,
     label: $i18n.t.value.sidebar.newChat,
-    shortcut: "⇧⌘N",
+    shortcut: `${modifiers.value.meta}${modifiers.value.shift}N`,
     icon: MessageSquarePlus,
   },
   {
     id: "settings" as const,
     label: $i18n.t.value.common.settings,
-    shortcut: "⌘,",
+    shortcut: `${modifiers.value.meta},`,
     icon: Settings,
   },
   {
     id: "shortcuts" as const,
     label: $i18n.t.value.shortcuts.keyboardShortcuts,
-    shortcut: "⌘/",
+    shortcut: `${modifiers.value.meta}/`,
     icon: Keyboard,
+  },
+]);
+/*
+  行序与上游的对话框一致：K、⇧N、B、逗号、斜杠
+  （frontend/src/components/workspace/command-palette.tsx 里那个数组）。
+*/
+const shortcutRows = computed(() => [
+  {
+    keys: `${modifiers.value.meta}K`,
+    label: $i18n.t.value.shortcuts.openCommandPalette,
+  },
+  {
+    keys: `${modifiers.value.meta}${modifiers.value.shift}N`,
+    label: $i18n.t.value.sidebar.newChat,
+  },
+  {
+    keys: `${modifiers.value.meta}B`,
+    label: $i18n.t.value.shortcuts.toggleSidebar,
+  },
+  {
+    keys: `${modifiers.value.meta},`,
+    label: $i18n.t.value.common.settings,
+  },
+  {
+    keys: `${modifiers.value.meta}/`,
+    label: $i18n.t.value.shortcuts.keyboardShortcuts,
   },
 ]);
 const filteredActions = computed(() => {
@@ -203,16 +241,12 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onGlobalKeydown));
         {{ $i18n.t.value.shortcuts.keyboardShortcutsDescription }}
       </DialogDescription>
       <dl class="grid grid-cols-[1fr_auto] gap-x-5 gap-y-3 text-sm">
-        <dt>{{ $i18n.t.value.shortcuts.openCommandPalette }}</dt>
-        <dd><kbd>⌘K</kbd></dd>
-        <dt>{{ $i18n.t.value.sidebar.newChat }}</dt>
-        <dd><kbd>⇧⌘N</kbd></dd>
-        <dt>{{ $i18n.t.value.common.settings }}</dt>
-        <dd><kbd>⌘,</kbd></dd>
-        <dt>{{ $i18n.t.value.shortcuts.keyboardShortcuts }}</dt>
-        <dd><kbd>⌘/</kbd></dd>
-        <dt>{{ $i18n.t.value.shortcuts.toggleSidebar }}</dt>
-        <dd><kbd>⌘B</kbd></dd>
+        <template v-for="row in shortcutRows" :key="row.keys">
+          <dt>{{ row.label }}</dt>
+          <dd>
+            <kbd>{{ row.keys }}</kbd>
+          </dd>
+        </template>
       </dl>
     </DialogContent>
   </Dialog>

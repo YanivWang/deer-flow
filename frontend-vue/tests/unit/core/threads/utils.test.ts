@@ -4,6 +4,7 @@ import { expect, test } from "vitest";
 import type { AgentThread } from "@/core/threads/types";
 import {
   channelSourceOfThread,
+  documentTitleOfThread,
   isThreadPinned,
   pathOfThread,
   sortPinnedThreads,
@@ -182,4 +183,65 @@ test("textOfMessage returns null when array content has no text", () => {
   } as unknown as Message;
 
   expect(textOfMessage(message)).toBeNull();
+});
+
+/*
+  会话页的标签标题。与上游 ThreadTitle 的 useEffect 同一条链：有标题用标题，
+  没标题时新会话落「新对话」、已有会话落「未命名」，加载中整条换成 Loading。
+  本仓此前会话页一个 useHead 都不设，这四支一支都走不到。
+*/
+const LABELS = {
+  appName: "DeerFlow",
+  newChatLabel: "New chat",
+  untitledLabel: "Untitled",
+};
+
+test("names the tab after the thread when it has a title", () => {
+  expect(
+    documentTitleOfThread({
+      ...LABELS,
+      title: "Browser Enabled",
+      isNewThread: false,
+      isLoading: false,
+    }),
+  ).toBe("Browser Enabled - DeerFlow");
+});
+
+test("falls back by whether the thread is new", () => {
+  expect(
+    documentTitleOfThread({
+      ...LABELS,
+      title: "",
+      isNewThread: true,
+      isLoading: false,
+    }),
+  ).toBe("New chat - DeerFlow");
+  expect(
+    documentTitleOfThread({
+      ...LABELS,
+      title: null,
+      isNewThread: false,
+      isLoading: false,
+    }),
+  ).toBe("Untitled - DeerFlow");
+  // 只有空白也算没有标题。
+  expect(
+    documentTitleOfThread({
+      ...LABELS,
+      title: "   ",
+      isNewThread: false,
+      isLoading: false,
+    }),
+  ).toBe("Untitled - DeerFlow");
+});
+
+test("says it is loading before the thread arrives", () => {
+  expect(
+    documentTitleOfThread({
+      ...LABELS,
+      title: "Browser Enabled",
+      isNewThread: false,
+      isLoading: true,
+    }),
+  ).toBe("Loading... - DeerFlow");
 });

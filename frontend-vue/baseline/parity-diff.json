@@ -118,9 +118,7 @@
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "testId:browser-trigger x React=1127.7 Vue=1136.8 Δ9.1"
-      ]
+      "geometry": []
     },
     "thread-list-pin/desktop/light/en-US": {
       "ariaOnlyReact": [],
