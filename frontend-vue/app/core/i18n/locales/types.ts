@@ -1062,7 +1062,6 @@ export interface Translations {
 
   markdown: {
     downloadFile: string;
-    copied: string;
     copyCode: string;
     copyTable: string;
     copyTableAsMarkdown: string;
@@ -1077,6 +1076,16 @@ export interface Translations {
     tableFormatCsv: string;
     tableFormatTsv: string;
     mermaidChart: string;
+    downloadDiagram: string;
+    downloadDiagramAsSvg: string;
+    downloadDiagramAsPng: string;
+    downloadDiagramAsMmd: string;
+    mermaidFormatSvg: string;
+    mermaidFormatPng: string;
+    mermaidFormatMmd: string;
+    zoomIn: string;
+    zoomOut: string;
+    resetZoomAndPan: string;
     unsafeLink: string;
     unsafeLinkTitle: (url: string) => string;
   };

@@ -3,7 +3,7 @@
                     真正的 UI 在同包那个 67,773 字节的 chunk 内）
   【架构位置】     L2 —— 通用渲染层组件
   【主要导出】     默认组件
-  【依赖关系】     shiki（异步高亮）· @/lib/utils
+  【依赖关系】     shiki（异步高亮）· @/lib/utils · ./MarkdownCopyButton.vue · ./MarkdownIcon.vue
   【边界与注意】   ① **class 串必须写在本文件里**。上游 `globals.css` 有三行
                    `@source ".../node_modules/streamdown/dist/..."`，Tailwind 4 靠它从
                    streamdown 的 dist 扫 class。frontend-vue 不装 streamdown，那三行也
@@ -17,17 +17,25 @@
                    DOM 等价 gate 保持逐属性比对，不必为两个死 class 开一条豁免。
                    将来若上游修了，这里跟着改并重录夹具。
 
-                   ③ **首帧必须是未高亮的回退结构**，与上游 SSR 一致：shiki 的
+                   ③ 复制按钮与图标是**与 mermaid 图块共用**的组件，不是这里的私有实现：
+                   上游两处复用的是同一个 `CodeBlockCopyButton` 与同一套内联图标，
+                   各写一份迟早会分叉（复制反馈到底在图标上还是 title 上就分叉过一次，
+                   见 MarkdownCopyButton.vue 文件头 ②）。
+
+                   ④ **首帧必须是未高亮的回退结构**，与上游 SSR 一致：shiki 的
                    `codeToTokens` 是异步的，先画结构再替换 token，才不会让代码块在流式
                    过程中闪一下空白。异步结果回来时若 `code` 已经变了就丢弃——
                    流式代码块每个 chunk 都会触发一次高亮，晚到的结果会把新内容盖回旧内容。
 -->
 
 <script setup lang="ts">
-import { computed, inject, ref, shallowRef, watch } from "vue";
+import { computed, inject, shallowRef, watch } from "vue";
 
 import { markdownStreamingKey } from "@/core/markdown/rendering-context";
 import { cn } from "@/lib/utils";
+
+import MarkdownCopyButton from "./MarkdownCopyButton.vue";
+import MarkdownIcon from "./MarkdownIcon.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -58,7 +66,6 @@ const lines = computed(() => {
 
 /** 高亮结果；`null` 表示还没回来（或失败），走未高亮回退。 */
 const highlighted = shallowRef<HighlightedToken[][] | null>(null);
-const copied = ref(false);
 const streaming = inject(
   markdownStreamingKey,
   computed(() => false),
@@ -115,19 +122,6 @@ function tokenStyle(token: HighlightedToken): string {
   return `--sdm-c:${token.light};--sdm-tbg:${token.background};--shiki-dark:${token.dark}`;
 }
 
-async function copy() {
-  if (streaming.value) return;
-  try {
-    await navigator.clipboard.writeText(props.code);
-    copied.value = true;
-    setTimeout(() => {
-      copied.value = false;
-    }, 2000);
-  } catch {
-    // 复制失败不改变任何渲染状态：剪贴板权限被拒是常态，不是错误。
-  }
-}
-
 function download() {
   if (streaming.value) return;
   const blob = new Blob([props.code], { type: "text/plain" });
@@ -174,50 +168,9 @@ function download() {
           type="button"
           @click="download"
         >
-          <svg
-            color="currentColor"
-            height="16"
-            stroke-linejoin="round"
-            viewBox="0 0 16 16"
-            width="16"
-            size="14"
-          >
-            <path
-              clip-rule="evenodd"
-              d="M8.75 1V1.75V8.68934L10.7197 6.71967L11.25 6.18934L12.3107 7.25L11.7803 7.78033L8.70711 10.8536C8.31658 11.2441 7.68342 11.2441 7.29289 10.8536L4.21967 7.78033L3.68934 7.25L4.75 6.18934L5.28033 6.71967L7.25 8.68934V1.75V1H8.75ZM13.5 9.25V13.5H2.5V9.25V8.5H1V9.25V14C1 14.5523 1.44771 15 2 15H14C14.5523 15 15 14.5523 15 14V9.25V8.5H13.5V9.25Z"
-              fill="currentColor"
-              fill-rule="evenodd"
-            />
-          </svg>
+          <MarkdownIcon name="DownloadIcon" :size="14" />
         </button>
-        <button
-          :class="ACTION_CLASS"
-          data-streamdown="code-block-copy-button"
-          :disabled="streaming"
-          :title="
-            copied
-              ? $i18n.t.value.markdown.copied
-              : $i18n.t.value.markdown.copyCode
-          "
-          type="button"
-          @click="copy"
-        >
-          <svg
-            color="currentColor"
-            height="16"
-            stroke-linejoin="round"
-            viewBox="0 0 16 16"
-            width="16"
-            size="14"
-          >
-            <path
-              clip-rule="evenodd"
-              d="M2.75 0.5C1.7835 0.5 1 1.2835 1 2.25V9.75C1 10.7165 1.7835 11.5 2.75 11.5H3.75H4.5V10H3.75H2.75C2.61193 10 2.5 9.88807 2.5 9.75V2.25C2.5 2.11193 2.61193 2 2.75 2H8.25C8.38807 2 8.5 2.11193 8.5 2.25V3H10V2.25C10 1.2835 9.2165 0.5 8.25 0.5H2.75ZM7.75 4.5C6.7835 4.5 6 5.2835 6 6.25V13.75C6 14.7165 6.7835 15.5 7.75 15.5H13.25C14.2165 15.5 15 14.7165 15 13.75V6.25C15 5.2835 14.2165 4.5 13.25 4.5H7.75ZM7.5 6.25C7.5 6.11193 7.61193 6 7.75 6H13.25C13.3881 6 13.5 6.11193 13.5 6.25V13.75C13.5 13.8881 13.3881 14 13.25 14H7.75C7.61193 14 7.5 13.8881 7.5 13.75V6.25Z"
-              fill="currentColor"
-              fill-rule="evenodd"
-            />
-          </svg>
-        </button>
+        <MarkdownCopyButton :code="props.code" />
       </div>
     </div>
     <div

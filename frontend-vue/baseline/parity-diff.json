@@ -237,23 +237,7 @@
       "geometry": []
     },
     "thread-history-mermaid/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- application:",
-        "- button \"Copy Code\":",
-        "- button \"Download diagram\":",
-        "- button \"Reset zoom and pan\":",
-        "- button \"View fullscreen\":",
-        "- button \"Zoom in\":",
-        "- button \"Zoom out\":",
-        "- img",
-        "- img",
-        "- img",
-        "- img",
-        "- img",
-        "- img",
-        "- img \"Mermaid chart\":",
-        "- text: mermaid"
-      ],
+      "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
