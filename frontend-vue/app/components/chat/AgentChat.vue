@@ -864,17 +864,9 @@ const promptHistory = computed(() =>
     })
     .filter(Boolean),
 );
-const currentTitle = computed(() => {
-  if (isDemo.value && demoTitle.value) return demoTitle.value;
-  if (!routeThreadId.value) return $i18n.t.value.pages.newChat;
-  return (
-    threads.threads.find((thread) => thread.thread_id === routeThreadId.value)
-      ?.values.title ?? $i18n.t.value.pages.newChat
-  );
-});
 /*
-  头部上真正显示出来的标题。currentTitle 带「新对话」兜底，那是给标签页用的；
-  头部只显示会话真的有的标题（React 的 ThreadTitle 就是这样）。
+  头部上真正显示出来的标题：会话真的有的标题，没有就是空串
+  （React 的 ThreadTitle 在 `!thread.values?.title` 时直接 return null）。
 */
 const headerTitle = computed(() => {
   if (isDemo.value && demoTitle.value) return demoTitle.value;
@@ -910,15 +902,24 @@ const currentThread = computed(() => {
     (thread) => thread.thread_id === threadId,
   );
   if (existing) return existing;
+  /*
+    列表里还没有这条会话时才自己拼一个。**不给 title 兜底**：这个对象只喂
+    ExportTrigger，而导出用的 `titleOfThread` 自己带 "Untitled" 兜底，与上游
+    `core/threads/export.ts` 是同一条链。此前这里填的是 currentTitle，而
+    currentTitle 在这一支里恒等于 `pages.newChat`——于是同一条无标题会话，
+    React 导出 `Untitled.md`、本仓导出 `New Chat.md`（中文界面下还会变成
+    `新对话.md`，导出文件名跟着界面语言走）。台账取不到它：导出要点开菜单，
+    文件名根本不在 DOM 里。
+  */
   return {
     thread_id: threadId,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     metadata: {},
     status: "idle",
-    values: { title: currentTitle.value, messages: visibleMessages.value },
+    values: { messages: visibleMessages.value },
     interrupts: {},
-  } as AgentThread;
+  } as unknown as AgentThread;
 });
 const isWelcomeMode = computed(
   () => visibleMessages.value.length === 0 && !stream.isHistoryLoading.value,

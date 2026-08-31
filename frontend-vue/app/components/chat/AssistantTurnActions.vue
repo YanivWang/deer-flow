@@ -6,6 +6,15 @@
   【边界与注意】   只拥有动作呈现与事件转发；动作可用性与业务执行仍由 MessageList 决定。
                    分支与重新生成的 aria-label 与 tooltip 文案是同一份：tooltip 是给鼠标
                    用户补上可见名字，不是可访问名字的来源，所以 aria-label 不能因此去掉。
+                   图标要认准上游那两颗：分支是 **GitBranchPlus**（带 + 号的那颗，
+                   `message-list.tsx:808`）、重新生成是 **RefreshCcw**（逆时针，
+                   `message-list.tsx:844`）。本仓此前用的是 GitBranch 与 RefreshCw——
+                   名字只差一两个字母，画出来是另外两颗图标，而可访问性树看不见 svg
+                   长什么样，所以对照台账永远不会报这一条。
+
+                   容器上**不写** `text-muted-foreground`：上游那一行只有布局与
+                   淡入类，颜色由 ghost 按钮自己继承。多写一句会把三颗图标整体调暗。
+
                    复制是例外，且是照着 React 抄的例外：React 的 CopyButton
                    （frontend/src/components/workspace/copy-button.tsx）只有图标和 tooltip，
                    同一个文件里的「编辑并重跑」却写了 aria-label——所以它不是「React
@@ -14,7 +23,12 @@
 -->
 
 <script setup lang="ts">
-import { Check, Copy, GitBranch, RefreshCw } from "lucide-vue-next";
+import {
+  Check,
+  Copy,
+  GitBranchPlusIcon,
+  RefreshCcwIcon,
+} from "lucide-vue-next";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +64,7 @@ const emit = defineEmits<{
   <TooltipProvider>
     <div
       data-testid="assistant-turn-actions"
-      class="text-muted-foreground mt-2 flex justify-start gap-1 opacity-0 transition-opacity delay-200 duration-300 group-hover:opacity-100"
+      class="mt-2 flex justify-start gap-1 opacity-0 transition-opacity delay-200 duration-300 group-hover:opacity-100"
     >
       <Tooltip>
         <TooltipTrigger>
@@ -69,7 +83,7 @@ const emit = defineEmits<{
             :aria-label="branchLabel"
             @click="emit('branch')"
           >
-            <GitBranch class="size-4" />
+            <GitBranchPlusIcon class="size-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>{{ branchLabel }}</TooltipContent>
@@ -82,7 +96,7 @@ const emit = defineEmits<{
             :aria-label="regenerateLabel"
             @click="emit('regenerate')"
           >
-            <RefreshCw class="size-3" />
+            <RefreshCcwIcon class="size-3" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>{{ regenerateLabel }}</TooltipContent>

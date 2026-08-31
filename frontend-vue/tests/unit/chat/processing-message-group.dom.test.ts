@@ -181,4 +181,20 @@ describe("ProcessingMessageGroup", () => {
     wrapper.unmount();
     vi.useRealTimers();
   });
+
+  /*
+    上游 `messages/run-duration.tsx:36` 把 "Working" 交给 Shimmer primitive；
+    本仓此前是 `<span class="animate-pulse">`。差的不只是动画：Shimmer 渲染的是
+    `<p>`，可访问性树上多一行 `- paragraph:`，span 不会——这一条只在有活跃 run
+    的页面上才看得见，对照台账里没有那样的场景。
+  */
+  it("hands the working label to the Shimmer primitive, not animate-pulse", () => {
+    const wrapper = mount(RunActivity, { props: { startTime: null } });
+    const row = wrapper.get("[data-testid='run-activity']");
+
+    const shimmer = row.get("p.shimmer");
+    expect(shimmer.text()).toContain("Working");
+    expect(row.find(".animate-pulse").exists()).toBe(false);
+    wrapper.unmount();
+  });
 });

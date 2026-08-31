@@ -244,9 +244,7 @@
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "text:I am DeerFlow, an open-source super agent. y React=244 Vue=238.7 Δ-5.3"
-      ]
+      "geometry": []
     },
     "artifact-stream-state/desktop/light/en-US": {
       "ariaOnlyReact": [],

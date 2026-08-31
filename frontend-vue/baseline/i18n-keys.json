@@ -957,7 +957,7 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 62,
+  "unusedTotal": 61,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.createPageSubtitle",
@@ -1013,7 +1013,6 @@
     "sidecar.reference",
     "sidecar.selectionCrossesMessages",
     "sidecar.sendFailed",
-    "tokenUsage.sharedAttribution",
     "toolCalls.clickToViewContent",
     "toolCalls.skillInstallTooltip",
     "uploads.uploading",

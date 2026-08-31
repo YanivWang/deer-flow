@@ -479,10 +479,16 @@ test.describe("Thread history", () => {
     改动，都能单独负向验证；合成一个"reasoning 底到正文顶"的距离反而钉不住——
     12+8 和 20+0 得到同一个和，而后者正是 margin 折叠时的样子。
 
-    **不在这里钉那段距离的绝对值**：实测是 36 而不是 12+8=20，多出来的 16 来自
-    `ReasoningDisclosure` 自己的外边距，那一块还没对着上游对齐（跨应用台账上
-    streaming-reasoning-order 仍有一条 `y Δ-5.3` 就是它的残余）。钉一个还没查清
-    来源的数字，只会在真去对齐 Reasoning 的那一轮变成假红。
+    这段距离的绝对值实测是 36 而不是 12+8=20，多出来的 16 是 Reasoning 根上的
+    `mb-4`——上游 `ai-elements/reasoning.tsx:114` 同一处、同一个值。这里也把它
+    钉上：三项加起来正好 36，任何一项被改动都会红。
+
+    wave 14 的 probe 顺手翻掉了这段注释此前的一句推断。它说跨应用台账上
+    streaming-reasoning-order 那条 `y Δ-5.3` 是"`ReasoningDisclosure` 自己的
+    外边距"的残余——不是。逐个盒子量下来，两边根上的 `mb-4` 完全相同，Δ 全部
+    来自**内容层**：本仓写的是 `mt-2` + `leading-relaxed`，上游是 `mt-4` +
+    text-sm 自带的行高，(8−16)+(22.75−20)=−5.25。两处方向相反、部分抵消，
+    这也是为什么只盯着 `mt-2` 会以为差的是 8px。
   */
   test("assistant content stacks with a flex gap and the body keeps its own margin", async ({
     page,
@@ -530,6 +536,12 @@ test.describe("Thread history", () => {
         gap: contentStyle.rowGap,
         // reasoning 确实排在正文上面——`gap` 与 `my-3` 之所以成立的前提。
         reasoningIsFirst: reasoning !== markdownRoot,
+        reasoningMarginBottom: getComputedStyle(reasoning).marginBottom,
+        // reasoning 盒底到正文盒顶的实际距离 = mb-4 + gap-2 + my-3。
+        reasoningToBody: Math.round(
+          markdownRoot.getBoundingClientRect().top -
+            reasoning.getBoundingClientRect().bottom,
+        ),
       };
     });
 
@@ -538,6 +550,8 @@ test.describe("Thread history", () => {
     expect(spacing.gap).toBe("8px");
     expect(spacing.marginTop).toBe("12px");
     expect(spacing.marginBottom).toBe("12px");
+    expect(spacing.reasoningMarginBottom).toBe("16px");
+    expect(spacing.reasoningToBody).toBe(36);
   });
 
   test("input box recalls previous prompts with arrow keys", async ({

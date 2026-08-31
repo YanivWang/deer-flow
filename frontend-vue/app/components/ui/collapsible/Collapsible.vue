@@ -18,15 +18,30 @@
 
                    happy-dom 把 hidden 当布尔属性、两种情况都序列化成 `hidden=""`，
                    看不出这个区别，所以这条判据的来源是 reka 的源码，不是单测输出。
+
+                   **`update:open` 必须显式声明并转发，靠 fallthrough 是不行的。**
+                   Vue 的 `renderComponentRoot` 在把 `$attrs` 合并到根 vnode 之前会跑
+                   `filterModelListeners`（runtime-core 3.5.40 第 4759 行）：凡是
+                   `onUpdate:<key>` 且本组件**声明了名为 `<key>` 的 prop**，就从
+                   fallthrough 里剔掉——它假定这一层自己在做 `v-model:<key>`，
+                   剔掉是为了避免双重 emit。本组件恰好声明了 `open`，于是
+                   `@update:open` 会被静默吞掉：**不报警告、不报错，点击触发器
+                   毫无反应**。wave 14 实测：同一个 Host 直接挂 reka 的
+                   CollapsibleRoot 能收到 `update:open`，套上这一层就收不到。
 -->
 <script setup lang="ts">
 import { CollapsibleRoot } from "reka-ui";
 
 defineProps<{ open?: boolean }>();
+const emit = defineEmits<{ "update:open": [value: boolean] }>();
 </script>
 
 <template>
-  <CollapsibleRoot data-slot="collapsible" :open="open">
+  <CollapsibleRoot
+    data-slot="collapsible"
+    :open="open"
+    @update:open="emit('update:open', $event)"
+  >
     <slot />
   </CollapsibleRoot>
 </template>

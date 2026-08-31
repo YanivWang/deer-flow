@@ -19,9 +19,10 @@ import {
   watch,
   type ComponentPublicInstance,
 } from "vue";
-import { Check, CheckCircle2, Clock3, Copy, Wrench } from "lucide-vue-next";
+import { CheckCircle2, Clock3, Wrench } from "lucide-vue-next";
 
 import AssistantTurnActions from "@/components/chat/AssistantTurnActions.vue";
+import HumanTurnActions from "@/components/chat/HumanTurnActions.vue";
 import HumanInputCard from "@/components/chat/HumanInputCard.vue";
 import CitationSourcesPanel from "@/components/chat/CitationSourcesPanel.vue";
 import MessageAttachments from "@/components/chat/MessageAttachments.vue";
@@ -953,54 +954,31 @@ onUnmounted(() => {
                   test-id="message-reference-attachment"
                   class="mt-2"
                 />
-                <div
-                  class="text-muted-foreground absolute right-0 -bottom-7 flex gap-2 text-xs opacity-0 transition-opacity group-hover:opacity-100"
-                >
-                  <!--
-                    复制按钮**没有**可访问名：React 的 CopyButton 只有一个图标 +
-                    一个 tooltip，没有 aria-label、也没有 sr-only 文本
-                    （frontend/src/components/workspace/copy-button.tsx）。
-                    同一排里的「编辑并重跑」在 React 那边是有 aria-label 的，
-                    所以这不是「React 全都没写」，是这一颗确实没有。补上名字会让
-                    两个应用在同一颗按钮上念出不同的东西，而这份对照要求它们一样。
-                  -->
-                  <button
-                    type="button"
-                    @click="
-                      copyMessage(
-                        message.id ?? `human:${entry.index}`,
-                        getMessageCopyData(message),
-                      )
-                    "
-                  >
-                    <Check
-                      v-if="
-                        copiedMessage === (message.id ?? `human:${entry.index}`)
-                      "
-                      :size="14"
-                    />
-                    <Copy v-else :size="14" />
-                  </button>
-                  <button
-                    v-if="
-                      interactive !== false &&
-                      editable?.humanMessage.id === message.id
-                    "
-                    type="button"
-                    class="hover:underline"
-                    :aria-label="$i18n.t.value.messages.actions.editAndRerun"
-                    @click="
-                      emit(
-                        'edit',
-                        message.id ?? '',
-                        text(message),
-                        groupIds(entry.index),
-                      )
-                    "
-                  >
-                    {{ $i18n.t.value.messages.actions.editAndRerun }}
-                  </button>
-                </div>
+                <HumanTurnActions
+                  :copied="
+                    copiedMessage === (message.id ?? `human:${entry.index}`)
+                  "
+                  :copy-label="$i18n.t.value.messages.actions.copyResponse"
+                  :edit-label="$i18n.t.value.messages.actions.editAndRerun"
+                  :show-edit="
+                    interactive !== false &&
+                    editable?.humanMessage.id === message.id
+                  "
+                  @copy="
+                    copyMessage(
+                      message.id ?? `human:${entry.index}`,
+                      getMessageCopyData(message),
+                    )
+                  "
+                  @edit="
+                    emit(
+                      'edit',
+                      message.id ?? '',
+                      text(message),
+                      groupIds(entry.index),
+                    )
+                  "
+                />
               </template>
               <template v-else-if="message.type === 'ai'">
                 <!--
