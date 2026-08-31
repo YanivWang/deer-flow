@@ -337,6 +337,8 @@ const l2Files = [
   "app/components/ui/tabs/TabsList.vue",
   "app/components/ui/tabs/TabsTrigger.vue",
   "app/components/ui/tabs/index.ts",
+  "app/components/ui/textarea/Textarea.vue",
+  "app/components/ui/textarea/index.ts",
   "app/components/ui/tooltip/Tooltip.vue",
   "app/components/ui/tooltip/TooltipContent.vue",
   "app/components/ui/tooltip/TooltipProvider.vue",

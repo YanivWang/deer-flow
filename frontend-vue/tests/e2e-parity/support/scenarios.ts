@@ -614,11 +614,67 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
               content: [{ type: "text", text: "Second question" }],
             },
             { type: "ai", id: "ai-2", content: "Intermediate answer" },
+            /*
+              这条 interrupt 是**故意**挂在 branch-thread 上的，不是另起一个场景：
+              场景 id 受棘轮约束（baseline/parity-scenario-coverage.json 只钉 id），
+              但夹具数据不受约束，而换夹具比加交互步骤划算——夹具不引入任何时序。
+
+              两边的分组逻辑逐字相同（core/messages/utils.ts 的
+              isClarificationToolMessage + assistant:clarification 分支实测 diff 为空），
+              所以 `name: "ask_clarification"` + `artifact.human_input` 在两个应用里
+              都会长出一个独立的 clarification 组。前一条是不带 tool_calls 的 ai，
+              形成 `assistant` 组，`lastOpenGroup()` 因此返回 null——这条 tool 消息
+              只进独立组，不会同时被塞进 processing 组里渲染两次。
+
+              必须放在**最后**：`deriveHumanInputThreadState` 有一条 legacy 兜底，
+              请求之后再出现任何可见的 human 消息就把它当成「已答」，卡片会从
+              active 掉成 answered，取样到的就不是打开态了。
+
+              choice_with_other 一次覆盖到卡片的大部分表面：标题、context 与问题的
+              markdown、选项按钮网格、sr-only 标签 + Textarea 的「其它答案」表单、
+              以及页脚提交按钮。
+            */
+            {
+              type: "tool",
+              id: "tool-clarify-1",
+              name: "ask_clarification",
+              content: "Waiting for clarification",
+              artifact: {
+                human_input: {
+                  version: 1,
+                  kind: "human_input_request",
+                  source: "ask_clarification",
+                  request_id: "parity-clarification-1",
+                  tool_call_id: "call-parity-1",
+                  question: "Which environment should I deploy to?",
+                  context: "Need the target environment.",
+                  input_mode: "choice_with_other",
+                  options: [
+                    {
+                      id: "option-1",
+                      label: "development",
+                      value: "development",
+                    },
+                    { id: "option-2", label: "staging", value: "staging" },
+                  ],
+                },
+              },
+            },
           ],
         },
       ],
     },
-    settle: [{ kind: "visible", target: { text: "First answer" } }],
+    /*
+      第二条锚点让这个夹具**自证**：settle 步骤在两个应用上都要跑通，所以哪一边
+      没把卡片渲染出来，整轮就当场红，而不是悄悄退化成「两边都没有、台账照样是 0」。
+    */
+    settle: [
+      { kind: "visible", target: { text: "First answer" } },
+      {
+        kind: "visible",
+        target: { text: "Which environment should I deploy to?" },
+      },
+    ],
   },
   {
     id: "subtask-card",

@@ -59,6 +59,7 @@ import {
   getAssistantTurnCopyData,
   getMessageCopyData,
   getMessageGroups,
+  isHiddenFromUIMessage,
   stripUploadedFilesTag,
 } from "@/core/messages/utils";
 import {
@@ -196,11 +197,57 @@ const branchable = computed(() =>
 const editable = computed(() =>
   getLatestEditableTurn(groups.value, props.streaming),
 );
+/*
+  「最新的 assistant 回合」是**按类型往回找**的，不是「最后一个组」。上游
+  message-list.tsx:597 的 latestAssistantGroupId 从尾部倒着扫，只认
+  `type === "assistant"`，并在 thread.isLoading 时直接返回 null。
+
+  本仓此前写的是位置判据 `entry.index === groups.length - 1`。只要 assistant 组
+  后面再挂上任何**别的**组，重跑入口就整个消失——待答的 clarification 组正是这种
+  情况：同一条线程上 React 仍然给出 Regenerate，Vue 没有（对照台账上
+  `- button "Regenerate"` 只此一处）。processing / subagent 组也是同一个形状。
+*/
+const latestAssistantGroupId = computed(() => {
+  if (props.streaming) return null;
+  for (let index = groups.value.length - 1; index >= 0; index -= 1) {
+    if (groups.value[index]?.type === "assistant") {
+      return groups.value[index]?.id ?? null;
+    }
+  }
+  return null;
+});
 const durations = computed(() =>
   getRunDurationDisplaysByGroupIndex(groups.value),
 );
+/*
+  可见性判据必须显式传 `isHiddenFromUIMessage`，不能用 deriveHumanInputThreadState
+  的默认值（那个只看 `hide_from_ui`）。上游 message-list.tsx:521 传的就是它。
+
+  差别落在 HIL 状态机的 legacy 兜底上：那条兜底把「请求之后出现的任意**可见**
+  human 消息」当成对最新未答请求的回答。默认判据看不见两类消息——名字在
+  HIDDEN_CONTROL_MESSAGE_NAMES 里的（summary / loop_warning / todo_reminder /
+  todo_completion_reminder），以及正文只有 `<slash_skill_activation>` 的那种。
+  于是本仓此前只要用户在待答卡片之后触发一次斜杠技能，卡片就被静默判成已答，
+  真正的问题再也回答不了。
+*/
 const humanInputState = computed(() =>
-  deriveHumanInputThreadState(props.rawMessages ?? props.messages),
+  deriveHumanInputThreadState(
+    props.rawMessages ?? props.messages,
+    (message) => !isHiddenFromUIMessage(message),
+  ),
+);
+/*
+  待答卡片打开时，人类消息上的「编辑并重跑」入口要收起来——重跑会把这条待答
+  请求连同它所在的回合一起作废，而卡片还在屏幕上等人回答。上游把这条判据写在
+  chat-page.tsx 的 `canEdit`（`!hasOpenHumanInputCard`，:345）里，再经 message-list
+  的 `canEdit` 传到每条人类消息上；本仓的 `hasOpenHumanInputRequest` 一直躺在
+  core 里没有任何调用点，入口因此在待答态下仍然可点。
+
+  直接读上面那份 humanInputState，不再 derive 第二遍：判据与可见性判据都已经
+  和上游一致，`latestOpenRequestId !== null` 就是 hasOpenHumanInputRequest 的定义。
+*/
+const hasOpenHumanInput = computed(
+  () => humanInputState.value.latestOpenRequestId !== null,
 );
 const hasActiveAssistantText = computed(() => {
   let lastHumanIndex = -1;
@@ -917,6 +964,7 @@ onUnmounted(() => {
                 "
                 :active="
                   interactive !== false &&
+                  !streaming &&
                   humanInputState.latestOpenRequestId ===
                     extractHumanInputRequest(message)!.request_id
                 "
@@ -925,6 +973,7 @@ onUnmounted(() => {
                     extractHumanInputRequest(message)!.request_id,
                   )
                 "
+                :read-only="interactive === false"
                 @submit="
                   handleHumanInputSubmit(
                     extractHumanInputRequest(message)!,
@@ -962,6 +1011,7 @@ onUnmounted(() => {
                   :edit-label="$i18n.t.value.messages.actions.editAndRerun"
                   :show-edit="
                     interactive !== false &&
+                    !hasOpenHumanInput &&
                     editable?.humanMessage.id === message.id
                   "
                   @copy="
@@ -1104,7 +1154,8 @@ onUnmounted(() => {
               <details
                 v-else-if="
                   message.type === 'tool' &&
-                  entry.group.type !== 'assistant:subagent'
+                  entry.group.type !== 'assistant:subagent' &&
+                  entry.group.type !== 'assistant:clarification'
                 "
                 class="my-2 text-sm"
               >
@@ -1151,7 +1202,8 @@ onUnmounted(() => {
               "
               :show-regenerate="
                 interactive !== false &&
-                entry.index === groups.length - 1 &&
+                latestAssistantGroupId !== null &&
+                entry.group.id === latestAssistantGroupId &&
                 Boolean(lastAI(entry.index)?.id)
               "
               @copy="

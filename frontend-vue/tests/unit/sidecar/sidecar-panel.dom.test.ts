@@ -238,13 +238,15 @@ describe("SidecarPanel session adapter", () => {
     });
     const card = wrapper.getComponent(HumanInputCard);
 
-    await card.get("button").trigger("click");
+    // 走表单 submit，不用 button click：happy-dom 只对真 MouseEvent 跑
+    // activation behavior，VTU 的 trigger("click") 派发的是普通 Event（坑 76）。
+    await card.get("form").trigger("submit");
     expect(card.get("[role='alert']").text()).toContain("required");
     expect(session.submitHumanInput).not.toHaveBeenCalled();
 
     const owner = card.get("input[type='text']");
     await owner.setValue("Dana");
-    await card.get("button").trigger("click");
+    await card.get("form").trigger("submit");
     await flushPromises();
     expect(session.submitHumanInput).toHaveBeenCalledWith(
       expect.objectContaining({ request_id: "sidecar-request-1" }),
@@ -256,7 +258,7 @@ describe("SidecarPanel session adapter", () => {
     expect(card.props("pending")).toBe(false);
     expect((owner.element as HTMLInputElement).value).toBe("Dana");
 
-    await card.get("button").trigger("click");
+    await card.get("form").trigger("submit");
     await flushPromises();
     expect(card.props("pending")).toBe(true);
     session.stream.error.value = new Error("sidecar run failed again");
@@ -264,7 +266,7 @@ describe("SidecarPanel session adapter", () => {
     expect(card.props("pending")).toBe(false);
     expect((owner.element as HTMLInputElement).value).toBe("Dana");
 
-    await card.get("button").trigger("click");
+    await card.get("form").trigger("submit");
     await flushPromises();
     const acceptedResponse = session.submitHumanInput.mock.calls.at(-1)?.[1];
     session.stream.messages.value = [
@@ -281,6 +283,8 @@ describe("SidecarPanel session adapter", () => {
     ];
     await flushPromises();
     expect(wrapper.text()).toContain("Answered:");
-    expect(wrapper.find("input[type='text']").exists()).toBe(false);
+    // 答过之后表单仍然挂着（禁用），不是被一行文字替换掉。
+    const answeredOwner = wrapper.get("input[type='text']");
+    expect(answeredOwner.attributes("disabled")).toBeDefined();
   });
 });

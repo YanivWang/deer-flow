@@ -957,7 +957,7 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 61,
+  "unusedTotal": 60,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.createPageSubtitle",
@@ -979,7 +979,6 @@
     "conversation.branchFailed",
     "conversation.startConversation",
     "home.blog",
-    "humanInput.otherLabel",
     "inputBox.createSkillPrompt",
     "inputBox.goalLengthCounter",
     "inputBox.inputPolishNoChanges",
