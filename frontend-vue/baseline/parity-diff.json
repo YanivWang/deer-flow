@@ -172,20 +172,11 @@
       "geometry": []
     },
     "subtask-card/desktop/light/en-US": {
-      "ariaOnlyReact": [
-        "- text: Executing subtask"
-      ],
-      "ariaOnlyVue": [
-        "- article:"
-      ],
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "text:Research stopped reload regression x React=418.5 Vue=412.5 Δ-6",
-        "text:Research stopped reload regression y React=199 Vue=169 Δ-30",
-        "text:Research stopped reload regression width React=232.6 Vue=710 Δ477.4",
-        "text:Research stopped reload regression color React=rgba(115,115,115,255) Vue=rgba(10,10,10,255)"
-      ]
+      "geometry": []
     },
     "artifact-preview/desktop/light/en-US": {
       "ariaOnlyReact": [],

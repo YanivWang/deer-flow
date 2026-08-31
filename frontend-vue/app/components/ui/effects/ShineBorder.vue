@@ -48,8 +48,21 @@ const colors = computed(() =>
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: shine-border var(--duration) infinite linear;
   will-change: background-position;
+}
+
+/*
+  上游是 `motion-safe:animate-shine`，也就是**只在 no-preference 下才有动画**，
+  减动偏好下整条 animation 不存在、background-position 停在 CSS 初始值 `0% 0%`。
+  此前这里写的是「总是动 + reduce 时 animation:none 并把 background-position 挪到
+  50% 50%」——动画开关一致，但静止时停的位置不一样，于是同一份减动偏好下两边的
+  流光边框亮在不同的地方。对照上下文正是 reducedMotion: "reduce"，只是这条差异
+  落在 background-position 上，台账不取样它。
+*/
+@media (prefers-reduced-motion: no-preference) {
+  .shine-border {
+    animation: shine-border var(--duration) infinite linear;
+  }
 }
 
 @keyframes shine-border {
@@ -61,13 +74,6 @@ const colors = computed(() =>
   }
   100% {
     background-position: 0% 0%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .shine-border {
-    animation: none;
-    background-position: 50% 50%;
   }
 }
 </style>

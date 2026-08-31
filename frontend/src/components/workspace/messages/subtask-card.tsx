@@ -58,6 +58,13 @@ export function SubtaskCard({
 }) {
   const { t } = useI18n();
   const [collapsed, setCollapsed] = useState(true);
+  // The header button is a disclosure: it toggles the panel below it. Without
+  // aria-expanded/aria-controls a screen reader announces it as a plain button
+  // with no state and no relationship to the panel, so the only cue that the
+  // card opens at all is the rotating chevron (WCAG 4.1.2). The id also gives
+  // the panel a stable target; ChainOfThoughtContent forwards it to the
+  // Collapsible content element.
+  const panelId = `subtask-panel-${taskId}`;
   const task = useSubtask(taskId)!;
   const { models, tokenUsageEnabled } = useModels();
   const updateSubtask = useUpdateSubtask();
@@ -132,6 +139,8 @@ export function SubtaskCard({
       <div className="bg-background/95 flex w-full flex-col rounded-lg">
         <div className="flex w-full items-center justify-between p-0.5">
           <Button
+            aria-controls={panelId}
+            aria-expanded={!collapsed}
             className="w-full items-start justify-start text-left"
             variant="ghost"
             onClick={() => setCollapsed(!collapsed)}
@@ -194,7 +203,7 @@ export function SubtaskCard({
             </div>
           </Button>
         </div>
-        <ChainOfThoughtContent className="px-4 pb-4">
+        <ChainOfThoughtContent className="px-4 pb-4" id={panelId}>
           {task.prompt && (
             <ChainOfThoughtStep
               label={

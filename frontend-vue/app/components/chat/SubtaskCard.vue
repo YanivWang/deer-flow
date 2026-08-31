@@ -3,25 +3,64 @@
   【文件职责】     展示子任务状态、模型、token、实时步骤与按需历史 backfill。
   【架构位置】     L3 UI adapter
   【主要导出】     默认 SubtaskCard 组件
-  【依赖关系】     core/tasks/api · core/tasks/view-model
-  【边界与注意】   展开才请求历史步骤；实时与历史合并由纯 view model 去重排序。
+  【依赖关系】     ui/chain-of-thought · ui/effects · core/tasks/api · core/tasks/view-model
+  【边界与注意】   构成照抄上游 `workspace/messages/subtask-card.tsx`：外层
+                   ChainOfThought，折叠头是一颗 ghost Button 里塞一个
+                   ChainOfThoughtStep，展开区是 ChainOfThoughtContent 里的一串 Step。
+                   此前本仓是 `<article>` + 手搓 button + span 堆，差的不是一层壳：
+
+                   - 任务描述在上游是 Step 的 label，落在 `flex-1 … overflow-hidden`
+                     里、继承 Step 默认 status(`complete`) 的 `text-muted-foreground`，
+                     右边还有一组 model/token/状态把它挤窄；本仓原来是独占一行的
+                     `font-medium` 正文色 span。对照台账上那四条几何
+                     （x Δ-6 · y Δ-30 · width 232.6→710 · color 灰→黑）是同一处。
+                   - 折叠头的元数据只在**折叠态**出现，展开后整块消失；`failed` 时
+                     整块转红并压到 67% 不透明度。
+                   - 状态词由 FlipDisplay 包着，且 in_progress 且最后一条消息带工具
+                     调用时显示的是**那次工具调用的解释**，只有没有工具调用才回落到
+                     `t.subtasks[status]`。
+
+                   展开区的 loading / 失败重试是**本仓自己加的**，上游没有：上游 fetch
+                   失败只是把 backfilledRef 放回 false，让下一次展开重试，用户看不到
+                   任何反馈。保留它是因为它确实更好，而且 subtask-card.dom.test.ts
+                   钉着这条行为。它只在真的请求失败时才出现，正常路径上两边的树一致；
+                   对照场景里 runId 为空、两边都不发这个请求，所以它也不在台账上。
+
+                   prompt 的 markdown 用的是调用点传下来的 markdownComponents，
+                   而上游那一处特意把 `a` 换成 CitationLink（其余地方是 MarkdownLink）。
+                   CitationLink 连同 HoverCard 引文卡片属于 citations 域，本仓还没有
+                   对应物，等那一轮再补——这里差的是链接的悬浮卡，不是 markdown 本身。
 */
 import { computed, onUnmounted, ref } from "vue";
 import {
   CheckCircle2,
-  ChevronDown,
-  CircleDashed,
+  ChevronUp,
   CircleX,
+  ClipboardList,
+  Loader2,
   Sparkles,
   Wrench,
 } from "lucide-vue-next";
 
+import MessageMarkdown from "@/components/chat/MessageMarkdown.vue";
+import { Button } from "@/components/ui/button";
+import {
+  ChainOfThought,
+  ChainOfThoughtContent,
+  ChainOfThoughtStep,
+} from "@/components/ui/chain-of-thought";
+import FlipDisplay from "@/components/ui/effects/FlipDisplay.vue";
+import Shimmer from "@/components/ui/effects/Shimmer.vue";
 import ShineBorder from "@/components/ui/effects/ShineBorder.vue";
+import { useModels } from "@/composables/useModels";
+import { hasToolCalls } from "@/core/messages/utils";
 import { fetchSubtaskSteps } from "@/core/tasks/api";
 import type { SubtaskStep } from "@/core/tasks/steps";
 import type { SubtaskResultUpdate } from "@/core/tasks/subtask-result";
 import type { Subtask } from "@/core/tasks/types";
 import { buildSubtaskCardViewModel } from "@/core/tasks/view-model";
+import { explainLastToolCall } from "@/core/tools/utils";
+import { cn } from "@/lib/utils";
 
 const props = defineProps<{
   taskId: string;
@@ -33,10 +72,12 @@ const props = defineProps<{
   terminal?: SubtaskResultUpdate;
   pendingStatus: Subtask["status"];
   isLoading: boolean;
+  markdownComponents?: Record<string, unknown>;
 }>();
 const { $i18n } = useNuxtApp();
+const { models, tokenUsageEnabled } = useModels();
 
-const expanded = ref(false);
+const collapsed = ref(true);
 const historicalSteps = ref<SubtaskStep[]>([]);
 const loadingSteps = ref(false);
 const stepsError = ref<string | null>(null);
@@ -52,9 +93,72 @@ const viewModel = computed(() =>
     liveTask: props.liveTask,
     terminal: props.terminal,
     historicalSteps: historicalSteps.value,
+    models: models.value,
   }),
 );
 const panelId = computed(() => `subtask-panel-${props.taskId}`);
+
+/** `t.subtasks[status]`，与上游同一张表。 */
+const statusText = computed(
+  () => $i18n.t.value.subtasks[viewModel.value.status],
+);
+
+/*
+  折叠态右侧的状态词。上游优先显示最后一次工具调用的解释，只有 in_progress 且
+  那条消息真的带工具调用时才走这一支；其余情况回落到 t.subtasks[status]。
+*/
+const collapsedStatusText = computed(() => {
+  const latest = props.liveTask?.latestMessage;
+  if (
+    viewModel.value.status === "in_progress" &&
+    latest &&
+    hasToolCalls(latest)
+  ) {
+    return explainLastToolCall(latest, $i18n.t.value);
+  }
+  return statusText.value;
+});
+
+/*
+  上游的 token 标签不是裸数字：开了 token 用量才显示，有数字时带上单位，
+  没数字时按状态显示「统计中」或短横线。本仓此前直接把 viewModel.tokenLabel
+  （只有数字）贴上去，且完全没看 tokenUsageEnabled。
+*/
+const runtimeUsageLabel = computed(() => {
+  if (!tokenUsageEnabled.value) return undefined;
+  const tokenLabel = viewModel.value.tokenLabel;
+  if (tokenLabel) return `${tokenLabel} ${$i18n.t.value.tokenUsage.label}`;
+  return viewModel.value.status === "in_progress"
+    ? $i18n.t.value.tokenUsage.collecting
+    : $i18n.t.value.tokenUsage.unavailableShort;
+});
+
+/*
+  折叠头右侧那组元数据的样式。**必须走 cn()**：failed 时上游是
+  `cn("text-muted-foreground …", "text-red-500 opacity-67")`，tailwind-merge 会把
+  被盖掉的 `text-muted-foreground` 整个删掉；用 `class` + `:class` 两个属性拼的话
+  两个 text-* 会同时留在 class 里，最终谁赢取决于**样式表里的先后**而不是这里的
+  先后——现在恰好是红色赢，但那是运气，不是判据。
+*/
+const metadataClasses = computed(() =>
+  cn(
+    "text-muted-foreground flex items-center gap-1 text-xs font-normal",
+    viewModel.value.status === "failed" ? "text-red-500 opacity-67" : "",
+  ),
+);
+
+/*
+  上游在 message-list 里构造 Subtask 时，pending 状态为 failed 就先把 error 填成
+  `t.subtasks.failed`，随后工具结果解析出的真 error 再覆盖它。没有这一步，
+  「跑到一半被停掉」的卡片展开后那条红色步骤会是空的。
+*/
+const errorText = computed(
+  () =>
+    viewModel.value.error ??
+    (props.pendingStatus === "failed"
+      ? $i18n.t.value.subtasks.failed
+      : undefined),
+);
 
 async function loadHistoricalSteps() {
   if (
@@ -91,8 +195,8 @@ async function loadHistoricalSteps() {
 
 function toggle(event: MouseEvent) {
   (event.currentTarget as HTMLButtonElement | null)?.focus();
-  expanded.value = !expanded.value;
-  if (expanded.value) void loadHistoricalSteps();
+  collapsed.value = !collapsed.value;
+  if (!collapsed.value) void loadHistoricalSteps();
 }
 
 function retrySteps() {
@@ -108,98 +212,166 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <article
-    class="border-border bg-background relative overflow-hidden rounded-lg border"
-    :aria-busy="viewModel.status === 'in_progress' || isLoading"
+  <ChainOfThought
+    class="relative w-full gap-2 rounded-lg border py-0"
+    :open="!collapsed"
     :data-task-id="taskId"
+    :aria-busy="viewModel.status === 'in_progress' || isLoading"
   >
+    <div
+      class="ambilight z-[-1]"
+      :class="viewModel.status === 'in_progress' ? 'enabled' : ''"
+    />
     <ShineBorder
       v-if="viewModel.status === 'in_progress'"
       :border-width="1.5"
       :shine-color="['#A07CFE', '#FE8FB5', '#FFBE7B']"
     />
-    <button
-      data-testid="subtask-toggle"
-      type="button"
-      class="hover:bg-accent/50 flex w-full items-center gap-2 px-3 py-2 text-left"
-      :aria-expanded="expanded"
-      :aria-controls="panelId"
-      @click="toggle"
-    >
-      <CheckCircle2
-        v-if="viewModel.status === 'completed'"
-        :size="16"
-        class="shrink-0 text-emerald-600"
-      />
-      <CircleX
-        v-else-if="viewModel.status === 'failed'"
-        :size="16"
-        class="text-destructive shrink-0"
-      />
-      <CircleDashed
-        v-else
-        :size="16"
-        class="text-muted-foreground shrink-0 animate-spin"
-      />
-      <span class="min-w-0 flex-1">
-        <span class="block truncate text-sm font-medium">{{
-          viewModel.description
-        }}</span>
-        <span class="text-muted-foreground flex flex-wrap gap-x-2 text-xs">
-          <span>{{ viewModel.statusLabel }}</span>
-          <span v-if="viewModel.modelLabel">{{ viewModel.modelLabel }}</span>
-          <span v-if="viewModel.tokenLabel">{{ viewModel.tokenLabel }}</span>
-        </span>
-      </span>
-      <ChevronDown
-        :size="16"
-        aria-hidden="true"
-        class="text-muted-foreground shrink-0 transition-transform"
-        :class="expanded ? 'rotate-180' : ''"
-      />
-    </button>
-
-    <div
-      v-if="expanded"
-      :id="panelId"
-      class="border-border space-y-3 border-t px-4 py-3"
-    >
-      <p v-if="viewModel.prompt" class="text-muted-foreground text-sm">
-        {{ viewModel.prompt }}
-      </p>
-      <p
-        v-if="loadingSteps"
-        role="status"
-        class="text-muted-foreground text-xs"
-      >
-        {{ $i18n.t.value.subtasks.loadingSteps }}
-      </p>
-      <div v-else-if="stepsError" role="alert" class="text-destructive text-xs">
-        <span>{{ stepsError }}</span>
-        <button
-          data-testid="subtask-steps-retry"
-          type="button"
-          class="ml-2 underline"
-          @click="retrySteps"
+    <div class="bg-background/95 flex w-full flex-col rounded-lg">
+      <div class="flex w-full items-center justify-between p-0.5">
+        <Button
+          data-testid="subtask-toggle"
+          class="w-full items-start justify-start text-left"
+          variant="ghost"
+          :aria-expanded="!collapsed"
+          :aria-controls="panelId"
+          @click="toggle"
         >
-          {{ $i18n.t.value.subtasks.retry }}
-        </button>
+          <div class="flex w-full items-center justify-between">
+            <ChainOfThoughtStep class="font-normal">
+              <template #icon><ClipboardList /></template>
+              <template #label>
+                <Shimmer
+                  v-if="viewModel.status === 'in_progress'"
+                  :text="viewModel.description"
+                  :duration="3"
+                  :spread="3"
+                />
+                <template v-else>{{ viewModel.description }}</template>
+              </template>
+            </ChainOfThoughtStep>
+            <div class="flex items-center gap-1">
+              <div v-if="collapsed" :class="metadataClasses">
+                <span
+                  v-if="viewModel.modelLabel"
+                  class="max-w-32 truncate"
+                  :title="viewModel.modelLabel"
+                  >{{ viewModel.modelLabel }}</span
+                >
+                <span
+                  v-if="runtimeUsageLabel"
+                  class="max-w-28 truncate"
+                  :title="runtimeUsageLabel"
+                  >{{ runtimeUsageLabel }}</span
+                >
+                <CheckCircle2
+                  v-if="viewModel.status === 'completed'"
+                  class="size-3"
+                />
+                <CircleX
+                  v-else-if="viewModel.status === 'failed'"
+                  class="size-3 text-red-500"
+                />
+                <Loader2
+                  v-else-if="viewModel.status === 'in_progress'"
+                  class="size-3 animate-spin"
+                />
+                <FlipDisplay
+                  class="max-w-[420px] truncate pb-1"
+                  :unique-key="liveTask?.latestMessage?.id ?? ''"
+                >
+                  {{ collapsedStatusText }}
+                </FlipDisplay>
+              </div>
+              <ChevronUp
+                class="text-muted-foreground size-4"
+                :class="collapsed ? 'rotate-180' : ''"
+              />
+            </div>
+          </div>
+        </Button>
       </div>
-      <ol v-if="viewModel.steps.length" class="space-y-2">
-        <li
-          v-for="step in viewModel.steps"
-          :key="step.message_index"
-          class="text-muted-foreground flex items-start gap-2 text-sm"
+      <ChainOfThoughtContent :id="panelId" class="px-4 pb-4">
+        <ChainOfThoughtStep v-if="viewModel.prompt">
+          <template #label>
+            <MessageMarkdown
+              :content="viewModel.prompt"
+              :components="markdownComponents"
+              :streaming="isLoading"
+            />
+          </template>
+        </ChainOfThoughtStep>
+        <p
+          v-if="loadingSteps"
+          role="status"
+          class="text-muted-foreground text-xs"
         >
-          <Wrench v-if="step.kind === 'tool'" :size="14" class="mt-0.5" />
-          <Sparkles v-else :size="14" class="mt-0.5" />
-          <span>{{ step.kind === "tool" ? step.tool_name : step.text }}</span>
-        </li>
-      </ol>
-      <p v-if="viewModel.result" class="text-sm">{{ viewModel.result }}</p>
-      <p v-if="viewModel.error" class="text-destructive text-sm">
-        {{ viewModel.error }}
-      </p>
+          {{ $i18n.t.value.subtasks.loadingSteps }}
+        </p>
+        <div
+          v-else-if="stepsError"
+          role="alert"
+          class="text-destructive text-xs"
+        >
+          <span>{{ stepsError }}</span>
+          <button
+            data-testid="subtask-steps-retry"
+            type="button"
+            class="ml-2 underline"
+            @click="retrySteps"
+          >
+            {{ $i18n.t.value.subtasks.retry }}
+          </button>
+        </div>
+        <ChainOfThoughtStep
+          v-for="(step, index) in viewModel.steps"
+          :key="`${step.message_index}-${index}`"
+        >
+          <template #icon>
+            <Loader2
+              v-if="
+                viewModel.status === 'in_progress' &&
+                index === viewModel.steps.length - 1
+              "
+              class="size-4 animate-spin"
+            />
+            <Wrench v-else-if="step.kind === 'tool'" class="size-4" />
+            <Sparkles v-else class="size-4" />
+          </template>
+          <template #label>
+            <template v-if="step.kind === 'tool'">{{
+              step.tool_name ?? statusText
+            }}</template>
+            <div v-else class="text-muted-foreground line-clamp-3 text-sm">
+              <MessageMarkdown
+                :content="step.text"
+                :components="markdownComponents"
+              />
+            </div>
+          </template>
+        </ChainOfThoughtStep>
+        <template v-if="viewModel.status === 'completed'">
+          <ChainOfThoughtStep>
+            <template #icon><CheckCircle2 class="size-4" /></template>
+            <template #label>{{ $i18n.t.value.subtasks.completed }}</template>
+          </ChainOfThoughtStep>
+          <ChainOfThoughtStep>
+            <template #label>
+              <MessageMarkdown
+                v-if="viewModel.result"
+                :content="viewModel.result"
+                :components="markdownComponents"
+              />
+            </template>
+          </ChainOfThoughtStep>
+        </template>
+        <ChainOfThoughtStep v-if="viewModel.status === 'failed'">
+          <template #icon><CircleX class="size-4 text-red-500" /></template>
+          <template #label>
+            <div class="text-red-500">{{ errorText }}</div>
+          </template>
+        </ChainOfThoughtStep>
+      </ChainOfThoughtContent>
     </div>
-  </article>
+  </ChainOfThought>
 </template>

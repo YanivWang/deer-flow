@@ -293,6 +293,23 @@ function subtaskId(
 ) {
   return toolCallId ?? `task-${groupIndex}-${callIndex}`;
 }
+/*
+  这条消息里 `task` 工具调用的条数，也就是组头要报的数字。
+
+  上游是按**组**去重后数的（`tasks: Set<Subtask>`），但 assistant:subagent 组
+  只可能装一条 ai 消息——getMessageGroups 里每遇到一条 hasSubagent 的消息就
+  `groups.push({ type: "assistant:subagent", messages: [message] })` 新开一组，
+  后续只有 tool 结果消息会被追加进来，而那些不带 task 调用。所以「每组一次」
+  和「每条带 task 调用的 ai 消息一次」是同一件事。
+*/
+function subtaskCallCount(message: Message) {
+  if (message.type !== "ai") return 0;
+  let count = 0;
+  for (const call of message.tool_calls ?? []) {
+    if (call.name === "task") count += 1;
+  }
+  return count;
+}
 async function handleHumanInputSubmit(
   request: HumanInputRequest,
   response: HumanInputResponse,
@@ -995,6 +1012,30 @@ onUnmounted(() => {
                   就是这个）。flex 容器不折叠 margin。
                 -->
                 <div class="flex flex-col gap-2">
+                  <!--
+                    子任务组头。上游 `message-list.tsx` 的 assistant:subagent 分支
+                    在**所有卡片之前**先渲染一行
+                    `<div className="text-muted-foreground pt-2 text-sm font-normal">`，
+                    内容是 `t.subtasks.executing(tasks.size)`；count===1 时那个函数
+                    既不插数字也不加复数，念出来正好是 "Executing subtask"。
+                    本仓此前整行没有，`subtasks.executing` 一直躺在未引用的词条里
+                    （对照台账上 `- text: Executing subtask` 只此一处）。
+
+                    放在 ReasoningDisclosure 之前而不是工具调用循环之前：上游把组头
+                    push 进 results 之后才开始遍历消息，推理块和卡片都排在它后面。
+                    这一行是 block、外面是 flex 容器，`pt-2` 不与容器的 gap 折叠，
+                    两边都是 8px 内边距 + 20px 行高 = 28px。
+                  -->
+                  <div
+                    v-if="subtaskCallCount(message) > 0"
+                    class="text-muted-foreground pt-2 text-sm font-normal"
+                  >
+                    {{
+                      $i18n.t.value.subtasks.executing(
+                        subtaskCallCount(message),
+                      )
+                    }}
+                  </div>
                   <ReasoningDisclosure
                     v-if="reasoning(message)"
                     :content="reasoning(message) ?? ''"
@@ -1026,27 +1067,35 @@ onUnmounted(() => {
                   >
                     {{ artifact.label }}
                   </button>
-                  <div
+                  <!--
+                    卡片是 gap-2 容器的**直接**子节点，不再套 `my-2 text-sm`。
+                    上游 assistant:subagent 分支把 SubtaskCard 直接 push 进
+                    `<div className="relative z-1 flex flex-col gap-2">`，中间没有层；
+                    flex 容器不折叠 margin，多出来的 `my-2` 会在 gap 的 8px 之外再加
+                    8px，把整张卡片往下推 8px。非 task 的工具调用仍走原来的 details，
+                    那是本仓自己的渲染路径（上游的工具步骤在 processing 组里），
+                    不在这一轮的范围内。
+                  -->
+                  <template
                     v-for="(call, callIndex) in message.tool_calls ?? []"
                     :key="subtaskId(call.id, entry.index, callIndex)"
-                    class="my-2 text-sm"
                   >
-                    <template v-if="call.name === 'task'">
-                      <SubtaskCard
-                        :task-id="subtaskId(call.id, entry.index, callIndex)"
-                        :thread-id="threadId"
-                        :run-id="runIdOfGroup(entry.index) ?? activeRunId"
-                        :description="subtaskDescription(call.args)"
-                        :prompt="subtaskPrompt(call.args)"
-                        :live-task="
-                          subtasks?.[subtaskId(call.id, entry.index, callIndex)]
-                        "
-                        :terminal="subtaskTerminal(call.id)"
-                        :pending-status="subtaskPendingStatus(call.id)"
-                        :is-loading="streaming"
-                      />
-                    </template>
-                    <template v-else>
+                    <SubtaskCard
+                      v-if="call.name === 'task'"
+                      :task-id="subtaskId(call.id, entry.index, callIndex)"
+                      :thread-id="threadId"
+                      :run-id="runIdOfGroup(entry.index) ?? activeRunId"
+                      :description="subtaskDescription(call.args)"
+                      :prompt="subtaskPrompt(call.args)"
+                      :live-task="
+                        subtasks?.[subtaskId(call.id, entry.index, callIndex)]
+                      "
+                      :terminal="subtaskTerminal(call.id)"
+                      :pending-status="subtaskPendingStatus(call.id)"
+                      :is-loading="streaming"
+                      :markdown-components="messageMarkdownComponents"
+                    />
+                    <div v-else class="my-2 text-sm">
                       <details class="group/tool">
                         <summary
                           class="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-2 py-1.5 transition-colors"
@@ -1063,11 +1112,24 @@ onUnmounted(() => {
                           class="bg-muted text-muted-foreground mt-1 ml-6 max-h-64 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
                           >{{ JSON.stringify(call.args, null, 2) }}</pre>
                       </details>
-                    </template>
-                  </div>
+                    </div>
+                  </template>
                 </div>
               </template>
-              <details v-else-if="message.type === 'tool'" class="my-2 text-sm">
+              <!--
+                子任务组里的 tool 结果**不单独渲染**。上游 assistant:subagent 分支只
+                遍历 `type === "ai"` 的消息（组头 + 推理块 + 卡片），tool 结果只被读
+                去更新子任务的状态、结果、模型与 token，不再画一遍。本仓此前走的是
+                通用的 tool 分支，于是同一份任务结果出现两次：一次在卡片里，一次是
+                下面这个 `<details>`（可访问性树上多一行 `- group: task result`）。
+              -->
+              <details
+                v-else-if="
+                  message.type === 'tool' &&
+                  entry.group.type !== 'assistant:subagent'
+                "
+                class="my-2 text-sm"
+              >
                 <summary
                   class="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-2 py-1.5"
                 >

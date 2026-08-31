@@ -122,3 +122,75 @@ body {
   color: var(--foreground);
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
+
+/*
+  子任务卡片「正在跑」时垫在卡片下面那层彩色环境光。
+
+  照抄上游 `frontend/src/styles/globals.css` 的 `.ambilight`（同样在 @layer base
+  里）。卡片本身永远渲染这个 div，只有 in_progress 时才加 `.enabled`；不加时
+  opacity 是 0，所以它在终态卡片上既看不见也不占位（高度 0）——但它在 DOM 里，
+  少了它卡片的子节点数就和上游对不上。
+
+  这里刻意**不加** prefers-reduced-motion 分支：上游没有，而对照要求两边在同一组
+  环境条件下长得一样。要改的话得两边同改。
+*/
+@layer base {
+  .ambilight {
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+  }
+
+  .ambilight:before,
+  .ambilight:after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: linear-gradient(
+      45deg,
+      #fb0094,
+      #0000ff,
+      #00ff00,
+      #ffff00,
+      #ff0000,
+      #fb0094,
+      #0000ff,
+      #00ff00,
+      #ffff00,
+      #ff0000
+    );
+    background-size: 400%;
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    z-index: -1;
+    animation: ambilight 40s ease-in-out infinite;
+  }
+
+  .ambilight.enabled {
+    opacity: 1;
+  }
+
+  .dark .ambilight:before,
+  .dark .ambilight:after {
+    opacity: 0.85;
+  }
+
+  @keyframes ambilight {
+    0% {
+      background-position: 0 0;
+    }
+    50% {
+      background-position: 400% 0;
+    }
+    100% {
+      background-position: 0 0;
+    }
+  }
+
+  .ambilight:after {
+    filter: blur(60px);
+  }
+}

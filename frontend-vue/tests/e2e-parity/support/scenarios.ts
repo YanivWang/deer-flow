@@ -323,6 +323,8 @@ const ARTIFACT_MESSAGES = [
 ];
 
 const SUBTASK_DESCRIPTION = "Research stopped reload regression";
+const SUBTASK_DONE_DESCRIPTION = "Summarize the release notes";
+const SUBTASK_DONE_RESULT = "Three regressions were fixed this week.";
 
 const MERMAID_CONTENT = `Here is a relationship diagram.
 
@@ -658,14 +660,76 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
                   },
                   type: "tool_call",
                 },
+                /*
+                  第二个子任务带工具结果，于是走的是**另一条**渲染路径：
+                  derivePendingSubtaskStatus 看到有结果就给 in_progress，真状态由
+                  parseSubtaskResult 从 additional_kwargs 读出来（completed）。
+                  一条 ai 消息里两个 task 调用还顺手覆盖了组头的复数分支
+                  （`executing(2)` 才会插数字和 "in parallel"）。
+
+                  没有第三种状态的卡片：in_progress 要么当前回合还在跑、要么工具结果
+                  的形状没被认出来，前者静态夹具做不到，后者是「契约变了」的降级路径，
+                  拿它当常态样本会把一条本该刺眼的兜底渲染钉成基线。
+                */
+                {
+                  id: "call-completed-subtask",
+                  name: "task",
+                  args: {
+                    subagent_type: "general-purpose",
+                    description: SUBTASK_DONE_DESCRIPTION,
+                    prompt: "Read the changelog and summarize what shipped.",
+                  },
+                  type: "tool_call",
+                },
               ],
               invalid_tool_calls: [],
+            },
+            {
+              type: "tool",
+              id: "msg-tool-completed-subtask",
+              name: "task",
+              tool_call_id: "call-completed-subtask",
+              content: `Task Succeeded. Result: ${SUBTASK_DONE_RESULT}`,
+              additional_kwargs: {
+                subagent_status: "completed",
+                subagent_result_brief: SUBTASK_DONE_RESULT,
+                subagent_model_name: "deerflow-basic",
+                subagent_token_usage: {
+                  input_tokens: 800,
+                  output_tokens: 400,
+                  total_tokens: 1200,
+                },
+              },
             },
           ],
         },
       ],
     },
-    settle: [{ kind: "visible", target: { text: SUBTASK_DESCRIPTION } }],
+    /*
+      三个锚点都在折叠态和展开态下同时可见，所以既能当 settle 断言又能量几何
+      （sampleGeometry 只取 settle 里的 visible，但量的是**跑完 steps 之后**的状态）。
+      组头那一行是这一轮新增的，单独给它一个锚点：它的 pt-2 与外层 gap 的关系
+      决定了整组的纵向节奏，量它比量卡片更早发现问题。
+    */
+    settle: [
+      { kind: "visible", target: { text: SUBTASK_DESCRIPTION } },
+      { kind: "visible", target: { text: SUBTASK_DONE_DESCRIPTION } },
+      { kind: "visible", target: { text: "Executing 2 subtasks in parallel" } },
+    ],
+    /*
+      展开一张卡片。展开区里的一切——prompt 的 markdown、终态步骤、失败原因——
+      折叠着的时候两边都在 DOM 之外，台账一行都看不到；aria 快照是在所有 steps
+      跑完之后取的，所以这一步把整个展开面板纳入了比对。
+    */
+    steps: [
+      { kind: "click", target: { text: SUBTASK_DESCRIPTION } },
+      {
+        kind: "visible",
+        target: {
+          text: "Investigate why the stopped subtask card should not remain running after reload.",
+        },
+      },
+    ],
   },
   {
     id: "artifact-preview",
