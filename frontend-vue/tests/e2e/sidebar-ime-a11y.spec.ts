@@ -102,7 +102,12 @@ test("mobile drawer is modal, traps focus, closes by Escape/backdrop and restore
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openWorkspace(page);
-  const trigger = page.getByRole("button", { name: "Toggle sidebar" });
+  // 抽屉打开后页面上有**两颗**同名触发器（会话头部一颗、抽屉里一颗），
+  // 所以外层这颗要限定在 <header> 里——侧栏自己的头部是 div[data-slot=sidebar-header]，
+  // 不是 <header> 标签，不会被这个选择器捞到。
+  const trigger = page
+    .locator("header")
+    .getByRole("button", { name: "Toggle sidebar" });
   await trigger.click();
 
   const dialog = page.getByRole("dialog", { name: "Workspace navigation" });
@@ -111,10 +116,14 @@ test("mobile drawer is modal, traps focus, closes by Escape/backdrop and restore
   // 关着的时候它整棵子树都不在 DOM 里。
   await expect(dialog.locator(":focus")).toHaveCount(1);
 
-  // 循环边界取抽屉里**实际**第一个/最后一个可聚焦元素，而不是写死某个控件名：
-  // 顶部的 DeerFlow 字样在两个前端里都是不可聚焦的 div（只有 React 的静态 demo
-  // 模式才渲染成链接），写死它会让这条用例断言一个产品里不存在的东西。
-  const first = dialog.getByRole("link", { name: "New chat" });
+  // 循环边界取抽屉里**实际**第一个/最后一个可聚焦元素。顶部的 DeerFlow 字样在两个
+  // 前端里都是不可聚焦的 div（只有 React 的静态 demo 模式才渲染成链接），写死它会让
+  // 这条用例断言一个产品里不存在的东西。
+  //
+  // 第一个是侧栏自己的触发器：上游 SidebarHeader 里那颗 `<SidebarTrigger />` 不带
+  // 任何 `md:` 前缀，Sheet 里照样渲染。此前本仓给它加了 `hidden md:flex`，抽屉里
+  // 根本没有这颗按钮——初始焦点因此落到「新对话」上，而且抽屉里没有任何关闭入口。
+  const first = dialog.getByRole("button", { name: "Toggle sidebar" });
   const last = dialog.getByRole("button", { name: "Settings and more" });
   await expect(first).toBeFocused();
 

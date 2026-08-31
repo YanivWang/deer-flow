@@ -85,7 +85,6 @@ const {
   isNarrow,
   open: sidebarOpen,
   sidebarExpanded,
-  setCollapsed,
   closeMobileSidebar,
   toggleSidebar,
   collapseSidebar,
@@ -343,6 +342,7 @@ function openSettingsDialog(section: "appearance" | "about") {
     v-if="mobileOpen || !isNarrow"
     id="workspace-sidebar"
     ref="sidebarElement"
+    data-slot="sidebar-inner"
     data-sidebar="sidebar"
     :data-mobile="mobileOpen ? 'true' : undefined"
     :role="mobileOpen ? 'dialog' : undefined"
@@ -362,41 +362,64 @@ function openSettingsDialog(section: "appearance" | "about") {
       触发器在收起态是 display:none 直到悬停，所以它此时**不在可访问性树里**——
       不是看不见而已。
     -->
-    <div data-sidebar="header" class="flex flex-col gap-2 px-2">
+    <div
+      data-slot="sidebar-header"
+      data-sidebar="header"
+      class="flex flex-col gap-2 px-2"
+    >
+      <!--
+        两层，不是一层：上游外层是 `flex h-12 flex-col justify-center`（定高 48），
+        内层才是 `flex items-center justify-between gap-2`，高度贴着最高的那个
+        child 走（实测 28，就是触发器）。拍平成一层的话位置仍然对得上——因为定高
+        由外层给——但"这一行有多高"这个信息就没了，下一个人往里加东西时无从判断
+        是谁在撑高度。
+      -->
       <div
-        class="group/workspace-header flex h-12 shrink-0 items-center"
-        :class="sidebarExpanded ? 'justify-between' : 'justify-center'"
+        class="group/workspace-header flex h-12 shrink-0 flex-col justify-center"
       >
         <div
           v-if="sidebarExpanded"
-          class="text-primary cursor-default px-2 font-serif text-base"
+          class="flex items-center justify-between gap-2"
         >
-          DeerFlow
-        </div>
-        <span
-          v-else
-          class="text-primary font-serif group-hover/workspace-header:hidden"
-          >DF</span
-        >
-        <!--
-          名字恒为 "Toggle Sidebar"，也不带 aria-expanded：React 的 SidebarTrigger
-          就是一个 sr-only 的固定名字。名字随收起态在"收起/展开"之间来回换，读屏器
-          每次折叠都会重念一遍按钮，用户听到的是控件变了，其实只是状态变了。
+          <div class="text-primary ml-2 cursor-default font-serif">
+            DeerFlow
+          </div>
+          <!--
+            名字恒为 "Toggle Sidebar"，也不带 aria-expanded：React 的 SidebarTrigger
+            就是一个 sr-only 的固定名字。名字随收起态在"收起/展开"之间来回换，读屏器
+            每次折叠都会重念一遍按钮，用户听到的是控件变了，其实只是状态变了。
 
-          可见性 class 由调用点给，这也是上游的形状（collapsed 分支传的是
-          `hidden pl-2 group-hover/workspace-header:block`）；盒子、图标、opacity
-          则全部归 primitive，见 ui/sidebar/SidebarTrigger.vue。
-        -->
-        <SidebarTrigger
-          :open="sidebarOpen"
-          :class="
-            sidebarExpanded
-              ? 'hidden md:flex'
-              : 'hidden md:group-hover/workspace-header:flex'
-          "
-          :aria-label="$i18n.t.value.primitives.toggleSidebar"
-          @click="setCollapsed(!collapsed)"
-        />
+            **展开态不传任何可见性 class**，这是上游的形状（`<SidebarTrigger />`）。
+            此前本仓传的是 `hidden md:flex`，于是窄屏抽屉里这颗触发器是**没有的**；
+            上游的 Sheet 里它一直在——抽屉里没有关闭入口，只能点遮罩或按 Esc。
+          -->
+          <SidebarTrigger
+            :open="sidebarOpen"
+            :aria-label="$i18n.t.value.primitives.toggleSidebar"
+            @click="toggleSidebar"
+          />
+        </div>
+        <div
+          v-else
+          class="flex w-full cursor-pointer items-center justify-center"
+        >
+          <span
+            class="text-primary block pt-1 font-serif group-hover/workspace-header:hidden"
+            >DF</span
+          >
+          <!--
+            收起态的 class 照抄上游：`hidden pl-2 group-hover/workspace-header:block`。
+            那个 `block` 会经 twMerge 盖掉 Button base 的 `inline-flex`——看着像笔误，
+            但它是上游的实际渲染，改成 flex 两边就不一样了。
+            这一支只在桌面出现：窄屏收起时侧栏整棵子树都不渲染。
+          -->
+          <SidebarTrigger
+            :open="sidebarOpen"
+            class="hidden pl-2 group-hover/workspace-header:block"
+            :aria-label="$i18n.t.value.primitives.toggleSidebar"
+            @click="toggleSidebar"
+          />
+        </div>
       </div>
       <!--
         「新对话」和上面那条标题栏同属 SidebarHeader，中间隔 gap-2（8px）：React 把
@@ -406,11 +429,13 @@ function openSettingsDialog(section: "appearance" | "about") {
         侧栏一旦要整体滚动，靠 padding 拼出来的间距会跟着一起错位。
       -->
       <ul
+        data-slot="sidebar-menu"
         data-sidebar="menu"
         class="flex w-full min-w-0 flex-col gap-1 text-sm"
       >
-        <li data-sidebar="menu-item">
+        <li data-slot="sidebar-menu-item" data-sidebar="menu-item">
           <NuxtLink
+            data-slot="sidebar-menu-button"
             data-sidebar="menu-button"
             to="/workspace/chats/new"
             :data-active="isActive('/workspace/chats/new')"
@@ -436,19 +461,23 @@ function openSettingsDialog(section: "appearance" | "about") {
       标题没有按 SidebarGroupLabel 的 h-8 + 组内边距排，每一行会话都落在错的 y 上。
     -->
     <div
+      data-slot="sidebar-content"
       data-sidebar="content"
       class="flex min-h-0 flex-1 flex-col gap-2 overflow-auto"
     >
       <div
+        data-slot="sidebar-group"
         data-sidebar="group"
         class="relative flex w-full min-w-0 flex-col p-2 pt-1"
       >
         <ul
+          data-slot="sidebar-menu"
           data-sidebar="menu"
           class="flex w-full min-w-0 flex-col gap-1 text-sm"
         >
-          <li data-sidebar="menu-item">
+          <li data-slot="sidebar-menu-item" data-sidebar="menu-item">
             <NuxtLink
+              data-slot="sidebar-menu-button"
               data-sidebar="menu-button"
               class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground flex h-8 items-center gap-2 rounded-md px-2"
               :data-active="
@@ -464,9 +493,10 @@ function openSettingsDialog(section: "appearance" | "about") {
               }}</span>
             </NuxtLink>
           </li>
-          <li data-sidebar="menu-item">
+          <li data-slot="sidebar-menu-item" data-sidebar="menu-item">
             <NuxtLink
               v-if="features.agentsApiEnabled.value"
+              data-slot="sidebar-menu-button"
               data-sidebar="menu-button"
               class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground flex h-8 items-center gap-2 rounded-md px-2"
               :data-active="route.path.startsWith('/workspace/agents')"
@@ -507,8 +537,9 @@ function openSettingsDialog(section: "appearance" | "about") {
               >
             </div>
           </li>
-          <li data-sidebar="menu-item">
+          <li data-slot="sidebar-menu-item" data-sidebar="menu-item">
             <NuxtLink
+              data-slot="sidebar-menu-button"
               data-sidebar="menu-button"
               to="/workspace/scheduled-tasks"
               class="text-muted-foreground hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent flex h-8 items-center gap-2 rounded-md px-2"
@@ -535,17 +566,27 @@ function openSettingsDialog(section: "appearance" | "about") {
       -->
       <div
         v-if="sidebarExpanded && sidebarThreads.length"
+        data-slot="sidebar-group"
         data-sidebar="group"
         class="relative flex w-full min-w-0 flex-col p-2"
       >
         <div
+          data-slot="sidebar-group-label"
           data-sidebar="group-label"
           class="text-sidebar-foreground/70 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium"
         >
           {{ $i18n.t.value.sidebar.recentChats }}
         </div>
-        <div data-sidebar="group-content" class="w-full text-sm">
-          <ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1">
+        <div
+          data-slot="sidebar-group-content"
+          data-sidebar="group-content"
+          class="w-full text-sm"
+        >
+          <ul
+            data-slot="sidebar-menu"
+            data-sidebar="menu"
+            class="flex w-full min-w-0 flex-col gap-1"
+          >
             <!--
               按钮和哨兵是 ul 的**非 li 子节点**，与 React 一样：它们不是列表项，
               包进 li 会让读屏器把「加载更早的对话」念成第 51 个会话。哨兵还要
@@ -562,7 +603,11 @@ function openSettingsDialog(section: "appearance" | "about") {
                 scroll-parent-selector='[data-sidebar="content"]'
               >
                 <template #default="{ thread }">
-                  <li data-sidebar="menu-item" class="group/menu-item relative">
+                  <li
+                    data-slot="sidebar-menu-item"
+                    data-sidebar="menu-item"
+                    class="group/menu-item relative"
+                  >
                     <!--
                       标题包在一个 `min-w-0 truncate` 的 span 里，链接自己是
                       `w-full ... p-2 pr-8` 的 h-8 行——这是 React 的
@@ -572,6 +617,7 @@ function openSettingsDialog(section: "appearance" | "about") {
                       用前景色。React 那一份是文字宽度、20px 高、muted 色。
                     -->
                     <NuxtLink
+                      data-slot="sidebar-menu-button"
                       data-sidebar="menu-button"
                       :to="pathOfThread(thread)"
                       :data-active="isActive(pathOfThread(thread))"
@@ -647,104 +693,154 @@ function openSettingsDialog(section: "appearance" | "about") {
         {{ $i18n.t.value.navigation.tryAgain }}
       </button>
     </div>
-    <ul data-sidebar="menu" class="mt-auto p-2">
-      <li data-sidebar="menu-item">
-        <DropdownMenu v-model:open="settingsOpen">
-          <DropdownMenuTrigger>
-            <!--
+    <!--
+      SidebarFooter：`flex flex-col gap-2 p-2` 的独立容器，不是给 ul 挂个 mt-auto。
+      上游把它与 header / content 并列交给 Sidebar
+      （frontend/src/components/workspace/workspace-sidebar.tsx），`mt-auto` 那种写法
+      位置对得上、结构对不上：footer 一旦要放第二块东西（上游 gap-2 就是为它留的），
+      挂在 ul 上的 mt-auto 会把那块也一起推到底。
+    -->
+    <div
+      data-slot="sidebar-footer"
+      data-sidebar="footer"
+      class="mt-auto flex flex-col gap-2 p-2"
+    >
+      <ul
+        data-slot="sidebar-menu"
+        data-sidebar="menu"
+        class="flex w-full min-w-0 flex-col gap-1"
+      >
+        <li
+          data-slot="sidebar-menu-item"
+          data-sidebar="menu-item"
+          class="group/menu-item relative"
+        >
+          <DropdownMenu v-model:open="settingsOpen">
+            <DropdownMenuTrigger>
+              <!--
               名字只来自可见文字，不额外挂 aria-label / title：React 的
               WorkspaceNavMenu 给这颗按钮的全部内容就是收起时一个图标、展开时
               图标 + "Settings and more" 文本（frontend/src/components/workspace/workspace-nav-menu.tsx），
               没有 sr-only 也没有 tooltip prop。补上名字听起来更好，但那样两个
               应用在收起态念出来的东西不一样，而这份对照要求它们一样。
+
+              **这里刻意不写 `data-slot`。** 上游是
+              `<DropdownMenuTrigger asChild><SidebarMenuButton size="lg">`，两层
+              as-child 之后留在 DOM 上的是**最外层**那个——probe 实测 React 这颗按钮
+              的 data-slot 是 `dropdown-menu-trigger`，不是 `sidebar-menu-button`
+              （坑 62）。本仓 reka 的 DropdownMenuTrigger 同样会写上自己的 slot，
+              所以补一个 `sidebar-menu-button` 只会把它盖掉、反而与上游不一致。
+              `data-sidebar` / `data-size` 上游不会覆盖，照写。
+
+              `h-12` 来自上游的 `<SidebarMenuButton size="lg">`（cva 的 lg 档就是
+              `h-12 text-sm`），此前本仓写的是 h-9，整块 footer 因此矮 12px。
+              内层那个 div 也是上游的：图标与文字住在
+              `text-muted-foreground flex w-full items-center gap-2` 里，
+              按钮本身不带前景色——收起态换的是**整块内容**（居中的单图标），
+              不是给同一块加几个 class。
             -->
-            <button
-              ref="settingsTrigger"
-              type="button"
-              data-testid="workspace-nav-menu-trigger"
-              class="text-muted-foreground hover:bg-sidebar-accent flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm"
+              <button
+                ref="settingsTrigger"
+                type="button"
+                data-sidebar="menu-button"
+                data-size="lg"
+                data-testid="workspace-nav-menu-trigger"
+                class="peer/menu-button hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground flex h-12 w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm"
+              >
+                <div
+                  v-if="sidebarExpanded"
+                  class="text-muted-foreground flex w-full items-center gap-2 text-left text-sm"
+                >
+                  <Settings :size="16" class="shrink-0" />
+                  <span>{{ $i18n.t.value.workspace.settingsAndMore }}</span>
+                  <ChevronsUpDown
+                    :size="16"
+                    class="text-muted-foreground ml-auto"
+                  />
+                </div>
+                <div v-else class="flex size-full items-center justify-center">
+                  <Settings :size="16" class="text-muted-foreground" />
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              side="top"
+              class="w-[calc(var(--reka-dropdown-menu-trigger-width))] min-w-56"
             >
-              <Settings :size="16" class="shrink-0" />
-              <span v-if="sidebarExpanded">{{
-                $i18n.t.value.workspace.settingsAndMore
-              }}</span>
-              <ChevronsUpDown
-                v-if="sidebarExpanded"
-                :size="16"
-                class="ml-auto"
-              />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            side="top"
-            class="w-[calc(var(--reka-dropdown-menu-trigger-width))] min-w-56"
-          >
-            <DropdownMenuItem @select="openSettingsDialog('appearance')">
-              <Settings2 :size="14" /> {{ $i18n.t.value.common.settings }}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem as-child>
-              <a
-                href="https://deerflow.tech/"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="flex w-full items-center gap-2"
-              >
-                <Globe :size="14" />
-                {{ $i18n.t.value.workspace.officialWebsite }}
-              </a>
-            </DropdownMenuItem>
-            <DropdownMenuItem as-child>
-              <a
-                href="https://github.com/bytedance/deer-flow"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="flex w-full items-center gap-2"
-              >
-                <Github :size="14" /> {{ $i18n.t.value.workspace.visitGithub }}
-              </a>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem as-child>
-              <a
-                href="https://github.com/bytedance/deer-flow/issues"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="flex w-full items-center gap-2"
-              >
-                <Bug :size="14" /> {{ $i18n.t.value.workspace.reportIssue }}
-              </a>
-            </DropdownMenuItem>
-            <DropdownMenuItem as-child>
-              <a
-                href="mailto:support@deerflow.tech"
-                class="flex w-full items-center gap-2"
-              >
-                <Mail :size="14" /> {{ $i18n.t.value.workspace.contactUs }}
-              </a>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem @select="openSettingsDialog('about')">
-              <Info :size="14" /> {{ $i18n.t.value.workspace.about }}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </li>
-    </ul>
+              <DropdownMenuItem @select="openSettingsDialog('appearance')">
+                <Settings2 :size="14" /> {{ $i18n.t.value.common.settings }}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem as-child>
+                <a
+                  href="https://deerflow.tech/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex w-full items-center gap-2"
+                >
+                  <Globe :size="14" />
+                  {{ $i18n.t.value.workspace.officialWebsite }}
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem as-child>
+                <a
+                  href="https://github.com/bytedance/deer-flow"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex w-full items-center gap-2"
+                >
+                  <Github :size="14" />
+                  {{ $i18n.t.value.workspace.visitGithub }}
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem as-child>
+                <a
+                  href="https://github.com/bytedance/deer-flow/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex w-full items-center gap-2"
+                >
+                  <Bug :size="14" /> {{ $i18n.t.value.workspace.reportIssue }}
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem as-child>
+                <a
+                  href="mailto:support@deerflow.tech"
+                  class="flex w-full items-center gap-2"
+                >
+                  <Mail :size="14" /> {{ $i18n.t.value.workspace.contactUs }}
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem @select="openSettingsDialog('about')">
+                <Info :size="14" /> {{ $i18n.t.value.workspace.about }}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </li>
+      </ul>
+    </div>
     <!--
       SidebarRail：一条贴着侧栏右缘、宽 16px 的拖拽热区，点一下也能收起/展开。
       tabindex="-1" 是 React 的选择——它与头部那个触发器同名同功能，进 Tab 序列
-      只会让键盘用户连按两次听到同一个按钮。窄屏没有它（React 的 rail 是 sm:flex）。
+      只会让键盘用户连按两次听到同一个按钮。
+
+      rail 是 `sm:flex`（≥640px 就在），而窄屏抽屉的分界是 768px，所以
+      640~767px 这一档 rail 是**看得见的**。此前这里调的是 `setCollapsed`，
+      在那一档点它会去改桌面收起态、而不是关掉眼前的抽屉；上游 SidebarRail 调的
+      是 `toggleSidebar()`（认窄屏）。
     -->
     <button
       type="button"
+      data-slot="sidebar-rail"
       data-sidebar="rail"
       :aria-label="$i18n.t.value.primitives.toggleSidebar"
       :title="$i18n.t.value.primitives.toggleSidebar"
       tabindex="-1"
       class="hover:after:bg-sidebar-border absolute inset-y-0 -right-4 z-20 hidden w-4 -translate-x-1/2 cursor-w-resize after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex"
-      @click="setCollapsed(!collapsed)"
+      @click="toggleSidebar"
     />
   </div>
   <button
