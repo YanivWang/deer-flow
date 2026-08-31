@@ -64,8 +64,8 @@ function hiddenContextMessage(parentThreadId: string, prompt: string): Message {
   } as Message;
 }
 
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Request failed";
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 export function useSidecarSession(options: {
@@ -76,6 +76,12 @@ export function useSidecarSession(options: {
   context: MaybeRefOrGetter<ThreadRunContextInput>;
   onReferencesAccepted?: (references: SidecarReference[]) => void;
 }) {
+  /*
+    这一层会产出**上屏的文案**（fileError / errorMessage 都渲染在面板里），
+    所以它得拿 i18n。原来三处都是写死的英文字面量——`.ts` 不在 i18n source guard
+    的扫描面内（它只扫产品 SFC），于是这三条一直没人拦（坑 52 的反面）。
+  */
+  const { $i18n } = useNuxtApp();
   const input = ref("");
   const selectedFiles = ref<File[]>([]);
   const submissionPending = ref(false);
@@ -187,7 +193,8 @@ export function useSidecarSession(options: {
     if (!options.sidecarThreadId.value && contexts.length === 0) {
       const restored = await currentLifecycle.restore();
       if (restored) return restored;
-      throw new Error("Select text before starting a side chat.");
+      /* 上游这一支抛的是 t.sidecar.noContext（sidecar-panel.tsx:326），不是自造的句子。 */
+      throw new Error($i18n.t.value.sidecar.noContext);
     }
     return currentLifecycle.ensure(contexts);
   }
@@ -202,8 +209,29 @@ export function useSidecarSession(options: {
     selectedFiles.value.push(...result.accepted);
     if (supported.message) fileError.value = supported.message;
     else if (result.violations.length > 0) {
+      /*
+        三种违规三条文案，与 ChatComposer 和上游 reportUploadLimitViolations
+        （sidecar-panel.tsx:253）用同一组词条。原来这里忽略 `violation.code`，
+        把「文件太多」「总量超限」也一律说成 "X exceeds 50 MB"——文案对不上，
+        而且是写死的英文。
+      */
       const violation = result.violations[0]!;
-      fileError.value = `${violation.files.map((file) => file.name).join(", ")} exceeds ${formatUploadSize(violation.limit)}`;
+      const names = violation.files.map((file) => file.name).join(", ");
+      fileError.value =
+        violation.code === "max_files"
+          ? $i18n.t.value.uploads.tooManyFiles(
+              violation.files.length,
+              violation.limit,
+            )
+          : violation.code === "max_total_size"
+            ? $i18n.t.value.uploads.totalSizeTooLarge(
+                violation.files.length,
+                formatUploadSize(violation.limit),
+              )
+            : $i18n.t.value.uploads.filesTooLarge(
+                names,
+                formatUploadSize(violation.limit),
+              );
     } else {
       fileError.value = "";
     }
@@ -398,7 +426,9 @@ export function useSidecarSession(options: {
     submitHumanInput,
     deleteThread,
     errorMessage: computed(() =>
-      submissionError.value ? errorMessage(submissionError.value) : "",
+      submissionError.value
+        ? errorMessage(submissionError.value, $i18n.t.value.sidecar.sendFailed)
+        : "",
     ),
   };
 }

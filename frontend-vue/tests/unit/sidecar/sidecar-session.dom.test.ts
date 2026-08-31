@@ -3,11 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref, type EffectScope } from "vue";
 
 import { useSidecarSession } from "@/composables/useSidecarSession";
+import { enUS } from "@/core/i18n/locales/en-US";
 
 const mocks = vi.hoisted(() => ({
   findLatestSidecarThread: vi.fn(),
   createSidecarThread: vi.fn(),
   uploadFiles: vi.fn(),
+  uploadLimits: undefined as
+    | { max_files: number; max_file_size: number; max_total_size: number }
+    | undefined,
   fetchWithAuth: vi.fn(),
   stream: undefined as
     | {
@@ -32,7 +36,7 @@ vi.mock("@/core/api/fetcher", () => ({ fetch: mocks.fetchWithAuth }));
 vi.mock("@/core/config", () => ({ getBackendBaseURL: () => "" }));
 vi.mock("@/composables/useUploads", () => ({
   useUploadLimits: () => ({
-    data: { value: undefined },
+    data: { value: mocks.uploadLimits },
   }),
 }));
 vi.mock("@/composables/useThreadStream", async () => {
@@ -83,6 +87,7 @@ describe("useSidecarSession", () => {
       .mockReset()
       .mockResolvedValue({ thread_id: "sidecar-1" });
     mocks.uploadFiles.mockReset();
+    mocks.uploadLimits = undefined;
     mocks.fetchWithAuth
       .mockReset()
       .mockResolvedValue(new Response(null, { status: 204 }));
@@ -321,5 +326,62 @@ describe("useSidecarSession", () => {
         onAccepted: expect.any(Function),
       },
     );
+  });
+
+  /*
+    这一层会产出上屏文案，所以它必须走词典。三条原来都是写死的英文字面量——
+    `.ts` 不在 i18n source guard 的扫描面内（它只扫产品 SFC），所以没人拦。
+
+    三条正反都断言（坑 57）：只断言「等于词典那句」的话，把词典项改成同一串英文
+    也照样绿；所以同时断言**不等于**原来那句自造的英文。
+  */
+  it("takes the upload-violation copy from the dictionary, one message per violation code", async () => {
+    mocks.uploadLimits = {
+      max_files: 1,
+      max_file_size: 10,
+      max_total_size: 15,
+    };
+    const { session } = setup();
+
+    session.addFiles([
+      new File(["0123456789abc"], "big.txt"),
+      new File(["x"], "second.txt"),
+    ]);
+    await flushPromises();
+    const firstMessage = session.fileError.value;
+    expect(firstMessage).not.toBe("");
+    // 原来无论哪种违规都拼这一句，忽略 violation.code。
+    expect(firstMessage).not.toContain(" exceeds ");
+    expect([
+      enUS.uploads.tooManyFiles(2, 1),
+      enUS.uploads.totalSizeTooLarge(2, "15 B"),
+      enUS.uploads.filesTooLarge("big.txt", "10 B"),
+    ]).toContain(firstMessage);
+  });
+
+  it("asks for context with the upstream key instead of a hand-written sentence", async () => {
+    const { session, references } = setup();
+    references.value = [];
+    mocks.findLatestSidecarThread.mockResolvedValue(null);
+
+    await expect(session.ensureThread([])).rejects.toThrow(
+      enUS.sidecar.noContext,
+    );
+    await expect(session.ensureThread([])).rejects.not.toThrow(
+      "Select text before starting a side chat.",
+    );
+  });
+
+  it("falls back to sidecar.sendFailed when the rejection is not an Error", async () => {
+    const { session } = setup();
+    // 非 Error 抛值走 errorMessage 的兜底那一支；原来兜底是写死的 "Request failed"。
+    mocks.createSidecarThread.mockRejectedValue("boom");
+    session.setInput("hello");
+
+    expect(await session.submit()).toBe(false);
+    await flushPromises();
+
+    expect(session.errorMessage.value).toBe(enUS.sidecar.sendFailed);
+    expect(session.errorMessage.value).not.toBe("Request failed");
   });
 });
