@@ -84,7 +84,7 @@ describe("BrowserPanel empty state", () => {
   it("switches both the title and the description when live is turned off", async () => {
     const wrapper = mountPanel();
     await wrapper
-      .get(`button[aria-label='${enUS.browser.switchToStatic}']`)
+      .get(`button[title='${enUS.browser.stopLiveControl}']`)
       .trigger("click");
 
     expect(wrapper.get("h3").text()).toBe(enUS.browser.noFrame);

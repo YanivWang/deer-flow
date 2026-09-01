@@ -132,7 +132,9 @@ describe("BrowserPanel behavior", () => {
 
   it("queues connecting navigation and converges live URL/title from Gateway events", async () => {
     const { wrapper } = mountPanel();
-    const input = wrapper.get('input[aria-label="Browser URL"]');
+    const input = wrapper.get(
+      'input[placeholder="Enter a URL and press Enter"]',
+    );
     await input.setValue("connecting.example/next");
     await wrapper.get("form").trigger("submit");
     expect(parsedInputs(sockets[0])).toEqual([]);
@@ -159,19 +161,26 @@ describe("BrowserPanel behavior", () => {
     );
     await nextTick();
 
-    expect(wrapper.get('[data-testid="browser-mode"]').text()).toBe("Live");
-    expect(wrapper.get('[data-testid="browser-title"]').text()).toBe(
-      "Gateway title",
-    );
+    const mode = wrapper.get('[data-testid="browser-mode"]');
+    expect(mode.text()).toBe("Live");
+    expect(mode.attributes("data-variant")).toBe("default");
+    expect(mode.attributes("title")).toBe("Stop live control");
+    /*
+      头部那一格是**面板标签**，不是页面标题：上游 browser-view-panel.tsx:342 画的
+      就是 `t.common.browser`，和左边的 MonitorIcon 是一对。Gateway 报上来的页面
+      标题只剩 `<img alt>` 一个出口。两半都断言（坑 57）：只断言 "Browser" 在，
+      把标题重新接回头部也照样绿。
+    */
+    expect(wrapper.get("header").text()).toContain("Browser");
+    expect(wrapper.get("header").text()).not.toContain("Gateway title");
     expect((input.element as HTMLInputElement).value).toBe(
       "https://resolved.example/final",
     );
 
     sockets[0]?.serverClose();
     await nextTick();
-    expect(wrapper.get('[data-testid="browser-mode"]').text()).toMatch(
-      /Reconnecting/,
-    );
+    // 上游两态：请求了 Live 但还没连上就是 "…"，不报重连次数。
+    expect(wrapper.get('[data-testid="browser-mode"]').text()).toBe("…");
     await wrapper.setProps({ active: false });
     expect(sockets[0]?.closed).toBe(true);
     wrapper.unmount();
@@ -290,7 +299,7 @@ describe("BrowserPanel behavior", () => {
     vi.stubGlobal("fetch", fetchMock);
     const { wrapper } = mountPanel(null);
     await wrapper
-      .get('input[aria-label="Browser URL"]')
+      .get('input[placeholder="Enter a URL and press Enter"]')
       .setValue("https://fallback.example");
     await wrapper.get("form").trigger("submit");
 
@@ -310,7 +319,10 @@ describe("BrowserPanel behavior", () => {
     expect(wrapper.get('[role="alert"]').text()).toContain(
       "Browser navigation failed",
     );
-    expect(wrapper.get('[data-testid="browser-mode"]').text()).toBe("Static");
+    const staticMode = wrapper.get('[data-testid="browser-mode"]');
+    expect(staticMode.text()).toBe("Live");
+    expect(staticMode.attributes("data-variant")).toBe("ghost");
+    expect(staticMode.attributes("title")).toBe("Take live control");
 
     await wrapper.get('button[aria-label="Retry navigation"]').trigger("click");
     await flushPromises();
@@ -320,9 +332,8 @@ describe("BrowserPanel behavior", () => {
       url: "https://rest.example/final",
       title: "REST title",
     });
-    expect(wrapper.get('[data-testid="browser-title"]').text()).toBe(
-      "REST title",
-    );
+    // 页面标题唯一的出口：上游 `alt={frame?.title ?? "Browser view"}`。
+    expect(wrapper.get("img").attributes("alt")).toBe("REST title");
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     wrapper.unmount();
   });

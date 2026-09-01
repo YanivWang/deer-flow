@@ -486,14 +486,57 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     ],
   },
   {
+    /*
+      browser 面板**本体**。这条场景原来只断言触发器可见，从来没打开过面板——
+      于是整块头部（标题、前进后退、地址栏、Live 切换、关闭）一行台账都没有，
+      而实测那里有六条 aria 差异和一整排几何差异（本仓的 URL 栏被挤到只剩 36.6px 宽，
+      上游同一屏是 129.3）。
+
+      **点击写在 settle 而不是 steps**：几何只取 settle 里的 visible 锚点
+      （见 capture.ts 的 sampleGeometry），所以要让头部进几何取样，把面板打开的
+      那一下必须排在这些锚点前面，也就是同在 settle 里。
+
+      **锚点全部用两个应用共有的可访问名**，一条都不靠 data-testid（上游这个面板
+      一个 testid 都没有）：
+      - `/^Browser$/` 是面板标签那一格，上游画的是 `t.common.browser`；
+      - Back / Forward 的名字上游来自 `title`，本仓也用 `title`；
+      - 地址栏的名字来自 **placeholder**——本仓曾经挂 `aria-label` 把它顶掉，
+        这条锚点就是那个 bug 的守卫，改回去当场取不到；
+      - `/^…$/` 是 Live 切换在「请求了 Live 但还没连上」时的文案。mock 后端没有
+        WS 端点，两个应用都停在这一态：实测 React 三轮四个时点恒定 "…"。
+        本仓原来是四态（Connecting → Reconnecting n/6 → …），实测取样点
+        settle+700ms 正好落在第一次重连定时器（800ms）前 100ms，
+        **拿它当锚点就是一份会飘的门禁**——两态化之后才敢挂上来。
+      - 关闭按钮的名字两边都有：上游那颗原来没有可访问名，是 WCAG 4.1.2 缺陷，
+        已按「两边同改」补上 `t.common.closeBrowser`。
+
+      空状态那条 heading 一并挂上：它证明取样落在「还没有画面」这一支，
+      两个应用都到得了，不会静默退化成「两边都没渲染、台账照样 0」。
+    */
     id: "browser-feature",
-    title: "浏览器面板入口",
+    title: "浏览器面板入口与面板本体",
     backend: "mock",
     path: `/workspace/chats/${MOCK_THREAD_ID}`,
     mock: {
       threads: [{ thread_id: MOCK_THREAD_ID, title: "Browser Enabled" }],
     },
-    settle: [{ kind: "visible", target: { testId: "browser-trigger" } }],
+    settle: [
+      { kind: "visible", target: { testId: "browser-trigger" } },
+      { kind: "click", target: { testId: "browser-trigger" } },
+      { kind: "visible", target: { text: /^Browser$/ } },
+      { kind: "visible", target: { role: "button", name: "Back" } },
+      { kind: "visible", target: { role: "button", name: "Forward" } },
+      {
+        kind: "visible",
+        target: { role: "textbox", name: "Enter a URL and press Enter" },
+      },
+      { kind: "visible", target: { role: "button", name: /^…$/ } },
+      { kind: "visible", target: { role: "button", name: "Close browser" } },
+      {
+        kind: "visible",
+        target: { role: "heading", name: "Connecting to live browser…" },
+      },
+    ],
   },
   {
     /*

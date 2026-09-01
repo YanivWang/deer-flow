@@ -16,6 +16,7 @@ import { ConversationEmptyState } from "@/components/ai-elements/conversation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { resolveArtifactURL } from "@/core/artifacts/utils";
+import { useI18n } from "@/core/i18n/hooks";
 import { isIMEComposing } from "@/lib/ime";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ export function BrowserViewPanel({
   threadId: string;
   className?: string;
 }) {
+  const { t } = useI18n();
   const browserView = useMaybeBrowserView();
   const frame = browserView?.latestFrame ?? null;
   const imageUrl = frame
@@ -339,7 +341,9 @@ export function BrowserViewPanel({
     >
       <header className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
         <MonitorIcon className="size-4 shrink-0" />
-        <span className="shrink-0 text-sm font-medium">Browser</span>
+        {/* This panel label was a hardcoded literal while `common.browser`
+            sat unused in the dictionary, so zh-CN rendered "Browser" here. */}
+        <span className="shrink-0 text-sm font-medium">{t.common.browser}</span>
         <div className="flex shrink-0 items-center">
           <Button
             size="icon-sm"
@@ -407,7 +411,11 @@ export function BrowserViewPanel({
           <RadioIcon className="size-3.5" />
           {live ? (status === "open" ? "Live" : "…") : "Live"}
         </Button>
+        {/* The close button had no accessible name at all: XIcon is
+            aria-hidden and there was neither an aria-label nor a title, so a
+            screen reader announced only "button" (WCAG 4.1.2). */}
         <Button
+          aria-label={t.common.closeBrowser}
           size="icon-sm"
           variant="ghost"
           className="shrink-0"

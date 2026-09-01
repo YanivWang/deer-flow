@@ -61,6 +61,7 @@ export const zhCN: Translations = {
     showArtifacts: "查看此对话的文件",
     browser: "浏览器",
     showBrowser: "打开浏览器面板",
+    closeBrowser: "关闭浏览器",
   },
 
   runDuration: {

@@ -990,19 +990,15 @@ export interface Translations {
   browser: {
     trigger: string;
     panelTitle: string;
-    static: string;
     live: string;
-    connecting: string;
-    reconnecting: (attempt: number, maximum: number) => string;
     back: string;
     forward: string;
-    urlLabel: string;
     urlPlaceholder: string;
     close: string;
     retryNavigation: string;
     retryLive: string;
-    switchToStatic: string;
-    switchToLive: string;
+    stopLiveControl: string;
+    takeLiveControl: string;
     connectingFrame: string;
     connectingFrameDescription: string;
     noFrame: string;

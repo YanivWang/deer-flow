@@ -131,18 +131,27 @@ test.describe("Vue browser control", () => {
     const panel = page.getByTestId("browser-panel");
     await expect(panel).toBeVisible({ timeout: 15_000 });
     await expect(panel.getByTestId("browser-mode")).toHaveText("Live");
-    await expect(panel.getByTestId("browser-title")).toHaveText(
-      "Gateway title",
+    /*
+      头部不再画页面标题：上游那一格是写死的面板标签，Gateway 报上来的标题只走
+      `<img alt>`，而且取的是**静态帧**的标题（上游 `alt={frame?.title ?? …}`），
+      不是 live 标题——所以这里是 "Static title" 而不是 "Gateway title"。
+    */
+    await expect(panel.getByTestId("browser-mode")).toHaveAttribute(
+      "data-variant",
+      "default",
     );
-    await expect(panel.getByLabel("Browser URL")).toHaveValue(
-      "https://gateway.example/final",
-    );
+    await expect(panel.locator("header")).not.toContainText("Gateway title");
     await expect(
-      panel.getByRole("img", { name: "Gateway title" }),
+      panel.getByPlaceholder("Enter a URL and press Enter"),
+    ).toHaveValue("https://gateway.example/final");
+    await expect(
+      panel.getByRole("img", { name: "Static title" }),
     ).toBeVisible();
 
-    await panel.getByLabel("Browser URL").fill("next.example/path");
-    await panel.getByLabel("Browser URL").press("Enter");
+    await panel
+      .getByPlaceholder("Enter a URL and press Enter")
+      .fill("next.example/path");
+    await panel.getByPlaceholder("Enter a URL and press Enter").press("Enter");
     await expect
       .poll(() =>
         browser.clientMessages.filter((item) => item.type === "navigate"),
@@ -157,7 +166,7 @@ test.describe("Vue browser control", () => {
     await page.goto(`/workspace/chats/${MOCK_THREAD_ID}`);
     const panel = page.getByTestId("browser-panel");
     await expect(panel.getByTestId("browser-mode")).toHaveText("Live");
-    const image = panel.getByRole("img", { name: "Gateway title" });
+    const image = panel.getByRole("img", { name: "Static title" });
     await expect
       .poll(() =>
         image.evaluate((element) => (element as HTMLImageElement).naturalWidth),
@@ -233,20 +242,28 @@ test.describe("Vue browser control", () => {
     await page.goto(`/workspace/chats/${MOCK_THREAD_ID}`);
     const panel = page.getByTestId("browser-panel");
     await expect(panel.getByTestId("browser-mode")).toHaveText("Live");
-    await panel.getByLabel("Switch to static browser").click();
-    await expect(panel.getByTestId("browser-mode")).toHaveText("Static");
+    await panel.getByTitle("Stop live control").click();
+    // 两态：文案恒为 Live，静态态靠 variant 与 title 区分（上游同形）。
+    await expect(panel.getByTestId("browser-mode")).toHaveText("Live");
+    await expect(panel.getByTestId("browser-mode")).toHaveAttribute(
+      "data-variant",
+      "ghost",
+    );
+    await expect(panel.getByTitle("Take live control")).toBeVisible();
     await expect.poll(browser.closed).toBe(1);
 
-    await panel.getByLabel("Browser URL").fill("https://fallback.example");
-    await panel.getByLabel("Browser URL").press("Enter");
+    await panel
+      .getByPlaceholder("Enter a URL and press Enter")
+      .fill("https://fallback.example");
+    await panel.getByPlaceholder("Enter a URL and press Enter").press("Enter");
     await expect(panel.getByRole("alert")).toContainText(
       "Browser navigation failed",
     );
     await panel.getByLabel("Retry navigation").click();
-    await expect(panel.getByTestId("browser-title")).toHaveText("REST title");
-    await expect(panel.getByLabel("Browser URL")).toHaveValue(
-      "https://rest.example/final",
-    );
+    await expect(panel.getByRole("img", { name: "REST title" })).toBeVisible();
+    await expect(
+      panel.getByPlaceholder("Enter a URL and press Enter"),
+    ).toHaveValue("https://rest.example/final");
     expect(requests).toEqual([
       { url: "https://fallback.example" },
       { url: "https://fallback.example" },

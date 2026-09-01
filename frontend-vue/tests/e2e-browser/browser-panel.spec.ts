@@ -54,30 +54,53 @@ test("real Gateway converges REST navigation and binary live state in the Vue pa
   await expect(panel.getByTestId("browser-mode")).toHaveText("Live", {
     timeout: 30_000,
   });
-  await expect(panel.getByLabel("Browser URL")).toHaveValue(initial.url);
-  if (initial.title) {
-    await expect(panel.getByTestId("browser-title")).toHaveText(initial.title);
-  }
+  await expect(
+    panel.getByPlaceholder("Enter a URL and press Enter"),
+  ).toHaveValue(initial.url);
+  /*
+    页面标题唯一的出口是 `<img alt>`，而且上游取的是**静态帧**的标题
+    （`alt={frame?.title ?? "Browser view"}`，frame 来自 BrowserViewProvider）。
+    上面那次 REST 导航是用 `context.request` 在页面之外发的，没有任何一条
+    tool 消息把 browser_view 帧带进线程，所以这一屏两个应用都没有静态帧——
+    alt 落到上游那句兜底。**头部那一格画的是写死的面板标签，不是页面标题。**
+    真实标题在下面客户端自己发起 REST 导航之后才有出口。
+  */
+  await expect(panel.getByRole("img")).toHaveAttribute("alt", "Browser view");
   await expect(panel.getByRole("img")).toHaveAttribute("src", /^blob:/, {
     timeout: 30_000,
   });
 
-  await panel.getByLabel("Switch to static browser").click();
-  await expect(panel.getByTestId("browser-mode")).toHaveText("Static");
+  await panel.getByTitle("Stop live control").click();
+  // 上游两态：文案恒为 Live，静态态靠 variant / title 区分。
+  await expect(panel.getByTestId("browser-mode")).toHaveAttribute(
+    "data-variant",
+    "ghost",
+  );
+  await expect(panel.getByTitle("Take live control")).toBeVisible();
   const restResponse = page.waitForResponse(
     (response) =>
       response.url().includes(`/api/threads/${threadId}/browser/navigate`) &&
       response.request().method() === "POST",
   );
-  await panel.getByLabel("Browser URL").fill("http://localhost:3101/");
-  await panel.getByLabel("Browser URL").press("Enter");
+  await panel
+    .getByPlaceholder("Enter a URL and press Enter")
+    .fill("http://localhost:3101/");
+  await panel.getByPlaceholder("Enter a URL and press Enter").press("Enter");
   const authoritative = await restResponse;
   expect(authoritative.status(), await authoritative.text()).toBe(200);
   expect(authoritative.request().postDataJSON()).toEqual({
     url: "http://localhost:3101/",
   });
-  await expect(panel.getByLabel("Browser URL")).toHaveValue(
-    "http://localhost:3101/",
-  );
+  await expect(
+    panel.getByPlaceholder("Enter a URL and press Enter"),
+  ).toHaveValue("http://localhost:3101/");
+  // 客户端这次 REST 导航把帧写进本地静态帧，alt 于是变成真实页面标题。
+  const restFrame = (await authoritative.json()) as { title: string };
+  if (restFrame.title) {
+    await expect(panel.getByRole("img")).toHaveAttribute(
+      "alt",
+      restFrame.title,
+    );
+  }
   await expect(panel.getByRole("alert")).toHaveCount(0);
 });
