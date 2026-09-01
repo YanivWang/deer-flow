@@ -19,7 +19,9 @@ import {
   ArrowUp,
   Mic,
   Paperclip,
+  Sparkles,
   Square,
+  Target,
   WandSparkles,
   X,
 } from "lucide-vue-next";
@@ -41,7 +43,11 @@ import {
 } from "@/core/threads/composer-draft";
 import { canPolishInput } from "@/core/input-polish/can-polish";
 import { polishInputDraft } from "@/core/input-polish/api";
-import { RESERVED_SLASH_SKILL_NAMES } from "@/core/skills/slash";
+import {
+  getLeadingSlashQuery,
+  getMatchingSlashSuggestions,
+  type SlashSuggestion,
+} from "@/core/skills/slash-suggestions";
 import { findSuggestionTemplatePlaceholder } from "@/core/suggestions/placeholders";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import { isImeComposing } from "@/core/input/ime";
@@ -71,6 +77,7 @@ import {
 } from "@/core/threads/goal";
 import { invalidateThreadCaches } from "@/core/threads/cache-invalidation";
 import { isCompactCommand } from "@/core/threads/compact-command";
+import { isCompleteBuiltinCommand } from "@/core/threads/builtin-command";
 import { compactThreadContext } from "@/core/threads/api";
 import type { GoalState } from "@/core/threads/types";
 import { createAsyncGeneration } from "@/core/async/generation";
@@ -256,7 +263,6 @@ const textarea = ref<HTMLTextAreaElement | null>(null);
 const chipInput = ref<HTMLElement | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
 let historyIndex = -1;
-const skillCommandNames = new Set([...RESERVED_SLASH_SKILL_NAMES, "compact"]);
 const enabledSkillNames = computed(
   () =>
     new Set(
@@ -283,38 +289,55 @@ let activeSubmissionDraft: {
   text: string;
   skillName: string | null;
 } | null = null;
-const slashQuery = computed(() => {
-  if (!input.value.startsWith("/") || input.value.includes("\n")) return null;
-  if (selectedSkill.value && !input.value.startsWith("/")) return null;
-  const match = /^\/([^\s]*)$/.exec(input.value);
-  return match?.[1]?.toLowerCase() ?? null;
-});
-const suggestions = computed(() => {
+const builtinSlashCommands = computed<SlashSuggestion[]>(() => [
+  {
+    name: "goal",
+    description: $i18n.t.value.inputBox.goalCommandDescription,
+    kind: "builtin",
+  },
+  {
+    name: "compact",
+    description: $i18n.t.value.inputBox.compactCommandDescription,
+    kind: "builtin",
+  },
+]);
+const slashQuery = computed(() => getLeadingSlashQuery(input.value));
+const suggestions = computed<SlashSuggestion[]>(() => {
   if (slashQuery.value === null) return [];
-  const query = slashQuery.value;
-  const skillOptions = skills.value
-    .filter((skill) => skill.enabled && !skillCommandNames.has(skill.name))
-    .filter((skill) => skill.name.includes(query))
-    .map((skill) => ({
-      name: skill.name,
-      label: skill.name,
-      kind: "skill" as const,
-    }));
-  if (selectedSkill.value) return skillOptions;
-  const commands = [
-    {
-      name: "goal",
-      label: `${$i18n.t.value.inputBox.goalLabel} — ${$i18n.t.value.inputBox.goalCommandDescription}`,
-      kind: "command" as const,
-    },
-    {
-      name: "compact",
-      label: $i18n.t.value.inputBox.compactCommandDescription,
-      kind: "command" as const,
-    },
-  ].filter((command) => command.name.includes(query));
-  return [...skillOptions, ...commands];
+  const matches = getMatchingSlashSuggestions(
+    skills.value,
+    slashQuery.value,
+    builtinSlashCommands.value,
+  );
+  /*
+    内建命令拥有**整行**，所以不能跟技能激活叠在一起：选中技能之后再选 `/goal`，
+    提交出去的是一句聊天文本而不是命令。所以这里把它们从结果里去掉，而不是不喂给
+    helper——helper 需要这份清单去预留它们的名字（叫这个名字的技能同样够不着，
+    理由镜像：它提交出去运行的是命令而不是那个技能）。
+  */
+  return selectedSkill.value
+    ? matches.filter(({ kind }) => kind === "skill")
+    : matches;
 });
+/*
+  焦点态与「关掉过」是显示条件的一部分，不是可有可无的装饰（上游
+  input-box.tsx:1322 的 showSkillSuggestions）。本仓原来只看 `suggestions.length`，
+  于是这个浮层**关不掉**：Escape 没有分支，点走焦点也不消失，它就一直盖在会话流上。
+
+  记的是**当时那行文本**而不是一个裸布尔。记布尔的话，Escape 之后再敲一个字符
+  列表也回不来了——而用户按 Escape 想说的是「这一行我不需要提示」，不是
+  「这个会话里别再提示我」。文本一变（继续打字、退格），条件自然不再成立。
+*/
+const textareaFocused = ref(false);
+const dismissedSuggestionValue = ref<string | null>(null);
+const showSuggestions = computed(
+  () =>
+    props.disabled !== true &&
+    textareaFocused.value &&
+    slashQuery.value !== null &&
+    suggestions.value.length > 0 &&
+    dismissedSuggestionValue.value !== input.value,
+);
 
 /*
   润色按钮的可用性判据，与 React 的 inputPolishDisabled 一一对应
@@ -385,7 +408,12 @@ watch(selectedSkill, async () => {
     chipInput.value.innerText = input.value;
   }
 });
-watch(suggestions, () => {
+/*
+  重置活动项的依赖跟上游一致（input-box.tsx:1538 的 [slashSkillQuery,
+  skillSuggestions.length]），不是整个数组。数组身份每次重算都变，而 hover 会改
+  suggestionIndex——盯着数组身份重置，等于把鼠标刚移上去的那一项又弹回第一项。
+*/
+watch([slashQuery, () => suggestions.value.length], () => {
   suggestionIndex.value = 0;
 });
 
@@ -579,15 +607,32 @@ function toggleVoiceInput() {
   startVoiceRecognition();
 }
 
-function selectSuggestion() {
-  const item = suggestions.value[suggestionIndex.value];
+/*
+  接受一条建议。两支的落点不同，这是上游 applySkillSuggestion（input-box.tsx:1541）
+  的判据：技能变成一枚 chip、正文清空、光标回到 chip 里的正文区；内建命令则原样
+  写回输入框成 `/name `——**带着那个尾随空格**，它同时是「命令已经打完」的信号
+  （查询串含空白，目录自然关掉）和参数的起点。
+
+  内建那一支还要把这一行记进 dismissed：`/goal ` 这行文本本来就不是一次查询，
+  这一笔是防止后续退格回到 `/goal` 时目录又弹出来盖住刚打的命令。
+*/
+function applySuggestion(item: SlashSuggestion | undefined) {
   if (!item) return false;
   if (item.kind === "skill") {
     selectedSkill.value = item.name;
     input.value = "";
+    dismissedSuggestionValue.value = null;
     void nextTick(() => chipInput.value?.focus());
   } else {
-    input.value = `/${item.name} `;
+    const next = `/${item.name} `;
+    input.value = next;
+    dismissedSuggestionValue.value = next;
+    void nextTick(() => {
+      const element = textarea.value;
+      if (!element) return;
+      element.focus();
+      element.setSelectionRange(next.length, next.length);
+    });
   }
   return true;
 }
@@ -610,8 +655,6 @@ async function submit() {
     : plain;
   const compactCommand =
     selectedFiles.value.length === 0 && isCompactCommand(text);
-  if (!compactCommand && suggestions.value.length > 0 && selectSuggestion())
-    return;
   if (!text && selectedFiles.value.length === 0) return;
   const placeholder = findSuggestionTemplatePlaceholder(text);
   if (placeholder) {
@@ -883,29 +926,64 @@ async function submit() {
 
 const compositionActive = ref(false);
 
-function onKeydown(event: KeyboardEvent) {
-  if (isImeComposing(event, compositionActive.value)) return;
-  if (event.key === "Enter" && event.shiftKey) return;
-  if (suggestions.value.length > 0 && event.key === "ArrowDown") {
+/*
+  斜杠目录的键盘导航，对应上游的 handleSkillSuggestionKeyDown（input-box.tsx:1569）。
+  它在上游是**独立于提交路径**的一段：Enter/Tab 在 keydown 阶段就把建议接受掉并
+  preventDefault，于是表单提交那条路根本看不见目录。本仓原来把「接受建议」塞在
+  `submit()` 里，两条路混在一起，才需要 `!compactCommand` 那个硬编码去绕开自己。
+
+  Enter 与 Tab 的分工不同（2026-09-02 用户拍板，两边同改）：**输入行正好是一条
+  打全了的内建命令时，Enter 直接执行**，不再先接受一次它自己的建议——打全
+  `/compact` 还要按两下回车是一记空keystroke。Tab 仍然只做补全。
+  这条只在没有技能 chip 时成立：chip 态里目录只列技能，`/compact` 这行文本
+  提交出去也不是命令，此时 Enter 该接受的就是那条技能建议。
+*/
+function onSuggestionKeydown(event: KeyboardEvent) {
+  if (!showSuggestions.value) return;
+  if (event.key === "ArrowDown") {
     event.preventDefault();
     suggestionIndex.value =
       (suggestionIndex.value + 1) % suggestions.value.length;
     return;
   }
-  if (suggestions.value.length > 0 && event.key === "ArrowUp") {
+  if (event.key === "ArrowUp") {
     event.preventDefault();
     suggestionIndex.value =
       (suggestionIndex.value - 1 + suggestions.value.length) %
       suggestions.value.length;
     return;
   }
-  if (event.key === "Enter" && !event.shiftKey) {
+  if (event.key === "Enter" || event.key === "Tab") {
+    if (event.shiftKey) return;
+    if (
+      event.key === "Enter" &&
+      !selectedSkill.value &&
+      isCompleteBuiltinCommand(input.value)
+    ) {
+      return;
+    }
+    event.preventDefault();
+    applySuggestion(suggestions.value[suggestionIndex.value]);
+    return;
+  }
+  if (event.key === "Escape") {
+    event.preventDefault();
+    dismissedSuggestionValue.value = input.value;
+  }
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (isImeComposing(event, compositionActive.value)) return;
+  onSuggestionKeydown(event);
+  if (event.defaultPrevented) return;
+  if (event.key === "Enter" && event.shiftKey) return;
+  if (event.key === "Enter") {
     event.preventDefault();
     void submit();
     return;
   }
   if (
-    suggestions.value.length === 0 &&
+    !showSuggestions.value &&
     event.key === "ArrowUp" &&
     (!input.value || historyIndex >= 0)
   ) {
@@ -914,7 +992,7 @@ function onKeydown(event: KeyboardEvent) {
     input.value =
       props.promptHistory[props.promptHistory.length - 1 - historyIndex] ?? "";
   } else if (
-    suggestions.value.length === 0 &&
+    !showSuggestions.value &&
     event.key === "ArrowDown" &&
     historyIndex >= 0
   ) {
@@ -1173,6 +1251,66 @@ defineExpose({ replaceDraft, offerFollowup });
         </button>
       </div>
     </div>
+    <!--
+      斜杠目录挂在**整叠 composer 的定位父**上，不在输入框边框里面——上游
+      input-box.tsx:2139 就是这个位置（`{showSkillSuggestions && ...}` 排在
+      `<PromptInput>` 之前），于是它 `bottom-full` 贴的是整个 composer 的上沿、
+      宽度跟着 composer 走。本仓原来把它塞在 ComposerSurface 内部，于是量到的是
+      边框内沿、宽度写死 320px。几何面只取 settle 锚点（浮层不在里面），所以这一处
+      台账测不到，得照着上游的 DOM 位置摆。
+    -->
+    <div
+      v-if="showSuggestions"
+      class="absolute right-0 bottom-full left-0 z-40 mb-2 px-1"
+    >
+      <div
+        role="listbox"
+        :aria-label="$i18n.t.value.primitives.skillSuggestions"
+        class="bg-popover/95 text-popover-foreground border-border max-h-72 overflow-y-auto rounded-xl border p-1 shadow-lg backdrop-blur-sm"
+      >
+        <!--
+          `mouseenter` 把活动项挪到指针下那一项，与上游 input-box.tsx:2160 一致。
+          少了它，`aria-selected` 说的是第一项、`mousedown` 生效的却是指针下那一项,
+          读屏器听到的和点下去发生的是两回事。
+        -->
+        <button
+          v-for="(suggestion, index) in suggestions"
+          :key="`${suggestion.kind}:${suggestion.name}`"
+          role="option"
+          type="button"
+          :aria-selected="index === suggestionIndex"
+          class="aria-selected:bg-accent aria-selected:text-accent-foreground text-popover-foreground hover:bg-accent/70 hover:text-accent-foreground flex min-h-12 w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors"
+          @mouseenter="suggestionIndex = index"
+          @mousedown.prevent="
+            suggestionIndex = index;
+            applySuggestion(suggestion);
+          "
+        >
+          <Target
+            v-if="suggestion.kind === 'builtin'"
+            :size="16"
+            class="text-muted-foreground shrink-0"
+            aria-hidden="true"
+          />
+          <Sparkles
+            v-else
+            :size="16"
+            class="text-muted-foreground shrink-0"
+            aria-hidden="true"
+          />
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-medium"
+              >/{{ suggestion.name }}</span
+            >
+            <span
+              v-if="suggestion.description"
+              class="text-muted-foreground block truncate text-xs"
+              >{{ suggestion.description }}</span
+            >
+          </span>
+        </button>
+      </div>
+    </div>
     <form
       class="mx-auto w-full"
       :class="disabled ? 'pointer-events-none opacity-60' : ''"
@@ -1241,6 +1379,8 @@ defineExpose({ replaceDraft, offerFollowup });
               class="min-h-10 flex-1 text-sm outline-none focus-visible:ring-0 focus-visible:outline-none"
               @input="onChipInput"
               @keydown="onKeydown"
+              @focus="textareaFocused = true"
+              @blur="textareaFocused = false"
               @compositionstart="compositionActive = true"
               @compositionend="compositionActive = false"
             />
@@ -1257,30 +1397,11 @@ defineExpose({ replaceDraft, offerFollowup });
             class="field-sizing-content max-h-48 min-h-6! w-full min-w-0 resize-none bg-transparent p-0! text-base leading-6! outline-none focus-visible:ring-0 focus-visible:outline-none md:text-sm"
             :disabled="disabled || polishing || compactPending"
             @keydown="onKeydown"
+            @focus="textareaFocused = true"
+            @blur="textareaFocused = false"
             @compositionstart="compositionActive = true"
             @compositionend="compositionActive = false"
           />
-        </div>
-        <div
-          v-if="suggestions.length"
-          role="listbox"
-          :aria-label="$i18n.t.value.primitives.skillSuggestions"
-          class="bg-background border-border absolute bottom-full left-0 z-20 mb-2 w-80 rounded-lg border p-1 shadow-lg"
-        >
-          <button
-            v-for="(suggestion, index) in suggestions"
-            :key="suggestion.name"
-            role="option"
-            type="button"
-            :aria-selected="index === suggestionIndex"
-            class="aria-selected:bg-accent block w-full rounded px-3 py-2 text-left text-sm"
-            @mousedown.prevent="
-              suggestionIndex = index;
-              selectSuggestion();
-            "
-          >
-            {{ suggestion.label }}
-          </button>
         </div>
         <div role="group" data-slot="input-group-footer">
           <div class="relative">
@@ -1533,7 +1654,7 @@ defineExpose({ replaceDraft, offerFollowup });
         isWelcome &&
         showWelcomeSuggestions !== false &&
         !selectedSkill &&
-        suggestions.length === 0
+        !showSuggestions
       "
       class="flex items-center justify-center pt-2"
     >

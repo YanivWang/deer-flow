@@ -146,6 +146,7 @@ import {
   getInputSubmitAction,
   getLeadingSlashSkillQuery,
   getMatchingSkillSuggestions,
+  isCompleteBuiltinCommand,
   type GoalCommand,
   isAbortError,
   isCurrentGoalRequest,
@@ -1593,6 +1594,20 @@ export function InputBox({
         if (event.shiftKey) {
           return;
         }
+        // A line that already spells out a whole builtin command runs on Enter
+        // instead of re-accepting its own suggestion: `/compact` would
+        // otherwise need two Enters, the first of which only rewrites the line
+        // into itself plus a trailing space. Tab still completes.
+        // Only outside a skill chip: there the catalog offers skills alone and
+        // the same text does not dispatch a command, so Enter must accept the
+        // highlighted skill.
+        if (
+          event.key === "Enter" &&
+          !selectedSlashSkill &&
+          isCompleteBuiltinCommand(textInput.value ?? "")
+        ) {
+          return;
+        }
         event.preventDefault();
         const selectedSkill = skillSuggestions[skillSuggestionIndex];
         if (selectedSkill) {
@@ -1608,6 +1623,7 @@ export function InputBox({
     },
     [
       applySkillSuggestion,
+      selectedSlashSkill,
       showSkillSuggestions,
       skillSuggestionIndex,
       skillSuggestions,

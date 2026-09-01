@@ -13,9 +13,11 @@ import {
   getMatchingSkillSuggestions,
   GOAL_OBJECTIVE_COUNTER_VISIBLE_AT,
   isAbortError,
+  isCompleteBuiltinCommand,
   isCurrentGoalRequest,
   isGoalObjectiveTooLong,
   MAX_GOAL_OBJECTIVE_CHARS,
+  MAX_SKILL_SUGGESTIONS,
   parseCompactCommand,
   parseGoalCommand,
   readGoalResponseError,
@@ -362,6 +364,62 @@ describe("getMatchingSkillSuggestions", () => {
     );
     const result = getMatchingSkillSuggestions(skills, "", []);
     expect(result.length).toBeLessThanOrEqual(6);
+  });
+
+  // Truncating skills to the whole cap first and clamping the concatenation
+  // afterwards dropped `/goal` and `/compact` outright once six skills matched,
+  // leaving both builtin commands reachable only by typing them blind. The cap
+  // is unchanged; only who gets squeezed out of it moved.
+  it("reserves the matching builtin rows so skills cannot squeeze them out", () => {
+    const skills = Array.from({ length: 10 }, (_, i) =>
+      makeSkill(`skill-${i}`),
+    );
+
+    const result = getMatchingSkillSuggestions(skills, "", builtins);
+
+    expect(result).toHaveLength(MAX_SKILL_SUGGESTIONS);
+    expect(
+      result.filter((s) => s.kind === "builtin").map((s) => s.name),
+    ).toEqual(["goal", "new"]);
+    expect(result.filter((s) => s.kind === "skill").map((s) => s.name)).toEqual([
+      "skill-0",
+      "skill-1",
+      "skill-2",
+      "skill-3",
+    ]);
+  });
+});
+
+describe("isCompleteBuiltinCommand", () => {
+  it("accepts every spelling the two dispatchers actually run", () => {
+    for (const value of [
+      "/goal",
+      "/goal ",
+      "/goal clear",
+      "/goal ship the parity harness",
+      "/GOAL",
+      "/compact",
+      "/context compact",
+      "  /compact  ",
+    ]) {
+      expect(isCompleteBuiltinCommand(value)).toBe(true);
+    }
+  });
+
+  it("rejects half-typed commands and ordinary text", () => {
+    for (const value of [
+      "",
+      "   ",
+      "/",
+      "/go",
+      "/comp",
+      "/compacted",
+      "/goalkeeper",
+      "compact",
+      "tell me about /compact",
+    ]) {
+      expect(isCompleteBuiltinCommand(value)).toBe(false);
+    }
   });
 });
 

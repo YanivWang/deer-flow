@@ -210,14 +210,19 @@ export function getMatchingSkillSuggestions(
       }
       return a.index - b.index;
     })
-    .slice(0, MAX_SKILL_SUGGESTIONS)
+    // Reserve the matching builtin rows before handing the rest to skills.
+    // Truncating skills to the full cap first and clamping the concatenation
+    // afterwards silently drops `/goal` and `/compact` from the list as soon as
+    // six skills match, leaving the two builtin commands reachable only by
+    // typing them blind. The cap still holds; only who gets squeezed changes.
+    .slice(0, Math.max(0, MAX_SKILL_SUGGESTIONS - builtinMatches.length))
     .map(({ skill }) => ({
       name: skill.name,
       description: skill.description,
       kind: "skill" as const,
     }));
 
-  return [...skillMatches, ...builtinMatches].slice(0, MAX_SKILL_SUGGESTIONS);
+  return [...skillMatches, ...builtinMatches];
 }
 
 export function parseGoalCommand(value: string): GoalCommand | null {
@@ -241,15 +246,24 @@ export function parseCompactCommand(value: string): boolean {
   return /^\/(?:compact|context\s+compact)\s*$/i.test(value.trim());
 }
 
+// A line that is already a complete builtin command. Two callers share the
+// predicate: the polish button (a command line must not be rewritten) and the
+// composer's Enter semantics (a fully typed command runs instead of
+// re-accepting its own suggestion). Reuse the same parsers the composer
+// dispatches with instead of maintaining a third parallel list.
+export function isCompleteBuiltinCommand(value: string): boolean {
+  const trimmed = value.trim();
+  return parseGoalCommand(trimmed) !== null || parseCompactCommand(trimmed);
+}
+
 export function canPolishInput(value: string): boolean {
   const trimmed = value.trim();
   if (!trimmed) {
     return false;
   }
   // Reserved builtin command lines are routed to their own handlers, not the
-  // LLM, so they must not be rewritten. Reuse the same parsers the composer
-  // uses to dispatch them instead of maintaining a third parallel list.
-  return parseGoalCommand(trimmed) === null && !parseCompactCommand(trimmed);
+  // LLM, so they must not be rewritten.
+  return !isCompleteBuiltinCommand(trimmed);
 }
 
 export function getInputSubmitAction({

@@ -596,17 +596,23 @@ describe("composer submission and stale lifecycle", () => {
   });
 
   /*
-    上游 input-box.tsx:2133 在这个下拉列表上写死了
+    上游 input-box.tsx:2142 在这个下拉列表上写死了
     `aria-label="Skill suggestions"`（未接入词典）。本仓这里原来完全没有
-    aria-label——parity 台账抓不到，因为默认态取样不会打开这个列表
-    （wave 17 坑 86）。按 `deerflow-untranslated-primitive-names` 的既定规矩，
+    aria-label。按 `deerflow-untranslated-primitive-names` 的既定规矩，
     Vue 用 `primitives.skillSuggestions` 照抄同一串英文。
+
+    wave 21 起这一屏进了对照取样面（sidebar 场景的 steps 里打一个 `/`），
+    所以台账也盯着它了；这条用例留着，因为台账只比两个应用、不回答
+    「这串英文是不是照抄的」。**先 focus 再写值**：显示条件里有焦点态，
+    `setValue` 不会触发 focus。
   */
   it("names the slash-skill suggestion listbox to match React's hardcoded label", async () => {
     const { wrapper } = mountComposer();
     await flushPromises();
 
-    await wrapper.get("textarea[name='message']").setValue("/en");
+    const textarea = wrapper.get("textarea[name='message']");
+    await textarea.trigger("focus");
+    await textarea.setValue("/en");
     await flushPromises();
 
     const listbox = wrapper.get("[role='listbox']");

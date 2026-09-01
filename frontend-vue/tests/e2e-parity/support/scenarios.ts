@@ -491,6 +491,24 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         },
       },
     ],
+    /*
+      斜杠建议**展开态**挂在这个场景上，理由与 agent-chat 挂模型选择器相同：
+      场景 id 受棘轮约束，夹具与步骤不受，而这个场景本来就停在一屏干净的 composer 上。
+
+      展开态必须取样。这一屏在 wave 20 之前一次都没被打开过，而它一打开就是 8 行
+      差异：上游每项是 `/{name}` + 说明两行，本仓技能项只有裸名字、`/goal` 拼成
+      "Goal — 说明"、`/compact` 连名字都没有（线索 103 的又一例）。
+
+      只需要一步 `fill`——它顺带满足了显示条件里的焦点态，两个应用都是如此。
+      默认 mock 的技能目录里有 data-analysis / frontend-design 两条启用的，加上
+      /goal 与 /compact 两条内建命令，正好四行。
+
+      **活动项跟着指针走**（两个应用都是），所以这个场景不能有 click 步骤：
+      Playwright 的虚拟指针停在上一步点过的地方，取样结果就会变成
+      「上一步把鼠标留在哪儿」。`fill` 不移动指针，指针留在 (0,0)，两边的
+      `[selected]` 因此稳定落在第一项。
+    */
+    steps: [{ kind: "fill", target: { selector: "textarea" }, value: "/" }],
   },
   {
     id: "thread-history",
