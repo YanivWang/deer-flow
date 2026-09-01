@@ -117,8 +117,15 @@ test("command palette is a combobox: first result is pre-selected and Escape res
   await composer.click();
   await page.keyboard.press("Meta+k");
 
-  const search = page.getByRole("textbox", { name: "Search actions" });
+  /*
+    role 是 combobox 不是 textbox：ui/command 的输入框与 cmdk 同构
+    （role="combobox" + aria-expanded + aria-autocomplete="list"），用例名一直
+    这么写，定位器以前落后于它。
+  */
+  const search = page.getByRole("combobox", { name: "Search actions" });
   await expect(search).toBeFocused();
+  await expect(search).toHaveAttribute("aria-expanded", "true");
+  await expect(search).toHaveAttribute("aria-autocomplete", "list");
 
   const options = page.getByRole("option");
   await expect(options).toHaveCount(3);

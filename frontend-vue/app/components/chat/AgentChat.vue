@@ -195,11 +195,14 @@ const context = computed(() => ({
   ...(props.agentName ? { agent_name: props.agentName } : {}),
   ...(props.bootstrap ? { is_bootstrap: true } : {}),
 }));
+const isUltraWelcome = computed(() => context.value.mode === "ultra");
 const welcomeColors = computed(() =>
-  context.value.mode === "ultra"
+  isUltraWelcome.value
     ? ["#efefbb", "#e9c665", "#e3a812"]
     : ["var(--color-foreground)"],
 );
+/** 欢迎区的技能创建分支。判据与 skillModePrompt 的 query 部分是同一个。 */
+const skillWelcome = computed(() => route.query.mode === "skill");
 const warnings = ref<string[]>([]);
 const localUploading = ref(false);
 const demoMessages = ref<Message[] | null>(null);
@@ -1807,7 +1810,25 @@ onUnmounted(() => {
                   v-else
                   class="absolute right-0 bottom-0 left-0 mx-auto flex w-full flex-col items-center justify-center gap-2 px-4 py-4 text-center sm:px-8"
                 >
+                  <!--
+                    技能创建入口（?mode=skill）整段换掉标题与说明，上游
+                    welcome.tsx:48 与 :59 是两处独立的三元。本仓原来只有通用那一支，
+                    于是从设置页点「创建技能」跳过来，屏幕上仍然写着
+                    「👋 Hello, again!」——`welcome.createYourOwnSkill` 与
+                    `welcome.createYourOwnSkillDescription` 两条词条一直零消费，
+                    缺的就是这里。
+
+                    判据只看 query，与上游一致（它读 searchParams，不看 thread_id）；
+                    欢迎区本身已经被 isWelcomeMode 那一层挡住了。
+                  -->
                   <div
+                    v-if="skillWelcome"
+                    class="max-w-full text-2xl font-bold"
+                  >
+                    ✨ {{ $i18n.t.value.welcome.createYourOwnSkill }} ✨
+                  </div>
+                  <div
+                    v-else
                     class="flex flex-wrap items-center justify-center gap-2 text-2xl font-bold"
                   >
                     <!--
@@ -1815,8 +1836,12 @@ onUnmounted(() => {
                   （frontend/src/components/workspace/welcome.tsx 里它只是一个普通
                   div），于是读屏器读到的是「👋 Hello, again!」。藏掉它，两边听到的
                   欢迎语就不是同一句。
+
+                  ultra 档换成 🚀，与金色 welcomeColors 是同一个判据（上游
+                  welcome.tsx:53 的 `isUltra ? "🚀" : "👋"`）。本仓原来只换了颜色，
+                  于是 ultra 会话的欢迎语颜色变了、表情没变。
                 -->
-                    <span>👋</span>
+                    <span>{{ isUltraWelcome ? "🚀" : "👋" }}</span>
                     <AuroraText :colors="welcomeColors">
                       {{ $i18n.t.value.welcome.greeting }}
                     </AuroraText>
@@ -1824,7 +1849,11 @@ onUnmounted(() => {
                   <p
                     class="text-muted-foreground max-w-full text-sm whitespace-pre-line"
                   >
-                    {{ $i18n.t.value.welcome.description }}
+                    {{
+                      skillWelcome
+                        ? $i18n.t.value.welcome.createYourOwnSkillDescription
+                        : $i18n.t.value.welcome.description
+                    }}
                   </p>
                 </div>
               </div>

@@ -1,7 +1,9 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it } from "vitest";
+import { defineComponent } from "vue";
 
 import ComposerModelSelector from "@/components/chat/ComposerModelSelector.vue";
+import { Command, CommandInput } from "@/components/ui/command";
 import { enUS } from "@/core/i18n/locales/en-US";
 import type { Model } from "@/core/models/types";
 
@@ -136,6 +138,92 @@ describe("composer model selector", () => {
 
     expect(wrapper.emitted("select")).toEqual([[models[1]]]);
     expect(trigger.attributes("aria-expanded")).toBe("false");
+    wrapper.unmount();
+  });
+
+  /*
+    命令面板的可访问性合同，逐条对着 cmdk 抄。三条都是 2026-09-02 在对照 probe 里
+    实测出来的差异，不是照着文档补的：上游的搜索框是 combobox [expanded]、列表
+    带写死的 aria-label="Suggestions"、活动项带 aria-selected；本仓当时分别是
+    裸 textbox、无名 listbox、和恒为 false 的 aria-selected。
+
+    名字这一条**没有**跟着上游退让：cmdk 恒定渲染一个 <label cmdk-label> 并把
+    aria-labelledby 指过去，而上游两个调用点都没给 Command 传 label，于是那个
+    label 是空的、accname 算出空串、placeholder 兜底被压掉——上游的搜索框根本
+    没有可访问名。那是缺陷，已两边同改（model-selector.tsx 的 label prop）。
+  */
+  it("gives the search box combobox semantics and keeps its accessible name", async () => {
+    const { wrapper, trigger } = openSelector({ selectedModel: models[0] });
+    await trigger.trigger("click");
+    await flushPromises();
+
+    const search = document.querySelector<HTMLInputElement>(
+      '[data-slot="command-input"]',
+    )!;
+    expect(search.getAttribute("role")).toBe("combobox");
+    expect(search.getAttribute("aria-expanded")).toBe("true");
+    expect(search.getAttribute("aria-autocomplete")).toBe("list");
+    /*
+      名字来自一个视觉隐藏的真 <label>，不是 aria-label——cmdk 就是这样，而
+      两者在可访问性树里不等价：aria-label 不留 text 节点，<label> 留。
+    */
+    const label = document.querySelector<HTMLLabelElement>(
+      '[data-slot="command-label"]',
+    )!;
+    expect(label.textContent?.trim()).toBe(enUS.inputBox.searchModels);
+    expect(label.getAttribute("for")).toBe(search.id);
+    expect(search.id).not.toBe("");
+    expect(search.getAttribute("aria-label")).toBeNull();
+    wrapper.unmount();
+  });
+
+  /* 没给 label 就不渲染那个元素，对应上游"没传 label"的那一半。 */
+  it("renders no label element when the caller gives no name", async () => {
+    const wrapper = mount(
+      defineComponent({
+        components: { Command, CommandInput },
+        template: "<Command><CommandInput /></Command>",
+      }),
+      { attachTo: document.body },
+    );
+    await flushPromises();
+    expect(document.querySelector('[data-slot="command-label"]')).toBeNull();
+    wrapper.unmount();
+  });
+
+  it("names the list the way cmdk does", async () => {
+    const { wrapper, trigger } = openSelector({ selectedModel: models[0] });
+    await trigger.trigger("click");
+    await flushPromises();
+
+    expect(
+      document
+        .querySelector('[data-slot="command-list"]')
+        ?.getAttribute("aria-label"),
+    ).toBe(enUS.primitives.suggestions);
+    wrapper.unmount();
+  });
+
+  /*
+    活动项就是 aria-selected 的那一项。Reka 的 Listbox 把 aria-selected 当成
+    「被选中的值」、高亮只落在 data-highlighted 上，于是所有项恒为 false；cmdk 的
+    `value` 就是活动项。combobox + aria-activedescendant 的组合下必须是后者，
+    否则读屏器指过去的那一项在树里根本不是选中态。
+
+    断言两半都要有（坑 57）：换一项高亮之后，**旧的那一项要掉回 false**。
+  */
+  it("marks the highlighted option as the selected one", async () => {
+    const { wrapper, trigger } = openSelector({ selectedModel: models[0] });
+    await trigger.trigger("click");
+    await flushPromises();
+
+    const selected = () =>
+      items().map((item) => item.getAttribute("aria-selected"));
+    expect(selected()).toEqual(["true", "false"]);
+
+    items()[1]!.dispatchEvent(new MouseEvent("pointermove", { bubbles: true }));
+    await flushPromises();
+    expect(selected()).toEqual(["false", "true"]);
     wrapper.unmount();
   });
 

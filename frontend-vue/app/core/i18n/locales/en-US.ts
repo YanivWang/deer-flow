@@ -46,6 +46,7 @@ export const enUS: Translations = {
     stop: "Stop",
     skillSuggestions: "Skill suggestions",
     modelSelector: "Model Selector",
+    suggestions: "Suggestions",
     notifications: "Notifications alt+T",
     loadingPanel: "Loading panel…",
     loadingSettingsPage: "Loading…",

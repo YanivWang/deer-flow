@@ -801,7 +801,8 @@ test.describe("Side chat", () => {
     await sidecarInputForm
       .getByRole("button", { name: "Pro", exact: true })
       .click();
-    await page.getByRole("menuitem").filter({ hasText: "Flash" }).click();
+    // Mode options are radio items now, so the active mode is announced.
+    await page.getByRole("menuitemradio").filter({ hasText: "Flash" }).click();
     await expect(
       sidecarInputForm.getByRole("button", { name: "Flash", exact: true }),
     ).toBeVisible();

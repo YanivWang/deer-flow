@@ -413,3 +413,74 @@ describe("SidecarPanel session adapter", () => {
     expect(draft.wrapper.text()).toContain(enUS.sidecar.emptyDescription);
   });
 });
+
+/*
+  sidecar 的模式菜单与主输入框是同一份产品决策，上游两处逐字同构
+  （sidecar-panel.tsx 的 SidecarModeMenu 与 input-box.tsx 的模式菜单）。
+  本仓这一支原来是 w-32 的裸标签列表：同一个下拉在主输入框里读得出
+  「Flash 快速高效……」，在 sidecar 里只读得出「Flash」。
+*/
+describe("SidecarPanel 模式菜单", () => {
+  beforeEach(() => {
+    mocks.sendMessage.mockReset();
+    vi.stubGlobal("useNuxtApp", () => ({
+      $i18n: { t: ref(enUS), locale: ref("en-US") },
+    }));
+  });
+
+  async function openModeMenu(supportsThinking: boolean) {
+    mocks.loadModels.mockReset().mockResolvedValue({
+      models: [
+        {
+          id: "reasoner",
+          name: "reasoner",
+          model: "Reasoner",
+          display_name: "Reasoner",
+          supports_thinking: supportsThinking,
+        },
+      ],
+    });
+    const { wrapper } = mountPanel();
+    await flushPromises();
+    await wrapper.get('[data-testid="sidecar-mode-trigger"]').trigger("click");
+    await flushPromises();
+    return wrapper;
+  }
+
+  function radioItems() {
+    return [
+      ...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]'),
+    ];
+  }
+
+  it("titles the group and spells out every mode", async () => {
+    const wrapper = await openModeMenu(true);
+
+    const menu = document.querySelector('[role="menu"]');
+    expect(menu?.textContent).toContain(enUS.inputBox.mode);
+    expect(radioItems()).toHaveLength(4);
+    expect(radioItems()[0]!.textContent).toContain(
+      enUS.inputBox.flashModeDescription,
+    );
+    expect(radioItems()[3]!.textContent).toContain(
+      enUS.inputBox.ultraModeDescription,
+    );
+    // 标题不是菜单项：它不该进方向键序列。
+    expect(menu?.querySelectorAll('[role="menuitem"]')).toHaveLength(0);
+    wrapper.unmount();
+    document.body.innerHTML = "";
+  });
+
+  /*
+    模型不支持 thinking 时只留 Flash。selectMode 会把别的档位经 resolvedMode
+    拉回 flash，所以列出来的是一个点了不肯 checked 的 radio。两边同改。
+  */
+  it("lists only flash when the model cannot think", async () => {
+    const wrapper = await openModeMenu(false);
+
+    expect(radioItems()).toHaveLength(1);
+    expect(radioItems()[0]!.textContent).toContain(enUS.inputBox.flashMode);
+    wrapper.unmount();
+    document.body.innerHTML = "";
+  });
+});

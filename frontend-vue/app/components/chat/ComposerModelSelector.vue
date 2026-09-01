@@ -151,9 +151,14 @@ function selectModel(model: Model) {
         <CommandInput
           v-model="search"
           :placeholder="$i18n.t.value.inputBox.searchModels"
-          :aria-label="$i18n.t.value.inputBox.searchModels"
+          :label="$i18n.t.value.inputBox.searchModels"
         />
-        <CommandList>
+        <!--
+          列表的可访问名。cmdk 的 Command.List 恒定带 aria-label="Suggestions"
+          （写死的英文，上游两个调用点都没覆盖），Reka 的 ListboxContent 不带名字。
+          按"primitive 的可访问名照抄"那条约定走 primitives.*。
+        -->
+        <CommandList :aria-label="$i18n.t.value.primitives.suggestions">
           <CommandItem
             v-for="model in filteredModels"
             :key="model.id"

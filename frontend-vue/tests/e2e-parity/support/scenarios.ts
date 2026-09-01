@@ -339,6 +339,48 @@ const CHANNEL_PROVIDERS = [
   ...provider,
 }));
 
+/*
+  带能力位的模型目录。共享 mock 的 `/api/models` 返回**空列表**，于是工具条上的
+  模型/模式/推理强度三个控件要么没有名字、要么整个不渲染——composer 的这一半
+  一直落在取样面之外，而"台账 0"在这种情况下只说明"这一屏没被取样"。
+
+  两条记录各站一种能力：`parity-basic` 什么都不支持，`parity-thinker` 同时声明
+  supports_thinking 与 supports_reasoning_effort。两个应用都在模型目录到位之后
+  把 context 收敛到 models[0]（React 的 useEffect + getResolvedMode，本仓的
+  watch + normalizeComposerContext），所以谁排第一决定了默认落在 flash 还是 pro，
+  也就决定了推理强度选择器出不出现——两份顺序因此都要用上。
+*/
+const PARITY_MODEL_BASIC = {
+  id: "parity-basic",
+  name: "parity-basic",
+  model: "parity/basic",
+  display_name: "Parity Basic",
+};
+const PARITY_MODEL_THINKER = {
+  id: "parity-thinker",
+  name: "parity-thinker",
+  model: "parity/thinker",
+  display_name: "Parity Thinker",
+  supports_thinking: true,
+  supports_reasoning_effort: true,
+};
+/** 不支持 thinking 的模型排第一：默认收敛到 flash。 */
+const MODELS_ROUTE_BASIC_FIRST: ParityRouteOverride = {
+  pattern: "**/api/models",
+  json: {
+    models: [PARITY_MODEL_BASIC, PARITY_MODEL_THINKER],
+    token_usage: { enabled: false },
+  },
+};
+/** 支持 thinking 的模型排第一：默认收敛到 pro，推理强度选择器随之出现。 */
+const MODELS_ROUTE_THINKER_FIRST: ParityRouteOverride = {
+  pattern: "**/api/models",
+  json: {
+    models: [PARITY_MODEL_THINKER, PARITY_MODEL_BASIC],
+    token_usage: { enabled: false },
+  },
+};
+
 const ARTIFACT_PATH = "/artifact-fixtures/report.html";
 
 /** 与 frontend/tests/e2e/artifact-preview.spec.ts 的 writeFileMessages() 同形。 */
@@ -467,7 +509,23 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     backend: "mock",
     path: "/workspace/agents/test-agent/chats/new",
     mock: { agents: MOCK_AGENTS },
+    /*
+      模型选择器**展开态**挂在这个场景上，理由与 branch-thread 挂 interrupt 相同：
+      场景 id 受棘轮约束，夹具与步骤不受约束，而这一屏本来就是最干净的 composer。
+
+      展开态必须取样，因为它整个 portal 到 body 上、稳定态里一个节点都不留。
+      实测（2026-09-02）它一次带出六行差异：搜索框的 role、列表的可访问名、
+      活动项的 aria-selected——全是 wave 19 换成 Dialog+Command 时没人看得见的。
+
+      触发器按可访问名点，两个应用都渲染 selectedModel.display_name。
+    */
+    routes: [MODELS_ROUTE_BASIC_FIRST],
     settle: [{ kind: "visible", target: { selector: "textarea" } }],
+    steps: [
+      { kind: "click", target: { role: "button", name: "Parity Basic" } },
+      { kind: "visible", target: { role: "dialog", name: "Model Selector" } },
+      { kind: "visible", target: { role: "option", name: /Parity Thinker/ } },
+    ],
   },
   {
     id: "agents-feature-disabled",
@@ -635,7 +693,20 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     title: "移动端工作区首屏",
     backend: "mock",
     path: "/workspace/chats/new",
+    /*
+      模式菜单在**不支持 thinking** 的模型下的样子。另外三个展开态都用
+      thinker-first，于是"选不中的档位该不该列出来"这条判据在取样面上是空的——
+      两边同改成"不列"之后，没有任何门禁看得见 React 那一半。这一条补上它。
+
+      它顺带落在 mobile 维度上，而这个场景本来就只跑 mobile：菜单宽 w-80 大于
+      375 的视口，浮层的碰撞调整两边各做各的，但那属于定位策略、不进取样面。
+    */
+    routes: [MODELS_ROUTE_BASIC_FIRST],
     settle: [{ kind: "visible", target: { selector: "textarea" } }],
+    steps: [
+      { kind: "click", target: { role: "button", name: /^Flash$/ } },
+      { kind: "visible", target: { role: "menuitemradio", name: /^Flash / } },
+    ],
     // 这个场景的全部意义就是小屏，所以它只跑 mobile。
     dimensions: [{ viewport: "mobile", theme: "light", locale: "en-US" }],
   },
@@ -661,7 +732,20 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         },
       ],
     },
+    /*
+      模式菜单的**展开态**挂在这里。菜单同样 portal 到 body，稳定态里没有它。
+      用 thinker-first 的目录是因为四档模式只有在模型支持 thinking 时才全出现，
+      而"哪几档该出现"本身就是两边分叉过的判据。
+    */
+    routes: [MODELS_ROUTE_THINKER_FIRST],
     settle: [{ kind: "visible", target: { text: PLAIN_TEXT_SOURCE } }],
+    steps: [
+      { kind: "click", target: { role: "button", name: /^Pro$/ } },
+      {
+        kind: "visible",
+        target: { role: "menuitemradio", name: /^Ultra / },
+      },
+    ],
   },
   {
     id: "integrations",
@@ -1219,6 +1303,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       ],
     },
     routes: [
+      MODELS_ROUTE_THINKER_FIRST,
       {
         pattern: "**/api/threads/*/runs/*/workspace-changes*",
         json: {
@@ -1254,8 +1339,20 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         },
       },
     ],
+    /*
+      推理强度菜单的展开态。它只在 supports_reasoning_effort 且当前不是 flash
+      时才渲染，所以必须用 thinker-first 的目录——basic-first 会把模式收敛到
+      flash，整个控件连同它的菜单一起消失。
+    */
     settle: [
       { kind: "visible", target: { text: "I updated the workspace report." } },
+    ],
+    steps: [
+      { kind: "click", target: { role: "button", name: /^Reasoning Effort:/ } },
+      {
+        kind: "visible",
+        target: { role: "menuitemradio", name: /^Minimal / },
+      },
     ],
   },
   {

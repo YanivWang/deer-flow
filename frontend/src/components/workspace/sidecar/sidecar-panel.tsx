@@ -12,7 +12,7 @@ import {
   XIcon,
   ZapIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ConversationEmptyState } from "@/components/ai-elements/conversation";
@@ -20,7 +20,6 @@ import {
   PromptInput,
   PromptInputActionMenu,
   PromptInputActionMenuContent,
-  PromptInputActionMenuItem,
   PromptInputActionMenuTrigger,
   PromptInputAttachment,
   PromptInputAttachments,
@@ -45,8 +44,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenuGroup,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/core/i18n/hooks";
 import {
@@ -759,6 +759,8 @@ function SidecarModeMenu({
 }) {
   const { t } = useI18n();
   const mode = getResolvedMode(context.mode, supportThinking);
+  // See input-box.tsx: the heading has to name the group it sits in.
+  const labelId = useId();
 
   return (
     <PromptInputActionMenu>
@@ -786,17 +788,28 @@ function SidecarModeMenu({
         </PromptInputActionMenuTrigger>
       </ModeHoverGuide>
       <PromptInputActionMenuContent className="w-80">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="text-muted-foreground text-xs">
+        {/*
+          Radio items, an in-group label, and only the modes the model can
+          honour — same reasons as the main composer's mode menu (input-box.tsx).
+        */}
+        <DropdownMenuRadioGroup
+          aria-labelledby={labelId}
+          value={mode}
+          onValueChange={(next) => onModeSelect(next as SidecarInputMode)}
+        >
+          <DropdownMenuLabel
+            id={labelId}
+            className="text-muted-foreground text-xs"
+          >
             {t.inputBox.mode}
           </DropdownMenuLabel>
-          <PromptInputActionMenuItem
+          <DropdownMenuRadioItem
+            value="flash"
             className={cn(
               mode === "flash"
                 ? "text-accent-foreground"
                 : "text-muted-foreground/65",
             )}
-            onSelect={() => onModeSelect("flash")}
           >
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-1 font-bold">
@@ -812,20 +825,15 @@ function SidecarModeMenu({
                 {t.inputBox.flashModeDescription}
               </div>
             </div>
-            {mode === "flash" ? (
-              <CheckIcon className="ml-auto size-4" />
-            ) : (
-              <div className="ml-auto size-4" />
-            )}
-          </PromptInputActionMenuItem>
+          </DropdownMenuRadioItem>
           {supportThinking && (
-            <PromptInputActionMenuItem
+            <DropdownMenuRadioItem
+              value="thinking"
               className={cn(
                 mode === "thinking"
                   ? "text-accent-foreground"
                   : "text-muted-foreground/65",
               )}
-              onSelect={() => onModeSelect("thinking")}
             >
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-1 font-bold">
@@ -841,72 +849,61 @@ function SidecarModeMenu({
                   {t.inputBox.reasoningModeDescription}
                 </div>
               </div>
-              {mode === "thinking" ? (
-                <CheckIcon className="ml-auto size-4" />
-              ) : (
-                <div className="ml-auto size-4" />
-              )}
-            </PromptInputActionMenuItem>
+            </DropdownMenuRadioItem>
           )}
-          <PromptInputActionMenuItem
-            className={cn(
-              mode === "pro"
-                ? "text-accent-foreground"
-                : "text-muted-foreground/65",
-            )}
-            onSelect={() => onModeSelect("pro")}
-          >
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-1 font-bold">
-                <GraduationCapIcon
-                  className={cn(
-                    "mr-2 size-4",
-                    mode === "pro" && "text-accent-foreground",
-                  )}
-                />
-                {t.inputBox.proMode}
-              </div>
-              <div className="pl-7 text-xs">
-                {t.inputBox.proModeDescription}
-              </div>
-            </div>
-            {mode === "pro" ? (
-              <CheckIcon className="ml-auto size-4" />
-            ) : (
-              <div className="ml-auto size-4" />
-            )}
-          </PromptInputActionMenuItem>
-          <PromptInputActionMenuItem
-            className={cn(
-              mode === "ultra"
-                ? "text-accent-foreground"
-                : "text-muted-foreground/65",
-            )}
-            onSelect={() => onModeSelect("ultra")}
-          >
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-1 font-bold">
-                <RocketIcon
-                  className={cn(
-                    "mr-2 size-4",
-                    mode === "ultra" && "text-[#dabb5e]",
-                  )}
-                />
-                <div className={cn(mode === "ultra" && "golden-text")}>
-                  {t.inputBox.ultraMode}
+          {supportThinking && (
+            <DropdownMenuRadioItem
+              value="pro"
+              className={cn(
+                mode === "pro"
+                  ? "text-accent-foreground"
+                  : "text-muted-foreground/65",
+              )}
+            >
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-1 font-bold">
+                  <GraduationCapIcon
+                    className={cn(
+                      "mr-2 size-4",
+                      mode === "pro" && "text-accent-foreground",
+                    )}
+                  />
+                  {t.inputBox.proMode}
+                </div>
+                <div className="pl-7 text-xs">
+                  {t.inputBox.proModeDescription}
                 </div>
               </div>
-              <div className="pl-7 text-xs">
-                {t.inputBox.ultraModeDescription}
+            </DropdownMenuRadioItem>
+          )}
+          {supportThinking && (
+            <DropdownMenuRadioItem
+              value="ultra"
+              className={cn(
+                mode === "ultra"
+                  ? "text-accent-foreground"
+                  : "text-muted-foreground/65",
+              )}
+            >
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-1 font-bold">
+                  <RocketIcon
+                    className={cn(
+                      "mr-2 size-4",
+                      mode === "ultra" && "text-[#dabb5e]",
+                    )}
+                  />
+                  <div className={cn(mode === "ultra" && "golden-text")}>
+                    {t.inputBox.ultraMode}
+                  </div>
+                </div>
+                <div className="pl-7 text-xs">
+                  {t.inputBox.ultraModeDescription}
+                </div>
               </div>
-            </div>
-            {mode === "ultra" ? (
-              <CheckIcon className="ml-auto size-4" />
-            ) : (
-              <div className="ml-auto size-4" />
-            )}
-          </PromptInputActionMenuItem>
-        </DropdownMenuGroup>
+            </DropdownMenuRadioItem>
+          )}
+        </DropdownMenuRadioGroup>
       </PromptInputActionMenuContent>
     </PromptInputActionMenu>
   );
@@ -946,7 +943,7 @@ function SidecarModelSelector({
           </div>
         </PromptInputButton>
       </ModelSelectorTrigger>
-      <ModelSelectorContent>
+      <ModelSelectorContent label={t.inputBox.searchModels}>
         <ModelSelectorInput placeholder={t.inputBox.searchModels} />
         <ModelSelectorList>
           {models.map((model) => (

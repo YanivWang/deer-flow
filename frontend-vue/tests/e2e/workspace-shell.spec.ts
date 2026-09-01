@@ -48,7 +48,8 @@ test("command palette owns exact shortcuts, keyboard navigation and cleanup", as
   await page.keyboard.press("Meta+k");
   const palette = page.getByRole("dialog", { name: "Actions" });
   await expect(palette).toBeVisible();
-  const search = palette.getByRole("textbox", { name: "Search actions" });
+  // ui/command 的输入框是 combobox（与 cmdk 同构），不是裸 textbox。
+  const search = palette.getByRole("combobox", { name: "Search actions" });
   await expect(search).toBeFocused();
   await search.fill("Settings");
   await search.press("ArrowDown");

@@ -32,17 +32,30 @@ export const ModelSelectorTrigger = (props: ModelSelectorTriggerProps) => (
 
 export type ModelSelectorContentProps = ComponentProps<typeof DialogContent> & {
   title?: ReactNode;
+  /**
+   * Accessible name for the search field.
+   *
+   * cmdk always renders a visually hidden `<label cmdk-label>` and points the
+   * input's `aria-labelledby` at it. Without this prop that label is empty, so
+   * accname resolves to the empty string and suppresses the placeholder
+   * fallback — the search field ends up with no accessible name at all.
+   */
+  label?: string;
 };
 
 export const ModelSelectorContent = ({
   className,
   children,
   title = "Model Selector",
+  label,
   ...props
 }: ModelSelectorContentProps) => (
   <DialogContent className={cn("p-0", className)} {...props}>
     <DialogTitle className="sr-only">{title}</DialogTitle>
-    <Command className="**:data-[slot=command-input-wrapper]:h-auto">
+    <Command
+      className="**:data-[slot=command-input-wrapper]:h-auto"
+      label={label}
+    >
       {children}
     </Command>
   </DialogContent>

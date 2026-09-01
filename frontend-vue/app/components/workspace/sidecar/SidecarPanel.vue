@@ -31,6 +31,7 @@ import { ConversationEmptyState } from "@/components/ui/conversation";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -176,6 +177,17 @@ const modeOptions = computed(() => [
     description: $i18n.t.value.inputBox.ultraModeDescription,
   },
 ]);
+/*
+  模型不支持 thinking 时只留 Flash。上游 SidecarModeMenu 原来照样列出另外三项，
+  但 selectMode 会把它们经 resolvedMode 拉回 flash——勾永远不动，只有隐藏的
+  reasoning_effort 被改了。换成 radio 之后这更明显：一个点了不肯 checked 的
+  menuitemradio 是坏掉的控件。已两边同改（sidecar-panel.tsx 同一处）。
+*/
+const availableModeOptions = computed(() =>
+  selectedModel.value?.supports_thinking === true
+    ? modeOptions.value
+    : modeOptions.value.filter((option) => option.id === "flash"),
+);
 /* 触发器文案与 hover 说明取自同一条记录；未知 mode 回落到 pro，与 React 一致。 */
 /*
   触发器读的必须是**解析后**的 mode。上游 SidecarModeMenu 一进来就跑
@@ -477,18 +489,33 @@ async function confirmDelete() {
                   </button>
                 </ModeHoverGuide>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" side="top" class="w-32">
+              <!--
+                与上游 SidecarModeMenu 同构：w-80、组内标题、每项「名字 + 说明」。
+                本仓原来是 w-32 的裸标签列表，于是同一个下拉在主输入框里读得出
+                「Flash 快速高效……」、在 sidecar 里只读得出「Flash」。
+              -->
+              <DropdownMenuContent align="start" side="top" class="w-80">
                 <DropdownMenuRadioGroup
                   :model-value="resolvedActiveMode"
                   @update:model-value="selectMode(String($event))"
                 >
+                  <DropdownMenuLabel class="text-muted-foreground text-xs">
+                    {{ $i18n.t.value.inputBox.mode }}
+                  </DropdownMenuLabel>
                   <DropdownMenuRadioItem
-                    v-for="mode in modeOptions"
+                    v-for="mode in availableModeOptions"
                     :key="mode.id"
                     :value="mode.id"
-                    class="text-xs capitalize"
+                    class="py-2"
                   >
-                    {{ mode.label }}
+                    <span class="block">
+                      <span class="block text-sm font-medium">{{
+                        mode.label
+                      }}</span>
+                      <span class="text-muted-foreground block text-xs">{{
+                        mode.description
+                      }}</span>
+                    </span>
                   </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>

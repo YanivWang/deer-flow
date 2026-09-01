@@ -1394,11 +1394,20 @@ defineExpose({ replaceDraft, offerFollowup });
                 </button>
               </ModeHoverGuide>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="top" class="w-72">
+            <DropdownMenuContent align="end" side="top" class="w-80">
+              <!--
+                分组标题在 radio group **里面**，与上游同构（上游原来把它放在外面
+                一层 DropdownMenuGroup 里，两层 role="group" 中有一层什么都不命名，
+                已两边同改成这一种）。`inputBox.mode` 此前在本仓零消费，而未引用扫描
+                器按叶子名匹配看不见它——缺的就是这一行。
+              -->
               <DropdownMenuRadioGroup
                 :model-value="explicitMode"
                 @update:model-value="selectModeById(String($event))"
               >
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  {{ $i18n.t.value.inputBox.mode }}
+                </DropdownMenuLabel>
                 <DropdownMenuRadioItem
                   v-for="mode in availableModes"
                   :key="mode.id"
@@ -1431,11 +1440,14 @@ defineExpose({ replaceDraft, offerFollowup });
                 {{ activeReasoningEffort.label }}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="top" class="w-72">
+            <DropdownMenuContent align="end" side="top" class="w-70">
               <DropdownMenuRadioGroup
                 :model-value="selectedReasoningEffort"
                 @update:model-value="selectReasoningEffort(String($event))"
               >
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  {{ $i18n.t.value.inputBox.reasoningEffort }}
+                </DropdownMenuLabel>
                 <DropdownMenuRadioItem
                   v-for="effort in reasoningEfforts"
                   :key="effort.id"

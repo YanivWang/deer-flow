@@ -55,10 +55,23 @@ const MAIN_MESSAGES = [
   { type: "ai", id: "parent-ai-1", content: "Here is the plan." },
 ];
 
+/** 不支持 thinking 的模型：档位列表与强度控件都应该收敛到 flash 那一支。 */
+const FLASH_ONLY_MODELS = {
+  models: [
+    {
+      id: "plain",
+      name: "plain",
+      model: "Plain",
+      display_name: "Plain Model",
+    },
+  ],
+  token_usage: { enabled: false },
+};
+
 async function openWorkspace(
   page: Page,
   path: string,
-  options: { withSidecar?: boolean } = {},
+  options: { withSidecar?: boolean; thinking?: boolean } = {},
 ) {
   mockLangGraphAPI(page, {
     threads: [
@@ -98,7 +111,9 @@ async function openWorkspace(
     ],
   });
   await page.route("**/api/models", (route) =>
-    route.fulfill({ json: THINKING_MODELS }),
+    route.fulfill({
+      json: options.thinking === false ? FLASH_ONLY_MODELS : THINKING_MODELS,
+    }),
   );
   await page.goto(path);
   await expect(page.getByPlaceholder(/how can i assist you/i)).toBeVisible({
@@ -220,4 +235,88 @@ test("explains the sidecar mode too", async ({ page }) => {
   const described = await guideText(page);
   expect(described.startsWith(`${label}: `)).toBe(true);
   expect(described.length).toBeGreaterThan(label.length + 2);
+});
+
+/*
+  分组标题。上游两个菜单都在内容顶上放一条 DropdownMenuLabel（input-box.tsx 与
+  sidecar-panel.tsx 各一处），本仓一条都没有——`inputBox.mode` 因此在本仓零消费，
+  而未引用扫描器按叶子名匹配看不见它（同名叶子在别处有消费者）。
+*/
+test("titles both composer menus with their group label", async ({ page }) => {
+  await openWorkspace(page, "/workspace/chats/new");
+
+  const modeTrigger = page.getByTestId("composer-mode-trigger");
+  await modeTrigger.click();
+  const modeMenu = page.getByRole("menu");
+  await expect(modeMenu).toContainText("Mode");
+  // 标题不是菜单项：它不该进方向键序列，也不该被当成第五档。
+  await expect(page.getByRole("menuitemradio")).toHaveCount(4);
+  await page.keyboard.press("Escape");
+
+  const effortTrigger = page.getByTestId("composer-reasoning-effort-trigger");
+  await effortTrigger.click();
+  await expect(page.getByRole("menu")).toContainText("Reasoning Effort");
+  await expect(page.getByRole("menuitemradio")).toHaveCount(4);
+});
+
+/*
+  模型不支持 thinking 时只列 Flash。上游原来把另外三档也列出来，但 getResolvedMode
+  会把它们拉回 flash——勾永远不动，只有隐藏的 reasoning_effort 被改了。两边同改成
+  「选不中就不列」（frontend/src/components/workspace/input-box.tsx 与
+  sidecar/sidecar-panel.tsx 同一处）。
+*/
+test("lists only flash when the model cannot think", async ({ page }) => {
+  await openWorkspace(page, "/workspace/chats/new", { thinking: false });
+
+  const trigger = page.getByTestId("composer-mode-trigger");
+  await expect(trigger).toHaveText("Flash");
+  await trigger.click();
+  const options = page.getByRole("menuitemradio");
+  await expect(options).toHaveCount(1);
+  await expect(options.first()).toContainText("Flash");
+  // 强度选择器跟着 flash 一起消失。
+  await expect(
+    page.getByTestId("composer-reasoning-effort-trigger"),
+  ).toHaveCount(0);
+});
+
+/*
+  sidecar 的模式菜单与主输入框同构。本仓原来是 w-32 的裸标签列表，于是同一个下拉
+  在主输入框里读得出「Flash 快速高效……」、在 sidecar 里只读得出「Flash」。
+*/
+test("gives the sidecar mode menu the same title and descriptions", async ({
+  page,
+}) => {
+  await openWorkspace(page, `/workspace/chats/${MOCK_THREAD_ID}`, {
+    withSidecar: true,
+  });
+  await page.getByTestId("sidecar-header-trigger").click();
+  const panel = page.getByTestId("sidecar-panel");
+  await expect(panel).toBeVisible();
+
+  await panel.getByTestId("sidecar-mode-trigger").click();
+  await expect(page.getByRole("menu")).toContainText("Mode");
+  const options = page.getByRole("menuitemradio");
+  await expect(options).toHaveCount(4);
+  await expect(options.first()).toContainText(
+    "Fast and efficient, but may not be accurate",
+  );
+});
+
+/*
+  ultra 档把欢迎语的表情从 👋 换成 🚀，与金色 welcomeColors 是同一个判据
+  （上游 welcome.tsx:53 的 `isUltra ? "🚀" : "👋"`）。本仓原来只换了颜色，
+  于是 ultra 会话的欢迎语颜色变了、表情没变。
+*/
+test("swaps the welcome emoji in ultra mode", async ({ page }) => {
+  await openWorkspace(page, "/workspace/chats/new");
+
+  await expect(page.getByText("👋")).toBeVisible();
+  await expect(page.getByText("🚀")).toHaveCount(0);
+
+  await page.getByTestId("composer-mode-trigger").click();
+  await page.getByRole("menuitemradio").last().click(); // ultra
+
+  await expect(page.getByText("🚀")).toBeVisible();
+  await expect(page.getByText("👋")).toHaveCount(0);
 });

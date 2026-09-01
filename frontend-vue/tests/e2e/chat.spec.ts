@@ -73,6 +73,15 @@ test.describe("Chat workspace", () => {
     );
     // 建议行在这一屏是关掉的，两件事同一个 query。
     await expect(page.getByTestId("welcome-suggestions")).toHaveCount(0);
+
+    /*
+      欢迎区整段换掉，与上游 welcome.tsx:48/:59 的两处三元一致。本仓原来只有
+      通用那一支，于是从设置页点「创建技能」跳过来，屏幕上仍写着
+      「👋 Hello, again!」——两条 `welcome.createYourOwnSkill*` 因此零消费。
+    */
+    await expect(page.getByText("✨ Create Your Own Skill ✨")).toBeVisible();
+    await expect(page.getByText(/Hello, again/)).toHaveCount(0);
+    await expect(page.getByText(/release the power of DeerFlow/)).toBeVisible();
   });
 
   test("does not prefill the skill prompt on a plain new chat", async ({
@@ -83,6 +92,12 @@ test.describe("Chat workspace", () => {
     const textarea = page.getByPlaceholder(/how can i assist you/i);
     await expect(textarea).toBeVisible({ timeout: 15_000 });
     await expect(textarea).toHaveValue("");
+    /*
+      反面：通用欢迎语在没有这个 query 时必须还在。取 .first()——AuroraText 同时
+      渲染一份 sr-only 文本和一份 aria-hidden 的可见副本，裸定位器会 strict 违规。
+    */
+    await expect(page.getByText(/Hello, again/).first()).toBeVisible();
+    await expect(page.getByText("✨ Create Your Own Skill ✨")).toHaveCount(0);
   });
 
   test("can type a message in the input box", async ({ page }) => {
