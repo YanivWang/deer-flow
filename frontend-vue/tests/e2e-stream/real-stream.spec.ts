@@ -161,7 +161,11 @@ test.describe("真流 gate", () => {
     await expect(card).toContainText("Research the market", {
       timeout: 20_000,
     });
-    await expect(card).toContainText("Completed");
+    // 状态词来自词典的 `subtasks.completed`，上游同一条（frontend/src/components/
+    // workspace/messages/subtask-card.tsx:250 也读 t.subtasks.completed），两边都是
+    // "Subtask completed"。写死的 "Completed" 是 wave 11 之前 view-model.ts 里那个
+    // 已被删掉的 statusLabel 留下的。
+    await expect(card).toContainText("Subtask completed");
     await expect(card).toContainText("scenario-model");
     await expect(card).toContainText("30");
 
@@ -183,7 +187,10 @@ test.describe("真流 gate", () => {
     await textarea.press("Enter");
 
     // A7 的第一条正面特征：**用户看得见的本地化文案**，不是一个 key。
-    const warning = page.getByRole("status");
+    // 必须按 testid 取：这一屏还有别的 role="status"（工具条的上下文用量徽标
+    // 一直在，流式期间 MessageList 再挂一条 RunActivity），裸 getByRole("status")
+    // 会先命中徽标、断言到一个与 A7 无关的元素上。
+    const warning = page.getByTestId("stream-warning");
     await expect(warning).toBeVisible({ timeout: 20_000 });
     await expect(warning).toHaveText(
       "Some live updates expired. The conversation was restored from saved state.",

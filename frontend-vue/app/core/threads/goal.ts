@@ -25,6 +25,41 @@ export function parseGoalCommand(value: string): GoalCommand | null {
   return { kind: "set", objective: argument };
 }
 
+/*
+  计数器只在**接近**上限时才出现，不是永远挂在工具条上：上游
+  frontend/src/components/workspace/input-box-helpers.ts 里
+  `GOAL_OBJECTIVE_COUNTER_VISIBLE_AT = floor(MAX * 0.9)`，理由是"只在用户真的
+  可能被拒时出现，而不是给页脚添永久噪音"。阈值跟着上限走，不写死 3600。
+*/
+export const GOAL_OBJECTIVE_COUNTER_VISIBLE_AT = Math.floor(
+  MAX_GOAL_OBJECTIVE_CHARS * 0.9,
+);
+
+export type GoalObjectiveCounter = {
+  length: number;
+  max: number;
+  overLimit: boolean;
+};
+
+/*
+  只对 `/goal <objective>` 这一支计数，而且量的是**解析出来的 objective**，
+  不是输入框里的原文——发出去的就是它，计数器和 goalTooLong 的判据必须是同一个
+  字符串，否则用户会看见 3999/4000 却被后端拒掉。
+*/
+export function getGoalObjectiveCounter(
+  value: string,
+): GoalObjectiveCounter | null {
+  const command = parseGoalCommand(value);
+  if (command?.kind !== "set") return null;
+  const length = command.objective.length;
+  if (length < GOAL_OBJECTIVE_COUNTER_VISIBLE_AT) return null;
+  return {
+    length,
+    max: MAX_GOAL_OBJECTIVE_CHARS,
+    overLimit: length > MAX_GOAL_OBJECTIVE_CHARS,
+  };
+}
+
 export function goalContinuation(
   goal: Pick<GoalState, "continuation_count" | "max_continuations">,
 ) {

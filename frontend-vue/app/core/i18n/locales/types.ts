@@ -21,6 +21,7 @@ export interface Translations {
     submit: string;
     stop: string;
     skillSuggestions: string;
+    modelSelector: string;
     notifications: string;
     loadingPanel: string;
     loadingSettingsPage: string;

@@ -1,7 +1,7 @@
 {
   "$comment": "词典 key 基线。由 `make i18n-refresh` 生成。趁词典还是上游原样时取（06 §M1 1d）——此后 key 新增/删除或 unused 集漂移，`make i18n-check` 立刻报出来。",
   "source": "app/core/i18n/locales/en-US.ts",
-  "total": 951,
+  "total": 952,
   "keys": [
     "agents.agentCreated",
     "agents.agentCreatedPendingRefresh",
@@ -423,6 +423,7 @@
     "primitives.close",
     "primitives.loadingPanel",
     "primitives.loadingSettingsPage",
+    "primitives.modelSelector",
     "primitives.notifications",
     "primitives.skillSuggestions",
     "primitives.stop",
@@ -955,7 +956,7 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 56,
+  "unusedTotal": 50,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.createPageTitle",
@@ -976,12 +977,6 @@
     "conversation.branchFailed",
     "conversation.startConversation",
     "home.blog",
-    "inputBox.createSkillPrompt",
-    "inputBox.goalLengthCounter",
-    "inputBox.inputPolishNoChanges",
-    "inputBox.pleaseWaitStreaming",
-    "inputBox.searchModels",
-    "inputBox.suggestionPlaceholderRequired",
     "inputBox.voiceInputStop",
     "login.orContinueWith",
     "scheduledTasks.preview",

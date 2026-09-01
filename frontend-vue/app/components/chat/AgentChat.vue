@@ -219,6 +219,32 @@ const maxSuggestions = computed(
     DEFAULT_MAX_SUGGESTIONS,
 );
 const composer = ref<InstanceType<typeof ChatComposer> | null>(null);
+/*
+  技能创建入口（设置页的「创建技能」→ /workspace/chats/new?mode=skill）要把一段
+  引导 prompt 预填进输入框。上游 chat-page.tsx:90 调 useSpecificChatMode()，条件是
+  `thread_id === "new" && mode === "skill"`（chats/use-chat-mode.ts:16）。本仓一直
+  只用这个 query 关掉欢迎建议行，从没预填过，`inputBox.createSkillPrompt` 因此
+  躺在未引用词条里。
+
+  预填走 composer 的 replaceDraft，而不是自己写 input：草稿层要看见这次写入
+  （否则 skill catalog ready 之后的 restore() 会把它按"没人动过"覆盖回空串）。
+  上游用 setTimeout(100) 绕开同一件事。
+*/
+const skillModePrompt = computed(() =>
+  routeThreadId.value === null && route.query.mode === "skill"
+    ? $i18n.t.value.inputBox.createSkillPrompt
+    : null,
+);
+let appliedSkillModePrompt: string | null = null;
+watch(
+  [skillModePrompt, composer],
+  ([prompt, target]) => {
+    if (!prompt || !target || prompt === appliedSkillModePrompt) return;
+    appliedSkillModePrompt = prompt;
+    target.replaceDraft(prompt);
+  },
+  { immediate: true },
+);
 const failedSend = ref<{ text: string; files: FileInMessage[] } | null>(null);
 const mainTailRequest = ref(0);
 const threadTokenUsageQuery = useThreadTokenUsage(routeThreadId, {
@@ -1662,8 +1688,16 @@ onUnmounted(() => {
           >
             {{ stream.llmRetry.value.message }}
           </p>
+          <!--
+            带 data-testid 是因为这条横幅**不是** aria 上唯一的 role="status"：
+            工具条里的 ContextUsageBadge 永远在（占位态也带 role="status"），
+            流式输出期间 MessageList 还会再挂一条 RunActivity。裸
+            `getByRole("status")` 会先命中徽标、再撞上 strict mode——
+            e2e-stream 那条 gap 用例就是这么假绿又变红的。
+          -->
           <p
             v-if="warnings.length"
+            data-testid="stream-warning"
             role="status"
             class="absolute right-4 bottom-36 z-40 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-700 shadow"
           >

@@ -612,4 +612,131 @@ describe("composer submission and stale lifecycle", () => {
     const listbox = wrapper.get("[role='listbox']");
     expect(listbox.attributes("aria-label")).toBe("Skill suggestions");
   });
+
+  /*
+    上游 handleSubmit 的第一支就是「正在流式输出时说一句话再退出」
+    （input-box.tsx:1165）。本仓原来是静默 return：回车没反应，用户不知道为什么。
+    只有回车走得到这里——按钮在流式态被 onSubmitButtonClick 拦成「停止」。
+  */
+  it("tells the user to wait instead of submitting during a stream", async () => {
+    const { wrapper, submitMessage } = mountComposer(undefined, {
+      streaming: true,
+    });
+    await flushPromises();
+
+    await wrapper.get("textarea[name='message']").setValue("Second question");
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(submitMessage).not.toHaveBeenCalled();
+    expect(wrapper.get("[data-sonner-toast]").text()).toBe(
+      enUS.inputBox.pleaseWaitStreaming,
+    );
+  });
+
+  /*
+    未填的建议占位符：上游先 toast.warning 再选中它（input-box.tsx:1071）。
+    本仓原来只选中，`inputBox.suggestionPlaceholderRequired` 因此是死词条。
+  */
+  it("warns about an unresolved suggestion placeholder while selecting it", async () => {
+    const { wrapper, submitMessage } = mountComposer();
+    await flushPromises();
+
+    const draft = "Summarize [topic] for me";
+    const textarea = wrapper.get("textarea[name='message']");
+    await textarea.setValue(draft);
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(submitMessage).not.toHaveBeenCalled();
+    expect(wrapper.get("[data-sonner-toast]").text()).toBe(
+      enUS.inputBox.suggestionPlaceholderRequired,
+    );
+    const placeholder = findSuggestionTemplatePlaceholder(draft);
+    const element = textarea.element as HTMLTextAreaElement;
+    expect(element.selectionStart).toBe(placeholder?.start);
+    expect(element.selectionEnd).toBe(placeholder?.end);
+  });
+
+  /*
+    API 说「没改动」时上游不落草稿、只 toast（input-box.tsx:1656）。本仓原来
+    无条件 `input.value = result.rewritten_text`，既不看 `.changed` 也不 trim，
+    而且把按钮留在「撤销」——用户为一次什么都没发生的润色拿到一个撤销按钮。
+  */
+  it("keeps the draft and drops the undo affordance when polishing changed nothing", async () => {
+    mocks.polishInputDraft.mockResolvedValue({
+      rewritten_text: "  Polish me  ",
+      changed: false,
+    });
+    const { wrapper } = mountComposer();
+    await flushPromises();
+
+    const textarea = wrapper.get("textarea[name='message']");
+    await textarea.setValue("Polish me");
+    await wrapper.get("[data-testid='polish-input-button']").trigger("click");
+    await flushPromises();
+
+    expect((textarea.element as HTMLTextAreaElement).value).toBe("Polish me");
+    expect(wrapper.get("[data-sonner-toast]").text()).toBe(
+      enUS.inputBox.inputPolishNoChanges,
+    );
+    /*
+      按钮必须**重新查**：润色期间它被 v-if 换成取消按钮，结束时是一个新元素，
+      点击前拿到的 DOMWrapper 指向已经脱离文档的旧节点，`.text()` 会一直返回
+      点击前的字样——那样这条断言不修也是绿的。
+    */
+    expect(wrapper.get("[data-testid='polish-input-button']").text()).toBe(
+      enUS.inputBox.inputPolish,
+    );
+  });
+
+  it("applies a trimmed rewrite and offers undo when polishing did change the draft", async () => {
+    mocks.polishInputDraft.mockResolvedValue({
+      rewritten_text: "  Polished draft  ",
+      changed: true,
+    });
+    const { wrapper } = mountComposer();
+    await flushPromises();
+
+    const textarea = wrapper.get("textarea[name='message']");
+    await textarea.setValue("Polish me");
+    await wrapper.get("[data-testid='polish-input-button']").trigger("click");
+    await flushPromises();
+
+    expect((textarea.element as HTMLTextAreaElement).value).toBe(
+      "Polished draft",
+    );
+    expect(wrapper.find("[data-sonner-toast]").exists()).toBe(false);
+    expect(wrapper.get("[data-testid='polish-input-button']").text()).toBe(
+      enUS.inputBox.inputPolishUndo,
+    );
+  });
+
+  /*
+    `/goal <objective>` 写到上限的 90% 之后，工具条右侧出现 length/max 计数器
+    （上游 input-box.tsx:2649），超限时换成 text-destructive。
+  */
+  it("shows the goal length counter only near the limit and flags going over", async () => {
+    const { wrapper } = mountComposer();
+    await flushPromises();
+
+    const textarea = wrapper.get("textarea[name='message']");
+    await textarea.setValue(`/goal ${"a".repeat(3599)}`);
+    expect(wrapper.find("[data-testid='goal-length-counter']").exists()).toBe(
+      false,
+    );
+
+    await textarea.setValue(`/goal ${"a".repeat(3600)}`);
+    const counter = wrapper.get("[data-testid='goal-length-counter']");
+    expect(counter.text()).toBe("3600/4000");
+    expect(counter.attributes("aria-label")).toBe(
+      "Goal length: 3600/4000 characters",
+    );
+    expect(counter.classes()).toContain("text-muted-foreground");
+
+    await textarea.setValue(`/goal ${"a".repeat(4001)}`);
+    expect(
+      wrapper.get("[data-testid='goal-length-counter']").classes(),
+    ).toContain("text-destructive");
+  });
 });

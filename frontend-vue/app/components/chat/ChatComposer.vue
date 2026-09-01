@@ -6,7 +6,14 @@
   【依赖关系】     skills/uploads/models/goal APIs · composer draft · AgentChat
   【边界与注意】   props/events 是当前宿主接线面；通用 composer 行为由 E 组合同约束。
 */
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  ref,
+  shallowRef,
+  watch,
+} from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
 import {
   ArrowUp,
@@ -57,6 +64,7 @@ import {
 } from "@/core/models/capabilities";
 import type { ThreadRunContextInput } from "@/core/threads/submit";
 import {
+  getGoalObjectiveCounter,
   MAX_GOAL_OBJECTIVE_CHARS,
   parseGoalCommand,
   readGoalResponseError,
@@ -143,7 +151,17 @@ const compactPending = ref(false);
 const submissionPending = ref(false);
 let compactController: AbortController | null = null;
 let compactGeneration = 0;
-const polishController = ref<AbortController | null>(null);
+/*
+  shallowRef 不是风格选择。`ref()` 会对普通对象调 reactive()，而"是不是普通对象"
+  的判据是 `Object.prototype.toString.call(x)`：浏览器与 Node 的 AbortController
+  带 Symbol.toStringTag，念出来是 `[object AbortController]`，reactive() 直接放行，
+  于是 `polishController.value === controller` 成立；**happy-dom 的 AbortController
+  没有这个 tag**，念出来是 `[object Object]`，于是它被包成 Proxy，那句身份比较
+  在单测里恒为 false——finally 里的 `polishing.value = false` 一次都没跑过，
+  组件测试里润色永远停在"润色中"。产物没问题，是测试环境看不见完成态。
+  shallowRef 让两个环境同一行为，也本来就够用：控制器没有需要追踪的响应式字段。
+*/
+const polishController = shallowRef<AbortController | null>(null);
 let goalController: AbortController | null = null;
 const goalGeneration = createAsyncGeneration();
 const polishGeneration = createAsyncGeneration();
@@ -307,6 +325,14 @@ const suggestions = computed(() => {
 const polishUndoAvailable = computed(
   () => !polishing.value && polishOriginal.value !== null,
 );
+/*
+  `/goal <objective>` 写到接近上限时，工具条右侧出现一个 length/max 计数器
+  （上游 input-box.tsx:2649）。可访问名走词典，数字本身是可见文本。
+*/
+const goalObjectiveCounter = computed(() =>
+  getGoalObjectiveCounter(input.value),
+);
+
 const polishDisabled = computed(
   () =>
     props.disabled === true ||
@@ -568,6 +594,16 @@ function selectSuggestion() {
 
 async function submit() {
   if (props.disabled) return;
+  /*
+    流式输出期间提交要**说一句话**再退出，不是静悄悄什么都不做：上游
+    handleSubmit 开头就是 `if (status === "streaming") { toast.info(
+    t.inputBox.pleaseWaitStreaming); return reject }`（input-box.tsx:1165）。
+    走到这里的只有回车那条路——按钮在流式态被 onSubmitButtonClick 拦成"停止"。
+  */
+  if (props.streaming) {
+    toast.value = $i18n.t.value.inputBox.pleaseWaitStreaming;
+    return;
+  }
   const plain = input.value.trim();
   const text = selectedSkill.value
     ? `/${selectedSkill.value}${plain ? ` ${plain}` : ""}`
@@ -579,6 +615,12 @@ async function submit() {
   if (!text && selectedFiles.value.length === 0) return;
   const placeholder = findSuggestionTemplatePlaceholder(text);
   if (placeholder) {
+    /*
+      只选中占位符是不够的：没有一句话解释为什么没发出去。上游先
+      `toast.warning(t.inputBox.suggestionPlaceholderRequired)` 再选中
+      （input-box.tsx:1071）。
+    */
+    toast.value = $i18n.t.value.inputBox.suggestionPlaceholderRequired;
     await nextTick();
     const element = textarea.value;
     element?.focus();
@@ -954,7 +996,24 @@ async function polish() {
       polishGeneration.isCurrent(token, scope) &&
       input.value === original
     ) {
-      input.value = result.rewritten_text;
+      /*
+        API 说"没改动"（或者改出来是空的）时**不落草稿**，而且要把撤销态收回去。
+        上游 input-box.tsx:1656 是
+        `const rewrittenText = result.rewritten_text.trim();
+         if (!rewrittenText || !result.changed) { toast.info(
+           t.inputBox.inputPolishNoChanges); return; }`
+        ——它的撤销态是**成功之后**才 setInputPolishUndo 的，所以 no-op 天然不会
+        留下撤销按钮。本仓的 polishOriginal 是发请求**之前**就写好的（撤销要能在
+        请求还没回来时就取消），所以这里得显式清掉，否则用户为一次什么都没发生的
+        润色拿到一个"撤销"按钮。
+      */
+      const rewritten = result.rewritten_text.trim();
+      if (!rewritten || !result.changed) {
+        toast.value = $i18n.t.value.inputBox.inputPolishNoChanges;
+        polishOriginal.value = null;
+      } else {
+        input.value = rewritten;
+      }
     }
   } catch (error) {
     if (
@@ -984,7 +1043,17 @@ function cancelPolish() {
 function replaceDraft(value: string) {
   input.value = value;
   selectedSkill.value = null;
-  void nextTick(() => textarea.value?.focus());
+  /*
+    光标落到末尾，和上游 setPromptHistoryValue 一样（input-box.tsx:1609：
+    focus() 之后 setSelectionRange(len, len)）。只 focus 的话浏览器把光标放在
+    第 0 位，用户接着打字会写到预填文本的**前面**。
+  */
+  void nextTick(() => {
+    const element = textarea.value;
+    if (!element) return;
+    element.focus();
+    element.setSelectionRange(value.length, value.length);
+  });
 }
 function selectWelcomeSuggestion(value: string) {
   input.value = value;
@@ -1385,9 +1454,34 @@ defineExpose({ replaceDraft, offerFollowup });
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
+          <span
+            v-if="goalObjectiveCounter"
+            data-testid="goal-length-counter"
+            :aria-label="
+              $i18n.t.value.inputBox.goalLengthCounter
+                .replace('{length}', String(goalObjectiveCounter.length))
+                .replace('{max}', String(goalObjectiveCounter.max))
+            "
+            class="shrink-0 text-xs tabular-nums"
+            :class="
+              goalObjectiveCounter.overLimit
+                ? 'text-destructive font-medium'
+                : 'text-muted-foreground'
+            "
+            >{{ goalObjectiveCounter.length }}/{{
+              goalObjectiveCounter.max
+            }}</span
+          >
+          <!--
+            disabled 跟着 React 的 composerLocked 走（input-box.tsx:1328 =
+            `isComposerDisabled || polishingInput`，2673 行把它交给
+            ModelSelectorTrigger 的按钮）：润色期间草稿正被改写，这时换模型
+            会让请求打到一个用户还没看见的文本上。
+          -->
           <ComposerModelSelector
             :models="models"
             :selected-model="selectedModel"
+            :disabled="disabled || polishing"
             @select="selectModel"
           />
           <!--

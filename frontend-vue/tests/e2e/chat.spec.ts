@@ -46,6 +46,45 @@ test.describe("Chat workspace", () => {
     ).toBeVisible({ timeout: 15_000 });
   });
 
+  /*
+    设置页的「创建技能」跳到 /workspace/chats/new?mode=skill，那一屏要**预填**一段
+    引导 prompt，并把光标放到末尾。上游 chat-page.tsx:90 的 useSpecificChatMode()
+    做这件事，本仓一直只用这个 query 关掉建议行，`inputBox.createSkillPrompt`
+    因此是死词条。放在 e2e 而不是单测：判据是路由 query，而 AgentChat 是集成根。
+  */
+  test("prefills the skill-creation prompt on ?mode=skill and parks the caret at the end", async ({
+    page,
+  }) => {
+    await page.goto("/workspace/chats/new?mode=skill");
+
+    const textarea = page.getByPlaceholder(/how can i assist you/i);
+    await expect(textarea).toHaveValue(
+      "We're going to build a new skill step by step with `skill-creator`. To start, what do you want this skill to do?",
+      { timeout: 15_000 },
+    );
+    await expect(textarea).toBeFocused();
+    expect(
+      await textarea.evaluate(
+        (element: HTMLTextAreaElement) => element.selectionStart,
+      ),
+    ).toBe(
+      "We're going to build a new skill step by step with `skill-creator`. To start, what do you want this skill to do?"
+        .length,
+    );
+    // 建议行在这一屏是关掉的，两件事同一个 query。
+    await expect(page.getByTestId("welcome-suggestions")).toHaveCount(0);
+  });
+
+  test("does not prefill the skill prompt on a plain new chat", async ({
+    page,
+  }) => {
+    await page.goto("/workspace/chats/new");
+
+    const textarea = page.getByPlaceholder(/how can i assist you/i);
+    await expect(textarea).toBeVisible({ timeout: 15_000 });
+    await expect(textarea).toHaveValue("");
+  });
+
   test("can type a message in the input box", async ({ page }) => {
     await page.goto("/workspace/chats/new");
 

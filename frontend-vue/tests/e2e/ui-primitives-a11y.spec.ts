@@ -196,7 +196,7 @@ test("skill source is a tablist and the enable control is a switch", async ({
   await expect(toggle).toBeChecked();
 });
 
-test("composer model selector is a menu whose current model is announced", async ({
+test("composer model selector is a searchable dialog whose current model is announced", async ({
   page,
 }) => {
   await openWorkspace(page, "/workspace/chats/new", async () => {
@@ -228,18 +228,35 @@ test("composer model selector is a menu whose current model is announced", async
     );
   });
 
+  /*
+    上游 ModelSelector 就是 Dialog + Command（ai-elements/model-selector.tsx），
+    不是下拉菜单：一个带搜索框的命令面板。这条用例过去断言 aria-haspopup=menu，
+    锁的是本仓自己长出来的 DropdownMenu 形状。
+  */
   const trigger = page.getByTestId("composer-model-selector");
   await expect(trigger).toBeVisible({ timeout: 15_000 });
-  await expect(trigger).toHaveAttribute("aria-haspopup", "menu");
+  await expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
   await trigger.click();
 
-  const options = page.getByRole("menuitemradio");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  // sr-only 的标题给对话框一个可访问名，上游默认文案是写死的 "Model Selector"。
+  await expect(dialog).toHaveAccessibleName("Model Selector");
+
+  const options = dialog.getByRole("option");
   await expect(options).toHaveCount(2);
-  await expect(options.first()).toHaveAttribute("aria-checked", "true");
-  await expect(options.nth(1)).toHaveAttribute("aria-checked", "false");
+  await expect(options.first()).toContainText("Basic Model");
+  await expect(options.nth(1)).toContainText("Reasoning Model");
+
+  // 搜索框是这个形状的全部意义：`inputBox.searchModels` 靠它才有消费者。
+  const search = dialog.getByPlaceholder("Search models...");
+  await expect(search).toBeFocused();
+  await search.fill("reasoning");
+  await expect(options).toHaveCount(1);
+  await expect(options.first()).toContainText("Reasoning Model");
 
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("menuitemradio")).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(trigger).toBeFocused();
 });
 

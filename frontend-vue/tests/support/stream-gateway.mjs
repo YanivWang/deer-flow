@@ -380,6 +380,22 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  /*
+    模型目录。夹具原来没有这一支，`/api/models` 落到最后的 `{}`，于是
+    `tokenUsageEnabled` 取默认值 false（两边都是 `?? false`），子任务卡片上的
+    token 读数整条不渲染——「终态 Subtask 带 token」那条断言因此**够不着**，
+    只是它前面还有一条更早失败的断言，一直没暴露（坑 94）。
+    models 故意留空：`scenario-model` 不在目录里时卡片回落到显示后端原名，
+    正好是用例断言的那一串。
+  */
+  if (url.pathname === "/api/models") {
+    response.setHeader("content-type", "application/json");
+    response.end(
+      JSON.stringify({ models: [], token_usage: { enabled: true } }),
+    );
+    return;
+  }
+
   // 历史分页
   if (/\/threads\/[^/]+\/messages\/page$/.test(url.pathname)) {
     response.setHeader("content-type", "application/json");

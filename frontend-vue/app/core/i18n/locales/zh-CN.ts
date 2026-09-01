@@ -45,6 +45,7 @@ export const zhCN: Translations = {
     submit: "Submit",
     stop: "Stop",
     skillSuggestions: "Skill suggestions",
+    modelSelector: "Model Selector",
     notifications: "Notifications alt+T",
     loadingPanel: "Loading panel…",
     loadingSettingsPage: "Loading…",
