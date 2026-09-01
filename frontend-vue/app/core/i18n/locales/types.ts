@@ -20,6 +20,7 @@ export interface Translations {
     toggleSidebar: string;
     submit: string;
     stop: string;
+    skillSuggestions: string;
     notifications: string;
     loadingPanel: string;
     loadingSettingsPage: string;

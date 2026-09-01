@@ -146,6 +146,25 @@ test.describe.serial("real Gateway Agent lifecycle", () => {
         "Let's design the agent's purpose and review style before saving.",
       ),
     ).toBeVisible({ timeout: 30_000 });
+    /*
+      上游 agents/new/page.tsx 在 agent 还没建出来这一步用的是裸 `PromptInput`
+      （textarea + submit，没有附件/语音/润色/模式/模型选择器）——不是页面其余部分
+      共用的那个完整 ChatComposer。这几行钉住的正是这一点：AgentBootstrapComposer
+      装上之后，只有它自己的 textarea/submit，ChatComposer 那一整排控件必须一个都
+      不在。之前这里从没断言过，因为 ChatComposer 的完整控件集悄悄冒出来也不会让
+      任何既有用例变红——它只是多余，不是错误。
+    */
+    await expect(
+      page.getByTestId("agent-bootstrap-composer-textarea"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("agent-bootstrap-composer-submit"),
+    ).toBeVisible();
+    await expect(page.getByTestId("add-attachments-button")).toHaveCount(0);
+    await expect(page.getByTestId("voice-input-button")).toHaveCount(0);
+    await expect(page.getByTestId("polish-input-button")).toHaveCount(0);
+    await expect(page.getByTestId("composer-mode-trigger")).toHaveCount(0);
+    await expect(page.getByTestId("composer-model-selector")).toHaveCount(0);
     const save = page.getByTestId("agent-save");
     await expect(save).toBeEnabled();
     await save.evaluate((element) => {

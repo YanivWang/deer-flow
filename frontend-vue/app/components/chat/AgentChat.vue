@@ -19,6 +19,7 @@ import {
 import { useQueryClient } from "@tanstack/vue-query";
 import { Bot, CalendarClock, PlusSquare } from "lucide-vue-next";
 
+import AgentBootstrapComposer from "@/components/chat/AgentBootstrapComposer.vue";
 import AgentWelcome from "@/components/chat/AgentWelcome.vue";
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
@@ -1793,11 +1794,22 @@ onUnmounted(() => {
                   </p>
                 </div>
               </div>
+              <!--
+                上游 agents/new/page.tsx 整个创建流程都没有 follow-up 建议这一层
+                （见它的完整 return，没有 Suggestions 组件），不分「还没建出来」还是
+                「已建成」。原来这里只在已建成时隐藏，于是引导对话期间也会冒出建议
+                chip，而它是个死按钮：`ref="composer"` 只挂在下面的 ChatComposer 上，
+                bootstrap 时那一支不渲染，于是 `composer` 是 **null**，
+                `composer?.offerFollowup(...)` 被可选链吞掉——不是「ref 指向了没有这个
+                方法的组件」，AgentBootstrapComposer 根本没有接这个 ref。
+                bootstrap 是每个实例上的常量，所以直接并进 v-if，不留隐藏 DOM。
+              -->
               <div
                 v-if="
-                  !isWelcomeMode && (followupsLoading || followups.length > 0)
+                  !bootstrap &&
+                  !isWelcomeMode &&
+                  (followupsLoading || followups.length > 0)
                 "
-                v-show="!(bootstrap && creation.status.value === 'created')"
                 data-slot="suggestions-list"
                 class="mb-2 flex w-full flex-wrap justify-center gap-2"
               >
@@ -1834,8 +1846,22 @@ onUnmounted(() => {
                 :todos="authoritativeTodos"
                 class="mb-2"
               />
+              <!--
+                创建 agent 还没建出来的这一步，上游用的是裸的
+                `PromptInput` + `PromptInputTextarea` + `PromptInputSubmit`
+                （frontend/src/app/workspace/agents/new/page.tsx:434），没有附件、
+                语音、润色、模式/模型选择器——`onSubmit` 也只读文本，`files` 恒为
+                空数组。本仓原来这段期间用的是完整 ChatComposer，于是创建 agent 时
+                比上游多出一整排控件。AgentBootstrapComposer 补的就是这一段最简界面，
+                发送仍然经同一个 `send()`。
+              -->
+              <AgentBootstrapComposer
+                v-if="bootstrap && creation.status.value !== 'created'"
+                :disabled="stream.isStreaming.value"
+                @send="(text) => void send(text, [])"
+              />
               <ChatComposer
-                v-if="!(bootstrap && creation.status.value === 'created')"
+                v-else-if="!bootstrap"
                 ref="composer"
                 :surface-class="
                   isWelcomeMode ? '-translate-y-2 sm:-translate-y-4' : ''

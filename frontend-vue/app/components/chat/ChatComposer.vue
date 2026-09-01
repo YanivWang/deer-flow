@@ -1195,6 +1195,7 @@ defineExpose({ replaceDraft, offerFollowup });
         <div
           v-if="suggestions.length"
           role="listbox"
+          :aria-label="$i18n.t.value.primitives.skillSuggestions"
           class="bg-background border-border absolute bottom-full left-0 z-20 mb-2 w-80 rounded-lg border p-1 shadow-lg"
         >
           <button
