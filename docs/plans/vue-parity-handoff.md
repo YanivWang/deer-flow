@@ -8,17 +8,16 @@
 
 ---
 
-## 当前状态（截至 wave 23，2026-09-02）
+## 当前状态（截至 wave 24，2026-09-02）
 
-- 分支 `main-wc`。HEAD = `0b1b8336`（marker chore），`3d6bb266` = wave 23。
+- 分支 `main-wc`。HEAD = `2fb4c55d` = wave 24（**没动 `frontend/`**）。
 - **对照台账 0 行**，38 个样本，`make -C frontend-vue e2e-parity` 46 条全绿。
 - **upstream marker 已推到 `3d6bb266`**。
 - 已彻底对齐的域（14 个 + settings/memory）：chat / artifacts / 会话列表 /
   scheduled-tasks / channels / integrations + 设置外壳 / mermaid / subtask-card /
   workspace 头部 / sidebar / messages / sidecar / browser / composer，
-  外加 **settings 域**（wave 22 memory 面板 74→0；wave 23 其余六个 section
-  108→36，其中 account / appearance / notification / tools / skills **五个归 0**，
-  about 还剩 36 行等 wave 24）。
+  外加 **settings 域全部**（wave 22 memory 面板 74→0；wave 23 其余六个 section
+  108→36；wave 24 把关于页剩下的 36 行也归 0）。
 
 > **⚠️ settings 域进不了对照取样面**（wave 22 的结构性发现，线索 107）：
 > `tests/parity/scenario-coverage.test.ts` 要求场景 id **逐字等于**
@@ -29,7 +28,7 @@
 ### 门禁实测值（wave 21 收工时逐条跑过，全绿）
 
 ```
-make -C frontend-vue verify        229 文件 / 1903 单测；词典 947 key、42 unused
+make -C frontend-vue verify        230 文件 / 1915 单测；词典 954 key、42 unused
 make -C frontend-vue e2e-parity    46    台账 0 行，38 样本
 make -C frontend-vue e2e-mock      262 + 19 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
@@ -38,7 +37,7 @@ make -C frontend-vue e2e-visual    8     **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **211**（总 213）。动了 `frontend/` 再加
+产品 SFC **214**（总 216）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（1018）/ `test:e2e`（**146**）。
 **`frontend/tests/e2e/landing.spec.ts:61` 是一条既有的负载抖动**（`locator.boundingBox`
 等动画区的 `.max-w-6xl`），wave 20/21/22 都遇到过。判据：先证你这一轮改的东西
@@ -90,71 +89,51 @@ wave 20/21 连着两轮正面打了 ① 和 ⑦。**判据：一个域收工前�
 
 ---
 
-## 上一轮（wave 23）做了什么
+## 上一轮（wave 24）做了什么
 
-**settings 其余六个面板**。probe 量到六个 section 合计 **108 行**
-（account 6 / appearance 16 / notification **0** / tools 3 / skills 8 / about 75），
-收工时**五个归 0**，about 从 75 降到 36。
+**markdown 的三个镜像**。wave 23 收工时关于页还剩 36 行，读下去发现根本不是关于页
+的事：`richContentComponents` 一直缺 `a` 与 `img`，而链接那一条是**一层安全控制**。
 
-- 账号：`<dl>` → 两列网格里的 `<span>`；密码框与按钮换成上游同一个 Input / Button；
-  退出按钮补 LogOut 图标。
-- 外观：主题卡片补齐「图标 + 标题 + 说明 + 一张 aria-hidden 的预览图」，预览按
-  **解析后**的主题画；补 Separator；语言选择器从原生 `<select>` 换成 `ui/select`。
-- 工具：空态从带边框的 `<p>` 换成裸文本 div。
-- 关于：新增 `about-content.ts`（与上游逐字同一份 markdown），交给 markdown 适配器，
-  插件链取 Streamdown 的**内建默认**；新增运行期 `appVersion`
-  （`frontend-vue/package.json` 的 version 从 0.1.0 改成 2.1.0）。
-- **两边同改**：技能页开关与 tab 组补可访问名；账号页错误/成功进 live region。
-  那两个上游页面**此前都没有任何测试**，顺手各写了第一份。
-- **删掉六条本仓自己发明的 `settings.about.*`**（上游只有 `settings.nav.about`）。
+- **第一步是让台账看得见**：把 `artifact-batched-stream` 的正文换成带链接与图片的
+  一份、末尾切回 markdown 预览，台账当场报出 3 行。
+- `MarkdownImage`：外框 + 悬停遮罩 + 下载按钮 + 失败回退。
+- `MarkdownSafeLink` + `MarkdownLinkSafetyModal`：`linkSafety: {enabled:true}` 是
+  streamdown 的**内建默认**，链接渲染成 `<button>`，点击先弹确认框再 `window.open`。
+  **本仓此前是直接跳转的 `<a>`——少了一层防护**，markdown 正文是模型产出的。
+- 段落解包：独生子是 `img`（或带 `data-block` 的 `code`）时不渲染 `<p>`。
+- ArtifactPreview 覆盖 `a`（上游同样覆盖：artifact 是用户自己的文件），顺带补上
+  本仓那里缺失的**危险协议守卫**。
 
-### wave 23 新增的踩坑线索（记忆里编号 110~112）
+结果：台账仍 0 且 artifact 的 markdown 渲染树真的在样本里；关于页 36 → **0**。
 
-- **110. `defineAsyncComponent` 的 import 会在用例跑完之后才 resolve，撞上已拆掉的
-  测试环境。** dom 用例渲染了带异步渲染器的组件，要么 `vi.waitFor` 等它，要么 stub 掉，
-  不能既不等也不停。这类错误报的「originated in」可能指向别的文件。
-- **111. 同一份 primitive 镜像漏传，在不同调用点长得不一样。** 判断影响面时，
-  先把所有调用点的 components map 列出来——被覆盖的那些不受影响。
-- **112. 一个 primitive 的「内建默认」可能是一整个安全特性，不只是样式。**
-  照抄默认行为之前，先去 `node_modules` 里读它的默认 context 值。
+### wave 24 新增的踩坑线索（记忆里编号 113~115）
+
+- **113. 两个应用都会把连续的工具步骤折叠成「1 more step」，只显示最后一条。**
+  往已有场景的消息里加工具调用之前，先想它会不会把现有 settle 锚点折叠进去。
+- **114. 一个共享镜像的缺口，可能因为「夹具里没有那种内容」而在台账上永远是 0。**
+  镜像有 N 个槽位时，问「夹具里有没有能走到每个槽位的内容」——补一条链接、一张图、
+  一个表格进夹具，比读 N 遍源码快得多。
+- **115. `onMounted` 里的「补一次判断」会把事件处理器整个遮住。** happy-dom 里
+  `<img>` 挂载后 `complete` 恒 true、`naturalWidth` 恒 0，于是直接 `trigger("error")`
+  的用例删掉 `@error` 处理器照样绿。修法是先把状态推到相反的一端再触发。
 
 ---
 
-## 下一轮（wave 24）：把 link safety 与 image wrapper 补进 `richContentComponents`
+## 下一轮（wave 25）：给 `ParityScenario` 加枚举式夹具注入
 
-这是关于页剩下的 36 行，但**不是关于页的事**——那份镜像同时被 **ArtifactPreview**
-消费，而 `artifact-preview` 是**已覆盖**的对照场景。今天台账是 0，只是因为 artifact
-夹具里没有 markdown 链接与图片。
+把 `settings-notification` 从 pending 挪进 covered。这是 wave 22 就记下的那条独立的
+活，也是**整个 settings 域进取样面的唯一合法入口**（棘轮要求场景 id 逐字等于 React
+的 spec 文件名，settings 只有这一个 id）。
 
-**开工第一步：往 artifact 夹具里加一条链接和一张图，跑一次 parity，看它报出什么**
-——那就是这一轮的施工图，而且这一轮的成果会被台账直接验证（与 settings 域不同）。
-
-两条的机制已经 probe 清楚：
-
-- **link safety**：`linkSafety: { enabled: true }` 是 Streamdown 的**内建默认**。
-  链接渲染成 `<button class="wrap-anywhere appearance-none text-left font-medium
-  text-primary underline" data-incomplete="false" data-streamdown="link">`，点击弹
-  `link-safety-modal`，确认后 `window.open(href, "_blank", "noreferrer")`。
-  关掉安全模式时才是 `<a class="wrap-anywhere font-medium text-primary underline"
-  data-streamdown="link" rel="noreferrer" target="_blank">`。
-  **本仓渲染的是直接跳转的 `<a>`——看起来「更好用」，实际是少做了一层防护。**
-- **image wrapper**：`<div class="group relative my-4 inline-block"
-  data-streamdown="image-wrapper">` + `<img class="max-w-full rounded-lg"
-  data-streamdown="image">` + 一层 hover 遮罩 + 一颗 `title="Download image"` 的按钮。
-
-**注意 `MessageList` 的 `messageMarkdownComponents` 会用自己的 `a`/`img` 覆盖**
-（MarkdownLink / MarkdownMessageImage），所以聊天路径不受影响；受影响的是
-ArtifactPreview、记忆面板与关于页。
-
-之后是 auth / setup / showcase。
-
-### 另一条独立的、值钱的活
-
-给 `ParityScenario` 加**枚举式**夹具注入（不能是回调，否则场景又能分叉），
-把 `settings-notification` 从 pending 挪进 covered——那是整个 settings 域进取样面的
-**唯一合法入口**，也会让 pending 清单第一次缩到只剩一条。
 它 pending 的理由写在 `baseline/parity-scenario-coverage.json` 的 `$pendingReasons`：
-要在页面加载前替换 `Notification` 与 `document.hasFocus`。
+要在页面加载前替换 `Notification` 与 `document.hasFocus`——那属于夹具注入而不是交互
+步骤。**注入必须是枚举式的数据**（例如 `stubs: { notification: "granted" }`），
+不能是回调，否则场景又能分叉，而那正是 `scenarios.ts` 文件头明写要防的东西。
+
+做完之后 pending 只剩 `chat-thread-init-ordering` 一条。
+
+之后是 **auth / setup / showcase** 三个域（都还没 probe 过），以及下面「挂着的账」
+里那几笔。
 
 ---
 
@@ -164,7 +143,7 @@ ArtifactPreview、记忆面板与关于页。
 
 - **`settings.memory.*` 剩下的六条 unused 全部核实为「上游自己也零消费」**
   （`rawJson` 与五条 `*Success`）——**不是缺 UI**，与 `inputBox.voiceInputStop` 同类。
-- **关于页还剩 36 行**：见「下一轮」，属共享 markdown 镜像而不是这一屏。
+- settings 域已全部归 0（wave 24 收尾）。
 
 ### composer 域剩下的两条
 
@@ -252,12 +231,12 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 看报出的行是否逐条可归因，再还原后跑一次干净的。
 （macOS 的 BSD sed 不支持 `0,/pat/`，**退出码 0 但文件一个字节没改**；用 python harness。）
 
-## 其他常踩的坑（完整 112 条在记忆文件里）
+## 其他常踩的坑（完整 115 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
-  「N 个产品 SFC」（**213 / 211**）、`tests/unit/i18n/source-guard.test.ts` 的
-  `toHaveLength(211)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
-  （**947 / 42**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
+  「N 个产品 SFC」（**216 / 214**）、`tests/unit/i18n/source-guard.test.ts` 的
+  `toHaveLength(214)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
+  （**954 / 42**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
   「N 个已审阅 unused key」也要一起改。
 - **新增 L2 组件要加进 `tests/architecture.test.ts` 的 `l2Files` 允许清单**
   （要有 `【架构位置】 L2` 头、不许 import 产品层——`@/composables`、`#app`、`#imports`
@@ -277,7 +256,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、112 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、115 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
