@@ -4,6 +4,14 @@
   【主要导出】     默认 AssistantTurnActions 组件
   【依赖关系】     Button L2 · Tooltip L2 · lucide-vue-next
   【边界与注意】   只拥有动作呈现与事件转发；动作可用性与业务执行仍由 MessageList 决定。
+
+                   **「画不画」和「能不能点」是两个 prop，不是一个。** 上游
+                   `message-list.tsx:780/817` 用 `enableBranchForTurn` /
+                   `enableRegenerateForTurn` 决定**渲染**，用 `disabled={!canBranch …}` /
+                   `disabled={!canRegenerate …}` 决定**可用**——只读态（案例页 isMock、
+                   静态站、上传中、加载中）下这两颗仍然画出来，只是禁用。本仓此前把两者
+                   压成一个 show-*，只读态下整颗按钮消失，读屏器与键盘用户因此看不到
+                   「这里本来有个操作、现在不可用」。
                    分支与重新生成的 aria-label 与 tooltip 文案是同一份：tooltip 是给鼠标
                    用户补上可见名字，不是可访问名字的来源，所以 aria-label 不能因此去掉。
                    图标要认准上游那两颗：分支是 **GitBranchPlus**（带 + 号的那颗，
@@ -46,10 +54,14 @@ withDefaults(
     regenerateLabel: string;
     showBranch?: boolean;
     showRegenerate?: boolean;
+    branchDisabled?: boolean;
+    regenerateDisabled?: boolean;
   }>(),
   {
     showBranch: false,
     showRegenerate: false,
+    branchDisabled: false,
+    regenerateDisabled: false,
   },
 );
 
@@ -81,6 +93,7 @@ const emit = defineEmits<{
             variant="ghost"
             size="icon-sm"
             :aria-label="branchLabel"
+            :disabled="branchDisabled"
             @click="emit('branch')"
           >
             <GitBranchPlusIcon class="size-4" />
@@ -94,6 +107,7 @@ const emit = defineEmits<{
             variant="ghost"
             size="icon-sm"
             :aria-label="regenerateLabel"
+            :disabled="regenerateDisabled"
             @click="emit('regenerate')"
           >
             <RefreshCcwIcon class="size-3" />

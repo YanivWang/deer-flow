@@ -177,7 +177,15 @@ const toast = ref("");
 const skillCatalog = useSkillsCatalog({
   enabled: computed(() => !props.disabled),
 });
-const modelCatalog = useModels({ enabled: computed(() => !props.disabled) });
+/*
+  **不按 disabled 关掉。** 上游 input-box.tsx:356 是裸的 `useModels()`。关掉它的后果
+  不是少发一个请求，而是模式与模型这两颗触发器的**文字来源没了**：模式触发器只在
+  `context.mode` 是四个合法值之一时才写字，而 context.mode 是模型目录到位后由
+  「自动选模型」那一步写进去的（上游 getResolvedMode(undefined, supportsThinking)
+  给出 "pro"）；模型触发器写的是 selectedModel.display_name。目录不来，两颗按钮
+  就都是空的——可访问性树上是两颗**没有名字**的按钮。
+*/
+const modelCatalog = useModels();
 const skills = skillCatalog.skills;
 const models = modelCatalog.models;
 const voiceListening = ref(false);
@@ -1311,10 +1319,18 @@ defineExpose({ replaceDraft, offerFollowup });
         </button>
       </div>
     </div>
+    <!--
+      **表单上不写 aria-disabled。** 上游 input-box.tsx 一处都没有，它把
+      `disabled` 逐个发给真正的控件（composerLocked）。`aria-disabled` 是**向下继承**的：
+      挂在这一层，可访问性树里连里面那两个 `role="group"` 的 addon 都会被标成
+      disabled，而 group 根本不是可禁用的角色；更糟的是它会替那些**并没有被禁用**的
+      控件宣布「不可用」——本仓的语音按钮就是这样：DOM 上是可用的，只是被
+      `pointer-events-none` 盖住，读屏器却听到 disabled。
+      要说「不可用」，就把 disabled 发给控件本身。
+    -->
     <form
       class="mx-auto w-full"
       :class="disabled ? 'pointer-events-none opacity-60' : ''"
-      :aria-disabled="disabled"
       :aria-busy="compactPending || submissionPending"
       @submit.prevent="submit"
     >
@@ -1463,7 +1479,7 @@ defineExpose({ replaceDraft, offerFollowup });
                   : $i18n.t.value.inputBox.voiceInputStart
                 : $i18n.t.value.inputBox.voiceInputUnsupported
             "
-            :disabled="!voiceSupported || polishing || streaming"
+            :disabled="disabled || !voiceSupported || polishing || streaming"
             @click="toggleVoiceInput"
           >
             <Square v-if="voiceListening" :size="12" class="fill-current" />
@@ -1506,10 +1522,17 @@ defineExpose({ replaceDraft, offerFollowup });
                 :label="activeMode.label"
                 :description="activeMode.description"
               >
+                <!--
+                  触发器要接 disabled，与上游同一个 `composerLocked`
+                  （input-box.tsx:2391 的 `disabled={composerLocked}`）。
+                  只读会话里它此前仍然是可聚焦、可展开的：菜单打得开、
+                  选中一项还会写回 context，而这条会话根本发不出消息。
+                -->
                 <button
                   type="button"
                   data-testid="composer-mode-trigger"
                   class="hover:bg-accent h-8 rounded-md px-2 text-xs"
+                  :disabled="disabled || polishing"
                 >
                   {{ explicitMode ? activeMode.label : "" }}
                 </button>

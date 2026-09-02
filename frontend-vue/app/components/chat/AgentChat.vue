@@ -255,7 +255,16 @@ const threadTokenUsageQuery = useThreadTokenUsage(routeThreadId, {
 });
 const threadTokenUsage = threadTokenUsageQuery.usage;
 const contextUsage = computed(() => selectContextUsage(threadTokenUsage.value));
-const modelCatalog = useModels({ enabled: computed(() => !isDemo.value) });
+/*
+  **不按 isDemo 关掉。** 上游 chat-page.tsx:77 是裸的 `useModels()`——只读案例页
+  照样取模型目录，因为头部的 token 用量指示器、输入框的模式与模型触发器都要靠它
+  才有名字。本仓此前把它关掉，于是案例页上那两颗触发器**一个可访问名都没有**
+  （读屏器念出来是两颗空按钮），头部的用量指示器整个消失。
+
+  代价是公开案例页会多发一次 /api/models。这是上游选的代价，两边一致比省一个
+  只读请求重要：一颗念不出名字的按钮对读屏器用户是死路。
+*/
+const modelCatalog = useModels();
 const selectedModel = computed(() => {
   if (!agentResolved.value) return undefined;
   return resolveComposerModel(
@@ -1545,8 +1554,14 @@ onUnmounted(() => {
                 $i18n.t.value.sidebar.scheduledTasks
               }}</span>
             </NuxtLink>
+            <!--
+              上游这一对是 `tokenUsageEnabled ? <TokenUsageIndicator/> : <ContextUsageBadge/>`
+              （chat-page.tsx:295），**没有** isMock 判据：只读案例页仍然把用量画出来，
+              只是背后的 useThreadTokenUsage 被关掉，数字落在 "-" 上。本仓此前两支都挂
+              `!isDemo`，于是案例页头部整块消失。
+            -->
             <TokenUsageIndicator
-              v-if="!isDemo && modelCatalog.tokenUsageEnabled.value"
+              v-if="modelCatalog.tokenUsageEnabled.value"
               :thread-id="routeThreadId"
               :messages="visibleMessages"
               :pending-messages="pendingUsageMessages"
@@ -1556,10 +1571,7 @@ onUnmounted(() => {
               :preferences="settings.tokenUsage"
               @preferences-change="updateThreadSettings('tokenUsage', $event)"
             />
-            <ContextUsageBadge
-              v-else-if="!isDemo"
-              :context-usage="contextUsage"
-            />
+            <ContextUsageBadge v-else :context-usage="contextUsage" />
             <button
               v-if="bootstrap"
               type="button"
@@ -1603,8 +1615,15 @@ onUnmounted(() => {
               :open="activePanel === 'browser'"
               @toggle="toggleBrowser"
             />
+            <!--
+              导出**不按 isDemo 关掉**：上游是裸的 `<ExportTrigger threadId={threadId} />`
+              （chat-page.tsx:312），只读案例页照样能把这条会话导出成 Markdown/JSON——
+              导出是纯读，不写后端。本仓此前把它删掉，案例页因此少一颗按钮。
+              （它要用 workspace toast，所以 showcase layout 也得挂上 toast owner，
+              否则 useWorkspaceToast 直接抛错——这就是当初顺手删掉它的原因。）
+            -->
             <ExportTrigger
-              v-if="routeThreadId && currentThread && !isWelcomeMode && !isDemo"
+              v-if="routeThreadId && currentThread && !isWelcomeMode"
               :thread-id="routeThreadId"
               :thread="currentThread"
               :messages="visibleMessages"

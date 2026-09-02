@@ -1,34 +1,34 @@
 # React → Vue 对照对齐：轮次交接文档
 
 **这份文档是每一轮开工的第一读物。** 它记录「上一轮做完了什么、下一轮做什么、
-有哪些账挂着」。深度背景（103+ 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
+有哪些账挂着」。深度背景（124 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
 `deerflow-parity-harness-plan` 里；这里只放接手一轮所需的最小集合。
 
 **每推完一个阶段（一轮 wave），就地更新这份文档，然后开始下一轮。**
 
 ---
 
-## 当前状态（截至 wave 26，2026-09-02）
+## 当前状态（截至 wave 27，2026-09-02）
 
-- 分支 `main-wc`。HEAD = `2a0bf39d` = wave 26（**没动 `frontend/`**）。
+- 分支 `main-wc`。wave 27 **动了 `frontend/` 一处**（`artifact-file-list.tsx` 的
+  下载链接漏传 `isMock`），所以有配套的 chore 提交把 marker 往前推。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
 - 覆盖率棘轮：covered **24**，pending **只剩 1 条**（`chat-thread-init-ordering`）。
-- **upstream marker 已推到 `3d6bb266`**。
 - 已彻底对齐的域（14 个 + settings/memory）：chat / artifacts / 会话列表 /
   scheduled-tasks / channels / integrations + 设置外壳 / mermaid / subtask-card /
   workspace 头部 / sidebar / messages / sidecar / browser / composer，
-  外加 **settings 域全部**（wave 22~24）与 **auth**（wave 26：`/login` 58→0，
-  `/setup` 本来就是 0）。
+  外加 **settings 域全部**（wave 22~24）、**auth**（wave 26：`/login` 58→0）
+  与 **只读案例页**（wave 27：`/showcase/<id>` **29→0**，收工前 probe 复量过）。
 
 > **settings 域现在有一个取样点了**：wave 25 给 `ParityScenario` 加了枚举式夹具注入
 > （`stubs`），`settings-notification` 已从 pending 挪进 covered。**其余六个面板仍然
 > 没有合法的场景 id**（棘轮要求 id 逐字等于 React spec 文件名），它们的差异仍然只能
 > 靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 21 收工时逐条跑过，全绿）
+### 门禁实测值（wave 27 收工时逐条跑过，全绿）
 
 ```
-make -C frontend-vue verify        230 文件 / 1915 单测；词典 954 key、42 unused
+make -C frontend-vue verify        232 文件 / 1931 单测；词典 954 key、42 unused
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本
 make -C frontend-vue e2e-mock      262 + 21 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
@@ -37,8 +37,8 @@ make -C frontend-vue e2e-visual    8     **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **214**（总 216）。动了 `frontend/` 再加
-`python3 scripts/pnpm.py --dir frontend check` / `test`（1018）/ `test:e2e`（**146**）。
+产品 SFC **215**（总 217）。动了 `frontend/` 再加
+`python3 scripts/pnpm.py --dir frontend check` / `test`（**1020**）/ `test:e2e`（**146**）。
 **`frontend/tests/e2e/landing.spec.ts:61` 是一条既有的负载抖动**（`locator.boundingBox`
 等动画区的 `.max-w-6xl`），wave 20/21/22 都遇到过。判据：先证你这一轮改的东西
 进不了落地页 bundle，再谈负载。
@@ -89,56 +89,97 @@ wave 20/21 连着两轮正面打了 ① 和 ⑦。**判据：一个域收工前�
 
 ---
 
-## 上一轮（wave 26）做了什么
+## 上一轮（wave 27）做了什么
 
-先 probe 了三条从没量过的路由，按台账口径：**`/login` 58 行、`/setup` 0 行、
-`/showcase/<demo id>` 25 行**。这一轮做掉 `/login`。
+做掉了 `/showcase/<demo id>`：**29 行 → 0 行**（收工前 probe 复量过）。
+**实测是 29 行不是交接文档写的 25 行**（21 onlyReact + 8 onlyVue）——上一轮那份清单
+漏了整簇输入框差异，还把 `button "Tokens -"` 写成了 `status "Context window"`。
+**行号与清单一律自己复量**（坑 85）。
 
-- 根因只有一个：上游 `login/page.tsx:77` 的
-  `if (isAuthenticated) router.push(redirectPath)`，本仓没有。**关掉鉴权部署时
-  Gateway 直接给出一个用户**，上游会跳回工作区，本仓停在一张用不上的表单上。
-- 判据只看「有没有 user」；`unavailable` 那一支必须留在登录页。
-- session 探测走**动态 import**，与 `middleware/auth.global.ts` 同一个办法。
+根因一句话：**本仓的 `demo` 比上游的 `isMock` 关掉了更多东西。** 上游把只读案例页
+当成「功能受限的工作区」——导出、用量指示器、重跑/分叉、通知区都**渲染出来**，
+只关掉写入。七簇差异各修各的：
 
-### wave 26 新增的踩坑线索（记忆里编号 118~120）
+| 簇 | 修法 |
+|---|---|
+| A clarification 无 `human_input` 的那一支（6 行） | MessageList 补上游 `message-list.tsx:1147` 的 markdown 分支——此前那个 `<details>` 把整个组排除掉了，什么都不画 |
+| B 只读态 turn actions（4 行） | `show-*` 只管渲染、新增 `*-disabled` 管可用；上游一直是这么分的 |
+| C 导出（1 行） | 去掉 `!isDemo`（真正的原因是 F） |
+| D 用量指示器（1 行） | 去掉 `!isDemo`，并让 `useModels()` 不再按 `isDemo` 关 |
+| E present_files 组（8 行） | 抽 `ArtifactFileCards.vue`，面板清单与会话流两个消费点共用（上游就是同一个组件） |
+| F 通知区（1 行） | showcase layout 里 `provideWorkspaceToast()` + `<WorkspaceToaster />` |
+| G 只读输入框（8 行） | 去掉表单上的 `aria-disabled`（它**向下继承**）、语音按钮与模式触发器接 `disabled`、模型目录不再按 `disabled` 关 |
 
-- **118. 没锚住开头的 URL 正则是同义反复。** 断「跳到 `/workspace/chats/safe?view=1`」
-  时，没跳转的 URL `/login?next=/workspace/chats/safe?view=1` 结尾一模一样，两种情况
-  都成立。**按 pathname + search 拆开比**。
-- **119. 首屏预算突然翻倍，先问「是不是量错了页面」。** `/login` 从 348 KB 跳到
-  728 KB，实际是页面跳去了工作区（728,847 ≈ 工作区 718,194），不是 import 变重。
-- **120. 门禁只能串行跑。** 同时开两个后台任务会撞 `Another Nuxt build is already
-  running`，整轮白跑。长门禁丢后台是对的，但同一时刻只能有一个。
+**这一轮先让台账把缺口喂了出来**（线索 114）：只加夹具、不改产品代码跑一次 parity，
+`branch-thread`（多一条**不带** `artifact.human_input` 的 `ask_clarification`）与
+`artifact-stream-state`（多一个 present_files 回合）当场报出 **13 行**，那就是能被
+台账守住的那一部分施工图。改完 NEW=0 GONE=0。剩下 16 行由单测守。
+
+### wave 27 动了 `frontend/`（判据成立）
+
+`artifact-file-list.tsx` 的下载链接**漏传 `isMock`**，而同目录的
+`artifact-file-detail.tsx` 每一处都传了。后果：公开案例页上那颗 Download 指向
+需要鉴权的 `/api/threads/...`，而 demo artifact 是由 `/mock/api` 那条 route handler
+提供的——**这处不改，React 自己也是坏的**。两边同改，React 侧补了第一份
+`artifact-file-list.dom.test.tsx`（2 条），marker 由配套的 chore 提交推进。
+
+### wave 27 新增的踩坑线索（记忆里编号 121~124）
+
+- **121. Vue 会把「没传」的 Boolean prop 变成 `false`，不是 `undefined`。**
+  源码里 `props.modelSelectionReady === false` 读起来像三态，实际上「不传」和
+  「传 false」在组件内部无法区分。单测漏传 `modelSelectionReady` 于是
+  `selectedModel` 恒为 undefined、`contextChange` 永远不发，红了两轮才定位。
+- **122. `aria-disabled` 是向下继承的。** 挂在表单上，可访问性树里连里面
+  `role="group"` 的 addon 和**并没有被禁用**的控件都会被标成 disabled。
+  要说「不可用」就把 `disabled` 发给控件本身。
+- **123. `import.meta.client` 在 vitest 的 `dom` project 里恒为 `undefined`**
+  （只有 `nuxt` project 定义它）。任何挂在它后面的能力判据在 dom project 里永远是
+  「不支持」，于是「这颗按钮是禁用的」这类断言**不测产品只测环境**——本轮的语音按钮
+  用例就是这样假绿的。
+- **124. happy-dom project 里 `import.meta.url` 是 http URL**，
+  `new URL(…, import.meta.url)` 交给 `readFileSync` 直接抛
+  `The URL must be of scheme file`；node project 里同样的写法是好的。
+  在 `.dom.test.ts` 里读源码要用相对 vitest 工作目录的路径。
 
 ---
 
-## 下一轮（wave 27）：showcase 那 25 行
+## 下一轮（wave 28）：三条路，挑一条
 
-probe 已经量清楚，**根因是本仓的 `demo` 比上游的 `isMock` 关掉了更多东西**：
-上游把只读案例页当成「功能受限的工作区」（导出、上下文用量、重跑/分叉都**渲染
-出来**、按需禁用），本仓用 `v-if="!isDemo"` 整块删掉
-（`AgentChat.vue` 的 1538 / 1549 / 1607 等处）。
-
-台账口径下的清单：
-
-- **onlyReact**：`button "Export"`、`button "Regenerate" [disabled]`、
-  `button "Branch conversation" [disabled]` ×3、`status "Context window"`、
-  `region "Notifications alt+T"`、`link "Download"` + `text: <文件名> JPG file`、
-  澄清选项的 `list`/`listitem`、两段 `paragraph`
-- **onlyVue**：`button "Reasoning"`、`button "<文件名>"`、`group [disabled]` ×2、
-  `group: Present Files`、`group: present_files result`
-
-**showcase 没有对应的 React spec id（线索 107），所以这一轮台账测不到**，
-只能靠 probe + 单测。**可以考虑的替代路径**：把 demo 夹具里那几种内容形状
-（带选项的澄清、reasoning、图片产物、present_files）补进某个**已覆盖**场景的夹具，
-让台账去守（线索 114 的手法，wave 24 用过一次，很有效）。
-
-probe 复现命令：`/showcase/21cfea46-34bd-4aa6-9e1f-3009452fbeb9`
-（allowlist 在 `frontend/src/core/threads/static-demo.ts` 与 `#shared/showcase`）。
+1. **`chat-thread-init-ordering`**（pending 最后一条，做完 pending 清零）。
+   要「填入并发送」这一步，而且要**先测流式取样是否稳定**（理由原文在
+   `baseline/parity-scenario-coverage.json` 的 `$pendingReasons`）。
+2. **案例页剩下的 4 行 + 请求层的落差**（见下面「挂着的账」的头两条）。
+3. **`border-border` 基础层**（影响全仓，本来就该单独一轮）。
 
 ---
 
 ## 挂着的账（有意没修；**当假设重新验**）
+
+### 只读案例页剩下的（wave 27 量到的）
+
+> 收工前 probe 复量：`/showcase/<demo id>` 的 aria 差异 **onlyReact 0 / onlyVue 0**。
+> 下面两条都是**台账与 probe 都看不见**的东西，不是「已经对齐」。
+
+- **`ArtifactFileList` 的 Install 按钮没抄。** 上游那份清单在文件名以 `.skill` 结尾
+  **且**当前用户是管理员时，下载左边还有一颗 Install（调 `installSkill`、成功/失败弹
+  toast）。wave 27 抽 `ArtifactFileCards.vue` 时**有意没补**：它要 admin 判据 +
+  安装请求 + 安装中状态，与「present_files 组该画什么」不是同一件事。
+  **两个消费点（面板清单、会话流卡片）都缺它**，组件头注释里也写了。
+  案例页的 `.jpg` 走不到这一支，所以 probe 上看不见——**别当成已经对齐**。
+- **请求层的落差**（台账天生看不见的第②类：`/showcase` 不在取样面里，
+  `requestsOnly*` 根本没被比过）。wave 27 实测：
+
+  ```
+  react-only /api: /api/features · /api/skills · /api/suggestions/config
+                   · /api/threads/<id>/uploads/limits
+  vue-only   /api: （空）
+  ```
+
+  上游把案例页当受限工作区，这四个只读请求照发；本仓分别由
+  `useBrowserControlEnabled({enabled:!isDemo})`、composer 的 skills/uploads 查询、
+  `useSuggestionsConfig({enabled:!isDemo})` 关掉。**在这一屏上它们没有产生任何可见
+  差异**（复量之后 aria 是 0/0），所以 wave 27 没有一起放开——但这是「没测到」
+  不是「一致」，**当假设重新验**。
 
 ### settings 域剩下的
 
@@ -232,11 +273,11 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 看报出的行是否逐条可归因，再还原后跑一次干净的。
 （macOS 的 BSD sed 不支持 `0,/pat/`，**退出码 0 但文件一个字节没改**；用 python harness。）
 
-## 其他常踩的坑（完整 120 条在记忆文件里）
+## 其他常踩的坑（完整 124 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
-  「N 个产品 SFC」（**216 / 214**）、`tests/unit/i18n/source-guard.test.ts` 的
-  `toHaveLength(214)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
+  「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
+  `toHaveLength(215)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
   （**954 / 42**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
   「N 个已审阅 unused key」也要一起改。
 - **新增 L2 组件要加进 `tests/architecture.test.ts` 的 `l2Files` 允许清单**
@@ -257,7 +298,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、120 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、124 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、

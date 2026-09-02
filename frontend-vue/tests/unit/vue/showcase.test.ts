@@ -16,6 +16,11 @@ const landingSource = readFileSync(
   "utf8",
 );
 
+const showcaseLayoutSource = readFileSync(
+  new URL("../../../app/layouts/showcase.vue", import.meta.url),
+  "utf8",
+);
+
 function listFiles(root: string, directory = root): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -83,5 +88,26 @@ describe("public showcase contracts", () => {
         [...(STATIC_DEMO_ARTIFACTS[fixtureThreadId] ?? [])].sort(),
       ).toEqual(fixtureFiles);
     }
+  });
+
+  /*
+    案例页外壳要挂 toast owner。上游
+    `frontend/src/app/showcase/[thread_id]/layout.tsx` 里有一个
+    `<Toaster position="top-center" />`，可访问性树上是一条
+    `region "Notifications alt+T"`。
+
+    这不只是少一行播报区：`useWorkspaceToast()` 在没有 owner 时**直接抛错**，
+    所以任何用它的头部控件（ExportTrigger）都挂不上去——本仓此前正是靠把这些
+    控件从案例页删掉来绕开，头部因此比上游少一颗按钮。
+
+    对照台账看不到这一屏：showcase 没有同名的 React spec 文件（线索 107）。
+  */
+  test("mounts the toast viewport on the public showcase shell", () => {
+    expect(showcaseLayoutSource).toContain("provideWorkspaceToast()");
+    expect(showcaseLayoutSource).toContain("<WorkspaceToaster />");
+    // viewport 是 main 的兄弟，与上游同构（那边挂在 SidebarInset 外面）。
+    expect(showcaseLayoutSource).toMatch(/<\/main>\s*<WorkspaceToaster \/>/);
+    // 卸载时清干净，与 workspace layout 同一条纪律。
+    expect(showcaseLayoutSource).toContain("onUnmounted(() => toast.clear())");
   });
 });

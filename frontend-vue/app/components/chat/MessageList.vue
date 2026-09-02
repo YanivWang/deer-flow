@@ -34,6 +34,7 @@ import ReasoningDisclosure from "@/components/chat/ReasoningDisclosure.vue";
 import RunActivity from "@/components/chat/RunActivity.vue";
 import SubtaskCard from "@/components/chat/SubtaskCard.vue";
 import { MARKDOWN_LINK_CONTEXT } from "@/components/chat/markdown-link-context";
+import ArtifactFileCards from "@/components/workspace/artifacts/ArtifactFileCards.vue";
 import WorkspaceChangesBadge from "@/components/workspace/changes/WorkspaceChangesBadge.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import { richContentComponents } from "@/components/markdown/components";
@@ -53,6 +54,7 @@ import { deriveAssistantTurnUsageState } from "@/core/messages/derived-state";
 import type { BrowserViewMeta } from "@/core/messages/processing";
 import {
   extractContentFromMessage,
+  extractPresentFilesFromMessage,
   extractReasoningContentFromMessage,
   getBranchableAssistantGroupIds,
   getLatestEditableTurn,
@@ -61,6 +63,7 @@ import {
   getMessageGroups,
   isHiddenFromUIMessage,
   stripUploadedFilesTag,
+  type MessageGroup,
 } from "@/core/messages/utils";
 import {
   formatRunDuration,
@@ -597,6 +600,23 @@ function toolLabel(name: string) {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
+/*
+  present_files 组的两个取数口，与上游 message-list.tsx 的 assistant:present-files
+  分支逐条对应：文件清单来自组内**每一条**带 present_files 调用的 ai 消息
+  （`extractPresentFilesFromMessage` 的 flatMap），前导正文只取 `messages[0]`。
+
+  这一组**不再**走通用的 ai 分支：上游那一支不画 reasoning、不画工具折叠块、
+  也不画 artifactTargets 的文件名按钮，只画正文 + 文件卡片。
+*/
+function presentFiles(group: MessageGroup) {
+  return group.messages.flatMap((message) =>
+    extractPresentFilesFromMessage(message),
+  );
+}
+function presentFilesLead(group: MessageGroup) {
+  const first = group.messages[0];
+  return first ? text(first) : "";
+}
 function artifactTargets(message: Message) {
   if (message.type !== "ai") return [];
   return (message.tool_calls ?? []).flatMap((call) => {
@@ -949,6 +969,35 @@ onUnmounted(() => {
               @artifact="emit('artifact', $event)"
               @browser="emit('browser', $event)"
             />
+            <!--
+              present_files 自己是一组，不走下面那圈按消息的通用渲染：上游
+              message-list.tsx 的 assistant:present-files 分支只画「组内第一条消息的
+              正文（有才画）」+ 文件卡片清单，reasoning、工具调用折叠块、artifactTargets
+              的文件名按钮**一个都没有**。本仓此前根本没有这条分支，于是同一组消息
+              落进通用的 ai 分支，画出来是 Reasoning + 两个折叠块 + 一颗文件名按钮，
+              而上游画的是一张带下载链接的文件卡片——四行对四行，全是这一处。
+
+              正文的 `mb-4` 是上游写在这个调用点上的，不是渲染器自带的
+              （assistant 气泡那一处传的是 `my-3`）。
+            -->
+            <div
+              v-else-if="entry.group.type === 'assistant:present-files'"
+              class="w-full"
+            >
+              <MessageMarkdown
+                v-if="presentFilesLead(entry.group)"
+                class="mb-4"
+                :content="presentFilesLead(entry.group)"
+                :components="messageMarkdownComponents"
+                :streaming="streaming && entry.index === groups.length - 1"
+              />
+              <ArtifactFileCards
+                :thread-id="threadId ?? ''"
+                :files="presentFiles(entry.group)"
+                :is-mock="isMock"
+                @select="emit('artifact', $event)"
+              />
+            </div>
             <template
               v-for="message in entry.group.messages"
               v-else
@@ -1151,6 +1200,27 @@ onUnmounted(() => {
                 通用的 tool 分支，于是同一份任务结果出现两次：一次在卡片里，一次是
                 下面这个 `<details>`（可访问性树上多一行 `- group: task result`）。
               -->
+              <!--
+                clarification 组有**两支**，此前只做了一支。带 `artifact.human_input`
+                的走上面的 HumanInputCard；不带的那一支，上游把这条 tool 消息的正文
+                当 markdown 画出来（message-list.tsx:1147 的 `if (hasContent(message))`），
+                本仓此前什么都不画——下面那个 details 把整个 clarification 组排除掉了，
+                于是一段本该念出来的追问在会话里凭空消失。
+
+                **不传 `my-3`**：上游这一处的 MarkdownContent 没有 className，
+                与 assistant 气泡那一处不是同一个调用点。
+              -->
+              <MessageMarkdown
+                v-else-if="
+                  message.type === 'tool' &&
+                  entry.group.type === 'assistant:clarification' &&
+                  !extractHumanInputRequest(message) &&
+                  text(message)
+                "
+                :content="text(message)"
+                :components="messageMarkdownComponents"
+                :streaming="streaming && entry.index === groups.length - 1"
+              />
               <details
                 v-else-if="
                   message.type === 'tool' &&
@@ -1197,15 +1267,14 @@ onUnmounted(() => {
               :copy-label="$i18n.t.value.messages.actions.copyResponse"
               :branch-label="$i18n.t.value.messages.actions.branch"
               :regenerate-label="$i18n.t.value.messages.actions.regenerate"
-              :show-branch="
-                interactive !== false && branchable.has(entry.group.id ?? '')
-              "
+              :show-branch="branchable.has(entry.group.id ?? '')"
               :show-regenerate="
-                interactive !== false &&
                 latestAssistantGroupId !== null &&
                 entry.group.id === latestAssistantGroupId &&
                 Boolean(lastAI(entry.index)?.id)
               "
+              :branch-disabled="interactive === false"
+              :regenerate-disabled="interactive === false"
               @copy="
                 copyMessage(
                   `assistant:${entry.group.id ?? entry.index}`,

@@ -21,6 +21,8 @@ import {
 } from "@/core/utils/files";
 import { cn } from "@/lib/utils";
 
+import { useThread } from "../messages/context";
+
 import { useArtifacts } from "./context";
 
 export function ArtifactFileList({
@@ -34,6 +36,14 @@ export function ArtifactFileList({
 }) {
   const { t } = useI18n();
   const { user } = useAuth();
+  /*
+   * The download href must honour the mock thread flag, exactly like
+   * artifact-file-detail.tsx does for every URL it builds. Without it this
+   * link points at the authenticated Gateway route, which an anonymous
+   * visitor on /showcase/<thread_id> cannot read — the demo artifacts are
+   * served by the /mock/api route handler instead.
+   */
+  const { isMock } = useThread();
   const isAdmin = user?.system_role === "admin";
   const { select: selectArtifact, setOpen } = useArtifacts();
   const [installingFile, setInstallingFile] = useState<string | null>(null);
@@ -117,6 +127,7 @@ export function ArtifactFileList({
                     filepath: file,
                     threadId: threadId,
                     download: true,
+                    isMock,
                   })}
                   target="_blank"
                   rel="noopener noreferrer"

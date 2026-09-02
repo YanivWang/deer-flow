@@ -993,6 +993,25 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
               markdown、选项按钮网格、sr-only 标签 + Textarea 的「其它答案」表单、
               以及页脚提交按钮。
             */
+            /*
+              第二条 clarification，**故意不带** `artifact.human_input`：走的是
+              「没有结构化请求、只有一段正文」的那一支。上面那条覆盖的是
+              HumanInputCard，这一条覆盖的是同一个 `assistant:clarification` 组
+              在**没有**请求时该画什么——上游把这段正文当 markdown 渲染
+              （message-list.tsx 的 `if (hasContent(message))` 那一支）。
+
+              两条分支共用一个组类型，所以只喂带请求的那份，缺的那一支在台账上
+              永远是 0：不是两边一致，是这一屏根本没有这种内容（线索 114）。
+              正文里放一个有序列表，让「正文按 markdown 渲染」这件事在
+              可访问性树上留下 list/listitem，而不只是一段 text。
+            */
+            {
+              type: "tool",
+              id: "tool-clarify-0",
+              name: "ask_clarification",
+              content:
+                "Two deploy targets look plausible here.\n\nWhich one did you mean?\n\n  1. The staging cluster\n  2. The production cluster",
+            },
             {
               type: "tool",
               id: "tool-clarify-1",
@@ -1574,6 +1593,45 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
               type: "ai",
               id: "msg-ai-artifact",
               content: "Created a markdown report.",
+            },
+            /*
+              present_files 这一整组此前没有任何样本走到过：上游给它一个专门的
+              `assistant:present-files` 组，画的是文件卡片（文件名 + 类型 +
+              下载链接），而不是通用的工具步骤折叠块。夹具里没有这种内容，
+              两边画得多不一样都不会进台账（线索 114）。
+
+              挂在这条场景上是因为它的锚点都不在会话流里：settle 只等头部的
+              artifact-trigger，steps 全在面板内，所以多一组消息不动任何锚点
+              （线索 113 说的折叠只发生在连续的**工具步骤**上，
+              present_files 自己就是一个独立组）。
+
+              文件名**不能**叫 report.md：steps 里有 `click text: report.md`，
+              同名会让定位器一次命中两个节点直接 strict violation。
+
+              路径不进 thread 的 artifacts 数组，卡片只读 tool_call 的 filepaths
+              （两边都是），所以头部 artifact 计数不变。
+            */
+            {
+              type: "ai",
+              id: "msg-ai-present",
+              content: "",
+              tool_calls: [
+                {
+                  name: "present_files",
+                  args: {
+                    filepaths: ["/mnt/user-data/outputs/summary.txt"],
+                  },
+                  id: "call-present-1",
+                  type: "tool_call",
+                },
+              ],
+            },
+            {
+              type: "tool",
+              id: "msg-tool-present",
+              name: "present_files",
+              tool_call_id: "call-present-1",
+              content: "Successfully presented files",
             },
           ],
         },

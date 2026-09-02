@@ -75,3 +75,46 @@ describe("chat header composition", () => {
     expect(source).toMatch(/<FlipDisplay\s+v-if="headerTitle"/);
   });
 });
+
+/*
+  只读案例页（`demo` prop → isDemo）上头部该有什么。
+
+  **对照台账看不到这一屏**：每个对照场景都是可写的工作区会话，而 /showcase/<id>
+  没有同名的 React spec 文件，进不了取样面（线索 107）。所以这几条只能在这里钉。
+
+  判据一律是「上游那一处有没有 isMock 判据」——上游 chat-page.tsx 把只读案例页
+  当成**功能受限的工作区**：导出、用量指示器都照画，写入路径才关掉。
+*/
+describe("read-only showcase header", () => {
+  it("does not gate the export trigger on demo mode", () => {
+    // 上游 chat-page.tsx:312 是裸的 <ExportTrigger threadId={threadId} />。
+    expect(source).toMatch(
+      /<ExportTrigger\s+v-if="routeThreadId && currentThread && !isWelcomeMode"/,
+    );
+  });
+
+  it("does not gate the usage indicators on demo mode", () => {
+    // 上游是 `tokenUsageEnabled ? <TokenUsageIndicator/> : <ContextUsageBadge/>`。
+    expect(source).toMatch(
+      /<TokenUsageIndicator\s+v-if="modelCatalog\.tokenUsageEnabled\.value"/,
+    );
+    expect(source).toContain(
+      '<ContextUsageBadge v-else :context-usage="contextUsage" />',
+    );
+  });
+
+  it("fetches the model catalogue on the showcase page too", () => {
+    /*
+      上游 chat-page.tsx:77 是裸的 useModels()。关掉它不只是少一个请求：
+      tokenUsageEnabled 恒为 false，用量指示器整条分支就再也走不到。
+    */
+    expect(source).toContain("const modelCatalog = useModels();");
+    expect(source).not.toContain("useModels({ enabled:");
+  });
+
+  it("keeps the sidebar trigger and scheduled-tasks link out of demo mode", () => {
+    // 这两条上游**确实**有 isMock 判据，不要顺手一起放开。
+    expect(source).toMatch(/<SidebarTrigger\s+v-if="!isDemo"/);
+    expect(source).toContain('v-if="routeThreadId && !agentName && !isDemo"');
+  });
+});
