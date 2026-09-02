@@ -246,7 +246,7 @@ wave 20/21 连着两轮正面打了 ① 和 ⑦。**判据：一个域收工前�
 - **`inputBox.voiceInputStop` 是上游自己也零消费的死条目**，有意留着，**不是缺 UI**。
 - **chip 编辑区上游是 `<span contentEditable>`、本仓是 `<div>`**（role 都是 textbox）。
 
-### 剩余 48 条 unused 词条
+### 剩余 42 条 unused 词条
 
 逐条 grep 时注意**扫描器按叶子名匹配，双向都会漏报**：不在 unused 里不等于有人用
 （`inputBox.mode` 就是这样被埋了很久）。当前清单见记忆文件。
