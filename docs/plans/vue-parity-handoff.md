@@ -1,17 +1,17 @@
 # React → Vue 对照对齐：轮次交接文档
 
 **这份文档是每一轮开工的第一读物。** 它记录「上一轮做完了什么、下一轮做什么、
-有哪些账挂着」。深度背景（151 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
+有哪些账挂着」。深度背景（154 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
 `deerflow-parity-harness-plan` 里；这里只放接手一轮所需的最小集合。
 
 **每推完一个阶段（一轮 wave），就地更新这份文档，然后开始下一轮。**
 
 ---
 
-## 当前状态（截至 wave 33，2026-09-03）
+## 当前状态（截至 wave 34，2026-09-03）
 
-- 分支 `main-wc`。`acd119a2` = wave 32，`4d9dd508` = wave 33。
-- wave 30~33 **都没有动 `frontend/`**，**upstream marker 仍在 `c78bc91c`**（wave 28 推的）。
+- 分支 `main-wc`。`4d9dd508` = wave 33，`a3adbba1` = wave 34。
+- wave 30~34 **都没有动 `frontend/`**，**upstream marker 仍在 `c78bc91c`**（wave 28 推的）。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
 - 覆盖率棘轮：covered **24**，pending **仍是 1 条**（`chat-thread-init-ordering`）——
   wave 29 **实测**过，结论是**不能加**，翻案判据写在 `$pendingReasons` 里。
@@ -27,7 +27,8 @@
   (367,197)）、**聊天面的播报机制**（wave 31：22 处收进 workspace toaster，
   unused 39→36）与 **CSS 基础层的级联层次序**（wave 32：全仓 90 处 border 颜色
   工具类从「一处都没生效」变成全部生效）与 **词典手术**（wave 33：删掉扫描器结构上
-  看不见的 10 条死词条，并给「本仓独有的词典块」补了守卫）。
+  看不见的 10 条死词条，并给「本仓独有的词典块」补了守卫）与
+  **写操作的成功播报**（wave 34：五个面 12 处，unused 36→26）。
 
 > **`app/pages/` 下的路由已经一条不剩地量过了**（wave 28 量完最后三条）。
 > **要找活只能去「挂着的账」里挑**，不要再指望「还有没量过的路由」。
@@ -36,10 +37,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 33 收工时逐条跑过）
+### 门禁实测值（wave 34 收工时逐条跑过，零重跑零红）
 
 ```
-make -C frontend-vue verify        exit 0；240 文件 / 2008 单测，词典 945 key、36 unused
+make -C frontend-vue verify        exit 0；242 文件 / 2023 单测，词典 945 key、26 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 31 处 / 11 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      263 + 21 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -48,7 +49,7 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~33 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30~34 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1022**）/ `test:e2e`（**146**）。
 
 **已知的两条负载抖动**（都不是产品缺陷，但每次遇到都要重新证一遍因果）：
@@ -149,109 +150,91 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 33）做了什么
+## 上一轮（wave 34）做了什么
 
-正题是「词典手术」。交接文档写的是「三簇按叶子名匹配扫描器看不见的死条目」，
-量下来是 **10 条**，而且它们藏在一个比「三簇」更说得清的地方。顺带两笔小账。
+本轮是「收尾复量」：把「挂着的账」逐条当假设重新验。**第一条就翻了。**
 
-### 一、先量：一个「更好的扫描器」并不便宜
+### 一、复量的做法：拿 unused 集去撞上游
 
-`make i18n-unused` 按**叶子名**匹配，是为了容忍
-`const larkCopy = copy.value.settings.integrations.lark` 这类别名。代价是同名叶子
-互相遮蔽。本轮试写「全路径匹配」的替代判据，**在共有块上一次误报 122 条**；
-加上别名检测仍然误报（跨行别名不是正则做得准的）。**结论：通用的死条目检测器
-要类型感知的分析，这一轮不做，只做能判准的那部分。**
+对**每一条** unused key 问「上游用不用它」。用 = 本仓少了一块 UI。
+31 条里 **17 条上游在用**，其中 12 处是同一件事：
 
-### 二、能判准的那部分：本仓独有的 8 个块
+**上游写操作成功之后 toast 一句，本仓在五个面上一句话都不说**——
+memory 设置（6 条）、agents 列表（删 agent / 保存设置）、artifact 保存、
+sidecar 删除会话、引用来源复制（成功 + 失败）。
 
-本仓词典 **38 个顶层块**，上游 **30 个**。多出来的 8 个
-（`primitives` / `browser` / `artifacts` / `markdown` / `marketing` / `messages` /
-`navigation` / `setup`）里，「上游也没人用」这条辩解**不成立**——上游根本没有这些 key。
-117 条里 **10 条是死的，扫描器一条都没报**：`browser.trigger`（被 `common.showBrowser`
-顶掉）、`browser.navigationFailed`（只有一条单测消费）、
-`messages.{conversation,clarification,subtask}`、
-`navigation.{settingsAndMore,appearance,light,dark,language}`（后五条是别处同名 key 的
-**死副本**，UI 用的一直是另一份）。逐条手验后删掉：**953 → 943**。
+具体到用户：**删掉一条记忆、删掉一个 agent、删掉一整条 side chat——都是不可逆操作
+——除了对话框关掉之外没有任何确认。** 引用面板那处更彻底：唯一会变的图标是
+`aria-hidden` 的装饰，读屏器什么都听不到。
 
-### 三、守卫（`tests/unit/i18n/vue-only-keys.test.ts`）
+12 处全部接上（判据用 wave 31 那条：一刻发生的事走 toaster），
+外加引用复制按钮的**可访问名**跟着换。**unused 36 → 26。**
 
-三条：① 「本仓独有的块」清单 == 「上游词典里没有的块」；② 这些块里每条都要有消费者；
-③ **`primitives.*` 两个 locale 一字不差**——那是上游写死英文的可访问名，
-本仓照抄这一侧，而**把它们翻成中文此前不会让任何门禁变红**。
+### 二、交接文档记错的那条
 
-守卫读上游词典当坐标系，在 `standalone-check` 里登记成 **DECLARED**
-（与 `scenario-coverage.test.ts` 同形）。**BLOCKING 仍是 0**；不登记会打成 1 处。
+「`settings.memory.*` 剩下的六条 unused 全部核实为『上游自己也零消费』」——
+**只有 `rawJson` 是**，其余五条上游全在 toast。**「已审阅」这三个字本身要重验。**
 
-### 四、两笔小账
+### 三、自审：三条假绿，成因是我自己下的错判断
 
-- **命令面板**：上游 `<CommandDialog>` 用 shadcn 的默认值 "Command Palette" /
-  "Search for a command to run..."（写死英文）。本仓此前念 "Actions"。
-  按 `primitives.*` 照抄，新增两条 key：**943 → 945**。
-- **chip 可编辑区**：`<span>` + `aria-multiline` + `aria-placeholder` +
-  `data-empty`/`data-placeholder` 的空态占位 + `tabindex`。布局那两个类没动
-  （改它要先量几何）。
+我先入为主地认为「i18n 基线能当这一簇的守卫」（toast 一删，key 回到 unused 集就红）。
+**对叶子名撞车的 key 不成立**（线索 148）：`settings.memory.exportSuccess` 被
+`common.exportSuccess` 遮蔽；`agents.deleteSuccess` 与 `sidecar.deleteSuccess`
+**互相**遮蔽。补了 `tests/unit/i18n/success-announcements.test.ts` 逐处钉住。
 
-### 五、`/auth/callback` 有意没做（本轮改判）
+**顺带又踩了一次线索 126**：守卫文件里写了那些 key 的全路径，
+`make i18n-unused` 从此再也看不见它们（`tests/` 是它的扫描根）。这次可接受
+（守卫更准），但同一条机制会在两个方向上咬人。
 
-差异是真的（上游 `(auth)/layout.tsx` 的服务端 redirect 让 OAuth 回跳的 `?next=`
-深链**总是被丢掉**），但**修法只在 `frontend/` 一侧，本仓不需要任何改动**——
-这不是「两边同改」，是替上游修 bug；而这一屏进不了取样面（wave 28 量过 44 行噪声），
-**对齐价值为零**。另外交接文档原来给的修法也不是最好的（会把 `/login` 的服务端跳转
-变成客户端跳转）；更小的是把 `auth/callback` 移出 `(auth)` 路由组。详见「挂着的账」。
+### 四、复量的其余结论
 
-### wave 33 自审抓出来的（都已修）
+- `inputBox.voiceInputStop` 确实上游也零消费 ✓（上游那个 grep 命中的是
+  `voiceInputStopLabel`——**前缀陷阱**）。
+- **`SidebarTrigger` 窄屏读桌面 `open`** ✓ 属实，而且**就在可见面上**
+  （上游三处都是 `className="md:hidden"`，专门给移动端渲染）。**本轮没做**，
+  详见「挂着的账」——但「需要用户先拍板」那句**已经过期**。
+- **`Button` 的 as-child** ✓ 属实，仍无任何选择器消费。
+- **欢迎区在树里的位置** —— 记录**不够准**，见「挂着的账」。
 
-1. **守卫的正则漏转义，负向验证当场假绿**：`["trigger"]` 被当成**字符类**。
-2. **差点把工具报错读成「红」**：`--reporter=basic` 在 vitest 里不存在，进程以 1 退出。
-3. **手写的词典解析器在对象数组上跑偏**（`marketing.caseStudyItems`）——
-   改成直接读 `baseline/i18n-keys.json`。
-4. **`primitives` 的守卫第一版比对了注释**，改成先剥注释再比值。
-5. **新增的两条 primitives 第一版在 zh-CN 里写成了中文**，按规矩改回英文。
+### wave 34 新增的踩坑线索（记忆里编号 152~154）
 
-### 两条用例过期（不是产品回归）
+- **152. 「已核实」「已审阅」这类字样本身要重验。** wave 34 第一条挂账就是错的
+  （六条里有五条记反了），而它挂了整整十轮。
+- **153. i18n 基线不能当「这处代码还在」的守卫**——叶子名撞车时它两边都看不见
+  （`exportSuccess` 撞 `common.exportSuccess`；`agents.deleteSuccess` 与
+  `sidecar.deleteSuccess` 互相遮蔽）。要钉代码就写代码守卫。
+- **154. HTML 注释不能写进标签的属性列表里。** Vue 编译器报
+  `Attribute name cannot contain U+0022`，而且是**整个测试文件**报错，
+  错误信息离改动点很远。
 
-- `i18n-theme.spec.ts:76` 用 `zhCN.browser.trigger` 当浏览器触发器的名字，
-  **此前能过只是因为它与 `common.showBrowser` 在 zh-CN 里恰好同字**。
-- `workspace-shell.spec.ts:49` 等的是 `dialog { name: "Actions" }`。
+## 下一轮（wave 35）：剩下的 5 条「上游有、本仓没有」
 
-### wave 33 新增的踩坑线索（记忆里编号 148~151）
+wave 34 的复量把 unused 集逐条撞过上游，**结论是这份清单还有活**。按性价比：
 
-- **148. 一条 key 死着，可能只是因为别处有一条同名叶子活着。** 叶子名扫描器天生看不见
-  这种。**判准的办法只在「上游没有的块」里成立**——那里「上游也没人用」不成立。
-- **149. 非零退出码可能来自工具本身。** `--reporter=basic` 在 vitest 里不存在，
-  进程以 1 退出，看起来像用例失败。变异脚本用 `--reporter=dot`。
-- **150. 别自己再解析一遍词典。** `baseline/i18n-keys.json` 由真解析器生成、
-  被 `i18n-check` 钉住；手写的括号计数在对象数组上会跑偏。
-- **151. 这台机器上 `webServer` 的 240s 在 load>20 时不够用。**
-  `Timed out waiting 240000ms from config.webServer` 是基建超时，不是断言失败，
-  遇到就等负载降下来，不要先去查产品。
-
-## 下一轮（wave 34）：收尾复量
-
-`app/pages/` 下的路由已经量光，**只能从「挂着的账」里挑**。wave 30~33 把「必须单独
-一轮」的四条做掉了三条，第四条（`/auth/callback`）wave 33 量完**改判为不做**
-（理由见上、细节见「挂着的账」）。剩下的：
-
-1. **收尾复量**（推荐做这一轮）：把「挂着的账」逐条当假设重新验一遍。
-   连着四轮的教训是这份清单会过期——wave 30「必须单独一轮」量完是普通清零、
-   wave 31「就四处」实际 22 处、wave 32「本仓没有」实际是有但写错地方、
-   wave 33「三簇」实际 10 条且位置说得更清。**这一轮的产出就是一份重新验过的清单。**
-2. **剩下的小账**（可合并进任意一轮）：`Button` 的 as-child、模型选择器筛选、
-   欢迎区在树里的位置、browser 面板剩余分叉、chip 的布局类。
-3. **共有块的死条目**：要做得先有类型感知的分析（wave 33 量过，正则做不准）。
-   这不是一轮平替，是一次工具投资，**先问它值不值**。
+1. **五条「上游在用、本仓没有」的 UI 形状**（不是播报，所以 wave 34 没顺手做掉）：
+   - `channels.connectedAs(label)`：上游 `channels-settings-page.tsx:192` 在已连接的
+     provider 后面缀一句「已作为 {label} 连接」；本仓没有。
+   - `channels.reconnect`：上游 `:284` 在过期/失效时把按钮文案换成「重新连接」。
+   - `common.editRerunWarning`：上游 `message-list-item.tsx:531` 在「编辑并重跑」的
+     编辑框里挂一行警告；本仓没有。
+   - `artifactEditing.discardChanges`：上游 `artifact-file-detail.tsx:271` 退出编辑前
+     `window.confirm` 一次；本仓直接丢弃草稿。
+   - `artifactEditing.runInProgress`：上游 `:495` 用它当保存按钮的禁用理由。
+   **开工先逐条量它在本仓对应的那一屏长什么样**，别照着这份清单直接写。
+2. **`SidebarTrigger` 的窄屏图标**（唯一还剩的两边同改，见「挂着的账」）。
+3. **可合并的小账**：`Button` as-child、模型选择器筛选、chip 的布局类、
+   browser 面板剩余分叉。
 
 ### 还剩几轮（**估计，不是实测；下一轮仍要当假设重新验**）
 
-wave 29 估 7~9，wave 30 估 6~8，wave 31 估 5~6，wave 32 估 4，wave 33 做完再估：
+wave 29 估 7~9，30 估 6~8，31 估 5~6，32 估 4，33 估 2，**34 做完又变成 2~3**——
+因为复量本身挖出了新活。**这个数字的规律是：每次「收尾」都会发现清单不准。**
+所以下一轮的判据不是「还剩几条」，而是「**这一轮有没有再翻出记错的账**」；
+连着两轮翻不出，才算真收尾。
 
-- **收尾复量（1）**：把挂账逐条重验，产出一份新的清单
+- **本轮候选（1~2）**：上面第 1、2 条
 - **可合并的小账（1）**
-- **被上游阻塞（0 轮，只记账）**：首次发送后那一屏的 `Completed in <1s` 与
-  `Edit and rerun`；`/auth/callback` 的上游修缮
-- **已决定不做（0 轮，只记账）**
-
-合计 **2 轮左右**。**这个数字连着五轮都偏悲观**，但收尾复量那一轮本身就会把它校准。
+- **被上游阻塞（0 轮，只记账）**：首次发送后那一屏；`/auth/callback` 的上游修缮
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -275,8 +258,11 @@ wave 29 估 7~9，wave 30 估 6~8，wave 31 估 5~6，wave 32 估 4，wave 33 �
 
 ### settings 域剩下的
 
-- **`settings.memory.*` 剩下的六条 unused 全部核实为「上游自己也零消费」**
-  （`rawJson` 与五条 `*Success`）——**不是缺 UI**，与 `inputBox` 下的 voiceInputStop 同类。
+- ~~`settings.memory.*` 六条 unused 全部核实为「上游自己也零消费」~~ ——
+  **这条记错了，wave 34 翻案**：只有 `rawJson` 是上游也零消费的，其余五条上游全在
+  `toast.success`，本仓一条都没有。连同被 `common.exportSuccess` 遮蔽的
+  `exportSuccess`，六条已于 wave 34 全部接上。
+  **「已核实」这三个字本身要重验**（线索 152）。
 - settings 域已全部归 0（wave 24 收尾）。
 
 ### 建 agent 页剩下的（wave 28 新增）
@@ -328,8 +314,11 @@ wave 29 估 7~9，wave 30 估 6~8，wave 31 估 5~6，wave 32 估 4，wave 33 �
 
 ### 跨域 / 更早挖出的
 
-- **欢迎区与建议列表在树里的位置不同**：上游放进 InputGroup（`extraHeader`），
-  本仓是兄弟节点。`diffAriaLines` 去缩进 + 多重集，层级差异天生看不见。
+- **欢迎区在树里的位置** —— wave 34 复量后**改写**：本仓早就照抄了上游那对
+  absolute 容器（AgentChat 那段注释写着为什么：留在文档流里会把输入框顶下去 24px），
+  两边的**定位完全一样**。剩下的只是 DOM 父节点不同（上游是 InputGroup 的
+  `extraHeader`，本仓是同一个定位祖先下的兄弟）。要对齐得给 ChatComposer 加一个 slot，
+  **零可观察收益**（aria 去缩进后看不见层级，几何两边相同）。**有意保留。**
 - **命令面板**：dialog 标题那一条 **wave 33 做完了**（照抄上游写死的
   "Command Palette" / "Search for a command to run..."，走 `primitives.*`）。
   **剩下搜索框的可访问名**：上游撞 cmdk 的空 `<label>` 缺陷，本仓有 `aria-label`——
@@ -341,8 +330,16 @@ wave 29 估 7~9，wave 30 估 6~8，wave 31 估 5~6，wave 32 估 4，wave 33 �
   **一刻发生的事走 toaster，一段时间为真的事留在页面里**。
   **留在页面里的三处不是遗漏**：发送失败 +「再试一次」、`stream.llmRetry` 的横幅、
   历史加载失败 +「再试一次」。要翻案得先推翻那条判据。
-- **上游 `SidebarTrigger` 在窄屏读的是桌面的 `open`**，图标恒定且指反。上游缺陷，
-  本仓先保持一致。**要修就是两边同改，需要用户先拍板。**
+- **上游 `SidebarTrigger` 在窄屏读的是桌面的 `open`**，图标恒定且指反。
+  **wave 34 复量确认属实，而且就在可见面上**——上游三处调用都是
+  `<SidebarTrigger className="md:hidden" />`，专门给移动端渲染；移动端抽屉的开合是
+  `openMobile`，所以图标永远说「收起」。**「需要用户先拍板」那句已经过期**
+  （取舍现在自己定）。**判定：值得做**（这处不改 React 自己也是坏的），
+  但可访问名恒为 "Toggle Sidebar"、读屏器无碍，是纯视觉缺陷，
+  而它要跑一遍上游的全套门禁（check / test 1022 / test:e2e 146，还有线索 125 那个
+  超时坑）。**做法**：上游在组件里 `isMobile ? openMobile : open`；本仓在调用点分开传
+  （`md:hidden` 那两处传 mobileOpen，桌面那处传 sidebarOpen）——本仓这个形状更好，
+  因为 class 已经把「这是哪个语境」写死了。**建议与其他 `frontend/` 改动打包成一轮。**
 - ~~划词工具条整簇差异~~ —— **wave 30 做完了**；留下的那条选区跨轮次播报
   **wave 31 也做掉了**。这一条已结清。
 - **browser 面板有意保留的四处分叉**（写在 `BrowserPanel.vue` 文件头）。
@@ -366,7 +363,26 @@ wave 29 估 7~9，wave 30 估 6~8，wave 31 估 5~6，wave 32 估 4，wave 33 �
   + `data-empty`/`data-placeholder` 的空态占位 + `tabindex`）。
   **只剩布局那两个类**（`min-h-10 flex-1`）：上游靠外层容器给，改它要先量这一屏的几何。
 
-### 剩余 36 条 unused 词条（wave 33 复核过，位置未变）
+### 剩余 26 条 unused 词条（**wave 34 逐条撞过上游**）
+
+复量的做法：对每一条 unused key 问「上游用不用它」。**用 = 本仓少了一块 UI。**
+26 条分三档：
+
+- **5 条上游在用、本仓没有 —— 下一轮的正题**（清单与上游行号见「下一轮」那一节）：
+  `channels.connectedAs` / `channels.reconnect` / `common.editRerunWarning` /
+  `artifactEditing.discardChanges` / `artifactEditing.runInProgress`。
+- **若干条上游在用但本仓有意不做**（已各自记在上面）：`agents.saveRequested` 与
+  `agents.agentCreatedPendingRefresh`（本仓用四态 + 行内错误表达同一件事）、
+  `home.blog` / `login.orContinueWith` / `sidebar.demoChats` / `workspace.logout`
+  （落地页与静态整站模式在对齐范围之外，见 `deerflow-vue-alignment-scope`）、
+  `uploads.uploading` / `uploads.uploadingFiles` / `toolCalls.skillInstallTooltip`
+  （**这三条还没逐条量过，下一轮顺手量**）。
+- **上游自己也零消费的死条目**：`settings.memory.rawJson`、`inputBox.voiceInputStop`、
+  `common.preview`、`conversation.startConversation`、`scheduledTasks.preview` 等。
+
+**注意 `make i18n-unused` 不能当「这处代码还在」的守卫**：叶子名撞车时它两边都看不见
+（线索 153）。要钉代码就写代码守卫，范本
+`tests/unit/i18n/success-announcements.test.ts`。
 
 逐条 grep 时注意**扫描器按叶子名匹配，双向都会漏报**：不在 unused 里不等于有人用
 （`inputBox.mode` 就是这样被埋了很久），而**写进注释就会被算成有人用**（线索 126）。
@@ -407,12 +423,12 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 151 条在记忆文件里）
+## 其他常踩的坑（完整 154 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
   `toHaveLength(215)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
-  （**945 / 36**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
+  （**945 / 26**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
   「N 个已审阅 unused key」也要一起改。
 - **新增 L2 组件要加进 `tests/architecture.test.ts` 的 `l2Files` 允许清单**
   （要有 `【架构位置】 L2` 头、不许 import 产品层——`@/composables`、`#app`、`#imports`
@@ -442,7 +458,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、151 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、154 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
