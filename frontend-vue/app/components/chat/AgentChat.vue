@@ -1056,7 +1056,7 @@ const headerClass = computed(() =>
   组件**拿不到开合态**，图标只能写死一个 Menu。全局事件仍然保留给真正跨切面的
   两个调用方（命令面板的 Cmd+B、artifact 面板的收起）。
 */
-const { open: sidebarOpen, toggleSidebar } = useWorkspaceSidebar();
+const { mobileOpen: sidebarMobileOpen, toggleSidebar } = useWorkspaceSidebar();
 
 function startAgentChat() {
   if (!props.agentName) return;
@@ -1577,9 +1577,16 @@ onUnmounted(() => {
             侧栏在移动端是一个会被卸载的抽屉，触发器指着一个此刻并不存在的 id，
             aria-controls 是断的；expanded 也只能描述抽屉，描述不了桌面端的收起态。
           -->
+          <!--
+            这颗触发器带着 `md:hidden`——它**只在窄屏出现**，而窄屏抽屉的开合是
+            `mobileOpen` 不是桌面的 `open`。此前传的是 `sidebarOpen`，于是图标恒定
+            且指反：抽屉关着，按钮却画着「收起」。上游同一处是在组件里
+            `isMobile ? openMobile : open`（已两边同改，sidebar.tsx:261）；本仓把这个
+            选择留在调用点，因为 class 已经写死了这是哪个语境，不必再问一次视口。
+          -->
           <SidebarTrigger
             v-if="!isDemo"
-            :open="sidebarOpen"
+            :open="sidebarMobileOpen"
             :aria-label="$i18n.t.value.primitives.toggleSidebar"
             class="md:hidden"
             @click="toggleSidebar"

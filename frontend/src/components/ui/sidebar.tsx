@@ -258,7 +258,13 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { open, toggleSidebar } = useSidebar();
+  // On mobile the drawer's state is `openMobile`, not the desktop `open`. Every
+  // call site renders this trigger with `md:hidden`, so reading `open` there made
+  // the icon constant and pointing the wrong way: it said "collapse" while the
+  // drawer was closed. The accessible name is unaffected (it is always
+  // "Toggle Sidebar"), so this is a visual-only fix.
+  const { open, openMobile, isMobile, toggleSidebar } = useSidebar();
+  const expanded = isMobile ? openMobile : open;
 
   return (
     <Button
@@ -273,7 +279,7 @@ function SidebarTrigger({
       }}
       {...props}
     >
-      {open ? <PanelLeftCloseIcon /> : <PanelLeftOpenIcon />}
+      {expanded ? <PanelLeftCloseIcon /> : <PanelLeftOpenIcon />}
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );

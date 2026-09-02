@@ -949,7 +949,7 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 22,
+  "unusedTotal": 20,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.saveRequested",
@@ -969,8 +969,6 @@
     "sidebar.demoChats",
     "sidecar.reference",
     "toolCalls.clickToViewContent",
-    "toolCalls.skillInstallTooltip",
-    "uploads.uploading",
     "uploads.uploadingFiles",
     "workspace.logout"
   ]

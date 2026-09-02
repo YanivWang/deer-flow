@@ -133,10 +133,18 @@ const emit = defineEmits<{
   >
     <Download :size="15" />
   </button>
+  <!--
+    安装键外面上游还套了一层 `<Tooltip content={t.toolCalls.skillInstallTooltip}>`
+    （artifact-file-detail.tsx:532），说的是「这颗按钮会做什么」，与按钮自己的名字
+    （`common.install`）是两句话。本仓这一排动作用 aria-label 代替上游的 tooltip
+    机制（见文件头），所以这句说明落到 `title` 上：hover 时能看见，
+    读屏器把它当描述念（已经有 aria-label 顶着名字那一格）。
+  -->
   <button
     v-if="canInstall && !editing"
     type="button"
     :aria-label="$i18n.t.value.common.install"
+    :title="$i18n.t.value.toolCalls.skillInstallTooltip"
     class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
     :disabled="installing"
     @click="emit('install')"

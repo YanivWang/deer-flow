@@ -392,9 +392,14 @@ function openSettingsDialog(section: "appearance" | "about") {
             **展开态不传任何可见性 class**，这是上游的形状（`<SidebarTrigger />`）。
             此前本仓传的是 `hidden md:flex`，于是窄屏抽屉里这颗触发器是**没有的**；
             上游的 Sheet 里它一直在——抽屉里没有关闭入口，只能点遮罩或按 Esc。
+
+            **图标读的状态要分窄屏**：这一处在桌面侧栏与窄屏抽屉里都渲染，
+            而窄屏抽屉的开合是 `mobileOpen`。传桌面的 `open` 会让抽屉里那颗图标恒定
+            且指反。上游同一处是 `isMobile ? openMobile : open`（已两边同改，
+            sidebar.tsx:261）；这里的 class 没写死语境，所以照它问一次 `isNarrow`。
           -->
           <SidebarTrigger
-            :open="sidebarOpen"
+            :open="isNarrow ? mobileOpen : sidebarOpen"
             :aria-label="$i18n.t.value.primitives.toggleSidebar"
             @click="toggleSidebar"
           />

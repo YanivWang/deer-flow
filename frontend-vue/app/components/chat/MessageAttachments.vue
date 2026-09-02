@@ -56,6 +56,17 @@ function formatBytes(bytes: number) {
         />
         <FileText v-else :size="16" />
         <span class="truncate">{{ file.filename }}</span>
+        <!--
+          「还在上传」这件事此前只有那颗转圈图标在说，而它没有任何文字替代——
+          读屏器念得出文件名，念不出它还没传完。上游 message-list-item.tsx:701
+          在同一张卡片上写着 `{t.uploads.uploading}`。
+        -->
+        <span
+          v-if="file.status === 'uploading'"
+          class="text-muted-foreground shrink-0 text-[10px]"
+        >
+          {{ $i18n.t.value.uploads.uploading }}
+        </span>
       </div>
       <a
         v-else-if="isImageAttachment(file)"

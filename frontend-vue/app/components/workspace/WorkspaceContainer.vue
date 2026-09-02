@@ -50,7 +50,7 @@ function nameOfSegment(segment: string | undefined) {
   组件**拿不到开合态**，图标只能写死一个 ChevronRight。全局事件仍然保留给
   真正跨切面的两个调用方（命令面板的 Cmd+B、artifact 面板的收起）。
 */
-const { open: sidebarOpen, toggleSidebar } = useWorkspaceSidebar();
+const { mobileOpen: sidebarMobileOpen, toggleSidebar } = useWorkspaceSidebar();
 </script>
 
 <template>
@@ -59,8 +59,13 @@ const { open: sidebarOpen, toggleSidebar } = useWorkspaceSidebar();
       class="top-0 right-0 left-0 z-20 flex h-16 shrink-0 items-center justify-between gap-2 border-b backdrop-blur-sm transition-[width,height] ease-out"
     >
       <div class="flex min-w-0 items-center gap-2 px-2 sm:px-4">
+        <!--
+          带着 `md:hidden`，只在窄屏出现，所以读的是抽屉的 `mobileOpen`
+          而不是桌面的 `open`（同 AgentChat 那一处；上游是在组件里
+          `isMobile ? openMobile : open`，sidebar.tsx:261，已两边同改）。
+        -->
         <SidebarTrigger
-          :open="sidebarOpen"
+          :open="sidebarMobileOpen"
           class="md:hidden"
           :aria-label="$i18n.t.value.primitives.toggleSidebar"
           @click="toggleSidebar"

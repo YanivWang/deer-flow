@@ -122,15 +122,48 @@ describe("侧栏触发器的唯一实现", () => {
     共享状态里取 open——只钉模板里传了 :open 是不够的，传一个字面量 false
     同样能过，所以连 useWorkspaceSidebar 一起钉。
   */
-  it("feeds every trigger from the shared sidebar state", () => {
-    for (const file of [
-      "app/components/chat/AgentChat.vue",
-      "app/components/workspace/WorkspaceContainer.vue",
-      "app/components/workspace/ThreadSidebar.vue",
-    ]) {
+  /*
+    每一处都从共享状态取，**而且取的是与自己语境匹配的那一份**。
+
+    此前这条守卫要求三处**都**传 `:open="sidebarOpen"`——那正好把一个缺陷钉住了：
+    带 `md:hidden` 的两处只在窄屏出现，而窄屏抽屉的开合是 `mobileOpen`，
+    传桌面的 `open` 会让图标恒定且指反（抽屉关着，按钮画着「收起」）。
+    上游同一处是 `isMobile ? openMobile : open`（wave 36 两边同改，sidebar.tsx:261）。
+
+    本仓把这个选择留在调用点：class 已经写死语境的（`md:hidden`）直接传 mobileOpen，
+    没写死的（侧栏自己的头部，桌面与抽屉里都渲染）才问一次 `isNarrow`。
+  */
+  it("feeds every trigger from the state that matches its own context", () => {
+    for (const [file, expected] of [
+      // 都带 md:hidden：只在窄屏出现。
+      ["app/components/chat/AgentChat.vue", ':open="sidebarMobileOpen"'],
+      [
+        "app/components/workspace/WorkspaceContainer.vue",
+        ':open="sidebarMobileOpen"',
+      ],
+      // 侧栏自己的头部：桌面与抽屉里都渲染，所以要问视口。
+      [
+        "app/components/workspace/ThreadSidebar.vue",
+        ':open="isNarrow ? mobileOpen : sidebarOpen"',
+      ],
+    ] as const) {
       const source = stripComments(readSource(file));
       expect(source, file).toContain("useWorkspaceSidebar()");
-      expect(source, file).toContain(':open="sidebarOpen"');
+      expect(source, file).toContain(expected);
     }
+  });
+
+  /* 两个图标各对一个状态，别把判据写反了。 */
+  it("shows the collapse icon only while the sidebar is open", () => {
+    expect(
+      mount(SidebarTrigger, { props: { open: true } })
+        .find(".lucide-panel-left-close")
+        .exists(),
+    ).toBe(true);
+    expect(
+      mount(SidebarTrigger, { props: { open: false } })
+        .find(".lucide-panel-left-open")
+        .exists(),
+    ).toBe(true);
   });
 });
