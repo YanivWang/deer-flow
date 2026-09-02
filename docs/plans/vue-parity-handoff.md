@@ -8,15 +8,17 @@
 
 ---
 
-## 当前状态（截至 wave 22，2026-09-02）
+## 当前状态（截至 wave 23，2026-09-02）
 
-- 分支 `main-wc`。HEAD = `d486da57`（marker chore），`fefda8ba` = wave 22。
+- 分支 `main-wc`。HEAD = `0b1b8336`（marker chore），`3d6bb266` = wave 23。
 - **对照台账 0 行**，38 个样本，`make -C frontend-vue e2e-parity` 46 条全绿。
-- **upstream marker 已推到 `fefda8ba`**。
+- **upstream marker 已推到 `3d6bb266`**。
 - 已彻底对齐的域（14 个 + settings/memory）：chat / artifacts / 会话列表 /
   scheduled-tasks / channels / integrations + 设置外壳 / mermaid / subtask-card /
   workspace 头部 / sidebar / messages / sidecar / browser / composer，
-  外加 **settings 域的 memory 面板**（wave 22）。
+  外加 **settings 域**（wave 22 memory 面板 74→0；wave 23 其余六个 section
+  108→36，其中 account / appearance / notification / tools / skills **五个归 0**，
+  about 还剩 36 行等 wave 24）。
 
 > **⚠️ settings 域进不了对照取样面**（wave 22 的结构性发现，线索 107）：
 > `tests/parity/scenario-coverage.test.ts` 要求场景 id **逐字等于**
@@ -27,7 +29,7 @@
 ### 门禁实测值（wave 21 收工时逐条跑过，全绿）
 
 ```
-make -C frontend-vue verify        228 文件 / 1894 单测；词典 953 key、42 unused
+make -C frontend-vue verify        229 文件 / 1903 单测；词典 947 key、42 unused
 make -C frontend-vue e2e-parity    46    台账 0 行，38 样本
 make -C frontend-vue e2e-mock      262 + 19 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
@@ -37,7 +39,7 @@ make -C frontend-vue e2e-external  3
 ```
 
 产品 SFC **211**（总 213）。动了 `frontend/` 再加
-`python3 scripts/pnpm.py --dir frontend check` / `test`（1015）/ `test:e2e`（**146**）。
+`python3 scripts/pnpm.py --dir frontend check` / `test`（1018）/ `test:e2e`（**146**）。
 **`frontend/tests/e2e/landing.spec.ts:61` 是一条既有的负载抖动**（`locator.boundingBox`
 等动画区的 `.max-w-6xl`），wave 20/21/22 都遇到过。判据：先证你这一轮改的东西
 进不了落地页 bundle，再谈负载。
@@ -88,45 +90,61 @@ wave 20/21 连着两轮正面打了 ① 和 ⑦。**判据：一个域收工前�
 
 ---
 
-## 上一轮（wave 22）做了什么
+## 上一轮（wave 23）做了什么
 
-**settings 域第一刀：记忆面板**。probe 打开 `?settings=memory` 量到 **74 行**差异，
-做完 **0 行**（且 markdown 区两边 HTML 逐字节相同）。
+**settings 其余六个面板**。probe 量到六个 section 合计 **108 行**
+（account 6 / appearance 16 / notification **0** / tools 3 / skills 8 / about 75），
+收工时**五个归 0**，about 从 75 降到 36。
 
-- 摘要区从六张手写 `<article>` 改成**一份 markdown 文档**（`## / ### / > 引用 / ---`），
-  新增 `app/core/memory/document.ts` 照抄上游四个纯函数。
-- 空小节不再被过滤，写成灰掉的 `(empty)`；时间从裸 ISO 改成 `formatTimeAgo`
-  （新增 `app/core/utils/datetime.ts`，`threads/updated-time` 改成在它之上只加
-  「缺时间返回 null」这一条会话列表语义）。
-- 事实行四项元数据按上游规则呈现（category 首字母大写、confidence 念**档位**、
-  createdAt 相对时间、source 是能点进会话的链接），次序改成元数据在上。
-- 筛选改成单选组（新增 L2 `ui/toggle-group`），搜索框改回 `textbox`。
-- **两边同改**：事实行图标按钮改成带正文的可访问名（上游一页三对同名按钮）。
+- 账号：`<dl>` → 两列网格里的 `<span>`；密码框与按钮换成上游同一个 Input / Button；
+  退出按钮补 LogOut 图标。
+- 外观：主题卡片补齐「图标 + 标题 + 说明 + 一张 aria-hidden 的预览图」，预览按
+  **解析后**的主题画；补 Separator；语言选择器从原生 `<select>` 换成 `ui/select`。
+- 工具：空态从带边框的 `<p>` 换成裸文本 div。
+- 关于：新增 `about-content.ts`（与上游逐字同一份 markdown），交给 markdown 适配器，
+  插件链取 Streamdown 的**内建默认**；新增运行期 `appVersion`
+  （`frontend-vue/package.json` 的 version 从 0.1.0 改成 2.1.0）。
+- **两边同改**：技能页开关与 tab 组补可访问名；账号页错误/成功进 live region。
+  那两个上游页面**此前都没有任何测试**，顺手各写了第一份。
+- **删掉六条本仓自己发明的 `settings.about.*`**（上游只有 `settings.nav.about`）。
 
-### wave 22 新增的踩坑线索（记忆里编号 107~109）
+### wave 23 新增的踩坑线索（记忆里编号 110~112）
 
-- **107. 一个域可能*结构上*进不了取样面。** 开工一个新域之前，先去
-  `baseline/parity-scenario-coverage.json` 查它有没有 id；没有的话这一轮从头到尾
-  都只能靠 probe 找差异、靠单测守。
-- **108. 调用点漏传 `components` / rehype 插件，会同时丢掉可访问性树形与全部样式，
-  而且是静默的。** 新接一个 markdown 调用点时先看现有调用点传了什么：
-  `MessageList` 传 `messageMarkdownComponents`、`ArtifactPreview` 传
-  `richContentComponents`，两者都不是默认值；内联 HTML 还需要 `rawHtmlRehypePlugins`。
-- **109. `flushPromises` 等不到 `defineAsyncComponent` 的动态 import**（它只冲微任务）。
-  用 `vi.waitFor`。顺带：变异 harness 的落地判据写成 `back.count(old) != 0` 时，
-  **追加式变异**会被恒误判成没落地。
+- **110. `defineAsyncComponent` 的 import 会在用例跑完之后才 resolve，撞上已拆掉的
+  测试环境。** dom 用例渲染了带异步渲染器的组件，要么 `vi.waitFor` 等它，要么 stub 掉，
+  不能既不等也不停。这类错误报的「originated in」可能指向别的文件。
+- **111. 同一份 primitive 镜像漏传，在不同调用点长得不一样。** 判断影响面时，
+  先把所有调用点的 components map 列出来——被覆盖的那些不受影响。
+- **112. 一个 primitive 的「内建默认」可能是一整个安全特性，不只是样式。**
+  照抄默认行为之前，先去 `node_modules` 里读它的默认 context 值。
 
 ---
 
-## 下一轮（wave 23）：settings 其余六个 section
+## 下一轮（wave 24）：把 link safety 与 image wrapper 补进 `richContentComponents`
 
-`account / appearance / notification / tools / skills / about`。做法照 wave 22：
-**先 probe** 打开 `?settings=<section>`，把两边的 aria 按台账口径
-（`normalizeAriaSnapshot` + 去缩进多重集）diff 一遍，再逐簇修，靠单测守。
+这是关于页剩下的 36 行，但**不是关于页的事**——那份镜像同时被 **ArtifactPreview**
+消费，而 `artifact-preview` 是**已覆盖**的对照场景。今天台账是 0，只是因为 artifact
+夹具里没有 markdown 链接与图片。
 
-**about 两边差最远**——React 是一份 markdown 走 SafeStreamdown，本仓是手写 article。
-wave 22 已经把 markdown 适配器接进设置面板了（`MessageMarkdown` +
-`richContentComponents` + `rawHtmlRehypePlugins`），about 直接照抄这套即可。
+**开工第一步：往 artifact 夹具里加一条链接和一张图，跑一次 parity，看它报出什么**
+——那就是这一轮的施工图，而且这一轮的成果会被台账直接验证（与 settings 域不同）。
+
+两条的机制已经 probe 清楚：
+
+- **link safety**：`linkSafety: { enabled: true }` 是 Streamdown 的**内建默认**。
+  链接渲染成 `<button class="wrap-anywhere appearance-none text-left font-medium
+  text-primary underline" data-incomplete="false" data-streamdown="link">`，点击弹
+  `link-safety-modal`，确认后 `window.open(href, "_blank", "noreferrer")`。
+  关掉安全模式时才是 `<a class="wrap-anywhere font-medium text-primary underline"
+  data-streamdown="link" rel="noreferrer" target="_blank">`。
+  **本仓渲染的是直接跳转的 `<a>`——看起来「更好用」，实际是少做了一层防护。**
+- **image wrapper**：`<div class="group relative my-4 inline-block"
+  data-streamdown="image-wrapper">` + `<img class="max-w-full rounded-lg"
+  data-streamdown="image">` + 一层 hover 遮罩 + 一颗 `title="Download image"` 的按钮。
+
+**注意 `MessageList` 的 `messageMarkdownComponents` 会用自己的 `a`/`img` 覆盖**
+（MarkdownLink / MarkdownMessageImage），所以聊天路径不受影响；受影响的是
+ArtifactPreview、记忆面板与关于页。
 
 之后是 auth / setup / showcase。
 
@@ -144,10 +162,9 @@ wave 22 已经把 markdown 适配器接进设置面板了（`MessageMarkdown` +
 
 ### settings 域剩下的
 
-- **六个面板内部仍是自己长的结构**：裸 `<h2>`、手搓按钮、没有 shadcn primitive。
-  about 差最远（见「下一轮」）。
 - **`settings.memory.*` 剩下的六条 unused 全部核实为「上游自己也零消费」**
   （`rawJson` 与五条 `*Success`）——**不是缺 UI**，与 `inputBox.voiceInputStop` 同类。
+- **关于页还剩 36 行**：见「下一轮」，属共享 markdown 镜像而不是这一屏。
 
 ### composer 域剩下的两条
 
@@ -235,12 +252,12 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 看报出的行是否逐条可归因，再还原后跑一次干净的。
 （macOS 的 BSD sed 不支持 `0,/pat/`，**退出码 0 但文件一个字节没改**；用 python harness。）
 
-## 其他常踩的坑（完整 109 条在记忆文件里）
+## 其他常踩的坑（完整 112 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**213 / 211**）、`tests/unit/i18n/source-guard.test.ts` 的
   `toHaveLength(211)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
-  （**953 / 42**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
+  （**947 / 42**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
   「N 个已审阅 unused key」也要一起改。
 - **新增 L2 组件要加进 `tests/architecture.test.ts` 的 `l2Files` 允许清单**
   （要有 `【架构位置】 L2` 头、不许 import 产品层——`@/composables`、`#app`、`#imports`
@@ -260,7 +277,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、109 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、112 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
