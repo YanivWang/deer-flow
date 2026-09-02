@@ -1181,17 +1181,6 @@ export const zhCN: Translations = {
       signOut: "退出登录",
       signOutFailed: "退出登录失败。",
     },
-    about: {
-      title: "关于 DeerFlow",
-      description:
-        "DeerFlow 是一个开源超级智能体框架，可用于研究、编码、内容生成和计算机操作。",
-      safetyTitle: "安全",
-      safetyDescription:
-        "智能体输出可能有误。依赖重要结果前，请先复核内容并检查工具操作。",
-      runtimeTitle: "运行时",
-      runtimeDescription:
-        "此 Vue 工作区通过当前 DeerFlow Gateway 使用会话、运行、工具、记忆、集成、频道和定时任务。",
-    },
     acknowledge: {
       emptyTitle: "致谢",
       emptyDescription: "相关的致谢信息会展示在这里。",

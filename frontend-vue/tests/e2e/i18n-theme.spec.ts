@@ -50,7 +50,12 @@ test("locale switch updates an open dialog, product surfaces, future errors and 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText(enUS.settings.appearance.themeTitle);
-  await dialog.locator("select").selectOption("zh-CN");
+  /*
+    语言选择器已经从原生 `<select>` 换成 shadcn 的 Select（与上游同一个 primitive）：
+    没有 `selectOption` 可用，选项 portal 到 body 上，要先开触发器再点那一项。
+  */
+  await dialog.locator('[data-slot="select-trigger"]').click();
+  await page.getByRole("option", { name: zhCN.locale.localName }).click();
 
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
   await expect(dialog).toContainText(zhCN.settings.appearance.themeTitle);

@@ -11,9 +11,12 @@
                    三种事件在本仓 happy-dom 上的实测值：MouseEvent=提交、
                    `.click()`=提交、`new Event("click")`=**不提交**。
 
-                   卡片里的 `MessageMarkdown` 是 `defineAsyncComponent`，在这个
-                   project 里不会解析，所以问题正文与 context 都不上屏——
-                   本文件因此**不断言问题文案**，那部分由 e2e 覆盖。
+                   卡片里的 `MessageMarkdown` 里套着一个 `defineAsyncComponent`
+                   （StreamMarkdown）。本文件**不断言问题文案**（那部分由 e2e 覆盖），
+                   所以直接把 MessageMarkdown 整个 stub 掉。不 stub 的话那条动态
+                   import 会在用例跑完之后才 resolve，撞上已经拆掉的测试环境，
+                   报成 `EnvironmentTeardownError`——2026-09-02 实测过一次，
+                   出不出现取决于机器负载，是一条真的 flake 源。
 */
 
 import { mount } from "@vue/test-utils";
@@ -55,6 +58,7 @@ function mountCard(
 ) {
   return mount(HumanInputCard, {
     props: { request, active: true, pending: false, ...props },
+    global: { stubs: { MessageMarkdown: true } },
   });
 }
 

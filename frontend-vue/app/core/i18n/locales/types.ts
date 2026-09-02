@@ -976,14 +976,6 @@ export interface Translations {
       signOut: string;
       signOutFailed: string;
     };
-    about: {
-      title: string;
-      description: string;
-      safetyTitle: string;
-      safetyDescription: string;
-      runtimeTitle: string;
-      runtimeDescription: string;
-    };
     acknowledge: {
       emptyTitle: string;
       emptyDescription: string;

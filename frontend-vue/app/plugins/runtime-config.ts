@@ -15,5 +15,6 @@ export default defineNuxtPlugin(() => {
     langgraphBaseUrl: String(config.public.langgraphBaseUrl ?? ""),
     backendBaseUrl: String(config.public.backendBaseUrl ?? ""),
     authDisabled: isEnabledRuntimeFlag(config.public.authDisabled),
+    appVersion: String(config.public.appVersion ?? ""),
   });
 });

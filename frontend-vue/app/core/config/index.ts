@@ -1,7 +1,7 @@
 /*
   【文件职责】     见下方导出与 JSDoc。
   【架构位置】     L3
-  【主要导出】     getBackendBaseURL / getLangGraphBaseURL
+  【主要导出】     getBackendBaseURL / getLangGraphBaseURL / getAppVersion
   【依赖关系】     见下方 import。
   【边界与注意】   本文件由本仓维护；行为由 tests/ 下的用例约束。
 */
@@ -14,12 +14,15 @@ export interface DeerFlowRuntimeOptions {
   langgraphBaseUrl: string;
   backendBaseUrl: string;
   authDisabled: boolean;
+  /** 关于页显示的产品版本；见 nuxt.config.ts 的 `appVersion`。 */
+  appVersion: string;
 }
 
 const DEFAULT_RUNTIME_OPTIONS: DeerFlowRuntimeOptions = {
   langgraphBaseUrl: "",
   backendBaseUrl: "",
   authDisabled: false,
+  appVersion: "",
 };
 
 let runtimeOptions: DeerFlowRuntimeOptions = DEFAULT_RUNTIME_OPTIONS;
@@ -30,6 +33,11 @@ export function setDeerFlowRuntimeOptions(options: DeerFlowRuntimeOptions) {
 
 export function getDeerFlowRuntimeOptions(): DeerFlowRuntimeOptions {
   return runtimeOptions;
+}
+
+/** 关于页显示的产品版本。没注入时给一个空串，调用方自己决定要不要渲染。 */
+export function getAppVersion() {
+  return runtimeOptions.appVersion;
 }
 
 /** 测试与 HMR 用：回到「什么都没注入」的初始态。 */

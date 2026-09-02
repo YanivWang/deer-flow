@@ -102,16 +102,21 @@ async function toggle(name: string, enabled: boolean) {
         >
           {{ actionError }}
         </p>
-        <p
+        <!--
+          空态是一段裸文本，不是一张带边框的卡片（上游 tool-settings-page.tsx:53
+          是 `<div className="text-muted-foreground text-sm">`）。`<p>` 在可访问性
+          树里会多出一个 paragraph 节点，而上游那一句直接挂在 main 的文本里。
+        -->
+        <div
           v-if="
             !mcp.loading.value &&
             !mcp.error.value &&
             Object.keys(mcp.config.value?.mcp_servers ?? {}).length === 0
           "
-          class="text-muted-foreground rounded-md border p-4 text-sm"
+          class="text-muted-foreground text-sm"
         >
           {{ t.settings.tools.empty }}
-        </p>
+        </div>
         <div
           v-for="(server, name) in mcp.config.value?.mcp_servers ?? {}"
           :key="name"

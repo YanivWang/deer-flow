@@ -1238,17 +1238,6 @@ export const enUS: Translations = {
       signOut: "Sign Out",
       signOutFailed: "Failed to sign out.",
     },
-    about: {
-      title: "About DeerFlow",
-      description:
-        "DeerFlow is an open-source super agent harness for research, coding, content generation, and computer use.",
-      safetyTitle: "Safety",
-      safetyDescription:
-        "Agent output can be incorrect. Review important results and inspect tool actions before relying on them.",
-      runtimeTitle: "Runtime",
-      runtimeDescription:
-        "This Vue workspace uses the current DeerFlow Gateway for threads, runs, tools, memory, integrations, channels, and scheduled tasks.",
-    },
     acknowledge: {
       emptyTitle: "Acknowledgements",
       emptyDescription: "Credits and acknowledgements will show here.",

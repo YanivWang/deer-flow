@@ -82,7 +82,9 @@ function SkillSettingsList({
       <header className="flex justify-between">
         <div className="flex gap-2">
           <Tabs defaultValue="public" onValueChange={setFilter}>
-            <TabsList variant="line">
+            {/* Name the tab set. An unnamed tablist is announced as a bare
+                "tab list", which says nothing about what it filters. */}
+            <TabsList variant="line" aria-label={t.settings.skills.title}>
               <TabsTrigger value="public">{t.common.public}</TabsTrigger>
               <TabsTrigger value="custom">{t.common.custom}</TabsTrigger>
             </TabsList>
@@ -110,7 +112,11 @@ function SkillSettingsList({
               </ItemDescription>
             </ItemContent>
             <ItemActions>
+              {/* Name the switch after its skill. A page of skills otherwise
+                  ships a column of identical unnamed switches, so a screen
+                  reader cannot tell which one it is on (WCAG 4.1.2). */}
               <Switch
+                aria-label={skill.name}
                 checked={skill.enabled}
                 disabled={
                   env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true" || !isAdmin

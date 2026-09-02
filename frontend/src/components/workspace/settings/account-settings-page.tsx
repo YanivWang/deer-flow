@@ -127,8 +127,18 @@ export function AccountSettingsPage() {
               required
               minLength={8}
             />
-            {error && <p className="text-sm text-red-500">{error}</p>}
-            {message && <p className="text-sm text-green-500">{message}</p>}
+            {/* Live regions: without them the result of the submit is only
+                visible, so a screen-reader user gets no feedback at all. */}
+            {error && (
+              <p className="text-sm text-red-500" role="alert">
+                {error}
+              </p>
+            )}
+            {message && (
+              <p className="text-sm text-green-500" role="status">
+                {message}
+              </p>
+            )}
             <Button
               type="submit"
               variant="outline"

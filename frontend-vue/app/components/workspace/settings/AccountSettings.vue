@@ -9,7 +9,11 @@
 import { onMounted, ref } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
 
+import { LogOut } from "lucide-vue-next";
+
 import SettingsSection from "./SettingsSection.vue";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import { clearAuthenticatedClientState } from "@/core/auth/client-state";
 import type { User } from "@/core/auth/types";
@@ -98,23 +102,35 @@ async function logout() {
 <template>
   <div class="space-y-8">
     <SettingsSection :title="$i18n.t.value.settings.account.profileTitle">
+      <!--
+        资料区是一组 `<span>` 排在两列网格里，不是 `<dl>`（上游
+        account-settings-page.tsx:76）。`<dl>` 语义上更贴切，但它在可访问性树里
+        会长出 term/definition 节点，而上游那四段是 main 下面的纯文本——两个应用
+        读屏器听到的不是同一棵树。照抄上游。
+      -->
       <div class="space-y-2">
-        <dl class="grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2 text-sm">
-          <dt class="text-muted-foreground">
+        <div
+          class="grid grid-cols-[max-content_max-content] items-center gap-4"
+        >
+          <span class="text-muted-foreground text-sm">
             {{ $i18n.t.value.settings.account.email }}
-          </dt>
-          <dd>{{ user?.email ?? "—" }}</dd>
-          <dt class="text-muted-foreground">
+          </span>
+          <span class="text-sm font-medium">{{ user?.email ?? "—" }}</span>
+          <span class="text-muted-foreground text-sm">
             {{ $i18n.t.value.settings.account.role }}
-          </dt>
-          <dd class="capitalize">{{ user?.system_role ?? "—" }}</dd>
+          </span>
+          <span class="text-sm font-medium capitalize">{{
+            user?.system_role ?? "—"
+          }}</span>
           <template v-if="user?.oauth_provider">
-            <dt class="text-muted-foreground">
+            <span class="text-muted-foreground text-sm">
               {{ $i18n.t.value.settings.account.ssoProvider }}
-            </dt>
-            <dd class="capitalize">{{ user.oauth_provider }}</dd>
+            </span>
+            <span class="text-sm font-medium capitalize">{{
+              user.oauth_provider
+            }}</span>
           </template>
-        </dl>
+        </div>
       </div>
     </SettingsSection>
 
@@ -123,47 +139,45 @@ async function logout() {
       :title="$i18n.t.value.settings.account.changePasswordTitle"
       :description="$i18n.t.value.settings.account.changePasswordDescription"
     >
+      <!--
+        三个输入框与提交按钮走 shadcn 的 Input / Button primitive，与上游同一个
+        （account-settings-page.tsx:107）。本仓原来是手搓的 border + padding，
+        可访问名一样，但 focus ring、disabled 态、尺寸档全是另一套。
+      -->
       <form class="max-w-sm space-y-3" @submit.prevent="changePassword">
-        <input
+        <Input
           v-model="currentPassword"
           type="password"
           required
           :placeholder="$i18n.t.value.settings.account.currentPassword"
-          class="border-input w-full rounded-md border px-3 py-2"
         />
-        <input
+        <Input
           v-model="newPassword"
           type="password"
           required
           minlength="8"
           :placeholder="$i18n.t.value.settings.account.newPassword"
-          class="border-input w-full rounded-md border px-3 py-2"
         />
-        <input
+        <Input
           v-model="confirmPassword"
           type="password"
           required
           minlength="8"
           :placeholder="$i18n.t.value.settings.account.confirmNewPassword"
-          class="border-input w-full rounded-md border px-3 py-2"
         />
-        <p v-if="error" role="alert" class="text-sm text-red-600">
+        <p v-if="error" role="alert" class="text-sm text-red-500">
           {{ error }}
         </p>
-        <p v-if="message" role="status" class="text-sm text-emerald-700">
+        <p v-if="message" role="status" class="text-sm text-green-500">
           {{ message }}
         </p>
-        <button
-          type="submit"
-          class="rounded-md border px-3 py-2"
-          :disabled="busy"
-        >
+        <Button type="submit" variant="outline" size="sm" :disabled="busy">
           {{
             busy
               ? $i18n.t.value.settings.account.updating
               : $i18n.t.value.settings.account.updatePassword
           }}
-        </button>
+        </Button>
       </form>
     </SettingsSection>
     <SettingsSection
@@ -182,13 +196,10 @@ async function logout() {
     </SettingsSection>
 
     <SettingsSection title="" description="">
-      <button
-        type="button"
-        class="rounded-md bg-red-600 px-3 py-2 text-white"
-        @click="logout"
-      >
+      <Button variant="destructive" size="sm" class="gap-2" @click="logout">
+        <LogOut class="size-4" aria-hidden="true" />
         {{ $i18n.t.value.settings.account.signOut }}
-      </button>
+      </Button>
     </SettingsSection>
   </div>
 </template>

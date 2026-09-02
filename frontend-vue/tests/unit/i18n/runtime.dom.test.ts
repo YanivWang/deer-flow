@@ -11,6 +11,7 @@ import { computed, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AppearanceSettings from "@/components/workspace/settings/AppearanceSettings.vue";
+import { Select } from "@/components/ui/select";
 import { clientTranslations } from "@/core/i18n/client-translations";
 import { enUS } from "@/core/i18n/locales/en-US";
 import { zhCN } from "@/core/i18n/locales/zh-CN";
@@ -106,10 +107,19 @@ describe("AppearanceSettings", () => {
     vi.stubGlobal("useNuxtApp", () => ({ $i18n: i18n, $theme: theme }));
 
     const wrapper = mount(AppearanceSettings, {
+      attachTo: document.body,
       global: { config: { globalProperties: { $i18n: i18n, $theme: theme } } },
     });
     expect(wrapper.text()).toContain(enUS.settings.appearance.themeTitle);
-    await wrapper.get("select").setValue("zh-CN");
+    /*
+      语言选择器已经从原生 `<select>` 换成 shadcn 的 Select（与上游同一个
+      primitive），没有 `setValue` 可用；Reka 的下拉要真的指针事件才展开，
+      在这个环境里点不开。这条用例的主题是「面板已经打开时，locale 一变就跟着变」，
+      所以直接从 Select 发它自己的 `update:modelValue`——那正是面板接的那个事件。
+      「选择器确实是 Select 而不是原生 select」由
+      tests/unit/settings/settings-panels.dom.test.ts 单独钉。
+    */
+    wrapper.getComponent(Select).vm.$emit("update:modelValue", "zh-CN");
     await flushPromises();
     expect(wrapper.text()).toContain(zhCN.settings.appearance.themeTitle);
     expect(wrapper.text()).toContain(zhCN.settings.appearance.darkDescription);

@@ -64,7 +64,10 @@ describe("AccountSettings authenticated client boundary", () => {
       },
     });
     await flushPromises();
-    await wrapper.get("button.bg-red-600").trigger("click");
+    // 退出按钮已经换成 shadcn 的 Button（destructive 档），不再是手搓的 bg-red-600。
+    await wrapper
+      .get('[data-slot="button"][data-variant="destructive"]')
+      .trigger("click");
     await flushPromises();
 
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);

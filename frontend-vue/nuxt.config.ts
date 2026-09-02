@@ -6,9 +6,19 @@
   【边界与注意】   不承载聊天或协议业务；代理规则只从 routes.ts 读取。
 */
 
+import { readFileSync } from "node:fs";
+
 import tailwindcss from "@tailwindcss/vite";
 import { createThemeBootstrapScript } from "./app/core/theme/bootstrap";
 import { csrRoutes } from "./config/routes";
+
+const appPackageVersion = (
+  JSON.parse(
+    readFileSync(new URL("package.json", import.meta.url), "utf8"),
+  ) as {
+    version: string;
+  }
+).version;
 
 type ClientChunk = { moduleIds: string[]; name: string };
 
@@ -106,6 +116,13 @@ export default defineNuxtConfig({
       backendBaseUrl: "",
       authDisabled: "",
       m0TestPages: "",
+      /*
+        关于页显示的产品版本。与 React 的 `src/version.ts` 同一条判据：优先用
+        构建期注入的 NUXT_PUBLIC_APP_VERSION（nightly CI 会写成
+        `<base>-nightly.<日期>-<短 sha>`），否则回落到 package.json。
+        用 `||` 而不是 `??` 是**有意**的：容器构建会把它设成空串，空串必须一起回落。
+      */
+      appVersion: process.env.NUXT_PUBLIC_APP_VERSION || appPackageVersion,
     },
   },
   nitro: { compressPublicAssets: true },
