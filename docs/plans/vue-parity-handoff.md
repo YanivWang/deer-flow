@@ -1,7 +1,7 @@
 # React → Vue 对照对齐：轮次交接文档
 
 **这份文档是每一轮开工的第一读物。** 它记录「上一轮做完了什么、下一轮做什么、
-有哪些账挂着」。深度背景（124 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
+有哪些账挂着」。深度背景（125 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
 `deerflow-parity-harness-plan` 里；这里只放接手一轮所需的最小集合。
 
 **每推完一个阶段（一轮 wave），就地更新这份文档，然后开始下一轮。**
@@ -10,8 +10,9 @@
 
 ## 当前状态（截至 wave 27，2026-09-02）
 
-- 分支 `main-wc`。wave 27 **动了 `frontend/` 一处**（`artifact-file-list.tsx` 的
-  下载链接漏传 `isMock`），所以有配套的 chore 提交把 marker 往前推。
+- 分支 `main-wc`。HEAD = `6912c5cf`（chore），`a4d888cf` = wave 27。
+- wave 27 **动了 `frontend/` 一处**（`artifact-file-list.tsx` 的下载链接漏传
+  `isMock`），**upstream marker 已推到 `a4d888cf`**。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
 - 覆盖率棘轮：covered **24**，pending **只剩 1 条**（`chat-thread-init-ordering`）。
 - 已彻底对齐的域（14 个 + settings/memory）：chat / artifacts / 会话列表 /
@@ -123,7 +124,7 @@ wave 20/21 连着两轮正面打了 ① 和 ⑦。**判据：一个域收工前�
 提供的——**这处不改，React 自己也是坏的**。两边同改，React 侧补了第一份
 `artifact-file-list.dom.test.tsx`（2 条），marker 由配套的 chore 提交推进。
 
-### wave 27 新增的踩坑线索（记忆里编号 121~124）
+### wave 27 新增的踩坑线索（记忆里编号 121~125）
 
 - **121. Vue 会把「没传」的 Boolean prop 变成 `false`，不是 `undefined`。**
   源码里 `props.modelSelectionReady === false` 读起来像三态，实际上「不传」和
@@ -140,6 +141,13 @@ wave 20/21 连着两轮正面打了 ① 和 ⑦。**判据：一个域收工前�
   `new URL(…, import.meta.url)` 交给 `readFileSync` 直接抛
   `The URL must be of scheme file`；node project 里同样的写法是好的。
   在 `.dom.test.ts` 里读源码要用相对 vitest 工作目录的路径。
+- **125. 别的仓库的构建会把 `next build` 的墙钟拉到 CPU 时间的 4~5 倍。**
+  wave 27 实测 `113s user + 112s sys 但 17 分 21 秒墙钟、CPU 只占 21%`，
+  于是 `frontend/playwright.config.ts` 那个 **120s** 的 `webServer` 超时连着三次
+  连用例都没跑起来（parity 给的是 300s，同一份构建反而过）。**判据是看 `time` 的
+  CPU 占用**：21% 说明在等不在算。绕法是配置自带的 `PLAYWRIGHT_SKIP_WEB_SERVER=1`
+  + `PLAYWRIGHT_BASE_URL`（自己先 build + `next start`），**不要动那个签入的 120s**；
+  再红就把那几个 spec 用 `--workers=2` 单独重跑确认是并发争用。
 
 ---
 
@@ -273,7 +281,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 看报出的行是否逐条可归因，再还原后跑一次干净的。
 （macOS 的 BSD sed 不支持 `0,/pat/`，**退出码 0 但文件一个字节没改**；用 python harness。）
 
-## 其他常踩的坑（完整 124 条在记忆文件里）
+## 其他常踩的坑（完整 125 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -298,7 +306,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、124 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、125 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
