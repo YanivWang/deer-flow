@@ -58,13 +58,9 @@ describe("locale contract", () => {
   it("keeps formatter parameters opaque instead of translating backend/user/file data", () => {
     const filename = "用户-report.ts";
     const url = "https://example.com/路径?q=raw";
-    const backendDetail = "provider_error_X9";
     for (const dictionary of [enUS, zhCN]) {
       expect(dictionary.artifacts.actions.removeFile(filename)).toContain(
         filename,
-      );
-      expect(dictionary.browser.navigationFailed(backendDetail)).toContain(
-        backendDetail,
       );
       expect(dictionary.markdown.unsafeLinkTitle(url)).toContain(url);
     }

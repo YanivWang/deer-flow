@@ -51,6 +51,8 @@ const CROSS_APP_BY_DESIGN = {
     "场景覆盖率棘轮；坐标系是上游的 spec 清单，缺席时那条用例 skipIf 跳过。",
   "baseline/parity-scenario-coverage.json":
     "覆盖率棘轮的数据（纯数据），命中的是它说明坐标系来自哪里。",
+  "tests/unit/i18n/vue-only-keys.test.ts":
+    "本仓独有词典块的守卫；坐标系是上游词典的顶层块清单，缺席时那条用例 skipIf 跳过。",
 };
 
 const COMMENT_STYLES = {

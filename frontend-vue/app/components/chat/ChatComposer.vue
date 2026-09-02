@@ -343,6 +343,13 @@ const activeMode = computed(
 );
 const textarea = ref<HTMLTextAreaElement | null>(null);
 const chipInput = ref<HTMLElement | null>(null);
+/*
+  空态占位靠 `data-empty` 驱动（上游 input-box.tsx:2281 是
+  `data-empty={textInput.value.length === 0}`）。判据取 `input`，不取
+  `chipInput.innerText`——后者是 DOM 状态，contenteditable 的输入在 `@input`
+  之后才同步回来，读它会慢一拍。
+*/
+const chipEmpty = computed(() => input.value.length === 0);
 const fileInput = ref<HTMLInputElement | null>(null);
 let historyIndex = -1;
 const enabledSkillNames = computed(
@@ -1492,13 +1499,35 @@ defineExpose({ replaceDraft, offerFollowup });
             <span class="bg-secondary rounded px-2 py-1 text-xs"
               >/{{ selectedSkill }}</span
             >
-            <div
+            <!--
+              斜杠技能选中之后那块可编辑区，逐件对着上游 input-box.tsx:2277：
+
+              1. **`<span>` 而不是 `<div>`**（上游是 span；role 都写着 textbox，
+                 所以这一条本身不改可访问性，但它是同一处的形状）。
+              2. **`aria-multiline="true"`**：告诉读屏器回车是换行不是提交。
+                 本仓此前没有，读屏器会把它当单行输入播报。
+              3. **`aria-placeholder` + 空态占位**：上游用
+                 `data-empty` / `data-placeholder` 加一条
+                 `data-[empty=true]:before:content-[attr(data-placeholder)]`
+                 把提示画出来；本仓此前**空的时候一个字都不画**，
+                 可访问名也只有 aria-label 一处。
+              4. **`tabindex`**：锁住时是 -1，与上游 `tabIndex={composerLocked ? -1 : 0}` 同。
+
+              布局那几个类（`min-h-10 flex-1`）是本仓自己的，上游靠外层容器给，
+              这一轮不动——改它要先量一次这一屏的几何。
+            -->
+            <span
               ref="chipInput"
               role="textbox"
               data-slot="input-group-control"
+              aria-multiline="true"
               :aria-label="$i18n.t.value.inputBox.placeholder"
+              :aria-placeholder="$i18n.t.value.inputBox.placeholder"
+              :data-empty="chipEmpty"
+              :data-placeholder="$i18n.t.value.inputBox.placeholder"
               :contenteditable="disabled ? 'false' : 'true'"
-              class="min-h-10 flex-1 text-sm outline-none focus-visible:ring-0 focus-visible:outline-none"
+              :tabindex="disabled ? -1 : 0"
+              class="before:text-muted-foreground min-h-10 flex-1 text-sm outline-none before:pointer-events-none focus-visible:ring-0 focus-visible:outline-none data-[empty=true]:before:content-[attr(data-placeholder)]"
               @input="onChipInput"
               @keydown="onKeydown"
               @focus="textareaFocused = true"

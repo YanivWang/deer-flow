@@ -196,11 +196,18 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onGlobalKeydown));
       :close-label="$i18n.t.value.primitives.close"
       @close-auto-focus="restoreFocus"
     >
+      <!--
+        对话框的名字与说明照抄上游 `<CommandDialog>` 的默认值
+        （ui/command.tsx:32/33 写死的 "Command Palette" / "Search for a command
+        to run..."），走 primitives.* —— 与 close / toggleSidebar 那几条同一条规矩：
+        上游写死英文的 primitive 名字，本仓照抄而不是另起一句。
+        此前这里念的是 "Actions"，与上游不是同一句。
+      -->
       <DialogTitle class="sr-only">
-        {{ $i18n.t.value.shortcuts.actions }}
+        {{ $i18n.t.value.primitives.commandPalette }}
       </DialogTitle>
       <DialogDescription class="sr-only">
-        {{ $i18n.t.value.shortcuts.searchActions }}
+        {{ $i18n.t.value.primitives.commandPaletteDescription }}
       </DialogDescription>
       <Command>
         <CommandInput

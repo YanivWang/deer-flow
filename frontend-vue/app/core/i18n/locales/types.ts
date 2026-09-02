@@ -22,6 +22,8 @@ export interface Translations {
     stop: string;
     skillSuggestions: string;
     modelSelector: string;
+    commandPalette: string;
+    commandPaletteDescription: string;
     suggestions: string;
     notifications: string;
     loadingPanel: string;
@@ -982,7 +984,6 @@ export interface Translations {
   };
 
   browser: {
-    trigger: string;
     panelTitle: string;
     live: string;
     back: string;
@@ -997,7 +998,6 @@ export interface Translations {
     connectingFrameDescription: string;
     noFrame: string;
     noFrameDescription: string;
-    navigationFailed: (detail: string) => string;
     navigationFailedFallback: string;
   };
 
@@ -1020,9 +1020,6 @@ export interface Translations {
   };
 
   messages: {
-    conversation: string;
-    clarification: string;
-    subtask: string;
     tool: string;
     toolResult: (name: string) => string;
     copyFailed: string;
@@ -1042,11 +1039,6 @@ export interface Translations {
   navigation: {
     workspace: string;
     closeSidebar: string;
-    settingsAndMore: string;
-    appearance: string;
-    light: string;
-    dark: string;
-    language: string;
     deleteConversationFailed: string;
     tryAgain: string;
   };

@@ -46,7 +46,12 @@ test("command palette owns exact shortcuts, keyboard navigation and cleanup", as
   const originalFocus = page.getByRole("link", { name: "Chats", exact: true });
   await originalFocus.focus();
   await page.keyboard.press("Meta+k");
-  const palette = page.getByRole("dialog", { name: "Actions" });
+  /*
+    对话框的名字照抄上游 `<CommandDialog>` 写死的默认值（ui/command.tsx:32），
+    走 `primitives.commandPalette`。此前本仓念的是 "Actions"（`shortcuts.actions`）——
+    与上游不是同一句（wave 33）。
+  */
+  const palette = page.getByRole("dialog", { name: "Command Palette" });
   await expect(palette).toBeVisible();
   // ui/command 的输入框是 combobox（与 cmdk 同构），不是裸 textbox。
   const search = palette.getByRole("combobox", { name: "Search actions" });

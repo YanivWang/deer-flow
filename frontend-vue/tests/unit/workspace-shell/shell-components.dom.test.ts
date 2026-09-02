@@ -110,6 +110,16 @@ describe("CommandPalette", () => {
     await flushPromises();
     const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
     expect(dialog).not.toBeNull();
+    /*
+      对话框的可访问名照抄上游 `<CommandDialog>` 的默认值（shadcn 的
+      ui/command.tsx:32/33 写死英文，不进它自己的 i18n），走 primitives.*——
+      与 close / toggleSidebar 那几条同一条规矩。此前这里念的是 "Actions"。
+    */
+    expect(dialog.getAttribute("aria-labelledby")).toBeTruthy();
+    expect(dialog.textContent).toContain(enUS.primitives.commandPalette);
+    expect(dialog.textContent).toContain(
+      enUS.primitives.commandPaletteDescription,
+    );
     const input = document.querySelector<HTMLInputElement>(
       '[aria-label="Search actions"]',
     )!;

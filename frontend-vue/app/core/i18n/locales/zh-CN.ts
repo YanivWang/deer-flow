@@ -46,6 +46,8 @@ export const zhCN: Translations = {
     stop: "Stop",
     skillSuggestions: "Skill suggestions",
     modelSelector: "Model Selector",
+    commandPalette: "Command Palette",
+    commandPaletteDescription: "Search for a command to run...",
     suggestions: "Suggestions",
     notifications: "Notifications alt+T",
     loadingPanel: "Loading panel…",
@@ -1186,7 +1188,6 @@ export const zhCN: Translations = {
     },
   },
   browser: {
-    trigger: "打开浏览器面板",
     panelTitle: "浏览器视图",
     live: "实时",
     back: "后退",
@@ -1202,7 +1203,6 @@ export const zhCN: Translations = {
     noFrame: "暂无浏览器活动",
     noFrameDescription:
       "在上方输入网址，或让智能体自己浏览——实时画面会显示在这里。",
-    navigationFailed: (detail) => `浏览器导航失败：${detail}`,
     navigationFailedFallback: "浏览器导航失败。",
   },
   artifacts: {
@@ -1223,9 +1223,6 @@ export const zhCN: Translations = {
     cannotPreview: "这种文件类型无法在浏览器里预览。",
   },
   messages: {
-    conversation: "对话",
-    clarification: "需要确认",
-    subtask: "子任务",
     tool: "工具",
     toolResult: (name) => `${name} 结果`,
     copyFailed: "复制消息失败。",
@@ -1244,11 +1241,6 @@ export const zhCN: Translations = {
   navigation: {
     workspace: "工作区导航",
     closeSidebar: "关闭侧栏",
-    settingsAndMore: "设置及更多",
-    appearance: "外观",
-    light: "浅色",
-    dark: "深色",
-    language: "语言",
     deleteConversationFailed: "删除对话失败。",
     tryAgain: "重试",
   },

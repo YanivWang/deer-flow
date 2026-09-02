@@ -418,6 +418,46 @@ describe("ChatComposer slash suggestions", () => {
   });
 
   /*
+    chip 旁边那块可编辑区，逐件对着上游 input-box.tsx:2277。此前本仓是一个只带
+    `role="textbox"` + `aria-label` 的 `<div>`：**没有 aria-multiline**
+    （读屏器把它当单行输入播报，回车该换行还是该提交说不清），
+    **空的时候一个占位字都不画**（上游用 data-empty/data-placeholder 画出来），
+    锁住时也**没有退出 Tab 序列**。
+
+    这一屏对照台账看不见：斜杠技能要先打字再选中才出现（第①类），
+    而 aria-multiline / aria-placeholder / data-* 三样都不进 aria 快照（第⑤类）。
+  */
+  it("gives the chip editor the same textbox contract upstream has", async () => {
+    const { wrapper } = mountComposer();
+    await flushPromises();
+    const textarea = await openSuggestions(wrapper, "/front");
+    await textarea.trigger("keydown", { key: "Enter" });
+    await flushPromises();
+
+    const editor = wrapper.get('[role="textbox"][contenteditable]');
+    expect(editor.element.tagName.toLowerCase()).toBe("span");
+    expect(editor.attributes("aria-multiline")).toBe("true");
+    expect(editor.attributes("aria-placeholder")).toBe(
+      enUS.inputBox.placeholder,
+    );
+    expect(editor.attributes("data-placeholder")).toBe(
+      enUS.inputBox.placeholder,
+    );
+    // 刚选中技能时草稿是空的 → 占位要画出来。
+    expect(editor.attributes("data-empty")).toBe("true");
+    expect(editor.attributes("tabindex")).toBe("0");
+
+    await editor.trigger("input");
+    Object.defineProperty(editor.element, "innerText", {
+      value: "hello",
+      configurable: true,
+    });
+    await editor.trigger("input");
+    await flushPromises();
+    expect(editor.attributes("data-empty")).toBe("false");
+  });
+
+  /*
     打全了的内建命令回车**直接执行**，不再先接受一次它自己的建议（2026-09-02 两边同改）。
     没有这一条，`/compact` 要按两下回车，第一下只是把这行改写成它自己加一个空格。
   */

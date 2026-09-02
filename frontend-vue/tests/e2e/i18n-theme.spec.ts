@@ -73,7 +73,14 @@ test("locale switch updates an open dialog, product surfaces, future errors and 
     .getByRole("button", { name: zhCN.primitives.close, exact: true })
     .click();
   await expect(page.getByPlaceholder(zhCN.inputBox.placeholder)).toBeVisible();
-  await expect(page.getByLabel(zhCN.browser.trigger)).toBeVisible();
+  /*
+    浏览器触发器的名字取 `common.showBrowser`（BrowserTrigger 就是这么写的，
+    与上游 browser-trigger.tsx 同源）。此前这里写的是 `browser.trigger`——
+    那条 key 已经没有任何产品消费者，它当时能过**只是因为两条 key 在 zh-CN 里
+    恰好是同一串字**（都是「打开浏览器面板」）。wave 33 删掉那条死词条之后
+    这里立刻 TypeError，反倒把这条巧合暴露了出来。
+  */
+  await expect(page.getByLabel(zhCN.common.showBrowser)).toBeVisible();
   // 面板不会自己打开（React 只在流式写入途中才自动打开），点一下产物路径。
   await page.getByText(ARTIFACT_PATH).click();
   await expect(page.getByLabel(zhCN.clipboard.copyToClipboard)).toBeVisible();

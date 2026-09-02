@@ -46,6 +46,14 @@ export const enUS: Translations = {
     stop: "Stop",
     skillSuggestions: "Skill suggestions",
     modelSelector: "Model Selector",
+    /*
+      上游 `<CommandDialog>` 用的是 shadcn 的默认值（ui/command.tsx:32/33），
+      同样写死英文、同样不进它自己的 i18n。本仓此前把这两处读成
+      `shortcuts.actions`（"Actions"）与 `shortcuts.searchActions`，
+      读屏器念出来的对话框名字与上游不是同一句。
+    */
+    commandPalette: "Command Palette",
+    commandPaletteDescription: "Search for a command to run...",
     suggestions: "Suggestions",
     notifications: "Notifications alt+T",
     loadingPanel: "Loading panel…",
@@ -1243,7 +1251,6 @@ export const enUS: Translations = {
     },
   },
   browser: {
-    trigger: "Open browser panel",
     panelTitle: "Browser view",
     live: "Live",
     back: "Back",
@@ -1259,7 +1266,6 @@ export const enUS: Translations = {
     noFrame: "No browser activity yet",
     noFrameDescription:
       "Enter a URL above or let the agent browse — the live view will appear here.",
-    navigationFailed: (detail) => `Browser navigation failed: ${detail}`,
     navigationFailedFallback: "Browser navigation failed.",
   },
   artifacts: {
@@ -1280,9 +1286,6 @@ export const enUS: Translations = {
     cannotPreview: "This file type cannot be previewed in the browser.",
   },
   messages: {
-    conversation: "Conversation",
-    clarification: "Clarification",
-    subtask: "Subtask",
     tool: "Tool",
     toolResult: (name) => `${name} result`,
     copyFailed: "Failed to copy message.",
@@ -1301,11 +1304,6 @@ export const enUS: Translations = {
   navigation: {
     workspace: "Workspace navigation",
     closeSidebar: "Close sidebar",
-    settingsAndMore: "Settings and more",
-    appearance: "Appearance",
-    light: "Light",
-    dark: "Dark",
-    language: "Language",
     deleteConversationFailed: "Failed to delete conversation.",
     tryAgain: "Try again",
   },
