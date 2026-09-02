@@ -1,17 +1,17 @@
 # React → Vue 对照对齐：轮次交接文档
 
 **这份文档是每一轮开工的第一读物。** 它记录「上一轮做完了什么、下一轮做什么、
-有哪些账挂着」。深度背景（147 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
+有哪些账挂着」。深度背景（151 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
 `deerflow-parity-harness-plan` 里；这里只放接手一轮所需的最小集合。
 
 **每推完一个阶段（一轮 wave），就地更新这份文档，然后开始下一轮。**
 
 ---
 
-## 当前状态（截至 wave 32，2026-09-03）
+## 当前状态（截至 wave 33，2026-09-03）
 
-- 分支 `main-wc`。`453174c8` = wave 30，`f42514bf` = wave 31，`acd119a2` = wave 32。
-- wave 30 / 31 / 32 **都没有动 `frontend/`**，**upstream marker 仍在 `c78bc91c`**（wave 28 推的）。
+- 分支 `main-wc`。`acd119a2` = wave 32，`4d9dd508` = wave 33。
+- wave 30~33 **都没有动 `frontend/`**，**upstream marker 仍在 `c78bc91c`**（wave 28 推的）。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
 - 覆盖率棘轮：covered **24**，pending **仍是 1 条**（`chat-thread-init-ordering`）——
   wave 29 **实测**过，结论是**不能加**，翻案判据写在 `$pendingReasons` 里。
@@ -26,7 +26,8 @@
   **划词工具条整簇**（wave 30：aria 1→0，位置从 (955,642) 挪到与上游逐像素相同的
   (367,197)）、**聊天面的播报机制**（wave 31：22 处收进 workspace toaster，
   unused 39→36）与 **CSS 基础层的级联层次序**（wave 32：全仓 90 处 border 颜色
-  工具类从「一处都没生效」变成全部生效）。
+  工具类从「一处都没生效」变成全部生效）与 **词典手术**（wave 33：删掉扫描器结构上
+  看不见的 10 条死词条，并给「本仓独有的词典块」补了守卫）。
 
 > **`app/pages/` 下的路由已经一条不剩地量过了**（wave 28 量完最后三条）。
 > **要找活只能去「挂着的账」里挑**，不要再指望「还有没量过的路由」。
@@ -35,11 +36,11 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 32 收工时逐条跑过）
+### 门禁实测值（wave 33 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；239 文件 / 2004 单测，词典 953 key、36 unused
-                                   standalone-check BLOCKING 0 处 / 0 个文件
+make -C frontend-vue verify        exit 0；240 文件 / 2008 单测，词典 945 key、36 unused
+                                   standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 31 处 / 11 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      263 + 21 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
@@ -47,7 +48,7 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~32 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30~33 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1022**）/ `test:e2e`（**146**）。
 
 **已知的两条负载抖动**（都不是产品缺陷，但每次遇到都要重新证一遍因果）：
@@ -64,6 +65,12 @@ make -C frontend-vue e2e-external  3
    wave 29 改的三个文件一个都不在这条链上；而且 **ThreadSidebar 本来就 import
    `ui/dialog`**，所以那一轮往 ChatComposer 里加的 Dialog 没给这条路由的
    critical path 添任何模块（同一次跑里 `/workspace/chats/new` 的 route-payload 是过的）。
+
+**wave 33 赶上别的仓库在构建，load 一度到 60**：`e2e-settings` 与 `e2e-external` 两次
+`Timed out waiting 240000ms from config.webServer`（**基建超时，不是断言**），
+`ui-primitives-a11y.spec.ts:288` 的 hover tooltip 在 load 22 时红过一次。
+**load 降到 5 之后三套全绿。** 这台机器上 `webServer` 的 240s 在 load>20 时不够用，
+遇到就等负载，不要先去查产品。
 
 **wave 30 与 wave 31 全程零重跑**；**wave 32 重跑过一次**：第一遍 `e2e-mock` 在
 **load 18** 时 `thread-list-infinite-scroll.spec.ts:74` 红了一次，因果够不着
@@ -142,94 +149,109 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 32）做了什么
+## 上一轮（wave 33）做了什么
 
-正题是「`border-border` 基础层」。**交接文档记的那句话已经过期**——「本仓 `main.css`
-没有 `* { @apply border-border }` 基础层」是错的，那条规则早就有了。真正的问题在
-**它写在哪儿**，而后果比记着的严重得多。
+正题是「词典手术」。交接文档写的是「三簇按叶子名匹配扫描器看不见的死条目」，
+量下来是 **10 条**，而且它们藏在一个比「三簇」更说得清的地方。顺带两笔小账。
 
-### 一、根因：不属于任何层的作者样式赢过所有层
+### 一、先量：一个「更好的扫描器」并不便宜
 
-Tailwind 4 的 `@import "tailwindcss"` 声明 `@layer theme, base, components, utilities`。
-按 CSS 级联层规范，**不属于任何层的作者样式优先级高于所有层**——高于 utilities，
-**与具体度无关**。本仓把三条基础规则裸写在顶层（上游 `globals.css:321` 写在
-`@layer base` 里），于是 `* { border-color: var(--border) }` 盖掉了全仓每一个
-`border-<颜色>` 工具类。
+`make i18n-unused` 按**叶子名**匹配，是为了容忍
+`const larkCopy = copy.value.settings.integrations.lark` 这类别名。代价是同名叶子
+互相遮蔽。本轮试写「全路径匹配」的替代判据，**在共有块上一次误报 122 条**；
+加上别名检测仍然误报（跨行别名不是正则做得准的）。**结论：通用的死条目检测器
+要类型感知的分析，这一轮不做，只做能判准的那部分。**
 
-### 二、实测
+### 二、能判准的那部分：本仓独有的 8 个块
 
-| 探针 | 上游 | 本仓（改前） | 本仓（改后） |
-|---|---|---|---|
-| `<div class="border-destructive">` | `rgba(231,0,11,255)` | **`rgba(232,229,222,255)`** | `rgba(231,0,11,255)` |
-| `agents/new` 的 `<input class="border-input border-ring border-destructive">` | `rgba(23,121,225,255)` | **同上** | 与上游相同 |
-| `agent-chat` 的 `div [border-input/50 border-input]` | `rgba(217,215,207,128)` | **同上** | `rgba(217,215,207,128)` |
+本仓词典 **38 个顶层块**，上游 **30 个**。多出来的 8 个
+（`primitives` / `browser` / `artifacts` / `markdown` / `marketing` / `messages` /
+`navigation` / `setup`）里，「上游也没人用」这条辩解**不成立**——上游根本没有这些 key。
+117 条里 **10 条是死的，扫描器一条都没报**：`browser.trigger`（被 `common.showBrowser`
+顶掉）、`browser.navigationFailed`（只有一条单测消费）、
+`messages.{conversation,clarification,subtask}`、
+`navigation.{settingsAndMore,appearance,light,dark,language}`（后五条是别处同名 key 的
+**死副本**，UI 用的一直是另一份）。逐条手验后删掉：**953 → 943**。
 
-`rgba(232,229,222,255)` 就是 `--border` 本身。当时全仓 **90 处** `border-<颜色>`
-工具类**一处都没生效**：输入框不是输入框的边框色、聚焦不变色、校验失败不变红、
-`border-transparent` 画出一条灰线。
+### 三、守卫（`tests/unit/i18n/vue-only-keys.test.ts`）
 
-### 三、为什么四层门禁一个都没抓到（本轮最值得记的一条）
+三条：① 「本仓独有的块」清单 == 「上游词典里没有的块」；② 这些块里每条都要有消费者；
+③ **`primitives.*` 两个 locale 一字不差**——那是上游写死英文的可访问名，
+本仓照抄这一侧，而**把它们翻成中文此前不会让任何门禁变红**。
 
-- **对照台账**：`sampleGeometry` 只取 color / background / fontSize，**不取 borderColor**；
-  边框**宽度**没变，所以盒模型也一模一样。
-- **`e2e-visual` 的 8 张截图**：改完**一张都没变**（`maxDiffPixelRatio: 0.01`）——
-  1px 细线换个相近的灰，占的像素远不到 1%。
-- **lint / typecheck / standalone-check**：既不是引用问题也不是类型问题。
-- **单测**：happy-dom 不跑 Tailwind，算不出计算样式。
+守卫读上游词典当坐标系，在 `standalone-check` 里登记成 **DECLARED**
+（与 `scenario-coverage.test.ts` 同形）。**BLOCKING 仍是 0**；不登记会打成 1 处。
 
-所以补的守卫是**两层**：① `css-source-scan.test.ts` 的**结构**断言——`main.css` 顶层
-只允许变量定义（`:root` / `.dark`）与 at-rule，能匹配元素的选择器都必须在 `@layer` 里
-（挡的是**这一类**）；② `i18n-theme.spec.ts` 的**真实构建 + 计算样式**断言
-（源码守卫证不了打包之后层序仍然对）。**两层缺一不可**由变异 A5 证明：给基础层加
-`!important` 会绕过结构守卫，只有计算样式那条抓得到。
+### 四、两笔小账
 
-### 四、一条用例过期（不是产品回归）
+- **命令面板**：上游 `<CommandDialog>` 用 shadcn 的默认值 "Command Palette" /
+  "Search for a command to run..."（写死英文）。本仓此前念 "Actions"。
+  按 `primitives.*` 照抄，新增两条 key：**943 → 945**。
+- **chip 可编辑区**：`<span>` + `aria-multiline` + `aria-placeholder` +
+  `data-empty`/`data-placeholder` 的空态占位 + `tabindex`。布局那两个类没动
+  （改它要先量几何）。
 
-`sidebar-ime-a11y.spec.ts:184` 此前断言侧栏触发器聚焦后 `outline-style: solid`——
-那条断言**是这个缺陷的产物**（基础层裸写在顶层，赢过了那颗按钮自己的 `outline-none`）。
-挪进层之后是 `none`，与上游同一颗按钮逐字相同：可见的焦点指示是 **3px 的 ring**。
-断言改成「outline-style 是 none **且** box-shadow 不是 none」。
-**没有写 focus 工具类的元素仍然拿到那条 2px outline**（本仓比上游多的一层保护），
-e2e 里直接量过：裸 `<input>` 聚焦后是 `solid 2px`。
+### 五、`/auth/callback` 有意没做（本轮改判）
 
-### wave 32 新增的踩坑线索（记忆里编号 144~147）
+差异是真的（上游 `(auth)/layout.tsx` 的服务端 redirect 让 OAuth 回跳的 `?next=`
+深链**总是被丢掉**），但**修法只在 `frontend/` 一侧，本仓不需要任何改动**——
+这不是「两边同改」，是替上游修 bug；而这一屏进不了取样面（wave 28 量过 44 行噪声），
+**对齐价值为零**。另外交接文档原来给的修法也不是最好的（会把 `/login` 的服务端跳转
+变成客户端跳转）；更小的是把 `auth/callback` 移出 `(auth)` 路由组。详见「挂着的账」。
 
-- **144. Tailwind 4 里，不属于任何 `@layer` 的作者样式赢过所有工具类，与具体度无关。**
-  基础层必须写在 `@layer base` 里。加 `!important` 是同一类错误的另一种写法。
-- **145. `sampleGeometry` 不取 `borderColor`**，`e2e-visual` 的 1% 像素容差也盖不住
-  1px 细线的颜色变化。**颜色类的缺陷要专门量计算样式**，四层门禁都不会替你发现。
-- **146. 结构守卫与行为守卫要成对。** 只有结构守卫时，`!important` 从旁边绕过去；
-  只有行为守卫时，下一个人不知道规矩是什么。
-- **147. 交接文档里「本仓没有 X」这种话同样会过期。** 这一条记了很多轮，
-  而 X 早就有了，错的是**它写在哪儿**。**「没有」也要当假设重新验。**
+### wave 33 自审抓出来的（都已修）
 
-## 下一轮（wave 33）：一条正题 + 两笔小账
+1. **守卫的正则漏转义，负向验证当场假绿**：`["trigger"]` 被当成**字符类**。
+2. **差点把工具报错读成「红」**：`--reporter=basic` 在 vitest 里不存在，进程以 1 退出。
+3. **手写的词典解析器在对象数组上跑偏**（`marketing.caseStudyItems`）——
+   改成直接读 `baseline/i18n-keys.json`。
+4. **`primitives` 的守卫第一版比对了注释**，改成先剥注释再比值。
+5. **新增的两条 primitives 第一版在 zh-CN 里写成了中文**，按规矩改回英文。
 
-`app/pages/` 下的路由已经量光，**只能从「挂着的账」里挑**。wave 30~32 做掉了划词工具条、
-播报机制、CSS 基础层，剩下的：
+### 两条用例过期（不是产品回归）
 
-1. **`/auth/callback` 的结构性对齐**（唯一还剩的「必须单独一轮」）。会把 `/login` 的
-   服务端跳转变成客户端跳转（会闪一下登录表单），**要先跑一遍上游的 e2e-auth**。
-   机制与两条路都写在下面「挂着的账」里。
-2. **词典手术**：三簇按叶子名匹配扫描器看不见的死条目 + 36 条 unused 复核。
-3. **可合并的小账**：`Button` 的 as-child、chip 编辑区（比记的大，见下）、
-   命令面板名字、模型选择器筛选、欢迎区在树里的位置、browser 面板剩余分叉。
+- `i18n-theme.spec.ts:76` 用 `zhCN.browser.trigger` 当浏览器触发器的名字，
+  **此前能过只是因为它与 `common.showBrowser` 在 zh-CN 里恰好同字**。
+- `workspace-shell.spec.ts:49` 等的是 `dialog { name: "Actions" }`。
 
-**开工第一件事仍然是量。** 连着三轮的教训：wave 30 那条被记成「必须单独一轮的结构性
-改动」，量完是一次普通域清零；wave 31 记着四处，普查出 22 处；wave 32 记着「本仓没有
-这条规则」，实际是有、但写错了地方。**「必须单独一轮」「就四处」「本仓没有」这三种
-话都要当假设重新验**（线索 140 / 147）。
+### wave 33 新增的踩坑线索（记忆里编号 148~151）
+
+- **148. 一条 key 死着，可能只是因为别处有一条同名叶子活着。** 叶子名扫描器天生看不见
+  这种。**判准的办法只在「上游没有的块」里成立**——那里「上游也没人用」不成立。
+- **149. 非零退出码可能来自工具本身。** `--reporter=basic` 在 vitest 里不存在，
+  进程以 1 退出，看起来像用例失败。变异脚本用 `--reporter=dot`。
+- **150. 别自己再解析一遍词典。** `baseline/i18n-keys.json` 由真解析器生成、
+  被 `i18n-check` 钉住；手写的括号计数在对象数组上会跑偏。
+- **151. 这台机器上 `webServer` 的 240s 在 load>20 时不够用。**
+  `Timed out waiting 240000ms from config.webServer` 是基建超时，不是断言失败，
+  遇到就等负载降下来，不要先去查产品。
+
+## 下一轮（wave 34）：收尾复量
+
+`app/pages/` 下的路由已经量光，**只能从「挂着的账」里挑**。wave 30~33 把「必须单独
+一轮」的四条做掉了三条，第四条（`/auth/callback`）wave 33 量完**改判为不做**
+（理由见上、细节见「挂着的账」）。剩下的：
+
+1. **收尾复量**（推荐做这一轮）：把「挂着的账」逐条当假设重新验一遍。
+   连着四轮的教训是这份清单会过期——wave 30「必须单独一轮」量完是普通清零、
+   wave 31「就四处」实际 22 处、wave 32「本仓没有」实际是有但写错地方、
+   wave 33「三簇」实际 10 条且位置说得更清。**这一轮的产出就是一份重新验过的清单。**
+2. **剩下的小账**（可合并进任意一轮）：`Button` 的 as-child、模型选择器筛选、
+   欢迎区在树里的位置、browser 面板剩余分叉、chip 的布局类。
+3. **共有块的死条目**：要做得先有类型感知的分析（wave 33 量过，正则做不准）。
+   这不是一轮平替，是一次工具投资，**先问它值不值**。
 
 ### 还剩几轮（**估计，不是实测；下一轮仍要当假设重新验**）
 
-wave 29 估 7~9，wave 30 估 6~8，wave 31 估 5~6，wave 32 做完再估：
+wave 29 估 7~9，wave 30 估 6~8，wave 31 估 5~6，wave 32 估 4，wave 33 做完再估：
 
-- **必须单独一轮（1）**：`/auth/callback`
-- **词典手术（1）**、**可合并的小账（1）**、**收尾复量（1）**
+- **收尾复量（1）**：把挂账逐条重验，产出一份新的清单
+- **可合并的小账（1）**
 - **被上游阻塞（0 轮，只记账）**：首次发送后那一屏的 `Completed in <1s` 与
-  `Edit and rerun`，要等上游那条 history/stream 竞态
+  `Edit and rerun`；`/auth/callback` 的上游修缮
+- **已决定不做（0 轮，只记账）**
 
-合计 **4 轮左右**。
+合计 **2 轮左右**。**这个数字连着五轮都偏悲观**，但收尾复量那一轮本身就会把它校准。
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -270,19 +292,23 @@ wave 29 估 7~9，wave 30 估 6~8，wave 31 估 5~6，wave 32 做完再估：
 - **上游那颗 `<Input>` 的可访问名来自 placeholder。** 本仓照抄了（去掉了自己加的
   `aria-label`）。这是「命名弱但存在」，按 wave 28 的判据不算缺陷；要改是两边同改。
 
-### `/auth/callback`（wave 28 新增）
+### `/auth/callback`（wave 28 新增，**wave 33 改判为不做**）
 
-- **上游那一屏在有 session 时够不到**（机制见上面「上一轮做了什么」）。后果是上游
-  callback 页对 `?next=` 的处理是死代码，而 OAuth 回跳带的深链因此被丢掉。
-- **本仓保留「尊重 `next`」这一侧。** 要对齐成上游那样，只有两条路：
-  (a) 本仓也丢掉 `next` —— 会让 `resolveAuthCallback` 与它的单测全部失去意义；
-  (b) 上游把 `authenticated → redirect("/workspace")` 从共享的 `(auth)/layout.tsx`
-  里挪走，改由 `login/page.tsx`（**它本来就有** `if (isAuthenticated) router.push(redirectPath)`）
-  与 `setup/page.tsx` 各自负责。(b) 是对的修法，但它把 `/login` 的服务端跳转变成
-  客户端跳转（会闪一下登录表单），是一处结构性改动，**要单独一轮并且先跑一遍上游的
-  e2e-auth**。wave 28 没做。
-- 401 与 5xx 两支两边**已经一致**（`/login?error=sso_failed`；本仓另外把「服务不可用」
-  分出来送去 `?error=gateway_unavailable&next=…`，那是 wave 26 的既定改进）。
+- **差异是真的**：上游 `(auth)/layout.tsx` 见到 authenticated 就服务端
+  `redirect("/workspace")`。真实 OAuth 流程走到 callback 时 session cookie 已经在了，
+  于是**回跳带的 `?next=` 深链总是被丢掉**，那个页面对 `next` 的处理是死代码。
+  本仓的全局 middleware 只在 `/workspace/*` 上探 session，callback 页照常渲染并尊重 `next`。
+- **但修法只在 `frontend/` 一侧，本仓不需要任何改动。** 这不是「两边同改」——
+  那条边界的目的是让两棵树在**被取样的面**上逐行一致；这一屏在
+  `DEER_FLOW_AUTH_DISABLED=1` 下两边打开的根本不是同一个页面（wave 28 量过 44 行噪声），
+  **进不了取样面，对齐价值为零**。**所以它不占一轮平替。**
+- **wave 28 记的修法也不是最好的。** 那条「把 `authenticated → redirect` 从共享
+  layout 挪到各页」会把 `/login` 的服务端跳转变成客户端跳转（闪一下登录表单）。
+  **更小的修法**：把 `auth/callback` 移出 `(auth)` 路由组——那个页面不用
+  AuthProvider、不用 I18nProvider（它一句 `t` 都没有），只需要自带一个
+  `dynamic = "force-dynamic"` 的 layout（`useSearchParams` 在静态渲染下要 Suspense）。
+- **哪天要做**，判据是「有人真的因为深链被吞而报障」，做的时候按上面那条更小的修法，
+  并且要跑一遍上游的 e2e-auth。401 与 5xx 两支两边**已经一致**。
 
 ### 首次发送之后那一屏（wave 29 新增，**没有进台账**）
 
@@ -304,8 +330,10 @@ wave 29 估 7~9，wave 30 估 6~8，wave 31 估 5~6，wave 32 做完再估：
 
 - **欢迎区与建议列表在树里的位置不同**：上游放进 InputGroup（`extraHeader`），
   本仓是兄弟节点。`diffAriaLines` 去缩进 + 多重集，层级差异天生看不见。
-- **命令面板的搜索框可访问名**：上游同样撞 cmdk 的空 `<label>` 缺陷，本仓有
-  `aria-label`；上游 dialog 标题是 "Command Palette"，本仓是 "Actions"。这一屏没被取样。
+- **命令面板**：dialog 标题那一条 **wave 33 做完了**（照抄上游写死的
+  "Command Palette" / "Search for a command to run..."，走 `primitives.*`）。
+  **剩下搜索框的可访问名**：上游撞 cmdk 的空 `<label>` 缺陷，本仓有 `aria-label`——
+  本仓这一侧更好，有意保留。这一屏没被取样。
 - **模型选择器的筛选**：上游是 cmdk 的 command-score 模糊评分，本仓是子串匹配。
   写在 `ComposerModelSelector.vue` 文件头。
 - ~~上游 toast / 本仓静默或内联~~ —— **wave 31 做完了**（普查出 22 处，
@@ -329,19 +357,16 @@ wave 29 估 7~9，wave 30 估 6~8，wave 31 估 5~6，wave 32 做完再估：
 - **上游种子取数失败会弹 toast**（`hooks.ts:1839`），本仓静默降级（S8 明写 403/404 属常态）。
   **这一条 wave 31 有意没动**：它不是「缺一层播报」，是 S8 写死的「403/404 属常态」，
   弹 toast 会在每次打开只读线程时报一次假故障。
-- **`messages.clarification` / `messages.conversation` / `messages.subtask` 是既有
-  死条目**，unused 扫描器按叶子名匹配看不见它们。清理整簇属词典手术，单独一轮。
-- **`browser.trigger` / `browser.navigationFailed` 也是死条目**（只有测试在消费）。
+- ~~`messages.*` 与 `browser.*` 的死条目~~ —— **wave 33 做完了**：连同
+  `navigation.*` 那五条一共 **10 条**，全部删掉（953 → 943，再加命令面板两条 → 945）。
+  **剩下的是共有块里的死条目**：要判准得先有类型感知的分析（wave 33 实测正则会误报
+  122 条），那是一次工具投资而不是一轮平替，**先问它值不值**。
 - **inputBox 下的 voiceInputStop 是上游自己也零消费的死条目**，有意留着，**不是缺 UI**。
-- **chip 编辑区**：wave 30 复查发现它**比「span vs div」大**。上游
-  `input-box.tsx:2277` 除了 `<span contentEditable>` 还写了 `aria-multiline="true"`、
-  `aria-placeholder`、`data-empty` / `data-placeholder`（后两个驱动空态占位文字）；
-  本仓 `ChatComposer.vue:1462` 的 `<div role="textbox">` 只有 `aria-label`，
-  **空的时候一个占位字都不画**。可访问名两边都在（按 wave 28 的判据不算缺陷），
-  但 `aria-multiline` 与空态占位是两处实打实的落差。三样都不进 aria 快照，
-  所以台账天生看不见。
+- ~~chip 编辑区~~ —— **wave 33 做完了**（span + `aria-multiline` + `aria-placeholder`
+  + `data-empty`/`data-placeholder` 的空态占位 + `tabindex`）。
+  **只剩布局那两个类**（`min-h-10 flex-1`）：上游靠外层容器给，改它要先量这一屏的几何。
 
-### 剩余 36 条 unused 词条
+### 剩余 36 条 unused 词条（wave 33 复核过，位置未变）
 
 逐条 grep 时注意**扫描器按叶子名匹配，双向都会漏报**：不在 unused 里不等于有人用
 （`inputBox.mode` 就是这样被埋了很久），而**写进注释就会被算成有人用**（线索 126）。
@@ -382,12 +407,12 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 147 条在记忆文件里）
+## 其他常踩的坑（完整 151 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
   `toHaveLength(215)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
-  （**953 / 36**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
+  （**945 / 36**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
   「N 个已审阅 unused key」也要一起改。
 - **新增 L2 组件要加进 `tests/architecture.test.ts` 的 `l2Files` 允许清单**
   （要有 `【架构位置】 L2` 头、不许 import 产品层——`@/composables`、`#app`、`#imports`
@@ -417,7 +442,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、147 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、151 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
