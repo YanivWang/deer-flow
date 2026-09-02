@@ -135,8 +135,31 @@ function startSso(provider: Provider) {
   );
 }
 
+/*
+  已经有 session 的人不该停在登录页上——上游 login/page.tsx:77 的
+  `if (isAuthenticated) router.push(redirectPath)`。它不只是「刚登录完的那一跳」：
+  **关掉鉴权部署时（`authDisabled`），Gateway 直接给出一个用户**，于是上游访问
+  /login 会立刻回到工作区，而本仓停在一张永远也用不上的登录表单上。
+  实测（2026-09-02 probe）两个应用在同一份配置下一个跳一个不跳，台账口径下差 58 行。
+
+  判据与上游一致：**只看「有没有 user」**（React 的 `isAuthenticated = user !== null`），
+  不看 authDisabled 开关——`unavailable` 是服务状态不是登出，那一支要留在登录页上。
+
+  **session query 必须动态 import**，与 middleware/auth.global.ts 同一条理由：
+  `session-query` → `session` → `auth/types` 拖着 zod 与 vue-query 的一整块。
+  第一版在这里写了静态 `useAuthSession`，`/login` 的关键路径当场从 348 KB 涨到
+  **728 KB**（route-payload 门禁抓的）。走 queryClient 拿的还是同一份缓存，
+  与 middleware、`/auth/callback` 共用一个 query key。
+*/
+async function redirectIfSignedIn() {
+  const { authSessionQueryOptions } = await import("@/core/auth/session-query");
+  const probe = await queryClient.fetchQuery(authSessionQueryOptions());
+  if (probe.tag === "authenticated") await navigateTo(redirectPath.value);
+}
+
 watch(setupAttempt, () => void checkSetupStatus(), { immediate: true });
 onMounted(() => {
+  void redirectIfSignedIn();
   const preference = loadRememberLoginPreference();
   email.value = preference.email;
   rememberMe.value = preference.rememberMe;

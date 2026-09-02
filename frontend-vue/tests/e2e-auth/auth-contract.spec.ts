@@ -172,18 +172,78 @@ test("SSO providers expose the failure hint and preserve safe next/remember para
   expect(url.searchParams.get("remember_me")).toBe("true");
 });
 
+/*
+  已经有 session 的人不该停在登录页上（上游 login/page.tsx:77 的
+  `if (isAuthenticated) router.push(redirectPath)`）。这不只是"刚登录完的那一跳"：
+  **关掉鉴权部署时 Gateway 直接给出一个用户**，于是访问 /login 会立刻回到工作区，
+  而本仓此前停在一张永远用不上的登录表单上（2026-09-02 probe 实测，台账口径差 58 行）。
+
+  `next` 要一起验：跳的必须是校验过的那个目标，不是写死的工作区首页。
+*/
+test("an existing session leaves the login page for the validated next path", async ({
+  page,
+}) => {
+  mockLangGraphAPI(page);
+  await mockLoginShell(page);
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({ json: USER }),
+  );
+
+  await page.goto("/login?next=/workspace/chats/safe%3Fview%3D1");
+  /*
+    断言要按 **pathname + search** 拆开比，不能用一条没锚住开头的正则：
+    没跳转时 URL 是 `/login?next=/workspace/chats/safe?view=1`，它的**结尾**同样是
+    `workspace/chats/safe?view=1`，于是 `toHaveURL(/...safe\?view=1$/)` 在跳与不跳
+    两种情况下都成立——这条用例第一版就是这么写的，把跳转整个删掉照样绿。
+  */
+  await expect
+    .poll(() => {
+      const url = new URL(page.url());
+      return `${url.pathname}${url.search}`;
+    })
+    .toBe("/workspace/chats/safe?view=1");
+});
+
+/*
+  服务不可用**不是**登出，也不是登录——那一支必须留在登录页上，否则 Gateway 一抖
+  用户就被弹到一个同样打不开的工作区。
+*/
+test("a gateway outage keeps the user on the login page", async ({ page }) => {
+  mockLangGraphAPI(page);
+  await mockLoginShell(page);
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({ status: 503, json: { detail: "unavailable" } }),
+  );
+
+  await page.goto("/login");
+  await expect(
+    page.getByRole("button", { name: "Sign In", exact: true }),
+  ).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/login");
+});
+
 test("registration uses the exact JSON contract", async ({ page }) => {
   mockLangGraphAPI(page);
   await mockLoginShell(page);
   let body: unknown;
   let contentType = "";
+  /*
+    注册**之前** `/auth/me` 必须回 401。登录页现在照上游那样「已经有 session 就跳回
+    工作区」（login/page.tsx:77），一上来就把 me 喂成已登录，页面会在点到
+    「Create Account」之前就跳走——按钮当场从 DOM 上摘掉。下面那条 setup 用例
+    本来就是这么写的（`initialized` 开关）。
+  */
+  let registered = false;
   await page.route("**/api/v1/auth/register", (route) => {
     body = route.request().postDataJSON();
     contentType = route.request().headers()["content-type"] ?? "";
+    registered = true;
     return route.fulfill({ json: USER });
   });
   await page.route("**/api/v1/auth/me", (route) =>
-    route.fulfill({ json: USER }),
+    registered
+      ? route.fulfill({ json: USER })
+      : route.fulfill({ status: 401, json: { detail: "Unauthorized" } }),
   );
 
   await page.goto("/login");

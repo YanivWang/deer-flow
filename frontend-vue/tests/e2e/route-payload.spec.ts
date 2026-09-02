@@ -130,6 +130,17 @@ test.describe("route payload", () => {
       page,
     }) => {
       seedThread(page, PLAIN);
+      /*
+        `/login` 的预算量的是**匿名访客**下载了什么。共享 mock 默认把
+        `/api/v1/auth/me` 喂成已登录，而登录页现在照上游那样「已有 session 就跳回
+        工作区」——那样量到的是工作区的载荷，挂在 /login 的名下（实测 728 KB，
+        与工作区 718 KB 几乎相等，就是这么发现的）。这里覆盖成 401。
+      */
+      if (route === "/login") {
+        await page.route("**/api/v1/auth/me", (handler) =>
+          handler.fulfill({ status: 401, json: { detail: "Unauthorized" } }),
+        );
+      }
       const measured = await measure(page, route);
       const actual = {
         critical: total(measured.critical),
