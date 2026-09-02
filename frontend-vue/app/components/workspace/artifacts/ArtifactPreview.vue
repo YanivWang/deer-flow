@@ -8,6 +8,7 @@
 */
 import {
   computed,
+  markRaw,
   onBeforeUnmount,
   onMounted,
   ref,
@@ -21,6 +22,7 @@ import { Download } from "lucide-vue-next";
 import { buttonVariants } from "@/components/ui/button";
 import CitationSourcesPanel from "@/components/chat/CitationSourcesPanel.vue";
 import StreamMarkdown from "@/components/markdown/StreamMarkdown.vue";
+import MarkdownLink from "@/components/chat/MarkdownLink.vue";
 import { richContentComponents } from "@/components/markdown/components";
 import {
   artifactFileIcon,
@@ -90,6 +92,24 @@ const artifactRehypePlugins = computed<PluggableList>(() => [
   （只有单测在用）。
 */
 // 与 React 一致：只有 markdown 预览才抽引用来源。
+/*
+  markdown 预览里的链接**不走 markdown 层默认的安全确认按钮**，走普通 `<a>`——
+  上游 artifact-file-detail.tsx:1014 就是这么覆盖的（`components={{ a: ArtifactLink }}`）。
+  理由：artifact 是用户自己让 agent 写下来的文件，预览它等同于打开自己的文档；
+  而聊天正文里的链接才是"模型现编的外链"，那一层才需要先确认。
+
+  复用消息路径那个 MarkdownLink：它的三支（危险协议 → 不可点的 span、citation:
+  → hover 卡片、其余 → 带下划线的外链）与上游 ArtifactLink 逐条对应，而且这里既没有
+  threadId 也没有注入 context，`/mnt/` 那条 artifact 解析分支走不到。
+
+  **必须是稳定引用**（markRaw + 模块级常量）：MarkdownBlock 的文件头明写调用方每次
+  传新对象会让整棵树重挂载。
+*/
+const previewMarkdownComponents = markRaw({
+  ...richContentComponents,
+  a: MarkdownLink,
+});
+
 const citationSources = computed(() =>
   props.policy.language === "markdown"
     ? extractCitationSources(props.content ?? "")
@@ -338,7 +358,7 @@ onBeforeUnmount(() => {
   >
     <StreamMarkdown
       :content="content"
-      :components="richContentComponents"
+      :components="previewMarkdownComponents"
       :remark-plugins="appRemarkPlugins"
       :rehype-plugins="artifactRehypePlugins"
     />

@@ -1312,6 +1312,13 @@ export const enUS: Translations = {
   },
   markdown: {
     downloadFile: "Download file",
+    downloadImage: "Download image",
+    imageNotAvailable: "Image not available",
+    openExternalLink: "Open external link?",
+    externalLinkWarning: "You're about to visit an external website.",
+    copyLink: "Copy link",
+    copied: "Copied",
+    openLink: "Open link",
     copyCode: "Copy Code",
     copyTable: "Copy table",
     copyTableAsMarkdown: "Copy table as Markdown",

@@ -1054,6 +1054,13 @@ export interface Translations {
 
   markdown: {
     downloadFile: string;
+    downloadImage: string;
+    imageNotAvailable: string;
+    openExternalLink: string;
+    externalLinkWarning: string;
+    copyLink: string;
+    copied: string;
+    openLink: string;
     copyCode: string;
     copyTable: string;
     copyTableAsMarkdown: string;

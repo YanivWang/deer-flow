@@ -1255,6 +1255,13 @@ export const zhCN: Translations = {
   },
   markdown: {
     downloadFile: "下载文件",
+    downloadImage: "Download image",
+    imageNotAvailable: "Image not available",
+    openExternalLink: "Open external link?",
+    externalLinkWarning: "You're about to visit an external website.",
+    copyLink: "Copy link",
+    copied: "Copied",
+    openLink: "Open link",
     copyCode: "复制代码",
     copyTable: "复制表格",
     copyTableAsMarkdown: "复制表格为 Markdown",

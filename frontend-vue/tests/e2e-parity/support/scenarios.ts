@@ -383,6 +383,29 @@ const MODELS_ROUTE_THINKER_FIRST: ParityRouteOverride = {
 
 const ARTIFACT_PATH = "/artifact-fixtures/report.html";
 
+/*
+  markdown 预览的正文里**必须**有一条链接和一张图片。
+
+  `richContentComponents` 是本仓对 Streamdown 内建元素样式的镜像，而它一直没有 `a`
+  与 `img`——聊天路径看不出来（MessageList 用自己的 MarkdownLink / MarkdownMessageImage
+  把这两个覆盖掉了），artifact 预览这一支才是裸的。此前所有 artifact 夹具的正文里
+  一个链接一张图都没有，于是这处缺口整整三轮台账都是 0（线索 111）。
+
+  为什么挂在 artifact-batched-stream 而不是 artifact-preview：后者的正文来自
+  write_file 草稿，而**两个应用都会把连续的工具步骤折叠成「1 more step」并只显示
+  最后一条**——再加一条 write_file，`/artifact-fixtures/report.html` 这个 settle 锚点
+  当场取不到（实测：artifact-preview 与 artifact-panel-resize 一起红）。
+  batched-stream 的正文是路由喂的，改它不动任何锚点。
+*/
+const BATCHED_ARTIFACT_MARKDOWN = [
+  "# batched report",
+  "",
+  "See [the upstream repo](https://github.com/bytedance/deer-flow) for context.",
+  "",
+  "![Star History Chart](https://api.star-history.com/svg?repos=bytedance/deer-flow&type=Date)",
+  "",
+].join("\n");
+
 /** 与 frontend/tests/e2e/artifact-preview.spec.ts 的 writeFileMessages() 同形。 */
 const ARTIFACT_MESSAGES = [
   {
@@ -1516,7 +1539,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         pattern: "**/api/threads/*/artifacts/**",
         contentType: "text/markdown",
         headers: { ETag: `"${"a".repeat(64)}"` },
-        json: "# batched report\n\nbody",
+        json: BATCHED_ARTIFACT_MARKDOWN,
       },
     ],
     settle: [{ kind: "visible", target: { testId: "artifact-trigger" } }],
@@ -1554,6 +1577,17 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       { kind: "click", target: { selector: '[role="combobox"]' } },
       { kind: "click", target: { role: "option", name: "helper.skill" } },
       { kind: "visible", target: { role: "button", name: "Install" } },
+      /*
+        最后切回 markdown，让这一份样本**停在渲染好的 markdown 预览上**。
+        前面几支的可达性由上面的步骤各自断言过了，但一个场景只取一份样本——
+        停在 .skill 上，整棵 markdown 渲染树就一行都没被比过。
+      */
+      { kind: "click", target: { selector: '[role="combobox"]' } },
+      {
+        kind: "click",
+        target: { role: "option", name: "batched-report.md" },
+      },
+      { kind: "visible", target: { role: "link", name: "the upstream repo" } },
     ],
   },
 ];

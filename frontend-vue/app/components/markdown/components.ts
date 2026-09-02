@@ -11,6 +11,8 @@ import { defineComponent, h, markRaw } from "vue";
 
 import { cn } from "@/lib/utils";
 
+import MarkdownImage from "./MarkdownImage.vue";
+import MarkdownSafeLink from "./MarkdownSafeLink.vue";
 import MarkdownPre from "./MarkdownPre.vue";
 import MarkdownTable from "./MarkdownTable.vue";
 
@@ -40,6 +42,59 @@ function styledElement(
     },
   });
 }
+
+/*
+  只包着一张图片（或一个块级代码）的段落**不渲染 `<p>`**。
+
+  逐字对着 streamdown 的 MarkdownParagraph（`dist/chunk-BO2N2NFS.js`）：它先把
+  null 与空串子节点滤掉，只剩一个元素且那个元素是 `img`、或是带 `data-block` 的
+  `code` 时，直接把子节点原样交出去。理由是块级内容不该被塞进一个行内容器——
+  `<p><div></div></p>` 在 HTML 解析器眼里根本不合法，浏览器会把 div 提出去、
+  留下一个空段落。
+
+  本仓此前没有这个覆盖，于是图片外面多一层 `<p>`：对照台账上报成 Vue 多一个
+  `paragraph` 节点。判断走的是 hast 的 `node`（渲染器把它当属性透下来），
+  不是 vnode——vnode 那一层拿不到原始 tagName。
+*/
+type HastChild = {
+  type?: string;
+  value?: string;
+  tagName?: string;
+  properties?: Record<string, unknown>;
+};
+
+function unwrappedOnlyChild(node: unknown): HastChild | null {
+  const children = (node as { children?: HastChild[] } | undefined)?.children;
+  if (!Array.isArray(children)) return null;
+  const meaningful = children.filter(
+    (child) => child != null && !(child.type === "text" && child.value === ""),
+  );
+  if (meaningful.length !== 1) return null;
+  const only = meaningful[0]!;
+  if (only.type !== "element") return null;
+  if (only.tagName === "img") return only;
+  if (
+    only.tagName === "code" &&
+    only.properties !== undefined &&
+    ("data-block" in only.properties || "dataBlock" in only.properties)
+  ) {
+    return only;
+  }
+  return null;
+}
+
+const Paragraph = defineComponent({
+  name: "MarkdownParagraph",
+  inheritAttrs: false,
+  setup(_, { attrs, slots }) {
+    return () => {
+      const { node, class: incomingClass, ...rest } = attrs;
+      const children = slots.default?.();
+      if (unwrappedOnlyChild(node)) return children;
+      return h("p", { ...rest, class: incomingClass }, children);
+    };
+  },
+});
 
 const Heading1 = styledElement(
   "MarkdownHeading1",
@@ -179,4 +234,17 @@ export const richContentComponents = markRaw({
   th: TableHeaderCell,
   td: TableCell,
   pre: MarkdownPre,
+  /*
+    图片走 streamdown 的 image 组件镜像：外框、悬停遮罩、下载按钮与失败回退。
+    不挂它渲染出来的是裸 `<img>`——聊天路径看不出来（MessageList 用自己的
+    MarkdownMessageImage 覆盖了 `img`），artifact 预览与关于页才是裸的。
+  */
+  img: MarkdownImage,
+  p: Paragraph,
+  /*
+    链接默认走**先确认再跳转**那一支（streamdown 的 `linkSafety` 内建就是开着的）。
+    调用点要普通 `<a>` 的，在自己的 components map 里覆盖 `a`——上游 artifact 预览
+    与消息流就是这么做的（ArtifactLink / MarkdownLink）。
+  */
+  a: MarkdownSafeLink,
 } as const);
