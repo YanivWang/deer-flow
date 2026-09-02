@@ -1,7 +1,7 @@
 /*
   【文件职责】     用**与框架无关的数据**描述对照场景：打开哪里、做什么、等到什么。
   【架构位置】     对照测试基础设施
-  【主要导出】     PARITY_SCENARIOS · applyScenarioBackend · runScenario · DIMENSION 类型
+  【主要导出】     PARITY_SCENARIOS · applyScenarioBackend · applyScenarioStubs · runScenario · DIMENSION 类型
   【依赖关系】     ../../e2e/utils/mock-api（Gateway 的 HTTP/SSE 行为）· @playwright/test
   【边界与注意】   场景是**数据不是函数**，这一条是刻意的。写成函数，作者迟早会在里面
                    分叉——「React 走这条、Vue 走那条」——而那正是对照要发现的东西，
@@ -105,6 +105,30 @@ export type ParityRouteOverride = {
   headers?: Record<string, string>;
 };
 
+/**
+ * 页面加载**之前**要装的夹具。
+ *
+ * 与 `routes` 同一个道理：写成**枚举值**，不是回调。允许传函数的话，场景又能在
+ * 「React 走这条、Vue 走那条」上分叉，而那正是这份目录要防的东西（见文件头）。
+ * 每一项的实现固定写在 `applyScenarioStubs` 里，场景只能从封闭集合里挑一个值。
+ *
+ * 这是 `settings-notification` 一直待在 pending 里的原因：它要的不是一次交互，
+ * 而是在页面跑起来之前把 `Notification` 与 `document.hasFocus` 换掉。
+ */
+export type ParityStubs = {
+  /**
+   * 用一个假的 `Notification` 替换 `window.Notification`，并选定初始权限。
+   *
+   * 不能靠真实浏览器权限：Playwright 里它默认是 `default`，而"已授权"那一支
+   * （开关已打开、可以发测试通知）才是这个面板真正长代码的地方。
+   * 假的那份同时把发出去的通知记进 `window.__deerflowNotifications`，
+   * 与上游 `frontend/tests/e2e/settings-notification.spec.ts` 的 mock 同形。
+   */
+  notification?: "default" | "granted" | "denied";
+  /** `document.hasFocus()` 的返回值。页面在后台时产品才会发完成通知。 */
+  documentFocused?: boolean;
+};
+
 export type ParityScenario = {
   /** 与 React spec 文件同名（去掉 .spec.ts），覆盖率棘轮靠它对齐。 */
   id: string;
@@ -118,6 +142,8 @@ export type ParityScenario = {
   settle: ParityStep[];
   /** 取样前的交互。 */
   steps?: ParityStep[];
+  /** 页面加载前要装的夹具；见 ParityStubs。 */
+  stubs?: ParityStubs;
   /** 要跑的采样维度；缺省只跑 DEFAULT_DIMENSION。 */
   dimensions?: ParityDimension[];
 };
@@ -149,6 +175,54 @@ export async function applyScenarioBackend(
             : JSON.stringify(override.json),
       }),
     );
+  }
+}
+
+/**
+ * 把 `stubs` 声明的夹具装进页面。**必须在 goto 之前调用。**
+ *
+ * 实现固定在这里，场景那边只给一个枚举值——这样两个应用拿到的是**同一段**注入代码，
+ * 渲染差异不可能来自夹具。
+ */
+export async function applyScenarioStubs(page: Page, scenario: ParityScenario) {
+  const stubs = scenario.stubs;
+  if (!stubs) return;
+  if (stubs.notification !== undefined) {
+    await page.addInitScript((permission) => {
+      const record: { title: string; body?: string }[] = [];
+      (
+        globalThis as unknown as {
+          __deerflowNotifications?: typeof record;
+        }
+      ).__deerflowNotifications = record;
+
+      class MockNotification {
+        static permission = permission;
+        static async requestPermission() {
+          MockNotification.permission = "granted";
+          return "granted";
+        }
+        onclick: (() => void) | null = null;
+        onerror: ((error: Event) => void) | null = null;
+        closed = false;
+        constructor(title: string, options?: { body?: string }) {
+          record.push({ title, body: options?.body });
+        }
+        close() {
+          this.closed = true;
+        }
+      }
+
+      Object.defineProperty(globalThis, "Notification", {
+        configurable: true,
+        value: MockNotification,
+      });
+    }, stubs.notification);
+  }
+  if (stubs.documentFocused !== undefined) {
+    await page.addInitScript((focused) => {
+      Document.prototype.hasFocus = () => focused;
+    }, stubs.documentFocused);
   }
 }
 
@@ -234,6 +308,7 @@ export async function runScenario(
   timeout = 30_000,
 ) {
   await applyScenarioBackend(page, scenario);
+  await applyScenarioStubs(page, scenario);
   await applyDimension(page, base, dimension);
   await page.goto(`${base}${scenario.path}`);
   for (const step of scenario.settle) await runStep(page, step, timeout);
@@ -391,18 +466,27 @@ const ARTIFACT_PATH = "/artifact-fixtures/report.html";
   把这两个覆盖掉了），artifact 预览这一支才是裸的。此前所有 artifact 夹具的正文里
   一个链接一张图都没有，于是这处缺口整整三轮台账都是 0（线索 111）。
 
+  图片走**同源固定路径 + 路由夹具**，不是外网 URL。下载按钮只在图片真的加载成功后
+  才出现，所以图片能不能加载直接决定台账里有没有那两行——外网 URL 会让这份台账
+  变成一份看网络脸色的门禁（实测：同一次跑里两个应用一个加载到了一个没有，
+  `button "Download image"` 与 `img` 两行凭空冒出来）。
+
   为什么挂在 artifact-batched-stream 而不是 artifact-preview：后者的正文来自
   write_file 草稿，而**两个应用都会把连续的工具步骤折叠成「1 more step」并只显示
   最后一条**——再加一条 write_file，`/artifact-fixtures/report.html` 这个 settle 锚点
   当场取不到（实测：artifact-preview 与 artifact-panel-resize 一起红）。
   batched-stream 的正文是路由喂的，改它不动任何锚点。
 */
+/** 一张最小的同源图片，两个应用都从自己的源上取到逐字节相同的一份。 */
+const PARITY_FIXTURE_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="60" viewBox="0 0 120 60"><rect width="120" height="60" fill="#e2e8f0"/></svg>';
+
 const BATCHED_ARTIFACT_MARKDOWN = [
   "# batched report",
   "",
   "See [the upstream repo](https://github.com/bytedance/deer-flow) for context.",
   "",
-  "![Star History Chart](https://api.star-history.com/svg?repos=bytedance/deer-flow&type=Date)",
+  "![Chart](/parity-fixtures/chart.svg)",
   "",
 ].join("\n");
 
@@ -1210,6 +1294,37 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     ],
   },
   {
+    /*
+      通知设置面板。这一条**从目录建起来就待在 pending 里**，理由是它要的不是一次
+      交互，而是在页面跑起来之前把 `Notification` 换掉——权限是浏览器状态，
+      `page.route` 和步骤词汇都碰不到它。`stubs` 就是为它加的（见 ParityStubs）。
+
+      取"已授权"那一支：这个上下文里浏览器默认给的是 **denied**（实测，见下面那条
+      锚点的注释），于是不注入就只走得到"被拒绝"那一支——开关恒为禁用、旁边挂一段
+      提示。授权之后开关才活过来、才谈得上发测试通知，那才是这个面板真正长代码
+      的地方，而它**只能靠注入到达**。
+    */
+    id: "settings-notification",
+    title: "已授权状态下的通知设置面板",
+    backend: "mock",
+    path: "/workspace/chats/new?settings=notification",
+    stubs: { notification: "granted" },
+    /*
+      第二条锚点是**夹具生效的证据**，而且它必须挑一条只有 `granted` 才成立的事实。
+      实测（2026-09-02）：这个上下文里 `Notification.permission` 默认是 **denied**
+      （不是 default，也不是 granted）——所以「请求通知权限」那颗按钮在两种情况下
+      都不出现，拿它当证据是拿不住的（第一版就是这么写的，把 stub 摘掉照样绿）。
+      改成断言**拒绝提示不在**：那段话只在 denied 时渲染，也就是默认态。
+    */
+    settle: [
+      { kind: "visible", target: { role: "switch", name: "Notification" } },
+      {
+        kind: "hidden",
+        target: { text: /Notification permission was denied/ },
+      },
+    ],
+  },
+  {
     id: "channels",
     title: "侧栏的 IM 渠道列表",
     backend: "mock",
@@ -1540,6 +1655,11 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         contentType: "text/markdown",
         headers: { ETag: `"${"a".repeat(64)}"` },
         json: BATCHED_ARTIFACT_MARKDOWN,
+      },
+      {
+        pattern: "**/parity-fixtures/chart.svg",
+        contentType: "image/svg+xml",
+        json: PARITY_FIXTURE_SVG,
       },
     ],
     settle: [{ kind: "visible", target: { testId: "artifact-trigger" } }],

@@ -14,6 +14,7 @@
   "chat",
   "integrations",
   "scheduled-tasks",
+  "settings-notification",
   "sidebar",
   "sidecar-chat",
   "streaming-reasoning-order",
@@ -27,8 +28,7 @@
   "workspace-changes"
  ],
  "pending": [
-  "chat-thread-init-ordering",
-  "settings-notification"
+  "chat-thread-init-ordering"
  ],
  "exempt": [
   {
@@ -41,7 +41,6 @@
   }
  ],
  "$pendingReasons": {
-  "chat-thread-init-ordering": "要在真实提交一条消息之后取样，而步骤词汇里还没有「填入并发送」这一步；补它之前要先测流式取样是否稳定，否则整份台账会跟着流的时序抖。",
-  "settings-notification": "同上，另外还要在页面加载前替换 Notification 与 document.hasFocus，那属于夹具注入而不是交互步骤。"
+  "chat-thread-init-ordering": "要在真实提交一条消息之后取样，而步骤词汇里还没有「填入并发送」这一步；补它之前要先测流式取样是否稳定，否则整份台账会跟着流的时序抖。"
  }
 }
