@@ -36,6 +36,7 @@ import { urlOfArtifact } from "@/core/artifacts/utils";
 import { writeTextToClipboard } from "@/core/clipboard";
 import { installSkill } from "@/core/skills/api";
 import type { Message } from "@/core/types/message";
+import { useWorkspaceToast } from "@/core/workspace-shell/toast";
 import type { ArtifactDraftOwner } from "@/composables/useArtifactDraft";
 
 const props = defineProps<{
@@ -50,6 +51,7 @@ const props = defineProps<{
   draftOwner: ArtifactDraftOwner;
 }>();
 const { $i18n } = useNuxtApp();
+const toast = useWorkspaceToast();
 const emit = defineEmits<{ close: []; select: [path: string] }>();
 
 const content = ref("");
@@ -369,6 +371,12 @@ async function save() {
     props.draftOwner.completeSave(path, result.sha256);
     content.value = savedContent;
     sha256.value = result.sha256;
+    /*
+      保存成功要说一句（上游 artifact-file-detail.tsx:333）。本仓此前只有失败时的
+      内联 `error`——保存成功之后编辑态自己退出，除此之外没有任何确认。
+      失败仍然内联（那是「这份草稿现在有问题」的状态，wave 31 的判据）。
+    */
+    toast.success($i18n.t.value.artifactEditing.saved);
     props.draftOwner.requestExitEdit(path);
   } catch (reason) {
     if (

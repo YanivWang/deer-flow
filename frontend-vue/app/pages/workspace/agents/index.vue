@@ -18,12 +18,21 @@ import AgentCard from "@/components/workspace/agents/AgentCard.vue";
 import AgentSettingsDialog from "@/components/workspace/agents/AgentSettingsDialog.vue";
 import AgentsFeatureDisabled from "@/components/workspace/agents/AgentsFeatureDisabled.vue";
 import { useAgents } from "@/composables/useAgents";
+import { useWorkspaceToast } from "@/core/workspace-shell/toast";
 import { useModels } from "@/composables/useModels";
 import { useAgentsApiEnabled } from "@/composables/useWorkspaceFeatures";
 import type { Agent, UpdateAgentRequest } from "@/core/agents/types";
 
 definePageMeta({ layout: "workspace" });
 const { $i18n } = useNuxtApp();
+/*
+  两条**成功播报**（上游 agent-card.tsx:124 与 agent-settings-dialog.tsx:120）。
+  本仓此前只有失败时的内联 actionError——删掉一个 agent、保存一次设置，
+  除了卡片消失/对话框关掉之外没有任何确认。判据是 wave 31 定的那条：
+  **一刻发生的事走 toaster，一段时间里为真的事留在页面里**；失败仍然内联，
+  它是「这一页现在有问题」的状态。
+*/
+const toast = useWorkspaceToast();
 const features = useAgentsApiEnabled();
 const featureEnabled = computed(
   () => features.loaded.value && features.agentsApiEnabled.value,
@@ -70,6 +79,7 @@ async function saveEdit(request: UpdateAgentRequest) {
   actionError.value = "";
   try {
     await agentCatalog.update.mutateAsync({ agent: editing.value, request });
+    toast.success($i18n.t.value.agents.settingsSaved);
     editing.value = null;
   } catch (cause) {
     actionError.value = message(cause, $i18n.t.value.agents.settingsSaveFailed);
@@ -86,6 +96,7 @@ async function remove(agent: Agent) {
   actionError.value = "";
   try {
     await agentCatalog.remove.mutateAsync(agent);
+    toast.success($i18n.t.value.agents.deleteSuccess);
   } catch (cause) {
     actionError.value = message(cause, $i18n.t.value.agents.deleteFailed);
   }

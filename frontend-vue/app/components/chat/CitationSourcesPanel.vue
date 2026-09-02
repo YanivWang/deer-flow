@@ -15,17 +15,27 @@ import {
   type CitationSource,
 } from "@/core/citations/sources";
 import { writeTextToClipboard } from "@/core/clipboard";
+import { useWorkspaceToast } from "@/core/workspace-shell/toast";
 
 defineProps<{ sources: CitationSource[] }>();
 const { $i18n } = useNuxtApp();
+const toast = useWorkspaceToast();
 const copied = ref<string | null>(null);
+/*
+  复制成功/失败都要说一句（上游 citation-sources-panel.tsx:100/105）。
+  本仓此前只换图标——图标是 `aria-hidden` 的装饰，读屏器**什么都听不到**，
+  失败时更是一点反馈都没有。
+*/
 async function copySource(source: CitationSource) {
-  if (await writeTextToClipboard(formatCitationMarkdownReference(source))) {
-    copied.value = source.id;
-    setTimeout(() => {
-      if (copied.value === source.id) copied.value = null;
-    }, 2_000);
+  if (!(await writeTextToClipboard(formatCitationMarkdownReference(source)))) {
+    toast.error($i18n.t.value.clipboard.failedToCopyToClipboard);
+    return;
   }
+  toast.success($i18n.t.value.clipboard.copiedToClipboard);
+  copied.value = source.id;
+  setTimeout(() => {
+    if (copied.value === source.id) copied.value = null;
+  }, 2_000);
 }
 </script>
 
@@ -69,10 +79,20 @@ async function copySource(source: CitationSource) {
           }}</span>
           <ExternalLink :size="13" />
         </a>
+        <!--
+          复制之后按钮的名字要跟着换（上游 :126 是
+          `aria-label={copied ? copiedLabel : copyLabel}`）。本仓此前恒为
+          「Copy reference…」，而唯一会变的图标是 aria-hidden 的装饰——
+          读屏器听不出复制到底成没成。
+        -->
         <button
           type="button"
           class="text-muted-foreground rounded p-1.5"
-          :aria-label="$i18n.t.value.citations.copyReference(source.title)"
+          :aria-label="
+            copied === source.id
+              ? $i18n.t.value.citations.copiedReference(source.title)
+              : $i18n.t.value.citations.copyReference(source.title)
+          "
           @click="copySource(source)"
         >
           <Check v-if="copied === source.id" :size="14" />

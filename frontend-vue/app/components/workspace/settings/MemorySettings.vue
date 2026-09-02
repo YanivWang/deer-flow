@@ -15,6 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import SettingsActionDialog from "@/components/workspace/settings/SettingsActionDialog.vue";
 import SettingsSection from "@/components/workspace/settings/SettingsSection.vue";
 import { useMemory } from "@/composables/useMemory";
+import { useWorkspaceToast } from "@/core/workspace-shell/toast";
 import {
   confidenceToLevelKey,
   filterMemoryDocument,
@@ -62,6 +63,22 @@ interface PendingImport {
 const { $i18n } = useNuxtApp();
 const t = computed(() => $i18n.t.value);
 const owner = useMemory();
+/*
+  六条**成功播报**，与上游 memory-settings-page.tsx 逐处对应
+  （`:396` export、`:435` import、`:445` clearAll、`:457` factDelete、
+  `:510/:513` edit/add）。本仓此前一条都没有：删掉一条记忆、清空整份文档、
+  导入一份文件，屏幕上除了对话框关掉之外**没有任何确认**。
+
+  交接文档把 `settings.memory.*` 那几条记成「上游自己也零消费」——**记错了**：
+  只有 `rawJson` 是上游也没人用的，其余五条上游都在 toast，
+  加上被 `common.exportSuccess` 的同名叶子遮蔽的 `exportSuccess`，一共六条
+  （wave 34 复量）。
+
+  走 toaster 而不是内联，判据是 wave 31 定的那条：**一刻发生的事走 toaster，
+  一段时间里为真的事留在页面里**。失败仍然是内联的——那几处是「这个表单现在有问题」，
+  是状态不是播报，本仓这一侧比上游的 toast 更贴近判据，有意保留。
+*/
+const toast = useWorkspaceToast();
 const importInput = ref<HTMLInputElement | null>(null);
 const query = ref("");
 const filter = ref<MemoryViewFilter>("all");
@@ -230,6 +247,11 @@ async function saveFact() {
     } else {
       await owner.create.mutateAsync(buildMemoryFactCreateInput(factForm));
     }
+    toast.success(
+      factToEdit.value
+        ? t.value.settings.memory.editFactSuccess
+        : t.value.settings.memory.addFactSuccess,
+    );
     closeFactEditor();
   } catch (cause) {
     factFormError.value = errorMessage(cause, t.value.settings.memory.factSave);
@@ -277,6 +299,7 @@ async function confirmImport() {
   importError.value = "";
   try {
     await owner.importDocument.mutateAsync(pending.memory);
+    toast.success(t.value.settings.memory.importSuccess);
     pendingImport.value = null;
   } catch (cause) {
     importError.value = errorMessage(
@@ -303,6 +326,7 @@ async function exportDocument() {
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
+    toast.success(t.value.settings.memory.exportSuccess);
   } catch (cause) {
     pageError.value = errorMessage(cause, t.value.common.exportFailed);
   }
@@ -313,6 +337,7 @@ async function confirmClear() {
   clearError.value = "";
   try {
     await owner.clear.mutateAsync();
+    toast.success(t.value.settings.memory.clearAllSuccess);
     clearDialogOpen.value = false;
   } catch (cause) {
     clearError.value = errorMessage(cause, t.value.settings.memory.clearAll);
@@ -330,6 +355,7 @@ async function confirmDelete() {
   deleteError.value = "";
   try {
     await owner.remove.mutateAsync(fact.id);
+    toast.success(t.value.settings.memory.factDeleteSuccess);
     factToDelete.value = null;
   } catch (cause) {
     deleteError.value = errorMessage(cause, t.value.common.delete);

@@ -23,6 +23,12 @@ import ArtifactPanel from "@/components/workspace/artifacts/ArtifactPanel.vue";
 import { useArtifactDraft } from "@/composables/useArtifactDraft";
 import { ArtifactActionError } from "@/core/artifacts/actions";
 import { ArtifactRequestError } from "@/core/artifacts/api";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 /*
   「加载完整文件」是一颗**只有可见文字**的按钮，没有 aria-label——React 的截断提示条
@@ -175,6 +181,7 @@ function mountPanel(
   });
   const wrapper = mount(Host, {
     global: {
+      provide: { [workspaceToastKey as symbol]: toastStore },
       stubs: { StreamMarkdown: { template: "<div data-testid='markdown' />" } },
     },
   });

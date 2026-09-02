@@ -20,6 +20,12 @@ import { ref } from "vue";
 import MemorySettings from "@/components/workspace/settings/MemorySettings.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
 import type { UserMemory } from "@/core/memory/types";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 const memoryFactory = vi.hoisted(() => vi.fn());
 vi.mock("@/composables/useMemory", () => ({ useMemory: memoryFactory }));
@@ -106,6 +112,7 @@ function mountMemory() {
   return mount(MemorySettings, {
     attachTo: document.body,
     global: {
+      provide: { [workspaceToastKey as symbol]: toastStore },
       stubs: {
         NuxtLink: { template: '<a :href="to"><slot /></a>', props: ["to"] },
       },

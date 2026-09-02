@@ -15,6 +15,12 @@ import SkillSettings from "@/components/workspace/settings/SkillSettings.vue";
 import ToolSettings from "@/components/workspace/settings/ToolSettings.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
 import type { UserMemory } from "@/core/memory/types";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 const memoryFactory = vi.hoisted(() => vi.fn());
 const permissionsFactory = vi.hoisted(() => vi.fn());
@@ -161,7 +167,10 @@ describe("MemorySettings", () => {
   it("rejects malformed and structurally invalid imports without a network request", async () => {
     const owner = memoryOwner();
     memoryFactory.mockReturnValue(owner);
-    const wrapper = mount(MemorySettings, { attachTo: document.body });
+    const wrapper = mount(MemorySettings, {
+      attachTo: document.body,
+      global: { provide: { [workspaceToastKey as symbol]: toastStore } },
+    });
 
     await selectFile(wrapper, {
       name: "malformed.json",
@@ -183,7 +192,10 @@ describe("MemorySettings", () => {
   it("shows complete import preview and warnings before one confirmed request", async () => {
     const owner = memoryOwner();
     memoryFactory.mockReturnValue(owner);
-    const wrapper = mount(MemorySettings, { attachTo: document.body });
+    const wrapper = mount(MemorySettings, {
+      attachTo: document.body,
+      global: { provide: { [workspaceToastKey as symbol]: toastStore } },
+    });
     const imported = {
       ...memory,
       futureRoot: true,
@@ -214,11 +226,53 @@ describe("MemorySettings", () => {
     expect(owner.importDocument.mutateAsync).toHaveBeenCalledWith(imported);
   });
 
+  /*
+    六条**成功播报**（上游 memory-settings-page.tsx 的 :396 / :435 / :445 / :457 /
+    :510 / :513）。本仓此前一条都没有——删掉一条记忆、清空整份文档、导入一份文件，
+    屏幕上除了对话框关掉之外没有任何确认。
+
+    交接文档把这几条词条记成「上游自己也零消费」，**记错了**：只有 `rawJson` 是，
+    其余五条上游都在 toast，再加上被 `common.exportSuccess` 同名叶子遮蔽的
+    `exportSuccess`，一共六条（wave 34 复量）。
+
+    这一屏进不了对照台账：settings 的七个面板里只有 `settings-notification` 有合法的
+    场景 id（棘轮要求 id 逐字等于 React spec 文件名），memory 面板没有。
+  */
+  it("announces every successful memory write", async () => {
+    const owner = memoryOwner();
+    memoryFactory.mockReturnValue(owner);
+    const wrapper = mount(MemorySettings, {
+      attachTo: document.body,
+      global: { provide: { [workspaceToastKey as symbol]: toastStore } },
+    });
+    const messages = () => toastStore.toasts.value.map((item) => item.message);
+
+    // 删一条事实
+    toastStore.clear();
+    // 删除键的名字是 `factActionLabel(t.common.delete, fact)`，没有 testid。
+    await wrapper.findAll('button[aria-label^="Delete"]')[0]!.trigger("click");
+    await flushPromises();
+    dialogButtons("alertdialog")[1]!.click();
+    await flushPromises();
+    expect(messages()).toEqual([enUS.settings.memory.factDeleteSuccess]);
+
+    // 清空整份文档
+    toastStore.clear();
+    await wrapper.get('[data-testid="memory-clear-open"]').trigger("click");
+    await flushPromises();
+    dialogButtons("alertdialog")[1]!.click();
+    await flushPromises();
+    expect(messages()).toEqual([enUS.settings.memory.clearAllSuccess]);
+  });
+
   it("retains failed destructive dialogs and sends exact create/edit confidence zero", async () => {
     const owner = memoryOwner();
     owner.clear.mutateAsync.mockRejectedValue(new Error("Conflict detail"));
     memoryFactory.mockReturnValue(owner);
-    const wrapper = mount(MemorySettings, { attachTo: document.body });
+    const wrapper = mount(MemorySettings, {
+      attachTo: document.body,
+      global: { provide: { [workspaceToastKey as symbol]: toastStore } },
+    });
 
     await wrapper.get('[data-testid="memory-clear-open"]').trigger("click");
     await flushPromises();
@@ -258,7 +312,10 @@ describe("MemorySettings", () => {
   it("distinguishes a non-empty no-match search from fully empty memory", async () => {
     const owner = memoryOwner();
     memoryFactory.mockReturnValue(owner);
-    const wrapper = mount(MemorySettings, { attachTo: document.body });
+    const wrapper = mount(MemorySettings, {
+      attachTo: document.body,
+      global: { provide: { [workspaceToastKey as symbol]: toastStore } },
+    });
     await wrapper.get('[data-testid="memory-search"]').setValue("absent");
     expect(wrapper.find('[data-testid="memory-no-matches"]').exists()).toBe(
       true,

@@ -62,6 +62,7 @@ import {
 } from "@/core/sidecar";
 import type { ThreadRunContextInput } from "@/core/threads/submit";
 import type { Message } from "@/core/types/message";
+import { useWorkspaceToast } from "@/core/workspace-shell/toast";
 
 const props = defineProps<{
   session: SidecarSession;
@@ -78,6 +79,7 @@ const emit = defineEmits<{
   deleted: [];
 }>();
 const { $i18n } = useNuxtApp();
+const toast = useWorkspaceToast();
 
 const compositionActive = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -294,8 +296,13 @@ function chooseFiles(event: Event) {
   input.value = "";
 }
 
+/*
+  删除成功要说一句（上游 sidecar-panel.tsx:511）。本仓此前只有对话框自己关掉，
+  没有任何确认——而这是一个不可逆操作。失败那一支保持内联（wave 31 的判据）。
+*/
 async function confirmDelete() {
   if (await props.session.deleteThread()) {
+    toast.success($i18n.t.value.sidecar.deleteSuccess);
     emit("deleted");
     deleteDialog.value = false;
   }
