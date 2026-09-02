@@ -1,55 +1,64 @@
 # React → Vue 对照对齐：轮次交接文档
 
 **这份文档是每一轮开工的第一读物。** 它记录「上一轮做完了什么、下一轮做什么、
-有哪些账挂着」。深度背景（130 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
+有哪些账挂着」。深度背景（135 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
 `deerflow-parity-harness-plan` 里；这里只放接手一轮所需的最小集合。
 
 **每推完一个阶段（一轮 wave），就地更新这份文档，然后开始下一轮。**
 
 ---
 
-## 当前状态（截至 wave 28，2026-09-02）
+## 当前状态（截至 wave 29，2026-09-02）
 
-- 分支 `main-wc`。HEAD = `311d11e7`（chore），`c78bc91c` = wave 28。
-- wave 28 **动了 `frontend/` 一处**（`workspace/agents/new/page.tsx`：返回键没有可访问名、
-  校验错误没有 `role="alert"`），**upstream marker 已推到 `c78bc91c`**。
+- 分支 `main-wc`。`bc5d6173` = wave 29。
+- wave 29 **没有动 `frontend/`**，**upstream marker 仍在 `c78bc91c`**（wave 28 推的）。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
-- 覆盖率棘轮：covered **24**，pending **只剩 1 条**（`chat-thread-init-ordering`）。
+- 覆盖率棘轮：covered **24**，pending **仍是 1 条**（`chat-thread-init-ordering`）——
+  wave 29 **实测**了它，结论是**不能加**，理由从推断换成了数字，见下。
 - 已彻底对齐的域（14 个 + settings/memory）：chat / artifacts / 会话列表 /
   scheduled-tasks / channels / integrations + 设置外壳 / mermaid / subtask-card /
   workspace 头部 / sidebar / messages / sidecar / browser / composer，
   外加 **settings 域全部**（wave 22~24）、**auth**（wave 26：`/login` 58→0）、
-  **只读案例页**（wave 27：`/showcase/<id>` 29→0）与
-  **建 agent 页**（wave 28：`/workspace/agents/new` 9→0）。
+  **只读案例页**（wave 27：`/showcase/<id>` 29→0）、
+  **建 agent 页**（wave 28：`/workspace/agents/new` 9→0）与
+  **composer 的焦点 + follow-up 整簇**（wave 29）。
 
-> **`app/pages/` 下的路由现在一条不剩地量过了。** wave 28 把最后三条没 probe 过的
-> 都量了：`/workspace` 本来就 0/0；`/workspace/agents/new` 9 行，这一轮清零；
-> `/auth/callback` **在这套配置下量不到**（理由见「挂着的账」）。
-> 落地页与 docs/blog 双向豁免。**下一轮要找活，去「挂着的账」里挑，
-> 不要再指望「还有没量过的路由」。**
+> **`app/pages/` 下的路由已经一条不剩地量过了**（wave 28 量完最后三条）。
+> **要找活只能去「挂着的账」里挑**，不要再指望「还有没量过的路由」。
 
-> **settings 域现在有一个取样点了**：wave 25 给 `ParityScenario` 加了枚举式夹具注入
-> （`stubs`），`settings-notification` 已从 pending 挪进 covered。**其余六个面板仍然
-> 没有合法的场景 id**（棘轮要求 id 逐字等于 React spec 文件名），它们的差异仍然只能
-> 靠 probe 找、靠单测守（线索 107）。
+> **settings 域有一个取样点**（`settings-notification`，wave 25 的 `stubs`）。
+> 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
+> 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 28 收工时逐条跑过，全绿）
+### 门禁实测值（wave 29 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；235 文件 / 1963 单测，词典 953 key、39 unused
-make -C frontend-vue e2e-parity    47    台账 0 行，39 样本
+make -C frontend-vue verify        exit 0；237 文件 / 1975 单测，词典 953 key、39 unused
+                                   standalone-check BLOCKING 0 处 / 0 个文件
+make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      262 + 21 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
-                                   (= protocol + real + scheduled + channels + agents + settings + shell + browser)
 make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 29 没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1022**）/ `test:e2e`（**146**）。
-**`frontend/tests/e2e/landing.spec.ts:61` 是一条既有的负载抖动**（`locator.boundingBox`
-等动画区的 `.max-w-6xl`），wave 20/21/22 都遇到过。判据：先证你这一轮改的东西
-进不了落地页 bundle，再谈负载。
+
+**已知的两条负载抖动**（都不是产品缺陷，但每次遇到都要重新证一遍因果）：
+
+1. `frontend/tests/e2e/landing.spec.ts:61`——`locator.boundingBox` 等动画区的
+   `.max-w-6xl`，wave 20~23 与 wave 28 都遇到过。
+2. **`frontend-vue/tests/e2e/channels.spec.ts:1020`（wave 29 新增）**——
+   「channel query 401 follows the shared login redirect」。它 `page.goto` 之后用
+   **5s** 等 `/login?next=`，而那次跳转要等水合完成、`providersQuery` 发出去、
+   拿到 401、`fetchWithAuth` 才 `window.location.href`。wave 29 在 **load 41** 时红过
+   一次，随后在 load 3~10 时 `--repeat-each=5` **5/5 全绿**。
+   因果链是 `layouts/workspace.vue → ThreadSidebar → WorkspaceChannelsList →
+   useChannelConnections → providersQuery → fetchWithAuth 401`，
+   wave 29 改的三个文件一个都不在这条链上；而且 **ThreadSidebar 本来就 import
+   `ui/dialog`**，所以那一轮往 ChatComposer 里加的 Dialog 没给这条路由的
+   critical path 添任何模块（同一次跑里 `/workspace/chats/new` 的 route-payload 是过的）。
 
 ### 开工前必查
 
@@ -91,11 +100,12 @@ ls frontend/.next/BUILD_ID frontend-vue/.output/server/index.mjs frontend-vue/.o
 > 那两处同形的表单错误（`account-settings-page.tsx:133`、`human-input-card.tsx:339`）
 > 都写着 `role="alert"`。
 
-### 台账天生看不见的七类差异
+### 台账天生看不见的八类差异
 
 ① 需要交互才看得见的；② 藏在请求 body 里的；③ portal 出去还会遮蔽页面的浮层；
 ④ 顺序与层级（aria 去缩进后按多重集比）；⑤ primitive 的默认值；
-⑥ 只在某种后端状态下才分叉的渲染路径；⑦ **这一屏压根没被取样**。
+⑥ 只在某种后端状态下才分叉的渲染路径；⑦ **这一屏压根没被取样**；
+⑧ **焦点**（`document.activeElement`，见下）。
 
 wave 20/21 连着两轮正面打了 ① 和 ⑦。**判据：一个域收工前，把它所有「点一下才出现」
 的东西列出来，逐个问「这一屏进过取样面没有」。** 挂展开态很便宜：场景 id 受
@@ -105,127 +115,159 @@ wave 20/21 连着两轮正面打了 ① 和 ⑦。**判据：一个域收工前�
 **wave 28 补了第八类：焦点。** `document.activeElement` 不进 aria 快照，也不是几何量，
 所以「打开这一屏之后光标在哪」这件事，**台账、probe 的 aria diff、几何三样都看不见**。
 probe 里顺手记一行 `page.evaluate(() => document.activeElement)` 就能量到——
-wave 28 正是这样发现建 agent 页少了 autoFocus，以及下面那条新账的。
+wave 28 正是这样发现建 agent 页与 composer 都少了 autoFocus（**composer 那一条
+wave 29 已经做掉**）。
+
+**wave 29 给第⑦类补了一条推论**：一屏「没被取样」可能不是因为没人写场景，
+而是因为**上游在那一屏上不确定**——`chat-thread-init-ordering` 就是这样。
+遇到这种，先量再决定，不要硬加；量出来的数字本身就是产出。
 
 ---
 
-## 上一轮（wave 28）做了什么
+## 上一轮（wave 29）做了什么
 
-把最后三条没量过的路由一次量完，做掉了 `/workspace/agents/new`：**9 行 → 0 行**
-（三种交互态各自复量过：静置、填了名字、填了非法名字，都是 0/0）。
-顺手清了三笔挂账。
+正题是**测量**：把 `chat-thread-init-ordering` 那条挂了十几轮的 pendingReason
+当假设重新验。结论是**不能加这个场景**，但理由从推断换成了数字。然后做掉了
+备选正题（composer 的 `autoFocus`）与 composer 域剩下的两笔账。
 
-### 三条路由的实测结果
+### 一、`chat-thread-init-ordering` 的实测（本轮最值钱的产出）
 
-| 路由 | 实测 | 处置 |
+pendingReason 原文说了两件事，**第一件已经过期，第二件被证实且比原来严重**：
+
+1. **「步骤词汇里还没有『填入并发送』」——过期了。** `ParityStep` 现在有
+   `fill` 与 `press`，`fill textarea "Hello"` + `press "Enter"` 走得完一次真实提交：
+   两个应用 10 次取样全部打到了 `POST /runs/stream` 并渲染出流式回答。
+2. **「流式取样是否稳定」——不稳，而且不稳的是上游。**
+
+同一份候选场景、同一次构建，两个应用各取样 5 次（aria / 请求序列 / 几何 /
+最终 URL / `document.activeElement` 五样都记）：
+
+| 臂 | React | Vue |
 |---|---|---|
-| `/workspace` | aria 0/0、请求 0/0，两边都落在 `/workspace/chats/new` | 无需改动 |
-| `/workspace/agents/new` | aria **5 onlyReact / 4 onlyVue**，焦点也不同 | 这一轮做掉 |
-| `/auth/callback` | **量不到**（见下） | 记账，不动 |
+| 静置 700ms（对照） | 56行/20请求 ×4，55行/23请求 ×1 → **2 种状态** | 55行/17请求 ×5 → **1 种** |
+| 静置 3000ms | 55行/23请求 ×4，56行/20请求 ×1 → **仍是 2 种** | 55行/17请求 ×5 → **1 种** |
+| 显式等 "Loading…" 消失 | **5 次里 2 次等满 30s 超时** | 55行/17请求 ×5 → **1 种** |
 
-**`/auth/callback` 为什么量不到**：上游 `(auth)/layout.tsx` 在 `getServerSideUser()`
-返回 authenticated 时**直接 `redirect("/workspace")`**，而 `getServerSideUser()` 一看到
-`isAuthDisabledMode()` 就返回合成管理员、**根本不发请求**。于是对照环境
-（两边都 `DEER_FLOW_AUTH_DISABLED=1`）下，React 的这一屏永远渲染不出来——probe 量到的
-是「React 在工作区、Vue 在回调页」，44 行噪声。`page.route` 也救不了：那次判断发生在
-Next 的服务端，浏览器侧的路由拦截碰不到它。
+**决定性的是第三行**：加长静置只是把两个状态的比例掉了个个儿，没有收敛；而显式等
+「Loading…」消失会**超时**，说明 React 那个状态是**终态**不是中间态。两个终态是：
 
-顺带发现的**上游缺陷**：上游 callback 页里 `resolveAuthNextPath(searchParams.get("next"))`
-是**够不到的代码**——session 有效时 layout 先跳走（丢掉 `next`），session 无效时
-又统一去 `/login?error=sso_failed`（也丢掉 `next`）。本仓 middleware 只守 `/workspace*`，
-所以回调页照常渲染并**尊重 `next`**（probe 实测：`?next=/workspace/agents` 上游落在
-`/workspace/chats/new`、本仓落在 `/workspace/agents`）。**有意保留本仓这一侧**，
-理由与代价写在「挂着的账」里。
+- **A**（56 行 / 20 请求）：路由播报区停在 `Loading... - DeerFlow`（标签页标题也就
+  永远停在这儿），会话流里多一条**没去重的 "Hello"** 和一颗无名按钮。
+- **B**（55 行 / 23 请求）：播报区空，多出 `messages/page` + `token-usage` +
+  `threads/{id}` 一轮重取。
 
-### `/workspace/agents/new` 那 9 行的根因
+跨两次 probe 的 15 个 React 样本大约 8A / 7B——**接近抛硬币**。把这一屏放进台账，
+会有约一半概率翻面。所以**没有加这个场景**，pending 仍是 1；`$pendingReasons` 里
+那句推断已经换成上面这组数字，翻案判据也写了：**上游那条竞态修好之后，
+同一次构建连取 5 次只出现一个终态，再补**。
 
-一句话：**本仓这一屏是一张手搓的表单，不是上游那个两步流程的第一步。**
-上游 `new/page.tsx` 有 header（返回 + `createPageTitle` 的 h1）、圆形头像里的 Bot、
-h2 的步骤标题、`<Input>`、错误段落、整宽且空值置灰的 Continue；本仓只有 h1 + 裸
-input + 永不禁用的按钮。九行逐条对应：
+顺带给棘轮补了一条守卫：`$pendingReasons` 此前**没有任何代码读它**，
+删掉一条理由、或者把场景挪进 covered 却留着旧理由，都不会让任何门禁变红。
+现在 `tests/parity/scenario-coverage.test.ts` 钉住「pending 与 $pendingReasons 一一对应，
+且每条理由不短于 20 字」。
 
-| 行 | 修法 |
-|---|---|
-| `- button`（上游那颗无名返回键） | 补 header 与返回键，**两边同改**加上 `aria-label` |
-| `- heading "Design your Agent" [level=1]` | 补 header 标题（吃掉 `agents.createPageTitle`） |
-| h2 vs h1 的步骤标题（两行） | h1 归 header，步骤标题降成 h2 |
-| textbox 的可访问名 + `/placeholder:` + 值挪成兄弟节点（三行） | 去掉本仓多写的 `aria-label`，名字回到 placeholder |
-| `- button "Continue" [disabled]` | 空值时置灰 |
-| `- paragraph:` vs `- alert:` | **两边同改**：上游这段补 `role="alert"` |
+### 二、composer 的 `autoFocus`（wave 28 挂的账）
 
-另外三处台账看不见、但 probe 的焦点记录与源码对照能看见的：
-`autoFocus`（本仓没有，照 React 的做法在 `onMounted` 里 `.focus()`）、
-`backend_unreachable` 单独文案（`agents.nameStepNetworkError` 此前零消费）、
-以及回车提交从 `<form required>` 换成 `keydown + IME 守卫`（上游没有 `<form>`，
-留着原生校验会在空值回车时弹一个上游根本没有的浏览器气泡）。
+上游 `<InputBox autoFocus={isWelcomeMode}>` 一路传到 `<PromptInputTextarea autoFocus>`，
+而 React 的 `autoFocus` 是 **commit 阶段 imperative 调 `.focus()`**，且**只在首次挂载**
+那一刻起作用。本仓 `ChatComposer.vue` 一个 `autofocus` 都没有。
 
-### 顺手清掉的三笔挂账
+修法照 `AgentBootstrapComposer` 与 `chats/index.vue` 那两处既有写法：新增一个
+**独立的 `autoFocus` prop**，`onMounted` 里显式 `.focus()`。
 
-1. **`ArtifactFileCards` 的 `.skill` Install 按钮**（wave 27 有意没补）。两个消费点
-   （面板清单、会话流 present_files 组）现在都有。判据比上游多一条 `!isMock`，
-   理由写在组件头注释里：上游靠 showcase layout 的 `<AuthProvider initialUser={null}>`
-   让 `isAdmin` 恒 false，而本仓的 `isAdmin` 在 `authDisabled` 部署下案例页上也是 true。
-2. **模式图标与 golden-text 整簇**。四档图标（Zap/Lightbulb/GraduationCap/Rocket）+
-   ultra 的 `text-[#dabb5e]` 与 `.golden-text`，触发器与菜单项两处，
-   **复合输入框与 sidecar 两个组件**都补齐；`.golden-text` 照抄上游 `globals.css:405`
-   进 `main.css` 的 `@layer base`。菜单项的排版也一起对齐（选中态整条
-   `text-accent-foreground`、说明行 `pl-7` 缩进）。
-3. **bootstrap 会话的一次性保存提示**（`agents.saveHint`，此前零消费）。
-   存储键与上游逐字相同，两个应用共用一份「读过了」的记忆，有单测钉着。
+**不能直接读 `isWelcome`**：上游的 `isWelcomeMode` 初值是 `useState(isNewThread)`，
+autoFocus 只看挂载那一刻；本仓的 `isWelcome` 是
+`visibleMessages.length === 0 && !isHistoryLoading` 这个 computed，打开已有线程时
+会先真后假地抖一下，跟着它走会在上游根本不聚焦的屏上抢焦点。所以 AgentChat 传的是
+**挂载那一刻**的 `initialRouteThreadId === null`（现成的常量，line 179）。
 
-### wave 28 动了 `frontend/`（判据成立）
+probe 复量（三条路由，每条两个应用各取一份）：
 
-`workspace/agents/new/page.tsx` 两处：返回键**没有可访问名**（同一个 header 里紧挨着的
-More 触发器写着 `aria-label={t.agents.more}`），校验错误段落**没有 `role="alert"`**
-（这份代码库另外两处同形的表单错误都写了）。两处都补上，两边的树仍逐行一致。
-React 侧新增 `tests/unit/app/workspace/agents/new-page.dom.test.tsx`（2 条），
-marker 由配套的 chore 提交推进。
+| 路由 | 改前 | 改后 | aria diff |
+|---|---|---|---|
+| `/workspace/chats/new` | React textarea / Vue **body** | 两边都是 textarea | 0/0 |
+| `/workspace/agents/test-agent/chats/new` | 同上 | 两边都是 textarea | 0/0 |
+| `/workspace/chats/{已有线程}` | 两边都是 body | **两边仍然都是 body** | 0/0 |
 
-### wave 28 新增的踩坑线索（记忆里编号 126~130）
+第三行是判别性的：它证明这不是「到处都聚焦」。
 
-- **126. 注释里写一次 `x.leafName`，那条词条就从 unused 集里消失。** unused 扫描器
-  按 `/\.([A-Za-z_$][\w$]*)/` 扫**全文**，注释不例外。wave 28 有三次撞上：给
-  `voiceInputStop`、`nameStepChecking`、`saveRequested` 写解释的那几行注释，
-  各自把它们伪装成「有人用」。**注释里提到死条目要写成「container 下的 leafName」**，
-  别写成带点的完整 key——否则一条真正的死条目会被一句注释永久埋掉。
-- **127. 焦点是第八类台账看不见的差异。** `document.activeElement` 不进 aria 快照。
-  probe 里加一行就能量，成本几乎为零，收益是一整类此前完全没查过的差异。
-- **128. happy-dom 下 ChatComposer 的 DropdownMenu 打不开。** reka 的
-  `DropdownMenuTrigger` 没有以 as-child 合并到触发器上，DOM 里留了一个字面
-  `<dropdownmenutrigger>` 元素，click 与 pointerdown 都打不开菜单；同一份写法的
-  SidecarPanel 却是好的。**不是产品缺陷**——对照套件的 `ui-polish-mobile` 在真浏览器里
-  正是点开这个菜单再断言 `menuitemradio`，一直是绿的。要在单测里覆盖菜单项那一层，
-  挂 SidecarPanel。
-- **129. 菜单项里有两个 svg，第一个是 primitive 自带的选中勾。** `querySelector("svg")`
-  永远拿到那个勾，于是「四个图标各不相同」变成「四个勾都一样」，用例恒红或恒绿都不测
-  产品。按产品自己写的 class 取（`svg[class*="mr-2"]`）。
-- **130. 一条用例挂在断言上，它后面的 `document.body.innerHTML = ""` 就不会执行，**
-  下一条用例的 `document.querySelectorAll` 会读到上一条留下的浮层。wave 28 有两条
-  连坐失败，改掉第一条第二条自己就好了。**看见成对失败先怀疑清理没跑。**
+**上游 `app/workspace/chats/page.tsx:88` 那个裸 `autoFocus` 不在这一簇里**——
+它是会话**列表页**的搜索框，本仓 `pages/workspace/chats/index.vue` 早就在
+`onMounted` 里 `searchInput.focus()` 了。所以上游三处里本轮要补的其实是**两处**。
 
----
+### 三、follow-up 整簇（composer 域剩下的两条）
 
-## 下一轮（wave 29）：三条路，挑一条
+1. **确认框换成真 `<Dialog>`。** 上游 `input-box.tsx:2765` 是 portal + 遮罩 +
+   焦点陷阱 + Escape + `DialogTitle`/`DialogDescription` + 三颗 `<Button>`；
+   本仓原来是 `absolute bottom-full` 的手搓副本，靠 `aria-label` 顶替标题，
+   `aria-modal="true"` 只是在**说**自己是模态（浏览器不会因此拦焦点，Tab 会直接走进
+   底下的输入框，Escape 也关不掉）。同时**去掉了本仓多渲染的那段 `pendingFollowup`
+   正文**——上游只有标题和描述两行。
+2. **`showFollowups` 的五条缺失判据。** 上游 `input-box.tsx:1981` 是六条合取，
+   本仓只有三条。逐条对应关系写在 `AgentChat.vue` 那段 v-if 上面的注释里；其中
+   **`status !== "streaming"` 是真缺陷**：`send()` 只清 `followups`、不清
+   `followupsLoading`，上一轮建议还没取回来时再发一条，「正在生成建议」那颗 chip 会
+   一直挂在新的流上面。`!followupsHidden` 那条**本仓已经等价**（关闭键直接清数组）。
 
-1. **`chat-thread-init-ordering`**（pending 最后一条，做完 pending 清零）。
-   要「填入并发送」这一步，而且要**先测流式取样是否稳定**（理由原文在
-   `baseline/parity-scenario-coverage.json` 的 `$pendingReasons`）。
-2. **composer 的 `autoFocus`**（wave 28 新量到，见下面第一条账）。它横跨三条路由，
-   而且会动焦点相关的既有断言，值得单独一轮。
-3. **`border-border` 基础层**（影响全仓，本来就该单独一轮）。
+   `!showSkillSuggestions` 与 `!selectedSlashSkill` 这两条只有 composer 自己看得见
+   （chip 画在 composer **外面**），所以加了一条 emit
+   `followupsSuppressedChange`。**没有照抄上游的 `onFollowupsVisibilityChange`**：
+   那个 prop 在上游全仓没有任何消费点，照抄等于搬一个死接口过来。
+
+### 四、`ArtifactFileCards` 的 CardAction（wave 28 顺手看到的账）
+
+上游 `artifact-file-list.tsx:109` 是 `<CardAction className="row-span-1 self-center">`，
+tailwind-merge 之后是 `col-start-2 row-start-1 justify-self-end row-span-1 self-center`；
+本仓那个裸 div 写的是 `row-span-2` 且**漏了 `justify-self-end``。跨一行还是两行会改
+卡片高度（按钮比标题行高）。**几何面只取 settle 锚点，这张卡片不是任何场景的锚点**，
+所以台账量不到它，补了一条单测。
+
+### wave 29 自审抓出来的（都已修）
+
+1. **新加的关闭键用例第一版恒红**：`offerFollowup` 在草稿为空时**直接发出去、
+   根本不弹框**，忘了先占住草稿，于是断言在等一个永远不会出现的对话框。
+2. **负向验证抓出一条真的假绿**：把 `@update:open` 改成空函数，全部用例照样绿——
+   关闭键与 Escape 走的是 `update:open`，而页脚那颗 Cancel 直接调
+   `resolveFollowup('cancel')`，两条路径不同。手搓副本时代根本没有 `update:open`
+   这条路，换成真 Dialog 之后它才存在，于是从来没被测过。补了一条用例，D4 转红。
+3. **`until grep -aq '...passed...'` 会被 Gateway 那句
+   `authentication is bypassed` 命中**（"bypassed" 里有 "passed"），等待循环立刻退出，
+   看起来像「命令秒完成」。要写成 `^ +[0-9]+ (passed|failed)`。
+
+### wave 29 新增的踩坑线索（记忆里编号 131~135）
+
+- **131. 一条 baseline 字段可能一行代码都没人读。** `$pendingReasons` 从这份目录
+  建起来就在，只有 scenarios.ts 的一段**注释**提过它。**判据：baseline 里每加一个
+  字段，问一句「哪一行代码读它」**；没有就补一条守卫，否则它迟早被静默改坏。
+- **132. `grep 'passed'` 会命中 `bypassed`。** 见上面自审第 3 条。
+- **133. `offerFollowup` 在草稿为空时不弹框，直接发。** 写它的用例要先占住草稿。
+- **134. 上游首次发送之后落在两个终态之间**（详见上面那张表）。**任何要在「真实提交
+  之后」取样的场景都会撞上它**，不只是这一条 pending。
+- **135. Next/Nuxt 的路由播报区会把 document.title 塞进一个 `role="alert"`。**
+  aria 快照里那行 `- alert: xxx - DeerFlow` 是**框架自带的**，不是产品标记。
+  本轮那三行 aria 抖动里有一行就是它。
+
+## 下一轮（wave 30）：四条路，挑一条
+
+`app/pages/` 下的路由已经量光，**只能从「挂着的账」里挑**。按性价比：
+
+1. **划词工具条整簇**（messages 域）。上游锚在选区上（放不下就翻转）、两颗按钮各带
+   图标、还有**第三颗关闭按钮**；本仓钉死在 `right-8 bottom-28` 的屏幕角落。
+   步骤词汇里 `select-text` **已经有了**（wave 21 加的，sidecar-chat 在用），所以
+   「需要一条取样在选中态的新场景」这句话**要当假设重新验**——很可能直接挂现成场景
+   就能取到样（夹具与 steps 不受棘轮约束）。
+2. **流式警告 toast vs 内联横幅**（上游 `core/threads/hooks.ts:1805`；本仓
+   `AgentChat.vue` 的 `warnings` 渲染成 `absolute right-4 bottom-36` 的 `<p role="status">`）。
+3. **`border-border` 基础层**（影响全仓，压不住就要拆两轮）。
+4. **`/auth/callback` 的结构性对齐**（会把 `/login` 的服务端跳转变成客户端跳转，
+   要先跑一遍上游的 e2e-auth）。
+
+另外三笔小账：**`Button` 的 as-child**、**chip 编辑区 `<span contentEditable>` vs
+`<div>`**、**词典手术**（三簇按叶子名匹配扫描器看不见的死条目 + 39 条 unused 复核）。
 
 ---
 
 ## 挂着的账（有意没修；**当假设重新验**）
-
-### composer 的 autoFocus（wave 28 新量到）
-
-probe 实测 `/workspace`（跳到 `/workspace/chats/new`）之后：
-**上游焦点落在 composer 的 textarea 上，本仓落在 `body`。**
-上游三处都传：`chat-page.tsx:413` 与 `agents/[agent_name]/chats/[thread_id]/page.tsx:404`
-是 `autoFocus={isWelcomeMode}`，`app/workspace/chats/page.tsx:88` 是裸的 `autoFocus`；
-本仓 `ChatComposer.vue` 里一个 `autofocus` 都没有。
-**台账、几何、aria 三样都看不见**（线索 127）。会动焦点顺序相关的既有断言，单独一轮。
 
 ### 只读案例页剩下的
 
@@ -278,20 +320,21 @@ probe 实测 `/workspace`（跳到 `/workspace/chats/new`）之后：
 - 401 与 5xx 两支两边**已经一致**（`/login?error=sso_failed`；本仓另外把「服务不可用」
   分出来送去 `?error=gateway_unavailable&next=…`，那是 wave 26 的既定改进）。
 
-### composer 域剩下的两条
+### 首次发送之后那一屏（wave 29 新增，**没有进台账**）
 
-- **follow-up 确认框仍是手搓副本。** 上游 `input-box.tsx:2750` 是真 `<Dialog>`
-  （portal / 焦点陷阱 / 遮罩 / Escape / DialogTitle+DialogDescription + 三个 Button）；
-  本仓 `ChatComposer.vue` 是 `absolute bottom-full` 的
-  `div[role=dialog][aria-modal=true]` + 手搓按钮，**且多渲染一段 `pendingFollowup`
-  正文（上游没有）**。本仓 `ui/dialog` 早就有了。改动会动焦点顺序与「第一个可聚焦
-  元素」的断言。**顺带把 follow-up chip 那五条缺失守卫一起做掉**：上游
-  `showFollowups`（`input-box.tsx:1965`）是
-  `!disabled && !isWelcomeMode && !showSkillSuggestions && !selectedSlashSkill &&
-  !followupsHidden && status !== "streaming" && (...)`，本仓 `AgentChat.vue` 那一处
-  只有 `!bootstrap && !isWelcomeMode && (loading || length)`。要给 ChatComposer 加一个
-  emit（上游对应 `onFollowupsVisibilityChange`）。
-- ~~模式图标与 golden-text~~ —— **wave 28 做掉了。**
+候选场景没有加，但那 10 次取样把这一屏的差异照下来了。都是**只在提交之后**
+才看得见的（第①类），现在没有任何门禁守着：
+
+- **上游那条竞态本身**：见上面「上一轮做了什么」的表。终态 A 里标签页标题永远停在
+  `Loading…`，会话流里留着一条**没去重的用户消息**。判据成立
+  （「这处不改，React 自己是不是也是坏的？」——是），但根因在 LangGraph SDK 的
+  `fetchStateHistory` 与流之间，**不是一处两边同改能收掉的东西**，本轮只记账。
+- **上游画一行 `Completed in <1s`（回合耗时），本仓不画。**
+- **本仓在用户消息上多一颗 `button "Edit and rerun"`**，上游那个位置是一颗无名按钮。
+- 播报区：上游 settle 之后是**空的**，本仓是 `New chat - DeerFlow`。**这一条不算差异**
+  ——两边都是框架自带的路由播报区（线索 135），不是产品标记。
+
+要动前两条，得先有一个稳的取样面，也就是要先等上游那条竞态。
 
 ### 跨域 / 更早挖出的
 
@@ -315,8 +358,6 @@ probe 实测 `/workspace`（跳到 `/workspace/chats/new`）之后：
 - **`Button` 的 as-child 没做**：上游 `<Button asChild>` 会把
   `data-slot`/`data-variant`/`data-size` 放到 `<a>` 上，本仓裸调 `buttonVariants()`
   只出 class。两边都 grep 过，**没有任何选择器消费它**，所以现在只是合同差异。
-- **`ArtifactFileCards` 的 CardAction 是 `row-span-2`、上游是 `row-span-1`**
-  （wave 28 顺手看到，没动）。差的是这一格在两行网格里怎么跨，没有取样点量它。
 - **run 成功结束之后退回「重新取的 checkpoint」**（跨域候选）。
 - **上游种子取数失败会弹 toast**（`hooks.ts:1839`），本仓静默降级（S8 明写 403/404 属常态）。
 - **上游 `MessageList` 的 `handleSubmitHumanInput` 在 catch 里 `toast.error`**，
@@ -368,7 +409,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 130 条在记忆文件里）
+## 其他常踩的坑（完整 135 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -389,15 +430,23 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
   提交说明里提一句抬了多少。**但 `criticalPathForbidden` 仍然守着**
   （katex / shiki / mermaid 的本体特征串不许进 critical ∪ prefetch）。
 - **后台跑长命令时不要用 `| tail`**——管道会缓冲到命令结束。直接 `> file 2>&1`。
+  等它的时候**不要 `grep -q 'passed'`**：Gateway 那句
+  `authentication is bypassed` 里就有 "passed"，等待循环会立刻退出，
+  看起来像「命令秒完成」。写成 `grep -aqE '^ +[0-9]+ (passed|failed)'`（线索 132）。
+- **baseline 里每加一个字段，先问「哪一行代码读它」。** `$pendingReasons` 挂了十几轮
+  没有任何消费者，删掉一条理由不会让任何门禁变红（线索 131；wave 29 补了守卫）。
 - **几何容差 `GEOMETRY_TOLERANCE_PX = 2` 在 `diff.spec.ts:66`，不要动。**
 - **同一时刻只能有一个后台门禁任务**（Nuxt 构建锁，线索 120）。
 
 ## 背景在哪
 
-- 每一轮的实测记录、130 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、135 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
+  `frontend-vue/tests/parity/scenario-coverage.test.ts`、
+  `frontend-vue/tests/unit/chat/followup-chip-guards.test.ts`、
+  `frontend-vue/tests/unit/composer/composer-autofocus.dom.test.ts`、
   `app/components/chat/*.vue`、`app/components/ui/command/*.vue`、
   `app/components/workspace/artifacts/ArtifactFileCards.vue`、
   `app/pages/workspace/agents/new.vue`、
