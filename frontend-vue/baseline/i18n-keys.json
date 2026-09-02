@@ -949,15 +949,11 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 26,
+  "unusedTotal": 22,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.saveRequested",
-    "artifactEditing.discardChanges",
-    "artifactEditing.runInProgress",
     "channels.connectedAs",
-    "channels.reconnect",
-    "common.editRerunWarning",
     "common.preview",
     "conversation.startConversation",
     "home.blog",

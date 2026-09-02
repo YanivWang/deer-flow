@@ -95,6 +95,26 @@ describe("留在页面里的三处状态", () => {
   });
 });
 
+/*
+  「改完重跑会丢掉这一轮之后的消息」这句提醒，上游写在编辑框与两颗按钮之间
+  （message-list-item.tsx:530）。本仓此前没有——用户按下「Update and rerun」之前
+  看不到任何关于后果的说明，而这是一个**会丢内容**的操作。
+  `common.editRerunWarning` 也因此一直躺在 unused 里（wave 35）。
+*/
+describe("编辑并重跑的提醒", () => {
+  it("warns about the consequence before the two buttons", () => {
+    const box = agentChat.slice(
+      agentChat.indexOf('v-if="editState"'),
+      agentChat.indexOf("$i18n.t.value.common.updateAndRerun"),
+    );
+    expect(box).toContain("$i18n.t.value.common.editRerunWarning");
+    // 要在两颗按钮**之前**，与上游同序：看到警告再决定按哪一颗。
+    expect(box.indexOf("editRerunWarning")).toBeLessThan(
+      box.indexOf("$i18n.t.value.common.cancel"),
+    );
+  });
+});
+
 describe("分支的两条播报", () => {
   /*
     上游 `chat-page.tsx:225` 把整段包在 try/catch 里。本仓此前一个 catch 都没有——

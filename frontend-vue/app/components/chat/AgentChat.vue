@@ -1798,6 +1798,15 @@ onUnmounted(() => {
               rows="3"
               class="border-input w-full rounded-md border p-2"
             />
+            <!--
+              「改完重跑会丢掉这一轮之后的消息」这句提醒，上游写在输入框与两颗按钮
+              之间（message-list-item.tsx:530）。本仓此前没有——用户按下
+              「Update and rerun」之前看不到任何关于后果的说明，而这是一个**会丢内容**
+              的操作。`common.editRerunWarning` 也因此一直躺在 unused 里。
+            -->
+            <p class="text-muted-foreground mt-2 text-xs">
+              {{ $i18n.t.value.common.editRerunWarning }}
+            </p>
             <div class="mt-2 flex justify-end gap-2">
               <button
                 type="button"

@@ -319,7 +319,23 @@ function updateDraft(value: string) {
   props.draftOwner.update(filepath.value, value);
 }
 
+/*
+  丢弃草稿前**先问一句**（上游 artifact-file-detail.tsx:270 的 `confirmDiscard`，
+  在 :409 切文件与 :521 点丢弃两处都过一遍）。本仓此前直接丢——用户点一下
+  「丢弃」，未保存的编辑当场没了，没有任何挽回余地。
+
+  用 `globalThis.confirm` 而不是自造一个对话框：上游就是 `window.confirm`，
+  两边同一种模态。`dirty` 为假时不问，与上游 `!isDirty ||` 那一支相同。
+*/
+function confirmDiscard() {
+  return (
+    !dirty.value ||
+    globalThis.confirm($i18n.t.value.artifactEditing.discardChanges)
+  );
+}
+
 function discard() {
+  if (!confirmDiscard()) return;
   props.draftOwner.discard(filepath.value);
   props.draftOwner.requestExitEdit(filepath.value);
   content.value = activeDraft.value.remoteContent;

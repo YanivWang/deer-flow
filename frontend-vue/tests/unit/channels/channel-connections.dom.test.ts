@@ -121,6 +121,14 @@ function mountSettings(owner = createOwner()) {
   return { owner, wrapper };
 }
 
+/*
+  连接按钮的三档文案。第三档「重新连接」是本仓 wave 35 之前缺的：上游
+  channels-settings-page.tsx:284 在连接被吊销时把「连接」换成「重新连接」，
+  本仓对已吊销的连接照样写「连接」，用户看不出这次是首次接入还是接回一条断掉的。
+
+  三档一起断言，缺一不可：只测「重新连接」那一档的话，把判据写成恒返回 reconnect
+  也是绿的。
+*/
 beforeEach(() => {
   vi.stubGlobal("useNuxtApp", () => ({
     $i18n: { t: ref(enUS) },
@@ -285,5 +293,25 @@ describe("ChannelConnections settings UI", () => {
     await wrapper.get("button").trigger("click");
     await nextTick();
     expect(wrapper.get('[role="alert"]').text()).toBe(message);
+  });
+});
+
+describe("connect button label", () => {
+  it("says reconnect only when every connection is revoked", () => {
+    const revokedOnly = createOwner(
+      [provider()],
+      [connection("connection-old", "revoked", "Old")],
+    );
+    expect(mountSettings(revokedOnly).wrapper.text()).toContain(
+      enUS.channels.reconnect,
+    );
+
+    const fresh = createOwner([provider()], []);
+    const freshText = mountSettings(fresh).wrapper.text();
+    expect(freshText).toContain(enUS.channels.connect);
+    expect(freshText).not.toContain(enUS.channels.reconnect);
+
+    // 还有活着的账号时是「添加账号」，吊销的那条不该把它顶掉。
+    expect(mountSettings().wrapper.text()).toContain(enUS.channels.addAccount);
   });
 });

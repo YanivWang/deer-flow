@@ -61,9 +61,21 @@ const emit = defineEmits<{
     <Edit3 :size="15" />
   </button>
   <template v-if="editing">
+    <!--
+      保存键**禁用时要说得出为什么**。上游 artifact-file-detail.tsx:493 把 tooltip
+      在三句之间切（跑起来了 / 冲突 / 保存），而 ArtifactAction 把 tooltip 原样写进
+      sr-only——也就是说上游这颗按钮的**可访问名**会跟着状态变。本仓此前恒为
+      "Save"：按钮灰着、读屏器只念得出「保存」，用户无从知道为什么点不动。
+    -->
     <button
       type="button"
-      :aria-label="$i18n.t.value.common.save"
+      :aria-label="
+        streaming
+          ? $i18n.t.value.artifactEditing.runInProgress
+          : conflict
+            ? $i18n.t.value.artifactEditing.conflict
+            : $i18n.t.value.common.save
+      "
       class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
       :disabled="streaming || saving || !dirty || conflict"
       @click="emit('save')"

@@ -211,12 +211,27 @@ function closeConnectDialog() {
   activeConnectProvider.value = null;
 }
 
+/*
+  连接按钮的文案。第三支「重新连接」是本仓此前缺的一档：上游
+  channels-settings-page.tsx:284 在 `connection?.status === "revoked"` 时把
+  「连接」换成「重新连接」，本仓对已吊销的连接照样写「连接」——用户看不出这次是
+  首次接入还是接回一条断掉的。`channels.reconnect` 也因此一直躺在 unused 里。
+
+  判据用 `view.connections`（与上面 addAccount 那一支同源），而不是上游那个
+  `connection`（它只看第一条）：本仓一个 provider 可以挂多个账号，
+  「还有活着的账号」优先于「有一条被吊销了」。
+*/
 function connectLabel(view: ChannelProviderView) {
-  return view.connections.some(
-    (connection) =>
-      connection.status === "connected" || connection.status === "pending",
-  )
-    ? text.value.addAccount
+  if (
+    view.connections.some(
+      (connection) =>
+        connection.status === "connected" || connection.status === "pending",
+    )
+  ) {
+    return text.value.addAccount;
+  }
+  return view.connections.some((connection) => connection.status === "revoked")
+    ? text.value.reconnect
     : text.value.connect;
 }
 </script>

@@ -23,6 +23,7 @@ import ArtifactPanel from "@/components/workspace/artifacts/ArtifactPanel.vue";
 import { useArtifactDraft } from "@/composables/useArtifactDraft";
 import { ArtifactActionError } from "@/core/artifacts/actions";
 import { ArtifactRequestError } from "@/core/artifacts/api";
+import { enUS } from "@/core/i18n/locales/en-US";
 import {
   createWorkspaceToastStore,
   workspaceToastKey,
@@ -416,10 +417,35 @@ describe("ArtifactPanel", () => {
     await flushPromises();
 
     expect(wrapper.get("[role='alert']").text()).toContain("revision changed");
+    /*
+      冲突之后保存键**改名**：上游 artifact-file-detail.tsx:493 把 tooltip 切成
+      `artifactEditing.conflict`，而 ArtifactAction 把 tooltip 原样写进 sr-only——
+      也就是这颗按钮的可访问名。本仓此前恒为 "Save"：按钮灰着、读屏器只念得出
+      「保存」，用户无从知道为什么点不动（wave 35）。
+    */
+    expect(wrapper.find("button[aria-label='Save']").exists()).toBe(false);
     expect(
-      wrapper.get("button[aria-label='Save']").attributes("disabled"),
+      wrapper
+        .get(`button[aria-label="${enUS.artifactEditing.conflict}"]`)
+        .attributes("disabled"),
     ).toBeDefined();
+    /*
+      丢弃前**要先问一句**（上游 artifact-file-detail.tsx:270 的 `confirmDiscard`）。
+      本仓此前直接丢——点一下「丢弃」，未保存的编辑当场没了。
+      先验「拒绝时草稿还在」，再验「同意时才真丢」：只测同意那一支的话，
+      把 confirm 整个删掉也是绿的。
+    */
+    const confirmSpy = vi.fn().mockReturnValue(false);
+    vi.stubGlobal("confirm", confirmSpy);
     await wrapper.get("button[aria-label='Discard changes']").trigger("click");
+    expect(confirmSpy).toHaveBeenCalledWith(
+      enUS.artifactEditing.discardChanges,
+    );
+    expect(wrapper.find("[data-testid='artifact-editor']").exists()).toBe(true);
+
+    confirmSpy.mockReturnValue(true);
+    await wrapper.get("button[aria-label='Discard changes']").trigger("click");
+    vi.unstubAllGlobals();
     expect(wrapper.find("[data-testid='artifact-editor']").exists()).toBe(
       false,
     );
@@ -443,8 +469,11 @@ describe("ArtifactPanel", () => {
     await flushPromises();
     await active.wrapper.get("button[aria-label='Edit']").trigger("click");
     await typeInEditor(active.wrapper, "blocked");
+    // 跑起来的时候名字换成「有 run 正在进行」，理由同上。
     expect(
-      active.wrapper.get("button[aria-label='Save']").attributes("disabled"),
+      active.wrapper
+        .get(`button[aria-label="${enUS.artifactEditing.runInProgress}"]`)
+        .attributes("disabled"),
     ).toBeDefined();
     expect(mocks.save).not.toHaveBeenCalled();
     active.wrapper.unmount();
