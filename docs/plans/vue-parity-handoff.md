@@ -8,10 +8,11 @@
 
 ---
 
-## 当前状态（截至 wave 24，2026-09-02）
+## 当前状态（截至 wave 25，2026-09-02）
 
-- 分支 `main-wc`。HEAD = `2fb4c55d` = wave 24（**没动 `frontend/`**）。
-- **对照台账 0 行**，38 个样本，`make -C frontend-vue e2e-parity` 46 条全绿。
+- 分支 `main-wc`。HEAD = `aac6fa42` = wave 25（**没动 `frontend/`**）。
+- **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
+- 覆盖率棘轮：covered **24**，pending **只剩 1 条**（`chat-thread-init-ordering`）。
 - **upstream marker 已推到 `3d6bb266`**。
 - 已彻底对齐的域（14 个 + settings/memory）：chat / artifacts / 会话列表 /
   scheduled-tasks / channels / integrations + 设置外壳 / mermaid / subtask-card /
@@ -19,17 +20,16 @@
   外加 **settings 域全部**（wave 22 memory 面板 74→0；wave 23 其余六个 section
   108→36；wave 24 把关于页剩下的 36 行也归 0）。
 
-> **⚠️ settings 域进不了对照取样面**（wave 22 的结构性发现，线索 107）：
-> `tests/parity/scenario-coverage.test.ts` 要求场景 id **逐字等于**
-> `frontend/tests/e2e/*.spec.ts` 的文件名，而 settings 只有 `settings-notification`
-> 一个 id 且它 pending 的理由成立。**所以这个域的「台账 0」什么都没说**——
-> 差异只能靠 probe 找、靠单测守。
+> **settings 域现在有一个取样点了**：wave 25 给 `ParityScenario` 加了枚举式夹具注入
+> （`stubs`），`settings-notification` 已从 pending 挪进 covered。**其余六个面板仍然
+> 没有合法的场景 id**（棘轮要求 id 逐字等于 React spec 文件名），它们的差异仍然只能
+> 靠 probe 找、靠单测守（线索 107）。
 
 ### 门禁实测值（wave 21 收工时逐条跑过，全绿）
 
 ```
 make -C frontend-vue verify        230 文件 / 1915 单测；词典 954 key、42 unused
-make -C frontend-vue e2e-parity    46    台账 0 行，38 样本
+make -C frontend-vue e2e-parity    47    台账 0 行，39 样本
 make -C frontend-vue e2e-mock      262 + 19 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
                                    (= protocol + real + scheduled + channels + agents + settings + shell + browser)
@@ -89,51 +89,46 @@ wave 20/21 连着两轮正面打了 ① 和 ⑦。**判据：一个域收工前�
 
 ---
 
-## 上一轮（wave 24）做了什么
+## 上一轮（wave 25）做了什么
 
-**markdown 的三个镜像**。wave 23 收工时关于页还剩 36 行，读下去发现根本不是关于页
-的事：`richContentComponents` 一直缺 `a` 与 `img`，而链接那一条是**一层安全控制**。
+**给 `ParityScenario` 加枚举式夹具注入**，把 `settings-notification` 挪进 covered。
 
-- **第一步是让台账看得见**：把 `artifact-batched-stream` 的正文换成带链接与图片的
-  一份、末尾切回 markdown 预览，台账当场报出 3 行。
-- `MarkdownImage`：外框 + 悬停遮罩 + 下载按钮 + 失败回退。
-- `MarkdownSafeLink` + `MarkdownLinkSafetyModal`：`linkSafety: {enabled:true}` 是
-  streamdown 的**内建默认**，链接渲染成 `<button>`，点击先弹确认框再 `window.open`。
-  **本仓此前是直接跳转的 `<a>`——少了一层防护**，markdown 正文是模型产出的。
-- 段落解包：独生子是 `img`（或带 `data-block` 的 `code`）时不渲染 `<p>`。
-- ArtifactPreview 覆盖 `a`（上游同样覆盖：artifact 是用户自己的文件），顺带补上
-  本仓那里缺失的**危险协议守卫**。
+```ts
+export type ParityStubs = {
+  notification?: "default" | "granted" | "denied";
+  documentFocused?: boolean;
+};
+```
 
-结果：台账仍 0 且 artifact 的 markdown 渲染树真的在样本里；关于页 36 → **0**。
+与 `routes` 同一个道理**必须是枚举值不是回调**（允许函数的话场景又能分叉）。
+实现固定在 `applyScenarioStubs`（`page.addInitScript`，goto 之前跑）。
 
-### wave 24 新增的踩坑线索（记忆里编号 113~115）
+**新场景一挂上就抓到一处真差异**：`ui/switch` 停在更旧的 shadcn 版本上
+（`h-5 w-9` = 20×36 对上游 `h-[1.15rem] w-8` = 18.4×32），台账报出 width Δ4 / x Δ-4。
+抄回上游那份，滑块位移换成 `translate-x-[calc(100%-2px)]`；`cursor-pointer` 有意保留。
 
-- **113. 两个应用都会把连续的工具步骤折叠成「1 more step」，只显示最后一条。**
-  往已有场景的消息里加工具调用之前，先想它会不会把现有 settle 锚点折叠进去。
-- **114. 一个共享镜像的缺口，可能因为「夹具里没有那种内容」而在台账上永远是 0。**
-  镜像有 N 个槽位时，问「夹具里有没有能走到每个槽位的内容」——补一条链接、一张图、
-  一个表格进夹具，比读 N 遍源码快得多。
-- **115. `onMounted` 里的「补一次判断」会把事件处理器整个遮住。** happy-dom 里
-  `<img>` 挂载后 `complete` 恒 true、`naturalWidth` 恒 0，于是直接 `trigger("error")`
-  的用例删掉 `@error` 处理器照样绿。修法是先把状态推到相反的一端再触发。
+### wave 25 新增的踩坑线索（记忆里编号 116~117）
+
+- **116. 「夹具生效了吗」要用一条只有夹具生效才成立的事实去证。** 第一版拿
+  「请求权限按钮不可见」当证据，摘掉注入照样绿——因为这个上下文里权限默认是
+  **denied**（不是 default），那颗按钮两种情况下都不出现。
+  **先把「不注入时是什么状态」量出来**，再挑锚点。
+- **117. 测试夹具里不许出现外网资源。** wave 24 的 artifact 夹具用了一张外网图，
+  而下载按钮只在图片真的加载成功后才出现——台账因此随机多出两行，**方向每次都可能
+  不同**。换成同源固定路径 + 路由夹具。
 
 ---
 
-## 下一轮（wave 25）：给 `ParityScenario` 加枚举式夹具注入
+## 下一轮（wave 26）：auth / setup / showcase
 
-把 `settings-notification` 从 pending 挪进 covered。这是 wave 22 就记下的那条独立的
-活，也是**整个 settings 域进取样面的唯一合法入口**（棘轮要求场景 id 逐字等于 React
-的 spec 文件名，settings 只有这一个 id）。
+三个域都还没 probe 过。做法照 wave 22/23：先 probe 把两边的 aria 按台账口径
+（`normalizeAriaSnapshot` + 去缩进多重集）diff 一遍，再逐簇修。
 
-它 pending 的理由写在 `baseline/parity-scenario-coverage.json` 的 `$pendingReasons`：
-要在页面加载前替换 `Notification` 与 `document.hasFocus`——那属于夹具注入而不是交互
-步骤。**注入必须是枚举式的数据**（例如 `stubs: { notification: "granted" }`），
-不能是回调，否则场景又能分叉，而那正是 `scenarios.ts` 文件头明写要防的东西。
+**先去 `baseline/parity-scenario-coverage.json` 查它们有没有对应的 React spec id**
+（线索 107）——有的话这一轮的成果能被台账直接验证，没有的话就只能靠单测守。
 
-做完之后 pending 只剩 `chat-thread-init-ordering` 一条。
-
-之后是 **auth / setup / showcase** 三个域（都还没 probe 过），以及下面「挂着的账」
-里那几笔。
+之后是下面「挂着的账」里那几笔，以及 `chat-thread-init-ordering`（pending 最后一条，
+要「填入并发送」这一步，而且要先测流式取样是否稳定）。
 
 ---
 
@@ -231,7 +226,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 看报出的行是否逐条可归因，再还原后跑一次干净的。
 （macOS 的 BSD sed 不支持 `0,/pat/`，**退出码 0 但文件一个字节没改**；用 python harness。）
 
-## 其他常踩的坑（完整 115 条在记忆文件里）
+## 其他常踩的坑（完整 117 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**216 / 214**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -256,7 +251,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、115 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、117 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
