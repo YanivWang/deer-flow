@@ -26,6 +26,10 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useI18n } from "@/core/i18n/hooks";
 import { exportMemory } from "@/core/memory/api";
 import {
+  factActionLabel,
+  truncateFactPreview,
+} from "@/core/memory/fact-labels";
+import {
   useClearMemory,
   useCreateMemoryFact,
   useDeleteMemoryFact,
@@ -255,18 +259,6 @@ function isMemorySummaryEmpty(memory: UserMemory) {
     memory.history.earlierContext.summary.trim() === "" &&
     memory.history.longTermBackground.summary.trim() === ""
   );
-}
-
-function truncateFactPreview(content: string, maxLength = 140) {
-  const normalized = content.replace(/\s+/g, " ").trim();
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
-  const ellipsis = "...";
-  if (maxLength <= ellipsis.length) {
-    return normalized.slice(0, maxLength);
-  }
-  return `${normalized.slice(0, maxLength - ellipsis.length)}${ellipsis}`;
 }
 
 function upperFirst(str: string) {
@@ -720,8 +712,8 @@ export function MemorySettingsPage() {
                               className="shrink-0"
                               onClick={() => openEditFactDialog(fact)}
                               disabled={deleteMemoryFact.isPending}
-                              title={t.common.edit}
-                              aria-label={t.common.edit}
+                              title={factActionLabel(t.common.edit, fact)}
+                              aria-label={factActionLabel(t.common.edit, fact)}
                             >
                               <PenLineIcon className="h-4 w-4" />
                             </Button>
@@ -732,8 +724,11 @@ export function MemorySettingsPage() {
                               className="text-destructive hover:text-destructive shrink-0"
                               onClick={() => setFactToDelete(fact)}
                               disabled={deleteMemoryFact.isPending}
-                              title={t.common.delete}
-                              aria-label={t.common.delete}
+                              title={factActionLabel(t.common.delete, fact)}
+                              aria-label={factActionLabel(
+                                t.common.delete,
+                                fact,
+                              )}
                             >
                               <Trash2Icon className="h-4 w-4" />
                             </Button>

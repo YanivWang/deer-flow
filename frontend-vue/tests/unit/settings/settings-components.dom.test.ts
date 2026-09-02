@@ -113,7 +113,14 @@ function selectFile(wrapper: ReturnType<typeof mount>, file: object) {
 }
 
 beforeEach(() => {
-  vi.stubGlobal("useNuxtApp", () => ({ $i18n: { t: ref(enUS) } }));
+  /*
+    locale 不能省：记忆面板用它把时间戳格式化成「about 1 month ago」
+    （core/utils/datetime 的 formatTimeAgo，与 React 逐字一致）。
+    只喂 `t` 的话组件在读 `$i18n.locale.value` 时直接抛。
+  */
+  vi.stubGlobal("useNuxtApp", () => ({
+    $i18n: { t: ref(enUS), locale: ref("en-US") },
+  }));
   vi.stubGlobal("navigateTo", vi.fn());
 });
 

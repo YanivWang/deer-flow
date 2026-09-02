@@ -167,7 +167,8 @@ test.describe.serial("real Gateway settings", () => {
     const patched = await patchedPromise;
     expect(patched.status(), await patched.text()).toBe(200);
     expect(patched.request().postDataJSON()).toEqual({ confidence: 0 });
-    await expect(page.getByText(/Confidence: 0/)).toBeVisible();
+    // 置信度只念**档位**不念数字（上游 memory-settings-page.tsx:666），0 落在 normal 档。
+    await expect(page.getByText(/Confidence: Normal/)).toBeVisible();
 
     await page.getByTestId("memory-add-fact").click();
     await page.getByTestId("memory-fact-content").fill("Real manager fact");

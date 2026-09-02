@@ -171,12 +171,17 @@ test.describe("Vue settings", () => {
     mockMemory(page);
     await openSettings(page, "memory");
 
-    await expect(page.getByTestId("memory-fact-fact-a")).toContainText(
-      "2026-08-22T00:00:00Z",
-    );
-    await expect(page.getByTestId("memory-fact-fact-a")).toContainText(
-      "Manual",
-    );
+    /*
+      元数据四项都按上游的呈现规则念：category 首字母大写、confidence 念**档位**
+      不念数字、createdAt 走 formatTimeAgo、source 是 `manual` 时念
+      manualFactSource。时间是相对量，会随今天是哪天变，所以只断言前缀。
+    */
+    const factA = page.getByTestId("memory-fact-fact-a");
+    await expect(factA).toContainText("Category: Contract");
+    await expect(factA).toContainText("Confidence: High");
+    await expect(factA).toContainText("CreatedAt:");
+    await expect(factA).not.toContainText("2026-08-22T00:00:00Z");
+    await expect(factA).toContainText("Manual");
     await page.getByTestId("memory-search").fill("not present");
     await expect(page.getByTestId("memory-no-matches")).toBeVisible();
     await expect(page.getByTestId("memory-empty")).toHaveCount(0);
@@ -295,8 +300,9 @@ test.describe("Vue settings", () => {
     expect(
       gateway.requests.find((request) => request.method === "PATCH")?.body,
     ).toEqual({ confidence: 0 });
+    // 0 落在 normal 档：上游只念档位，不念这个数字。
     await expect(page.getByTestId("memory-fact-fact-a")).toContainText(
-      "Confidence: 0",
+      "Confidence: Normal",
     );
   });
 

@@ -957,7 +957,7 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 48,
+  "unusedTotal": 42,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.createPageTitle",
@@ -990,12 +990,6 @@
     "settings.memory.editFactSuccess",
     "settings.memory.factDeleteSuccess",
     "settings.memory.importSuccess",
-    "settings.memory.markdown.historyBackground",
-    "settings.memory.markdown.overview",
-    "settings.memory.markdown.table.confidenceLevel.high",
-    "settings.memory.markdown.table.confidenceLevel.normal",
-    "settings.memory.markdown.table.confidenceLevel.veryHigh",
-    "settings.memory.markdown.userContext",
     "settings.memory.rawJson",
     "settings.notification.disableNotification",
     "sidebar.demoChats",

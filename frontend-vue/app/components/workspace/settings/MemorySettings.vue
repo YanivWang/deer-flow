@@ -8,10 +8,20 @@
 */
 
 import { computed, reactive, ref } from "vue";
+import { Download, PenLine, Plus, Trash2, Upload } from "lucide-vue-next";
 
+import { Input } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import SettingsActionDialog from "@/components/workspace/settings/SettingsActionDialog.vue";
 import SettingsSection from "@/components/workspace/settings/SettingsSection.vue";
 import { useMemory } from "@/composables/useMemory";
+import {
+  confidenceToLevelKey,
+  filterMemoryDocument,
+  summariesToMarkdown,
+  upperFirst,
+  type MemoryDocumentLabels,
+} from "@/core/memory/document";
 import {
   parseMemoryImportText,
   type MemoryImportWarning,
@@ -20,12 +30,28 @@ import type { MemoryFact, UserMemory } from "@/core/memory/types";
 import {
   buildMemoryFactCreateInput,
   buildMemoryFactPatchInput,
-  filterMemory,
   truncateMemoryFact,
   validateMemoryFactForm,
   type MemoryFactForm,
   type MemoryViewFilter,
 } from "@/core/memory/view-model";
+/*
+  ① 空小节那句 `(empty)` 是一段内联 HTML（灰掉的 `<span>`）。上游走的是
+  `streamdownPlugins`，那一档带 rehype-raw；本仓消息路径**不带**，于是 raw 节点会被
+  降级成转义文本，页面上直接显示出 `<span class="...">(empty)</span>` 这串源码。
+  artifacts 预览路径早就有这一档，直接复用。
+
+  ② `richContentComponents` 是本仓对 Streamdown 内建元素样式的镜像（ArtifactPreview
+  用的也是它）。不传它，`**粗体**` 会渲染成真的 `<strong>`——而 Streamdown 渲染的是
+  `<span class="font-semibold" data-streamdown="strong">`。两者在可访问性树上不是
+  一回事（`strong` 有自己的节点，`span` 没有），列表、行内代码、引用块同理全裸。
+*/
+import { richContentComponents } from "@/components/markdown/components";
+import { rawHtmlRehypePlugins } from "@/core/markdown/plugins";
+import { pathOfThread } from "@/core/threads/utils";
+import { formatTimeAgo } from "@/core/utils/datetime";
+
+import MessageMarkdown from "@/components/chat/MessageMarkdown.vue";
 
 interface PendingImport {
   fileName: string;
@@ -55,24 +81,75 @@ const factForm = reactive<MemoryFactForm>({
   confidence: "0.8",
 });
 
-const summaryTitles = computed(() => ({
-  workContext: t.value.settings.memory.markdown.work,
-  personalContext: t.value.settings.memory.markdown.personal,
-  topOfMind: t.value.settings.memory.markdown.topOfMind,
-  recentMonths: t.value.settings.memory.markdown.recentMonths,
-  earlierContext: t.value.settings.memory.markdown.earlierContext,
-  longTermBackground: t.value.settings.memory.markdown.longTermBackground,
-}));
+const documentLabels = computed<MemoryDocumentLabels>(() => {
+  const markdown = t.value.settings.memory.markdown;
+  return {
+    overview: markdown.overview,
+    lastUpdated: t.value.common.lastUpdated,
+    userContext: markdown.userContext,
+    work: markdown.work,
+    personal: markdown.personal,
+    topOfMind: markdown.topOfMind,
+    historyBackground: markdown.historyBackground,
+    recentMonths: markdown.recentMonths,
+    earlierContext: markdown.earlierContext,
+    longTermBackground: markdown.longTermBackground,
+    updatedAt: markdown.updatedAt,
+    empty: markdown.empty,
+  };
+});
 const visible = computed(() =>
   owner.memory.value
-    ? filterMemory(
+    ? filterMemoryDocument(
         owner.memory.value,
         query.value,
         filter.value,
-        summaryTitles.value,
+        documentLabels.value,
       )
-    : { summaries: [], facts: [], empty: false, noMatches: false },
+    : {
+        sectionGroups: [],
+        facts: [],
+        fullyEmpty: false,
+        showSummaries: false,
+        showFacts: false,
+        hasMatches: true,
+        query: "",
+      },
 );
+const summariesMarkdown = computed(() =>
+  owner.memory.value
+    ? summariesToMarkdown(
+        owner.memory.value,
+        visible.value.sectionGroups,
+        documentLabels.value,
+        $i18n.locale.value,
+      )
+    : "",
+);
+function factMeta(fact: MemoryFact) {
+  const table = t.value.settings.memory.markdown.table;
+  return {
+    category: upperFirst(fact.category),
+    confidence: table.confidenceLevel[confidenceToLevelKey(fact.confidence)],
+    createdAt: formatTimeAgo(fact.createdAt, $i18n.locale.value),
+    manual: fact.source === "manual",
+    href: pathOfThread(fact.source),
+  };
+}
+/*
+  按钮名字带上事实正文，而不是三对一模一样的 Edit / Delete（2026-09-02 两边同改）。
+  正文用与删除确认框同一个截断规则，免得一条长事实把可访问名撑成一段散文。
+*/
+function factActionLabel(action: string, fact: MemoryFact) {
+  return `${action}: ${truncateMemoryFact(fact.content)}`;
+}
+
+const FILTER_OPTIONS = ["all", "facts", "summaries"] as const;
+function filterLabel(option: MemoryViewFilter) {
+  if (option === "all") return t.value.settings.memory.filterAll;
+  if (option === "facts") return t.value.settings.memory.filterFacts;
+  return t.value.settings.memory.filterSummaries;
+}
 const pendingSummaryCount = computed(() => {
   const memory = pendingImport.value?.memory;
   if (!memory) return 0;
@@ -279,41 +356,52 @@ async function confirmDelete() {
       </p>
       <template v-else-if="owner.memory.value">
         <div class="space-y-3">
-          <div class="flex flex-col gap-2 sm:flex-row">
-            <input
+          <!--
+            上游这一行是 `<Input>` + `<ToggleGroup type="single" variant="outline">`
+            （memory-settings-page.tsx:561）。两处都换：本仓原来的 `type="search"`
+            在可访问性树里是 `searchbox`（上游是 `textbox`），三颗筛选按钮原来是裸
+            `button`（上游是单选组里的 `radio`，读屏器念得出「三选一，当前第一项」）。
+          -->
+          <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+            <Input
               v-model="query"
-              type="search"
               :placeholder="t.settings.memory.searchPlaceholder"
-              class="border-input min-w-0 flex-1 rounded-md border px-3 py-2"
+              class="min-w-0 flex-1 sm:max-w-md"
               data-testid="memory-search"
             />
-            <div class="flex gap-1" role="group">
-              <button
-                v-for="option in ['all', 'facts', 'summaries'] as const"
+            <ToggleGroup
+              :model-value="filter"
+              type="single"
+              variant="outline"
+              class="shrink-0 self-start sm:ml-auto sm:self-auto"
+              @update:model-value="
+                (value) => {
+                  if (value) filter = value as MemoryViewFilter;
+                }
+              "
+            >
+              <ToggleGroupItem
+                v-for="option in FILTER_OPTIONS"
                 :key="option"
-                type="button"
-                class="rounded-md border px-3 py-2 text-sm"
-                :class="filter === option ? 'bg-accent' : ''"
-                @click="filter = option"
+                :value="option"
+                single
+                :checked="filter === option"
+                variant="outline"
+                class="whitespace-nowrap"
               >
-                {{
-                  option === "all"
-                    ? t.settings.memory.filterAll
-                    : option === "facts"
-                      ? t.settings.memory.filterFacts
-                      : t.settings.memory.filterSummaries
-                }}
-              </button>
-            </div>
+                {{ filterLabel(option) }}
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              class="rounded-md border px-3 py-2 text-sm"
+              class="flex items-center rounded-md border px-3 py-2 text-sm"
               :disabled="owner.importDocument.isPending.value"
               data-testid="memory-import-open"
               @click="importInput?.click()"
             >
+              <Upload class="mr-2 h-4 w-4" aria-hidden="true" />
               {{ t.settings.memory.importButton }}
             </button>
             <input
@@ -326,18 +414,20 @@ async function confirmDelete() {
             />
             <button
               type="button"
-              class="rounded-md border px-3 py-2 text-sm"
+              class="flex items-center rounded-md border px-3 py-2 text-sm"
               :disabled="owner.exportDocument.isPending.value"
               @click="exportDocument"
             >
+              <Download class="mr-2 h-4 w-4" aria-hidden="true" />
               {{ t.settings.memory.exportButton }}
             </button>
             <button
               type="button"
-              class="rounded-md border px-3 py-2 text-sm"
+              class="flex items-center rounded-md border px-3 py-2 text-sm"
               data-testid="memory-add-fact"
               @click="openCreateFact"
             >
+              <Plus class="mr-2 h-4 w-4" aria-hidden="true" />
               {{ t.settings.memory.addFact }}
             </button>
             <button
@@ -361,94 +451,135 @@ async function confirmDelete() {
         </div>
 
         <p
-          v-if="visible.empty"
-          class="text-muted-foreground rounded-md border border-dashed p-4 text-sm"
+          v-if="visible.fullyEmpty"
+          class="text-muted-foreground rounded-lg border border-dashed p-4 text-sm"
           data-testid="memory-empty"
         >
           {{ t.settings.memory.memoryFullyEmpty }}
         </p>
         <p
-          v-else-if="visible.noMatches"
-          class="text-muted-foreground rounded-md border border-dashed p-4 text-sm"
+          v-if="!visible.hasMatches && visible.query"
+          class="text-muted-foreground rounded-lg border border-dashed p-4 text-sm"
           data-testid="memory-no-matches"
         >
           {{ t.settings.memory.noMatches }}
         </p>
 
+        <!--
+          摘要区是**一份 markdown 文档**，不是一叠卡片（上游 memory-settings-page.tsx:637
+          把六个小节拼成 `## / ### / > 引用 / ---` 再交给 SafeStreamdown）。本仓原来是
+          六张手写 `<article>`：没有分组标题、没有引用块、时间是裸 ISO，而且**空小节
+          直接被过滤掉**——用户看不出「个人上下文」是没有内容还是这个功能不存在。
+        -->
         <div
-          v-if="filter !== 'facts' && visible.summaries.length"
-          class="space-y-3"
+          v-if="visible.showSummaries"
+          class="min-w-0 rounded-lg border p-4"
+          data-testid="memory-summary"
         >
-          <p class="text-muted-foreground text-sm">
+          <div class="text-muted-foreground mb-4 text-sm">
             {{ t.settings.memory.summaryReadOnly }}
-          </p>
-          <article
-            v-for="entry in visible.summaries"
-            :key="entry.key"
-            class="rounded-md border p-3"
-            data-testid="memory-summary"
-          >
-            <h3 class="font-medium">{{ entry.title }}</h3>
-            <p class="mt-1 text-sm whitespace-pre-wrap">{{ entry.summary }}</p>
-            <p
-              v-if="entry.updatedAt"
-              class="text-muted-foreground mt-2 text-xs"
-            >
-              {{ t.common.lastUpdated }}: {{ entry.updatedAt }}
-            </p>
-          </article>
+          </div>
+          <MessageMarkdown
+            :content="summariesMarkdown"
+            :components="richContentComponents"
+            :rehype-plugins="rawHtmlRehypePlugins"
+            class="size-full min-w-0"
+          />
         </div>
 
-        <div v-if="filter !== 'summaries'" class="space-y-2">
-          <h3 class="font-medium">{{ t.settings.memory.markdown.facts }}</h3>
+        <!--
+          事实行的次序是**元数据在上、正文在下**（上游 memory-settings-page.tsx:665）。
+          本仓原来倒过来，并且四项元数据全是原样：category 不首字母大写、confidence
+          念的是 `0.92` 这个数字而不是「Very high」这个档位、createdAt 是裸 ISO、
+          source 是 `conversation` 这种内部值而不是一条能点进去的链接。
+        -->
+        <div v-if="visible.showFacts" class="min-w-0 rounded-lg border p-4">
+          <div class="mb-4">
+            <h3 class="text-base font-medium">
+              {{ t.settings.memory.markdown.facts }}
+            </h3>
+          </div>
           <p
-            v-if="visible.facts.length === 0 && !visible.noMatches"
+            v-if="visible.facts.length === 0"
             class="text-muted-foreground text-sm"
           >
-            {{ t.settings.memory.noFacts }}
+            {{
+              visible.query
+                ? t.settings.memory.noMatches
+                : t.settings.memory.noFacts
+            }}
           </p>
-          <article
-            v-for="fact in visible.facts"
-            :key="fact.id"
-            class="flex items-start justify-between gap-3 rounded-md border p-3"
-            :data-testid="`memory-fact-${fact.id}`"
-          >
-            <div class="min-w-0">
-              <p class="text-sm break-words">{{ fact.content }}</p>
-              <p class="text-muted-foreground mt-1 text-xs">
-                {{ t.settings.memory.markdown.table.category }}:
-                {{ fact.category }} ·
-                {{ t.settings.memory.factConfidenceLabel }}:
-                {{ fact.confidence }} ·
-                {{ t.settings.memory.markdown.table.createdAt }}:
-                {{ fact.createdAt || "-" }} ·
-                {{ t.settings.memory.markdown.table.source }}:
-                {{
-                  fact.source === "manual"
-                    ? t.settings.memory.manualFactSource
-                    : fact.source
-                }}
-              </p>
+          <div v-else class="space-y-3">
+            <div
+              v-for="fact in visible.facts"
+              :key="fact.id"
+              class="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-start sm:justify-between"
+              :data-testid="`memory-fact-${fact.id}`"
+            >
+              <div class="min-w-0 space-y-2 [overflow-wrap:anywhere]">
+                <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <span>
+                    <span class="text-muted-foreground"
+                      >{{ t.settings.memory.markdown.table.category }}:</span
+                    >
+                    {{ factMeta(fact).category }}
+                  </span>
+                  <span>
+                    <span class="text-muted-foreground"
+                      >{{ t.settings.memory.markdown.table.confidence }}:</span
+                    >
+                    {{ factMeta(fact).confidence }}
+                  </span>
+                  <span>
+                    <span class="text-muted-foreground"
+                      >{{ t.settings.memory.markdown.table.createdAt }}:</span
+                    >
+                    {{ factMeta(fact).createdAt }}
+                  </span>
+                  <span>
+                    <span class="text-muted-foreground"
+                      >{{ t.settings.memory.markdown.table.source }}:</span
+                    >
+                    <template v-if="factMeta(fact).manual">
+                      {{ t.settings.memory.manualFactSource }}
+                    </template>
+                    <NuxtLink
+                      v-else
+                      :to="factMeta(fact).href"
+                      class="text-primary underline-offset-4 hover:underline"
+                    >
+                      {{ t.settings.memory.markdown.table.view }}
+                    </NuxtLink>
+                  </span>
+                </div>
+                <p class="text-sm [overflow-wrap:anywhere]">
+                  {{ fact.content }}
+                </p>
+              </div>
+              <div class="flex shrink-0 items-center gap-1 self-start sm:ml-3">
+                <button
+                  type="button"
+                  class="hover:bg-accent flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md disabled:pointer-events-none disabled:opacity-50"
+                  :disabled="owner.remove.isPending.value"
+                  :title="factActionLabel(t.common.edit, fact)"
+                  :aria-label="factActionLabel(t.common.edit, fact)"
+                  @click="openEditFact(fact)"
+                >
+                  <PenLine class="h-4 w-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  class="text-destructive hover:bg-accent flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md disabled:pointer-events-none disabled:opacity-50"
+                  :disabled="owner.remove.isPending.value"
+                  :title="factActionLabel(t.common.delete, fact)"
+                  :aria-label="factActionLabel(t.common.delete, fact)"
+                  @click="openDelete(fact)"
+                >
+                  <Trash2 class="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
             </div>
-            <div class="flex shrink-0 gap-2">
-              <button
-                type="button"
-                class="text-sm underline"
-                :aria-label="`${t.common.edit}: ${fact.content}`"
-                @click="openEditFact(fact)"
-              >
-                {{ t.common.edit }}
-              </button>
-              <button
-                type="button"
-                class="text-sm text-red-600 underline"
-                :aria-label="`${t.common.delete}: ${fact.content}`"
-                @click="openDelete(fact)"
-              >
-                {{ t.common.delete }}
-              </button>
-            </div>
-          </article>
+          </div>
         </div>
       </template>
       <p v-else class="text-muted-foreground text-sm">
