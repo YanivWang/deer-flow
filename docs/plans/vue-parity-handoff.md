@@ -8,19 +8,26 @@
 
 ---
 
-## 当前状态（截至 wave 21，2026-09-02）
+## 当前状态（截至 wave 22，2026-09-02）
 
-- 分支 `main-wc`。HEAD = `132cd0bb`（marker chore），`ac7df53f` = wave 21。
+- 分支 `main-wc`。HEAD = `d486da57`（marker chore），`fefda8ba` = wave 22。
 - **对照台账 0 行**，38 个样本，`make -C frontend-vue e2e-parity` 46 条全绿。
-- **upstream marker 已推到 `ac7df53f`**。
-- 已彻底对齐的域（14 个）：chat / artifacts / 会话列表 / scheduled-tasks / channels /
-  integrations + 设置外壳 / mermaid / subtask-card / workspace 头部 / sidebar /
-  messages / sidecar / browser / **composer**。
+- **upstream marker 已推到 `fefda8ba`**。
+- 已彻底对齐的域（14 个 + settings/memory）：chat / artifacts / 会话列表 /
+  scheduled-tasks / channels / integrations + 设置外壳 / mermaid / subtask-card /
+  workspace 头部 / sidebar / messages / sidecar / browser / composer，
+  外加 **settings 域的 memory 面板**（wave 22）。
+
+> **⚠️ settings 域进不了对照取样面**（wave 22 的结构性发现，线索 107）：
+> `tests/parity/scenario-coverage.test.ts` 要求场景 id **逐字等于**
+> `frontend/tests/e2e/*.spec.ts` 的文件名，而 settings 只有 `settings-notification`
+> 一个 id 且它 pending 的理由成立。**所以这个域的「台账 0」什么都没说**——
+> 差异只能靠 probe 找、靠单测守。
 
 ### 门禁实测值（wave 21 收工时逐条跑过，全绿）
 
 ```
-make -C frontend-vue verify        225 文件 / 1870 单测；词典 953 key、48 unused
+make -C frontend-vue verify        228 文件 / 1894 单测；词典 953 key、42 unused
 make -C frontend-vue e2e-parity    46    台账 0 行，38 样本
 make -C frontend-vue e2e-mock      262 + 19 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
@@ -29,8 +36,11 @@ make -C frontend-vue e2e-visual    8     **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **209**（总 211）。动了 `frontend/` 再加
-`python3 scripts/pnpm.py --dir frontend check` / `test`（1010）/ `test:e2e`（**146**）。
+产品 SFC **211**（总 213）。动了 `frontend/` 再加
+`python3 scripts/pnpm.py --dir frontend check` / `test`（1015）/ `test:e2e`（**146**）。
+**`frontend/tests/e2e/landing.spec.ts:61` 是一条既有的负载抖动**（`locator.boundingBox`
+等动画区的 `.max-w-6xl`），wave 20/21/22 都遇到过。判据：先证你这一轮改的东西
+进不了落地页 bundle，再谈负载。
 
 ### 开工前必查
 
@@ -54,8 +64,9 @@ ls frontend/.next/BUILD_ID frontend-vue/.output/server/index.mjs frontend-vue/.o
    NEW 和 GONE 都必须是 0。新增场景时基线加一条**五个数组全空**的记录。
 2. **归一化/取样规则只能因为实测而增加。** 每一条都在抹掉信息。
 3. **不要靠重跑收工。** 「偶尔红」先当真缺陷查——先证因果够不着，再谈负载。
-4. **「本仓可能更好」的一律先问用户。** wave 17/18/20/21 各问过一次，
-   **答案从来不是预设的那个。**
+4. **「本仓可能更好」的取舍自己定，不要中途提问**（2026-09-02 用户明确）。
+   判据仍是「这处不改，React 自己是不是也是坏的？」，但把选了哪边、代价是什么
+   **单独列进提交说明的一节**。
 
 ### 边界
 
@@ -77,56 +88,66 @@ wave 20/21 连着两轮正面打了 ① 和 ⑦。**判据：一个域收工前�
 
 ---
 
-## 上一轮（wave 21）做了什么
+## 上一轮（wave 22）做了什么
 
-**斜杠建议整簇**，composer 域最后一块硬骨头。8 行台账差异 + 七条行为分叉。
+**settings 域第一刀：记忆面板**。probe 打开 `?settings=memory` 量到 **74 行**差异，
+做完 **0 行**（且 markdown 区两边 HTML 逐字节相同）。
 
-- 新模块 `frontend-vue/app/core/skills/slash-suggestions.ts`（查询解析 + 四条匹配判据）
-  与 `app/core/threads/builtin-command.ts`（`isCompleteBuiltinCommand`，两个消费者共用）。
-- 展开态挂进 `sidebar` 场景的 `steps`。**这个场景不能有 click 步骤**——活动项现在
-  两边都跟指针走，Playwright 的虚拟指针会停在上一步点过的地方。
-- 两处两边同改（用户拍板）：打全的内建命令 Enter 直接执行；给内建命令预留名额
-  （上游 ≥6 个启用技能时 `/goal`/`/compact` 会从列表里彻底消失）。
-- 负向验证 36 条全红，其中两条第一次是假绿（见下面的新线索）。
+- 摘要区从六张手写 `<article>` 改成**一份 markdown 文档**（`## / ### / > 引用 / ---`），
+  新增 `app/core/memory/document.ts` 照抄上游四个纯函数。
+- 空小节不再被过滤，写成灰掉的 `(empty)`；时间从裸 ISO 改成 `formatTimeAgo`
+  （新增 `app/core/utils/datetime.ts`，`threads/updated-time` 改成在它之上只加
+  「缺时间返回 null」这一条会话列表语义）。
+- 事实行四项元数据按上游规则呈现（category 首字母大写、confidence 念**档位**、
+  createdAt 相对时间、source 是能点进会话的链接），次序改成元数据在上。
+- 筛选改成单选组（新增 L2 `ui/toggle-group`），搜索框改回 `textbox`。
+- **两边同改**：事实行图标按钮改成带正文的可访问名（上游一页三对同名按钮）。
 
-### wave 21 新增的踩坑线索（记忆里编号 104~106）
+### wave 22 新增的踩坑线索（记忆里编号 107~109）
 
-- **104. probe 自己会被自己前面的步骤污染。** 一页跑多个交互态时，前一步留下的
-  持久状态（例如 dismiss 记的那行文本）会让后一步量出假结论。
-  **每测一种交互态换一个 fresh context。**
-- **105. `@vue/test-utils` 的 `trigger()` 对 disabled 元素静默不做事。**
-  「禁用态下不该发生 X」的用例如果路径要经过 `trigger()`，会假绿。
-  改成「先开着、把状态做出来、再 `setProps({disabled:true})`」。
-- **106. 元素被 `v-if` 换掉时不派发 blur**，焦点标志会停在上一个元素留下的 true 上。
-  给互斥的两个元素挂同一个标志时，A/B 两半都要断言。
+- **107. 一个域可能*结构上*进不了取样面。** 开工一个新域之前，先去
+  `baseline/parity-scenario-coverage.json` 查它有没有 id；没有的话这一轮从头到尾
+  都只能靠 probe 找差异、靠单测守。
+- **108. 调用点漏传 `components` / rehype 插件，会同时丢掉可访问性树形与全部样式，
+  而且是静默的。** 新接一个 markdown 调用点时先看现有调用点传了什么：
+  `MessageList` 传 `messageMarkdownComponents`、`ArtifactPreview` 传
+  `richContentComponents`，两者都不是默认值；内联 HTML 还需要 `rawHtmlRehypePlugins`。
+- **109. `flushPromises` 等不到 `defineAsyncComponent` 的动态 import**（它只冲微任务）。
+  用 `vi.waitFor`。顺带：变异 harness 的落地判据写成 `back.count(old) != 0` 时，
+  **追加式变异**会被恒误判成没落地。
 
 ---
 
-## 下一轮（wave 22）：settings 其余 section
+## 下一轮（wave 23）：settings 其余六个 section
 
-**composer 域已收工**，只剩两条明确判定为「台账测不到、各自需要单独一轮」的账
-（见下面「挂着的账」）。
+`account / appearance / notification / tools / skills / about`。做法照 wave 22：
+**先 probe** 打开 `?settings=<section>`，把两边的 aria 按台账口径
+（`normalizeAriaSnapshot` + 去缩进多重集）diff 一遍，再逐簇修，靠单测守。
 
-### 入口
-
-`settings.memory.markdown.*` **七条 unused 词条，已核实是真缺 UI**：
-上游 `frontend/src/components/workspace/settings/memory-settings-page.tsx:153-200`
-用 `historyBackground` / `overview` / `userContext` / `rawJson` + 三个
-`table.confidenceLevel.*` **拼一份 markdown** 再渲染；本仓 `MemorySettings.vue`
-是另一套结构。
-
-### 域的全貌
-
-六个面板（account / appearance / notification / tools / skills / memory）内部都还是
-自己长的结构：裸 `<h2>`、手搓按钮、没有 shadcn primitive。about 两边差最远——
-React 是一份 markdown 走 SafeStreamdown，本仓是手写 article。
-**外壳部分 wave 6 已经做完**，`make e2e-settings` 覆盖生产路径。
+**about 两边差最远**——React 是一份 markdown 走 SafeStreamdown，本仓是手写 article。
+wave 22 已经把 markdown 适配器接进设置面板了（`MessageMarkdown` +
+`richContentComponents` + `rawHtmlRehypePlugins`），about 直接照抄这套即可。
 
 之后是 auth / setup / showcase。
+
+### 另一条独立的、值钱的活
+
+给 `ParityScenario` 加**枚举式**夹具注入（不能是回调，否则场景又能分叉），
+把 `settings-notification` 从 pending 挪进 covered——那是整个 settings 域进取样面的
+**唯一合法入口**，也会让 pending 清单第一次缩到只剩一条。
+它 pending 的理由写在 `baseline/parity-scenario-coverage.json` 的 `$pendingReasons`：
+要在页面加载前替换 `Notification` 与 `document.hasFocus`。
 
 ---
 
 ## 挂着的账（有意没修；**当假设重新验**）
+
+### settings 域剩下的
+
+- **六个面板内部仍是自己长的结构**：裸 `<h2>`、手搓按钮、没有 shadcn primitive。
+  about 差最远（见「下一轮」）。
+- **`settings.memory.*` 剩下的六条 unused 全部核实为「上游自己也零消费」**
+  （`rawJson` 与五条 `*Success`）——**不是缺 UI**，与 `inputBox.voiceInputStop` 同类。
 
 ### composer 域剩下的两条
 
@@ -214,12 +235,13 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 看报出的行是否逐条可归因，再还原后跑一次干净的。
 （macOS 的 BSD sed 不支持 `0,/pat/`，**退出码 0 但文件一个字节没改**；用 python harness。）
 
-## 其他常踩的坑（完整 106 条在记忆文件里）
+## 其他常踩的坑（完整 109 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
-  「N 个产品 SFC」（**211 / 209**）、`tests/unit/i18n/source-guard.test.ts` 的
-  `toHaveLength(209)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
-  （**953 / 48**）——改 i18n 后跑 `make i18n-refresh`，那两句话也要一起改。
+  「N 个产品 SFC」（**213 / 211**）、`tests/unit/i18n/source-guard.test.ts` 的
+  `toHaveLength(211)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
+  （**953 / 42**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
+  「N 个已审阅 unused key」也要一起改。
 - **新增 L2 组件要加进 `tests/architecture.test.ts` 的 `l2Files` 允许清单**
   （要有 `【架构位置】 L2` 头、不许 import 产品层——`@/composables`、`#app`、`#imports`
   都是禁的，所以 L2 primitive 不能自己取 i18n，标签由调用点传）。清单按字母序。
@@ -238,7 +260,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、106 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、109 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
