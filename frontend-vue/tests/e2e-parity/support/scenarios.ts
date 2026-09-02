@@ -733,9 +733,11 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       （标题读错词条、副标题整行不存在、空状态那一支根本没写），正是它们把
       SidecarPanel.vue 的四处分叉逼出来的。
 
-      工具条本身**不在取样里**：两个应用点完之后都会把选区清掉
+      工具条本身**不在这条场景的取样里**：两个应用点完之后都会把选区清掉
       （React setSelectionToolbar(null) / 本仓 selection.value = null），
-      所以稳定态里没有它。它自身的差异见提交说明里「台账测不到」那一节。
+      所以稳定态里没有它。**这条场景的 steps 不要动**——wave 30 要取工具条的样，
+      是另起一条不带 click 的 select-text 挂在 streaming-reasoning-order 上，
+      而不是把这一条的最后一步删掉：这一条守的是点完之后的面板。
     */
     id: "sidecar-chat",
     title: "划词开启 side chat 的草稿态",
@@ -1568,6 +1570,31 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       {
         kind: "visible",
         target: { text: "I am DeerFlow, an open-source super agent." },
+      },
+    ],
+    /*
+      划词工具条的**选中态**挂在这里。
+
+      交接文档从 wave 21 起写着「要守住它需要一条取样在选中态的**新场景**」。
+      wave 30 把这句当假设重新验，结论是**不需要**：`select-text` 这条步骤 wave 21
+      就有了，挡路的是 `sidecar-chat` 的最后一步——它在 select-text 之后紧接着
+      click，而两个应用都在那次点击里把选区清掉，于是稳定态里根本没有工具条
+      （scenarios 里那段注释说的就是这件事）。**不点**就取得到。
+
+      挂在这条场景上，是因为它是一屏**已经结束**的会话（避开线索 134：首次发送
+      之后上游在两个终态之间抛硬币），锚点只有正文那一行，而 sampleGeometry 只量
+      settle 里的锚点，加一步不动几何面；请求面也不动（select-text 不发请求）。
+
+      实测（2026-09-02，加步骤之前）：这一屏 aria 差 **1 行**——上游多一颗
+      `button "Close"`。位置差得远得多（上游 367,197 / 本仓 955,642），但那是几何，
+      而工具条不是 settle 锚点，台账天生量不到；位置与翻转由
+      tests/unit/chat/selection-toolbar.dom.test.ts 守。
+    */
+    steps: [
+      {
+        kind: "select-text",
+        scope: { testId: "main-message-list" },
+        text: "I am DeerFlow, an open-source super agent.",
       },
     ],
   },

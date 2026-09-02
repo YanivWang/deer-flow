@@ -19,7 +19,13 @@ import {
   watch,
   type ComponentPublicInstance,
 } from "vue";
-import { CheckCircle2, Clock3, Wrench } from "lucide-vue-next";
+import {
+  CheckCircle2,
+  Clock3,
+  MessageCircle,
+  MessageSquarePlus,
+  Wrench,
+} from "lucide-vue-next";
 
 import AssistantTurnActions from "@/components/chat/AssistantTurnActions.vue";
 import HumanTurnActions from "@/components/chat/HumanTurnActions.vue";
@@ -37,6 +43,7 @@ import { MARKDOWN_LINK_CONTEXT } from "@/components/chat/markdown-link-context";
 import ArtifactFileCards from "@/components/workspace/artifacts/ArtifactFileCards.vue";
 import WorkspaceChangesBadge from "@/components/workspace/changes/WorkspaceChangesBadge.vue";
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
+import { Button } from "@/components/ui/button";
 import { richContentComponents } from "@/components/markdown/components";
 import {
   buildWriteFileArtifactURL,
@@ -78,6 +85,7 @@ import type { Subtask } from "@/core/tasks/types";
 import type { Message } from "@/core/types/message";
 import { readReferenceMessageContexts } from "@/core/sidecar";
 import { writeTextToClipboard } from "@/core/clipboard";
+import { cn } from "@/lib/utils";
 
 const props = withDefaults(
   defineProps<{
@@ -129,6 +137,20 @@ type SelectionPayload = {
   message: Message;
   selectedText: string;
   displayIndex: number;
+};
+/*
+  划词工具条的状态：引用内容 + 它锚在屏幕上的哪里。
+
+  上游 message-list.tsx 的 SelectionToolbarState 是同一个形状（context + x/y/
+  placement）。位置必须进状态而不是留在 CSS 里：工具条锚的是**选区**，
+  而选区的位置只有 mouseup 那一刻的 Range 知道。
+*/
+type SelectionToolbarState = SelectionPayload & {
+  /** 选区中线的视口 x；工具条自己再 -translate-x-1/2 居中。 */
+  x: number;
+  /** 选区上沿（placement top）或下沿（placement bottom）加上边距后的视口 y。 */
+  y: number;
+  placement: "top" | "bottom";
 };
 const pendingHumanInputs = ref(new Set<string>());
 const copiedMessage = ref<string | null>(null);
@@ -274,7 +296,7 @@ const scroller = ref<HTMLElement | null>(null);
 const historySentinel = ref<HTMLElement | null>(null);
 const windowStart = ref<number | null>(null);
 const followingTail = ref(true);
-const selection = ref<SelectionPayload | null>(null);
+const selection = ref<SelectionToolbarState | null>(null);
 let userScrollIntent = false;
 let contentResizeObserver: ResizeObserver | undefined;
 let historyObserver: IntersectionObserver | undefined;
@@ -285,6 +307,13 @@ let retainFollowUntil = 0;
 const VIRTUAL_WINDOW_SIZE = 50;
 const ESTIMATED_GROUP_HEIGHT_PX = 80;
 const RETAIN_FOLLOW_DURATION_MS = 350;
+const SELECTION_TOOLBAR_MARGIN = 8;
+/*
+  工具条渲染出来的大概高度（p-1 内边距 + h-8 的按钮）。只用来判断选区上方放不放得下，
+  所以不需要精确值——放不下就翻到选区下方。两个常量与上游
+  message-list.tsx:146/150 逐字相同。
+*/
+const SELECTION_TOOLBAR_ESTIMATED_HEIGHT = 48;
 
 const renderedGroups = computed(() => {
   if (groups.value.length <= 80)
@@ -555,31 +584,99 @@ function requestHistoryLoad() {
   stopFollowingTail();
   emit("loadMoreHistory");
 }
-function onSelection(index: number) {
-  if (!props.selectionMode) return;
-  const selectedText = globalThis.getSelection?.()?.toString().trim() ?? "";
-  if (!selectedText) {
+/*
+  划词工具条的入口。对齐 message-list.tsx:649 的 handleAssistantTextSelection。
+
+  **只有 `assistant` 组、且组里那条是 ai 消息，才起工具条。** 上游是靠**在哪儿绑**
+  表达这条判据的：`group.type !== "assistant" || msg.type !== "ai"` 时那层
+  onMouseUp 根本不挂（message-list.tsx:1058）。本仓把处理器挂在组容器上，所以同一条
+  判据写在函数开头——两种写法的可观察行为相同，而组容器正好就是上游要
+  `closest("[data-assistant-turn]")` 才拿得到的那个元素。实测这一条：在人类消息上
+  划词，上游一个工具条都不出，本仓出（对照 probe 的 human 变体 onlyVue 2 行）。
+  `assistant` 组恒定只有一条消息（core/messages/utils.ts:198，与上游同构），
+  所以直接取 messages[0]，不用再猜是哪一条。
+
+  **按包含关系判定归属，不按正文子串。** 此前这里拿 `text(candidate).includes()`
+  找消息，机制上比上游窄一档：`text()` 给的是 markdown **源码**，而选区里是**渲染
+  之后**的文字。一段跨越行内标记的选区（`this is **bold** text` 上选
+  "is bold te"）在源码里根本不是子串，于是本仓静默不弹工具条，而上游只看
+  anchor/focus 两个节点在不在这一轮里，照弹不误。
+*/
+function onSelection(event: MouseEvent, index: number) {
+  if (!props.selectionMode || props.streaming) return;
+  const group = groups.value[index];
+  if (group?.type !== "assistant") return;
+  const message = group.messages[0];
+  if (!message || message.type !== "ai") return;
+
+  const domSelection = globalThis.getSelection?.();
+  const selectedText = domSelection?.toString().trim() ?? "";
+  if (
+    !domSelection ||
+    domSelection.isCollapsed ||
+    !selectedText ||
+    domSelection.rangeCount === 0
+  ) {
     selection.value = null;
     return;
   }
-  const message = [...(groups.value[index]?.messages ?? [])]
-    .reverse()
-    .find(
-      (candidate) =>
-        (candidate.type === "human" || candidate.type === "ai") &&
-        text(candidate).includes(selectedText),
-    );
-  selection.value = message
-    ? { message, selectedText, displayIndex: index + 1 }
-    : null;
+  const { anchorNode, focusNode } = domSelection;
+  if (!anchorNode || !focusNode) return;
+  const turn = event.currentTarget as HTMLElement | null;
+  if (!turn?.contains(anchorNode)) return;
+  if (!turn.contains(focusNode)) {
+    /*
+      选区漏到了别的轮次里，引用会有歧义。上游在这里额外 toast 一句 sidecar 下的
+      selectionCrossesMessages（**带点写会让 i18n 的 unused 扫描器把它算成有人用**，
+      线索 126）；本仓与「上游 toast、本仓静默」那一簇
+      （threads/hooks.ts 的流式警告、handleSubmitHumanInput 的 catch）一起等
+      那一轮统一处理，所以这里只做同样的**不弹工具条**。
+    */
+    selection.value = null;
+    return;
+  }
+
+  /*
+    工具条带着 `-translate-y-full`，锚在 rect.top 时会被它自己的高度顶上去；
+    选区贴近视口顶端时上方放不下，就翻到选区下方，保证两颗按钮都够得着
+    （上游 #3551）。
+  */
+  const rect = domSelection.getRangeAt(0).getBoundingClientRect();
+  const fitsAbove =
+    rect.top - SELECTION_TOOLBAR_MARGIN - SELECTION_TOOLBAR_ESTIMATED_HEIGHT >=
+    0;
+  selection.value = {
+    message,
+    selectedText,
+    displayIndex: index + 1,
+    x: rect.left + rect.width / 2,
+    y: fitsAbove
+      ? rect.top - SELECTION_TOOLBAR_MARGIN
+      : rect.bottom + SELECTION_TOOLBAR_MARGIN,
+    placement: fitsAbove ? "top" : "bottom",
+  };
 }
 function onKey(event: KeyboardEvent) {
   if (event.key === "Escape") selection.value = null;
 }
+/*
+  滚动就收起。工具条是 fixed 且按 mouseup 那一刻的视口坐标锚定的，页面一滚它就与
+  被引用的那段文字脱节。上游同样在 window 上用**捕获**阶段听（message-list.tsx:643），
+  捕获是必需的：真正在滚的是会话流那个容器，scroll 事件不冒泡到 window。
+*/
+function onSelectionScroll() {
+  if (selection.value) selection.value = null;
+}
 function dispatchSelection(action: "ask" | "add") {
-  if (!selection.value) return;
-  if (action === "ask") emit("selectionAsk", selection.value);
-  else emit("selectionAdd", selection.value);
+  const current = selection.value;
+  if (!current) return;
+  const payload: SelectionPayload = {
+    message: current.message,
+    selectedText: current.selectedText,
+    displayIndex: current.displayIndex,
+  };
+  if (action === "ask") emit("selectionAsk", payload);
+  else emit("selectionAdd", payload);
   selection.value = null;
   globalThis.getSelection?.()?.removeAllRanges();
 }
@@ -850,9 +947,11 @@ watch(historySentinel, (element, previous) => {
 });
 onMounted(() => {
   globalThis.addEventListener("keydown", onKey);
+  globalThis.addEventListener("scroll", onSelectionScroll, true);
 });
 onUnmounted(() => {
   globalThis.removeEventListener("keydown", onKey);
+  globalThis.removeEventListener("scroll", onSelectionScroll, true);
   contentResizeObserver?.disconnect();
   historyObserver?.disconnect();
   if (followAnimationFrame !== undefined) {
@@ -959,7 +1058,7 @@ onUnmounted(() => {
                 ? 'is-user group bg-secondary relative ml-auto w-fit max-w-full rounded-lg px-4 py-3 whitespace-pre-wrap'
                 : 'group relative w-full'
             "
-            @mouseup="onSelection(entry.index)"
+            @mouseup="onSelection($event, entry.index)"
           >
             <ProcessingMessageGroup
               v-if="entry.group.type === 'assistant:processing'"
@@ -1327,26 +1426,61 @@ onUnmounted(() => {
         {{ actionError }}
       </p>
     </div>
+    <!--
+      划词工具条。锚在**选区**上（上游 message-list.tsx:1328），不是屏幕角落：
+      此前这里是 `right-8 bottom-28`，实测同一段选区上游画在 (367,197)、本仓画在
+      (955,642)——引用的是哪一段完全看不出来。
+
+      三颗按钮都要 `@mousedown.prevent`：默认的 mousedown 会先把选区折叠掉，
+      工具条上的高亮随之消失，看起来像点错了。上游三颗也都写了。
+    -->
     <div
       v-if="selection"
       data-sidecar-selection-toolbar
-      class="bg-background fixed right-8 bottom-28 z-50 flex gap-1 rounded-md border p-1 shadow"
+      :class="
+        cn(
+          'bg-popover text-popover-foreground border-border fixed z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border p-1 shadow-lg',
+          selection.placement === 'bottom'
+            ? 'translate-y-0'
+            : '-translate-y-full',
+        )
+      "
+      :style="{ left: `${selection.x}px`, top: `${selection.y}px` }"
     >
-      <button
+      <Button
+        class="h-8 rounded-full px-2.5 text-xs"
+        size="sm"
         type="button"
-        class="hover:bg-accent rounded px-3 py-2 text-sm"
+        variant="ghost"
         @click="dispatchSelection('add')"
+        @mousedown.prevent
       >
+        <MessageCircle class="size-3.5" />
         {{ $i18n.t.value.sidecar.addToConversation }}
-      </button>
-      <button
+      </Button>
+      <Button
         v-if="selectionMode === 'main'"
+        class="h-8 rounded-full px-2.5 text-xs"
+        size="sm"
         type="button"
-        class="hover:bg-accent rounded px-3 py-2 text-sm"
+        variant="ghost"
         @click="dispatchSelection('ask')"
+        @mousedown.prevent
       >
+        <MessageSquarePlus class="size-3.5" />
         {{ $i18n.t.value.sidecar.askInSideChat }}
-      </button>
+      </Button>
+      <Button
+        :aria-label="$i18n.t.value.common.close"
+        class="size-8 rounded-full"
+        size="icon-sm"
+        type="button"
+        variant="ghost"
+        @click="selection = null"
+        @mousedown.prevent
+      >
+        <span aria-hidden="true">×</span>
+      </Button>
     </div>
   </div>
 </template>

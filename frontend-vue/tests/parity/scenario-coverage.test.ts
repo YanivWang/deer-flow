@@ -131,15 +131,41 @@ describe("对照场景覆盖率", () => {
     const offenders: string[] = [];
     for (const scenario of PARITY_SCENARIOS) {
       for (const step of [...scenario.settle, ...(scenario.steps ?? [])]) {
-        if (!("target" in step)) continue;
+        /*
+          `select-text` 用的是 `scope` 而不是 `target`，此前被 `"target" in step`
+          直接跳过——也就是说这条守卫对划词步骤是不生效的。步骤词汇加了新形状时
+          这里要跟着加，否则守卫会静默地少管一类。
+        */
+        const target = "target" in step ? step.target : step.scope;
         if (
-          "selector" in step.target &&
-          /\.[a-z-]|\[class/i.test(withoutAttributeValues(step.target.selector))
+          "selector" in target &&
+          /\.[a-z-]|\[class/i.test(withoutAttributeValues(target.selector))
         ) {
-          offenders.push(`${scenario.id}: ${step.target.selector}`);
+          offenders.push(`${scenario.id}: ${target.selector}`);
         }
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  /*
+    划词工具条的**选中态**必须留在取样面里。
+
+    它是一屏「点一下才出现」的东西（台账看不见的第①类），而 wave 30 之前它从来没被
+    取过样：唯一带 `select-text` 的场景是 sidecar-chat，那一条紧接着 click，
+    两个应用都在那次点击里把选区清掉，稳定态里没有工具条。
+
+    判据写成「有场景的**最后一步**是 select-text」，是因为这正是「取样时刻工具条还在」
+    的充要条件——后面再跟任何一步，都可能是把它关掉的那一步。少了这条守卫，
+    删掉那一步不会让任何门禁变红，工具条会静默地退出取样面（同线索 131 的机制）。
+  */
+  it("有场景把划词工具条停在选中态上取样", () => {
+    const sampled = PARITY_SCENARIOS.filter(
+      (scenario) => scenario.steps?.at(-1)?.kind === "select-text",
+    ).map((scenario) => scenario.id);
+    expect(
+      sampled.length,
+      "没有任何场景以 select-text 收尾：划词工具条又回到了取样面之外。",
+    ).toBeGreaterThan(0);
   });
 });
