@@ -9,6 +9,12 @@ import RunActivity from "@/components/chat/RunActivity.vue";
 import MessageList from "@/components/chat/MessageList.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
 import type { Message } from "@/core/types/message";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 const messages = [
   {
@@ -61,6 +67,7 @@ describe("ProcessingMessageGroup", () => {
     const wrapper = mount(ProcessingMessageGroup, {
       props: { messages, streaming: true, threadId: "thread-1" },
       global: {
+        provide: { [workspaceToastKey as symbol]: toastStore },
         stubs: {
           StreamMarkdown: {
             props: ["content"],
@@ -117,6 +124,7 @@ describe("ProcessingMessageGroup", () => {
         threadId: "thread-1",
       },
       global: {
+        provide: { [workspaceToastKey as symbol]: toastStore },
         plugins: [[VueQueryPlugin, { queryClient: new QueryClient() }]],
         stubs: {
           StreamMarkdown: {
@@ -146,6 +154,7 @@ describe("ProcessingMessageGroup", () => {
         streaming: false,
       },
       global: {
+        provide: { [workspaceToastKey as symbol]: toastStore },
         stubs: {
           StreamMarkdown: {
             props: ["content"],

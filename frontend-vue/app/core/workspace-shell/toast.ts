@@ -8,6 +8,13 @@
                    kind 与 React 用的 sonner 一一对应（success/error/info）；WorkspaceToaster
                    只把 error 播成 assertive，其余都是 polite。
 
+                   **上游的 `toast.warning` 映到 info，不另开一个 kind。** sonner 的
+                   warning 与 info 在可访问性上是同一档（都是 polite 的 status），
+                   区别只有那个图标，而这个 toaster 一个图标都不画——多一个 kind 会是
+                   一处没有任何可观察差别的分叉。上游用到 warning 的两处
+                   （`core/threads/hooks.ts:1805` 的 replay gap、
+                   `browser-view-panel.tsx:185` 的截图失败）都按 info 走。
+
                    show 接受一个已存在的 id 就地更新那一条，而不是再插一条：多步流程
                    （Lark 授权轮询）会对同一句提示反复改写「还在等待 / 已完成」，各插一条
                    会在屏幕上堆出一摞历史，读屏器也会把过期状态重播一遍。id 已经过期

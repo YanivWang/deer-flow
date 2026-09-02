@@ -187,12 +187,18 @@ test.describe("真流 gate", () => {
     await textarea.press("Enter");
 
     // A7 的第一条正面特征：**用户看得见的本地化文案**，不是一个 key。
-    // 必须按 testid 取：这一屏还有别的 role="status"（工具条的上下文用量徽标
+    // 它现在落在 workspace toaster 里（上游 `core/threads/hooks.ts:1805` 同样是
+    // 一条 toast）；此前是 `data-testid="stream-warning"` 那条内联横幅，而那条
+    // **只增不减**，一次性的警告会永远挂在屏幕上。
+    // 仍然按 testid 取容器：这一屏还有别的 role="status"（工具条的上下文用量徽标
     // 一直在，流式期间 MessageList 再挂一条 RunActivity），裸 getByRole("status")
     // 会先命中徽标、断言到一个与 A7 无关的元素上。
-    const warning = page.getByTestId("stream-warning");
+    const warning = page
+      .getByTestId("workspace-toaster")
+      .getByRole("status")
+      .first();
     await expect(warning).toBeVisible({ timeout: 20_000 });
-    await expect(warning).toHaveText(
+    await expect(warning).toContainText(
       "Some live updates expired. The conversation was restored from saved state.",
       { timeout: 20_000 },
     );

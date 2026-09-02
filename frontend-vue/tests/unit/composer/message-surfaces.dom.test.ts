@@ -7,6 +7,12 @@ import MessageList from "@/components/chat/MessageList.vue";
 import TodoList from "@/components/workspace/TodoList.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
 import type { Message } from "@/core/types/message";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 function mountMessages(messages: Message[], streaming = false) {
   const queryClient = new QueryClient({
@@ -24,6 +30,7 @@ function mountMessages(messages: Message[], streaming = false) {
       tokenUsageInlineMode: "per_turn",
     },
     global: {
+      provide: { [workspaceToastKey as symbol]: toastStore },
       plugins: [[VueQueryPlugin, { queryClient }]],
       stubs: {
         StreamMarkdown: { template: "<div data-testid='markdown' />" },

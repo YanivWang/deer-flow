@@ -11,6 +11,12 @@ import type {
   HumanInputResponse,
 } from "@/core/messages/human-input";
 import type { Message } from "@/core/types/message";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 const request: HumanInputRequest = {
   version: 1,
@@ -68,6 +74,7 @@ function mountHumanInput(
       ...overrides,
     },
     global: {
+      provide: { [workspaceToastKey as symbol]: toastStore },
       plugins: [[VueQueryPlugin, { queryClient }]],
       stubs: {
         StreamMarkdown: { template: "<div />" },
@@ -91,9 +98,31 @@ async function submitCard(wrapper: ReturnType<typeof mountHumanInput>) {
 
 describe("Human Input state machine", () => {
   beforeEach(() => {
+    toastStore.clear();
     vi.stubGlobal("useNuxtApp", () => ({
       $i18n: { t: ref(enUS), locale: ref("en-US") },
     }));
+  });
+
+  /*
+    提交**抛异常**（不是 resolve(false)）时上游 `message-list.tsx:590` 会
+    `toast.error(...)`；本仓此前只把 pending 清掉，卡片自己重新可用，用户看不到
+    任何解释。这一条与下面那条 resolve(false) 的回滚是两条不同的路径：
+    resolve(false) 是「后端明确拒收」，由调用方自己播报；抛异常是「根本没送到」。
+  */
+  it("announces a submit that threw, instead of silently re-enabling the card", async () => {
+    const submit = vi.fn(async () => {
+      throw new Error("Gateway unreachable");
+    });
+    const wrapper = mountHumanInput(submit);
+    await wrapper.get("textarea").setValue("Executive team");
+    await submitCard(wrapper);
+    await flushPromises();
+
+    expect(wrapper.getComponent(HumanInputCard).props("pending")).toBe(false);
+    expect(toastStore.toasts.value).toEqual([
+      { id: expect.any(Number), kind: "error", message: "Gateway unreachable" },
+    ]);
   });
 
   it("rolls a failed submit back to editable state and preserves the answer for retry", async () => {

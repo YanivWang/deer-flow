@@ -85,6 +85,7 @@ import type { Subtask } from "@/core/tasks/types";
 import type { Message } from "@/core/types/message";
 import { readReferenceMessageContexts } from "@/core/sidecar";
 import { writeTextToClipboard } from "@/core/clipboard";
+import { useWorkspaceToast } from "@/core/workspace-shell/toast";
 import { cn } from "@/lib/utils";
 
 const props = withDefaults(
@@ -133,6 +134,15 @@ const emit = defineEmits<{
   loadMoreHistory: [];
 }>();
 const { $i18n } = useNuxtApp();
+/*
+  两处播报走 workspace toaster，与上游同一条（`message-list.tsx:590` 的
+  `toast.error` 与 `:693` 的 `toast.info`）。此前两处都是**静默**：提交失败只把
+  pending 清掉、卡片自己重新可用，用户看不到任何解释。
+
+  owner 由 workspace / showcase 两个 layout provide，所以 inject 一定拿得到；
+  单测里要一起 provide（同一棵树里的 ArtifactFileCards 早就是这么用的）。
+*/
+const toast = useWorkspaceToast();
 type SelectionPayload = {
   message: Message;
   selectedText: string;
@@ -411,10 +421,11 @@ async function handleHumanInputSubmit(
       return;
     }
     emit("humanInput", request, response);
-  } catch {
+  } catch (error) {
     const next = new Set(pendingHumanInputs.value);
     next.delete(request.request_id);
     pendingHumanInputs.value = next;
+    toast.error(error instanceof Error ? error.message : String(error));
   }
 }
 function groupIds(index: number) {
@@ -625,13 +636,8 @@ function onSelection(event: MouseEvent, index: number) {
   const turn = event.currentTarget as HTMLElement | null;
   if (!turn?.contains(anchorNode)) return;
   if (!turn.contains(focusNode)) {
-    /*
-      选区漏到了别的轮次里，引用会有歧义。上游在这里额外 toast 一句 sidecar 下的
-      selectionCrossesMessages（**带点写会让 i18n 的 unused 扫描器把它算成有人用**，
-      线索 126）；本仓与「上游 toast、本仓静默」那一簇
-      （threads/hooks.ts 的流式警告、handleSubmitHumanInput 的 catch）一起等
-      那一轮统一处理，所以这里只做同样的**不弹工具条**。
-    */
+    // 选区漏到了别的轮次里，引用会有歧义：说一句，而不是静默失败（上游 :693 同款）。
+    toast.info($i18n.t.value.sidecar.selectionCrossesMessages);
     selection.value = null;
     return;
   }

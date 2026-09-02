@@ -7,6 +7,12 @@ import SidecarPanel from "@/components/workspace/sidecar/SidecarPanel.vue";
 import HumanInputCard from "@/components/chat/HumanInputCard.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
 import type { Message } from "@/core/types/message";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 const mocks = vi.hoisted(() => ({
   sendMessage: vi.fn(),
@@ -100,6 +106,7 @@ function mountPanel(
       session,
     },
     global: {
+      provide: { [workspaceToastKey as symbol]: toastStore },
       plugins: queryPlugins() as never,
       stubs: {
         MessageList: MessageListStub,
@@ -269,6 +276,7 @@ describe("SidecarPanel session adapter", () => {
         session,
       },
       global: {
+        provide: { [workspaceToastKey as symbol]: toastStore },
         plugins: [[VueQueryPlugin, { queryClient }]],
         stubs: {
           StreamMarkdown: { template: "<div />" },

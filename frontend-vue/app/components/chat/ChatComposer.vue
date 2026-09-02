@@ -95,6 +95,7 @@ import { isCompleteBuiltinCommand } from "@/core/threads/builtin-command";
 import { compactThreadContext } from "@/core/threads/api";
 import type { GoalState } from "@/core/threads/types";
 import { createAsyncGeneration } from "@/core/async/generation";
+import { useWorkspaceToast } from "@/core/workspace-shell/toast";
 import {
   appendSpeechTranscript,
   getSpeechRecognitionConstructor,
@@ -217,7 +218,19 @@ let goalController: AbortController | null = null;
 const goalGeneration = createAsyncGeneration();
 const polishGeneration = createAsyncGeneration();
 let submissionGeneration = 0;
-const toast = ref("");
+/*
+  播报走 workspace toaster，与上游 input-box.tsx 的 sonner 一一对应
+  （kind 逐条对着上游那一处：error / info / success；上游的 warning 映到 info，
+  理由在 workspace-shell/toast.ts 的文件头）。
+
+  此前这里是一个本地 `ref("")`，渲染成 `fixed right-5 bottom-5` 带 `data-sonner-toast`
+  的 div。它有三处实打实的落差：① **没有 role、没有 aria-live**，读屏器一条都念不到；
+  ② **从来不清空**（全文没有一处 `toast.value = ""`），一条一次性的提示会永远挂在
+  屏幕右下角；③ 位置也不对——上游 `<Toaster position="top-center" />`
+  （workspace-content.tsx:44 / showcase 的 layout.tsx:29），本仓的 toaster 同样是
+  top-center，只有这一份手搓副本在右下角。
+*/
+const toast = useWorkspaceToast();
 const skillCatalog = useSkillsCatalog({
   enabled: computed(() => !props.disabled),
 });
@@ -638,7 +651,7 @@ function voiceErrorMessage(kind: SpeechRecognitionErrorKind) {
 function startVoiceRecognition() {
   const Constructor = getSpeechRecognitionConstructor(globalThis);
   if (!Constructor) {
-    toast.value = $i18n.t.value.inputBox.voiceInputUnsupported;
+    toast.error($i18n.t.value.inputBox.voiceInputUnsupported);
     return;
   }
   const recognition = new Constructor();
@@ -659,7 +672,7 @@ function startVoiceRecognition() {
   recognition.onerror = (event) => {
     voiceLastError = mapSpeechRecognitionError(event.error);
     if (voiceLastError !== "cancelled" && voiceLastError !== "no_speech") {
-      toast.value = voiceErrorMessage(voiceLastError);
+      toast.error(voiceErrorMessage(voiceLastError));
     }
   };
   recognition.onend = () => {
@@ -674,7 +687,7 @@ function startVoiceRecognition() {
     voiceListening.value = true;
   } catch {
     voiceRecognition.value = null;
-    toast.value = $i18n.t.value.inputBox.voiceInputFailed;
+    toast.error($i18n.t.value.inputBox.voiceInputFailed);
   }
 }
 
@@ -727,7 +740,7 @@ async function submit() {
     走到这里的只有回车那条路——按钮在流式态被 onSubmitButtonClick 拦成"停止"。
   */
   if (props.streaming) {
-    toast.value = $i18n.t.value.inputBox.pleaseWaitStreaming;
+    toast.info($i18n.t.value.inputBox.pleaseWaitStreaming);
     return;
   }
   const plain = input.value.trim();
@@ -744,7 +757,7 @@ async function submit() {
       `toast.warning(t.inputBox.suggestionPlaceholderRequired)` 再选中
       （input-box.tsx:1071）。
     */
-    toast.value = $i18n.t.value.inputBox.suggestionPlaceholderRequired;
+    toast.info($i18n.t.value.inputBox.suggestionPlaceholderRequired);
     await nextTick();
     const element = textarea.value;
     element?.focus();
@@ -758,7 +771,7 @@ async function submit() {
       clearComposerDraft(getSessionComposerDraftStorage(), draftKey.value);
       input.value = "";
       selectedSkill.value = null;
-      toast.value = $i18n.t.value.inputBox.compactSkipped;
+      toast.info($i18n.t.value.inputBox.compactSkipped);
       return;
     }
     compactPending.value = true;
@@ -791,21 +804,27 @@ async function submit() {
       selectedSkill.value = null;
       historyIndex = -1;
       invalidateThreadCaches(queryClient, targetThreadId);
-      toast.value = result.compacted
-        ? $i18n.t.value.inputBox.compactSuccess
-        : result.reason
-          ? $i18n.t.value.inputBox.compactNotPerformed(result.reason)
-          : $i18n.t.value.inputBox.compactSkipped;
+      // 上游分成两条 kind：compacted 走 success（:1033），其余走 info（:1035）。
+      if (result.compacted) {
+        toast.success($i18n.t.value.inputBox.compactSuccess);
+      } else {
+        toast.info(
+          result.reason
+            ? $i18n.t.value.inputBox.compactNotPerformed(result.reason)
+            : $i18n.t.value.inputBox.compactSkipped,
+        );
+      }
     } catch (error) {
       if (
         !controller.signal.aborted &&
         generation === compactGeneration &&
         targetThreadId === props.targetThreadId
       ) {
-        toast.value =
+        toast.error(
           error instanceof Error
             ? error.message
-            : $i18n.t.value.inputBox.compactFailed;
+            : $i18n.t.value.inputBox.compactFailed,
+        );
       }
     } finally {
       if (compactController === controller) compactController = null;
@@ -821,9 +840,11 @@ async function submit() {
       goalCommand.kind === "set" &&
       goalCommand.objective.length > MAX_GOAL_OBJECTIVE_CHARS
     ) {
-      toast.value = $i18n.t.value.inputBox.goalTooLong.replace(
-        "{max}",
-        String(MAX_GOAL_OBJECTIVE_CHARS),
+      toast.error(
+        $i18n.t.value.inputBox.goalTooLong.replace(
+          "{max}",
+          String(MAX_GOAL_OBJECTIVE_CHARS),
+        ),
       );
       return;
     }
@@ -875,17 +896,23 @@ async function submit() {
       }
       const nextGoal = body.goal ?? null;
       emit("goalChange", nextGoal);
-      toast.value =
-        goalCommand.kind === "status"
-          ? nextGoal
+      // 上游 status 走 info（:911），clear/set 走 success（:938 / :967）。
+      if (goalCommand.kind === "status") {
+        toast.info(
+          nextGoal
             ? $i18n.t.value.inputBox.goalActive.replace(
                 "{goal}",
                 nextGoal.objective,
               )
-            : $i18n.t.value.inputBox.goalNone
-          : goalCommand.kind === "clear"
+            : $i18n.t.value.inputBox.goalNone,
+        );
+      } else {
+        toast.success(
+          goalCommand.kind === "clear"
             ? $i18n.t.value.inputBox.goalCleared
-            : $i18n.t.value.inputBox.goalSet;
+            : $i18n.t.value.inputBox.goalSet,
+        );
+      }
       if (goalCommand.kind === "set") {
         const onAccepted = () => {
           draft.clearIfUnchanged(draftSnapshot);
@@ -905,10 +932,11 @@ async function submit() {
         !controller.signal.aborted &&
         goalGeneration.isCurrent(token, scope)
       ) {
-        toast.value =
+        toast.error(
           cause instanceof Error
             ? cause.message
-            : $i18n.t.value.inputBox.goalFailed;
+            : $i18n.t.value.inputBox.goalFailed,
+        );
       }
       return;
     } finally {
@@ -992,10 +1020,11 @@ async function submit() {
       activeSubmissionDraft = null;
     }
     if (generation === submissionGeneration && scopeKey === draftKey.value) {
-      toast.value =
+      toast.error(
         error instanceof Error
           ? error.message
-          : $i18n.t.value.common.requestFailed;
+          : $i18n.t.value.common.requestFailed,
+      );
     }
   } finally {
     if (generation === submissionGeneration) {
@@ -1103,11 +1132,12 @@ function chooseFiles(event: Event) {
     limits.value,
   );
   selectedFiles.value = [...selectedFiles.value, ...result.accepted];
-  if (supported.message) toast.value = supported.message;
+  if (supported.message) toast.error(supported.message);
   if (result.violations.length > 0) {
     const violation = result.violations[0]!;
     const names = violation.files.map((file) => file.name).join(", ");
-    toast.value =
+    // 上游三支都是 toast.error（input-box.tsx:504 / 511 / 515）。
+    toast.error(
       violation.code === "max_files"
         ? $i18n.t.value.uploads.tooManyFiles(
             violation.files.length,
@@ -1121,7 +1151,8 @@ function chooseFiles(event: Event) {
           : $i18n.t.value.uploads.filesTooLarge(
               names,
               formatUploadSize(violation.limit),
-            );
+            ),
+    );
   }
   (event.target as HTMLInputElement).value = "";
 }
@@ -1168,7 +1199,7 @@ async function polish() {
       */
       const rewritten = result.rewritten_text.trim();
       if (!rewritten || !result.changed) {
-        toast.value = $i18n.t.value.inputBox.inputPolishNoChanges;
+        toast.info($i18n.t.value.inputBox.inputPolishNoChanges);
         polishOriginal.value = null;
       } else {
         input.value = rewritten;
@@ -1179,10 +1210,11 @@ async function polish() {
       !controller.signal.aborted &&
       polishGeneration.isCurrent(token, scope)
     ) {
-      toast.value =
+      toast.error(
         error instanceof Error
           ? error.message
-          : $i18n.t.value.inputBox.inputPolishFailed;
+          : $i18n.t.value.inputBox.inputPolishFailed,
+      );
       polishOriginal.value = null;
     }
   } finally {
@@ -1821,12 +1853,5 @@ defineExpose({ replaceDraft, offerFollowup });
     >
       {{ disclaimer }}
     </p>
-    <div
-      v-if="toast"
-      data-sonner-toast
-      class="bg-foreground text-background fixed right-5 bottom-5 z-50 rounded-lg px-4 py-3 text-sm shadow"
-    >
-      {{ toast }}
-    </div>
   </div>
 </template>

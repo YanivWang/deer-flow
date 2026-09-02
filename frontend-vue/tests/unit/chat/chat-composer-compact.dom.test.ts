@@ -5,6 +5,12 @@ import { ref } from "vue";
 
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 const compactThreadContext = vi.hoisted(() => vi.fn());
 
@@ -35,6 +41,7 @@ function mountComposer() {
       context: { mode: "flash", model_name: "gpt-5" },
     },
     global: {
+      provide: { [workspaceToastKey as symbol]: toastStore },
       plugins: [[VueQueryPlugin, { queryClient }]],
       stubs: {
         ReferenceAttachment: true,
@@ -48,6 +55,7 @@ function mountComposer() {
 
 describe("ChatComposer /compact", () => {
   beforeEach(() => {
+    toastStore.clear();
     compactThreadContext.mockReset();
     sessionStorage.clear();
   });
@@ -77,7 +85,13 @@ describe("ChatComposer /compact", () => {
       modelName: "gpt-5",
     });
     expect((textarea.element as HTMLTextAreaElement).value).toBe("");
-    expect(wrapper.text()).toContain(enUS.inputBox.compactSuccess);
+    expect(toastStore.toasts.value).toEqual([
+      {
+        id: expect.any(Number),
+        kind: "success",
+        message: enUS.inputBox.compactSuccess,
+      },
+    ]);
     expect(invalidate.mock.calls.map(([filters]) => filters.queryKey)).toEqual([
       ["threads", "search"],
       ["threads", "searchInfinite"],
@@ -102,9 +116,13 @@ describe("ChatComposer /compact", () => {
     expect((textarea.element as HTMLTextAreaElement).value).toBe(
       "/context compact",
     );
-    expect(wrapper.text()).toContain(
-      "Thread has a run in flight. Compact after the run finishes.",
-    );
+    expect(toastStore.toasts.value).toEqual([
+      {
+        id: expect.any(Number),
+        kind: "error",
+        message: "Thread has a run in flight. Compact after the run finishes.",
+      },
+    ]);
     wrapper.unmount();
   });
 });

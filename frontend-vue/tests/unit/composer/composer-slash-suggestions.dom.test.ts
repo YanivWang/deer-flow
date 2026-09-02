@@ -19,6 +19,12 @@ import { ref } from "vue";
 
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 const mocks = vi.hoisted(() => ({
   loadSkills: vi.fn(),
@@ -71,6 +77,7 @@ function mountComposer(props: Record<string, unknown> = {}) {
       ...props,
     },
     global: {
+      provide: { [workspaceToastKey as symbol]: toastStore },
       plugins: [[VueQueryPlugin, { queryClient }]],
       stubs: { ReferenceAttachment: true, GoalStatus: true },
     },

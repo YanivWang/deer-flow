@@ -1078,7 +1078,10 @@ test.describe("Chat workspace", () => {
     });
 
     await expect(
-      page.locator("[data-sonner-toast]").filter({ hasText: "too-large.txt" }),
+      page
+        .getByTestId("workspace-toaster")
+        .getByRole("alert")
+        .filter({ hasText: "too-large.txt" }),
     ).toBeVisible();
     await expect(page.locator("form").getByText("too-large.txt")).toBeHidden();
 
@@ -1138,7 +1141,10 @@ test.describe("Chat workspace", () => {
     await expect(promptForm.getByText("second.txt")).toBeVisible();
     await expect(promptForm.getByText("over-total.txt")).toBeHidden();
     await expect(
-      page.locator("[data-sonner-toast]").filter({ hasText: "5 B" }),
+      page
+        .getByTestId("workspace-toaster")
+        .getByRole("alert")
+        .filter({ hasText: "5 B" }),
     ).toBeVisible();
   });
 

@@ -18,6 +18,12 @@ import MessageList from "@/components/chat/MessageList.vue";
 import SubtaskCard from "@/components/chat/SubtaskCard.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
 import type { Subtask } from "@/core/tasks/types";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 const fetchedSteps = [
   { message_index: 1, kind: "ai" as const, text: "Planning the search" },
@@ -75,7 +81,10 @@ function mountCard(
   return mount(SubtaskCard, {
     attachTo: document.body,
     props,
-    global: { plugins: [[VueQueryPlugin, { queryClient }]] },
+    global: {
+      provide: { [workspaceToastKey as symbol]: toastStore },
+      plugins: [[VueQueryPlugin, { queryClient }]],
+    },
   });
 }
 
@@ -314,7 +323,10 @@ describe("MessageList subtask group header", () => {
         loading: false,
         threadId: "thread-1",
       },
-      global: { plugins: [[VueQueryPlugin, { queryClient }]] },
+      global: {
+        provide: { [workspaceToastKey as symbol]: toastStore },
+        plugins: [[VueQueryPlugin, { queryClient }]],
+      },
     });
   }
 
@@ -379,7 +391,10 @@ describe("MessageList subtask group header", () => {
         loading: false,
         threadId: "thread-1",
       },
-      global: { plugins: [[VueQueryPlugin, { queryClient }]] },
+      global: {
+        provide: { [workspaceToastKey as symbol]: toastStore },
+        plugins: [[VueQueryPlugin, { queryClient }]],
+      },
     });
     // 卡片本体在；tool 结果那条独立的 details 不在。
     expect(wrapper.find('[data-testid="subtask-toggle"]').exists()).toBe(true);

@@ -67,6 +67,7 @@ import {
   isAuthDisabledMode,
 } from "@/core/auth/auth-disabled-user";
 import { safeLocalStorage } from "@/core/settings/local";
+import { useWorkspaceToast } from "@/core/workspace-shell/toast";
 import { DEFAULT_MAX_SUGGESTIONS } from "@/core/suggestions/api";
 import type { Message, ToolCall } from "@/core/types/message";
 import {
@@ -148,6 +149,11 @@ const { $i18n } = useNuxtApp();
 const route = useRoute();
 const router = useRouter();
 const threads = useThreads();
+/*
+  workspace 与 showcase 两个 layout 都 provide 了这个 owner，所以这里可以直接 inject。
+  上游同一批提示走 sonner 的全局 toast，本仓走这一份；两边都是「一个应用一个 viewport」。
+*/
+const toast = useWorkspaceToast();
 const queryClient = useQueryClient();
 const isDemo = computed(
   () => props.demo === true || route.query.mock === "true",
@@ -205,7 +211,6 @@ const welcomeColors = computed(() =>
 );
 /** 欢迎区的技能创建分支。判据与 skillModePrompt 的 query 部分是同一个。 */
 const skillWelcome = computed(() => route.query.mode === "skill");
-const warnings = ref<string[]>([]);
 const localUploading = ref(false);
 const demoMessages = ref<Message[] | null>(null);
 const demoArtifacts = ref<string[]>([]);
@@ -252,7 +257,37 @@ watch(
   },
   { immediate: true },
 );
-const failedSend = ref<{ text: string; files: FileInMessage[] } | null>(null);
+/*
+  发失败之后留在屏幕上的那条：文案 + 重试所需的原始内容。
+
+  ——————————————————————————————————————————————————————————————————————
+  **聊天面上「谁管谁」的判据（wave 31 定下，与 BrowserPanel 文件头第 3 条同源）：**
+
+  **在某一刻发生的事 → workspace toaster；在一段时间里为真的事 → 页面里的状态。**
+
+  toaster：replay gap、流错误、分支成功/失败、human input 提交失败、选区跨轮次，
+  以及 ChatComposer 那 16 条（语音、compact、goal、上传、润色、提交失败）。
+  这一档全部**一次性**，说完就该走，上游用的也都是 sonner 的 toast。
+
+  页面里的状态，共三处，都不是「说一句」而是「现在是这个样子」：
+  ① 这一条——消息**还没发出去**，重试要用到原始 text/files；
+  ② `stream.llmRetry` 的横幅——**正在重试**，流恢复或出错时自己消失
+     （`clearThreadRetryNotice`）。上游那边是每个 llm_retry 事件一条 toast，
+     一次重试风暴会堆出一摞；
+  ③ MessageList 里历史加载失败那条 `role="alert"` + 「再试一次」。
+
+  「带着一个按钮」是这一档的**后果**不是判据：一段持续为真的状态才需要提供出路，
+  而 toast 五秒后自己走掉，按钮会跟着一起消失。
+  ——————————————————————————————————————————————————————————————————————
+
+  上游这一处只有 `toast.error(getStreamErrorMessage(error))`
+  （`core/threads/hooks.ts:2390`），没有任何重试入口，所以保留本仓这一侧。
+*/
+const failedSend = ref<{
+  text: string;
+  files: FileInMessage[];
+  message: string;
+} | null>(null);
 const mainTailRequest = ref(0);
 const threadTokenUsageQuery = useThreadTokenUsage(routeThreadId, {
   enabled: computed(() => !isDemo.value),
@@ -313,14 +348,21 @@ const stream = useThreadStream({
   ),
   context,
   model: selectedModel,
+  /*
+    流的两条播报都进 workspace toaster，与上游同一条（`core/threads/hooks.ts:1805`
+    的 `toast.warning` 与 `:1846` 的 `toast.error`）。此前它们 push 进一个
+    **只增不减**的数组，渲染成 `absolute right-4 bottom-36` 的 `<p role="status">`：
+    ① 一条一次性的警告会永远挂在屏幕上；② 错误只播成 polite，而 toaster 会把
+    error 播成 assertive。warning 映到 info 的理由写在 workspace-shell/toast.ts 的文件头。
+  */
   notify: {
     warn: (message) =>
-      warnings.value.push(
+      toast.info(
         message === "conversation.streamReplayGap"
           ? $i18n.t.value.conversation.streamReplayGap
           : message,
       ),
-    error: (message) => warnings.value.push(message),
+    error: (message) => toast.error(message),
   },
   onStart(startedThreadId) {
     lastStartedThreadId = startedThreadId;
@@ -1227,12 +1269,14 @@ async function send(
     return true;
   } catch (error) {
     if (options?.reportFailure !== false) {
-      failedSend.value = { text, files };
-      warnings.value.push(
-        error instanceof Error
-          ? error.message
-          : $i18n.t.value.common.requestFailed,
-      );
+      failedSend.value = {
+        text,
+        files,
+        message:
+          error instanceof Error
+            ? error.message
+            : $i18n.t.value.common.requestFailed,
+      };
     }
     if (options) throw error;
     return false;
@@ -1278,17 +1322,35 @@ async function stopRun() {
   followupsLoading.value = false;
   await stream.stop();
 }
+/*
+  分支。上游 `chat-page.tsx:225` 把整段包在 try/catch 里，成功 `toast.success(
+  branchCreated)`、失败 `toast.error(error.message ?? branchFailed)`。
+
+  本仓此前**一个 catch 都没有**：`branchThreadFromTurn` 一抛，这个 async 函数就变成
+  一条未处理的 rejection——没有跳转、没有任何提示，用户点了「分支」之后屏幕纹丝不动。
+  两条词条 `conversation.branchCreated` / `branchFailed` 也因此一直躺在 unused 里。
+*/
 async function branch(messageId: string, messageIds: string[]) {
   if (isDemo.value) return;
   if (!routeThreadId.value) return;
   const original = threads.threads.find(
     (thread) => thread.thread_id === routeThreadId.value,
   );
-  const result = await branchThreadFromTurn(routeThreadId.value, {
-    messageId,
-    messageIds,
-    title: original?.values.title,
-  });
+  let result: Awaited<ReturnType<typeof branchThreadFromTurn>>;
+  try {
+    result = await branchThreadFromTurn(routeThreadId.value, {
+      messageId,
+      messageIds,
+      title: original?.values.title,
+    });
+  } catch (error) {
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : $i18n.t.value.conversation.branchFailed,
+    );
+    return;
+  }
   const now = new Date().toISOString();
   threads.upsert({
     thread_id: result.thread_id,
@@ -1302,6 +1364,7 @@ async function branch(messageId: string, messageIds: string[]) {
     },
     interrupts: {},
   });
+  toast.success($i18n.t.value.conversation.branchCreated);
   const path = props.agentName
     ? `/workspace/agents/${encodeURIComponent(props.agentName)}/chats/${result.thread_id}`
     : `/workspace/chats/${result.thread_id}`;
@@ -1752,6 +1815,12 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
+          <!--
+            **正在重试**是一段持续为真的状态，不是一次播报，所以它留在页面里而不是
+            走 toaster（判据写在 failedSend 的声明上）。上游是每个 llm_retry 事件
+            一条 toast（`core/threads/hooks.ts:1835`），一次重试风暴会堆出一摞，
+            而且「已经不在重试了」这件事那边没有出口。
+          -->
           <p
             v-if="stream.llmRetry.value"
             data-testid="llm-retry-status"
@@ -1761,25 +1830,22 @@ onUnmounted(() => {
             {{ stream.llmRetry.value.message }}
           </p>
           <!--
-            带 data-testid 是因为这条横幅**不是** aria 上唯一的 role="status"：
+            **这条只剩「发失败了，可以再试一次」一种情况**（判据写在 failedSend 的
+            声明上）。此前它还兼着 replay gap 与流错误的播报，那两条现在走 toaster。
+
+            带 data-testid 是因为它**不是** aria 上唯一的 role="status"：
             工具条里的 ContextUsageBadge 永远在（占位态也带 role="status"），
             流式输出期间 MessageList 还会再挂一条 RunActivity。裸
-            `getByRole("status")` 会先命中徽标、再撞上 strict mode——
-            e2e-stream 那条 gap 用例就是这么假绿又变红的。
+            `getByRole("status")` 会先命中徽标、再撞上 strict mode。
           -->
           <p
-            v-if="warnings.length"
-            data-testid="stream-warning"
+            v-if="failedSend"
+            data-testid="send-failure"
             role="status"
             class="absolute right-4 bottom-36 z-40 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-700 shadow"
           >
-            {{ warnings.at(-1) }}
-            <button
-              v-if="failedSend"
-              type="button"
-              class="ml-2 underline"
-              @click="retrySend"
-            >
+            {{ failedSend.message }}
+            <button type="button" class="ml-2 underline" @click="retrySend">
               {{ $i18n.t.value.navigation.tryAgain }}
             </button>
           </p>

@@ -10,6 +10,12 @@ import {
   writeComposerDraft,
 } from "@/core/threads/composer-draft";
 import { findSuggestionTemplatePlaceholder } from "@/core/suggestions/placeholders";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 const mocks = vi.hoisted(() => ({
   loadSkills: vi.fn(),
@@ -59,6 +65,7 @@ function mountComposer(
       ...props,
     },
     global: {
+      provide: { [workspaceToastKey as symbol]: toastStore },
       plugins: [[VueQueryPlugin, { queryClient }]],
       stubs: {
         ReferenceAttachment: true,
@@ -87,6 +94,7 @@ async function selectFile(
 
 describe("composer submission and stale lifecycle", () => {
   beforeEach(() => {
+    toastStore.clear();
     sessionStorage.clear();
     vi.stubGlobal("useNuxtApp", () => ({
       $i18n: { t: ref(enUS), locale: ref("en-US") },
@@ -200,7 +208,9 @@ describe("composer submission and stale lifecycle", () => {
       "Review this file",
     );
     expect(wrapper.text()).toContain("notes.txt");
-    expect(wrapper.text()).toContain("Upload rejected");
+    expect(toastStore.toasts.value).toEqual([
+      { id: expect.any(Number), kind: "error", message: "Upload rejected" },
+    ]);
   });
 
   it("renders an image attachment inside the composer surface with a thumbnail and removable state", async () => {
@@ -653,6 +663,7 @@ describe("composer submission and stale lifecycle", () => {
         context: {},
       },
       global: {
+        provide: { [workspaceToastKey as symbol]: toastStore },
         plugins: [[VueQueryPlugin, { queryClient }]],
         stubs: {
           ReferenceAttachment: true,
@@ -716,9 +727,13 @@ describe("composer submission and stale lifecycle", () => {
     await flushPromises();
 
     expect(submitMessage).not.toHaveBeenCalled();
-    expect(wrapper.get("[data-sonner-toast]").text()).toBe(
-      enUS.inputBox.pleaseWaitStreaming,
-    );
+    expect(toastStore.toasts.value).toEqual([
+      {
+        id: expect.any(Number),
+        kind: "info",
+        message: enUS.inputBox.pleaseWaitStreaming,
+      },
+    ]);
   });
 
   /*
@@ -736,9 +751,13 @@ describe("composer submission and stale lifecycle", () => {
     await flushPromises();
 
     expect(submitMessage).not.toHaveBeenCalled();
-    expect(wrapper.get("[data-sonner-toast]").text()).toBe(
-      enUS.inputBox.suggestionPlaceholderRequired,
-    );
+    expect(toastStore.toasts.value).toEqual([
+      {
+        id: expect.any(Number),
+        kind: "info",
+        message: enUS.inputBox.suggestionPlaceholderRequired,
+      },
+    ]);
     const placeholder = findSuggestionTemplatePlaceholder(draft);
     const element = textarea.element as HTMLTextAreaElement;
     expect(element.selectionStart).toBe(placeholder?.start);
@@ -764,9 +783,13 @@ describe("composer submission and stale lifecycle", () => {
     await flushPromises();
 
     expect((textarea.element as HTMLTextAreaElement).value).toBe("Polish me");
-    expect(wrapper.get("[data-sonner-toast]").text()).toBe(
-      enUS.inputBox.inputPolishNoChanges,
-    );
+    expect(toastStore.toasts.value).toEqual([
+      {
+        id: expect.any(Number),
+        kind: "info",
+        message: enUS.inputBox.inputPolishNoChanges,
+      },
+    ]);
     /*
       按钮必须**重新查**：润色期间它被 v-if 换成取消按钮，结束时是一个新元素，
       点击前拿到的 DOMWrapper 指向已经脱离文档的旧节点，`.text()` 会一直返回
@@ -793,7 +816,7 @@ describe("composer submission and stale lifecycle", () => {
     expect((textarea.element as HTMLTextAreaElement).value).toBe(
       "Polished draft",
     );
-    expect(wrapper.find("[data-sonner-toast]").exists()).toBe(false);
+    expect(toastStore.toasts.value).toEqual([]);
     expect(wrapper.get("[data-testid='polish-input-button']").text()).toBe(
       enUS.inputBox.inputPolishUndo,
     );

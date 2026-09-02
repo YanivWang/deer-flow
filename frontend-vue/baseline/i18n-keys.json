@@ -957,7 +957,7 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 39,
+  "unusedTotal": 36,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.deleteSuccess",
@@ -971,8 +971,6 @@
     "citations.copiedReference",
     "common.editRerunWarning",
     "common.preview",
-    "conversation.branchCreated",
-    "conversation.branchFailed",
     "conversation.startConversation",
     "home.blog",
     "inputBox.voiceInputStop",
@@ -992,7 +990,6 @@
     "sidebar.demoChats",
     "sidecar.deleteSuccess",
     "sidecar.reference",
-    "sidecar.selectionCrossesMessages",
     "toolCalls.clickToViewContent",
     "toolCalls.skillInstallTooltip",
     "uploads.uploading",

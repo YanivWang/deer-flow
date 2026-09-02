@@ -13,6 +13,12 @@ import { ref } from "vue";
 
 import MessageList from "@/components/chat/MessageList.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 class ResizeObserverStub {
   observe() {}
@@ -61,6 +67,7 @@ describe("MessageList MarkdownLink integration", () => {
         interactive: false,
       },
       global: {
+        provide: { [workspaceToastKey as symbol]: toastStore },
         plugins: [[VueQueryPlugin, { queryClient: new QueryClient() }]],
       },
     });
@@ -141,6 +148,7 @@ describe("MessageList MarkdownLink integration", () => {
         interactive: false,
       },
       global: {
+        provide: { [workspaceToastKey as symbol]: toastStore },
         plugins: [[VueQueryPlugin, { queryClient: new QueryClient() }]],
       },
     });
@@ -176,6 +184,7 @@ describe("MessageList on-demand history", () => {
         historyLoadingMore: false,
       },
       global: {
+        provide: { [workspaceToastKey as symbol]: toastStore },
         plugins: [[VueQueryPlugin, { queryClient: new QueryClient() }]],
       },
     });

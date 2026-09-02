@@ -23,6 +23,12 @@ import { ref } from "vue";
 
 import MessageList from "@/components/chat/MessageList.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+const toastStore = createWorkspaceToastStore();
 
 class ResizeObserverStub {
   observe() {}
@@ -31,6 +37,7 @@ class ResizeObserverStub {
 }
 
 beforeEach(() => {
+  toastStore.clear();
   vi.stubGlobal("useNuxtApp", () => ({
     $i18n: { t: ref(enUS), locale: ref("en-US") },
   }));
@@ -70,6 +77,7 @@ function mountList(props: Record<string, unknown> = {}) {
     },
     attachTo: document.body,
     global: {
+      provide: { [workspaceToastKey as symbol]: toastStore },
       plugins: [[VueQueryPlugin, { queryClient: new QueryClient() }]],
     },
   });
@@ -366,7 +374,11 @@ describe("when the toolbar must not appear", () => {
     expect(toolbar(wrapper).exists()).toBe(false);
   });
 
-  it("drops the toolbar when the selection leaks into another turn", async () => {
+  /*
+    漏到别的轮次里时**要说一句**（上游 `message-list.tsx:693` 的 `toast.info`）：
+    引用会有歧义，静默不弹工具条看起来像划词坏了。
+  */
+  it("drops the toolbar when the selection leaks into another turn, and says why", async () => {
     const wrapper = mountList();
     await flushPromises();
 
@@ -380,6 +392,13 @@ describe("when the toolbar must not appear", () => {
     await flushPromises();
 
     expect(toolbar(wrapper).exists()).toBe(false);
+    expect(toastStore.toasts.value).toEqual([
+      {
+        id: expect.any(Number),
+        kind: "info",
+        message: enUS.sidecar.selectionCrossesMessages,
+      },
+    ]);
   });
 
   it("drops the toolbar on an empty or collapsed selection", async () => {
