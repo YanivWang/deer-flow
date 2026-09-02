@@ -139,7 +139,7 @@ test.describe.serial("real Gateway Agent lifecycle", () => {
     });
 
     await page.goto("/workspace/agents/new");
-    await page.getByLabel("Name your new Agent").fill(AGENT_NAME);
+    await page.getByPlaceholder("e.g. code-reviewer").fill(AGENT_NAME);
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(
       page.getByText(

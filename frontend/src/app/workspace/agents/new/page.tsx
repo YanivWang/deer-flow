@@ -291,9 +291,14 @@ export default function NewAgentPage() {
   const header = (
     <header className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3">
       <div className="flex items-center gap-3">
+        {/* Icon-only control: without a label a screen reader announces a bare
+            "button". The sibling More trigger in this same header already
+            carries aria-label, so this one was an oversight rather than a
+            deliberate choice. The label names where the control goes. */}
         <Button
           variant="ghost"
           size="icon-sm"
+          aria-label={t.agents.backToGallery}
           onClick={() => router.push("/workspace/agents")}
         >
           <ArrowLeftIcon className="h-4 w-4" />
@@ -360,8 +365,14 @@ export default function NewAgentPage() {
                 onKeyDown={handleNameKeyDown}
                 className={cn(nameError && "border-destructive")}
               />
+              {/* Validation errors appear while focus stays on the submit
+                  button, so they need to be announced. The other two form
+                  errors in this codebase (account-settings-page.tsx,
+                  human-input-card.tsx) already use role="alert". */}
               {nameError ? (
-                <p className="text-destructive text-sm">{nameError}</p>
+                <p className="text-destructive text-sm" role="alert">
+                  {nameError}
+                </p>
               ) : null}
               <Button
                 className="w-full"

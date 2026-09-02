@@ -169,11 +169,16 @@ test("empty chat", async ({ page }) => {
   expect(modelGeometry.maxWidth).toBe("224px");
   /*
     这个下限只是「按钮没有被压扁」的粗判据，真正的保证是下面那条
-    `scrollWidth <= clientWidth`（名字没被截断）。数字从 160 降到 150：wave 1 为了对齐
-    React，把模型触发器外面那层容器去掉了（行内块的行盒会多出几个 px），按钮因此比
-    录基线时窄了 5px。实测 155，名字仍然完整。
+    `scrollWidth <= clientWidth`（名字没被截断）。
+
+    数字降过两次，两次都是**同一行里别的控件变宽**把它挤窄的，不是它自己被压扁：
+    - 160 → 150：wave 1 为了对齐 React 把模型触发器外面那层容器去掉了
+      （行内块的行盒会多出几个 px），按钮窄了 5px，实测 155。
+    - 150 → 144：wave 28 给模式触发器补上了上游的档位图标（`size-3` + `gap-1`，
+      input-box.tsx:2393），同一行于是又紧了一档，实测 **150**。
+    改这个数字之前先看下面那条断言过没过：过了就是「行里挤了点」，没过才是真被截断。
   */
-  expect(modelGeometry.clientWidth).toBeGreaterThan(150);
+  expect(modelGeometry.clientWidth).toBeGreaterThan(144);
   expect(modelGeometry.scrollWidth).toBeLessThanOrEqual(
     modelGeometry.clientWidth,
   );

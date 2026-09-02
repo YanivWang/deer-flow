@@ -10,10 +10,14 @@
 import { computed, reactive, ref, watch } from "vue";
 import {
   ArrowUp,
+  GraduationCap,
+  Lightbulb,
   MessageSquareText,
   Paperclip,
+  Rocket,
   Trash2,
   X,
+  Zap,
 } from "lucide-vue-next";
 
 import MessageList from "@/components/chat/MessageList.vue";
@@ -155,26 +159,39 @@ const selectedModel = computed(
     models.value.find((model) => model.name === localContext.model_name) ??
     models.value[0],
 );
+/*
+  图标与 ultra 的金色与主输入框那一份同源（上游 sidecar-panel.tsx:770 与
+  input-box.tsx:2393 是同一组四条判断）。理由与那边一样：这一簇台账天生看不见，
+  判据是「上游画了什么」。
+*/
 const modeOptions = computed(() => [
   {
     id: "flash",
     label: $i18n.t.value.inputBox.flashMode,
     description: $i18n.t.value.inputBox.flashModeDescription,
+    icon: Zap,
+    golden: false,
   },
   {
     id: "thinking",
     label: $i18n.t.value.inputBox.reasoningMode,
     description: $i18n.t.value.inputBox.reasoningModeDescription,
+    icon: Lightbulb,
+    golden: false,
   },
   {
     id: "pro",
     label: $i18n.t.value.inputBox.proMode,
     description: $i18n.t.value.inputBox.proModeDescription,
+    icon: GraduationCap,
+    golden: false,
   },
   {
     id: "ultra",
     label: $i18n.t.value.inputBox.ultraMode,
     description: $i18n.t.value.inputBox.ultraModeDescription,
+    icon: Rocket,
+    golden: true,
   },
 ]);
 /*
@@ -483,9 +500,21 @@ async function confirmDelete() {
                   <button
                     type="button"
                     data-testid="sidecar-mode-trigger"
-                    class="hover:bg-accent h-8 rounded-md px-2 text-xs"
+                    class="hover:bg-accent flex h-8 max-w-20 min-w-0 items-center gap-1 rounded-md px-2 text-xs"
                   >
-                    {{ activeMode.label }}
+                    <div>
+                      <component
+                        :is="activeMode.icon"
+                        class="size-3"
+                        :class="activeMode.golden ? 'text-[#dabb5e]' : ''"
+                      />
+                    </div>
+                    <div
+                      class="truncate text-xs font-normal"
+                      :class="activeMode.golden ? 'golden-text' : ''"
+                    >
+                      {{ activeMode.label }}
+                    </div>
                   </button>
                 </ModeHoverGuide>
               </DropdownMenuTrigger>
@@ -507,14 +536,35 @@ async function confirmDelete() {
                     :key="mode.id"
                     :value="mode.id"
                     class="py-2"
+                    :class="
+                      resolvedActiveMode === mode.id
+                        ? 'text-accent-foreground'
+                        : 'text-muted-foreground/65'
+                    "
                   >
-                    <span class="block">
-                      <span class="block text-sm font-medium">{{
-                        mode.label
-                      }}</span>
-                      <span class="text-muted-foreground block text-xs">{{
-                        mode.description
-                      }}</span>
+                    <span class="flex flex-col gap-2">
+                      <span class="flex items-center gap-1 font-bold">
+                        <component
+                          :is="mode.icon"
+                          class="mr-2 size-4"
+                          :class="
+                            resolvedActiveMode === mode.id
+                              ? mode.golden
+                                ? 'text-[#dabb5e]'
+                                : 'text-accent-foreground'
+                              : ''
+                          "
+                        />
+                        <span
+                          :class="
+                            resolvedActiveMode === mode.id && mode.golden
+                              ? 'golden-text'
+                              : ''
+                          "
+                          >{{ mode.label }}</span
+                        >
+                      </span>
+                      <span class="pl-7 text-xs">{{ mode.description }}</span>
                     </span>
                   </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>

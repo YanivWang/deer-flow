@@ -434,7 +434,12 @@ test.describe("Agent chat", () => {
     });
 
     await page.goto("/workspace/agents/new");
-    await page.getByLabel("Name your new Agent").fill("reviewer");
+    /*
+      按 placeholder 定位，不按可访问名：这一屏的输入框**没有 aria-label**，
+      名字来自 placeholder，与上游那颗 `<Input>` 一致（wave 28 去掉了本仓自己加的
+      aria-label）。此前这里写的是 getByLabel("Name your new Agent")。
+    */
+    await page.getByPlaceholder("e.g. code-reviewer").fill("reviewer");
     await page.getByRole("button", { name: "Continue" }).click();
     const save = page.getByTestId("agent-save");
     await expect(save).toBeEnabled({ timeout: 15_000 });
@@ -506,7 +511,7 @@ test.describe("Agent chat", () => {
     });
 
     await page.goto("/workspace/agents/new");
-    await page.getByLabel("Name your new Agent").fill("reviewer");
+    await page.getByPlaceholder("e.g. code-reviewer").fill("reviewer");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByTestId("agent-save").click();
     await expect(page.getByTestId("agent-creation-error")).toContainText(

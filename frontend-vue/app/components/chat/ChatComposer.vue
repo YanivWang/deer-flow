@@ -17,13 +17,17 @@ import {
 import { useQueryClient } from "@tanstack/vue-query";
 import {
   ArrowUp,
+  GraduationCap,
+  Lightbulb,
   Mic,
   Paperclip,
+  Rocket,
   Sparkles,
   Square,
   Target,
   WandSparkles,
   X,
+  Zap,
 } from "lucide-vue-next";
 import ComposerAttachmentChip from "@/components/chat/ComposerAttachmentChip.vue";
 import ComposerModelSelector from "@/components/chat/ComposerModelSelector.vue";
@@ -225,30 +229,47 @@ const explicitMode = computed(() => {
     : "";
 });
 const selectedMode = computed(() => explicitMode.value || "flash");
+/*
+  每个档位带自己的图标，与上游 input-box.tsx:2393 的四条 `mode === …` 一一对应
+  （Zap / Lightbulb / GraduationCap / Rocket）。ultra 另外两处上色：图标是
+  `text-[#dabb5e]`，文字走 `.golden-text`（main.css 里那条照抄的规则）。
+
+  **这一整簇台账天生看不见**：lucide 的 svg 不进可访问性树，模式菜单也不是几何
+  锚点，颜色只在 settle 的 visible 锚点上取样。所以它靠的是「上游画了什么」，
+  不是「门禁有没有变红」。
+*/
 const modes = computed(() => [
   {
     id: "flash",
     label: $i18n.t.value.inputBox.flashMode,
     description: $i18n.t.value.inputBox.flashModeDescription,
     effort: "minimal" as const,
+    icon: Zap,
+    golden: false,
   },
   {
     id: "thinking",
     label: $i18n.t.value.inputBox.reasoningMode,
     description: $i18n.t.value.inputBox.reasoningModeDescription,
     effort: "low" as const,
+    icon: Lightbulb,
+    golden: false,
   },
   {
     id: "pro",
     label: $i18n.t.value.inputBox.proMode,
     description: $i18n.t.value.inputBox.proModeDescription,
     effort: "medium" as const,
+    icon: GraduationCap,
+    golden: false,
   },
   {
     id: "ultra",
     label: $i18n.t.value.inputBox.ultraMode,
     description: $i18n.t.value.inputBox.ultraModeDescription,
     effort: "high" as const,
+    icon: Rocket,
+    golden: true,
   },
 ]);
 const availableModes = computed(() =>
@@ -1531,10 +1552,30 @@ defineExpose({ replaceDraft, offerFollowup });
                 <button
                   type="button"
                   data-testid="composer-mode-trigger"
-                  class="hover:bg-accent h-8 rounded-md px-2 text-xs"
+                  class="hover:bg-accent flex h-8 max-w-28 items-center gap-1 rounded-md px-2 text-xs sm:max-w-none"
                   :disabled="disabled || polishing"
                 >
-                  {{ explicitMode ? activeMode.label : "" }}
+                  <!--
+                    图标与文字各占一层，与上游同构（input-box.tsx:2393 的两个 div）。
+                    没有显式 mode 时上游四条判断全不成立、什么也不画，所以这里同样
+                    挂在 explicitMode 上——按钮此时是一颗无名的空按钮，两边一致。
+                  -->
+                  <div>
+                    <component
+                      :is="activeMode.icon"
+                      v-if="explicitMode"
+                      class="size-3"
+                      :class="activeMode.golden ? 'text-[#dabb5e]' : ''"
+                    />
+                  </div>
+                  <div
+                    class="truncate text-xs font-normal"
+                    :class="
+                      explicitMode && activeMode.golden ? 'golden-text' : ''
+                    "
+                  >
+                    {{ explicitMode ? activeMode.label : "" }}
+                  </div>
                 </button>
               </ModeHoverGuide>
             </DropdownMenuTrigger>
@@ -1552,19 +1593,47 @@ defineExpose({ replaceDraft, offerFollowup });
                 <DropdownMenuLabel class="text-muted-foreground text-xs">
                   {{ $i18n.t.value.inputBox.mode }}
                 </DropdownMenuLabel>
+                <!--
+                  条目的排版照上游（input-box.tsx:2450）：选中的一条整条是
+                  `text-accent-foreground`，其余是 `text-muted-foreground/65`；
+                  标题行 `font-bold` 带图标，说明行 `pl-7 text-xs` 缩进到标题文字
+                  的起点下面。本仓原来是 `font-medium` + 说明行自己写死
+                  `text-muted-foreground`，于是选中态在说明行上看不出来。
+                -->
                 <DropdownMenuRadioItem
                   v-for="mode in availableModes"
                   :key="mode.id"
                   :value="mode.id"
                   class="py-2"
+                  :class="
+                    explicitMode === mode.id
+                      ? 'text-accent-foreground'
+                      : 'text-muted-foreground/65'
+                  "
                 >
-                  <span class="block">
-                    <span class="block text-sm font-medium">{{
-                      mode.label
-                    }}</span>
-                    <span class="text-muted-foreground block text-xs">{{
-                      mode.description
-                    }}</span>
+                  <span class="flex flex-col gap-2">
+                    <span class="flex items-center gap-1 font-bold">
+                      <component
+                        :is="mode.icon"
+                        class="mr-2 size-4"
+                        :class="
+                          explicitMode === mode.id
+                            ? mode.golden
+                              ? 'text-[#dabb5e]'
+                              : 'text-accent-foreground'
+                            : ''
+                        "
+                      />
+                      <span
+                        :class="
+                          explicitMode === mode.id && mode.golden
+                            ? 'golden-text'
+                            : ''
+                        "
+                        >{{ mode.label }}</span
+                      >
+                    </span>
+                    <span class="pl-7 text-xs">{{ mode.description }}</span>
                   </span>
                 </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>

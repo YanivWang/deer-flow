@@ -16,6 +16,36 @@ import { ref } from "vue";
 
 import MessageList from "@/components/chat/MessageList.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
+import {
+  createWorkspaceToastStore,
+  workspaceToastKey,
+} from "@/core/workspace-shell/toast";
+
+/*
+  ArtifactFileCards 的 `.skill` 安装走真实的 skills API 与 workspace toast，
+  所以这个文件把两者都换掉：网络请求用 mock，toast owner 用一份真的 store
+  （断言看的是它收到了什么）。`SkillRequestError` 必须一起导出——组件用
+  `instanceof` 分「要管理员」和其他失败，工厂函数漏掉它会让 catch 分支直接抛。
+*/
+const skillsApi = vi.hoisted(() => ({
+  installSkill: vi.fn(),
+}));
+vi.mock("@/core/skills/api", () => ({
+  installSkill: skillsApi.installSkill,
+  SkillRequestError: class SkillRequestError extends Error {
+    constructor(
+      readonly status: number,
+      message: string,
+    ) {
+      super(message);
+    }
+    get isAdminRequired() {
+      return this.status === 403;
+    }
+  },
+}));
+
+let toastStore = createWorkspaceToastStore();
 
 class ResizeObserverStub {
   observe() {}
@@ -24,6 +54,8 @@ class ResizeObserverStub {
 }
 
 beforeEach(() => {
+  toastStore = createWorkspaceToastStore();
+  skillsApi.installSkill.mockReset();
   vi.stubGlobal("useNuxtApp", () => ({
     $i18n: { t: ref(enUS), locale: ref("en-US") },
   }));
@@ -48,7 +80,10 @@ function mountList(props: Record<string, unknown>) {
       threadId: "thread-1",
       ...props,
     },
-    global: { plugins: [[VueQueryPlugin, { queryClient: new QueryClient() }]] },
+    global: {
+      plugins: [[VueQueryPlugin, { queryClient: new QueryClient() }]],
+      provide: { [workspaceToastKey as symbol]: toastStore },
+    },
   });
 }
 
@@ -180,6 +215,179 @@ describe("assistant:present-files group", () => {
     expect(wrapper.emitted("artifact")?.[0]).toEqual([
       "/mnt/user-data/outputs/summary.txt",
     ]);
+  });
+});
+
+/*
+  `.skill` 的 Install 按钮。台账看不见它有两条独立的原因，两条都成立：
+  这一屏的夹具里没有任何 `.skill` 文件（线索 114），而唯一有只读会话的那一屏
+  （/showcase/<id>）根本不在取样面里（线索 107）。所以它只能靠这里守。
+*/
+describe("assistant:present-files .skill install", () => {
+  const skillFiles = [
+    { id: "human-1", type: "human", content: [{ type: "text", text: "Go" }] },
+    {
+      id: "ai-present",
+      type: "ai",
+      content: "",
+      tool_calls: [
+        {
+          name: "present_files",
+          args: { filepaths: ["/mnt/user-data/outputs/reviewer.skill"] },
+          id: "call-1",
+          type: "tool_call",
+        },
+      ],
+    },
+    {
+      id: "tool-present",
+      type: "tool",
+      name: "present_files",
+      tool_call_id: "call-1",
+      content: "Successfully presented files",
+    },
+  ];
+
+  const installButton = (wrapper: ReturnType<typeof mountList>) =>
+    wrapper
+      .findAll("button")
+      .find((button) => button.text().includes("Install"));
+
+  it("renders Install next to Download for an admin", async () => {
+    const wrapper = mountList({
+      messages: skillFiles,
+      interactive: true,
+      isAdmin: true,
+    });
+    await flushPromises();
+
+    expect(installButton(wrapper)?.exists()).toBe(true);
+    expect(wrapper.get('a[target="_blank"]').text()).toContain("Download");
+  });
+
+  it("hides Install from a non-admin", async () => {
+    const wrapper = mountList({
+      messages: skillFiles,
+      interactive: true,
+      isAdmin: false,
+    });
+    await flushPromises();
+
+    expect(installButton(wrapper)).toBeUndefined();
+  });
+
+  /*
+    只读案例页上不能出现写入入口。上游靠的是另一条路——showcase layout 传的是
+    `<AuthProvider initialUser={null}>`，`isAdmin` 恒为 false——而本仓在
+    `authDisabled` 部署下案例页上的 isAdmin 是 true，所以判据里必须有 !isMock。
+  */
+  it("hides Install on a demo thread even for an admin", async () => {
+    const wrapper = mountList({
+      messages: skillFiles,
+      interactive: false,
+      isMock: true,
+      isAdmin: true,
+    });
+    await flushPromises();
+
+    expect(installButton(wrapper)).toBeUndefined();
+  });
+
+  it("installs the skill and reports success without opening the artifact", async () => {
+    skillsApi.installSkill.mockResolvedValue({
+      success: true,
+      skill_name: "reviewer",
+      message: "Installed reviewer",
+    });
+    const wrapper = mountList({
+      messages: skillFiles,
+      interactive: true,
+      isAdmin: true,
+    });
+    await flushPromises();
+
+    await installButton(wrapper)!.trigger("click");
+    await flushPromises();
+
+    expect(skillsApi.installSkill).toHaveBeenCalledWith({
+      thread_id: "thread-1",
+      path: "/mnt/user-data/outputs/reviewer.skill",
+    });
+    expect(toastStore.toasts.value).toEqual([
+      {
+        id: expect.any(Number),
+        kind: "success",
+        message: "Installed reviewer",
+      },
+    ]);
+    // 卡片本身是可点的；点安装不该顺手把文件在面板里打开（上游 stopPropagation）。
+    expect(wrapper.emitted("artifact")).toBeUndefined();
+  });
+
+  it("surfaces a soft failure message", async () => {
+    skillsApi.installSkill.mockResolvedValue({
+      success: false,
+      skill_name: "",
+      message: "Skill package is malformed",
+    });
+    const wrapper = mountList({
+      messages: skillFiles,
+      interactive: true,
+      isAdmin: true,
+    });
+    await flushPromises();
+
+    await installButton(wrapper)!.trigger("click");
+    await flushPromises();
+
+    expect(toastStore.toasts.value[0]).toMatchObject({
+      kind: "error",
+      message: "Skill package is malformed",
+    });
+  });
+
+  it("maps a 403 to the admin-required hint", async () => {
+    const { SkillRequestError } = await import("@/core/skills/api");
+    skillsApi.installSkill.mockRejectedValue(
+      new SkillRequestError(403, "Forbidden"),
+    );
+    const wrapper = mountList({
+      messages: skillFiles,
+      interactive: true,
+      isAdmin: true,
+    });
+    await flushPromises();
+
+    await installButton(wrapper)!.trigger("click");
+    await flushPromises();
+
+    expect(toastStore.toasts.value[0]).toMatchObject({
+      kind: "error",
+      message: enUS.settings.skills.installAdminRequired,
+    });
+  });
+
+  it("disables the button while the install is in flight", async () => {
+    let settle: (value: unknown) => void = () => {};
+    skillsApi.installSkill.mockReturnValue(
+      new Promise((resolve) => {
+        settle = resolve;
+      }),
+    );
+    const wrapper = mountList({
+      messages: skillFiles,
+      interactive: true,
+      isAdmin: true,
+    });
+    await flushPromises();
+
+    await installButton(wrapper)!.trigger("click");
+    await flushPromises();
+    expect(installButton(wrapper)!.attributes("disabled")).toBeDefined();
+
+    settle({ success: true, skill_name: "reviewer", message: "Installed" });
+    await flushPromises();
+    expect(installButton(wrapper)!.attributes("disabled")).toBeUndefined();
   });
 });
 

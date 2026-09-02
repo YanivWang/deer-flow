@@ -19,30 +19,54 @@
                    `<Button asChild>` 把变体 class 交给锚点，所以读屏器听到的是 link
                    而不是 button——链接才能新窗口打开、才能被「复制链接地址」。
 
-                   **已知与上游的一处差异**：上游这份清单在文件名以 `.skill` 结尾
-                   且当前用户是管理员时，下载左边还有一颗 Install 按钮（会调
-                   `installSkill` 并弹 toast）。本仓两个消费点都没有它。抽这一份的时候
-                   没有顺手补上，是因为它需要 admin 判据 + 安装请求 + 安装中状态，
-                   与「present_files 组该画什么」不是同一件事；这一条记在交接文档的
-                   「挂着的账」里，别当成已经对齐。
-*/
-import { computed } from "vue";
-import { Download } from "lucide-vue-next";
+                   `.skill` 的 Install 按钮（wave 28 补齐）：上游在文件名以 `.skill`
+                   结尾且当前用户是管理员时，下载左边还有一颗 Install。判据走的是本仓
+                   既有的纯函数 `canInstallSkillArtifact`，也就是**比上游多一条
+                   `!isMock`**——上游这份清单只判 `.skill && isAdmin`，而它的详情视图
+                   （artifact-file-detail.tsx）同样不判 isMock。上游在案例页上不出这颗
+                   按钮靠的是另一条路：showcase layout 传的是 `<AuthProvider
+                   initialUser={null}>` 且没人调 refreshUser，于是 `isAdmin` 恒为 false。
+                   本仓的 `isAdmin` 在 `authDisabled` 部署下即使在案例页也是 true
+                   （AgentChat.vue:164），只靠 isAdmin 会让只读案例页长出一颗写入按钮。
+                   `!isMock` 补的就是这条，与 ArtifactPanel 的详情视图同一个判据。
 
-import { buttonVariants } from "@/components/ui/button";
+                   失败提示用 `artifacts.installFailed` 而不是上游写死的英文
+                   "Failed to install skill"：本仓的详情视图早就用这条词条了，
+                   同一个动作在两处说不同的话更糟。
+
+                   toast 走 `useWorkspaceToast()`（**没有 provider 会抛**）。两个消费点
+                   分别在 workspace layout 与 showcase layout 下，两者都 provide 了；
+                   单测里直接挂 MessageList 的要自己 provide 一份。
+*/
+import { computed, ref } from "vue";
+import { Download, Loader, Package } from "lucide-vue-next";
+
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   artifactFileIcon,
   artifactFileName,
   artifactTypeDisplayName,
 } from "@/core/artifacts/display";
+import {
+  canInstallSkillArtifact,
+  classifyArtifact,
+} from "@/core/artifacts/policy";
 import { urlOfArtifact } from "@/core/artifacts/utils";
+import { SkillRequestError, installSkill } from "@/core/skills/api";
+import { useWorkspaceToast } from "@/core/workspace-shell/toast";
 
 const props = defineProps<{
   threadId: string;
   files: string[];
   isMock?: boolean;
+  isAdmin?: boolean;
 }>();
 const emit = defineEmits<{ select: [path: string] }>();
+const { $i18n } = useNuxtApp();
+const toast = useWorkspaceToast();
+
+/** 上游用一个 `installingFile` 记住是**哪一条**在装，不是一个全局布尔。 */
+const installingFile = ref<string | null>(null);
 
 const entries = computed(() =>
   props.files.map((filepath) => ({
@@ -50,6 +74,10 @@ const entries = computed(() =>
     name: artifactFileName(filepath),
     type: artifactTypeDisplayName(filepath),
     icon: artifactFileIcon(filepath),
+    installable: canInstallSkillArtifact(
+      classifyArtifact(filepath, { isMock: props.isMock }),
+      { isAdmin: props.isAdmin === true },
+    ),
     downloadURL: urlOfArtifact({
       filepath,
       threadId: props.threadId,
@@ -58,6 +86,30 @@ const entries = computed(() =>
     }),
   })),
 );
+
+async function install(filepath: string) {
+  if (installingFile.value) return;
+  installingFile.value = filepath;
+  try {
+    const result = await installSkill({
+      thread_id: props.threadId,
+      path: filepath,
+    });
+    if (result.success) {
+      toast.success(result.message);
+      return;
+    }
+    toast.error(result.message || $i18n.t.value.artifacts.installFailed);
+  } catch (cause) {
+    toast.error(
+      cause instanceof SkillRequestError && cause.isAdminRequired
+        ? $i18n.t.value.settings.skills.installAdminRequired
+        : $i18n.t.value.artifacts.installFailed,
+    );
+  } finally {
+    installingFile.value = null;
+  }
+}
 </script>
 
 <template>
@@ -83,6 +135,25 @@ const entries = computed(() =>
           {{ $i18n.t.value.artifacts.fileTypeLabel(entry.type) }}
         </div>
         <div class="col-start-2 row-span-2 row-start-1 self-center">
+          <!--
+            Install 在下载**左边**，与上游同序（artifact-file-list.tsx 的 CardAction
+            先渲染 Install 再渲染 Download）。`@click.stop` 与上游的
+            `e.stopPropagation(); e.preventDefault()` 同义：卡片本身是可点的，
+            点安装不该顺手把这个文件在面板里打开。
+          -->
+          <Button
+            v-if="entry.installable"
+            variant="ghost"
+            :disabled="installingFile === entry.filepath"
+            @click.stop="install(entry.filepath)"
+          >
+            <Loader
+              v-if="installingFile === entry.filepath"
+              class="size-4 animate-spin"
+            />
+            <Package v-else class="size-4" />
+            {{ $i18n.t.value.common.install }}
+          </Button>
           <a
             :href="entry.downloadURL"
             target="_blank"

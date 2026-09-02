@@ -94,6 +94,8 @@ const props = withDefaults(
     interactive?: boolean;
     artifactPaths?: readonly string[];
     isMock?: boolean;
+    /** `.skill` 的 Install 只对管理员出现；判据在 ArtifactFileCards 的文件头。 */
+    isAdmin?: boolean;
     subtasks?: Record<string, Subtask>;
     activeRunId?: string | null;
     hasMoreHistory?: boolean;
@@ -995,6 +997,7 @@ onUnmounted(() => {
                 :thread-id="threadId ?? ''"
                 :files="presentFiles(entry.group)"
                 :is-mock="isMock"
+                :is-admin="isAdmin"
                 @select="emit('artifact', $event)"
               />
             </div>

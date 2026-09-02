@@ -402,7 +402,6 @@ export interface Translations {
     nameStepHint: string;
     nameStepPlaceholder: string;
     nameStepContinue: string;
-    nameStepChecking: string;
     nameStepInvalidError: string;
     nameStepAlreadyExistsError: string;
     nameStepNetworkError: string;

@@ -28,6 +28,7 @@ const props = defineProps<{
   threadId: string;
   artifacts: string[];
   isMock?: boolean;
+  isAdmin?: boolean;
 }>();
 const emit = defineEmits<{ close: []; select: [path: string] }>();
 
@@ -76,6 +77,7 @@ const isEmpty = computed(() => props.artifacts.length === 0);
           :thread-id="threadId"
           :files="artifacts"
           :is-mock="isMock"
+          :is-admin="isAdmin"
           @select="emit('select', $event)"
         />
       </main>

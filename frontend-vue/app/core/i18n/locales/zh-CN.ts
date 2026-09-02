@@ -490,7 +490,6 @@ export const zhCN: Translations = {
       "只允许字母、数字和连字符，存储时自动转为小写（例如 code-reviewer）",
     nameStepPlaceholder: "例如 code-reviewer",
     nameStepContinue: "继续",
-    nameStepChecking: "正在检查…",
     nameStepInvalidError: "名称无效，只允许字母、数字和连字符",
     nameStepAlreadyExistsError: "已存在同名智能体",
     nameStepNetworkError: "网络请求失败，请检查网络或后端连接",

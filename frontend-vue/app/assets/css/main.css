@@ -193,4 +193,20 @@ body {
   .ambilight:after {
     filter: blur(60px);
   }
+
+  /*
+    ultra 档位的金色渐变文字。照抄上游 globals.css:405（同样在 @layer base 里），
+    连渐变角度与三个色标都一样。
+
+    模式触发器与模式菜单里的 "Ultra" 都靠它上色，而**对照台账永远测不到这一条**：
+    颜色只在 settle 的 visible 锚点上取样，模式菜单不是锚点；`-webkit-text-fill-color`
+    也不是 `color`。所以它只能靠「上游有没有这条规则」来判。
+  */
+  .golden-text {
+    background: linear-gradient(135deg, #d19e1d 0%, #e9c665 50%, #e3a812 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-fill-color: transparent;
+  }
 }

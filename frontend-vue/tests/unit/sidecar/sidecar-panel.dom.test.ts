@@ -86,11 +86,16 @@ function queryPlugins() {
   ];
 }
 
-function mountPanel(session = makeSession(), references: unknown[] = []) {
+function mountPanel(
+  session = makeSession(),
+  references: unknown[] = [],
+  /** 只有档位相关的用例需要换 mode；其余照旧拿 pro。 */
+  context: Record<string, unknown> = { model_name: "reasoner", mode: "pro" },
+) {
   const wrapper = mount(SidecarPanel, {
     props: {
       references,
-      context: { model_name: "reasoner", mode: "pro" },
+      context,
       active: true,
       session,
     },
@@ -480,6 +485,91 @@ describe("SidecarPanel 模式菜单", () => {
 
     expect(radioItems()).toHaveLength(1);
     expect(radioItems()[0]!.textContent).toContain(enUS.inputBox.flashMode);
+    wrapper.unmount();
+    document.body.innerHTML = "";
+  });
+
+  /*
+    每一档一个图标、只有 ultra 是金色，与上游 sidecar-panel.tsx:770 及主输入框那份
+    同源。**对照台账看不见这一簇**：lucide 的 svg 不进可访问性树，菜单也不是几何
+    锚点，`.golden-text` 换的是 -webkit-text-fill-color 连颜色取样都读不到。
+
+    这里同时是**复合输入框那一份的真 DOM 代理**：happy-dom 下 ChatComposer 的
+    dropdown 打不开（理由写在 composer-mode-icons.dom.test.ts），两处的模板是同一份
+    写法，菜单项这一层就在这里守。
+
+    图标身份不按 lucide 的内部 class 断言——那是组件库实现细节。断言的是四个 svg
+    各不相同，加上产品自己写的两处着色。
+  */
+  it("paints the mode menu with one icon per mode and gold only on ultra", async () => {
+    const wrapper = await openModeMenu(true);
+    const items = radioItems();
+
+    /*
+      每一项里有**两个** svg：primitive 自带的选中勾在前面，档位图标在后面。
+      按 `mr-2` 取的是档位那一个——拿 querySelector("svg") 会一直拿到那个勾，
+      于是「四个图标各不相同」变成「四个勾都一样」，用例恒红或恒绿都不测产品。
+    */
+    const glyphs = items.map((item) => {
+      const icon = item.querySelector('svg[class*="mr-2"]');
+      expect(icon, `${item.textContent} has no mode icon`).not.toBeNull();
+      expect(icon!.getAttribute("class")).toContain("mr-2 size-4");
+      return icon!.innerHTML;
+    });
+    expect(new Set(glyphs).size).toBe(4);
+
+    // 夹具的 context 是 pro，所以选中的是 pro 那一条。
+    const selected = items.find(
+      (item) => item.getAttribute("data-state") === "checked",
+    )!;
+    expect(selected.textContent).toContain(enUS.inputBox.proMode);
+    expect(selected.className).toContain("text-accent-foreground");
+
+    const ultra = items.find((item) =>
+      item.textContent?.startsWith(enUS.inputBox.ultraMode),
+    )!;
+    // 没被选中时 ultra 不上金色——金色是「当前档位」的标记，不是这一行的装饰。
+    expect(ultra.className).toContain("text-muted-foreground/65");
+    expect(ultra.querySelector(".golden-text")).toBeNull();
+
+    wrapper.unmount();
+    document.body.innerHTML = "";
+  });
+
+  it("turns ultra gold once it is the active mode", async () => {
+    mocks.loadModels.mockReset().mockResolvedValue({
+      models: [
+        {
+          id: "reasoner",
+          name: "reasoner",
+          model: "Reasoner",
+          display_name: "Reasoner",
+          supports_thinking: true,
+        },
+      ],
+    });
+    const { wrapper } = mountPanel(makeSession(), [], {
+      model_name: "reasoner",
+      mode: "ultra",
+    });
+    await flushPromises();
+
+    const trigger = wrapper.get('[data-testid="sidecar-mode-trigger"]');
+    expect(trigger.get("svg").classes()).toContain("text-[#dabb5e]");
+    expect(trigger.get("div:nth-child(2)").classes()).toContain("golden-text");
+
+    await trigger.trigger("click");
+    await flushPromises();
+
+    const ultra = radioItems().find((item) =>
+      item.textContent?.startsWith(enUS.inputBox.ultraMode),
+    )!;
+    expect(ultra.className).toContain("text-accent-foreground");
+    expect(ultra.querySelector(".golden-text")).not.toBeNull();
+    expect(
+      ultra.querySelector('svg[class*="mr-2"]')!.getAttribute("class"),
+    ).toContain("text-[#dabb5e]");
+
     wrapper.unmount();
     document.body.innerHTML = "";
   });

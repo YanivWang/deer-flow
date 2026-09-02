@@ -17,12 +17,13 @@ import {
   watch,
 } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
-import { Bot, CalendarClock, PlusSquare } from "lucide-vue-next";
+import { Bot, CalendarClock, Info, PlusSquare } from "lucide-vue-next";
 
 import AgentBootstrapComposer from "@/components/chat/AgentBootstrapComposer.vue";
 import AgentWelcome from "@/components/chat/AgentWelcome.vue";
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import AuroraText from "@/components/ui/effects/AuroraText.vue";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -65,6 +66,7 @@ import {
   AUTH_DISABLED_USER,
   isAuthDisabledMode,
 } from "@/core/auth/auth-disabled-user";
+import { safeLocalStorage } from "@/core/settings/local";
 import { DEFAULT_MAX_SUGGESTIONS } from "@/core/suggestions/api";
 import type { Message, ToolCall } from "@/core/types/message";
 import {
@@ -446,6 +448,34 @@ const creationBusy = computed(
   () =>
     creation.status.value === "saving" || creation.status.value === "verifying",
 );
+
+/*
+  「记得点保存」的一次性提示，与上游 new/page.tsx 的 showSaveHint 同构：
+  bootstrap 会话第一次进入时出现一次，读过就不再出现（同一个 localStorage 键名，
+  两个应用共用一份记忆），点了保存也立刻收起。
+
+  上游把它画在自己那张 create 页上；本仓的 bootstrap 走 AgentChat，所以它挂在这里，
+  **只在 bootstrap 时渲染**——非 bootstrap 的会话（含被对照台账覆盖的 agent-chat
+  场景）一个字节都不受影响。
+
+  agents 下的 saveRequested 与 agentCreatedPendingRefresh **有意不补**（不写成
+  带点的完整 key：unused 扫描器扫全文，注释里写一次就把它算成"有人用"，坑 10）：
+  上游靠这两条 toast 报告保存进度，本仓的 useAgentCreationSession 用
+  saving/verifying/created/error 四态 + 行内错误区表达同一件事，再加两条 toast
+  等于同一件事说两遍。它们仍留在已审阅 unused 集里。
+*/
+const SAVE_HINT_STORAGE_KEY = "deerflow.agent-create.save-hint-seen";
+const showSaveHint = ref(false);
+onMounted(() => {
+  if (!props.bootstrap) return;
+  if (safeLocalStorage.getItem(SAVE_HINT_STORAGE_KEY) === "1") return;
+  showSaveHint.value = true;
+  safeLocalStorage.setItem(SAVE_HINT_STORAGE_KEY, "1");
+});
+function saveAgent() {
+  showSaveHint.value = false;
+  void creation.save();
+}
 const authoritativeArtifacts = computed(() => {
   if (isDemo.value) return demoArtifacts.value;
   const state = stream.state.value;
@@ -1583,7 +1613,7 @@ onUnmounted(() => {
                 creationBusy ||
                 creation.status.value === 'created'
               "
-              @click="creation.save"
+              @click="saveAgent"
             >
               {{
                 creation.status.value === "verifying"
@@ -1641,8 +1671,18 @@ onUnmounted(() => {
           而不是落在标题栏。
         -->
         <main class="flex min-h-0 max-w-full grow flex-col">
+          <div v-if="showSaveHint" class="px-4 pt-4">
+            <div class="mx-auto w-full max-w-[var(--container-width-md)]">
+              <Alert>
+                <Info class="h-4 w-4" />
+                <AlertDescription>{{
+                  $i18n.t.value.agents.saveHint
+                }}</AlertDescription>
+              </Alert>
+            </div>
+          </div>
           <MessageList
-            :class="isWelcomeMode ? '' : 'pt-10'"
+            :class="isWelcomeMode ? '' : showSaveHint ? 'pt-4' : 'pt-10'"
             :messages="visibleMessages"
             :raw-messages="demoMessages ?? stream.messages.value"
             :streaming="stream.isStreaming.value"
@@ -1650,6 +1690,7 @@ onUnmounted(() => {
             :thread-id="routeThreadId"
             :artifact-paths="artifactPanel.artifacts.value"
             :is-mock="isDemo"
+            :is-admin="isAdmin"
             :subtasks="stream.subtasks.value"
             :active-run-id="stream.activeRunId.value"
             :has-more-history="stream.hasMoreHistory.value"
@@ -1990,6 +2031,7 @@ onUnmounted(() => {
         :thread-id="routeThreadId"
         :artifacts="artifactPanel.artifacts.value"
         :is-mock="isDemo"
+        :is-admin="isAdmin"
         @close="artifactPanel.close()"
         @select="openArtifact($event)"
       />

@@ -1,7 +1,7 @@
 {
   "$comment": "词典 key 基线。由 `make i18n-refresh` 生成。趁词典还是上游原样时取（06 §M1 1d）——此后 key 新增/删除或 unused 集漂移，`make i18n-check` 立刻报出来。",
   "source": "app/core/i18n/locales/en-US.ts",
-  "total": 954,
+  "total": 953,
   "keys": [
     "agents.agentCreated",
     "agents.agentCreatedPendingRefresh",
@@ -38,7 +38,6 @@
     "agents.nameStepBootstrapMessage",
     "agents.nameStepCheckError",
     "agents.nameStepCheckErrorWithDetail",
-    "agents.nameStepChecking",
     "agents.nameStepContinue",
     "agents.nameStepHint",
     "agents.nameStepInvalidError",
@@ -958,13 +957,10 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 42,
+  "unusedTotal": 39,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
-    "agents.createPageTitle",
     "agents.deleteSuccess",
-    "agents.nameStepNetworkError",
-    "agents.saveHint",
     "agents.saveRequested",
     "agents.settingsSaved",
     "artifactEditing.discardChanges",
