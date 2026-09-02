@@ -106,21 +106,44 @@
   --radius-2xl: calc(var(--radius) + 8px);
 }
 
-* {
-  border-color: var(--border);
-}
+/*
+  基础层**必须写在 `@layer base` 里**，不能裸写在顶层。
 
-:where(a, button, input, textarea, select, [tabindex]):focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
+  Tailwind 4 的 `@import "tailwindcss"` 会声明 `@layer theme, base, components,
+  utilities`，而按 CSS 级联层规范，**不属于任何层的作者样式优先级高于所有层**——
+  高于 utilities。所以裸写的 `* { border-color: var(--border) }` 会把全仓每一个
+  `border-<颜色>` 工具类全部盖掉，跟具体度无关。
 
-body {
-  min-height: 100vh;
-  margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  实测（2026-09-02，两个应用同一份 probe，各造一个 `<div class="border-destructive">`
+  再读计算样式）：上游 `rgba(231,0,11,255)`（destructive 红），本仓
+  `rgba(232,229,222,255)`——就是 `--border` 本身。真实元素上同样：`agents/new` 那颗
+  `<input class="border-input border-ring border-destructive">` 上游是
+  `rgba(23,121,225,255)`，本仓 `rgba(232,229,222,255)`。当时全仓有 **90 处**
+  `border-<颜色>` 工具类（border-input 28、border-ring 16、border-destructive 12…），
+  **一处都没生效**：输入框不是输入框的边框色、聚焦不变色、校验失败不变红。
+
+  几何面看不到它：`sampleGeometry` 只取 color / background / fontSize，
+  **不取 borderColor**（宽度没变，所以盒模型也一样）。
+*/
+@layer base {
+  * {
+    border-color: var(--border);
+    /* 上游 `* { @apply border-border outline-ring/50 }` 的后半句。 */
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+
+  :where(a, button, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
 }
 
 /*

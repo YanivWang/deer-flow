@@ -257,3 +257,102 @@ test("the React-equivalent root route is forced dark without overwriting the sav
     "light",
   );
 });
+
+/*
+  基础层与工具类的**级联层次序**。
+
+  Tailwind 4 把工具类放进 `@layer utilities`，而**不属于任何层的作者样式优先级高于
+  所有层**。所以 `main.css` 里的 `* { border-color: var(--border) }` 一旦裸写在顶层，
+  就会把全仓每一个 `border-<颜色>` 工具类盖掉，跟具体度无关——实测过一次：
+  `<div class="border-destructive">` 算出来是 `--border` 而不是红色，
+  而上游同一份 class 是红的（wave 32）。
+
+  这条断言要在**真实浏览器 + 真实构建**里做：源码里那条 `@layer base` 只能证明
+  写法对了，证不了打包之后层序仍然对。对照台账也看不到它——`sampleGeometry`
+  取的是 color / background / fontSize，**不取 borderColor**，边框宽度又没变。
+*/
+test("utility border colors win over the base layer", async ({ page }) => {
+  prepare(page);
+  await page.goto("/workspace/chats/new");
+  await expect(page.locator("textarea[name='message']")).toBeVisible();
+
+  const measured = await page.evaluate(() => {
+    const read = (className: string) => {
+      const probe = document.createElement("div");
+      probe.className = className;
+      document.body.append(probe);
+      const value = globalThis.getComputedStyle(probe).borderTopColor;
+      probe.remove();
+      return value;
+    };
+    const token = (name: string) => {
+      const probe = document.createElement("div");
+      probe.style.borderTopColor = `var(${name})`;
+      document.body.append(probe);
+      const value = globalThis.getComputedStyle(probe).borderTopColor;
+      probe.remove();
+      return value;
+    };
+    return {
+      base: read(""),
+      destructive: read("border-destructive"),
+      input: read("border-input"),
+      transparent: read("border-transparent"),
+      borderToken: token("--border"),
+      destructiveToken: token("--destructive"),
+      inputToken: token("--input"),
+    };
+  });
+
+  // 没有工具类时落到基础层的 --border……
+  expect(measured.base).toBe(measured.borderToken);
+  // ……有工具类时工具类赢，而且赢成它自己那个 token 的颜色。
+  expect(measured.destructive).toBe(measured.destructiveToken);
+  expect(measured.input).toBe(measured.inputToken);
+  expect(measured.transparent).toBe("rgba(0, 0, 0, 0)");
+  // 三个 token 互不相同，否则上面三条会同时成立却什么都没证明。
+  expect(
+    new Set([
+      measured.borderToken,
+      measured.destructiveToken,
+      measured.inputToken,
+    ]).size,
+  ).toBe(3);
+
+  /*
+    另一半：把基础层挪进 @layer 之后，**没有写 focus 工具类的元素仍然有焦点轮廓**。
+    这一条是本仓比上游多的一层保护（上游 `* { outline-ring/50 }` 只给颜色，
+    样式靠浏览器默认），这次改动只让写了 `outline-none` 的元素赢回自己的写法，
+    不该把这层保护一起冲掉。
+
+    用 `<input>` 而不是 `<a>`/`<button>`：Chromium 只对「接受键盘输入」的元素在
+    程序化 focus 时也匹配 `:focus-visible`，链接和按钮要真的按 Tab 才算。
+  */
+  const bareOutline = await page.evaluate(() => {
+    const probe = document.createElement("input");
+    document.body.append(probe);
+    probe.focus();
+    const style = globalThis.getComputedStyle(probe);
+    const value = `${style.outlineStyle} ${style.outlineWidth}`;
+    probe.remove();
+    return value;
+  });
+  expect(bareOutline).toBe("solid 2px");
+
+  /*
+    上游 `* { @apply border-border outline-ring/50 }` 的**后半句**：给每个元素一个
+    默认的 outline 颜色。没有它时 `outline-color` 落到 `currentColor`——写了
+    `outline-none` 的元素看不出区别（样式是 none），但任何自己开 outline 却不指定
+    颜色的地方会拿到文字色而不是 ring 色。
+  */
+  const outlineColor = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.style.color = "rgb(1, 2, 3)";
+    document.body.append(probe);
+    const style = globalThis.getComputedStyle(probe);
+    const value = { outline: style.outlineColor, text: style.color };
+    probe.remove();
+    return value;
+  });
+  expect(outlineColor.outline).not.toBe(outlineColor.text);
+});

@@ -171,7 +171,7 @@ test("mobile ignores the desktop collapsed cookie and closes after route navigat
   一致。同名的第二个控件是贴边的 rail，它 tabindex="-1"：两个同名同功能的按钮都进
   Tab 序列，键盘用户会连续听到两次一模一样的「Toggle Sidebar」。
 */
-test("keyboard focus has a visible global outline and the rail stays out of tab order", async ({
+test("keyboard focus is visible and the rail stays out of tab order", async ({
   page,
 }) => {
   await openWorkspace(page);
@@ -181,7 +181,20 @@ test("keyboard focus has a visible global outline and the rail stays out of tab 
   await page.keyboard.press("Shift+Tab");
   await page.keyboard.press("Tab");
   await expect(collapse).toBeFocused();
-  await expect(collapse).toHaveCSS("outline-style", "solid");
+  /*
+    这颗按钮的焦点指示是 **3px 的 ring**（`focus-visible:ring-[3px]`，画成 box-shadow），
+    不是 outline —— 它自己写着 `outline-none`，与上游同一颗按钮逐字相同。
+
+    此前这里断言的是 `outline-style: solid`，那是**基础层裸写在顶层**时的产物：
+    `main.css` 的 `:where(…):focus-visible { outline: 2px solid }` 不在任何 @layer 里，
+    于是赢过了 `outline-none` 工具类（wave 32）。把它挪进 `@layer base` 之后，
+    这颗按钮的表现与上游一致：outline-style 是 none，可见的是 ring。
+
+    没有写 focus 工具类的元素**仍然**落到基础层那条 2px outline 上——那一条是本仓
+    比上游多的一层保护，不受这次改动影响。
+  */
+  await expect(collapse).toHaveCSS("outline-style", "none");
+  await expect(collapse).not.toHaveCSS("box-shadow", "none");
   await expect(collapse).toHaveAttribute("aria-label", "Toggle Sidebar");
   await expect(collapse).not.toHaveAttribute("aria-expanded", /.*/);
 
