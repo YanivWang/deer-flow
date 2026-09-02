@@ -1,17 +1,17 @@
 # React → Vue 对照对齐：轮次交接文档
 
 **这份文档是每一轮开工的第一读物。** 它记录「上一轮做完了什么、下一轮做什么、
-有哪些账挂着」。深度背景（139 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
+有哪些账挂着」。深度背景（143 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
 `deerflow-parity-harness-plan` 里；这里只放接手一轮所需的最小集合。
 
 **每推完一个阶段（一轮 wave），就地更新这份文档，然后开始下一轮。**
 
 ---
 
-## 当前状态（截至 wave 30，2026-09-02）
+## 当前状态（截至 wave 31，2026-09-02）
 
-- 分支 `main-wc`。`453174c8` = wave 30。
-- wave 30 **没有动 `frontend/`**，**upstream marker 仍在 `c78bc91c`**（wave 28 推的）。
+- 分支 `main-wc`。`453174c8` = wave 30，`f42514bf` = wave 31。
+- wave 30 / 31 **都没有动 `frontend/`**，**upstream marker 仍在 `c78bc91c`**（wave 28 推的）。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
 - 覆盖率棘轮：covered **24**，pending **仍是 1 条**（`chat-thread-init-ordering`）——
   wave 29 **实测**过，结论是**不能加**，翻案判据写在 `$pendingReasons` 里。
@@ -22,9 +22,10 @@
   外加 **settings 域全部**（wave 22~24）、**auth**（wave 26：`/login` 58→0）、
   **只读案例页**（wave 27：`/showcase/<id>` 29→0）、
   **建 agent 页**（wave 28：`/workspace/agents/new` 9→0）、
-  **composer 的焦点 + follow-up 整簇**（wave 29）与
+  **composer 的焦点 + follow-up 整簇**（wave 29）、
   **划词工具条整簇**（wave 30：aria 1→0，位置从 (955,642) 挪到与上游逐像素相同的
-  (367,197)）。
+  (367,197)）与 **聊天面的播报机制**（wave 31：22 处收进 workspace toaster，
+  unused 39→36）。
 
 > **`app/pages/` 下的路由已经一条不剩地量过了**（wave 28 量完最后三条）。
 > **要找活只能去「挂着的账」里挑**，不要再指望「还有没量过的路由」。
@@ -33,10 +34,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 30 收工时逐条跑过）
+### 门禁实测值（wave 31 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；238 文件 / 1995 单测，词典 953 key、39 unused
+make -C frontend-vue verify        exit 0；239 文件 / 2003 单测，词典 953 key、36 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      262 + 21 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -45,7 +46,7 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30 没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30 与 31 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1022**）/ `test:e2e`（**146**）。
 
 **已知的两条负载抖动**（都不是产品缺陷，但每次遇到都要重新证一遍因果）：
@@ -63,8 +64,8 @@ make -C frontend-vue e2e-external  3
    `ui/dialog`**，所以那一轮往 ChatComposer 里加的 Dialog 没给这条路由的
    critical path 添任何模块（同一次跑里 `/workspace/chats/new` 的 route-payload 是过的）。
 
-**wave 30 这两条一条都没遇到，全程零重跑**：六个套件各跑一遍全绿，条数与 wave 29
-逐条相同（只有单测从 1975 涨到 1995，是本轮新增的 20 条）。
+**wave 30 与 wave 31 这两条一条都没遇到，全程零重跑**：两轮各把六个套件跑一遍全绿，
+e2e 条数与 wave 29 逐条相同（只有单测在涨：1975 → 1995 → 2003）。
 
 ### 开工前必查
 
@@ -137,144 +138,111 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 30）做了什么
+## 上一轮（wave 31）做了什么
 
-正题是**划词工具条整簇**。它挂在「挂着的账」里九轮，一直写着「要守住它需要一条
-**取样在选中态的新场景**」。这一轮先把这句当假设重新验——**假设是错的**，
-然后按测出来的数字把整簇差异修掉。
+正题是挂了很多轮的「上游 toast、本仓内联/静默」那一簇。开工先做了一次**普查**，
+结果比记着的大得多：这一簇不是四处，是 **22 处**，最大的一块此前根本没记在账上。
 
-### 一、翻掉「要新场景」那句话（本轮最值钱的产出）
+### 一、普查（先量，再改）
 
-`select-text` 这条步骤 wave 21 就有了。挡路的不是步骤词汇，是**唯一在用它的那条
-场景把它点掉了**：`sidecar-chat` 的 steps 是 `select-text` → click「Ask in side chat」
-→ 等面板，而两个应用都在那次点击里清选区（React `setSelectionToolbar(null)` /
-本仓 `selection.value = null`），稳定态里自然没有工具条。
+上游 `frontend/src/` 里一共 **130 处** `toast.*`。绝大多数域（channels / integrations /
+memory / artifacts / export / sidebar）本仓早就走 `useWorkspaceToast` 了，真正有落差的
+只有**聊天面**这 22 处：
 
-**不点就取得到。** 一次性 probe 把一步 `select-text`（不点）挂在
-`streaming-reasoning-order` 上，两个应用各取一份，**当场量到两处差异**：
+| 本仓此前的形态 | 处数 |
+|---|---|
+| `ChatComposer` 的手搓 `data-sonner-toast` | 16 |
+| `AgentChat` 的 `warnings` 数组 → 内联 `<p role="status">` | 3 |
+| 完全静默 | 3 |
 
-| 变体 | onlyReact | onlyVue | 工具条位置 React | 工具条位置 Vue |
-|---|---|---|---|---|
-| 选 **AI** 正文 | `- button "Close"` | （空） | (367,197) 337×42 | (955,642) 293×46 |
-| 选 **人类** 正文 | （空） | `- button "Add to conversation"` / `- button "Ask in side chat"` | 不出 | 出 |
+**这个 22 值得记住**：下一轮不用再从 130 处重新普查。
 
-选区 rect 两边**逐像素相同**（376,247,320×18），所以位置差的整整
-588×445 px 全是本仓这一侧。第二行是白捡的：上游只在 assistant 组的 ai 消息上挂
-onMouseUp，本仓挂在**每个组**上。
+### 二、`ChatComposer` 那个手搓的 toast（最大的一块）
 
-场景 id 受棘轮约束，**夹具与 steps 不受**——所以这一步是加在**已经 covered 的**
-场景上的，基线不用加记录，covered 24 / pending 1 没变，套件仍是 47 条。
+`const toast = ref("")` + `fixed right-5 bottom-5` 带 `data-sonner-toast` 的 div。
+三处落差，没有一处是风格问题：**① 没有 role、没有 aria-live**（读屏器一条都念不到）；
+**② 从来不清空**（全文没有一处 `toast.value = ""`，也没有定时器——一条「请等流式结束」
+会永远挂在右下角）；**③ 位置也不对**（上游 `<Toaster position="top-center" />`，
+本仓的 toaster 同样是 top-center，只有这份副本在右下角）。
 
-### 二、整簇修掉的八处
+16 条**逐条对着上游那一处**定 kind，不是一律 error：compact 成功走 success、
+goal 的 clear/set 走 success 而 status 走 info、pleaseWaitStreaming 与
+inputPolishNoChanges 走 info、其余 error。
 
-1. **锚在选区上**（headline）。上游 `message-list.tsx:1328` 是
-   `style={{ left: x, top: y }}` + `-translate-x-1/2`，x 取选区中线、y 取上沿减 8；
-   本仓原来是 `fixed right-8 bottom-28`，与选中的是哪一段完全无关。
-2. **放不下就翻到选区下方**。判据 `rect.top - 8 - 48 >= 0`（`SELECTION_TOOLBAR_MARGIN`
-   与 `SELECTION_TOOLBAR_ESTIMATED_HEIGHT` 两个常量与上游逐字相同），
-   class 上跟着在 `-translate-y-full` / `translate-y-0` 之间切。
-3. **第三颗关闭键**（`aria-label` = `common.close`，×）——台账上那一行就是它。
-4. **两颗动作按钮各带图标**（`MessageCircle` / `MessageSquarePlus`，`size-3.5`）。
-5. **三颗都换成 `<Button variant="ghost" size="sm">`**，容器从 `bg-background rounded-md
-   shadow` 换成 `bg-popover text-popover-foreground rounded-full shadow-lg`。
-6. **`@mousedown.prevent`**：默认 mousedown 会先折叠选区，高亮跟着消失。
-7. **只在 assistant 组的 ai 消息上起**，且**流式期间整屏不起**（上游 `thread.isLoading`）。
-8. **滚动就收起**（window 的**捕获**阶段——真正在滚的是会话流那个容器，
-   scroll 不冒泡到 window）。
+### 三、`AgentChat` 与三处完全静默的
 
-**顺带修掉一处机制差**：归属判定从「`text(message)` 的子串」换成上游的
-「anchor/focus 两个节点在不在这一轮里」。`text()` 给的是 markdown **源码**，
-选区里是**渲染之后**的文字，一段跨越行内标记的选区（`this is **bold** text` 上选
-"is bold te"）在源码里根本不是子串，于是本仓**静默不弹工具条**，上游照弹。
+`notify.warn`（replay gap）与 `notify.error`（流错误）改走 toaster——它们此前 push 进
+一个只增不减的数组，一次性的警告永远不走，而且错误只播成 polite。
 
-改完复量：两个变体 aria 都是 **0/0**，工具条 rect 两边都是 **(367,197) 337×42**。
+三处静默里最严重的是**分支失败**：本仓 `branch()` **一个 catch 都没有**，
+`branchThreadFromTurn` 一抛就是一条未处理的 rejection，不跳转、不提示，用户点完
+「分支」屏幕纹丝不动。另两处是 human input 提交抛异常、选区跨轮次（wave 30 记的账）。
+对应的三条词条因此从 unused 里出来：**39 → 36**。
 
-### 三、两条新守卫（都是「哪一行代码读它」问出来的）
+### 四、判据（本轮真正的产出）
 
-1. **`select-text` 的 `scope` 此前不受定位方式检查**。
-   `scenario-coverage.test.ts` 那条「只用两边共有的定位方式」写的是
-   `if (!("target" in step)) continue;`，而 `select-text` 用的是 `scope`——
-   整类步骤被静默跳过。**步骤词汇加新形状时，这条守卫要跟着加。**
-2. **「工具条留在取样面里」本身没有守卫**：把那一步删掉，没有任何门禁会红，
-   工具条会静默退出取样面（线索 131 的同一条机制）。现在钉的是
-   「有场景的**最后一步**是 select-text」——这正是「取样时刻工具条还在」的充要条件。
+**在某一刻发生的事 → workspace toaster；在一段时间里为真的事 → 页面里的状态。**
 
-### 四、位置为什么只能靠单测守
+写在 `AgentChat.vue` 的 `failedSend` 声明上，由 `chat-notification-routing.test.ts`
+钉住。留在页面里的只有三处：发送失败 +「再试一次」、`stream.llmRetry` 的横幅、
+历史加载失败 +「再试一次」。
 
-`sampleGeometry` 只量 **settle 里的 `visible` 锚点**（capture.ts 的函数头写着为什么：
-click/fill 的目标在交互之后可能已经移动或消失）。而 settle 跑在 steps **之前**，
-所以工具条不可能成为 settle 锚点。结论：**台账看得见工具条的可访问性树，看不见它的
-位置**。位置、翻转、`@mousedown.prevent`、各条不该出现的判据，全部由
-`tests/unit/chat/selection-toolbar.dom.test.ts`（19 条）守。
+**「带着一个按钮」是这一档的后果不是判据**——第一版就是这么写的，结果 `llmRetry`
+成了例外（它没有按钮，却明明是一段持续为真的状态）。改成按**时长**判之后，
+三处状态落在同一侧，不再有例外。这条判据与 `BrowserPanel` 文件头第 3 条同源。
 
-happy-dom 里 `Range.getBoundingClientRect()` 恒为全 0，造不出「贴着视口顶端」这种
-场景，所以那个文件把 `getSelection` 换成一份可控替身，被测的是 `onSelection` 里
-那段判据本身。
+### wave 31 自审抓出来的（都已修）
 
-### wave 30 自审抓出来的（都已修）
+1. **判据的第一版让 `llmRetry` 成了例外**（见上）。
+2. **变异脚本第一版的 `cn` 导入锚点 0 次命中**（ChatComposer 没从 `@/lib/utils`
+   导入 `cn`）。脚本在写文件**之前**就抛了，所以那一批替换一个都没落地——
+   失败得早比失败得晚好，但锚点仍然要按文件当前的样子取。
+3. `i18n-unused` 报的三条正好是预期的三条，不多不少；顺手核对过
+   `agents.deleteSuccess` / `sidecar.deleteSuccess` 仍在 unused 里（属别的域）。
 
-1. **注释里写 `sidecar.selectionCrossesMessages` 会让它从 unused 集里消失**
-   （线索 126 的现场复发）：那条 key 现在仍然是死条目，带点写会让 unusedTotal
-   从 39 掉到 38，`doc-facts` 当场红。改成「sidecar 下的 selectionCrossesMessages」。
-2. **负向验证抓出一条真的假绿**：把 `group?.type !== "assistant"` 整句删掉，
-   全部用例照样绿——「人类轮次」那条用例会被后一句 `message.type !== "ai"` 顺手挡住，
-   两条判据在那个输入上**重叠**了。能把它们分开的只有 **assistant:processing 组**：
-   它的 `messages[0]` 恰恰**是**一条 ai 消息。补了一条用例，C1 转红。
-3. **第一版把「流式期间不起」的用例写在单轮会话上，恒红**：流式期间那一轮的 ai
-   消息进的是 `assistant:processing` 组，压根没有 `data-assistant-turn`，
-   取锚点就失败。改成两轮会话、划**已经结束**的第一轮，并配一条同夹具的
-   非流式对照——只有这一对才在测「流着的时候整屏都不给划」。
+### wave 31 新增的踩坑线索（记忆里编号 140~143）
 
-### wave 30 新增的踩坑线索（记忆里编号 136~139）
+- **140. 一个「上游有、本仓没有」的账，先普查再估体量。** 这一簇记着四处，实际 22 处。
+  普查很便宜（一条 grep + 逐处对本仓），而按记忆估体量会把一轮估错一个量级。
+- **141. 手搓副本会带着原件的属性一起长**（`data-sonner-toast` 出现在一个不是 sonner
+  的 div 上，两个 e2e + 四条单测按它定位）。**看到一个组件库的内部属性，先确认
+  这里真的在用那个组件库。**
+- **142. 注入型 owner 改了之后，所有挂载该组件的单测都要一起 provide。**
+  `useWorkspaceToast` 拿不到 owner 直接抛，这一轮牵动 13 个测试文件。
+  好处是其中几条因此可以直接断言播报内容。
+- **143. 判据要按「时长」而不是「有没有按钮」来分播报与状态。** 按按钮分会让
+  `llmRetry` 这种「持续为真但没有出路」的状态变成例外。
 
-- **136. 一屏没被取样，可能是已有场景的最后一步把它关掉了。** 见上面第①条。
-- **137. `sampleGeometry` 只量 settle 锚点，而 settle 跑在 steps 之前**——
-  所以**任何靠交互才出现的东西，位置都进不了台账**，只能单测守。
-- **138. 两条判据可能在你写的那个输入上重叠，于是删掉一条也不红。**
-  负向验证发现假绿时，先问「有没有一个输入能把这两条分开」，再补用例。
-- **139. lucide-vue-next 会自动补 `aria-hidden="true"`**（`hasA11yProp`：
-  没有 aria-*/role/title 才补），与 lucide-react 行为一致。本仓有几处手写了
-  `aria-hidden="true"`，那是冗余而不是必需。
+## 下一轮（wave 32）：两条路，挑一条
 
-## 下一轮（wave 31）：三条路，挑一条
+`app/pages/` 下的路由已经量光，**只能从「挂着的账」里挑**。wave 30 做掉了划词工具条、
+wave 31 做掉了播报机制那一簇，剩下的：
 
-`app/pages/` 下的路由已经量光，**只能从「挂着的账」里挑**。wave 30 把其中一条
-（划词工具条）做掉了，剩下的按性价比：
+1. **`border-border` 基础层**（本仓 `main.css` 没有 `* { @apply border-border }`）。
+   影响全仓，压不住就要拆两轮。**开工第一件事是量**：先 grep 出全仓裸 `border`/
+   `border-b`/`border-t` 的处数，再挑两三处 probe 看颜色到底差多少——
+   wave 31 的教训是按记忆估体量会错一个量级（线索 140）。
+2. **`/auth/callback` 的结构性对齐**（会把 `/login` 的服务端跳转变成客户端跳转，
+   **要先跑一遍上游的 e2e-auth**）。
 
-1. **流式警告 toast vs 内联横幅**（上游 `core/threads/hooks.ts:1805`；本仓
-   `AgentChat.vue` 的 `warnings` 渲染成 `absolute right-4 bottom-36` 的
-   `<p role="status">`）。**这一轮值得先做**：它现在是**一整簇**了，不只一处——
-   wave 30 又往里放了一条（划词选区跨轮次时上游 toast、本仓静默），加上
-   `handleSubmitHumanInput` 的 catch、种子取数失败那条，一共四处走同一个决定。
-   做之前先答一个问题：本仓已经有**三套**播报机制（`workspace-shell/toast` 的
-   全局 toaster、ChatComposer 的局部 `toast` ref、MessageList 的 `actionError`
-   内联区），这一轮要么统一，要么明写谁管谁。
-2. **`border-border` 基础层**（本仓 `main.css` 没有 `* { @apply border-border }`）。
-   影响全仓，压不住就要拆两轮。
-3. **`/auth/callback` 的结构性对齐**（会把 `/login` 的服务端跳转变成客户端跳转，
-   要先跑一遍上游的 e2e-auth）。
-
-另外三笔小账：**`Button` 的 as-child**、**chip 编辑区**（wave 30 复查发现它比
-「span vs div」大，见下）、**词典手术**（三簇按叶子名匹配扫描器看不见的死条目 +
-39 条 unused 复核）。
+另外三笔小账，可以合并进任意一轮：**`Button` 的 as-child**、**chip 编辑区**
+（wave 30 复查发现它比「span vs div」大，见下）、**词典手术**
+（三簇按叶子名匹配扫描器看不见的死条目 + 36 条 unused 复核）。
 
 ### 还剩几轮（**估计，不是实测；下一轮仍要当假设重新验**）
 
-wave 29 估的是 7~9 轮，wave 30 做掉了其中一条「必须单独一轮」的。重估：
+wave 29 估 7~9，wave 30 估 6~8，wave 31 做完再估：
 
-- **必须单独一轮（3~4）**：上游 toast 那一簇（四处一起）、`border-border` 基础层
-  （影响全仓，压不住要拆两轮）、`/auth/callback` 结构性对齐（会把 `/login` 的
-  服务端跳转变成客户端跳转，**要先跑一遍上游的 e2e-auth**）
-- **可合并的小账（1~2）**：`Button` as-child、chip 编辑区、命令面板名字、
+- **必须单独一轮（2~3）**：`border-border`（压不住要拆两轮）、`/auth/callback`
+- **可合并的小账（1）**：`Button` as-child、chip 编辑区、命令面板名字、
   模型选择器筛选、欢迎区在树里的位置、browser 面板剩余分叉
 - **词典手术（1）**、**收尾复量（1）**
 - **被上游阻塞（0 轮，只记账）**：首次发送后那一屏的 `Completed in <1s` 与
   `Edit and rerun`，要等上游那条 history/stream 竞态
-- **已决定不做（0 轮，只记账）**：逐条写在「挂着的账」里
 
-合计 **6~8 轮**。**wave 30 的教训是这个数字可能偏悲观**：划词工具条被记成
-「必须单独一轮的结构性改动」，实测只是「给现成场景加一步 + 一屏组件」。
-**每一条「必须单独一轮」都值得先花半小时量一次再定。**
+合计 **5~6 轮**。**两轮连着的教训都是「先量再估」**：wave 30 那条被记成
+「必须单独一轮的结构性改动」，量完是一次普通域清零；wave 31 那条被记成四处，
+普查出来 22 处。**「必须单独一轮」和「就四处」这两种标签都要当假设重新验。**
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -353,18 +321,15 @@ wave 29 估的是 7~9 轮，wave 30 做掉了其中一条「必须单独一轮�
   `aria-label`；上游 dialog 标题是 "Command Palette"，本仓是 "Actions"。这一屏没被取样。
 - **模型选择器的筛选**：上游是 cmdk 的 command-score 模糊评分，本仓是子串匹配。
   写在 `ComposerModelSelector.vue` 文件头。
-- **上游 toast / 本仓静默或内联** 这一簇现在有**四处**，要做就一起做（下一轮候选 1）：
-  流式警告与 llm retry（上游 `core/threads/hooks.ts:1805`；本仓 `AgentChat.vue` 的
-  `warnings` 渲染成 `absolute right-4 bottom-36` 的 `<p role="status">`）、
-  种子取数失败（`hooks.ts:1839`）、`MessageList` 的 `handleSubmitHumanInput` catch、
-  以及 wave 30 新增的划词选区跨轮次。本仓已经有三套播报机制
-  （全局 toaster / ChatComposer 的局部 ref / MessageList 的 `actionError`），
-  这一轮的正题其实是**先定谁管谁**。
+- ~~上游 toast / 本仓静默或内联~~ —— **wave 31 做完了**（普查出 22 处，
+  全部收进 workspace toaster）。判据写在 `AgentChat.vue` 的 `failedSend` 声明上：
+  **一刻发生的事走 toaster，一段时间为真的事留在页面里**。
+  **留在页面里的三处不是遗漏**：发送失败 +「再试一次」、`stream.llmRetry` 的横幅、
+  历史加载失败 +「再试一次」。要翻案得先推翻那条判据。
 - **上游 `SidebarTrigger` 在窄屏读的是桌面的 `open`**，图标恒定且指反。上游缺陷，
   本仓先保持一致。**要修就是两边同改，需要用户先拍板。**
-- ~~划词工具条整簇差异~~ —— **wave 30 做完了**。留下的只有一条：
-  **选区跨轮次时上游 toast 一句 sidecar 下的 selectionCrossesMessages，本仓静默**。
-  归进下面那条 toast 的账里一起做（那条 key 因此仍在 39 条 unused 里）。
+- ~~划词工具条整簇差异~~ —— **wave 30 做完了**；留下的那条选区跨轮次播报
+  **wave 31 也做掉了**。这一条已结清。
 - **browser 面板有意保留的四处分叉**（写在 `BrowserPanel.vue` 文件头），其中
   `border-border`（本仓 `main.css` 没有 `* { @apply border-border }` 基础层）
   **影响全仓，哪天要统一处理就是单独一轮**。
@@ -373,8 +338,8 @@ wave 29 估的是 7~9 轮，wave 30 做掉了其中一条「必须单独一轮�
   只出 class。两边都 grep 过，**没有任何选择器消费它**，所以现在只是合同差异。
 - **run 成功结束之后退回「重新取的 checkpoint」**（跨域候选）。
 - **上游种子取数失败会弹 toast**（`hooks.ts:1839`），本仓静默降级（S8 明写 403/404 属常态）。
-- **上游 `MessageList` 的 `handleSubmitHumanInput` 在 catch 里 `toast.error`**，
-  本仓静默清 pending。
+  **这一条 wave 31 有意没动**：它不是「缺一层播报」，是 S8 写死的「403/404 属常态」，
+  弹 toast 会在每次打开只读线程时报一次假故障。
 - **`messages.clarification` / `messages.conversation` / `messages.subtask` 是既有
   死条目**，unused 扫描器按叶子名匹配看不见它们。清理整簇属词典手术，单独一轮。
 - **`browser.trigger` / `browser.navigationFailed` 也是死条目**（只有测试在消费）。
@@ -387,7 +352,7 @@ wave 29 估的是 7~9 轮，wave 30 做掉了其中一条「必须单独一轮�
   但 `aria-multiline` 与空态占位是两处实打实的落差。三样都不进 aria 快照，
   所以台账天生看不见。
 
-### 剩余 39 条 unused 词条
+### 剩余 36 条 unused 词条
 
 逐条 grep 时注意**扫描器按叶子名匹配，双向都会漏报**：不在 unused 里不等于有人用
 （`inputBox.mode` 就是这样被埋了很久），而**写进注释就会被算成有人用**（线索 126）。
@@ -428,12 +393,12 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 139 条在记忆文件里）
+## 其他常踩的坑（完整 143 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
   `toHaveLength(215)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
-  （**953 / 39**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
+  （**953 / 36**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
   「N 个已审阅 unused key」也要一起改。
 - **新增 L2 组件要加进 `tests/architecture.test.ts` 的 `l2Files` 允许清单**
   （要有 `【架构位置】 L2` 头、不许 import 产品层——`@/composables`、`#app`、`#imports`
@@ -463,7 +428,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、139 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、143 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
