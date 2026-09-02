@@ -134,7 +134,17 @@ async function install(filepath: string) {
         <div class="text-muted-foreground col-start-1 min-w-0 pl-8 text-xs">
           {{ $i18n.t.value.artifacts.fileTypeLabel(entry.type) }}
         </div>
-        <div class="col-start-2 row-span-2 row-start-1 self-center">
+        <!--
+          上游是 `<CardAction className="row-span-1 self-center">`
+          （artifact-file-list.tsx:109）。CardAction 的基础 class 里是
+          `row-span-2 ... self-start justify-self-end`，调用点用 tailwind-merge
+          把前两条换成了 `row-span-1 self-center`——本仓这里是一个裸 div，
+          得把合并之后的结果直接写出来。跨两行还是一行会改卡片高度：
+          按钮比标题行高，占一行时第一行被它撑开，占两行时两行一起分担。
+        -->
+        <div
+          class="col-start-2 row-span-1 row-start-1 self-center justify-self-end"
+        >
           <!--
             Install 在下载**左边**，与上游同序（artifact-file-list.tsx 的 CardAction
             先渲染 Install 再渲染 Download）。`@click.stop` 与上游的

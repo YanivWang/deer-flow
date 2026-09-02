@@ -31,6 +31,7 @@ const coverage = read("baseline/parity-scenario-coverage.json") as {
   covered: string[];
   pending: string[];
   exempt: { id: string; route: string }[];
+  $pendingReasons: Record<string, string>;
 };
 const scope = read("baseline/react-parity-scope.json") as {
   exemptRoutes: { routes: string[] };
@@ -76,6 +77,27 @@ describe("对照场景覆盖率", () => {
       "上游 spec 清单变了：新增的要进 pending（要做）或 exempt（在已豁免的路由上），" +
         "删掉的要从三个桶里一起移除。",
     ).toEqual(reactSpecIds());
+  });
+
+  /*
+    pending 的**理由**此前没有任何守卫：`$pendingReasons` 只在 scenarios.ts 的一段
+    注释里被提到过，没有一行代码读它。于是把某一条的理由删掉、或者把一个场景挪进
+    covered 却留下它的旧理由，两件事都不会让任何门禁变红——而理由正是这份棘轮里
+    唯一说得清「为什么还没做」的东西。wave 29 把一条挂了十几轮的**推断**换成了实测，
+    这条守卫是为了让下一任不会静默地把它丢掉。
+  */
+  it("每条 pending 都写着它为什么还没做，而且没有多余的理由", () => {
+    const reasons = coverage.$pendingReasons ?? {};
+    expect(
+      Object.keys(reasons).sort(),
+      "pending 与 $pendingReasons 必须一一对应：挪进 covered 的要把理由一起删掉。",
+    ).toEqual([...coverage.pending].sort());
+    for (const [id, reason] of Object.entries(reasons)) {
+      expect(
+        typeof reason === "string" && reason.trim().length >= 20,
+        `${id} 的理由是空的或者太短，写不出「为什么还没做」`,
+      ).toBe(true);
+    }
   });
 
   it("每条豁免场景都落在一条已经豁免的路由上", () => {

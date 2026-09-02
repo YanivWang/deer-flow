@@ -215,6 +215,8 @@ const agentResolved = ref(!props.agentName || isDemo.value);
 let agentRequest = 0;
 const followups = ref<string[]>([]);
 const followupsLoading = ref(false);
+/* composer 里正开着斜杠目录、或挂着一个技能 chip。见 ChatComposer 的同名 emit。 */
+const followupsSuppressed = ref(false);
 const suggestionsConfigQuery = useSuggestionsConfig({
   enabled: computed(() => !isDemo.value),
 });
@@ -1182,7 +1184,14 @@ async function send(
   },
 ) {
   if (isDemo.value) return false;
+  /*
+    上游三条提交路径都是 `setFollowups([]); setFollowupsHidden(false);
+    setFollowupsLoading(false);`（input-box.tsx:1024 / 1091 / 1202）三件一起做。
+    本仓原来只清数组：上一轮建议还在取的时候再发一条，「正在生成建议」那颗 chip
+    会跟着新的流一路挂着。
+  */
   followups.value = [];
+  followupsLoading.value = false;
   mainTailRequest.value += 1;
   try {
     const targetThreadId = await ensureThread();
@@ -1927,10 +1936,35 @@ onUnmounted(() => {
                 方法的组件」，AgentBootstrapComposer 根本没有接这个 ref。
                 bootstrap 是每个实例上的常量，所以直接并进 v-if，不留隐藏 DOM。
               -->
+              <!--
+                显示判据逐条对着上游 `showFollowups`（input-box.tsx:1981）：
+                `!disabled && !isWelcomeMode && !showSkillSuggestions &&
+                 !selectedSlashSkill && !followupsHidden && status !== "streaming" &&
+                 (followupsLoading || followups.length > 0)`。
+
+                逐条对应关系：
+                - `!disabled` → `!isDemo`（composer 拿到的 `disabled` 就是它）。
+                  本仓这一条目前**够不着**——followup 只在 refreshPostRun 里取，而
+                  它挂在 onFinish 上，只读线程从来不跑 run。留着是为了两边的判据同形，
+                  也为了以后真出现「可读不可写」的态时不会漏。
+                - `!showSkillSuggestions && !selectedSlashSkill` → `!followupsSuppressed`，
+                  由 composer 发上来（chip 画在 composer **外面**，看不见这两样）。
+                - `!followupsHidden` → 本仓的关闭键直接 `followups = []`，等价：
+                  上游留着数组只是为了下一批到达时用 `setFollowupsHidden(false)` 复位，
+                  而本仓下一批到达时本来就会重新赋值。
+                - `status !== "streaming"` → `!stream.isStreaming.value`。**这一条此前
+                  真的缺**：`send()` 只清 `followups`、不清 `followupsLoading`，所以在
+                  上一轮建议还没取回来时再发一条，「正在生成建议」那颗 chip 会一直挂在
+                  新的流上面（上游用这一条与提交时的 `setFollowupsLoading(false)` 挡了两道）。
+                - `!bootstrap` 是本仓独有的一条，理由见下面那段注释。
+              -->
               <div
                 v-if="
                   !bootstrap &&
+                  !isDemo &&
                   !isWelcomeMode &&
+                  !followupsSuppressed &&
+                  !stream.isStreaming.value &&
                   (followupsLoading || followups.length > 0)
                 "
                 data-slot="suggestions-list"
@@ -1998,6 +2032,7 @@ onUnmounted(() => {
                 :streaming="stream.isStreaming.value"
                 :uploading="localUploading"
                 :is-welcome="isWelcomeMode"
+                :auto-focus="initialRouteThreadId === null"
                 :show-welcome-suggestions="route.query.mode !== 'skill'"
                 :prompt-history="promptHistory"
                 :ensure-thread="ensureThread"
@@ -2012,6 +2047,7 @@ onUnmounted(() => {
                   localUploading = $event;
                   stream.isUploading.value = $event;
                 "
+                @followups-suppressed-change="followupsSuppressed = $event"
                 @clear-references="sidecar.clearConversationQuotes()"
                 @context-change="updateContext"
                 @goal-change="localGoal = $event"

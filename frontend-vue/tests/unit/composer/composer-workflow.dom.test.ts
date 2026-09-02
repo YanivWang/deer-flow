@@ -124,6 +124,8 @@ describe("composer submission and stale lifecycle", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    // 确认框现在 portal 到 body：不清掉，下一条用例会读到上一条留下的浮层。
+    document.body.innerHTML = "";
   });
 
   it("renders the complete React welcome suggestion row in source order", async () => {
@@ -284,7 +286,15 @@ describe("composer submission and stale lifecycle", () => {
     expect(wrapper.text()).not.toContain("notes.txt");
   });
 
-  it("offers append, replace, and cancel, then sends the selected result", async () => {
+  /*
+    上游那个确认框是**真的** `<Dialog>`（input-box.tsx:2765）：portal 出去、有遮罩、
+    有焦点陷阱与关闭键，标题/描述由 DialogTitle + DialogDescription 提供。所以这里
+    只能从 `document` 上找它——portal 出去的内容不在 wrapper 的子树里。
+
+    本仓原来是 `absolute bottom-full` 的手搓副本：`aria-label` 顶替标题、没有遮罩、
+    Escape 关不掉、Tab 会直接走进底下的输入框。它还多渲染一段待发正文，上游没有。
+  */
+  it("offers append, replace, and cancel in a real dialog, then sends the selected result", async () => {
     const submitMessage = vi.fn(async (_text, _files, options) => {
       options.onAccepted();
       return true;
@@ -293,25 +303,41 @@ describe("composer submission and stale lifecycle", () => {
     await flushPromises();
     const textarea = wrapper.get("textarea[name='message']");
     await textarea.setValue("Existing draft");
-    (
-      wrapper.vm as unknown as { offerFollowup(value: string): void }
-    ).offerFollowup("Suggested question");
+
+    const offer = (value: string) =>
+      (
+        wrapper.vm as unknown as { offerFollowup(value: string): void }
+      ).offerFollowup(value);
+    const dialog = () => document.querySelector('[role="dialog"]');
+    /* 关闭键排在 slot **之后**，所以取消/追加/替换仍然是 0/1/2。 */
+    const footerButton = (index: number) =>
+      dialog()!.querySelectorAll("button")[index] as HTMLButtonElement;
+
+    offer("Suggested question");
     await flushPromises();
 
-    expect(wrapper.get("[role='dialog']").text()).toContain(
-      "Suggested question",
+    expect(dialog()).not.toBeNull();
+    expect(dialog()!.getAttribute("aria-modal")).toBe("true");
+    expect(dialog()!.textContent).toContain(enUS.inputBox.followupConfirmTitle);
+    expect(dialog()!.textContent).toContain(
+      enUS.inputBox.followupConfirmDescription,
     );
-    await wrapper.get("[role='dialog'] button").trigger("click");
+    // 上游只画标题和描述，不把待发的那句再念一遍。
+    expect(dialog()!.textContent).not.toContain("Suggested question");
+    // 手搓副本没有的那颗关闭键。
+    expect(document.querySelector('[data-slot="dialog-close"]')).not.toBeNull();
+
+    footerButton(0).click();
+    await flushPromises();
+    expect(dialog()).toBeNull();
     expect((textarea.element as HTMLTextAreaElement).value).toBe(
       "Existing draft",
     );
     expect(submitMessage).not.toHaveBeenCalled();
 
-    (
-      wrapper.vm as unknown as { offerFollowup(value: string): void }
-    ).offerFollowup("Suggested question");
+    offer("Suggested question");
     await flushPromises();
-    await wrapper.findAll("[role='dialog'] button")[1]!.trigger("click");
+    footerButton(1).click();
     await flushPromises();
     expect(submitMessage).toHaveBeenLastCalledWith(
       "Existing draft\nSuggested question",
@@ -320,17 +346,72 @@ describe("composer submission and stale lifecycle", () => {
     );
 
     await textarea.setValue("Another draft");
-    (
-      wrapper.vm as unknown as { offerFollowup(value: string): void }
-    ).offerFollowup("Replacement");
+    offer("Replacement");
     await flushPromises();
-    await wrapper.findAll("[role='dialog'] button")[2]!.trigger("click");
+    footerButton(2).click();
     await flushPromises();
     expect(submitMessage).toHaveBeenLastCalledWith(
       "Replacement",
       [],
       expect.objectContaining({ onAccepted: expect.any(Function) }),
     );
+  });
+
+  /*
+    关闭键与 Escape 走的是 `update:open`，不是页脚那颗 Cancel（它直接调
+    `resolveFollowup('cancel')`）。**这一条是负向验证抓出来的**：把
+    `@update:open` 改成空函数，上面那条用例照样全绿——手搓副本时代根本没有这条路径，
+    换成真 Dialog 之后它才存在，于是也从来没被测过。
+  */
+  it("closes from the dialog's own close button, not just the footer", async () => {
+    const { wrapper } = mountComposer();
+    await flushPromises();
+    // 草稿是空的时候 offerFollowup 直接发出去，根本不问——先占住草稿。
+    const textarea = wrapper.get("textarea[name='message']");
+    await textarea.setValue("Existing draft");
+    (
+      wrapper.vm as unknown as { offerFollowup(value: string): void }
+    ).offerFollowup("Suggested question");
+    await flushPromises();
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+
+    (
+      document.querySelector('[data-slot="dialog-close"]') as HTMLElement
+    ).click();
+    await flushPromises();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    // 关掉不等于发出去：草稿原样留着。
+    expect((textarea.element as HTMLTextAreaElement).value).toBe(
+      "Existing draft",
+    );
+  });
+
+  /*
+    上游 `showFollowups`（input-box.tsx:1981）里有两条判据只有 composer 自己看得见：
+    斜杠目录开着、或者挂着一个技能 chip。本仓的 chip 画在 AgentChat 里，所以这两条
+    必须由 composer 发上来，否则目录展开时 chip 会压在它上面。
+  */
+  it("tells the host when the slash catalog covers the follow-up chips", async () => {
+    const { wrapper } = mountComposer();
+    await flushPromises();
+    expect(wrapper.emitted("followupsSuppressedChange")).toEqual([[false]]);
+
+    const textarea = wrapper.get("textarea[name='message']");
+    await textarea.trigger("focus");
+    await textarea.setValue("/");
+    await flushPromises();
+    expect(wrapper.emitted("followupsSuppressedChange")).toEqual([
+      [false],
+      [true],
+    ]);
+
+    await textarea.setValue("");
+    await flushPromises();
+    expect(wrapper.emitted("followupsSuppressedChange")).toEqual([
+      [false],
+      [true],
+      [false],
+    ]);
   });
 
   it("keeps new-session drafts isolated and rejects a stale accepted callback after route change", async () => {

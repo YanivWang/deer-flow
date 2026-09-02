@@ -10,6 +10,7 @@ import {
   computed,
   nextTick,
   onBeforeUnmount,
+  onMounted,
   ref,
   shallowRef,
   watch,
@@ -29,6 +30,15 @@ import {
   X,
   Zap,
 } from "lucide-vue-next";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import ComposerAttachmentChip from "@/components/chat/ComposerAttachmentChip.vue";
 import ComposerModelSelector from "@/components/chat/ComposerModelSelector.vue";
 import ModeHoverGuide from "@/components/chat/ModeHoverGuide.vue";
@@ -114,6 +124,23 @@ const props = withDefaults(
       options: { onAccepted: () => void },
     ) => Promise<boolean | undefined>;
     isWelcome?: boolean;
+    /*
+      挂载时把光标放进文本框，对应上游 `<InputBox autoFocus={isWelcomeMode}>`
+      （chat-page.tsx:413、agents/[agent_name]/chats/[thread_id]/page.tsx:404）一路
+      传到 `<PromptInputTextarea autoFocus>`（input-box.tsx:2313）。
+
+      **必须是一个独立的 prop，不能直接读 `isWelcome`。** React 的 autoFocus 只在
+      DOM 节点**首次挂载**那一刻起作用，之后 `isWelcomeMode` 翻成 false 不会再动焦点；
+      而本仓的 `isWelcome` 是 `visibleMessages.length === 0 && !isHistoryLoading` 这个
+      computed，打开一条已有线程时它会先真后假地抖一下，跟着它走会在上游根本不聚焦的
+      屏上抢走焦点。调用方传的是**挂载那一刻**「这是不是一条新线程」（AgentChat 里
+      现成的 `initialRouteThreadId === null`），与上游 `useState(isNewThread)` 的初值同源。
+
+      同样**不能写成 `autofocus` 属性**：HTML 的 autofocus 只在首次解析文档时的
+      autofocus candidates 里被处理，客户端路由进来时浏览器不理它（与
+      AgentBootstrapComposer 和 chats/index.vue 里那两处同一条机制）。
+    */
+    autoFocus?: boolean;
     showWelcomeSuggestions?: boolean;
     references?: SidecarReference[];
     context?: ThreadRunContextInput;
@@ -138,6 +165,19 @@ const emit = defineEmits<{
   clearReferences: [];
   contextChange: [value: ThreadRunContextInput];
   goalChange: [value: GoalState | null];
+  /*
+    「输入框里正开着一层会跟 follow-up chip 抢地方的东西」。
+
+    上游把 follow-up chip 画在 InputBox **里面**，所以它的 `showFollowups`
+    （input-box.tsx:1981）能直接读到 `showSkillSuggestions` 与 `selectedSlashSkill`
+    这两个自己的内部状态。本仓把 chip 画在 AgentChat 里（布局上它在整叠 composer
+    之上），从外面看不见这两样，于是必须由 composer 主动往外说一声。
+
+    **不照抄上游的 `onFollowupsVisibilityChange`**：那个 prop 在上游全仓没有任何
+    消费点（grep 过 frontend/src，只有 input-box.tsx 自己在调），照抄等于把一个死接口
+    搬过来。这里传的是外面**真正缺的那两个事实**，判断仍然留在 AgentChat 手里。
+  */
+  followupsSuppressedChange: [value: boolean];
 }>();
 
 const input = ref("");
@@ -552,7 +592,19 @@ function selectModeById(id: string) {
   );
   emit("contextChange", next);
 }
+onMounted(() => {
+  // 见 autoFocus prop 的注释：这里是上游 autoFocus 的等价实现。
+  if (props.autoFocus) textarea.value?.focus();
+});
+// 见 followupsSuppressedChange 的注释。上游那两条判据在 input-box.tsx:1984-1985。
+watch(
+  () => showSuggestions.value || selectedSkill.value !== null,
+  (value) => emit("followupsSuppressedChange", value),
+  { immediate: true },
+);
 onBeforeUnmount(() => {
+  // 上游 input-box.tsx:1997 的清理 effect：卸载时把这个事实收回去。
+  emit("followupsSuppressedChange", false);
   compactGeneration += 1;
   compactController?.abort();
   goalController?.abort();
@@ -1242,44 +1294,45 @@ defineExpose({ replaceDraft, offerFollowup });
     :class="isWelcome ? 'gap-4' : 'gap-2'"
   >
     <GoalStatus v-if="goal" :goal="goal" />
-    <div
-      v-if="pendingFollowup"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="$i18n.t.value.inputBox.followupConfirmTitle"
-      class="border-border bg-background absolute right-0 bottom-full left-0 z-50 mb-2 rounded-xl border p-4 shadow-lg"
+    <!--
+      上游 input-box.tsx:2765 是一个**真的** `<Dialog>`：portal 出去、遮罩、焦点陷阱、
+      Escape 关闭、`DialogTitle` + `DialogDescription` 提供可访问名与描述，
+      页脚三颗 `<Button>`（outline / secondary / default）。
+
+      本仓原来是 `absolute bottom-full` 的手搓副本：一个带 `role="dialog"`
+      `aria-modal="true"` 的 div，靠 `aria-label` 顶替标题、没有遮罩、没有焦点陷阱、
+      Escape 关不掉、Tab 会走到底下的输入框里去——`aria-modal` 只是在**说**自己是模态，
+      浏览器不会因此拦住焦点。
+
+      同时去掉了本仓多渲染的那一段 `pendingFollowup` 正文：上游只有标题和描述两行，
+      不把待发的建议再念一遍。
+    -->
+    <Dialog
+      :open="pendingFollowup !== null"
+      @update:open="(open: boolean) => !open && resolveFollowup('cancel')"
     >
-      <h3 class="text-sm font-semibold">
-        {{ $i18n.t.value.inputBox.followupConfirmTitle }}
-      </h3>
-      <p class="text-muted-foreground mt-1 text-xs">
-        {{ $i18n.t.value.inputBox.followupConfirmDescription }}
-      </p>
-      <p class="bg-muted mt-3 rounded-md p-2 text-sm">{{ pendingFollowup }}</p>
-      <div class="mt-3 flex justify-end gap-2">
-        <button
-          type="button"
-          class="rounded-md border px-3 py-1.5 text-xs"
-          @click="resolveFollowup('cancel')"
-        >
-          {{ $i18n.t.value.common.cancel }}
-        </button>
-        <button
-          type="button"
-          class="rounded-md border px-3 py-1.5 text-xs"
-          @click="resolveFollowup('append')"
-        >
-          {{ $i18n.t.value.inputBox.followupConfirmAppend }}
-        </button>
-        <button
-          type="button"
-          class="bg-primary text-primary-foreground rounded-md px-3 py-1.5 text-xs"
-          @click="resolveFollowup('replace')"
-        >
-          {{ $i18n.t.value.inputBox.followupConfirmReplace }}
-        </button>
-      </div>
-    </div>
+      <DialogContent :close-label="$i18n.t.value.primitives.close">
+        <DialogHeader>
+          <DialogTitle>
+            {{ $i18n.t.value.inputBox.followupConfirmTitle }}
+          </DialogTitle>
+          <DialogDescription>
+            {{ $i18n.t.value.inputBox.followupConfirmDescription }}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" @click="resolveFollowup('cancel')">
+            {{ $i18n.t.value.common.cancel }}
+          </Button>
+          <Button variant="secondary" @click="resolveFollowup('append')">
+            {{ $i18n.t.value.inputBox.followupConfirmAppend }}
+          </Button>
+          <Button @click="resolveFollowup('replace')">
+            {{ $i18n.t.value.inputBox.followupConfirmReplace }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     <!--
       斜杠目录挂在**整叠 composer 的定位父**上，不在输入框边框里面——上游
       input-box.tsx:2139 就是这个位置（`{showSkillSuggestions && ...}` 排在

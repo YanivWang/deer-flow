@@ -189,6 +189,29 @@ describe("assistant:present-files group", () => {
   });
 
   /*
+    上游那一格是 `<CardAction className="row-span-1 self-center">`
+    （artifact-file-list.tsx:109）：CardAction 的基础 class 是
+    `col-start-2 row-span-2 row-start-1 self-start justify-self-end`，调用点用
+    tailwind-merge 把 `row-span-2` 换成 `row-span-1`、`self-start` 换成 `self-center`。
+    本仓这里是裸 div，得把合并后的结果自己写全。
+
+    **台账量不到这一格**：几何面只取 settle 里的 visible 锚点，而这张卡片不是任何
+    场景的锚点（artifact-stream-state 的锚点在头部的 artifact 触发器上）。
+    跨一行还是两行会改卡片高度——按钮比标题行高，占一行时第一行被它撑开。
+  */
+  it("puts the card's action cell on one grid row, the way upstream does", async () => {
+    const wrapper = mountList({ messages: presentFiles, interactive: true });
+    await flushPromises();
+
+    const cell = wrapper.get('a[target="_blank"]').element.parentElement;
+    const classes = [...(cell?.classList ?? [])];
+    expect(classes).toContain("row-span-1");
+    expect(classes).toContain("self-center");
+    expect(classes).toContain("justify-self-end");
+    expect(classes).not.toContain("row-span-2");
+  });
+
+  /*
     只读案例页上的下载链接必须走 `/mock/api`：那条路由才是公开可读的
     demo artifact 服务端点，`/api/threads/...` 要鉴权。上游 ArtifactFileList
     **漏了**这个参数（详情面板每一处都传了），所以那条链接在公开案例页上是断的——
