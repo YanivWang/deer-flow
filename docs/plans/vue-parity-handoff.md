@@ -8,17 +8,17 @@
 
 ---
 
-## 当前状态（截至 wave 25，2026-09-02）
+## 当前状态（截至 wave 26，2026-09-02）
 
-- 分支 `main-wc`。HEAD = `aac6fa42` = wave 25（**没动 `frontend/`**）。
+- 分支 `main-wc`。HEAD = `2a0bf39d` = wave 26（**没动 `frontend/`**）。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
 - 覆盖率棘轮：covered **24**，pending **只剩 1 条**（`chat-thread-init-ordering`）。
 - **upstream marker 已推到 `3d6bb266`**。
 - 已彻底对齐的域（14 个 + settings/memory）：chat / artifacts / 会话列表 /
   scheduled-tasks / channels / integrations + 设置外壳 / mermaid / subtask-card /
   workspace 头部 / sidebar / messages / sidecar / browser / composer，
-  外加 **settings 域全部**（wave 22 memory 面板 74→0；wave 23 其余六个 section
-  108→36；wave 24 把关于页剩下的 36 行也归 0）。
+  外加 **settings 域全部**（wave 22~24）与 **auth**（wave 26：`/login` 58→0，
+  `/setup` 本来就是 0）。
 
 > **settings 域现在有一个取样点了**：wave 25 给 `ParityScenario` 加了枚举式夹具注入
 > （`stubs`），`settings-notification` 已从 pending 挪进 covered。**其余六个面板仍然
@@ -30,7 +30,7 @@
 ```
 make -C frontend-vue verify        230 文件 / 1915 单测；词典 954 key、42 unused
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本
-make -C frontend-vue e2e-mock      262 + 19 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
+make -C frontend-vue e2e-mock      262 + 21 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
                                    (= protocol + real + scheduled + channels + agents + settings + shell + browser)
 make -C frontend-vue e2e-visual    8     **不在 make e2e 里**
@@ -89,46 +89,52 @@ wave 20/21 连着两轮正面打了 ① 和 ⑦。**判据：一个域收工前�
 
 ---
 
-## 上一轮（wave 25）做了什么
+## 上一轮（wave 26）做了什么
 
-**给 `ParityScenario` 加枚举式夹具注入**，把 `settings-notification` 挪进 covered。
+先 probe 了三条从没量过的路由，按台账口径：**`/login` 58 行、`/setup` 0 行、
+`/showcase/<demo id>` 25 行**。这一轮做掉 `/login`。
 
-```ts
-export type ParityStubs = {
-  notification?: "default" | "granted" | "denied";
-  documentFocused?: boolean;
-};
-```
+- 根因只有一个：上游 `login/page.tsx:77` 的
+  `if (isAuthenticated) router.push(redirectPath)`，本仓没有。**关掉鉴权部署时
+  Gateway 直接给出一个用户**，上游会跳回工作区，本仓停在一张用不上的表单上。
+- 判据只看「有没有 user」；`unavailable` 那一支必须留在登录页。
+- session 探测走**动态 import**，与 `middleware/auth.global.ts` 同一个办法。
 
-与 `routes` 同一个道理**必须是枚举值不是回调**（允许函数的话场景又能分叉）。
-实现固定在 `applyScenarioStubs`（`page.addInitScript`，goto 之前跑）。
+### wave 26 新增的踩坑线索（记忆里编号 118~120）
 
-**新场景一挂上就抓到一处真差异**：`ui/switch` 停在更旧的 shadcn 版本上
-（`h-5 w-9` = 20×36 对上游 `h-[1.15rem] w-8` = 18.4×32），台账报出 width Δ4 / x Δ-4。
-抄回上游那份，滑块位移换成 `translate-x-[calc(100%-2px)]`；`cursor-pointer` 有意保留。
-
-### wave 25 新增的踩坑线索（记忆里编号 116~117）
-
-- **116. 「夹具生效了吗」要用一条只有夹具生效才成立的事实去证。** 第一版拿
-  「请求权限按钮不可见」当证据，摘掉注入照样绿——因为这个上下文里权限默认是
-  **denied**（不是 default），那颗按钮两种情况下都不出现。
-  **先把「不注入时是什么状态」量出来**，再挑锚点。
-- **117. 测试夹具里不许出现外网资源。** wave 24 的 artifact 夹具用了一张外网图，
-  而下载按钮只在图片真的加载成功后才出现——台账因此随机多出两行，**方向每次都可能
-  不同**。换成同源固定路径 + 路由夹具。
+- **118. 没锚住开头的 URL 正则是同义反复。** 断「跳到 `/workspace/chats/safe?view=1`」
+  时，没跳转的 URL `/login?next=/workspace/chats/safe?view=1` 结尾一模一样，两种情况
+  都成立。**按 pathname + search 拆开比**。
+- **119. 首屏预算突然翻倍，先问「是不是量错了页面」。** `/login` 从 348 KB 跳到
+  728 KB，实际是页面跳去了工作区（728,847 ≈ 工作区 718,194），不是 import 变重。
+- **120. 门禁只能串行跑。** 同时开两个后台任务会撞 `Another Nuxt build is already
+  running`，整轮白跑。长门禁丢后台是对的，但同一时刻只能有一个。
 
 ---
 
-## 下一轮（wave 26）：auth / setup / showcase
+## 下一轮（wave 27）：showcase 那 25 行
 
-三个域都还没 probe 过。做法照 wave 22/23：先 probe 把两边的 aria 按台账口径
-（`normalizeAriaSnapshot` + 去缩进多重集）diff 一遍，再逐簇修。
+probe 已经量清楚，**根因是本仓的 `demo` 比上游的 `isMock` 关掉了更多东西**：
+上游把只读案例页当成「功能受限的工作区」（导出、上下文用量、重跑/分叉都**渲染
+出来**、按需禁用），本仓用 `v-if="!isDemo"` 整块删掉
+（`AgentChat.vue` 的 1538 / 1549 / 1607 等处）。
 
-**先去 `baseline/parity-scenario-coverage.json` 查它们有没有对应的 React spec id**
-（线索 107）——有的话这一轮的成果能被台账直接验证，没有的话就只能靠单测守。
+台账口径下的清单：
 
-之后是下面「挂着的账」里那几笔，以及 `chat-thread-init-ordering`（pending 最后一条，
-要「填入并发送」这一步，而且要先测流式取样是否稳定）。
+- **onlyReact**：`button "Export"`、`button "Regenerate" [disabled]`、
+  `button "Branch conversation" [disabled]` ×3、`status "Context window"`、
+  `region "Notifications alt+T"`、`link "Download"` + `text: <文件名> JPG file`、
+  澄清选项的 `list`/`listitem`、两段 `paragraph`
+- **onlyVue**：`button "Reasoning"`、`button "<文件名>"`、`group [disabled]` ×2、
+  `group: Present Files`、`group: present_files result`
+
+**showcase 没有对应的 React spec id（线索 107），所以这一轮台账测不到**，
+只能靠 probe + 单测。**可以考虑的替代路径**：把 demo 夹具里那几种内容形状
+（带选项的澄清、reasoning、图片产物、present_files）补进某个**已覆盖**场景的夹具，
+让台账去守（线索 114 的手法，wave 24 用过一次，很有效）。
+
+probe 复现命令：`/showcase/21cfea46-34bd-4aa6-9e1f-3009452fbeb9`
+（allowlist 在 `frontend/src/core/threads/static-demo.ts` 与 `#shared/showcase`）。
 
 ---
 
@@ -226,7 +232,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 看报出的行是否逐条可归因，再还原后跑一次干净的。
 （macOS 的 BSD sed 不支持 `0,/pat/`，**退出码 0 但文件一个字节没改**；用 python harness。）
 
-## 其他常踩的坑（完整 117 条在记忆文件里）
+## 其他常踩的坑（完整 120 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**216 / 214**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -251,7 +257,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、117 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、120 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
