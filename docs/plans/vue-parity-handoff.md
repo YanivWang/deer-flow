@@ -8,11 +8,12 @@
 
 ---
 
-## 当前状态（截至 wave 49，2026-09-03）
+## 当前状态（截至 wave 50，2026-09-03）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
-  `54454b7c` = wave 43，`46f62dea` = wave 44。
+  `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
+  `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49。
 - **wave 40 动了 `frontend/`**（重连预算耗尽后那颗键在说反话，两边同改），
   **marker 已推到 `aef3618d`**。
 - **wave 39 动了 `frontend/`**（命令面板搜索框的可访问名，两边同改）。
@@ -55,8 +56,8 @@
 ### 门禁实测值（wave 44 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；248 文件 / 2053 单测，词典 945 key、18 unused
-                                   standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 35 处 / 14 个文件）
+make -C frontend-vue verify        exit 0；249 文件 / 2056 单测，词典 945 key、18 unused
+                                   standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 36 处 / 15 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
@@ -173,7 +174,61 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 48）做了什么
+## 上一轮（wave 49）做了什么
+
+**扫剩下两个角度：肯定句断言 + `tests/fixtures/` 的 golden 夹具。翻出一条。**
+
+### 肯定句断言：13 条撞完 13 条成立
+
+`app/**` 里有 **44 处「上游是 X / 上游走 Y / 上游写死 Z」**。肯定句比否定句更隐蔽
+——它过期时本仓会**照着一个不存在的形状继续「对齐」**。挑带可 grep 标识符的逐条撞，
+全部成立：上游 message-list 显式传 `isHiddenFromUIMessage`（默认判据确实只有
+`hide_from_ui !== true`）；`message-list.tsx:641` 确实是 `addEventListener("scroll", …, true)`
+捕获阶段；`export-trigger.tsx:67` 确实是裸 `align="end"`；`SidebarFooter` 确实是
+`flex flex-col gap-2 p-2`；`input-box.tsx:2710` 确实 `value={m.name}`；
+streamdown 的 `linkSafety` 默认确实是 `{enabled:true}`。
+
+**又差点误报一次**（同线索 173）：「那个只看 `hide_from_ui`」里的**「那个」指的是
+`deriveHumanInputThreadState` 的默认参数**，不是紧挨着的 `isHiddenFromUIMessage`
+（后者看三样）。**代词也要读准。**
+
+### 翻出来的：golden 夹具的出处没有任何东西验
+
+`tests/fixtures/react-markdown-dom.json` 是**本仓 markdown 对齐的全部依据**。
+`recordedFrom` 写着「streamdown 2.5.0」，上游现在装的也是 2.5.0——**今天准，
+但从来没有任何东西验过这句话**。两个失效模式都不会让门禁变红：
+
+1. **上游升级、夹具没重录** → 继续对着旧版本的 DOM 对齐，台账看不到（差异被夹具吸收）；
+2. **重录了但出处是假的** → 录制脚本把版本号**写死在字面量里**，升级后重录会盖上
+   一个与内容不符的标签。
+
+**两处都修了**：录制器改成从 `frontend/node_modules/streamdown/package.json` 读；
+加守卫 `tests/guards/golden-fixture-provenance.test.ts` 钉「标签 == 实际装的版本」，
+且 `$comment` 与 `recordedFrom` 不许各说各的。**只钉版本号不钉内容**——内容是
+`record-react-markdown.mjs --check` 的事，这里钉的是「那份 `--check` 在跟哪个版本比」。
+
+**L3「录制器退回写死」是无效变异**（今天写死值恰好等于实际版本），所以改用
+**L4 直接验行为**：把上游 `node_modules` 里的版本临时改成 `9.9.9-probe`，
+`--check` 立刻报「夹具已过期」——**证明出处确实是读出来的**。（已还原。）
+
+DECLARED 35/14 → **36/15**，BLOCKING 仍 0/0。
+
+---
+
+## 下一轮（wave 50）：**还没扫过的记录还有哪些**
+
+47/48/49 连着三轮都在扫「记录本身」，各翻出一条（48/49）或全清（47）。
+**剩下没扫过的**：
+
+1. **`tests/fixtures/streams/*.sse`**（wave 49 只扫了 json 夹具）。这些是签入的协议录制，
+   同样「说的是当时后端长这样」，同样没有出处校验。
+2. **`docs/` 下除交接文档之外的文件**（`ARCHITECTURE.md` / `BEHAVIOR_CONTRACTS.md` /
+   `README.md`）。`doc-references.test.ts` 只钉了「命令与路径存在」，
+   **没钉里面对上游/对代码的事实断言**。
+3. **提交说明里的数字**。每一轮都写了门禁实测值，那些数字**从来没有被回头核对过**
+   ——它们是这个项目「量过了」的唯一凭据。
+
+## 上一轮的上一轮（wave 48）做了什么
 
 **扫从来没有被任何东西验过的那一类：`baseline/` 下的纯数据文件——它们说的话没有任何代码验。**
 翻出一条，**所以收尾判据重新计数**（47 干净、48 不干净）。
@@ -440,7 +495,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 174 条在记忆文件里）
+## 其他常踩的坑（完整 175 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
