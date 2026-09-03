@@ -210,9 +210,20 @@ onUnmounted(() => globalThis.removeEventListener("keydown", onGlobalKeydown));
         {{ $i18n.t.value.primitives.commandPaletteDescription }}
       </DialogDescription>
       <Command>
+        <!--
+          可访问名走 `label`（视觉隐藏的真 <label>），不是 aria-label——
+          理由写在 `ui/command/CommandInput.vue` 的文件头：aria-label 名字是有了，
+          但可访问性树里少一个 `text` 节点，等于把差异从一处挪到另一处。
+          模型选择器那一处早就是这么接的（ComposerModelSelector.vue:176）。
+
+          上游 `CommandDialog` 原来不给 `<Command>` 传 label，于是 cmdk 那个
+          `<label cmdk-label>` 是空的、accname 算出空串、placeholder 兜底被压掉——
+          **搜索框根本没有可访问名**。那是 WCAG 4.1.2 缺陷，已按「根因在 frontend/
+          就两边同改」补在 `ui/command.tsx` 的 `CommandDialog` 上（wave 39）。
+        -->
         <CommandInput
           v-model="search"
-          :aria-label="$i18n.t.value.shortcuts.searchActions.replace('...', '')"
+          :label="$i18n.t.value.shortcuts.searchActions.replace('...', '')"
           :placeholder="$i18n.t.value.shortcuts.searchActions"
         />
         <CommandList :aria-label="$i18n.t.value.shortcuts.actions">

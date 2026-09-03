@@ -120,9 +120,26 @@ describe("CommandPalette", () => {
     expect(dialog.textContent).toContain(
       enUS.primitives.commandPaletteDescription,
     );
+    /*
+      搜索框的可访问名走**视觉隐藏的真 `<label>`**，不是 aria-label
+      （理由在 `ui/command/CommandInput.vue` 的文件头：aria-label 名字是有了，
+      但可访问性树里少一个 text 节点）。上游此前根本没给 `<Command>` 传 label，
+      那个 `<label cmdk-label>` 是空的、accname 算出空串、placeholder 兜底被压掉——
+      **搜索框没有任何可访问名**，已按两边同改补在 `ui/command.tsx` 的
+      `CommandDialog` 上（wave 39）。
+    */
     const input = document.querySelector<HTMLInputElement>(
-      '[aria-label="Search actions"]',
+      '[data-slot="command-input"]',
     )!;
+    const inputLabel = document.querySelector<HTMLElement>(
+      '[data-slot="command-label"]',
+    )!;
+    expect(inputLabel.textContent?.trim()).toBe("Search actions");
+    // 本仓用 `for`/`id` 显式关联（cmdk 用 aria-labelledby）——两种机制算出的
+    // 可访问名与 a11y 树里的 text 节点相同，台账比的就是后者。
+    expect(inputLabel.getAttribute("for")).toBe(input.id);
+    expect(input.id).toBeTruthy();
+    expect(input.getAttribute("aria-label")).toBeNull();
     expect(document.activeElement).toBe(input);
 
     // 焦点留在搜索框，当前项通过 aria-activedescendant 宣告——这是 combobox

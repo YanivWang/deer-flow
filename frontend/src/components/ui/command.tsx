@@ -31,6 +31,7 @@ function Command({
 function CommandDialog({
   title = "Command Palette",
   description = "Search for a command to run...",
+  label,
   children,
   className,
   showCloseButton = true,
@@ -38,6 +39,16 @@ function CommandDialog({
 }: React.ComponentProps<typeof Dialog> & {
   title?: string;
   description?: string;
+  /**
+   * Accessible name for the search field.
+   *
+   * cmdk always renders a visually hidden `<label cmdk-label>` and points the
+   * input's `aria-labelledby` at it. Without this prop that label is empty, so
+   * accname resolves to the empty string and suppresses the placeholder
+   * fallback — the search field ends up with no accessible name at all. Same
+   * defect and same fix as ModelSelectorContent's `label`.
+   */
+  label?: string;
   className?: string;
   showCloseButton?: boolean;
 }) {
@@ -49,7 +60,9 @@ function CommandDialog({
       >
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <DialogDescription className="sr-only">{description}</DialogDescription>
-        <Command className="[&_[cmdk-group-heading]]:text-muted-foreground **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
+        <Command
+          label={label}
+          className="[&_[cmdk-group-heading]]:text-muted-foreground **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
           {children}
         </Command>
       </DialogContent>

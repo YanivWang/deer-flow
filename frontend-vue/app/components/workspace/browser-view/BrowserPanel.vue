@@ -12,19 +12,23 @@
                    实测被撑到 URL 栏只剩 36.6px 宽（上游同一屏是 129.3）——那不是调
                    `flex-1` 能修的，是标题 98.7 + 模式按钮 113.9 两块把它挤没了。
 
-                   **有意与上游不同的三处，都不是疏忽**（原来是四处，第 1 条
-                   `border-border` 于 wave 32 结清：那句「本仓 main.css 没有
-                   `* { @apply border-border }` 基础层」是错的——规则一直都在，
-                   错的是它**裸写在顶层**，因而赢过所有工具类。挪进 `@layer base`
-                   之后，这里的裸 `border-b` 与上游落到同一个颜色）：
-                   1. 关闭按钮的 `browser.close`：上游那颗按钮**没有任何可访问名**
-                      （无 aria-label、无 title，XIcon 还是 aria-hidden），是 WCAG 4.1.2
-                      缺陷。按「根因在 frontend/ 就两边同改」的边界，上游同一颗按钮补上了
-                      `t.common.closeBrowser`，两边念同一句，台账仍是 0。
-                   2. `role="alert"` 那条内联错误 + 重试入口：上游走 toast，而且重连预算
+                   **有意与上游不同的两处，都不是疏忽。** 原来记的是四处，两条已结清：
+                   · `border-border`（wave 32）：那句「本仓 main.css 没有
+                     `* { @apply border-border }` 基础层」是错的——规则一直都在，
+                     错的是它**裸写在顶层**因而赢过所有工具类；挪进 `@layer base`
+                     之后这里的裸 `border-b` 与上游落到同一个颜色。
+                   · 关闭按钮（wave 28）：上游那颗**没有任何可访问名**
+                     （无 aria-label、无 title，XIcon 还是 aria-hidden），是 WCAG 4.1.2
+                     缺陷，已按「根因在 frontend/ 就两边同改」补上。**两边念同一句**
+                     （上游 `common.closeBrowser`、本仓 `browser.close`，同字不同路径），
+                     所以它不是分叉，只是一条别名——由
+                     `tests/unit/i18n/upstream-key-coverage.test.ts` 的别名表守着（wave 39）。
+
+                   剩下的两处：
+                   1. `role="alert"` 那条内联错误 + 重试入口：上游走 toast，而且重连预算
                       耗尽之后**什么都不显示**。本仓保留内联提示与重试。对照看不见它——
                       mock 后端没有 WS 端点时要 32 秒才耗尽 6 次预算，取样点在 settle+700ms。
-                   3. 画面上的 `@mousemove`：上游 forwardMouse 只接了 onClick。本仓多发
+                   2. 画面上的 `@mousemove`：上游 forwardMouse 只接了 onClick。本仓多发
                       move（远端页面的 hover 态因此能用），走 WS，台账看不见，
                       由 browser-panel.dom.test.ts 守着。
 

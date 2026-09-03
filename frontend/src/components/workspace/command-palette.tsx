@@ -72,7 +72,14 @@ export function CommandPalette() {
 
   return (
     <>
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      {/* `label` names the search field: without it cmdk's own empty
+          `<label cmdk-label>` wins over the placeholder and the field ends up
+          with no accessible name (same defect as ModelSelectorContent). */}
+      <CommandDialog
+        label={t.shortcuts.searchActions.replace("...", "")}
+        open={open}
+        onOpenChange={setOpen}
+      >
         <CommandInput placeholder={t.shortcuts.searchActions} />
         <CommandList>
           <CommandEmpty>{t.shortcuts.noResults}</CommandEmpty>
