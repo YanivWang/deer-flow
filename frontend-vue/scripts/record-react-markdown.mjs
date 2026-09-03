@@ -140,14 +140,29 @@ function record() {
   return JSON.parse(raw.slice(start + "@@RECORD@@".length, end));
 }
 
+/*
+  出处里的版本号**从上游实际装的那份读**，不写死。
+
+  写死的代价不是「不好看」：上游升 streamdown 之后重录一次，出处会盖上一个
+  **假的**版本号——夹具换了内容、标签还说是旧版本，而这份夹具正是 markdown
+  对齐的全部依据。wave 49 发现时两者恰好都是 2.5.0，所以从没显形过。
+  `tests/guards/golden-fixture-provenance.test.ts` 钉的就是「标签 == 实际装的版本」。
+*/
+function streamdownVersion() {
+  const manifest = join(FRONTEND, "node_modules/streamdown/package.json");
+  if (!existsSync(manifest)) return "unknown";
+  const parsed = JSON.parse(readFileSync(manifest, "utf8"));
+  return typeof parsed.version === "string" ? parsed.version : "unknown";
+}
+
 function main() {
   const check = process.argv.includes("--check");
   const records = record();
+  const version = streamdownVersion();
   const serialized = `${JSON.stringify(
     {
-      $comment:
-        "由 `node scripts/record-react-markdown.mjs` 从 frontend/ 的 React + streamdown@2.5.0 录制。勿手改。",
-      recordedFrom: "frontend/ · streamdown 2.5.0 · react-dom/server",
+      $comment: `由 \`node scripts/record-react-markdown.mjs\` 从 frontend/ 的 React + streamdown@${version} 录制。勿手改。`,
+      recordedFrom: `frontend/ · streamdown ${version} · react-dom/server`,
       entries: records,
     },
     null,
