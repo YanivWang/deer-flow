@@ -350,6 +350,24 @@ const chipInput = ref<HTMLElement | null>(null);
   之后才同步回来，读它会慢一拍。
 */
 const chipEmpty = computed(() => input.value.length === 0);
+/*
+  点容器的空白处把光标放到可编辑区末尾（上游 input-box.tsx:2266 的 onClick，
+  同样只在 `event.target === event.currentTarget` 时才动手——点在 chip 或文字上时
+  浏览器自己会把光标放对地方，抢过来反而会把用户点的位置吃掉）。
+*/
+function focusChipEnd(event: MouseEvent) {
+  if (event.target !== event.currentTarget) return;
+  const element = chipInput.value;
+  if (!element) return;
+  element.focus();
+  const selection = globalThis.getSelection?.();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
 const fileInput = ref<HTMLInputElement | null>(null);
 let historyIndex = -1;
 const enabledSkillNames = computed(
@@ -1495,8 +1513,24 @@ defineExpose({ replaceDraft, offerFollowup });
           />
         </div>
         <div data-slot="input-group-body">
-          <div v-if="selectedSkill" class="flex items-start gap-2">
-            <span class="bg-secondary rounded px-2 py-1 text-xs"
+          <!--
+            chip 与可编辑区是**同一行文字里的两个 inline 元素**，不是两列
+            （上游 input-box.tsx:2264 是一个 `whitespace-pre-wrap break-all` 的
+            可滚容器，chip 靠 `mr-2 align-top` 浮在文字里）。本仓原来是
+            `flex items-start gap-2` 的两列，差的不只是排版：
+
+            ① 正文不再绕着 chip 排，而是被挤进右边一栏；
+            ② 没有 `max-h-48 overflow-y-auto`，长草稿会把输入框撑到没有上限；
+            ③ chip 没有 `max-w-[min(11rem,45%)]`，一个长技能名会把可编辑区挤没；
+            ④ 点空白处不会把光标放到末尾（上游在容器上挂了 onClick）。
+          -->
+          <div
+            v-if="selectedSkill"
+            class="max-h-48 min-h-6 w-full min-w-0 cursor-text overflow-y-auto text-base leading-6 break-all whitespace-pre-wrap md:text-sm"
+            @click="focusChipEnd"
+          >
+            <span
+              class="bg-secondary mr-2 inline-block max-w-[min(11rem,45%)] truncate rounded px-2 py-1 align-top text-xs"
               >/{{ selectedSkill }}</span
             >
             <!--
@@ -1527,7 +1561,7 @@ defineExpose({ replaceDraft, offerFollowup });
               :data-placeholder="$i18n.t.value.inputBox.placeholder"
               :contenteditable="disabled ? 'false' : 'true'"
               :tabindex="disabled ? -1 : 0"
-              class="before:text-muted-foreground min-h-10 flex-1 text-sm outline-none before:pointer-events-none focus-visible:ring-0 focus-visible:outline-none data-[empty=true]:before:content-[attr(data-placeholder)]"
+              class="before:text-muted-foreground text-sm outline-none before:pointer-events-none focus-visible:ring-0 focus-visible:outline-none data-[empty=true]:before:content-[attr(data-placeholder)]"
               @input="onChipInput"
               @keydown="onKeydown"
               @focus="textareaFocused = true"

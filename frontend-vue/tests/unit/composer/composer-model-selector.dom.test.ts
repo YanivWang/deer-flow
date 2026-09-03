@@ -110,6 +110,23 @@ describe("composer model selector", () => {
     expect(items()).toHaveLength(1);
     expect(items()[0]!.textContent).toContain("Fast Model");
 
+    /*
+      **照屏幕上的字打也要命中**：列表写的是 `display_name`（"MiniMax CN /
+      MiniMax-M3"），筛的却是 `name`（`minimax-m3`）。上游有 command-score 的模糊
+      评分兜着，本仓原来是纯子串，"minimax m3" 一条都搜不到（wave 37）。
+    */
+    search.value = "minimax m3";
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    await flushPromises();
+    expect(items()).toHaveLength(1);
+    expect(items()[0]!.textContent).toContain("MiniMax");
+
+    // 原来那条子串判据是这条的严格子集，一起钉住免得被换掉。
+    search.value = "minimax-m";
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    await flushPromises();
+    expect(items()).toHaveLength(1);
+
     // 无匹配时列表就是空的：上游两个调用点都没有渲染 ModelSelectorEmpty。
     search.value = "nothing-matches";
     search.dispatchEvent(new Event("input", { bubbles: true }));

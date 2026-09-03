@@ -20,9 +20,13 @@
                    **筛选由本组件做**，Command primitive 不接管（与
                    workspace/CommandPalette.vue 同一条约定）。判据字段跟着上游走：
                    上游把 `value={m.name}` 交给 cmdk，cmdk 就只拿这一个字段打分，
-                   所以这里也只看 `model.name`。**唯一已知分叉**：cmdk 是模糊评分
-                   （command-score），这里是大小写无关的子串匹配——"minimax m3"
-                   在上游能命中 `minimax-m3`，在这里不能。没有为此引入评分库。
+                   所以这里也只看 `model.name`。**剩下的分叉**：cmdk 是模糊评分
+                   （command-score），这里是大小写无关、**分隔符不敏感**的子串匹配。
+                   wave 37 把分隔符那一档补上了——列表写的是 `display_name`
+                   （"MiniMax M3"）而筛的是 `name`（`minimax-m3`），照屏幕上的字打
+                   原来一条都搜不到。**非连续子序列（"mm3" → minimax-m3）仍然没有**：
+                   那要连同 command-score 的排序一起来，否则 "abc" 会命中几乎所有模型；
+                   为这一处引一个评分库不划算。
 
                    **没有 CommandEmpty**：上游两个调用点都没渲染
                    ModelSelectorEmpty，无匹配时列表就是空的。补一句"无结果"会凭空
@@ -98,12 +102,30 @@ watch(open, (value) => {
   if (value) search.value = "";
 });
 
+/*
+  分隔符不参与比较。列表上写的是 `display_name`（"MiniMax M3"），筛的却是
+  `model.name`（`minimax-m3`）——字段选择跟着上游（cmdk 拿到的 `value` 就是 name），
+  但上游有 command-score 的模糊评分兜着，**照屏幕上的字打**照样命中；
+  本仓原来是纯子串，"minimax m3" 一条都搜不到。
+
+  这一条只把空格 / 连字符 / 下划线折掉，**仍然是子串**：它是原来那条判据的严格超集
+  （今天能搜到的明天照样搜得到）。**没有做 cmdk 的非连续子序列匹配**：
+  那需要连同 command-score 的排序一起来，否则 "abc" 会命中几乎所有模型，
+  比现在更难用；而引一个评分库只为这一处不划算。剩下的分叉记在交接文档里。
+*/
+const collapseSeparators = (value: string) =>
+  value.toLocaleLowerCase().replaceAll(/[\s_-]+/g, "");
+
 const filteredModels = computed(() => {
   const query = search.value.trim().toLocaleLowerCase();
   if (!query) return props.models;
-  return props.models.filter((model) =>
-    model.name.toLocaleLowerCase().includes(query),
-  );
+  const collapsedQuery = collapseSeparators(query);
+  return props.models.filter((model) => {
+    const name = model.name.toLocaleLowerCase();
+    return (
+      name.includes(query) || collapseSeparators(name).includes(collapsedQuery)
+    );
+  });
 });
 
 function selectModel(model: Model) {

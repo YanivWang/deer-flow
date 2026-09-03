@@ -427,6 +427,50 @@ describe("ChatComposer slash suggestions", () => {
     这一屏对照台账看不见：斜杠技能要先打字再选中才出现（第①类），
     而 aria-multiline / aria-placeholder / data-* 三样都不进 aria 快照（第⑤类）。
   */
+  /*
+    chip 与可编辑区是**同一行文字里的两个 inline 元素**（上游 input-box.tsx:2264），
+    不是两列。本仓原来是 `flex items-start gap-2`，差的不只是排版：正文不再绕着 chip
+    排、长草稿没有 `max-h-48` 的上限、长技能名会把可编辑区挤没、点空白不聚焦末尾。
+    这一屏对照台账看不见（斜杠技能要先打字再选中才出现，第①类）。
+  */
+  it("keeps the chip and the editor in one scrollable inline row", async () => {
+    const { wrapper } = mountComposer();
+    await flushPromises();
+    const textarea = await openSuggestions(wrapper, "/front");
+    await textarea.trigger("keydown", { key: "Enter" });
+    await flushPromises();
+
+    const editor = wrapper.get('[role="textbox"][contenteditable]');
+    const row = editor.element.parentElement!;
+    // 容器：可滚且有高度上限，不是 flex 两列。
+    expect(row.className).toContain("max-h-48");
+    expect(row.className).toContain("overflow-y-auto");
+    expect(row.className).toContain("whitespace-pre-wrap");
+    expect(row.className).not.toContain("flex items-start");
+    // chip：inline + 宽度上限，不会把可编辑区挤没。
+    const chip = row.querySelector("span")!;
+    expect(chip.className).toContain("align-top");
+    expect(chip.className).toContain("max-w-[min(11rem,45%)]");
+    // 可编辑区不再自己占一栏。
+    expect(editor.classes()).not.toContain("flex-1");
+
+    /*
+      点容器空白处 → 光标落到可编辑区末尾（上游同一处的 onClick）。
+      只在 `target === currentTarget` 时动手，所以点在 chip 上不该抢焦点。
+    */
+    // 用 spy 而不是 document.activeElement：这个 wrapper 没有 attachTo，
+    // 脱离文档的节点 focus() 不会改 activeElement，断言会恒假。
+    const focusSpy = vi.spyOn(editor.element as HTMLElement, "focus");
+    chip.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flushPromises();
+    expect(focusSpy).not.toHaveBeenCalled();
+
+    row.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flushPromises();
+    expect(focusSpy).toHaveBeenCalledTimes(1);
+    focusSpy.mockRestore();
+  });
+
   it("gives the chip editor the same textbox contract upstream has", async () => {
     const { wrapper } = mountComposer();
     await flushPromises();
