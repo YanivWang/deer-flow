@@ -8,12 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 51，2026-09-03）
+## 当前状态（截至 wave 52，2026-09-03）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
-  `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50。
+  `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
+  `a1d675d6` = wave 51。
 - **wave 40 动了 `frontend/`**（重连预算耗尽后那颗键在说反话，两边同改），
   **marker 已推到 `aef3618d`**。
 - **wave 39 动了 `frontend/`**（命令面板搜索框的可访问名，两边同改）。
@@ -53,11 +54,11 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 50 收工时逐条跑过）
+### 门禁实测值（wave 51 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；249 文件 / 2056 单测，词典 945 key、18 unused
-                                   standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 36 处 / 15 个文件）
+make -C frontend-vue verify        exit 0；249 文件 / 2062 单测，词典 945 key、18 unused
+                                   standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 37 处 / 16 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
@@ -65,7 +66,7 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~49 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30~51 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1023**）/ `test:e2e`（**146**）。
 
 > **wave 40 实测：`test:e2e` 的 `webServer` 那 120 秒窗口在这台机器上喂不饱一次
@@ -183,57 +184,94 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 50）做了什么
+## 上一轮（wave 51）做了什么
 
-**扫「历轮提交说明里的门禁数字」——那些数字是这个项目「量过了」的唯一凭据，
-从来没有被回头核对过。翻出来的这条是做这个项目的人自己犯的。**
+**扫两处从没被验过的记录：`tests/fixtures/streams/*.sse` 的出处，
+以及 `docs/` 里对上游/对代码的事实断言。**
 
-### 门禁数字本身：19/19 全对
+### 翻出来的：一条指向已删除文件的「证据在那边」
 
-把最近 19 个带门禁数字的 commit 逐个 `git ls-tree` 数当时那棵树上的
-`tests/**/*.test.ts`，与提交说明里的「N 文件」对：**一个不差**
-（239→249 每一步增量都能对上那一轮加了哪些文件）。
+`tests/fixtures/streams/README.md:54` 写着「`debug` 的实测数据留在
+`playwright.m0-real-backend.config.ts` 的注释里」。**那份 config 在 `1209651f`
+（E2E 套件按用途重命名）里被拆成 `playwright.protocol.config.ts`，
+而 webServer 注释里那三个实测数字没跟着搬过来。**
 
-### 翻出来的：「独立复核台账」那段脚本有一半是结构性空跑
+**`1209651f` 正是 `doc-references.test.ts` 被写出来的那次腐烂。** 没抓到是因为
+那条守卫的路径正则按**顶层目录前缀**收口
+（`(?:tests|app|server|scripts|packages|config|baseline)/…`），
+**模块根上的裸文件名一个都不匹配**。同一份守卫的两半覆盖面差得很远：
+make target 那半扫全部已跟踪文本文件，路径那半只扫 Markdown、且要求带目录。
 
-每轮收工临时写的那段 python 用 `d.get("scenarios", d)` 兜底，
-**而基线的顶层键是 `entries`**。于是它把 `$comment`(str) 与 `entries`(dict)
-当成两个「场景」，内层再也匹配不到数组，**基线行数恒为 0，与文件内容无关**：
+**指路比事实更难发现**：它本身不含任何可判真假的断言，只含一个文件名。
 
-- `NEW = 0` **是真量的**（报告顶层就是 39 个场景 id，解析对了）；
-- `GONE = 0` **是结构决定的**，从来没测出过任何东西；
-- **「两边场景集合一不一致」压根没查过**。
+### 三处修法
 
-**结论没错**——真正的门禁是 `diff.spec.ts` 的 `toEqual(baseline.entries)`，
-**整棵结构深比**，一直在兜底。**错的是「独立复核过」这句话**，它在最近一轮的
-收工报告里出现了八次，而它有一半是空的。
+1. 实测三档（32 会 gap / 128 通过 / 加 debug 后 384 不再逐出）搬回
+   `playwright.protocol.config.ts` 文件头，README 改指它。证据待在旋钮旁边。
+2. `doc-references.test.ts` 新增一档：**反引号里的裸文件名必须在整个 checkout 里
+   搜得到**。判据同线索 172，只判「搜不到」，不判目录。实测 181 处引用、3 条豁免
+   （导出产物名 / node_modules 里的 SDK 运行时 / streamdown 发布 chunk），
+   外加一条盯着豁免名单本身的用例。
+3. `golden-fixture-provenance.test.ts` 加第二组：streams README 的「怎么录的」
+   == 录制器与套件真的在做的事（stream_mode 全集、`--queue-maxsize`、replay 场景
+   路径 + 存在性）。此前只有**内容**被钉（`doc-facts` 比帧数），**怎么录的没人验**。
 
-### 修法：不修脚本，改掉「让人手搓脚本」的那条规则
+### 顺带：wave 46 的引用守卫从 `app/**` 推到整个模块
 
-**硬规则 1 原文本身就是在要求每一轮的人现场发明一套比法**，已改写（见上面「四条硬规则」）。
-新增 `scripts/parity-ledger-report.mjs`（**只读报告工具，不是门禁**）：
-**形状先断言再计算**——读不到 `entries`、任何一条记录缺任何一个已知字段、场景数为 0，
-一律直接失败退出，**而不是安静地算出一个 0**。
+`上游文件.tsx:行号` 这一形状，`tests/**` 里有 **90 处**、`BEHAVIOR_CONTRACTS.md`
+里 1 处，**只因为换了个目录就一条都没人验**。实测 91 处全部指得到，
+所以**不改判据、只改覆盖面**：227 处一起看着。DECLARED 36/15 → **37/16**。
 
-**M5 那条假绿值得记**：第一版只在「一个已知字段都没有」时失败，改掉其中一个字段名
-还剩四个就放过——**那一个字段的行会静默消失**。收紧成「缺一个就失败」（实测两侧
-39 条记录都五个字段齐全，不会误伤）。→ 线索 **176**。
+### docs 那一路：8 条事实断言逐条撞过，全部成立
+
+streams README 的内容事实（226 帧 / 各事件条数 / 1 个 heartbeat / 225 个 `id:` /
+1.1MB / gzip 18KB / 9 个 messages 帧里 2 个带 tool_call_chunks / demo thread 最多
+74 条）、`录制时的仓库 commit 548bf3ae`（**手工核过：它正是录制 commit `d4e5461d`
+的父提交**）、S8b 的 `hooks.ts:2623` 纯分页、S8b 的后端 `get_thread_history` vs
+`get_thread_state`、S10 的两参箭头、N6 的三组 primitive 写死名、L14 的 516、
+A5 的 5 次 rejoin —— **全部成立**。
+
+**N6 差点误报**（线索 173 又发作）：上游确实有 `toggleSidebar` 词条，但那是
+`shortcuts.toggleSidebar`、消费点在 `command-palette.tsx:121` 的**快捷键说明**，
+不是控件的可访问名。**先读断言说的是哪个作用域，再决定 grep 什么。**
+
+### 有意不钉的一条
+
+**`录制时的仓库 commit` 那一行不上门禁。** 唯一验法是拿它去 git 里解析，
+而**浅克隆（CI 常见 fetch-depth 1）解析不出历史里的老 commit**，会变成一条
+与产品无关的红。它是纯历史标签，已在文件头如实写明它没有门禁。
 
 ---
 
-## 下一轮（wave 51）：**剩下两处没扫的记录**
+## 下一轮（wave 52）：**收尾判据重新计数，从 1 开始**
 
-wave 50 只做了三处里的第 3 处。剩下两处：
+47 干净、48/49/50/51 各翻出一条，所以**又要连着两轮**。别报「还剩几轮」。
 
-1. **`tests/fixtures/streams/*.sse`** —— 签入的协议录制，和 wave 49 那份 json 夹具
-   同一类：说的是「当时后端长这样」，**没有出处校验**。做法照 wave 49：
-   先问「它录自哪个后端版本 / 哪次录制」，再问「有没有任何东西验这句话」。
-2. **`docs/` 里除本文件之外的**（`ARCHITECTURE.md` / `BEHAVIOR_CONTRACTS.md` /
-   `README.md`）。`doc-references.test.ts` 只钉了「命令与路径存在」，
-   **没钉里面对上游/对代码的事实断言**——那正是 wave 47 在源码注释里扫过的那一类，
-   只是换了个地方。
+wave 52 扫哪里（继续挑没被覆盖的角度）：
 
-## 上一轮的上一轮（wave 48）做了什么
+1. **`tests/` 与 `scripts/` 下的文件头注释里那些「判据/取舍」段落。**
+   wave 46/51 钉住的是**引用指得到**，wave 47/48 撞的是**源码注释与 baseline**，
+   但**测试与脚本自己文件头里写的「为什么这么判」**从来没有被当成断言撞过——
+   而它们正是下一轮的人决定「要不要动这条门禁」的全部依据。做法同 47：
+   把里面点名的名字（常量、函数、阈值、上游文件）拿去撞。
+2. **`Makefile` 与 `README.md` 的套件表之外的那部分。**
+   `doc-references` 钉了「每个套件都写进 README」与「命令存在」，
+   **但没钉「README 里描述这个套件在测什么」和它实际 testDir 下的内容一致**。
+   一个套件被抽空或改了 testDir，README 的描述会静静地留在原地。
+3. **`baseline/` 下带 `$` 前缀的纯说明键**（wave 48 只把不带 `$` 的钉了消费者）。
+   `$` 开头是「纯说明，没人读」——那它说的话对不对，就完全没有任何东西看着了，
+   而 `$pendingReasons`（线索 131）恰恰是靠它挂了十几轮。
+
+## 更早几轮的记录（49 / 50 一句话，48 保留全文）
+
+- **wave 49**：`react-markdown-dom.json` 的 `recordedFrom` 说「录自 streamdown 2.5.0」，
+  没有任何东西验过。修法是两条一起：录制器从 `node_modules/<pkg>/package.json` 读真版本，
+  守卫钉「标签 == 实际装的版本」（→ 线索 175）。
+- **wave 50**：每轮收工手搓的「独立复核台账」脚本走 `d.get("scenarios", d)` 兜底，
+  而基线顶层键是 `entries`——**基线行数恒为 0 与内容无关**。改掉硬规则 1 +
+  固化 `scripts/parity-ledger-report.mjs`（形状先断言再计算，→ 线索 176）。
+
+## wave 48 做了什么
 
 **扫从来没有被任何东西验过的那一类：`baseline/` 下的纯数据文件——它们说的话没有任何代码验。**
 翻出一条，**所以收尾判据重新计数**（47 干净、48 不干净）。
@@ -263,19 +301,6 @@ wave 50 只做了三处里的第 3 处。剩下两处：
 **写「有没有人用 X」这类守卫时，第一件事是把注释剥掉**——否则守卫的文档会把被测对象救活。
 
 ---
-
-## 下一轮（wave 49）：**判据只差一轮，但别只盯着判据**
-
-47 干净、48 不干净，所以**还要连着两轮**。34~46 十三轮每轮都翻出过，47 是第一次空。
-
-wave 49 扫哪里（继续挑没被覆盖的角度）：
-
-1. **正面断言**（wave 47 只扫了否定断言，wave 48 拐去了 baseline）。
-   「上游是 X」「上游走 Y」这类**肯定句**同样会过期，过期时后果更隐蔽——
-   本仓会照着一个不存在的形状继续「对齐」。做法同 47：把断言里的名字拿去上游撞。
-2. **`tests/` 下的夹具**。`tests/fixtures/**` 里签入的 golden 数据（比如
-   `react-markdown-dom.json`）说的是「上游当时长这样」，**同样没有任何东西验它还准不准**。
-   wave 41 的教训（`agent-chat.spec.ts` 的夹具只推进了一半）说明夹具会和真实后端脱节。
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -500,7 +525,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 176 条在记忆文件里）
+## 其他常踩的坑（完整 177 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -533,10 +558,14 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
   所以**靠交互才出现的东西，位置永远进不了台账**，只能单测守（线索 137）。
 - **注释里带点写一条死词条会把它从 unused 集里弄没**（线索 126）。要写成
   「container 下的 leafName」，改完跑 `make i18n-unused` 核对。
+- **一条「证据在那边」的指路比一条说错的事实更难发现**：它不含任何可判真假的断言，
+  只含一个文件名（线索 177）。而**守卫的覆盖面要按半边分开问**——
+  `doc-references` 的 make target 那半扫全部文本文件，路径那半只扫 Markdown、
+  还要求带目录前缀，模块根上的裸文件名两半都漏。
 
 ## 背景在哪
 
-- 每一轮的实测记录、162 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、177 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
@@ -551,4 +580,8 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
   `workspace/browser-view/BrowserPanel.vue`
 - 取数合同在 `frontend-vue/BEHAVIOR_CONTRACTS.md` 的 **S8 / S8a / S8b / S8c**
 - **文件头里写着「实测过、做不到」的结论，也要看它给的机制对不对。已经翻案十一次。**
+- **`tests/guards/` 下已有八条「把散文变门禁」的守卫**（doc-facts / doc-references /
+  upstream-citations / upstream-zero-claims / golden-fixture-provenance /
+  baseline-keys-consumed / invariant-ownership / e2e-suite-contract）。
+  **加新守卫前先读它们的覆盖面**——wave 51 那条就躺在现成守卫的正则缝里。
   **上一轮写下的推断，下一轮仍要当假设重新验。**
