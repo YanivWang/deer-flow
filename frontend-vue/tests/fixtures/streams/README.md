@@ -51,7 +51,7 @@ cp test-results/e2e-protocol/run-protocol*/resume-gap.redacted.sse tests/fixture
 
 **`debug` 有意不录。** 08 §402 的 raw-trace 清单里没有它（§349 的 event-map
 清单里才有），而它一个人就把 fixture 从 1.1 MB 顶到 2.1 MB、事件数从 226 顶到 378。
-实测数据留在 `playwright.m0-real-backend.config.ts` 的注释里，要录随时能录。
+实测数据留在 `playwright.protocol.config.ts` 的注释里，要录随时能录。
 
 `--queue-maxsize` 必须跟着重调：它要**大于 live burst、小于总事件数**。
 实测 32 会让 create 流自己被 gap（原来的 74 帧下没问题），128 通过；

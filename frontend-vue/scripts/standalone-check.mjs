@@ -33,8 +33,10 @@ const GENERATED = new Set(["pnpm-lock.yaml"]);
 const CROSS_APP_BY_DESIGN = {
   "tests/parity/product-surface.test.ts":
     "产品表面对照；缺席时整组 describe.skipIf 跳过。",
+  "tests/guards/doc-references.test.ts":
+    "「反引号里的裸文件名在 checkout 里搜得到」那一档要拿兄弟应用的文件名当坐标系；缺席时只有那一条用例跳过，其余检查照常跑。",
   "tests/guards/upstream-citations.test.ts":
-    "钉源码注释里对上游的『文件:行号』引用还指得到东西；缺席时整组 describe.skipIf 跳过。",
+    "钉本仓源码/测试/文档里对上游的『文件:行号』引用还指得到东西；缺席时整组 describe.skipIf 跳过。",
   "tests/guards/upstream-zero-claims.test.ts":
     "把「上游这东西没人用」这类散文断言变成门禁；缺席时整组 describe.skipIf 跳过。",
   "tests/guards/golden-fixture-provenance.test.ts":

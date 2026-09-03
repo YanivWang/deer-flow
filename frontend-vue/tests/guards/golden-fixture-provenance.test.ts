@@ -22,6 +22,18 @@
 
                    `../frontend` 缺席时整组跳过：夹具是签入的，本仓的
                    install/build/test 都不依赖兄弟应用。已声明进 `standalone-check.mjs`。
+
+                   **第二组是 SSE golden trace 的出处**，同一个失效模式换了个地方：
+                   `tests/fixtures/streams/README.md` 写着「录自哪次录制、用的什么请求」，
+                   而在此之前只有**内容**被钉住（`doc-facts.test.ts` 比帧数与各事件条数），
+                   **怎么录的那半边一个字都没人验**。改了录制器的 stream_mode、
+                   或者把套件的 --queue-maxsize 调了，README 照样全绿——
+                   下一个照着它重录的人会拿到一份形状不同的夹具。
+                   所以这里钉的是**标签 == 录制器/套件配置真的在做的事**。
+
+                   录制时的仓库 commit 那一行**有意不钉**：唯一的验法是拿它去 git 里
+                   解析，而浅克隆（CI 常见的 fetch-depth 1）解析不出历史里的老 commit，
+                   会变成一条与产品无关的红。它是纯历史标签，如实说明它没有门禁。
 */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -73,4 +85,72 @@ describe.skipIf(!present)("golden 夹具的出处", () => {
     )?.[1];
     expect(inComment).toBe(stamped);
   });
+});
+
+/*
+  第二组：SSE golden trace 的出处。这一组不碰 `../frontend`，所以不跟着上面那个
+  skipIf 走；只有「那份 replay fixture 真的在」这一条要 `../backend`。
+*/
+const streamsDoc = readFileSync(
+  join(root, "tests/fixtures/streams/README.md"),
+  "utf8",
+);
+const recorder = readFileSync(
+  join(root, "tests/e2e-protocol/run-protocol.spec.ts"),
+  "utf8",
+);
+const protocolConfig = readFileSync(
+  join(root, "playwright.protocol.config.ts"),
+  "utf8",
+);
+
+describe("SSE golden trace 的出处", () => {
+  it("README 写的 stream_mode == 录制器真的请求的那几种", () => {
+    const block = /stream_mode: \[([^\]]+)\]/.exec(recorder)?.[1];
+    expect(block, "录制器里找不到 stream_mode 数组").toBeTruthy();
+    const requested = [...(block ?? "").matchAll(/"([^"]+)"/g)].map(
+      (m) => m[1],
+    );
+    const row = /请求的 stream_mode\s*\|([^|]*)\|/.exec(streamsDoc)?.[1];
+    expect(row, "README 的元数据表里找不到 stream_mode 那一行").toBeTruthy();
+    const documented = [...(row ?? "").matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+    // 两边都空掉时 toEqual 会假绿——先钉住「真的解析出东西了」。
+    expect(requested.length).toBeGreaterThan(3);
+    expect(
+      documented,
+      "录制器改了请求模式，README 还在写旧的那几种；照着它重录会得到形状不同的夹具",
+    ).toEqual(requested);
+  });
+
+  it("README 写的 --queue-maxsize == 套件真的传给 Gateway 的值", () => {
+    const configured = /"--queue-maxsize",\s*"(\d+)"/.exec(protocolConfig)?.[1];
+    expect(configured, "套件配置里找不到 --queue-maxsize").toMatch(/^\d+$/);
+    const documented = /run_m0_gateway\.py --queue-maxsize (\d+)/.exec(
+      streamsDoc,
+    )?.[1];
+    expect(
+      documented,
+      "这个窗口要落在实时爆发量与总事件数之间；README 写错了，重录出来的 create 流会自己被 gap",
+    ).toBe(configured);
+  });
+
+  it("README 写的录制场景 == 录制器真的读的那份 replay fixture", () => {
+    const used = /"(\.\.\/backend\/[^"]+\.json)"/.exec(recorder)?.[1];
+    expect(used, "录制器里找不到它读的 replay fixture").toBeTruthy();
+    const documented = /`(backend\/[^`]+\.json)`/.exec(streamsDoc)?.[1];
+    expect(documented, "README 的元数据表里找不到录制场景").toBeTruthy();
+    expect(`../${documented}`).toBe(used);
+  });
+
+  it.skipIf(!existsSync(join(root, "../backend")))(
+    "那份 replay fixture 在 checkout 里真的存在",
+    () => {
+      const used = /"(\.\.\/backend\/[^"]+\.json)"/.exec(recorder)?.[1] ?? "";
+      expect(used).not.toBe("");
+      expect({ used, exists: existsSync(join(root, used)) }).toEqual({
+        used,
+        exists: true,
+      });
+    },
+  );
 });

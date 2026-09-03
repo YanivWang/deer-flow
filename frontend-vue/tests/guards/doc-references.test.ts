@@ -37,6 +37,12 @@
                      随迁移台账一起没了，README 的链接留了下来）；
                    - 反引号里的仓库内路径指向改名或删除后的位置
                      （`tests/m6/`、`tests/m4a-stream/`、`app/stores/`…）。
+
+                   第三类是**裸文件名**——不带目录，所以上面那条按顶层目录前缀
+                   收口的路径检查看不见它。同一次改名（1209651f）删掉的那份
+                   playwright.m0-real-backend.config.ts 就是这样漏掉的：
+                   tests/fixtures/streams/README.md 里写着「实测数据留在它的注释里」，
+                   而那份 config 连同注释一起没了，所有门禁一路全绿。
                    指向 `../` 之外的目标只在那个顶层目录存在时才校验：本模块必须
                    能在仓库其余部分缺席时独立工作。路径检查同样跳过历史区——
                    一条记录说「当时这个文件在 tests/m6/」是既成事实，
@@ -234,6 +240,59 @@ const DELIBERATELY_ABSENT: Record<string, string> = {
     "ARCHITECTURE.md 记录的正是它已经不存在：全仓 defineStore 为 0，而 pinia 仍注册在 nuxt.config.ts 里。",
 };
 
+/**
+ * 反引号里的**裸文件名**（不带任何目录）。判据只有一条，和 172 号一样：
+ * **照着这个名字在 checkout 里搜，什么都搜不到。** 名字还在、只是换了目录不算——
+ * 那仍然找得到，而钉住目录会变成随任何一次移动就红的噪声。带目录的路径归
+ * REPO_PATH 管，两条互不重叠（这条要求整串里没有 `/`）。
+ */
+const BARE_FILENAME =
+  /`([A-Za-z0-9_][A-Za-z0-9_.-]*\.(?:ts|mts|tsx|mjs|js|cjs|jsx|vue|json|md|yml|yaml|sh|css|py))`/g;
+
+/**
+ * 反引号里点名、但整个 checkout 里一个同名文件都没有的名字。
+ * 判据同 DELIBERATELY_ABSENT：**这句话的意思本来就不是「仓库里有这个文件」**，
+ * 改成一个存在的名字反而会让注释说谎。加一条就要在这里写清楚为什么。
+ * 下面第二条用例盯着这张表本身：条目还得真的缺席、也还得真的有人在引它。
+ */
+const NON_REPO_FILENAMES: Record<string, string> = {
+  "Untitled.md":
+    "上游导出无标题会话时产出的文件名。那段注释讲的就是本仓导出成了别的名字，不是在指一个仓库文件。",
+  "client.js":
+    "@hey-api 生成的 SDK 运行时，只存在于 node_modules。那段注释记的是它在 threads.search 里逐字段做了 camelCase → wire 名的转换。",
+  "chunk-BO2N2NFS.js":
+    "streamdown 发布产物里的 chunk 名。用来说明上游那套 markdown 图标是内联在发布产物里的，不是图标库。",
+};
+
+/**
+ * 整个 checkout 里出现过的文件名（去掉目录）。必须覆盖兄弟应用与后端：本仓的注释
+ * 大量点名上游文件，只按 frontend-vue 自己的清单判会误报几十条（实测 26 条）。
+ *
+ * 所以这一档**需要完整 checkout**，兄弟应用缺席时直接跳过——与
+ * upstream-citations / upstream-zero-claims 同一条规矩，已声明进 standalone-check
+ * 的 CROSS_APP_BY_DESIGN。本文件其余的检查（make target、相对链接、仓库内路径）
+ * 都不依赖它，照常跑。
+ */
+const siblingApp = join(ROOT, "../frontend/src");
+
+function checkoutBasenames(): Set<string> | null {
+  if (rootTargets === null || !existsSync(siblingApp)) return null;
+  const repoRoot = join(ROOT, "..");
+  const listed = [
+    execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" }),
+    execFileSync("git", ["ls-files", "--others", "--exclude-standard"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    }),
+  ].join("\n");
+  const names = new Set<string>();
+  for (const rel of listed.split("\n")) {
+    if (rel === "") continue;
+    names.add(rel.split("/").pop() as string);
+  }
+  return names;
+}
+
 describe("每条被写进文档的 make 命令都存在", () => {
   it("扫到了文件，也扫到了 Makefile 的 target（两边空掉时不能假绿）", () => {
     expect(localTargets.size).toBeGreaterThan(20);
@@ -406,5 +465,57 @@ describe("文档指名的文件都存在", () => {
       }
     }
     expect(violations).toEqual([]);
+  });
+
+  /*
+    这一条扫的是全部文本文件，不只是 Markdown：死掉的文件名躺在源码文件头注释里
+    和躺在文档里烂得一样彻底，而注释正是本仓写「为什么这么做」的地方。
+  */
+  it("反引号里的裸文件名在 checkout 里搜得到", () => {
+    const known = checkoutBasenames();
+    if (known === null) return;
+    const violations: string[] = [];
+    let scanned = 0;
+    for (const rel of trackedTextFiles()) {
+      const source = stripHistoricalRegions(
+        readFileSync(join(ROOT, rel), "utf8"),
+      );
+      for (const [index, line] of source.split("\n").entries()) {
+        for (const match of line.matchAll(BARE_FILENAME)) {
+          const name = match[1] ?? "";
+          scanned += 1;
+          if (known.has(name)) continue;
+          if (name in NON_REPO_FILENAMES) continue;
+          violations.push(`${rel}:${index + 1}: ${name}`);
+        }
+      }
+    }
+    // 正则写坏时主断言会静默全绿——空集合永远 toEqual([])（同 131 号）。
+    expect(scanned).toBeGreaterThan(100);
+    expect(
+      violations,
+      "照着这个名字在整个 checkout 里搜，一个文件都搜不到",
+    ).toEqual([]);
+  });
+
+  it("豁免名单自己不会腐烂：每一条都还缺席、也还有人在引", () => {
+    const known = checkoutBasenames();
+    if (known === null) return;
+    const cited = new Set<string>();
+    for (const rel of trackedTextFiles()) {
+      const source = stripHistoricalRegions(
+        readFileSync(join(ROOT, rel), "utf8"),
+      );
+      for (const match of source.matchAll(BARE_FILENAME)) {
+        cited.add(match[1] ?? "");
+      }
+    }
+    const stale = Object.keys(NON_REPO_FILENAMES).filter(
+      (name) => known.has(name) || !cited.has(name),
+    );
+    expect(
+      stale,
+      "文件出现了、或者没人再引它——把这一条从 NON_REPO_FILENAMES 拿掉",
+    ).toEqual([]);
   });
 });
