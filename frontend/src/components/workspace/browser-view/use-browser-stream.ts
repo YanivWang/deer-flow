@@ -61,6 +61,7 @@ export function useBrowserStream(
     url: string | undefined,
     message: string | undefined,
   ) => void,
+  onReconnectExhausted?: () => void,
 ) {
   const [status, setStatus] = useState<BrowserStreamStatus>("idle");
   const [frameBuffer] = useState(() => new LatestBrowserFrameBuffer());
@@ -85,6 +86,8 @@ export function useBrowserStream(
   const liveUrlRef = useRef<string | null>(null);
   const onNavRejectedRef = useRef(onNavRejected);
   onNavRejectedRef.current = onNavRejected;
+  const onReconnectExhaustedRef = useRef(onReconnectExhausted);
+  onReconnectExhaustedRef.current = onReconnectExhausted;
 
   const sendInput = useCallback((event: BrowserInputEvent) => {
     const socket = socketRef.current;
@@ -144,6 +147,14 @@ export function useBrowserStream(
       // Exponential backoff with a ceiling + attempt cap so a server that keeps
       // rejecting the upgrade cannot pin the client in a tight reconnect loop.
       if (connectionAttempt >= RECONNECT_MAX_ATTEMPTS) {
+        // Returning here without telling anyone leaves the mode button
+        // rendering "…" — which reads as "connecting" — forever, even though
+        // no further attempt will ever be made. Hand the give-up back to the
+        // caller so it can leave live mode: the button then reads "Live" /
+        // "Take live control" again, which is true, and the single click that
+        // re-enables live also resets the budget (the disabled-effect above
+        // zeroes connectionAttempt).
+        onReconnectExhaustedRef.current?.();
         return;
       }
       const delay = Math.min(

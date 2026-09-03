@@ -59,11 +59,17 @@ export function BrowserViewPanel({
     },
     [],
   );
+  // The stream gives up after a fixed reconnect budget. Drop out of live mode
+  // when it does, so the toggle stops claiming "…" and one click re-arms it.
+  const handleReconnectExhausted = useCallback(() => {
+    setLive(false);
+  }, []);
   const { status, frameUrl, liveUrl, sendInput } = useBrowserStream(
     threadId,
     live,
     streamSeedUrl,
     handleNavRejected,
+    handleReconnectExhausted,
   );
   const panelRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<HTMLImageElement | null>(null);

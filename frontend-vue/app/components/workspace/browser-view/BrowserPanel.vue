@@ -25,9 +25,17 @@
                      `tests/unit/i18n/upstream-key-coverage.test.ts` 的别名表守着（wave 39）。
 
                    剩下的两处：
-                   1. `role="alert"` 那条内联错误 + 重试入口：上游走 toast，而且重连预算
-                      耗尽之后**什么都不显示**。本仓保留内联提示与重试。对照看不见它——
-                      mock 后端没有 WS 端点时要 32 秒才耗尽 6 次预算，取样点在 settle+700ms。
+                   1. `role="alert"` 那条内联错误 + 重试入口：上游走 toast，本仓保留内联
+                      提示与重试。对照看不见它——mock 后端没有 WS 端点时要 32 秒才耗尽
+                      6 次预算，取样点在 settle+700ms。
+                      **原来记的「上游耗尽之后什么都不显示」是错的**（wave 40 量）：
+                      上游那颗模式键会**永远画着 "…"**，那个字面意思是「还在连」，
+                      而 `scheduleReconnect` 已经彻底 return 了；出路是把它切走再切回来
+                      （`enabled` 转 false 时 `setConnectionAttempt(0)`），但界面没有任何
+                      地方说得出这一点。**而且这条账把「本仓更好」当成了整件事——
+                      同一处缺陷的另一半本仓照抄了**：`liveLabel` 原本写的是
+                      `status !== "open"`，本仓耗尽时是 `"error"`，于是本仓那颗键
+                      也在说同一句反话。两边已同改，形状不同，见 `liveLabel` 的注释。
                    2. 画面上的 `@mousemove`：上游 forwardMouse 只接了 onClick。本仓多发
                       move（远端页面的 hover 态因此能用），走 WS，台账看不见，
                       由 browser-panel.dom.test.ts 守着。
@@ -137,9 +145,22 @@ const liveActive = computed(
 const liveConnecting = computed(
   () => requestedLive.value && stream.status.value === "connecting",
 );
-/** 上游 browser-view-panel.tsx:408 的两态：请求了 Live 但还没连上画 "…"，其余都画 Live。 */
+/*
+  上游 browser-view-panel.tsx:408 的两态：请求了 Live 但还没连上画 "…"，其余都画 Live。
+  **但 `error` 不能落进「还没连上」那一支。** 这里原来照抄的是 `!== "open"`，
+  而本仓的控制器在重连预算耗尽时发的是 `status: "error"`——于是那颗键会永远画着
+  一个意思是「还在连」的 "…"，而它已经彻底不连了。上游同一处也说这句反话
+  （它只有三态，耗尽后停在 `closed`，标签一样是 "…"），已按「根因在 frontend/
+  就两边同改」处理：上游放弃时退出 live 模式，那颗键回到 "Live"/"Take live
+  control"，点一下就重新连（切走会把预算清零）。本仓不走那条路——`stop()` 会把
+  快照重置成初始态，连带抹掉下面那条 `role="alert"` 与重试入口，那正是本仓比上游
+  好的地方。所以本仓只把标签改诚实：放弃之后画 Live（live 模式确实还开着），
+  失败的事实与出路交给内联提示。
+*/
 const liveLabel = computed(() =>
-  requestedLive.value && stream.status.value !== "open"
+  requestedLive.value &&
+  stream.status.value !== "open" &&
+  stream.status.value !== "error"
     ? "…"
     : $i18n.t.value.browser.live,
 );

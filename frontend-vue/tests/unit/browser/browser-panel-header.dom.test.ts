@@ -29,6 +29,8 @@ const harness = vi.hoisted(() => {
     status: { value: "connecting" as string },
     frameUrl: { value: null as string | null },
     liveUrl: { value: null as string | null },
+    error: { value: null as string | null },
+    canRetry: { value: false },
     isPending: { value: false },
     sendInput: vi.fn(() => "sent" as const),
   };
@@ -55,9 +57,13 @@ vi.mock("@/components/workspace/browser-view/useBrowserStream", async () => {
   const status = vueRef("connecting");
   const frameUrl = vueRef<string | null>(null);
   const liveUrl = vueRef<string | null>(null);
+  const error = vueRef<string | null>(null);
+  const canRetry = vueRef(false);
   harness.status = status;
   harness.frameUrl = frameUrl;
   harness.liveUrl = liveUrl;
+  harness.error = error;
+  harness.canRetry = canRetry;
   return {
     useBrowserStream: () => ({
       status,
@@ -65,10 +71,10 @@ vi.mock("@/components/workspace/browser-view/useBrowserStream", async () => {
       liveUrl,
       title: vueRef(""),
       tabs: vueRef([]),
-      error: vueRef(null),
+      error,
       rejectedUrl: vueRef(null),
       reconnectAttempt: vueRef(0),
-      canRetry: vueRef(false),
+      canRetry,
       fallbackNavigate: vueRef(null),
       sendInput: harness.sendInput,
       retry: vi.fn(),
@@ -107,6 +113,8 @@ describe("BrowserPanel header", () => {
     harness.status.value = "connecting";
     harness.frameUrl.value = null;
     harness.liveUrl.value = null;
+    harness.error.value = null;
+    harness.canRetry.value = false;
     harness.isPending.value = false;
     harness.sendInput.mockClear();
     harness.sendInput.mockReturnValue("sent");
@@ -264,6 +272,40 @@ describe("BrowserPanel header", () => {
     const mode = wrapper.get('[data-testid="browser-mode"]');
     expect(mode.attributes("data-variant")).toBe("ghost");
     expect(mode.attributes("title")).toBe(enUS.browser.takeLiveControl);
+  });
+
+  /*
+    第⑧类之外的一条：**放弃重连之后那颗键在说反话。** 上游只有三态，耗尽后停在
+    `closed`，标签同样是 "…"——那是「还在连」的意思，而 `scheduleReconnect` 已经
+    彻底 return。上游按两边同改在放弃时退出 live 模式（`onReconnectExhausted`）；
+    本仓不能走那条路（`stop()` 会把快照重置，连带抹掉下面的 alert 与重试），
+    所以本仓只把标签改诚实。
+
+    两半都断言（坑 57）：只钉「error 时不画 …」的话，把 liveLabel 写死成 Live
+    也照样绿——所以连着钉住「连接中仍然画 …」。
+  */
+  it("stops rendering the connecting ellipsis once the stream has given up", async () => {
+    const wrapper = mountPanel();
+    const mode = () => wrapper.get("[data-testid='browser-mode']");
+    expect(mode().text()).toContain("…");
+    expect(mode().text()).not.toContain(enUS.browser.live);
+
+    harness.status.value = "error";
+    harness.error.value = "Live browser connection closed.";
+    harness.canRetry.value = true;
+    await nextTick();
+
+    expect(mode().text()).not.toContain("…");
+    expect(mode().text()).toContain(enUS.browser.live);
+    // live 模式还开着，所以 title 仍是「停止」而不是「接管」。
+    expect(mode().attributes("title")).toBe(enUS.browser.stopLiveControl);
+    // 失败的事实与出路留在内联提示里——这正是本仓与上游有意分叉的那一处，
+    // 改标签不许把它一起改没了。
+    const alert = wrapper.get("[role='alert']");
+    expect(alert.text()).toContain("Live browser connection closed.");
+    expect(
+      alert.get(`button[aria-label='${enUS.browser.retryLive}']`).exists(),
+    ).toBe(true);
   });
 
   it("only makes the panel a focus target while it is forwarding keys", async () => {
