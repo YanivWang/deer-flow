@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 57，2026-09-04）
+## 当前状态（截至 wave 58，2026-09-04）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57。
 - **动过 `frontend/` 的是十四轮，不是三轮**（wave 52 实测订正）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -28,7 +28,7 @@
   wave 52 实测**无漂移**，marker 也确实是 HEAD 的祖先——
   **边界规则本身有机器在守，需要人记的只有「这类改动做过哪些轮」。**
   最近三轮的内容：wave 40 重连预算耗尽后那颗键在说反话；wave 39 命令面板搜索框的
-  可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~56 都没动过。
+  可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~57 都没动过。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
 - 覆盖率棘轮：covered **24**，pending **仍是 1 条**（`chat-thread-init-ordering`）——
   wave 29 **实测**过，结论是**不能加**，翻案判据写在 `$pendingReasons` 里。
@@ -63,7 +63,7 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 56 收工时逐条跑过）
+### 门禁实测值（wave 57 收工时逐条跑过）
 
 ```
 make -C frontend-vue verify        exit 0；249 文件 / 2067 单测，词典 945 key、18 unused
@@ -75,7 +75,7 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~56 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30~57 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1023**）/ `test:e2e`（**146**）。
 **这两个数 wave 56 真跑过一遍复核：1023 passed；`--list` 报 146 tests in 27 files。**
 
@@ -202,62 +202,58 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 56）做了什么
+## 上一轮（wave 57）做了什么
 
-**wave 52（三次 vs 十四轮）与 wave 55（三处 vs 两处）连着两轮栽在计数上，
-所以正面扫这一类：把本文件里每一个数字拉出来逐条量。三十多个，两个是错的。**
+**扫 `scenarios.ts` 的 1798 行场景说明、104 个 L2 文件头、两份 README 的一致性。**
 
-| 位置 | 写着 | 实际 |
-| --- | --- | --- |
-| 开头第 4 行「深度背景（**176 条**踩坑线索…）」 | 176 | **180**（同文档另外两处写的都是 180） |
-| 「L2 primitive 文件头（**约 60 个文件**）」 | 约 60 | **104 个 `.vue`** |
+### 翻出来的：`scenarios.ts` 自己跟自己打架
 
-**第二个是 wave 55 写下一轮计划时随手估的，没量**；第一个是 wave 51~55 每轮更新
-线索数时只改后两处、**漏了开头那处**——同一个数字写在三处，改两处漏一处。
+同一份文件里两处讲 `Notification.permission` 的默认值，结论相反：
+第 122 行（stub 的存在理由）说「Playwright 里它默认是 `default`」——没日期、没量过；
+第 1335 行说「**实测（2026-09-02）**：默认是 **denied**（不是 default，也不是 granted）」。
 
-### 修法：一个数字只写一处
+**量了：四次全是 `denied`**（plain context 与 `PARITY_CONTEXT_OPTIONS` × opaque origin
+与 `http://localhost`）。headless Chromium 根本不支持通知；
+`PARITY_CONTEXT_OPTIONS` 里也没有任何 permission 设置，「这个上下文」并不特殊。
+**所以第 122 行是错的。** 结论没变（本来就不该靠真实权限），**错的是理由**——
+而理由才是下一个人判断「这个 stub 还需不需要」的依据。
 
-开头那句和「背景在哪」那节的条数都删了，全文只剩一处写线索总数。
-「约 60」换成实测 104。与 wave 53 同一条：**不承重的数字别写，承重的只写一处。**
+> **不上门禁**：这条事实变了也不弄坏任何东西（stub 照样覆盖它），门禁只会保护一句注释。
+> 本仓对环境事实的既定写法就是**带日期的实测标注**，补成同一形状即可。
 
-### 量过、全部正确的
+顺手订正 `ui/sidebar/index.ts` 的「上游还导出**十余个** primitive」——实测 **24 个**。
 
-React 侧 `test` **1023**（真跑了一遍）、`test:e2e` **146**（`--list` 报 146 tests in
-27 files，27 正是覆盖率棘轮的坐标系条数）、已对齐的域 **14 个**、
-「要动 L2 primitive 的 **9 个消费者**」（`ui/button/` 外 8 个调用点 + `Button.vue` 自己）、
-Reasoning「上游还有**六个** prop」（名字逐字相同）、`scenarios.ts` **1798 行**、
-以及本轮门禁的每一个数。
+### 量过、全部成立的
 
-> React 侧那两个数从 wave 40 之后没有任何提交碰过（`git log aef3618d..HEAD --
-> frontend/src frontend/tests` 为空），本来就不该漂——**但「不该漂」不是「没漂」。**
-
-### 顺手：路径守卫收进兄弟树
-
-wave 54 的路径检查只认本模块顶层目录，而本仓注释里还有 **172 处**指向
-`frontend/` `backend/` `docker/` `skills/` `contracts/` 的路径，此前一条都不查。
-已收进来，0 处新违规。**解析仍按 basename**——本仓写这类路径惯于省略中间层
-（`backend/routers/browser.py` 真身是 `backend/app/gateway/routers/browser.py`），
-钉全路径会把合法简写全判红。
+`chain-of-thought`「上游导出 7 个组件、未移植的正是 Header/SearchResults/SearchResult/Image」
+逐字相同；Reasoning 的六个 prop；`defaultGetThinkingMessage` 确在 `reasoning.tsx:159`；
+`SidebarTrigger` 三个调用点（按文件数）；L2 文件头点名的 6 个上游文件全部存在；
+**两份 README 没有事实分叉**（14 个标题一一对应、make 命令集合相同、反引号 token 集合
+只差两处出现次数）。
 
 ---
 
-## 下一轮（wave 57）：**收尾判据仍在重新计数**
+## 下一轮（wave 58）：**收尾判据仍在重新计数**
 
-47 干净，48~56 九轮各翻出一条。别报「还剩几轮」。
+47 干净，48~57 十轮各翻出一条。别报「还剩几轮」。
 
-wave 57 扫哪里：
+wave 58 扫哪里：
 
-1. **`tests/e2e-parity/support/scenarios.ts` 的 1798 行场景说明**（wave 55/56 都只抽了
-   几条）。里面每条 `实测（日期）` 都是一次没人复核过的测量，而它决定台账取样什么。
-2. **`app/components/ui/**` 的 104 个 L2 文件头**。wave 56 只撞了「上游 prop 枚举」
-   与「上游文件引用」两类，**「上游这个分支为什么不移植」那一类没撞过**——
-   上游把那个分支删了或改了，本仓的理由就成了空话。
-3. **`frontend-vue/README.md` 与 `README_zh.md` 的两份内容是否一致**。
-   `doc-references` 只钉了「每个套件都出现在两份 README 里」，
-   **没钉两份说的是不是同一件事**——一份改了另一份没改，谁都不会红。
+1. **`scenarios.ts` 里所有不带日期的断言**。wave 57 那条正是「没日期、没量过」的那句，
+   而它旁边带日期的那条是对的。**把这份文件里所有不带日期标注的事实句拉出来逐条量**——
+   带日期的那些至少还标了它是一次测量，不带的连这个都没有。
+2. **`app/composables/**` 与 `app/core/**` 的文件头**（L3/L1 两层，wave 47/49 抽样过，
+   但没有像 wave 57 这样系统地找「同一份文件里前后矛盾」）。
+   **新方法：不是拿去撞上游，而是先在本仓内部找自相矛盾的两句。**
+3. **`BEHAVIOR_CONTRACTS.md` 与各文件头之间的矛盾**。合同说 A，实现的文件头说 A'，
+   两边都没错到会红，但读的人会按其中一份去改代码。
 
-## 更早几轮的记录（49~55 一句话，48 保留全文）
+## 更早几轮的记录（49~56 一句话，48 保留全文）
 
+- **wave 56**：把本文件里每个数字逐条量，两个错的**都是自己造的**（「176 条线索」是
+  同一数字写三处、改两处漏一处；「L2 约 60 个文件」是 wave 55 随手估的，实际 104）。
+  **修法：一个数字只写一处。** 同轮真跑复核了 React 侧 1023 / 146，全对；
+  路径守卫收进兄弟树（172 处此前一条不查）。
 - **wave 55**：本文件写着「`BrowserPanel.vue` 文件头已同步改过（四处 → 三处）」，
   而文件头从 wave 39 起就写着**两处**，文档十六轮没跟。同轮给
   `packages/agent-core/tests/contract.test.ts` 补上了一个真存在的单向断言
@@ -554,7 +550,7 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 180 条在记忆文件里）
+## 其他常踩的坑（完整 181 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -587,6 +583,9 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   所以**靠交互才出现的东西，位置永远进不了台账**，只能单测守（线索 137）。
 - **注释里带点写一条死词条会把它从 unused 集里弄没**（线索 126）。要写成
   「container 下的 leafName」，改完跑 `make i18n-unused` 核对。
+- **先在本仓内部找「自相矛盾的两句」，比拿去撞上游更快**（线索 181）。
+  冲突时**信带日期的实测标注**，不信不带日期的断言。
+  **结论对、理由错比两者都错更危险**：结论让人以为这条验过了。
 - **「账记对了」不等于「那处改掉了」**（线索 180）。交接文档在 wave 41 记下
   「那条 e2e 路径是错的」，而代码里那行注释又挂了十三轮——**记录与被记录的东西
   是两份，改一份不会改另一份**。翻旧账时要问的是「那处真的改了吗」，不是「记了吗」。
