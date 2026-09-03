@@ -111,6 +111,19 @@ export interface ThreadRunner {
    * 切 thread 时调用方会 `reset()`，状态回到 idle，于是下一条线程能重新种。
    */
   seedDurableState(values: Record<string, unknown>): boolean;
+  /**
+   * run 结束之后重新取回来的 checkpoint。
+   *
+   * 与 `seedDurableState` 只差放行条件一处，但那一处是全部的意义所在：run settle
+   * 之后 `sessionState.status` 停在 `completed`/`cancelled`/`failed`，**永远不会自己
+   * 回到 `idle`**（只有 `reset()` 会），所以走 `seedDurableState` 的话这一帧会被
+   * 无声丢掉。这里改成「只在**还在流**的时候拒绝」。
+   *
+   * 反过来也不能把 `seedDurableState` 一起放宽：那道 `idle` 守的是**run 开始之前
+   * 就发出、run 结束之后才落地**的那一帧——它持有的是 run 之前的状态，放进来会把
+   * 整个 run 抹掉。两个入口拿到的 `values` 新旧不同，所以判据也不同。
+   */
+  refreshDurableState(values: Record<string, unknown>): boolean;
   subscribe(listener: () => void): () => void;
   submit(input: DeerFlowRunInput): Promise<void>;
   stop(): void;
@@ -251,6 +264,13 @@ export function createThreadRunner(options: ThreadRunnerOptions): ThreadRunner {
     }
   }
 
+  // 与 gap 恢复走同一条路：合成一帧 `values` 交给 reducer。两个种子入口必须同形，
+  // 否则「durable state 怎么落地」这件事就有两份实现。
+  function applyDurableValues(values: Record<string, unknown>): boolean {
+    store.dispatch({ event: "values", data: JSON.stringify(values) });
+    return true;
+  }
+
   return {
     getSnapshot: () => store.getSnapshot(),
     getWireMessages() {
@@ -266,10 +286,11 @@ export function createThreadRunner(options: ThreadRunnerOptions): ThreadRunner {
     isStreaming: () => STREAMING_STATUSES.has(sessionState.status),
     seedDurableState(values) {
       if (sessionState.status !== "idle") return false;
-      // 与 gap 恢复走同一条路：合成一帧 `values` 交给 reducer。两处必须同形，
-      // 否则「durable state 怎么落地」这件事就有两份实现。
-      store.dispatch({ event: "values", data: JSON.stringify(values) });
-      return true;
+      return applyDurableValues(values);
+    },
+    refreshDurableState(values) {
+      if (STREAMING_STATUSES.has(sessionState.status)) return false;
+      return applyDurableValues(values);
     },
     subscribe: (listener) => store.subscribe(listener),
     submit: consume,

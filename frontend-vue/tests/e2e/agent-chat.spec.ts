@@ -828,16 +828,22 @@ test.describe("Agent chat", () => {
       id: "msg-ai-agent",
       content: "Custom agent response",
     };
+    /*
+      两份服务端状态要一起推进：`/messages/page`（事件库）与 `/history`
+      （checkpoint）。edit-regenerate 跑完之后后端两边写的都是**替换后**的消息，
+      而 run 结束时前端会重取 checkpoint（`useThreadStream` 的 `onSettled`，
+      与上游 SDK 在 `onSuccess` 里 `history.mutate` 后采纳 `lastHead` 同形）。
+      只推进 historyRows 的话，这一屏会在 run 结束的瞬间被旧 checkpoint 拉回去。
+    */
+    const agentThread = {
+      thread_id: MOCK_THREAD_ID,
+      title: "Agent conversation",
+      agent_name: "test-agent",
+      messages: [humanMessage, aiMessage] as Record<string, unknown>[],
+    };
     mockLangGraphAPI(page, {
       agents: MOCK_AGENTS,
-      threads: [
-        {
-          thread_id: MOCK_THREAD_ID,
-          title: "Agent conversation",
-          agent_name: "test-agent",
-          messages: [humanMessage, aiMessage],
-        },
-      ],
+      threads: [agentThread],
     });
     let historyRows = [
       { run_id: `run-${MOCK_THREAD_ID}`, content: humanMessage },
@@ -903,6 +909,12 @@ test.describe("Agent chat", () => {
       `**/api/langgraph/threads/${MOCK_THREAD_ID}/runs/stream`,
       (route) => {
         streamBody = route.request().postDataJSON() as Record<string, unknown>;
+        const aiReply = {
+          type: "ai",
+          id: "msg-ai-1",
+          content: "Hello from DeerFlow!",
+        };
+        agentThread.messages = [replacementHumanMessage, aiReply];
         historyRows = [
           { run_id: MOCK_RUN_ID, content: replacementHumanMessage },
           {

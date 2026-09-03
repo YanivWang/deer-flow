@@ -271,6 +271,26 @@ export function useThreadStream(options: UseThreadStreamOptions) {
       if (state.status === "completed" || state.status === "cancelled") {
         handleStreamFinish();
       }
+      /*
+        run 成功结束就重取一次 checkpoint——上游 SDK 在
+        `react/stream.lgp.js` 的 `onSuccess` 里 `await history.mutate(threadId)`
+        做的是同一件事（`history` 就是 `threads.getHistory(id, { limit })`）。
+        **为什么必须重取**：run 内发生上下文压缩之后，checkpoint 持有的是摘要消息，
+        而事件库仍然持有当时流出去的原文；不重取的话本仓要切走再回来才更新。
+
+        **只在 `completed` 上做，不含 `cancelled`。** 上游的取消走 `stop()` →
+        `onStop`，那条路不刷历史；跟着它走的顺带好处是：本仓不会在某个只有本仓
+        会发请求的时机上多打一条 `/history`，对照台账的请求多重集因此仍然齐平。
+
+        **线程 id 取 `adoptedThreadId` 而不是路由上的那个。** `/chats/new` 提交
+        之后路由要过一会儿才换成真 id，run settle 时 `threadId.value` 可能还是
+        `null`——那样这一次重取会被静静跳过，而首个回合恰恰是最可能压缩的一回合。
+        上游同样用它刚建出来的 `usableThreadId`，不用路由。
+      */
+      const settledThreadId = adoptedThreadId ?? threadId.value;
+      if (state.status === "completed" && settledThreadId !== null) {
+        void seedThreadCheckpoint(settledThreadId, "run-end");
+      }
     },
   });
 
@@ -535,10 +555,20 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     那里守的是「晚到的响应不许覆盖正在流的消息」。少任何一道都会有可观察后果：
     少了这里，对照台账上会多出一条 Vue 独有的 `POST /history`；少了那里，
     首个回合的流会被自己的种子抹掉。
+
+    **打开线程不是唯一的取数时机**（wave 41）：run 成功结束之后还要再取一次，
+    见上面 `onSettled` 里那段。那一次走的是 `refreshDurableState`——run settle 之后
+    状态停在 `completed`，`seedDurableState` 的 `idle` 判据会把它无声丢掉。
   */
   let checkpointSeedGeneration = 0;
 
-  async function seedThreadCheckpoint(id: string) {
+  /**
+   * `mode` 决定这一帧交给 runner 的哪个入口，两者只差放行条件：
+   * · `open`——打开线程时取的，可能在 run 已经开跑之后才落地，所以只在 `idle` 放行；
+   * · `run-end`——因为 run 刚结束才去取的，那时状态停在 `completed`，
+   *   走 `seedDurableState` 会被无声丢掉。
+   */
+  async function seedThreadCheckpoint(id: string, mode: "open" | "run-end") {
     const generation = ++checkpointSeedGeneration;
     let entries: unknown;
     try {
@@ -562,14 +592,16 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     if (generation !== checkpointSeedGeneration || threadId.value !== id)
       return;
     const values = checkpointSeedValues(entries);
-    if (values) runner.seedDurableState(values);
+    if (!values) return;
+    if (mode === "run-end") runner.refreshDurableState(values);
+    else runner.seedDurableState(values);
   }
 
   watch(
     threadId,
     (id) => {
       if (id === null || runner.getSessionState().status !== "idle") return;
-      void seedThreadCheckpoint(id);
+      void seedThreadCheckpoint(id, "open");
     },
     { immediate: true },
   );

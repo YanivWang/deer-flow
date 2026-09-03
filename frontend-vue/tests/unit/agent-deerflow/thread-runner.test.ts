@@ -241,6 +241,47 @@ describe("createThreadRunner · checkpoint 种子", () => {
     expect(accepted).toBe(false);
   });
 
+  /*
+    run 结束之后重取的那一帧走另一个入口（wave 41）。两条判据必须**同时**成立，
+    只钉一条都会把这次改动的意义抹掉：
+    · settle 之后要收（不收的话上下文压缩后的摘要要切走再回来才更新）；
+    · 还在流的时候要拒（收下的话就退化成上面那条「晚到的种子抹掉流」的缺陷）。
+  */
+  it("run 结束之后收下重取的 checkpoint——seedDurableState 这时是收不下的", async () => {
+    const runner = runnerFor(STREAM);
+    await runner.submit({ threadId: "t-1", payload: {} });
+    expect(runner.getSessionState().status).toBe("completed");
+
+    // 同一帧、同一时刻：两个入口的差别就是这两行。
+    expect(
+      runner.seedDurableState({ messages: [{ id: "c1", type: "ai" }] }),
+    ).toBe(false);
+    expect(
+      runner.refreshDurableState({ messages: [{ id: "c1", type: "ai" }] }),
+    ).toBe(true);
+    expect(runner.getWireMessages().map((m) => m.id)).toEqual(["c1"]);
+  });
+
+  it("还在流的时候 refreshDurableState 照样拒收", async () => {
+    const attempts: boolean[] = [];
+    // 流是同步跑完的，所以「流到一半」这个时刻只能从会话状态钩子里拿。
+    // 钩子只在 submit() 期间触发，那时 runner 早就赋值完了。
+    const runner = runnerFor(STREAM, {
+      onSessionState(state) {
+        if (state.status !== "streaming") return;
+        attempts.push(
+          runner.refreshDurableState({ messages: [{ id: "c1", type: "ai" }] }),
+        );
+      },
+    });
+    await runner.submit({ threadId: "t-1", payload: {} });
+
+    expect(attempts.length).toBeGreaterThan(0);
+    expect(attempts).not.toContain(true);
+    // 先断实际损失：拒收失败时流里的消息会被这一帧抹掉。
+    expect(runner.getWireMessages().map((m) => m.id)).toEqual(["m1", "m2"]);
+  });
+
   it("reset 之后重新可种：切 thread 走的就是这条路", async () => {
     const runner = runnerFor(STREAM);
     await runner.submit({ threadId: "t-1", payload: {} });

@@ -73,11 +73,43 @@ const HISTORY_ROWS = [
   },
 ];
 
+const COMPACTED_TAIL = "COMPACTED-SUMMARY-4e91";
+
 async function mockGateway(
   page: Page,
-  options: { streamDelayMs?: number } = {},
+  options: {
+    streamDelayMs?: number;
+    /** 有值就路由 `POST /history`，并记下每次调用。 */
+    checkpoint?: { messages: unknown[] };
+    checkpointDelayMs?: number;
+    historyCalls?: string[];
+  } = {},
 ) {
-  const { streamDelayMs = 0 } = options;
+  const {
+    streamDelayMs = 0,
+    checkpoint,
+    checkpointDelayMs = 0,
+    historyCalls,
+  } = options;
+
+  if (checkpoint) {
+    await page.route(
+      "**/api/langgraph/threads/*/history",
+      async (route: Route) => {
+        historyCalls?.push(new Date().toISOString());
+        if (checkpointDelayMs > 0) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, checkpointDelayMs),
+          );
+        }
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([{ values: checkpoint }]),
+        });
+      },
+    );
+  }
 
   await page.route("**/api/langgraph/threads", async (route) => {
     const body = route.request().postDataJSON() as { thread_id?: string };
@@ -222,6 +254,53 @@ test.describe("数据流 gate", () => {
       early.map((e) => `${e.method} ${e.url}`),
       "history/runs must not be requested before the thread exists",
     ).toEqual([]);
+  });
+
+  /*
+    run 成功结束之后要**重新取一次 checkpoint**（wave 41）。上游 SDK 在
+    `react/stream.lgp.js` 的 `onSuccess` 里 `await history.mutate(threadId)`
+    做的是同一件事。**为什么这件事看得见**：run 内发生上下文压缩之后，
+    checkpoint 持有的是摘要，事件库仍然持有当时流出去的原文——不重取的话
+    本仓要切走再回来才更新。
+
+    这里断的是**可见后果**而不是请求本身：只断言「打了 /history」的话，
+    把响应丢掉照样绿（`refreshDurableState` 被 `idle` 判据无声吞掉时就是这样）。
+  */
+  test("run 结束之后重取 checkpoint，压缩过的摘要当场上屏", async ({
+    page,
+  }) => {
+    const historyCalls: string[] = [];
+    await mockGateway(page, {
+      historyCalls,
+      // 把重取拖慢，让「流的原文先上屏」这个前置条件真的可观测——不拖的话
+      // 摘要来得比 Playwright 的第一次轮询还快（实测就是这样红的）。
+      checkpointDelayMs: 1200,
+      // 流里那条 "Reading the skill" 在 checkpoint 里已经被压成了摘要。
+      checkpoint: {
+        messages: [
+          { id: "human-1__user", type: "human", content: "Build a deck" },
+          { id: "ai-early", type: "ai", content: COMPACTED_TAIL },
+        ],
+      },
+    });
+    await page.goto("/workspace/chats/new");
+
+    const textarea = page.getByPlaceholder(/how can i assist you/i);
+    await expect(textarea).toBeVisible({ timeout: 20_000 });
+    await textarea.fill("Build a deck");
+    await textarea.press("Enter");
+
+    // 流先把原文放上屏——前置条件要证明，不能假设。
+    await expect(page.getByText("Reading the skill")).toBeVisible({
+      timeout: 20_000,
+    });
+
+    // run 结束之后那一帧把它换成摘要。
+    await expect(page.getByText(COMPACTED_TAIL)).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByText("Reading the skill")).toHaveCount(0);
+    expect(historyCalls.length).toBeGreaterThan(0);
   });
 
   test("刷新之后从历史恢复，顺序与流式时一致（C1/C6）", async ({ page }) => {
