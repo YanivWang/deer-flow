@@ -8,18 +8,27 @@
 
 ---
 
-## 当前状态（截至 wave 52，2026-09-03）
+## 当前状态（截至 wave 53，2026-09-04）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51。
-- **wave 40 动了 `frontend/`**（重连预算耗尽后那颗键在说反话，两边同改），
-  **marker 已推到 `aef3618d`**。
-- **wave 39 动了 `frontend/`**（命令面板搜索框的可访问名，两边同改）。
-- **wave 36 动了 `frontend/`**（`SidebarTrigger` 的窄屏图标，两边同改），
-  **upstream marker 已推到 `79afa765`**。wave 30~35 都没动过。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52。
+- **动过 `frontend/` 的是十四轮，不是三轮**（wave 52 实测订正）：
+  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40**。
+  此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
+  而记忆里的压缩版把它读成了「总共三次」。**别再传这个数字，用命令量**：
+
+  ```bash
+  git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests
+  ```
+
+  **marker 已推到 `aef3618d`**（wave 40）；`node scripts/upstream-drift.mjs`
+  wave 52 实测**无漂移**，marker 也确实是 HEAD 的祖先——
+  **边界规则本身有机器在守，需要人记的只有「这类改动做过哪些轮」。**
+  最近三轮的内容：wave 40 重连预算耗尽后那颗键在说反话；wave 39 命令面板搜索框的
+  可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~52 都没动过。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
 - 覆盖率棘轮：covered **24**，pending **仍是 1 条**（`chat-thread-init-ordering`）——
   wave 29 **实测**过，结论是**不能加**，翻案判据写在 `$pendingReasons` 里。
@@ -54,10 +63,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 51 收工时逐条跑过）
+### 门禁实测值（wave 52 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；249 文件 / 2062 单测，词典 945 key、18 unused
+make -C frontend-vue verify        exit 0；249 文件 / 2065 单测，词典 945 key、18 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 37 处 / 16 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -66,7 +75,7 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~51 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30~52 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1023**）/ `test:e2e`（**146**）。
 
 > **wave 40 实测：`test:e2e` 的 `webServer` 那 120 秒窗口在这台机器上喂不饱一次
@@ -184,85 +193,72 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 51）做了什么
+## 上一轮（wave 52）做了什么
 
-**扫两处从没被验过的记录：`tests/fixtures/streams/*.sse` 的出处，
-以及 `docs/` 里对上游/对代码的事实断言。**
+**扫 `baseline/` 里带 `$` 前缀的纯说明键、README 的套件描述、`tests/`/`scripts/`
+文件头里的「判据」段落。翻出两条记错的账，都是记录错了，产品行为没问题。**
 
-### 翻出来的：一条指向已删除文件的「证据在那边」
+### 一：`react-parity-scope.json` 说自己只有一个消费者，其实有两个
 
-`tests/fixtures/streams/README.md:54` 写着「`debug` 的实测数据留在
-`playwright.m0-real-backend.config.ts` 的注释里」。**那份 config 在 `1209651f`
-（E2E 套件按用途重命名）里被拆成 `playwright.protocol.config.ts`，
-而 webServer 注释里那三个实测数字没跟着搬过来。**
+`$comment` 结尾写着「product-surface.test.ts 是它唯一的消费者」。那句话落在
+`07a1d766`（2026-08-26 00:01），而 `scenario-coverage.test.ts` 从
+**`23aa5ac2`（00:31）** 起就在读它——**30 分钟后就错了，然后错了九天、约五十轮**。
+它误导的正是最不该被误导的那个判断：**「我改这份数据，谁会跟着变红？」**
 
-**`1209651f` 正是 `doc-references.test.ts` 被写出来的那次腐烂。** 没抓到是因为
-那条守卫的路径正则按**顶层目录前缀**收口
-（`(?:tests|app|server|scripts|packages|config|baseline)/…`），
-**模块根上的裸文件名一个都不匹配**。同一份守卫的两半覆盖面差得很远：
-make target 那半扫全部已跟踪文本文件，路径那半只扫 Markdown、且要求带目录。
+**修法照本仓自己的教条：散文改不出这个性质，数据可以。** 手工维护的三份 baseline
+各自声明一条 **`$readers`**，由 `tests/guards/baseline-keys-consumed.test.ts`
+与**实测引用集**逐字比对。口径是**引用**不是读取（注释剥掉后提到文件名就算）——
+缩窄成「真的 readFileSync 了」要靠正则猜，而 prettier 会把
+`read("baseline/x.json")` 折成两行，**按行匹配会把三个真读者判成没读**。
+生成出来的四份不声明（手加的键下次重新生成就被写掉），如实写在文件头里。
 
-**指路比事实更难发现**：它本身不含任何可判真假的断言，只含一个文件名。
+### 二：「三次动 `frontend/`」记错了，实际十四轮
 
-### 三处修法
+见上面「当前状态」。**这一条有意不上门禁**：唯一验法是数 git 历史，钉一个数字就是
+`e2e-suite-contract.test.ts` 文件头点名的反模式（守卫钉快照数字，加一次两边同改
+就要改一次守卫）。**边界规则本身已经有 `upstream-drift.mjs` 在守**，
+所以产出是把那条命令写进文档，让下一轮去量。
 
-1. 实测三档（32 会 gap / 128 通过 / 加 debug 后 384 不再逐出）搬回
-   `playwright.protocol.config.ts` 文件头，README 改指它。证据待在旋钮旁边。
-2. `doc-references.test.ts` 新增一档：**反引号里的裸文件名必须在整个 checkout 里
-   搜得到**。判据同线索 172，只判「搜不到」，不判目录。实测 181 处引用、3 条豁免
-   （导出产物名 / node_modules 里的 SDK 运行时 / streamdown 发布 chunk），
-   外加一条盯着豁免名单本身的用例。
-3. `golden-fixture-provenance.test.ts` 加第二组：streams README 的「怎么录的」
-   == 录制器与套件真的在做的事（stream_mode 全集、`--queue-maxsize`、replay 场景
-   路径 + 存在性）。此前只有**内容**被钉（`doc-facts` 比帧数），**怎么录的没人验**。
+### 逐条撞过、成立的
 
-### 顺带：wave 46 的引用守卫从 `app/**` 推到整个模块
+`$criticalPathComment` 的三个标记（对 492 个签入构建 chunk 实测：katex 1、shiki 1、
+mermaid 3 且全是 mermaid 自己的分块，`app/`+`packages/` 零命中）、`$measured` 三段的
+日期/轮次/commit 与预算数字、`$groups` 的 CDP 判据、覆盖率棘轮的 27=24+1+2、
+`$exemptModes` 点名的两个上游文件、`--accept` 语义、上游 `buttonVariants` 与
+`<Reasoning>` 的唯一消费者、`invalidateStoppedThreadCaches` 的 6 个 key、
+`VUE_ONLY_BLOCKS` 的 8 个块、README 的套件一行说明——**全部成立**。
 
-`上游文件.tsx:行号` 这一形状，`tests/**` 里有 **90 处**、`BEHAVIOR_CONTRACTS.md`
-里 1 处，**只因为换了个目录就一条都没人验**。实测 91 处全部指得到，
-所以**不改判据、只改覆盖面**：227 处一起看着。DECLARED 36/15 → **37/16**。
-
-### docs 那一路：8 条事实断言逐条撞过，全部成立
-
-streams README 的内容事实（226 帧 / 各事件条数 / 1 个 heartbeat / 225 个 `id:` /
-1.1MB / gzip 18KB / 9 个 messages 帧里 2 个带 tool_call_chunks / demo thread 最多
-74 条）、`录制时的仓库 commit 548bf3ae`（**手工核过：它正是录制 commit `d4e5461d`
-的父提交**）、S8b 的 `hooks.ts:2623` 纯分页、S8b 的后端 `get_thread_history` vs
-`get_thread_state`、S10 的两参箭头、N6 的三组 primitive 写死名、L14 的 516、
-A5 的 5 次 rejoin —— **全部成立**。
-
-**N6 差点误报**（线索 173 又发作）：上游确实有 `toggleSidebar` 词条，但那是
-`shortcuts.toggleSidebar`、消费点在 `command-palette.tsx:121` 的**快捷键说明**，
-不是控件的可访问名。**先读断言说的是哪个作用域，再决定 grep 什么。**
-
-### 有意不钉的一条
-
-**`录制时的仓库 commit` 那一行不上门禁。** 唯一验法是拿它去 git 里解析，
-而**浅克隆（CI 常见 fetch-depth 1）解析不出历史里的老 commit**，会变成一条
-与产品无关的红。它是纯历史标签，已在文件头如实写明它没有门禁。
+**`buttonVariants` 差点误报**（线索 173 第四次发作）：本仓有 3 个消费者，
+但那句话的主语是**上游**。**先读断言说的是哪个作用域。**
 
 ---
 
-## 下一轮（wave 52）：**收尾判据重新计数，从 1 开始**
+## 下一轮（wave 53）：**收尾判据仍在重新计数**
 
-47 干净、48/49/50/51 各翻出一条，所以**又要连着两轮**。别报「还剩几轮」。
+47 干净、48/49/50/51/52 各翻出一条。别报「还剩几轮」。
 
-wave 52 扫哪里（继续挑没被覆盖的角度）：
+wave 53 扫哪里：
 
-1. **`tests/` 与 `scripts/` 下的文件头注释里那些「判据/取舍」段落。**
-   wave 46/51 钉住的是**引用指得到**，wave 47/48 撞的是**源码注释与 baseline**，
-   但**测试与脚本自己文件头里写的「为什么这么判」**从来没有被当成断言撞过——
-   而它们正是下一轮的人决定「要不要动这条门禁」的全部依据。做法同 47：
-   把里面点名的名字（常量、函数、阈值、上游文件）拿去撞。
-2. **`Makefile` 与 `README.md` 的套件表之外的那部分。**
-   `doc-references` 钉了「每个套件都写进 README」与「命令存在」，
-   **但没钉「README 里描述这个套件在测什么」和它实际 testDir 下的内容一致**。
-   一个套件被抽空或改了 testDir，README 的描述会静静地留在原地。
-3. **`baseline/` 下带 `$` 前缀的纯说明键**（wave 48 只把不带 `$` 的钉了消费者）。
-   `$` 开头是「纯说明，没人读」——那它说的话对不对，就完全没有任何东西看着了，
-   而 `$pendingReasons`（线索 131）恰恰是靠它挂了十几轮。
+1. **`app/**` 文件头里的「判据/取舍」段落**——wave 52 只抽查了 `tests/`/`scripts/`
+   那一侧，而 `app/**` 是本仓写「为什么这么做」最密的地方，
+   wave 46/51 钉的是那里的**引用指得到**，**说得对不对**只在 47（否定句）与
+   49（肯定句）抽查过一部分。
+2. **`BEHAVIOR_CONTRACTS.md` 的 A–S 十九组本身**。wave 51 撞了 S8b/S10/N6/L14/A5 五条，
+   剩下十四组没撞过。它们是本仓所有取数与交互决定的宪法，过期一条就会挡住一次真对齐
+   （`settings.memory.*` 那条挡了十轮）。
+3. **`scripts/` 下那些「不是门禁」的工具自己的判据**（`upstream-drift.mjs`
+   「不阻断构建」、`asset-budget.mjs`、`i18n-manager.mjs` 的扫描口径）。
+   它们没有门禁看着，而好几条门禁的结论建立在它们的口径上。
 
-## 更早几轮的记录（49 / 50 一句话，48 保留全文）
+## 更早几轮的记录（49 / 50 / 51 一句话，48 保留全文）
+
+- **wave 51**：`tests/fixtures/streams/README.md` 说「debug 实测数据留在
+  `playwright.m0-real-backend.config.ts` 的注释里」，而那份 config 在 `1209651f`
+  ——**正是写下 `doc-references.test.ts` 的那次重命名**——里被拆掉，数字没跟着搬。
+  漏掉是因为守卫**两半覆盖面差得远**，路径那半的正则按顶层目录前缀收口，
+  模块根上的裸文件名两半都不匹配（→ 线索 177）。修法：数字搬回活着的 config +
+  「裸文件名在 checkout 里搜得到」新门禁 + streams README 的「怎么录的」== 录制器
+  实际所做 + 把 wave 46 的引用守卫从 `app/**` 推到整个模块（+91 处）。
 
 - **wave 49**：`react-markdown-dom.json` 的 `recordedFrom` 说「录自 streamdown 2.5.0」，
   没有任何东西验过。修法是两条一起：录制器从 `node_modules/<pkg>/package.json` 读真版本，
@@ -515,6 +511,15 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
   删了不 `git add` 会让 `doc-references` 守卫假红）。
 - 一次 probe ≈ 5 分钟（瓶颈是 React 侧的 `next build`），丢后台跑。
 
+### 量「这一轮动没动 `frontend/`」
+
+```bash
+git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests
+node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改动被监视的路径
+```
+
+**别传数字，跑命令。** wave 52 就是因为传了一个数字，把十四轮记成了三轮。
+
 ## 负向验证的做法
 
 逐条变异 → **回读文件确认变异真的落地** → 只跑相关单测/e2e 文件 → 还原，
@@ -525,7 +530,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 177 条在记忆文件里）
+## 其他常踩的坑（完整 178 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -558,6 +563,9 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
   所以**靠交互才出现的东西，位置永远进不了台账**，只能单测守（线索 137）。
 - **注释里带点写一条死词条会把它从 unused 集里弄没**（线索 126）。要写成
   「container 下的 leafName」，改完跑 `make i18n-unused` 核对。
+- **散文里「谁在引我 / 谁是唯一消费者」这类话，写下当天就可能过期**（线索 178）。
+  `react-parity-scope.json` 那句 30 分钟后就错了。**改成数据 + 门禁比对**，
+  而且口径要选**能量准**的那个（「引用」可以，「读取」要靠正则猜行）。
 - **一条「证据在那边」的指路比一条说错的事实更难发现**：它不含任何可判真假的断言，
   只含一个文件名（线索 177）。而**守卫的覆盖面要按半边分开问**——
   `doc-references` 的 make target 那半扫全部文本文件，路径那半只扫 Markdown、
@@ -565,7 +573,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、177 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、178 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
