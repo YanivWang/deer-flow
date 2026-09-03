@@ -8,7 +8,7 @@
 
 ---
 
-## 当前状态（截至 wave 43，2026-09-03）
+## 当前状态（截至 wave 44，2026-09-03）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42。
@@ -171,73 +171,61 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 42）做了什么
+## 上一轮（wave 43）做了什么
 
-**没有已知的活，正题是复量。又翻出记错的账**——所以收尾判据仍未满足
-（34~42 **九轮九次一次都没空过**）。
+接着 wave 42 的请求体那条线走，**顺手量到一处真差异**，另外把两条 SDK 机件
+量成了「对着 DeerFlow 网关是空转的」。
 
-### 扫了一个从没系统扫过的盲类：**请求体**
+### 补掉：提交键少一个状态
 
-台账只记 `method + path + query`（`normalizeRequest` 就是这么写的），
-**请求体从来没有进过任何比对**。用一次性 probe 打上游的 mock 后端量了普通发送
-这条最复杂的请求：
+上游 `PromptInputSubmit`（`prompt-input.tsx:1093`）三个图标：`submitted → Loader2`、
+`streaming → Square`、**`error → XIcon`**；`status` 由 `chat-page.tsx:415` 算成
+`thread.error ? "error" : thread.isLoading ? "streaming" : "ready"`。
+本仓只有两态——**出错之后那颗键照样画箭头**。
 
-```
-上游键集 ["assistant_id","config","context","input","on_disconnect","stream_mode","stream_resumable"]
-本仓键集 同上，逐字相同
-```
+**这是缺口不是「表达方式不同」**：本仓 wave 31 把流错误收进了 workspace toaster，
+而 toaster 有时限——**toast 一过期，界面上不再有任何痕迹**。按 wave 31 自己的判据
+（**一刻发生的事走 toaster，一段时间里为真的事留在页面里**），「上一次 run 失败了」
+属于后者。照上游做、不多做：不接死分支 `submitted`，可访问名不动（只有 streaming 叫
+"Stop"），流式优先于出错。
 
-两处不同都量清了、都不算差异：
+### 量成空转的两条 SDK 机件（**都推翻了当时的假设**）
 
-| 不同 | 结论 |
-|---|---|
-| `stream_mode` **顺序**不同（上游 messages-tuple 在前） | 后端按集合处理；守卫断的是**集合** |
-| 真后端上上游会多一个 `checkpoint` | **空转**：`/history` 返回 `checkpoint:{"id","ts"}`（`threads.py:1226`），而 `services.py:948` 读 `checkpoint.get("checkpoint_id")`，取不到就 `return`。mock 的 `/history` 干脆不带这字段，所以 probe 上也看不到 |
+| 机件 | 假设 | 实测 |
+|---|---|---|
+| `historyError`（`error = stream.error ?? historyError ?? history.error`，读 `threadHead.tasks.at(-1).error`） | 「重载一个上次 run 失败的线程，上游还看得见错误、本仓什么都没有」 | **不成立**：后端把 task 序列化成 `[{"id","name"}]`（`threads.py:1220/1312`），**`error` 不在里面**，所以 `historyError` 恒为 undefined |
+| `checkpoint` 回发（wave 42） | 上游会把线程头 checkpoint 随每次提交发出去 | 会发，但**空转**：`/history` 给 `{id,ts}`，后端读 `checkpoint_id` |
 
-edit-regenerate 那条路**两边都发** `prepared.checkpoint`，键名正是后端真读的那个，已对齐。
+**→ 线索 169**：SDK 里有整段机件是为 LangGraph 官方后端写的，对着 DeerFlow 网关是空转的。
+**看见 SDK 读某个字段，先去后端确认那个字段真的会发出来**，否则会照着一个永远不成立的
+分支去「补齐」。（顺带：后端确实会从 `task.error` 推出线程 `status="error"`
+（`threads.py:573`），但那是另一个字段，**两边都没有消费点**——本仓 `ThreadStatus`
+里有 `"error"` 这一档，零消费。）
 
-**守卫**：`chat-dataflow.spec.ts` 新增一条，钉键集 + 三个传输字段的值 + stream_mode 的集合。
+### 没做成的：跨应用的请求体实测
 
-### 复核出来的三处记错
-
-1. **`GEOMETRY_TOLERANCE_PX` 在 `diff.spec.ts:76` 不是 66**（文件长了，行号漂了）。
-   其余 6 处带行号的引用逐个撞过，都还对得上。
-2. **`MermaidFullscreen.vue` 那句「上游哪天改成真正的 dialog，这里跟着改」是错的引导。**
-   那里的「上游」是第三方 npm 包 `@streamdown/mermaid`，**不在 fork 边界内**——
-   两边同改的对象是 `frontend/`，而这块代码在 `node_modules` 里、两个应用引同一个包。
-   与 `/auth/callback` 同一档：能改的只有本仓一侧，改了就是纯粹制造差异。已改写。
-3. **「种子取数失败弹 toast（`hooks.ts:1839`）」看着像引错，实际是对的**：1839 是**流**的
-   `onError`，但 SDK 把 history 取数的错误接进了同一个回调
-   （`useThreadHistory(..., { onError: options.onError })`），所以种子取失败确实走到那里，
-   而且除 toast 外还会**清掉乐观消息**。按线索 163 追问「是不是只在一部分上更好」：
-   不是，两半都更好。**账成立。**
-
-### 复核干净的（记下来，别重做）
-
-- 交接文档引用的 **43 个路径全部解析得到**（`probe.spec.ts` 是文档教你临时写、
-  提交前删掉的，不是断引用）。
-- **`thread-runner` 的会话态消费点全干净**：要么用 `STREAMING_STATUSES` 集合判，
-  要么显式列全 `failed`/`cancelled`——没有 wave 40/41 那种「本仓多一个状态成员、
-  消费点却照抄上游少一档」的问题。
-- **10 处「照抄上游」逐处看过**：都是类名/DOM 结构/缩放上下限一类的纯呈现照抄，
-  没有第二个状态机被抄小。`MermaidZoomPan` 的「重置键没有 disabled 变体」不是缺陷
-  ——它从不禁用。
-- **wave 41 自己带出来的一条**：上游 `onSuccess` 把**重取回来的** `lastHead` 交给
-  `onFinish`，本仓在重取之前就发。看着是差异，实测不是——本仓 `refreshPostRun`
-  紧接着 `threads.get()` 重取线程行，标题在里面。
+parity 套件把两个应用架在**同一个真 replay Gateway** 上，是量请求体的理想场地。
+探针写好了但**三次都没跑起来**：`Timed out waiting {240000,300000}ms from
+config.webServer`，负载 30~42（另一个仓的会话在同一台机器上跑门禁）。
+第三次连 React 侧构建都单独预热过（`next build` 实测 **7.1 分钟**），仍然超时。
+**探针已按规矩删掉**，这件事留给下一轮在机器空闲时做。
 
 ---
 
-## 下一轮（wave 43）：**继续复量，两条线**
+## 下一轮（wave 44）：**把请求体实测补上，机器空闲时做**
 
-1. **把请求体这一类扫完。** wave 42 只量了 `POST /runs/stream` 一条（最复杂的那条）。
+1. **跨应用请求体实测**（wave 43 没跑成的那件事）。写
+   `frontend-vue/tests/e2e-parity/probe.spec.ts`，`page.on("request")` 抓
+   `postDataJSON()` 的**顶层键集**，两个应用各开一个 fresh context 走同一条流程，
+   比 `METHOD 归一化路径 :: 排序后的键集`。wave 42 只量了 `POST /runs/stream`；
    还没量的：`POST /threads`、`POST /history`、`edit-regenerate/prepare`、
-   `POST /threads/{id}/state`、settings 域的各种 PUT/PATCH。
-   **方法就是 wave 42 那个一次性 probe**：`page.route` 抓 `postDataJSON()`，
-   两个应用各跑一遍比键集；量完记得删 probe。
-2. **响应的消费同样没比过。** 台账比的是「发了哪些请求」，不是「拿到之后各自读了哪些字段」。
-   一个具体的入口：两边对同一份 `/history` 条目分别读了什么（本仓
-   `checkpointSeedValues` 明写「不做任何字段裁剪」，上游走 SDK 的 `getBranchSequence`）。
+   `POST /threads/{id}/state`、settings 域的 PUT/PATCH。
+   **前置条件是机器空闲**——`webServer` 窗口喂不下一次高负载下的 `next build`。
+2. **响应的消费还是没比过。** 台账比的是「发了哪些请求」，不是「拿到之后各自读了哪些字段」。
+   wave 43 顺手比了 `/history` 一条（两边都整份取 `values`；上游多读 `tasks[].error`
+   与 `checkpoint`，**两个都是空转**）。还没比的：`GET /threads/{id}`、
+   `/messages/page`、`/token-usage`。**方法**：grep 两边对同一份响应各读了哪些字段，
+   逐个问「另一边不读它，界面上少了什么」——线索 169 提醒先确认后端真的发那个字段。
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -458,7 +446,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 167 条在记忆文件里）
+## 其他常踩的坑（完整 169 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的

@@ -50,7 +50,10 @@ vi.mock("@/core/input-polish/api", () => ({
 }));
 vi.mock("@/core/api/fetcher", () => ({ fetch: mocks.fetchWithAuth }));
 
-function mountComposer(context: Record<string, unknown>) {
+function mountComposer(
+  context: Record<string, unknown>,
+  extra: Record<string, unknown> = {},
+) {
   return mount(ChatComposer, {
     props: {
       threadKey: "mode-thread",
@@ -64,6 +67,7 @@ function mountComposer(context: Record<string, unknown>) {
       context,
       modelSelectionReady: true,
       submitMessage: vi.fn(async () => true),
+      ...extra,
     },
     global: {
       provide: { [workspaceToastKey as symbol]: toastStore },
@@ -168,6 +172,46 @@ describe("composer mode icons", () => {
     见 sidecar-panel.dom.test.ts 的 "paints the mode menu"）。这里补一条源码断言，
     保证复合输入框这一份没有被单独改回去。
   */
+  /*
+    提交键的三态（wave 43）。上游 `PromptInputSubmit`（prompt-input.tsx:1093）：
+    streaming → Square、**error → XIcon**、其余 → ArrowUp；`error` 由
+    `chat-page.tsx` 的 `thread.error ? "error" : …` 给。本仓原来只有两态，
+    出错之后那颗键照样画箭头——而本仓把流错误只送进 toaster，toast 一过期
+    界面上就不再有任何痕迹了。
+
+    **三态都要断**（坑 57）：只断「出错时画 X」的话，把图标写死成 X 也照样绿。
+    可访问名也一起钉：上游只有 streaming 改成 "Stop"，出错态仍然叫 "Submit"。
+  */
+  it("draws three distinct submit icons for ready / streaming / errored", async () => {
+    const marks = new Map<string, string>();
+    for (const [name, extra] of [
+      ["ready", {}],
+      ["streaming", { streaming: true }],
+      ["errored", { errored: true }],
+    ] as const) {
+      const wrapper = mountComposer({ mode: "chat" }, extra);
+      await flushPromises();
+      const button = wrapper.get('button[type="submit"]');
+      marks.set(name, button.find("svg").html());
+      expect(button.attributes("aria-label")).toBe(
+        name === "streaming" ? "Stop" : "Submit",
+      );
+      wrapper.unmount();
+    }
+    const drawn = [...marks.values()];
+    expect(new Set(drawn).size, "三态必须画出三个不同的图标").toBe(3);
+    // 流式优先于出错：run 还在跑的时候那颗键得是"停止"，不能变成 X。
+    const both = mountComposer(
+      { mode: "chat" },
+      { streaming: true, errored: true },
+    );
+    await flushPromises();
+    expect(both.get('button[type="submit"]').find("svg").html()).toBe(
+      marks.get("streaming"),
+    );
+    both.unmount();
+  });
+
   it("keeps the same per-item icon markup in the composer menu", () => {
     const source = readFileSync("app/components/chat/ChatComposer.vue", "utf8");
     // 缩进不进判据：prettier 换一次折行就会把写死的空白串打断。

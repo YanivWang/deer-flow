@@ -116,6 +116,25 @@ const props = withDefaults(
     defaultModelName?: string | null;
     modelSelectionReady?: boolean;
     streaming: boolean;
+    /**
+     * 上一次 run 有没有出错。**只驱动提交键的第三个图标**，不改任何行为。
+     *
+     * 上游 `input-box.tsx` 收的是 `status: ChatStatus`，由 `chat-page.tsx` 算成
+     * `thread.error ? "error" : thread.isLoading ? "streaming" : "ready"`，
+     * 再传给 `PromptInputSubmit`：submitted → Loader2、streaming → Square、
+     * **error → XIcon**（`prompt-input.tsx:1093`）。本仓原来只有前两态里的两个，
+     * 出错之后那颗键照样画箭头。
+     *
+     * **为什么补**：本仓把流错误只送进 workspace toaster，toast 一过期界面上就
+     * 不再有任何痕迹了。按 wave 31 自己定的判据——**一刻发生的事走 toaster，
+     * 一段时间里为真的事留在页面里**——「上一次 run 失败了」属于后者，
+     * 上游那颗 X 正是它的页面出口。
+     *
+     * **不传 `submitted`**：上游 `chat-page.tsx` 只会算出 error/streaming/ready
+     * 三种，`PromptInputSubmit` 里那条 `submitted → Loader2` 分支在这个应用里是死的。
+     * 可访问名也照上游：只有 streaming 变 "Stop"，出错态仍然叫 "Submit"。
+     */
+    errored?: boolean;
     uploading: boolean;
     promptHistory: string[];
     ensureThread?: () => Promise<string>;
@@ -1879,6 +1898,7 @@ defineExpose({ replaceDraft, offerFollowup });
             @click="onSubmitButtonClick"
           >
             <Square v-if="streaming" :size="12" class="fill-current" />
+            <X v-else-if="errored" :size="16" />
             <ArrowUp v-else :size="16" />
           </button>
         </div>

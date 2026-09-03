@@ -2112,6 +2112,7 @@ onUnmounted(() => {
                 :default-model-name="agent?.model"
                 :model-selection-ready="agentResolved"
                 :streaming="stream.isStreaming.value"
+                :errored="stream.error.value !== null"
                 :uploading="localUploading"
                 :is-welcome="isWelcomeMode"
                 :auto-focus="initialRouteThreadId === null"
