@@ -14,7 +14,7 @@
                    Tailwind 4 靠它们从 streamdown 的 dist 里扫 class。frontend-vue 按
                    02 §259 的裁决**不装 streamdown**，那三个路径根本不存在——
                    Tailwind 对扫不到的 `@source` 不报错，只是少生成一批 CSS。
-                   表现是「样式莫名少一块」，而且是在把 453 行 globals.css 整体搬过来的
+                   表现是「样式莫名少一块」，而且是在把整份 globals.css 搬过来的
                    那一刻才发生（M4b/M8），离改动点很远。
 
                    所以规则有两条，缺一不可：

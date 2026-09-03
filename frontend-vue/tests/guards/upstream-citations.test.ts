@@ -24,6 +24,23 @@
                    `../frontend` 缺席时整组跳过：本模块的独立性不受影响
                    （与 scenario-coverage / standalone-check 的 DECLARED 同一条规矩）。
 
+                   **wave 53 补的第二类：引用的不是位置，是上游文件的「多少行」。**
+                   `文件:行号` 只判存在与不越界（小幅漂移无所谓），而
+                   **`上游 N 行的 X` 是一句关于整份文件的精确断言**，上游一改就错，
+                   而且**错得毫无迹象**。wave 53 实测七处：`plugins.ts` 98、
+                   `safe-children.ts` 34、`api-client.ts` 471、`infinite.test.ts` 498
+                   四处仍然精确，而 `message-merge.test.ts` 的「1,740 行」在
+                   **`44832a5e`（2026-08-14 合上游）** 之后变成 2,095，
+                   两个文件里各挂着一份，错了三周。
+                   （同一轮还有 `globals.css` 的 453→454，是本仓自己那次
+                   `4804faa1` 改的；那句话里数字不承重，已删掉数字而不是改数字——
+                   **不承重的数字就别写**。）
+
+                   **判据是相等，不是「在范围内」**：这类数字只有准确才有意义，
+                   而它变红的那一刻，正是「上游那份测试长了 355 行，去看看」
+                   最该被看见的时候。**识别的形状是「反引号里的文件名紧挨着行数」**，
+                   所以 `上游那 16 行`（组件片段，不是整份文件）这类不会被误抓。
+
                    **wave 51 把范围从 `app/**` 推到整个模块。** wave 46 只扫了 `app/**`，
                    而同一形状的引用在 `tests/**` 里有 **90 处**、在 `BEHAVIOR_CONTRACTS.md`
                    里还有 1 处——**同一类记录，只因为换了个目录就一条都没人验**。
@@ -75,6 +92,54 @@ function walk(dir: string, exts: string[]): string[] {
 
 const CITATION = /([A-Za-z0-9_\-./]+\.(?:tsx|ts))[:：](\d+)/g;
 
+/**
+ * 「上游 `X`（N 行）」这一类**行数**断言。三种写法都收：
+ * 文件名后跟括号里的行数、`上游 \`X\` N 行`、`上游 N 行的 \`X\``。
+ * **必须有紧挨着的反引号文件名**——`上游那 16 行` 说的是组件里的一段，不是整份文件。
+ */
+const UPSTREAM_FILE = String.raw`[A-Za-z0-9_][A-Za-z0-9_.\-]*\.(?:tsx|ts|mts|mjs|js|vue|css|json)`;
+const LINE_COUNT_PATTERNS = [
+  new RegExp(
+    String.raw`\`(${UPSTREAM_FILE})\`\s*[（(](?:上游\s*)?([0-9][0-9,]*)\s*行`,
+    "g",
+  ),
+  new RegExp(
+    String.raw`上游\s*\`(${UPSTREAM_FILE})\`\s*([0-9][0-9,]*)\s*行`,
+    "g",
+  ),
+  new RegExp(
+    String.raw`上游\s*([0-9][0-9,]*)\s*行的\s*\`(${UPSTREAM_FILE})\``,
+    "g",
+  ),
+];
+
+type LineCountClaim = {
+  from: string;
+  line: number;
+  ref: string;
+  claimed: number;
+};
+
+function collectLineCountClaims(): LineCountClaim[] {
+  const found: LineCountClaim[] = [];
+  for (const file of walk(moduleRoot, [".vue", ".ts", ".mts", ".mjs", ".md"])) {
+    const source = readFileSync(file, "utf8");
+    LINE_COUNT_PATTERNS.forEach((pattern, index) => {
+      for (const match of source.matchAll(pattern)) {
+        const ref = index === 2 ? match[2]! : match[1]!;
+        const digits = index === 2 ? match[1]! : match[2]!;
+        found.push({
+          from: file.slice(moduleRoot.length + 1),
+          line: source.slice(0, match.index).split("\n").length,
+          ref,
+          claimed: Number(digits.replaceAll(",", "")),
+        });
+      }
+    });
+  }
+  return found;
+}
+
 type Citation = { from: string; line: number; ref: string; target: number };
 
 function collectCitations(): Citation[] {
@@ -116,6 +181,32 @@ describe.skipIf(!upstreamPresent)("本仓写下的上游引用", () => {
     // 阈值按实测（227 处）留出余量，不是钉死的条数：这里要挡的是「扫成 0」。
     expect(citations.length).toBeGreaterThan(150);
     expect(index.size).toBeGreaterThan(50);
+  });
+
+  it("引用上游文件行数的地方，数字就是那份文件的实际行数", () => {
+    const claims = collectLineCountClaims();
+    // 正则写坏就会一条都扫不到，而空集合永远 toEqual([])（同线索 131）。
+    expect(claims.length).toBeGreaterThan(2);
+    const wrong: string[] = [];
+    for (const claim of claims) {
+      const candidates = index.get(claim.ref) ?? [];
+      if (!candidates.length) {
+        wrong.push(`${claim.from}:${claim.line} → 上游没有 ${claim.ref}`);
+        continue;
+      }
+      const actual = candidates.map(
+        (path) => readFileSync(path, "utf8").split("\n").length - 1,
+      );
+      if (!actual.includes(claim.claimed)) {
+        wrong.push(
+          `${claim.from}:${claim.line} → ${claim.ref} 写着 ${claim.claimed} 行，实际 ${actual.join("/")} 行`,
+        );
+      }
+    }
+    expect(
+      wrong,
+      "上游那份文件的行数变了：改这个数字，同时想一想它长出来的那些行要不要跟进",
+    ).toEqual([]);
   });
 
   it("每条引用的文件都存在，行号都在文件长度之内", () => {

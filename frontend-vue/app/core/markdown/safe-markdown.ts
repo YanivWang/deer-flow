@@ -3,7 +3,7 @@
   【架构位置】     L2 —— 通用渲染层
   【主要导出】     getSafeMarkdown
   【依赖关系】     ../streamdown/preprocess
-  【边界与注意】   上游那 34 行里有 30 行是 React：`ComponentProps<typeof Streamdown>` 的
+  【边界与注意】   上游 `safe-children.ts`（34 行）里有 30 行是 React：`ComponentProps<typeof Streamdown>` 的
                    children 类型、两个 `useMemo` 包装。真正的逻辑只有一行组合。
                    Vue 侧不需要 hook——记忆化归组件的 `computed`，不进 core。
 
