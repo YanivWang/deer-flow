@@ -119,8 +119,14 @@ export type ParityStubs = {
   /**
    * 用一个假的 `Notification` 替换 `window.Notification`，并选定初始权限。
    *
-   * 不能靠真实浏览器权限：Playwright 里它默认是 `default`，而"已授权"那一支
-   * （开关已打开、可以发测试通知）才是这个面板真正长代码的地方。
+   * 不能靠真实浏览器权限：**实测（wave 57，plain context 与 PARITY_CONTEXT_OPTIONS
+   * 两种、opaque origin 与 `http://localhost` 两种，四次全是 `denied`）**——
+   * headless Chromium 压根不支持通知，于是"已授权"那一支（开关已打开、可以发测试
+   * 通知）永远走不到，而那才是这个面板真正长代码的地方。
+   *
+   * **这里原来写的是「Playwright 里它默认是 `default`」，那句是错的**，
+   * 而同一份文件下面 `settings-notification` 场景的注释里早就写着实测是 `denied`
+   * ——**一份文件里两句话互相矛盾，没有人对过**。保留下面那条的日期标注。
    * 假的那份同时把发出去的通知记进 `window.__deerflowNotifications`，
    * 与上游 `frontend/tests/e2e/settings-notification.spec.ts` 的 mock 同形。
    */
