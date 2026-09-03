@@ -8,7 +8,7 @@
 
 ---
 
-## 当前状态（截至 wave 45，2026-09-03）
+## 当前状态（截至 wave 46，2026-09-03）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
@@ -173,60 +173,54 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 44）做了什么
+## 上一轮（wave 45）做了什么
 
-**wave 43 三次没跑成的跨应用请求体实测，这一轮做成了，第一条流程就撞出一条真缺陷。**
+**正题是「同一份响应，两边各读了哪些字段」——台账比的是「发了哪些请求」，不是「拿到之后怎么用」。**
+这一轮**没有量到新的功能差异**，但翻出一条**挂了八轮的过期记录**。
 
-### 实测怎么做的（下次照抄）
+### 翻出来的：chip 编辑区那两个布局类，账和注释都停在旧状态
 
-parity 套件把两个应用架在**同一个真 replay Gateway** 上，是量请求体的唯一正确场地。
-临时写 `frontend-vue/tests/e2e-parity/probe.spec.ts`，`page.on("request")` 抓每条写请求的
-`postDataJSON()` **顶层键集**，三条流程（打开线程 / 打开设置 / 新建会话）各开 fresh
-context 跑一遍，输出 `METHOD 归一化路径 :: 排序后的键集` 再比。**跑之前先确认机器空闲**
-——`webServer` 窗口喂不下高负载下的 `next build`（wave 43 为此失败三次）。
+账里写着「只剩布局那两个类（`min-h-10 flex-1`）：上游靠外层容器给，改它要先量这一屏的几何」。
+**实测：那两个类从 wave 37（`7eea78f0`）起就不在元素上了**——那一轮把技能 chip 那一行
+改成上游的行内可滚行时一起去掉的，只有 `ChatComposer.vue` 的注释和这条账留在原地。
+`grep min-h-10` 在整个文件里只命中**注释那一行**。两处都已改写，账结清。
 
-### 撞出来的缺陷
+**这类错法值得单独记（线索 171）**：一条账被「顺带」修掉时，改动落在代码里，
+**账和原地注释不会自己跟着走**。**改完一处代码要回头看它的注释还成不成立**——
+`git log -S` 能一秒定位是哪一轮改的。
 
-```
-本仓  POST /threads/search :: limit,metadata,offset,sortBy,sortOrder
-上游  POST /threads/search :: limit,metadata,offset,sort_by,sort_order
-```
+### 顺带钉住的一件事：取样锚点为什么在本仓也有效
 
-**根因：SDK 的「选项名」不是「wire 名」。** SDK 的 `threads.search` 逐字段搭 body
-（`client.js`：`sort_by: query?.sortBy`），本仓 `splitSearchQuery` 把整个选项对象
-**原样摊上线**。**这跟 `run-protocol.ts` 文件头记过的 `streamMode`/`stream_mode`
-是同一个坑**——同一个陷阱在另一处又栽一次。
+`selector: "textarea"` 是几何锚点，而本仓的输入区在有 chip 时是 `<span role="textbox">`。
+**不是洞**：本仓是 `v-if/v-else`，无 chip 时走真 `<textarea>`，而取样发生在无 chip 的稳定态；
+锚点取自场景 settle 的 `visible` 项，**任一边找不到都会当场失败**，不会静默少比一处。
+已写进 `ChatComposer.vue` 的注释，免得下一轮把它当成新发现。
 
-**今天没炸，但仍然要修**：Gateway 的 `ThreadSearchRequest`（`threads.py:383`）
-只有 metadata/limit/offset/status，**没有排序字段**，多余键被 pydantic 忽略。
-那是「后端还没实现」不是「本仓发对了」——后端哪天认了 `sort_by`，
-上游生效、本仓**静默失效**。已修在 wire 边界，**探针复验：三条流程两个应用逐字相同**。
+### 响应消费面：扫干净了（记下来别重做）
 
-### 其余请求体都对得上
+| 扫法 | 结果 |
+|---|---|
+| 两边 `core/` 下 **111 对同名文件**的 interface/type 字段集机械对比 | 只有 2 处不同：`ConnectPollOptions`（本仓自有轮询实现的扩展）与 `Translations`（**词典，已有两道守卫**；机械比对不认别名表，`chats.deleteChatFailed` / `common.closeBrowser` 都在 `upstream-key-coverage.test.ts` 的 `ALIASES` 里） |
+| `/api/features` 的消费 | 两边 `api.ts` **逐字节相同** |
+| 线程 `status`（后端会从 `task.error` 推出 `"error"`） | **两边都不读**：上游只在乐观插入新线程时**写** `status:"busy"`，本仓 `ThreadStatus` 有这一档但零消费 |
+| `/messages/page` 的 `has_more` / `next_before_seq` | 两边同形（差异只有 import 位置与本仓多一个 SSR 安全的 `origin` 参数） |
 
-另一条 search（`limit,offset,select,…`）、`POST /threads/«id»/history :: limit`
-两边同名同键；设置页两边都不发写请求。
-
-### 负向验证里一条**无效变异**（不是假绿）
-
-先写的 H3 是「把两个 `if` 去掉、无条件赋值」，结果绿——**但那不是守卫弱，是那条改动
-产出的线上字节完全相同**（`JSON.stringify` 丢 `undefined`），而且上游 SDK 写的就是
-无条件赋值。换成 `?? null` 才真的改变字节，随即变红。
-**判「假绿」之前先问：这条变异真的改变了可观察行为吗？**（线索 170）
+**方法上的一条**：逐字段 grep 计数**噪声太大**（`status` 撞上 HTTP 状态、上传状态、
+Promise 状态……）。**有用的是按「类型声明」成对比，和按「只有驱动行为的字段才可能躲过台账」
+筛**——渲染出来的字段会被 aria 抓到，躲不过去。
 
 ---
 
-## 下一轮（wave 45）：**响应的消费**
+## 下一轮（wave 46）：**回头看每条被「顺带」修掉的账**
 
-请求体这一类扫完了（`/runs/stream` wave 42、其余 wave 44）。**还没比过的是「同一份
-响应，两边各读了哪些字段」**——台账比的是「发了哪些请求」，不是「拿到之后怎么用」。
+wave 45 的教训（线索 171）直接给出了下一轮的做法：**账不是只会一开始就记错，
+也会因为后来某一轮的顺带改动而过期**。
 
-已经比过的一条：`/history`（两边都整份取 `values`；上游多读 `tasks[].error` 与
-`checkpoint`，**两个都是空转**，见线索 169）。还没比的：`GET /threads/{id}`、
-`/messages/page`、`/token-usage`、`/features`、`/skills`。
-
-**方法**：grep 两边对同一份响应各读了哪些字段，逐个问「另一边不读它，界面上少了什么」。
-**先按线索 169 确认后端真的会发那个字段**，否则会照着一个永远不成立的分支去补齐。
+1. **对「挂着的账」里每一条，`git log -S <账里提到的那个标识符>` 撞一遍**，
+   看它最后一次变动是哪一轮、那一轮之后这条账还成不成立。
+   wave 45 就是这么翻出 `min-h-10` 的。
+2. **顺带把原地注释一起撞**：账写在两个地方（交接文档 + SFC/TS 文件头），
+   两边都会过期，而**文件头那份更容易被信**——它离代码最近。
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -380,7 +374,11 @@ context 跑一遍，输出 `METHOD 归一化路径 :: 排序后的键集` 再比
 - **inputBox 下的 voiceInputStop 是上游自己也零消费的死条目**，有意留着，**不是缺 UI**。
 - ~~chip 编辑区~~ —— **wave 33 做完了**（span + `aria-multiline` + `aria-placeholder`
   + `data-empty`/`data-placeholder` 的空态占位 + `tabindex`）。
-  **只剩布局那两个类**（`min-h-10 flex-1`）：上游靠外层容器给，改它要先量这一屏的几何。
+  ~~只剩布局那两个类（`min-h-10 flex-1`）~~ —— **这条记错了，wave 45 翻案**：
+  那两个类从 **wave 37（`7eea78f0`）** 起就从元素上去掉了（那一轮把 chip 行改成上游的
+  行内可滚行），只有 `ChatComposer.vue` 的注释和这条账留在原地，**一挂八轮**。
+  现在那个 span 的 class 里没有任何布局类，尺寸由外层容器给，与上游同形。
+  **这一条已结清。**
 
 ### 剩余 18 条 unused 词条（**34 逐条撞过上游；35/36/38 各做掉四/二/二条**）
 
@@ -447,7 +445,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 170 条在记忆文件里）
+## 其他常踩的坑（完整 171 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的

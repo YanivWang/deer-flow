@@ -1566,8 +1566,16 @@ defineExpose({ replaceDraft, offerFollowup });
                  可访问名也只有 aria-label 一处。
               4. **`tabindex`**：锁住时是 -1，与上游 `tabIndex={composerLocked ? -1 : 0}` 同。
 
-              布局那几个类（`min-h-10 flex-1`）是本仓自己的，上游靠外层容器给，
-              这一轮不动——改它要先量一次这一屏的几何。
+              **原来这里写着「布局那几个类（`min-h-10 flex-1`）是本仓自己的……
+              改它要先量一次这一屏的几何」——那句话从 wave 37（`7eea78f0`）起就过期了**：
+              那一轮把技能 chip 那一行改成上游的行内可滚行，这两个类当时就从元素上
+              去掉了，只有注释留在原地，一挂八轮（wave 45 复核）。现在这个 span 的
+              class 里没有任何布局类，尺寸由外层容器给，与上游同形。
+
+              顺带钉一件事：**取样锚点 `selector: "textarea"` 在本仓也命中真元素**——
+              有 chip 时画上面这个 span，没有 chip 时走下面的 `v-else` 真 `<textarea>`，
+              而取样发生在无 chip 的稳定态。锚点取自场景的 settle `visible` 项，
+              两边任一边找不到都会当场失败，不会静默少比一处。
             -->
             <span
               ref="chipInput"
