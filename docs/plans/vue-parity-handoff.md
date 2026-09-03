@@ -8,7 +8,7 @@
 
 ---
 
-## 当前状态（截至 wave 42，2026-09-03）
+## 当前状态（截至 wave 43，2026-09-03）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41。
@@ -40,7 +40,8 @@
   **掉线时的退出出路 + 登录页分隔**（wave 38，unused 20→18）与
   **命令面板搜索框的可访问名**（wave 39，两边同改）与
   **重连预算耗尽后的模式键**（wave 40，两边同改）与
-  **run 结束后重取 checkpoint**（wave 41）。
+  **run 结束后重取 checkpoint**（wave 41）。**wave 42 给「请求体」这一整类补上了
+  第一道守卫**（台账只比 method+path+query，请求体从来没进过任何比对）。
 
 > **`app/pages/` 下的路由已经一条不剩地量过了**（wave 28 量完最后三条）。
 > **要找活只能去「挂着的账」里挑**，不要再指望「还有没量过的路由」。
@@ -49,19 +50,19 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 41 收工时逐条跑过）
+### 门禁实测值（wave 42 收工时逐条跑过）
 
 ```
 make -C frontend-vue verify        exit 0；245 文件 / 2041 单测，词典 945 key、18 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 32 处 / 12 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
-make -C frontend-vue e2e-mock      264 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
+make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
 make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~41 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30~42 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1023**）/ `test:e2e`（**146**）。
 
 > **wave 40 实测：`test:e2e` 的 `webServer` 那 120 秒窗口在这台机器上喂不饱一次
@@ -170,67 +171,73 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 41）做了什么
+## 上一轮（wave 42）做了什么
 
-**做掉了 wave 38 量清、wave 40 复验为真的那条账：run 结束之后重取 checkpoint。**
+**没有已知的活，正题是复量。又翻出记错的账**——所以收尾判据仍未满足
+（34~42 **九轮九次一次都没空过**）。
 
-上游 SDK 在 `react/stream.lgp.js` 的 `onSuccess` 里 `await history.mutate(threadId)`，
-把取回来的 `lastHead` 当作新真相（那一支还 `return null` 清掉流的 values）。
-本仓只在 `threadId` 变化且 `status === "idle"` 时取一次——**run 内发生上下文压缩之后，
-上游立刻切到摘要视图，本仓要切走再回来才更新。**
+### 扫了一个从没系统扫过的盲类：**请求体**
 
-### 三条不能省的判据（每条都有负向验证钉着）
+台账只记 `method + path + query`（`normalizeRequest` 就是这么写的），
+**请求体从来没有进过任何比对**。用一次性 probe 打上游的 mock 后端量了普通发送
+这条最复杂的请求：
 
-| 判据 | 不这么做会怎样 |
+```
+上游键集 ["assistant_id","config","context","input","on_disconnect","stream_mode","stream_resumable"]
+本仓键集 同上，逐字相同
+```
+
+两处不同都量清了、都不算差异：
+
+| 不同 | 结论 |
 |---|---|
-| 不能复用 `seedDurableState` | run settle 之后状态停在 `completed`，**永远不会自己回到 `idle`**（只有 `reset()` 会），那道 `!== "idle"` 判据会把这一帧**无声丢掉** |
-| 也不能把 `seedDurableState` 一起放宽 | 那道 `idle` 守的是「run **之前**发出、run **之后**落地」的那一帧——它持有 run 之前的状态，放进来会把整个 run 抹掉 |
-| 线程 id 取 `adoptedThreadId` 不取路由 | `/chats/new` 提交后路由换得晚，run settle 时 `threadId.value` 可能还是 `null`，这次重取被静静跳过——而**首个回合恰恰最可能压缩**（E3 实测变红） |
+| `stream_mode` **顺序**不同（上游 messages-tuple 在前） | 后端按集合处理；守卫断的是**集合** |
+| 真后端上上游会多一个 `checkpoint` | **空转**：`/history` 返回 `checkpoint:{"id","ts"}`（`threads.py:1226`），而 `services.py:948` 读 `checkpoint.get("checkpoint_id")`，取不到就 `return`。mock 的 `/history` 干脆不带这字段，所以 probe 上也看不到 |
 
-**只在 `completed` 上做，不含 `cancelled`**：上游的取消走 `stop()` → `onStop`，那条路不刷历史。
-顺带好处是本仓不会在只有本仓会发请求的时机上多打一条 `/history`，**台账的请求多重集仍然齐平**
-（实测 NEW=0 GONE=0）。
+edit-regenerate 那条路**两边都发** `prepared.checkpoint`，键名正是后端真读的那个，已对齐。
 
-### 又纠正了两处记错
+**守卫**：`chat-dataflow.spec.ts` 新增一条，钉键集 + 三个传输字段的值 + stream_mode 的集合。
 
-- **e2e 范本路径是错的**：`tests/e2e-backend/thread-summarized-checkpoint.spec.ts` 不存在，
-  真身是 `tests/e2e-real/summarized-checkpoint.spec.ts`。
-- **「需要一个专门造后端状态的 e2e」只对一半**：`e2e-real` 的 replay gateway 驱动不了一次
-  真 run（没有录制也没有模型），而 **mock 后端的 `tests/e2e/` 恰恰能跑完整条流**——
-  落点在 `chat-dataflow.spec.ts`，断的是**可见后果**（摘要上屏、原文消失），
-  不是「打了 /history」——后者在 `refreshDurableState` 被 `idle` 吞掉时照样绿。
+### 复核出来的三处记错
 
-### 一处夹具红是真后果，不是噪声
+1. **`GEOMETRY_TOLERANCE_PX` 在 `diff.spec.ts:76` 不是 66**（文件长了，行号漂了）。
+   其余 6 处带行号的引用逐个撞过，都还对得上。
+2. **`MermaidFullscreen.vue` 那句「上游哪天改成真正的 dialog，这里跟着改」是错的引导。**
+   那里的「上游」是第三方 npm 包 `@streamdown/mermaid`，**不在 fork 边界内**——
+   两边同改的对象是 `frontend/`，而这块代码在 `node_modules` 里、两个应用引同一个包。
+   与 `/auth/callback` 同一档：能改的只有本仓一侧，改了就是纯粹制造差异。已改写。
+3. **「种子取数失败弹 toast（`hooks.ts:1839`）」看着像引错，实际是对的**：1839 是**流**的
+   `onError`，但 SDK 把 history 取数的错误接进了同一个回调
+   （`useThreadHistory(..., { onError: options.onError })`），所以种子取失败确实走到那里，
+   而且除 toast 外还会**清掉乐观消息**。按线索 163 追问「是不是只在一部分上更好」：
+   不是，两半都更好。**账成立。**
 
-`agent-chat.spec.ts` 的 edit-and-rerun 变红：它只推进 `/messages/page`（事件库）那份夹具，
-`/history`（checkpoint）还停在**编辑前**，于是 run 一结束旧 checkpoint 把编辑后的消息拉回原文。
-真实后端在 edit-regenerate 跑完之后两边写的都是替换后的消息，**夹具漏的是那一半**。
+### 复核干净的（记下来，别重做）
 
-### 负向验证（7 条全红）
-
-E1 不重取 / E2 走 `seedDurableState` / E3 线程 id 用路由 / E4 `refreshDurableState` 什么都收 /
-E5 收紧成和 seed 一样 / E6 夹具只推进事件库 / E7 编辑后的消息没写进 checkpoint。
-
-**写测试时踩到的一条（线索 166）**：第一版 e2e 红在**前置条件**那一行——重取落得太快，
-流的原文还没被 Playwright 轮询到就已经被摘要换掉了。给 `/history` 加 1200ms 延迟之后
-两半才都可观测。**「断言先看见 A 再看见 B」时，要确保 A 真的有窗口。**
+- 交接文档引用的 **43 个路径全部解析得到**（`probe.spec.ts` 是文档教你临时写、
+  提交前删掉的，不是断引用）。
+- **`thread-runner` 的会话态消费点全干净**：要么用 `STREAMING_STATUSES` 集合判，
+  要么显式列全 `failed`/`cancelled`——没有 wave 40/41 那种「本仓多一个状态成员、
+  消费点却照抄上游少一档」的问题。
+- **10 处「照抄上游」逐处看过**：都是类名/DOM 结构/缩放上下限一类的纯呈现照抄，
+  没有第二个状态机被抄小。`MermaidZoomPan` 的「重置键没有 disabled 变体」不是缺陷
+  ——它从不禁用。
+- **wave 41 自己带出来的一条**：上游 `onSuccess` 把**重取回来的** `lastHead` 交给
+  `onFinish`，本仓在重取之前就发。看着是差异，实测不是——本仓 `refreshPostRun`
+  紧接着 `threads.get()` 重取线程行，标题在里面。
 
 ---
 
-## 下一轮（wave 42）：**复量**
+## 下一轮（wave 43）：**继续复量，两条线**
 
-wave 40 与 41 各翻出记错的账（40 是 browser 面板分叉 1 的两半，41 是 e2e 范本路径 +
-「需要造后端状态」那半句），所以「连着两轮翻不出记错的账」**仍未满足**——
-34~41 **八轮八次一次都没空过**。别再报「还剩几轮」。
-
-wave 42 没有已知的活，只有复量。两条线：
-
-1. **把线索 163 铺到剩下的账上。** wave 40 撞过 `channels.connectedAs`、种子取数失败静默、
-   `agents.saveRequested`、`uploads.uploadingFiles`、`/showcase` 四条请求——都没有「照抄了另一半」。
-   **还没逐处量的是那些纯呈现的照抄**（`grep 照抄上游` 有 10 处），wave 40 粗看都是类名/DOM 结构，
-   没有第二个状态机被抄小，但没有逐处量。
-2. **每条账里引用的文件路径、行号、命令都当假设撞一遍。** wave 41 的教训：那条账挂了三轮，
-   引的 e2e 范本路径根本不存在——**账里的「怎么做」和账里的「是什么」一样会记错。**
+1. **把请求体这一类扫完。** wave 42 只量了 `POST /runs/stream` 一条（最复杂的那条）。
+   还没量的：`POST /threads`、`POST /history`、`edit-regenerate/prepare`、
+   `POST /threads/{id}/state`、settings 域的各种 PUT/PATCH。
+   **方法就是 wave 42 那个一次性 probe**：`page.route` 抓 `postDataJSON()`，
+   两个应用各跑一遍比键集；量完记得删 probe。
+2. **响应的消费同样没比过。** 台账比的是「发了哪些请求」，不是「拿到之后各自读了哪些字段」。
+   一个具体的入口：两边对同一份 `/history` 条目分别读了什么（本仓
+   `checkpointSeedValues` 明写「不做任何字段裁剪」，上游走 SDK 的 `getBranchSequence`）。
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -372,6 +379,11 @@ wave 42 没有已知的活，只有复量。两条线：
 - **上游种子取数失败会弹 toast**（`hooks.ts:1839`），本仓静默降级（S8 明写 403/404 属常态）。
   **这一条 wave 31 有意没动**：它不是「缺一层播报」，是 S8 写死的「403/404 属常态」，
   弹 toast 会在每次打开只读线程时报一次假故障。
+  **wave 42 复核过这条引用，它是对的，机制比记的更准**：`hooks.ts:1839` 是**流**的
+  `onError`，看起来像引错了——但 SDK 把 history 取数的错误接进了同一个回调
+  （`useThreadHistory(client, threadId, historyLimit, { …, onError: options.onError })`），
+  所以种子取失败时上游确实走到那里，而且除了 toast 还会**清掉乐观消息**。
+  本仓静默那一侧在两半上都更好，**没有「只在一部分上更好」**（线索 163 撞过）。
 - ~~`messages.*` 与 `browser.*` 的死条目~~ —— **wave 33 做完了**：连同
   `navigation.*` 那五条一共 **10 条**，全部删掉（953 → 943，再加命令面板两条 → 945）。
   **剩下的是共有块里的死条目**：要判准得先有类型感知的分析（wave 33 实测正则会误报
@@ -446,7 +458,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 162 条在记忆文件里）
+## 其他常踩的坑（完整 167 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -472,7 +484,8 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
   看起来像「命令秒完成」。写成 `grep -aqE '^ +[0-9]+ (passed|failed)'`（线索 132）。
 - **baseline 里每加一个字段，先问「哪一行代码读它」。** `$pendingReasons` 挂了十几轮
   没有任何消费者，删掉一条理由不会让任何门禁变红（线索 131；wave 29 补了守卫）。
-- **几何容差 `GEOMETRY_TOLERANCE_PX = 2` 在 `diff.spec.ts:66`，不要动。**
+- **几何容差 `GEOMETRY_TOLERANCE_PX = 2` 在 `diff.spec.ts:76`，不要动。**（wave 42 复核：
+  文件长了，原来记的 66 行已经漂了——**行号也要当假设撞**，线索 167。）
 - **同一时刻只能有一个后台门禁任务**（Nuxt 构建锁，线索 120）。
 - **`sampleGeometry` 只量 settle 里的 `visible` 锚点，而 settle 跑在 steps 之前**——
   所以**靠交互才出现的东西，位置永远进不了台账**，只能单测守（线索 137）。

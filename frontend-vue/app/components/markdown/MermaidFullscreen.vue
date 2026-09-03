@@ -7,8 +7,15 @@
                    裸遮罩，带 `role="button"` + `tabIndex=0`（点它任意处关闭），
                    没有 dialog 语义、没有焦点陷阱、没有 aria-modal。换成 Dialog
                    会多出 dialog/title/description 三层节点与一层 portal 容器，
-                   两边的可访问性树对不上。这是**照抄上游**而不是本仓的偏好——
-                   上游哪天改成真正的 dialog，这里跟着改。
+                   两边的可访问性树对不上。这是**照抄上游**而不是本仓的偏好。
+
+                   **「上游哪天改成真正的 dialog，这里跟着改」这句话原来在这里，
+                   wave 42 删掉了——它会把人引去 `frontend/src` 找一个不在那里的东西。**
+                   这里的「上游」是第三方 npm 包 `@streamdown/mermaid`，**不在 fork
+                   边界内**：两边同改那条规矩的对象是 `frontend/`，而这块代码在
+                   `node_modules` 里，两个应用引的是同一个包。所以它与 `/auth/callback`
+                   同一档——**能改的只有本仓一侧，改了就是纯粹制造差异，对齐价值为零**。
+                   要动它得先换包或提上游 issue，那不是一轮平替能装下的事。
 
                    ② 遮罩层同时听 click 与 Escape 关闭；内容层 `role="presentation"`
                    并把 click / keydown 挡住，否则点图上任何一处都会关掉全屏——

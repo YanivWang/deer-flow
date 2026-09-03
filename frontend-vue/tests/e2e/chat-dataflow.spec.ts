@@ -266,6 +266,77 @@ test.describe("数据流 gate", () => {
     这里断的是**可见后果**而不是请求本身：只断言「打了 /history」的话，
     把响应丢掉照样绿（`refreshDurableState` 被 `idle` 判据无声吞掉时就是这样）。
   */
+  /*
+    **请求体是台账天生看不见的一整类**（`normalizeRequest` 只记 method + path + query，
+    `diff.spec.ts` 比的是这些字符串的多重集）。wave 42 第一次系统扫了它，
+    这条守卫把扫出来的结论钉住——普通发送这一条是全仓最复杂的请求体。
+
+    实测（wave 42 用一次性 probe 打上游的 mock 后端）：上游发的键集是
+    `["assistant_id","config","context","input","on_disconnect","stream_mode","stream_resumable"]`，
+    与本仓逐字相同。两处已知的不同都不算差异：
+
+    · **`stream_mode` 的顺序**：上游是 messages-tuple/values/updates/custom（SDK 用
+      `unique([...trackStreamMode, ...callbackStreamMode])` 拼出来的），本仓是
+      values/messages-tuple/updates/custom。后端按集合处理，所以这里断的是**集合**。
+    · **真后端上上游会多一个 `checkpoint`**：`fetchStateHistory: { limit: 1 }` 让
+      SDK 的 `includeImplicitBranch` 为真，于是它把线程头的 checkpoint 回发。
+      **那个字段是空转的**——`/history` 返回的是 `checkpoint: {id, ts}`，而
+      `services.py` 读的是 `checkpoint.checkpoint_id`，取不到就 `return`。
+      （edit-regenerate 那条路两边都发 `prepared.checkpoint`，键名是后端真读的那个，
+      已经对齐——见 `agent-chat.spec.ts`。）
+
+    所以：**本仓在这里多发或少发任何一个键，都是真差异。**
+  */
+  test("普通发送的请求体键集与上游逐字相同", async ({ page }) => {
+    let body: Record<string, unknown> | undefined;
+    await mockGateway(page);
+    await page.route(
+      "**/api/langgraph/threads/*/runs/stream",
+      async (route) => {
+        body = route.request().postDataJSON() as Record<string, unknown>;
+        return route.fulfill({
+          status: 200,
+          contentType: "text/event-stream",
+          headers: {
+            "Content-Location": `/api/threads/${THREAD_ID}/runs/${RUN_ID}`,
+          },
+          body: OUT_OF_ORDER_STREAM,
+        });
+      },
+    );
+    await page.goto("/workspace/chats/new");
+
+    const textarea = page.getByPlaceholder(/how can i assist you/i);
+    await expect(textarea).toBeVisible({ timeout: 20_000 });
+    await textarea.fill("Build a deck");
+    await textarea.press("Enter");
+    await expect.poll(() => body !== undefined, { timeout: 20_000 }).toBe(true);
+
+    expect(Object.keys(body!).sort()).toEqual([
+      "assistant_id",
+      "config",
+      "context",
+      "input",
+      "on_disconnect",
+      "stream_mode",
+      "stream_resumable",
+    ]);
+    // 值也要钉：键在而值变了（比如 on_disconnect 变成 "cancel"）同样是真差异，
+    // 而且那一类只在断线时才显形。
+    expect(body).toMatchObject({
+      assistant_id: "lead_agent",
+      on_disconnect: "continue",
+      stream_resumable: false,
+      config: { recursion_limit: 1000 },
+    });
+    expect([...(body!.stream_mode as string[])].sort()).toEqual([
+      "custom",
+      "messages-tuple",
+      "updates",
+      "values",
+    ]);
+  });
+
   test("run 结束之后重取 checkpoint，压缩过的摘要当场上屏", async ({
     page,
   }) => {
