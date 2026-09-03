@@ -262,7 +262,7 @@ describe("describeSchedule", () => {
 });
 
 describe("zonedLocalToUtcIso", () => {
-  test("Asia/Shanghai is UTC-8 (wall 09:00 -> 01:00Z)", () => {
+  test("Asia/Shanghai is UTC+8 (wall 09:00 -> 01:00Z)", () => {
     expect(zonedLocalToUtcIso("2026-07-02T09:00", "Asia/Shanghai")).toBe(
       "2026-07-02T01:00:00+00:00",
     );
