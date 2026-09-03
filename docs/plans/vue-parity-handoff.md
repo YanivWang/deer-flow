@@ -120,9 +120,18 @@ ls frontend/.next/BUILD_ID frontend-vue/.output/server/index.mjs frontend-vue/.o
 
 ## 四条硬规则
 
-1. **台账保持 0。** 不要用 `make parity-accept` 收工。跑完门禁拿
-   `test-results/e2e-parity/report.json` 与 `baseline/parity-diff.json` 逐条比，
-   NEW 和 GONE 都必须是 0。新增场景时基线加一条**五个数组全空**的记录。
+1. **台账保持 0。** 不要用 `make parity-accept` 收工。
+   **真正的判据是 `e2e-parity` 本身**——`diff.spec.ts` 做的是
+   `expect(entries).toEqual(baseline.entries)`，**整棵结构深比**，
+   新增、消失、内容变更、场景增减全覆盖，比「NEW/GONE 都是 0」更严。
+   要把结果读成人话就跑 **`node scripts/parity-ledger-report.mjs`**，
+   **不要再手搓第二套比法**——wave 50 复核发现，此前每轮临时写的那段 python
+   走 `d.get("scenarios", d)` 兜底，而基线的顶层键是 **`entries`**，
+   于是**基线行数恒为 0 与内容无关**：`NEW` 那一半是真量的，
+   **`GONE` 那一半是结构决定的、从来没测出过任何东西**，
+   「两边场景集合一不一致」更是压根没查。结论没错（门禁一直在深比），
+   但那句「独立复核过」是空的。
+   新增场景时基线加一条**五个数组全空**的记录。
 2. **归一化/取样规则只能因为实测而增加。** 每一条都在抹掉信息。
 3. **不要靠重跑收工。** 「偶尔红」先当真缺陷查——先证因果够不着，再谈负载。
 4. **「本仓可能更好」的取舍自己定，不要中途提问**（2026-09-02 用户明确）。
