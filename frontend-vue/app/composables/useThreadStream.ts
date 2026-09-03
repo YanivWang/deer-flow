@@ -547,7 +547,7 @@ export function useThreadStream(options: UseThreadStreamOptions) {
     protected message / hidden checkpoint control」早就移植过来了，只是打开线程时
     没有任何输入喂给它——这一段就是那个缺掉的输入。台账测不到它：默认夹具的
     `/history` 与 `/messages/page` 返回同一批消息，两条路径的差异要专门造后端状态
-    才看得见（tests/e2e-backend/thread-summarized-checkpoint.spec.ts）。
+    才看得见（tests/e2e-real/summarized-checkpoint.spec.ts）。
 
     `status !== "idle"` 这一道与 `seedDurableState` 里那一道**不是重复**：
     这里省的是请求（上游 SDK 的 effect 同样有 `submittingRef.current === threadId`

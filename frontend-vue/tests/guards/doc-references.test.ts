@@ -43,6 +43,31 @@
                    playwright.m0-real-backend.config.ts 就是这样漏掉的：
                    tests/fixtures/streams/README.md 里写着「实测数据留在它的注释里」，
                    而那份 config 连同注释一起没了，所有门禁一路全绿。
+
+                   第四类是**没被反引号包住的路径**。前三类都要求反引号，
+                   而 wave 54 实测出三处死引用，全都没带反引号，于是前三类一条都不看：
+                   `scripts/i18n-manager.mjs` 说自己「与 `lib/source-facts.mjs` 同一条口径」，
+                   而那份文件也是 **1209651f 删掉的**（同一次改名的第三处遗留）；
+                   `useThreadStream.ts` 指着 `tests/e2e-backend/thread-summarized-checkpoint.spec.ts`、
+                   `types/message.ts` 与 `message-content-shapes.json` 指着
+                   `tests/unit/core-types/message-round-trip.test.ts`——
+                   **后两个从写下的那一天起就不存在**（同一个 commit 里，测试被归到了别处）。
+
+                   反引号里的同一形状（非 Markdown 文件里的 `app/…`、`tests/…` 路径）
+                   一并收进来——`REPO_PATH` 只扫 Markdown，`.ts` 注释里写一条死路径
+                   此前谁都不看。实测这样的引用全模块 39 处，**除了本文件的文件头
+                   一处不差**。
+
+                   **代价是本文件的文件头必须被排除。** 它要举的例子恰好就是死路径
+                   （上面那三条、以及开头那条 `app/core/PROVENANCE.md`），
+                   任何扫全文的检查都会把守卫的说明书判成违规——线索 126/174 反咬
+                   守卫本身的第三次。**只排除本文件的第一段块注释**，不是整个文件：
+                   下面的代码里再出现死路径仍然会红。
+
+                   这一档只挑**第一段是本模块顶层目录**的路径（app / tests / scripts /
+                   packages / baseline / server / config / lib）——实测全模块 781 个
+                   不带反引号的路径 token 里，这样收口只剩 5 个，其中 3 个是真死引用。
+                   判据仍是 172 号：**按名字在整个 checkout 里搜，搜不到才算死。**
                    指向 `../` 之外的目标只在那个顶层目录存在时才校验：本模块必须
                    能在仓库其余部分缺席时独立工作。路径检查同样跳过历史区——
                    一条记录说「当时这个文件在 tests/m6/」是既成事实，
@@ -255,6 +280,48 @@ const BARE_FILENAME =
  * 改成一个存在的名字反而会让注释说谎。加一条就要在这里写清楚为什么。
  * 下面第二条用例盯着这张表本身：条目还得真的缺席、也还得真的有人在引它。
  */
+/** 本模块顶层目录，两条路径检查共用。 */
+const TOP_DIRS = "app|tests|scripts|packages|baseline|server|config|lib";
+
+/** 反引号里的同形路径，只在非 Markdown 文件里查（Markdown 归 REPO_PATH）。 */
+const QUOTED_PATH = new RegExp(
+  String.raw`\`(?:frontend-vue/)?((?:${TOP_DIRS})/[A-Za-z0-9_./\-]+\.(?:ts|tsx|mts|mjs|js|cjs|vue|json|md|yml|yaml|sh|css|py))\``,
+  "g",
+);
+
+/**
+ * 本文件的第一段块注释是**守卫的说明书**，里面举的例子就是死路径。
+ * 只剥这一段，不是整个文件——下面代码里再出现死路径仍然要红。
+ */
+const SELF = "tests/guards/doc-references.test.ts";
+
+function withoutOwnHeader(rel: string, source: string): string {
+  if (rel !== SELF) return source;
+  const end = source.indexOf("*/");
+  return end === -1 ? source : " ".repeat(end + 2) + source.slice(end + 2);
+}
+
+/**
+ * 不带反引号的仓库内路径。只看**第一段是本模块顶层目录**的那些——放开这个限制会
+ * 把 node_modules / dist / test-results / .nuxt 里的路径和夹具里编出来的假路径
+ * 全部卷进来（实测 781 个 token 里有 19 个不解析，只有 5 个落在这个前缀集合里）。
+ */
+const BARE_PATH = new RegExp(
+  String.raw`(?<![\`/\w.\-])((?:${TOP_DIRS})/[A-Za-z0-9_./\-]+\.(?:ts|tsx|mts|mjs|js|cjs|vue|json|md|yml|yaml|sh|css|py))(?![\`\w])`,
+  "g",
+);
+
+/**
+ * 不带反引号、看起来像仓库路径、但**不是**在指一个仓库文件的。
+ * 判据与 NON_REPO_FILENAMES 相同：这句话的意思本来就不是「仓库里有这个文件」。
+ */
+const NON_REPO_PATHS: Record<string, string> = {
+  "app/components/workspace/Fixture.vue":
+    "i18n source guard 的单测在内存里编出来的假 SFC 路径，用来喂扫描器，不是仓库文件。",
+  "app/components/workspace/DynamicFixture.vue":
+    "同上，同一份单测里的第二个假路径。",
+};
+
 const NON_REPO_FILENAMES: Record<string, string> = {
   "Untitled.md":
     "上游导出无标题会话时产出的文件名。那段注释讲的就是本仓导出成了别的名字，不是在指一个仓库文件。",
@@ -495,6 +562,44 @@ describe("文档指名的文件都存在", () => {
     expect(
       violations,
       "照着这个名字在整个 checkout 里搜，一个文件都搜不到",
+    ).toEqual([]);
+  });
+
+  it("仓库路径（带不带反引号都算）在 checkout 里搜得到", () => {
+    const known = checkoutBasenames();
+    if (known === null) return;
+    const violations: string[] = [];
+    let scanned = 0;
+    for (const rel of trackedTextFiles()) {
+      const source = withoutOwnHeader(
+        rel,
+        stripHistoricalRegions(readFileSync(join(ROOT, rel), "utf8")),
+      );
+      const quotedToo = extname(rel) !== ".md";
+      for (const [index, line] of source.split("\n").entries()) {
+        const bare = line.replaceAll(/`[^`]*`/g, " ");
+        const patterns: [RegExp, string][] = quotedToo
+          ? [
+              [BARE_PATH, bare],
+              [QUOTED_PATH, line],
+            ]
+          : [[BARE_PATH, bare]];
+        for (const [pattern, text] of patterns) {
+          for (const match of text.matchAll(pattern)) {
+            const path = match[1] ?? "";
+            scanned += 1;
+            if (path in NON_REPO_PATHS) continue;
+            const name = path.slice(path.lastIndexOf("/") + 1);
+            if (known.has(name)) continue;
+            violations.push(`${rel}:${index + 1}: ${path}`);
+          }
+        }
+      }
+    }
+    expect(scanned).toBeGreaterThan(50);
+    expect(
+      violations,
+      "照着这个路径的文件名在整个 checkout 里搜，一个文件都搜不到",
     ).toEqual([]);
   });
 

@@ -22,7 +22,7 @@
                    谁把标注去掉（或改成 `satisfies` 之后再放宽），typecheck 就不管了，
                    而词典缺一条中文没人会立刻发现。这里不依赖类型标注，直接比 key。
 
-                   key 用 TS AST 抽，不用正则——与 lib/source-facts.mjs 同一条口径。
+                   key 用 TS AST 抽，不用正则——与 lib/i18n-source-guard.mjs 同一条口径。
                    词典里有大量嵌套对象和方法（`searchFor(query)` 那种模板函数），
                    正则分不清「对象字面量的属性」和「函数体里的对象」。
 */

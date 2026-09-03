@@ -9,7 +9,7 @@
                    把 `content` 塌成 `string`。塌了之后代码照样编得过、单测也可能全绿，
                    但 B1（带 tool_calls 的可见文本）与 B11（citation 从完整 children 树推导）
                    会静默走形。所以 `AgentMessageContent` 是联合类型，且
-                   tests/unit/core-types/message-round-trip.test.ts 用真实 thread fixture
+                   tests/guards/message-content-contract.test.ts 用真实 thread fixture
                    两个方向都往返一遍——不是只断言「能编译」。
 
                    与 SDK 的一处**有意不同**：SDK 的 `MessageContentComplex` 是
