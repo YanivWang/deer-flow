@@ -160,6 +160,15 @@ test("SSO providers expose the failure hint and preserve safe next/remember para
   await expect(
     page.getByRole("button", { name: "Continue with Company SSO" }),
   ).toBeVisible();
+  /*
+    SSO 那一块上面有一条「OR CONTINUE WITH」分隔（上游
+    `(auth)/login/page.tsx:314`）。本仓此前直接从密码表单跳到 SSO 按钮——
+    读屏器听不出这几颗按钮换了一条登录路径（wave 38）。
+    **对照台账看不见它**：`/login` 的对照夹具里没有 SSO provider，整块不渲染。
+  */
+  await expect(
+    page.getByText("Or continue with", { exact: true }),
+  ).toBeVisible();
   await submitCredentials(page);
   await expect(page.getByText(/account uses single sign-on/i)).toBeVisible();
 
@@ -412,6 +421,35 @@ test("OIDC callback validates the session and safe next path", async ({
 
   await page.goto("/auth/callback?next=https%3A%2F%2Fevil.example%2Fphish");
   await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
+});
+
+/*
+  掉线横幅上的**退出**是「会话本身坏了」时唯一的出路——重试治不了它。
+  上游 gateway-offline-banner.tsx:119 那颗按钮就是它（上游只有这一颗，没有重试）。
+  本仓此前只有重试，而唯一的退出入口在设置里、还会因为 POST 失败而放弃：
+  合起来就是「坏会话 + 后端不通 → 没有任何出路」（wave 38）。
+
+  这里连**后端不通**一起测：登出请求也 503，用户仍然必须离开工作区。
+*/
+test("the offline banner can sign the user out even while the gateway is down", async ({
+  page,
+}) => {
+  mockLangGraphAPI(page);
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({ status: 503, json: { detail: "Unavailable" } }),
+  );
+  await page.route("**/api/v1/auth/logout", (route) =>
+    route.fulfill({ status: 503, json: { detail: "Unavailable" } }),
+  );
+  await page.goto("/workspace");
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: /Gateway is temporarily unavailable/i }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Log out" }).click();
+  await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
 });
 
 test("OIDC callback keeps 401 and Gateway failure distinct", async ({

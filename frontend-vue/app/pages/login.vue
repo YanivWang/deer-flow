@@ -297,6 +297,24 @@ onMounted(() => {
       </form>
 
       <div v-if="providers.length" class="space-y-2">
+        <!--
+          「OR CONTINUE WITH」那条分隔（上游 `(auth)/login/page.tsx:314`）。
+          本仓此前直接从表单跳到 SSO 按钮：读屏器听不出这几颗按钮换了一条登录路径，
+          视觉上也没有断点。**对照台账看不见它**——`/login` 的对照夹具里没有 SSO
+          provider，这一整块根本不渲染（线索 114）。
+
+          结构照抄：一条绝对定位的横线垫底，文字浮在中间并用背景色把线切开。
+        -->
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <span class="w-full border-t" />
+          </div>
+          <div class="relative flex justify-center text-xs uppercase">
+            <span class="bg-background text-muted-foreground px-2">
+              {{ $i18n.t.value.login.orContinueWith }}
+            </span>
+          </div>
+        </div>
         <p v-if="showSsoHint" class="text-muted-foreground text-center text-sm">
           {{ $i18n.t.value.login.ssoHint }}
         </p>

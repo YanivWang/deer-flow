@@ -15,7 +15,7 @@ import SettingsSection from "./SettingsSection.vue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
-import { clearAuthenticatedClientState } from "@/core/auth/client-state";
+import { performLogout } from "@/core/auth/logout";
 import type { User } from "@/core/auth/types";
 
 const { $i18n } = useNuxtApp();
@@ -86,16 +86,24 @@ async function changePassword() {
   }
 }
 
+/*
+  失败也要走得掉：判据与端口说明写在 `core/auth/logout.ts` 的文件头。
+  此前这里是 `if (!response.ok) { error = signOutFailed; return; }`——
+  「会话坏了 + Gateway 连不上」正是最需要退出的那一刻，那时候人被留在原地。
+  `signOutFailed` 仍然会念出来，只是不再拦住退出本身。
+*/
 async function logout() {
-  const response = await fetchWithAuth("/api/v1/auth/logout", {
-    method: "POST",
+  const outcome = await performLogout({
+    post: () => fetchWithAuth("/api/v1/auth/logout", { method: "POST" }),
+    navigate: (to) => navigateTo(to),
+    hardNavigate: (to) => {
+      globalThis.location.href = to;
+    },
+    queryClient,
   });
-  if (!response.ok) {
+  if (outcome === "forced-out") {
     error.value = $i18n.t.value.settings.account.signOutFailed;
-    return;
   }
-  clearAuthenticatedClientState(queryClient);
-  await navigateTo("/login");
 }
 </script>
 

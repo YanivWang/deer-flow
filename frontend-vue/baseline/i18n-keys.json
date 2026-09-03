@@ -949,7 +949,7 @@
     "workspaceChanges.truncatedUnavailable",
     "workspaceChanges.viewChanges"
   ],
-  "unusedTotal": 20,
+  "unusedTotal": 18,
   "unusedKeys": [
     "agents.agentCreatedPendingRefresh",
     "agents.saveRequested",
@@ -958,7 +958,6 @@
     "conversation.startConversation",
     "home.blog",
     "inputBox.voiceInputStop",
-    "login.orContinueWith",
     "scheduledTasks.preview",
     "scheduledTasks.recipes.news.desc",
     "scheduledTasks.recipes.trending.desc",
@@ -969,7 +968,6 @@
     "sidebar.demoChats",
     "sidecar.reference",
     "toolCalls.clickToViewContent",
-    "uploads.uploadingFiles",
-    "workspace.logout"
+    "uploads.uploadingFiles"
   ]
 }

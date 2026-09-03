@@ -9,7 +9,11 @@
 <script setup lang="ts">
 import { computed, watch } from "vue";
 
+import { useQueryClient } from "@tanstack/vue-query";
+
 import { useAuthSession } from "@/composables/useAuthSession";
+import { fetch as fetchWithAuth } from "@/core/api/fetcher";
+import { performLogout } from "@/core/auth/logout";
 import { buildLoginLocation, isEnabledRuntimeFlag } from "@/core/auth/decision";
 import { createGatewayRecoveryTracker } from "@/core/workspace-shell/gateway-recovery";
 import { useWorkspaceToast } from "@/core/workspace-shell/toast";
@@ -22,6 +26,17 @@ const enabled = computed(
   () => !isEnabledRuntimeFlag(config.public.authDisabled),
 );
 const { session, isFetching, refresh } = useAuthSession({ enabled });
+const queryClient = useQueryClient();
+function signOut() {
+  return performLogout({
+    post: () => fetchWithAuth("/api/v1/auth/logout", { method: "POST" }),
+    navigate: (to) => navigateTo(to),
+    hardNavigate: (to) => {
+      globalThis.location.href = to;
+    },
+    queryClient,
+  });
+}
 const unavailable = computed(() => session.value?.tag === "unavailable");
 const recovery = createGatewayRecoveryTracker(() =>
   toast.success($i18n.t.value.workspace.gatewayRecovered),
@@ -57,17 +72,33 @@ watch(
       {{ $i18n.t.value.workspace.gatewayUnavailable }}
       {{ $i18n.t.value.workspace.gatewayUnavailableRetrying }}
     </span>
-    <button
-      type="button"
-      class="hover:bg-background rounded-md border px-3 py-1 text-xs"
-      :disabled="isFetching"
-      @click="refresh()"
-    >
-      {{
-        isFetching
-          ? $i18n.t.value.workspace.retrying
-          : $i18n.t.value.workspace.retryNow
-      }}
-    </button>
+    <div class="flex shrink-0 items-center gap-2">
+      <button
+        type="button"
+        class="hover:bg-background rounded-md border px-3 py-1 text-xs"
+        :disabled="isFetching"
+        @click="refresh()"
+      >
+        {{
+          isFetching
+            ? $i18n.t.value.workspace.retrying
+            : $i18n.t.value.workspace.retryNow
+        }}
+      </button>
+      <!--
+        **退出是这条横幅上的出路**，上游 gateway-offline-banner.tsx:119 那一颗就是它
+        （上游只有这一颗，没有重试）。两颗一起留：它们治的不是同一种故障——
+        重试治「后端暂时不通」，退出治「会话本身坏了」，而后者重试多少次都没用。
+        本仓此前只有重试，于是坏会话 + Gateway 不通时**没有任何出路**：
+        唯一的退出入口在设置里，而它当时还会因为 POST 失败而放弃（wave 38 一并修了）。
+      -->
+      <button
+        type="button"
+        class="hover:bg-background rounded-md border px-3 py-1 text-xs"
+        @click="signOut()"
+      >
+        {{ $i18n.t.value.workspace.logout }}
+      </button>
+    </div>
   </div>
 </template>
