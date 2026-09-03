@@ -1,16 +1,17 @@
 # React → Vue 对照对齐：轮次交接文档
 
 **这份文档是每一轮开工的第一读物。** 它记录「上一轮做完了什么、下一轮做什么、
-有哪些账挂着」。深度背景（158 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
+有哪些账挂着」。深度背景（160 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
 `deerflow-parity-harness-plan` 里；这里只放接手一轮所需的最小集合。
 
 **每推完一个阶段（一轮 wave），就地更新这份文档，然后开始下一轮。**
 
 ---
 
-## 当前状态（截至 wave 37，2026-09-03）
+## 当前状态（截至 wave 38，2026-09-03）
 
-- 分支 `main-wc`。`79afa765` = wave 36（chore `d2800af1`），`7eea78f0` = wave 37。
+- 分支 `main-wc`。`7eea78f0` = wave 37，`c34be80c` = wave 38。
+  marker 仍在 `79afa765`（wave 36 推的，chore `d2800af1`）。
 - **wave 36 动了 `frontend/`**（`SidebarTrigger` 的窄屏图标，两边同改），
   **upstream marker 已推到 `79afa765`**。wave 30~35 都没动过。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
@@ -32,7 +33,8 @@
   **写操作的成功播报**（wave 34：五个面 12 处，unused 36→26）与
   **四条「上游在用、本仓没有」的 UI 形状**（wave 35，unused 26→22）与
   **窄屏侧栏触发器 + 两句说明文字**（wave 36，unused 22→20，**两边同改**）与
-  **模型选择器筛选 + 技能 chip 那一行**（wave 37）。
+  **模型选择器筛选 + 技能 chip 那一行**（wave 37）与
+  **掉线时的退出出路 + 登录页分隔**（wave 38，unused 20→18）。
 
 > **`app/pages/` 下的路由已经一条不剩地量过了**（wave 28 量完最后三条）。
 > **要找活只能去「挂着的账」里挑**，不要再指望「还有没量过的路由」。
@@ -41,19 +43,19 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 37 收工时逐条跑过）
+### 门禁实测值（wave 38 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；243 文件 / 2030 单测，词典 945 key、20 unused
+make -C frontend-vue verify        exit 0；244 文件 / 2036 单测，词典 945 key、18 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 31 处 / 11 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
-make -C frontend-vue e2e-mock      263 + 21 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
+make -C frontend-vue e2e-mock      263 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
 make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~37 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30~38 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1022**）/ `test:e2e`（**146**）。
 
 **已知的两条负载抖动**（都不是产品缺陷，但每次遇到都要重新证一遍因果）：
@@ -154,68 +156,76 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 37）做了什么
+## 上一轮（wave 38）做了什么
 
-正题是「剩下的小账逐条**先量再写**」。四条量下来：**两条比记录的大且值得做，
-一条零收益、一条已经有守卫在管**。
+本轮本来只打算**通读核对**「挂着的账」——按 wave 34 的收尾判据，翻不出记错的账
+就可以宣布收尾。**翻出了三条**，其中一条把用户锁死。
 
-### 做掉的两条
+### 一、`workspace.logout` 归错了，背后是一个「锁死」
 
-1. **模型选择器：照屏幕上的字打，一条都搜不到。** 列表写 `display_name`
-   （"MiniMax CN / MiniMax-M3"），筛的是 `name`（`minimax-m3`）——字段是照上游来的，
-   但上游有 command-score 的模糊评分兜着。修法只把**空格/连字符/下划线**折掉，
-   仍是子串、是原判据的**严格超集**、不引依赖。**非连续子序列（"mm3"）仍然没有**：
-   那要连同排序一起来，否则 "abc" 命中几乎所有模型；`command-score`/`cmdk`
-   都不在依赖里（reka-ui 的 `useFilter` 是 Intl.Collator 的 contains，不是评分）。
-2. **技能 chip 那一行不是「两个布局类」，是结构不同。** 上游是
-   `whitespace-pre-wrap break-all` 的**可滚容器**、chip 靠 `mr-2 align-top` 浮在文字里；
-   本仓是 `flex` 两列。差四处：正文不绕排、**没有 `max-h-48`**（长草稿撑到没上限）、
-   **chip 没有 45% 宽度上限**（长技能名把可编辑区挤没）、**点空白不聚焦末尾**。四处全补。
+它被连同 `home.blog` / `login.orContinueWith` / `sidebar.demoChats` 一起记成
+「落地页与静态整站模式在对齐范围之外」。逐条撞上游：前者确实在
+`components/landing/header.tsx`、`sidebar.demoChats` 确实在静态整站那一支，
+**但 `workspace.logout` 在 `gateway-offline-banner.tsx:126`**——工作区掉线横幅上的退出键。
 
-### 量完决定不做的两条
+顺着量下去是**两处叠加**：① 本仓那条横幅只有「重试」，而重试治不了「会话本身坏了」；
+② 本仓唯一的退出入口（设置→账户）**POST 失败就地放弃**。合起来就是
+**会话坏了 + Gateway 不通 → 没有任何出路**。上游 `AuthProvider.tsx:117` 的注释是原话：
+失败硬跳转，`matching the legacy form-POST logout behaviour during a gateway outage`。
 
-- **`Button` 的 as-child**：两边**仍然没有任何选择器**消费 `data-slot`/`data-variant`/
-  `data-size`，`data-*` 也不进 aria 快照——**零可观察收益**，而要动 L2 primitive 的
-  9 个消费者。**有意不做。**
-- **browser 面板剩余三处分叉**：`BrowserPanel.vue` 文件头逐条写着为什么，仍然成立。
+修法：抽出 `core/auth/logout.ts` 的 `performLogout`（失败先清本地态再硬跳转），
+两个入口都走它，横幅补退出键。**两颗按钮都留**——重试与退出治的不是同一种故障。
 
-### 守卫复查（线索 157 的推论）：到此为止
+### 二、`login.orContinueWith` 也归错了
 
-形如「N 处必须一样」的守卫**全仓只有两个**——`sidebar-trigger`（wave 36 已修）与
-`e2e-suite-contract`。后者**本来就是好的**，文件头写着「原来钉的是『恰好 29 文件
-169 测试』这类快照数字……现在钉的是每个 spec 恰好被一个 config 覆盖」。
-**这条教训代码库自己早就记下了，wave 36 那次是漏网的一处，不是普遍现象。**
-所以这一项不再扩大范围。
+它在 `(auth)/login/page.tsx:314`，就是 wave 26 对齐到 0 行的那一屏。上游在密码表单与
+SSO 按钮之间有一条「OR CONTINUE WITH」分隔，本仓直接跳过去。已补。
+**台账没抓到是因为 `/login` 的对照夹具里没有 SSO provider**，整块不渲染（线索 114）。
 
-### wave 37 新增的踩坑线索（记忆里编号 158）
+### 三、第一次量清了 checkpoint 那条（只记录，不改）
 
-- **158. 补判据时要问「新的是不是旧的超集」。** 模型筛选那条如果写成「只按折叠后比」，
-  会悄悄丢掉原来能搜到的一类查询。负向验证里专门加一条 A2 钉这个方向——
-  **只测「新功能能用」的变异，换成替换式实现也是绿的。**
+本仓只在 `threadId` 变化时取种子；上游 SDK 的 `fetchStateHistory: {limit:1}`
+**每次流结束也重取**。后果：run 内发生上下文压缩之后，上游立刻切到摘要视图，
+本仓要切走再回来。**没有盲改**——`seedThreadCheckpoint` 的注释自己写着
+「少了那道 `status !== "idle"`，首个回合的流会被自己的种子抹掉」，
+补重取要连这条一起验，还需要专门造后端状态的 e2e。详见「挂着的账」。
 
-## 下一轮（wave 38）：**收尾判据第一次可能成立**
+### wave 38 新增的踩坑线索（记忆里编号 159~160）
 
-wave 34 定的判据：**连着两轮翻不出记错的账才算真收尾。**
+- **159. 纯函数对了不等于有人在用它。** wave 38 的负向验证里「设置里的登出绕开共享
+  实现」「横幅上去掉退出键」都是假绿——单测只测了 `performLogout` 本身。
+  **抽公共实现时，要额外钉一条「每个调用点都还在走它」。**
+- **160. 一批 key 被同一个理由归类时，逐条撞一遍上游。** wave 34 把四条 unused 一起
+  记成「落地页/静态整站范围外」，四条里**有两条不是**（`workspace.logout` 在掉线横幅、
+  `login.orContinueWith` 在登录页）。**理由对一半的分类比没有分类更危险**，
+  因为它看起来已经核过了。
 
-- wave 34 翻出一条（memory 那六条记反了）
-- wave 35 翻出一条（`channels.connectedAs` 不是缺口）
-- wave 36 翻出一条（守卫本身把缺陷钉成了合同）
-- **wave 37 翻出一条**（chip 那条记成「两个布局类」，实际是四处结构差异）
+## 下一轮（wave 39）：把「归类理由」也当假设重新验
 
-**四轮四条，仍然没到。** 但 wave 37 之后，「挂着的账」里**已经没有未量过的条目了**——
-每一条要么做掉了、要么写着量过之后为什么不做。所以 wave 38 的正题是：
+wave 34 的收尾判据：**连着两轮翻不出记错的账才算真收尾。**
+34 / 35 / 36 / 37 各翻出一条，**38 一次翻出三条**（而且那一轮本来只打算通读核对）。
+**五轮五次，一次都没空过。**
 
-1. **把「挂着的账」整章通读一遍，只做一件事：找还有没有记错的。**
-   不写代码，只核对。**如果一条都翻不出**，加上 wave 38 自己这一轮，
-   就满足「连着两轮」——可以宣布收尾。
-2. **翻得出就照常做掉**，然后 wave 39 再试一次。
-3. 顺带复量一次那三条**跨域候选**（它们从来没被正面量过）：
-   「run 成功结束之后退回重新取的 checkpoint」、
-   「首次发送后那一屏的 `Completed in <1s` 与 `Edit and rerun`」（被上游竞态阻塞）、
-   `/auth/callback`（wave 33 已判定不做，只需确认判据还成立）。
+wave 38 的三条有一个共同形状，值得当成下一轮的**方法**：
+**它们都不是「没记」，而是「记了、理由只对了一半」。**
+`workspace.logout` 与 `login.orContinueWith` 被一句「落地页与静态整站模式在范围外」
+一起盖住——那句话对 `home.blog` 和 `sidebar.demoChats` 是对的，对另外两条是错的。
+**一个对一半的理由比没有理由更危险**，因为它看起来已经核过了（线索 160）。
 
-**不要报「还剩几轮」**——29~37 报过 7~9 / 6~8 / 5~6 / 4 / 2 / 2~3 / 2~3 / 2~3，
-九轮没往下走过。用判据代替数字。
+所以 wave 39 只做一件事：
+
+1. **把「挂着的账」里每一条『按理由成批归类』的记录拆开，逐条撞上游。**
+   已知的成批理由有：「上游自己也零消费」（wave 34 已拆，翻出五条）、
+   「落地页/静态整站范围外」（wave 38 已拆，翻出两条）、
+   **「本仓这一侧更好，有意保留」（还没拆过——这是下一个目标）**、
+   **「上游缺陷，本仓先保持一致」（还没拆过）**。
+2. 翻得出就做掉；**一条都翻不出，加上 wave 39 自己这一轮才算连着两轮**——
+   到那时才可以宣布收尾。
+
+### 还剩几轮
+
+**不报数字。** 29~38 报过 7~9 / 6~8 / 5~6 / 4 / 2 / 2~3 / 2~3 / 2~3，十轮没往下走过，
+因为每一轮都在翻出新的记错的账。**用判据代替数字。**
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -337,7 +347,16 @@ wave 34 定的判据：**连着两轮翻不出记错的账才算真收尾。**
   只出 class。wave 34 与 wave 37 两次复验：两边**都没有任何选择器**消费它，
   `data-*` 也不进 aria 快照——**零可观察收益**，而要动 L2 primitive 的 9 个消费者。
   哪天要翻案，判据是「有人真的写了 `[data-slot="button"]` 的选择器」。
-- **run 成功结束之后退回「重新取的 checkpoint」**（跨域候选）。
+- **run 成功结束之后退回「重新取的 checkpoint」** —— **wave 38 第一次量清**：
+  本仓只在 `threadId` 变化时取种子（`useThreadStream.ts` 的 watch，且要求
+  `status === "idle"`）；上游是 SDK 的 `fetchStateHistory: { limit: 1 }`，
+  **每次流结束也重取**（wave 29 量到的「终态 B」里那一轮
+  `threads/{id}` + `messages/page` + `token-usage` 重取就是它）。
+  **后果**：run 内发生上下文压缩之后，上游立刻切到摘要视图，本仓要切走再回来才更新。
+  **没有盲改**：`seedThreadCheckpoint` 的注释写着「少了 `status !== "idle"` 那道，
+  首个回合的流会被自己的种子抹掉」——在流结束点补重取要连这条一起验，
+  而且需要一个专门造后端状态的 e2e（范本
+  `tests/e2e-backend/thread-summarized-checkpoint.spec.ts`）。**下一轮可做。**
 - **上游种子取数失败会弹 toast**（`hooks.ts:1839`），本仓静默降级（S8 明写 403/404 属常态）。
   **这一条 wave 31 有意没动**：它不是「缺一层播报」，是 S8 写死的「403/404 属常态」，
   弹 toast 会在每次打开只读线程时报一次假故障。
@@ -350,7 +369,7 @@ wave 34 定的判据：**连着两轮翻不出记错的账才算真收尾。**
   + `data-empty`/`data-placeholder` 的空态占位 + `tabindex`）。
   **只剩布局那两个类**（`min-h-10 flex-1`）：上游靠外层容器给，改它要先量这一屏的几何。
 
-### 剩余 20 条 unused 词条（**wave 34 逐条撞过上游；35 做掉四条、36 做掉两条**）
+### 剩余 18 条 unused 词条（**34 逐条撞过上游；35/36/38 各做掉四/二/二条**）
 
 复量的做法：对每一条 unused key 问「上游用不用它」。**用 = 本仓少了一块 UI。**
 26 条分三档：
@@ -360,8 +379,10 @@ wave 34 定的判据：**连着两轮翻不出记错的账才算真收尾。**
   （每条连接一行 vs 追加到 provider 说明里），**本仓这一侧对多账号更清楚，有意保留**。
 - **若干条上游在用但本仓有意不做**（已各自记在上面）：`agents.saveRequested` 与
   `agents.agentCreatedPendingRefresh`（本仓用四态 + 行内错误表达同一件事）、
-  `home.blog` / `login.orContinueWith` / `sidebar.demoChats` / `workspace.logout`
-  （落地页与静态整站模式在对齐范围之外，见 `deerflow-vue-alignment-scope`）、
+  `home.blog`（`components/landing/header.tsx`，落地页）与 `sidebar.demoChats`
+  （静态整站模式那一支）——**这两条 wave 38 逐条撞过上游，确实在范围外**；
+  同一批里的 `workspace.logout` 与 `login.orContinueWith` **归错了，wave 38 已做掉**
+  （前者是掉线横幅的退出键、后者在登录页）。**成批归类的理由要逐条撞**（线索 160）。
   `uploads.uploading` / `uploads.uploadingFiles` / `toolCalls.skillInstallTooltip`
   （**wave 36 量完了**：`uploads.uploading` 与 `toolCalls.skillInstallTooltip` 是真缺口、
   已补；`uploads.uploadingFiles` **不是缺口**——上游边传边发所以要插一条乐观 AI 消息，
@@ -413,12 +434,12 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 158 条在记忆文件里）
+## 其他常踩的坑（完整 160 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
   `toHaveLength(215)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
-  （**945 / 20**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
+  （**945 / 18**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
   「N 个已审阅 unused key」也要一起改。
 - **新增 L2 组件要加进 `tests/architecture.test.ts` 的 `l2Files` 允许清单**
   （要有 `【架构位置】 L2` 头、不许 import 产品层——`@/composables`、`#app`、`#imports`
@@ -448,7 +469,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、158 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、160 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
