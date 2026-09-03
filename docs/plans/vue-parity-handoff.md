@@ -8,10 +8,11 @@
 
 ---
 
-## 当前状态（截至 wave 44，2026-09-03）
+## 当前状态（截至 wave 45，2026-09-03）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
-  `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42。
+  `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
+  `54454b7c` = wave 43，`46f62dea` = wave 44。
 - **wave 40 动了 `frontend/`**（重连预算耗尽后那颗键在说反话，两边同改），
   **marker 已推到 `aef3618d`**。
 - **wave 39 动了 `frontend/`**（命令面板搜索框的可访问名，两边同改）。
@@ -40,8 +41,9 @@
   **掉线时的退出出路 + 登录页分隔**（wave 38，unused 20→18）与
   **命令面板搜索框的可访问名**（wave 39，两边同改）与
   **重连预算耗尽后的模式键**（wave 40，两边同改）与
-  **run 结束后重取 checkpoint**（wave 41）。**wave 42 给「请求体」这一整类补上了
-  第一道守卫**（台账只比 method+path+query，请求体从来没进过任何比对）。
+  **run 结束后重取 checkpoint**（wave 41）与**提交键的出错态**（wave 43）。
+  **wave 42/44 把「请求体」这一整类扫完并补上了守卫**（台账只比 method+path+query，
+  请求体从来没进过任何比对；wave 44 在这一类里撞出并修掉了 `sortBy`→`sort_by`）。
 
 > **`app/pages/` 下的路由已经一条不剩地量过了**（wave 28 量完最后三条）。
 > **要找活只能去「挂着的账」里挑**，不要再指望「还有没量过的路由」。
@@ -50,10 +52,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 42 收工时逐条跑过）
+### 门禁实测值（wave 44 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；245 文件 / 2041 单测，词典 945 key、18 unused
+make -C frontend-vue verify        exit 0；245 文件 / 2044 单测，词典 945 key、18 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 32 处 / 12 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -62,7 +64,7 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~42 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30~44 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1023**）/ `test:e2e`（**146**）。
 
 > **wave 40 实测：`test:e2e` 的 `webServer` 那 120 秒窗口在这台机器上喂不饱一次
@@ -171,61 +173,60 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 43）做了什么
+## 上一轮（wave 44）做了什么
 
-接着 wave 42 的请求体那条线走，**顺手量到一处真差异**，另外把两条 SDK 机件
-量成了「对着 DeerFlow 网关是空转的」。
+**wave 43 三次没跑成的跨应用请求体实测，这一轮做成了，第一条流程就撞出一条真缺陷。**
 
-### 补掉：提交键少一个状态
+### 实测怎么做的（下次照抄）
 
-上游 `PromptInputSubmit`（`prompt-input.tsx:1093`）三个图标：`submitted → Loader2`、
-`streaming → Square`、**`error → XIcon`**；`status` 由 `chat-page.tsx:415` 算成
-`thread.error ? "error" : thread.isLoading ? "streaming" : "ready"`。
-本仓只有两态——**出错之后那颗键照样画箭头**。
+parity 套件把两个应用架在**同一个真 replay Gateway** 上，是量请求体的唯一正确场地。
+临时写 `frontend-vue/tests/e2e-parity/probe.spec.ts`，`page.on("request")` 抓每条写请求的
+`postDataJSON()` **顶层键集**，三条流程（打开线程 / 打开设置 / 新建会话）各开 fresh
+context 跑一遍，输出 `METHOD 归一化路径 :: 排序后的键集` 再比。**跑之前先确认机器空闲**
+——`webServer` 窗口喂不下高负载下的 `next build`（wave 43 为此失败三次）。
 
-**这是缺口不是「表达方式不同」**：本仓 wave 31 把流错误收进了 workspace toaster，
-而 toaster 有时限——**toast 一过期，界面上不再有任何痕迹**。按 wave 31 自己的判据
-（**一刻发生的事走 toaster，一段时间里为真的事留在页面里**），「上一次 run 失败了」
-属于后者。照上游做、不多做：不接死分支 `submitted`，可访问名不动（只有 streaming 叫
-"Stop"），流式优先于出错。
+### 撞出来的缺陷
 
-### 量成空转的两条 SDK 机件（**都推翻了当时的假设**）
+```
+本仓  POST /threads/search :: limit,metadata,offset,sortBy,sortOrder
+上游  POST /threads/search :: limit,metadata,offset,sort_by,sort_order
+```
 
-| 机件 | 假设 | 实测 |
-|---|---|---|
-| `historyError`（`error = stream.error ?? historyError ?? history.error`，读 `threadHead.tasks.at(-1).error`） | 「重载一个上次 run 失败的线程，上游还看得见错误、本仓什么都没有」 | **不成立**：后端把 task 序列化成 `[{"id","name"}]`（`threads.py:1220/1312`），**`error` 不在里面**，所以 `historyError` 恒为 undefined |
-| `checkpoint` 回发（wave 42） | 上游会把线程头 checkpoint 随每次提交发出去 | 会发，但**空转**：`/history` 给 `{id,ts}`，后端读 `checkpoint_id` |
+**根因：SDK 的「选项名」不是「wire 名」。** SDK 的 `threads.search` 逐字段搭 body
+（`client.js`：`sort_by: query?.sortBy`），本仓 `splitSearchQuery` 把整个选项对象
+**原样摊上线**。**这跟 `run-protocol.ts` 文件头记过的 `streamMode`/`stream_mode`
+是同一个坑**——同一个陷阱在另一处又栽一次。
 
-**→ 线索 169**：SDK 里有整段机件是为 LangGraph 官方后端写的，对着 DeerFlow 网关是空转的。
-**看见 SDK 读某个字段，先去后端确认那个字段真的会发出来**，否则会照着一个永远不成立的
-分支去「补齐」。（顺带：后端确实会从 `task.error` 推出线程 `status="error"`
-（`threads.py:573`），但那是另一个字段，**两边都没有消费点**——本仓 `ThreadStatus`
-里有 `"error"` 这一档，零消费。）
+**今天没炸，但仍然要修**：Gateway 的 `ThreadSearchRequest`（`threads.py:383`）
+只有 metadata/limit/offset/status，**没有排序字段**，多余键被 pydantic 忽略。
+那是「后端还没实现」不是「本仓发对了」——后端哪天认了 `sort_by`，
+上游生效、本仓**静默失效**。已修在 wire 边界，**探针复验：三条流程两个应用逐字相同**。
 
-### 没做成的：跨应用的请求体实测
+### 其余请求体都对得上
 
-parity 套件把两个应用架在**同一个真 replay Gateway** 上，是量请求体的理想场地。
-探针写好了但**三次都没跑起来**：`Timed out waiting {240000,300000}ms from
-config.webServer`，负载 30~42（另一个仓的会话在同一台机器上跑门禁）。
-第三次连 React 侧构建都单独预热过（`next build` 实测 **7.1 分钟**），仍然超时。
-**探针已按规矩删掉**，这件事留给下一轮在机器空闲时做。
+另一条 search（`limit,offset,select,…`）、`POST /threads/«id»/history :: limit`
+两边同名同键；设置页两边都不发写请求。
+
+### 负向验证里一条**无效变异**（不是假绿）
+
+先写的 H3 是「把两个 `if` 去掉、无条件赋值」，结果绿——**但那不是守卫弱，是那条改动
+产出的线上字节完全相同**（`JSON.stringify` 丢 `undefined`），而且上游 SDK 写的就是
+无条件赋值。换成 `?? null` 才真的改变字节，随即变红。
+**判「假绿」之前先问：这条变异真的改变了可观察行为吗？**（线索 170）
 
 ---
 
-## 下一轮（wave 44）：**把请求体实测补上，机器空闲时做**
+## 下一轮（wave 45）：**响应的消费**
 
-1. **跨应用请求体实测**（wave 43 没跑成的那件事）。写
-   `frontend-vue/tests/e2e-parity/probe.spec.ts`，`page.on("request")` 抓
-   `postDataJSON()` 的**顶层键集**，两个应用各开一个 fresh context 走同一条流程，
-   比 `METHOD 归一化路径 :: 排序后的键集`。wave 42 只量了 `POST /runs/stream`；
-   还没量的：`POST /threads`、`POST /history`、`edit-regenerate/prepare`、
-   `POST /threads/{id}/state`、settings 域的 PUT/PATCH。
-   **前置条件是机器空闲**——`webServer` 窗口喂不下一次高负载下的 `next build`。
-2. **响应的消费还是没比过。** 台账比的是「发了哪些请求」，不是「拿到之后各自读了哪些字段」。
-   wave 43 顺手比了 `/history` 一条（两边都整份取 `values`；上游多读 `tasks[].error`
-   与 `checkpoint`，**两个都是空转**）。还没比的：`GET /threads/{id}`、
-   `/messages/page`、`/token-usage`。**方法**：grep 两边对同一份响应各读了哪些字段，
-   逐个问「另一边不读它，界面上少了什么」——线索 169 提醒先确认后端真的发那个字段。
+请求体这一类扫完了（`/runs/stream` wave 42、其余 wave 44）。**还没比过的是「同一份
+响应，两边各读了哪些字段」**——台账比的是「发了哪些请求」，不是「拿到之后怎么用」。
+
+已经比过的一条：`/history`（两边都整份取 `values`；上游多读 `tasks[].error` 与
+`checkpoint`，**两个都是空转**，见线索 169）。还没比的：`GET /threads/{id}`、
+`/messages/page`、`/token-usage`、`/features`、`/skills`。
+
+**方法**：grep 两边对同一份响应各读了哪些字段，逐个问「另一边不读它，界面上少了什么」。
+**先按线索 169 确认后端真的会发那个字段**，否则会照着一个永远不成立的分支去补齐。
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -446,7 +447,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 169 条在记忆文件里）
+## 其他常踩的坑（完整 170 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
