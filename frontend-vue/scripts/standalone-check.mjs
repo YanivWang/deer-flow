@@ -35,6 +35,8 @@ const CROSS_APP_BY_DESIGN = {
     "产品表面对照；缺席时整组 describe.skipIf 跳过。",
   "tests/guards/upstream-citations.test.ts":
     "钉源码注释里对上游的『文件:行号』引用还指得到东西；缺席时整组 describe.skipIf 跳过。",
+  "tests/guards/upstream-zero-claims.test.ts":
+    "把「上游这东西没人用」这类散文断言变成门禁；缺席时整组 describe.skipIf 跳过。",
   "scripts/record-react-markdown.mjs":
     "golden 夹具录制器；夹具已签入，缺席时退出 0 不重录。",
   "tests/fixtures/react-markdown-dom.json":
