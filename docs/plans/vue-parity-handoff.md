@@ -436,11 +436,28 @@ wave 58 扫哪里：
   以及画面上的 `@mousemove`（上游 forwardMouse 只接 onClick）。
   **这里原来写着「四处 → 三处」，从 wave 39（`b700cf17`）起就过期了**——
   记录与被记录的东西是两份（线索 180）。
-- **`Button` 的 as-child —— wave 37 量完决定不做。** 上游 `<Button asChild>` 会把
-  `data-slot`/`data-variant`/`data-size` 放到 `<a>` 上，本仓裸调 `buttonVariants()`
-  只出 class。wave 34 与 wave 37 两次复验：两边**都没有任何选择器**消费它，
-  `data-*` 也不进 aria 快照——**零可观察收益**，而要动 L2 primitive 的 9 个消费者。
-  哪天要翻案，判据是「有人真的写了 `[data-slot="button"]` 的选择器」。
+- **`Button` 的 as-child —— wave 37 量完决定不做，wave 58 订正了理由。** 上游
+  `<Button asChild>` 会把 `data-slot`/`data-variant`/`data-size` 放到 `<a>` 上，
+  本仓裸调 `buttonVariants()` 只出 class。**决定不变**（要动 L2 primitive 的 9 个
+  消费者，而 `data-*` 不进 aria 快照），**但「两边都没有任何选择器消费它」是错的**：
+  `tests/unit/settings/settings-panels.dom.test.ts` 里那条
+  `button[data-slot="button"]` 既选 `data-slot` 又断言 `data-variant`，
+  而它是 **wave 23（`3d6bb266`）** 落的——**比 wave 37 那次「复验」还早十四轮**
+  （线索 152：「已核实」三个字本身要重验）。而且它不是孤例：
+  **全仓有 14 个测试文件在按 `data-slot="button"` / `data-variant` 选或断言。**
+  **它不影响这个决定**：那条选择器要的是真 `<button>` 上的 `data-*`，本仓的
+  `Button.vue` 一直就有；as-child 缺的只是**裸调 `buttonVariants()` 的那两处
+  `<NuxtLink>`**（`app/pages/index.vue:51`、`app/components/chat/AgentChat.vue:1659`）
+  上的 `data-*`，而没有任何选择器去选它们。
+  **翻案判据也跟着收紧**（原来那句松到会被上面那条误触发）：
+
+  ```bash
+  # 有没有人按 data-* 去选一个「裸调 buttonVariants 的元素」（当前是那两处 NuxtLink）
+  grep -rn 'buttonVariants(' frontend-vue/app | grep -v 'ui/button/'
+  grep -rn 'data-slot=.button.\|data-variant' frontend-vue/tests frontend-vue/app | grep -v 'ui/button/'
+  ```
+
+  两条的交集非空时才翻案。**wave 58 实测：交集为空。**
 - ~~run 成功结束之后退回「重新取的 checkpoint」~~ —— **wave 41 做完了。**
   `useThreadStream` 的 `onSettled` 在 `completed` 上重取一次，走新加的
   `runner.refreshDurableState`（`seedDurableState` 的 `idle` 判据会把这一帧**无声丢掉**
