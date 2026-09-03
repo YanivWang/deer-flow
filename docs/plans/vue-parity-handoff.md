@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 53，2026-09-04）
+## 当前状态（截至 wave 54，2026-09-04）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53。
 - **动过 `frontend/` 的是十四轮，不是三轮**（wave 52 实测订正）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -28,7 +28,7 @@
   wave 52 实测**无漂移**，marker 也确实是 HEAD 的祖先——
   **边界规则本身有机器在守，需要人记的只有「这类改动做过哪些轮」。**
   最近三轮的内容：wave 40 重连预算耗尽后那颗键在说反话；wave 39 命令面板搜索框的
-  可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~52 都没动过。
+  可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~53 都没动过。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
 - 覆盖率棘轮：covered **24**，pending **仍是 1 条**（`chat-thread-init-ordering`）——
   wave 29 **实测**过，结论是**不能加**，翻案判据写在 `$pendingReasons` 里。
@@ -63,10 +63,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 52 收工时逐条跑过）
+### 门禁实测值（wave 53 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；249 文件 / 2065 单测，词典 945 key、18 unused
+make -C frontend-vue verify        exit 0；249 文件 / 2066 单测，词典 945 key、18 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 37 处 / 16 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -75,7 +75,7 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~52 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30~53 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1023**）/ `test:e2e`（**146**）。
 
 > **wave 40 实测：`test:e2e` 的 `webServer` 那 120 秒窗口在这台机器上喂不饱一次
@@ -193,65 +193,69 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 52）做了什么
+## 上一轮（wave 53）做了什么
 
-**扫 `baseline/` 里带 `$` 前缀的纯说明键、README 的套件描述、`tests/`/`scripts/`
-文件头里的「判据」段落。翻出两条记错的账，都是记录错了，产品行为没问题。**
+**扫 `BEHAVIOR_CONTRACTS.md` 的 A–S 十九组与 `app/**` 文件头的判据段落。
+翻出的是同一类：本仓引用了上游的一个具体「值」，上游一改就静默过期。**
 
-### 一：`react-parity-scope.json` 说自己只有一个消费者，其实有两个
+### 翻出来的：三处过期的上游值
 
-`$comment` 结尾写着「product-surface.test.ts 是它唯一的消费者」。那句话落在
-`07a1d766`（2026-08-26 00:01），而 `scenario-coverage.test.ts` 从
-**`23aa5ac2`（00:31）** 起就在读它——**30 分钟后就错了，然后错了九天、约五十轮**。
-它误导的正是最不该被误导的那个判断：**「我改这份数据，谁会跟着变红？」**
+| 引用 | 写着 | 实际 | 什么时候变的 |
+| --- | --- | --- | --- |
+| `message-merge.ts` + `message-identity.ts` 的 `message-merge.test.ts` | 1,740 行 | **2,095** | `44832a5e`（2026-08-14 合上游），错了三周 |
+| `css-source-scan.test.ts` 的 `globals.css` | 453 行 | **454** | `4804faa1`（2026-08-24，本仓自己动 `frontend/` 那次） |
+| H3 引的 React class | `[&>[data-panel]]:…` | 上游写 `*:data-panel:…` | Tailwind v4 变体写法 |
 
-**修法照本仓自己的教条：散文改不出这个性质，数据可以。** 手工维护的三份 baseline
-各自声明一条 **`$readers`**，由 `tests/guards/baseline-keys-consumed.test.ts`
-与**实测引用集**逐字比对。口径是**引用**不是读取（注释剥掉后提到文件名就算）——
-缩窄成「真的 readFileSync 了」要靠正则猜，而 prettier 会把
-`read("baseline/x.json")` 折成两行，**按行匹配会把三个真读者判成没读**。
-生成出来的四份不声明（手加的键下次重新生成就被写掉），如实写在文件头里。
+**三处都是写下时准确的，不是记错、是过期**——当时验过一遍，之后再没人验第二遍。
+`文件:行号` 那一类 wave 46/51 已上门禁，**「多少行」这一类一直没有**。
 
-### 二：「三次动 `frontend/`」记错了，实际十四轮
+> **方法教训**：`git log -- <path>` 默认做历史简化，**合并进来的上游改动看不见**。
+> 三处里有两处是 `--full-history` 才露出来的。
 
-见上面「当前状态」。**这一条有意不上门禁**：唯一验法是数 git 历史，钉一个数字就是
-`e2e-suite-contract.test.ts` 文件头点名的反模式（守卫钉快照数字，加一次两边同改
-就要改一次守卫）。**边界规则本身已经有 `upstream-drift.mjs` 在守**，
-所以产出是把那条命令写进文档，让下一轮去量。
+### 门禁：行数断言必须等于实际行数
+
+`upstream-citations.test.ts` 加一条，形状是**反引号文件名紧挨着行数**，实测抓到 6 处。
+**判据是相等不是范围**：行号引用允许漂几行（照着还找得到），
+而「N 行」是关于整份文件的精确断言，它变红那一刻正是该去看上游改了什么的时候。
+顺手把两处说不清指哪份文件的写法改成可判的；`globals.css` 那句里数字不承重，
+**删掉数字而不是改数字——不承重的数字就别写**。
 
 ### 逐条撞过、成立的
 
-`$criticalPathComment` 的三个标记（对 492 个签入构建 chunk 实测：katex 1、shiki 1、
-mermaid 3 且全是 mermaid 自己的分块，`app/`+`packages/` 零命中）、`$measured` 三段的
-日期/轮次/commit 与预算数字、`$groups` 的 CDP 判据、覆盖率棘轮的 27=24+1+2、
-`$exemptModes` 点名的两个上游文件、`--accept` 语义、上游 `buttonVariants` 与
-`<Reasoning>` 的唯一消费者、`invalidateStoppedThreadCaches` 的 6 个 key、
-`VUE_ONLY_BLOCKS` 的 8 个块、README 的套件一行说明——**全部成立**。
+B15（上游调用点确实没传 `feedback`）、S8b/S8c 的 SDK 内部逐字存在、A1 `throttle: true`、
+H2/H9、E22 `inputPolishDisabled`、H3 的**机制**（splitpanes 4.1.2 自带 pane 过渡）、
+合同里 8 条 API 路径全在 openapi 快照里、`app/**` 里 **8 处「唯一的调用点/消费者」全部成立**、
+其余四处行数（98 / 34 / 471 / 498）与 runtime-core 3.5.40 全部仍然精确。
 
-**`buttonVariants` 差点误报**（线索 173 第四次发作）：本仓有 3 个消费者，
-但那句话的主语是**上游**。**先读断言说的是哪个作用域。**
+### 一次真失败，不是抖动
+
+第一遍 `verify` RC=2，`format-check` 红——改短 H3 那串 class 之后 Markdown 表格列宽
+不再是 prettier 的写法。**是自己改出来的**，`prettier --write` 只动了那一行，重跑全绿。
 
 ---
 
-## 下一轮（wave 53）：**收尾判据仍在重新计数**
+## 下一轮（wave 54）：**收尾判据仍在重新计数**
 
-47 干净、48/49/50/51/52 各翻出一条。别报「还剩几轮」。
+47 干净，48/49/50/51/52/53 各翻出一条。别报「还剩几轮」。
 
-wave 53 扫哪里：
+wave 54 扫哪里：
 
-1. **`app/**` 文件头里的「判据/取舍」段落**——wave 52 只抽查了 `tests/`/`scripts/`
-   那一侧，而 `app/**` 是本仓写「为什么这么做」最密的地方，
-   wave 46/51 钉的是那里的**引用指得到**，**说得对不对**只在 47（否定句）与
-   49（肯定句）抽查过一部分。
-2. **`BEHAVIOR_CONTRACTS.md` 的 A–S 十九组本身**。wave 51 撞了 S8b/S10/N6/L14/A5 五条，
-   剩下十四组没撞过。它们是本仓所有取数与交互决定的宪法，过期一条就会挡住一次真对齐
-   （`settings.memory.*` 那条挡了十轮）。
-3. **`scripts/` 下那些「不是门禁」的工具自己的判据**（`upstream-drift.mjs`
+1. **`BEHAVIOR_CONTRACTS.md` 剩下的十几组**。wave 51 撞了 S8b/S10/N6/L14/A5，
+   wave 53 撞了 A1/B15/E22/H2/H3/H9/S8c + 8 条 API 路径，**C/D/F/G/I/J/K/M/O/P/Q/R
+   这些组基本没撞过**。它们是本仓所有取数与交互决定的宪法。
+2. **`scripts/` 下那些「不是门禁」的工具自己的判据**（`upstream-drift.mjs` 的
    「不阻断构建」、`asset-budget.mjs`、`i18n-manager.mjs` 的扫描口径）。
    它们没有门禁看着，而好几条门禁的结论建立在它们的口径上。
+3. **`packages/agent-core/` 那一层的文件头**。全仓唯一一个独立包，
+   它的 `AGENTS.md`/`ARCHITECTURE.md` 与合同版本号（`AGENTS_CORE_CONTRACT_VERSION = "m8"`）
+   只有一条 doc-facts 断言看着，其余判据一条都没撞过。
 
-## 更早几轮的记录（49 / 50 / 51 一句话，48 保留全文）
+## 更早几轮的记录（49~52 一句话，48 保留全文）
 
+- **wave 52**：`react-parity-scope.json` 的 `$comment` 说「product-surface.test.ts 是它
+  唯一的消费者」，而 `scenario-coverage.test.ts` 在那句话落地 **30 分钟后**就开始读它，
+  错了九天约五十轮。修法是 `$readers` 数组 + 门禁与实测引用集逐字比对（→ 线索 178）。
+  同轮订正了「三次动 `frontend/`」（实际十四轮）。
 - **wave 51**：`tests/fixtures/streams/README.md` 说「debug 实测数据留在
   `playwright.m0-real-backend.config.ts` 的注释里」，而那份 config 在 `1209651f`
   ——**正是写下 `doc-references.test.ts` 的那次重命名**——里被拆掉，数字没跟着搬。
@@ -530,7 +534,7 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 178 条在记忆文件里）
+## 其他常踩的坑（完整 179 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -563,6 +567,10 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   所以**靠交互才出现的东西，位置永远进不了台账**，只能单测守（线索 137）。
 - **注释里带点写一条死词条会把它从 unused 集里弄没**（线索 126）。要写成
   「container 下的 leafName」，改完跑 `make i18n-unused` 核对。
+- **引用上游的一个「值」（行数、class 串、常量）会随上游前进静默过期**（线索 179）。
+  `文件:行号` 允许漂几行，**「N 行」不允许**——它是关于整份文件的精确断言。
+  **不承重的数字干脆别写。** 另：`git log -- <path>` 默认做历史简化，
+  **合并进来的上游改动看不见**，查这类过期要 `--full-history`。
 - **散文里「谁在引我 / 谁是唯一消费者」这类话，写下当天就可能过期**（线索 178）。
   `react-parity-scope.json` 那句 30 分钟后就错了。**改成数据 + 门禁比对**，
   而且口径要选**能量准**的那个（「引用」可以，「读取」要靠正则猜行）。
@@ -573,7 +581,7 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 
 ## 背景在哪
 
-- 每一轮的实测记录、178 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、179 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
