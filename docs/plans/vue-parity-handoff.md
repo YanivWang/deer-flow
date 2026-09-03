@@ -1,16 +1,16 @@
 # React → Vue 对照对齐：轮次交接文档
 
 **这份文档是每一轮开工的第一读物。** 它记录「上一轮做完了什么、下一轮做什么、
-有哪些账挂着」。深度背景（157 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
+有哪些账挂着」。深度背景（158 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
 `deerflow-parity-harness-plan` 里；这里只放接手一轮所需的最小集合。
 
 **每推完一个阶段（一轮 wave），就地更新这份文档，然后开始下一轮。**
 
 ---
 
-## 当前状态（截至 wave 36，2026-09-03）
+## 当前状态（截至 wave 37，2026-09-03）
 
-- 分支 `main-wc`。`54cfa76d` = wave 35，`79afa765` = wave 36，chore `d2800af1`。
+- 分支 `main-wc`。`79afa765` = wave 36（chore `d2800af1`），`7eea78f0` = wave 37。
 - **wave 36 动了 `frontend/`**（`SidebarTrigger` 的窄屏图标，两边同改），
   **upstream marker 已推到 `79afa765`**。wave 30~35 都没动过。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
@@ -31,7 +31,8 @@
   看不见的 10 条死词条，并给「本仓独有的词典块」补了守卫）与
   **写操作的成功播报**（wave 34：五个面 12 处，unused 36→26）与
   **四条「上游在用、本仓没有」的 UI 形状**（wave 35，unused 26→22）与
-  **窄屏侧栏触发器 + 两句说明文字**（wave 36，unused 22→20，**两边同改**）。
+  **窄屏侧栏触发器 + 两句说明文字**（wave 36，unused 22→20，**两边同改**）与
+  **模型选择器筛选 + 技能 chip 那一行**（wave 37）。
 
 > **`app/pages/` 下的路由已经一条不剩地量过了**（wave 28 量完最后三条）。
 > **要找活只能去「挂着的账」里挑**，不要再指望「还有没量过的路由」。
@@ -40,10 +41,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 36 收工时逐条跑过，零重跑零红）
+### 门禁实测值（wave 37 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；243 文件 / 2029 单测，词典 945 key、20 unused
+make -C frontend-vue verify        exit 0；243 文件 / 2030 单测，词典 945 key、20 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 31 处 / 11 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      263 + 21 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -52,7 +53,7 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~36 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30~37 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1022**）/ `test:e2e`（**146**）。
 
 **已知的两条负载抖动**（都不是产品缺陷，但每次遇到都要重新证一遍因果）：
@@ -153,61 +154,68 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 36）做了什么
+## 上一轮（wave 37）做了什么
 
-wave 34 留下三条没量过的 unused，`SidebarTrigger` 那条又被拖了三轮。本轮一次做完。
-**这是 wave 28 以来第一次动 `frontend/`**，所以另有一个 chore 提交（marker → `79afa765`）。
+正题是「剩下的小账逐条**先量再写**」。四条量下来：**两条比记录的大且值得做，
+一条零收益、一条已经有守卫在管**。
 
-### 一、窄屏那颗侧栏触发器一直指反（两边同改）
+### 做掉的两条
 
-`SidebarTrigger` 用 `open` 挑图标，而 `open` 只描述**桌面**侧栏；窄屏抽屉的开合是
-`openMobile`。上游三处调用**都带着 `md:hidden`**——这颗按钮本来就是专门给移动端
-渲染的。后果：抽屉关着、按钮画着「收起」，点开之后图标也不变。
+1. **模型选择器：照屏幕上的字打，一条都搜不到。** 列表写 `display_name`
+   （"MiniMax CN / MiniMax-M3"），筛的是 `name`（`minimax-m3`）——字段是照上游来的，
+   但上游有 command-score 的模糊评分兜着。修法只把**空格/连字符/下划线**折掉，
+   仍是子串、是原判据的**严格超集**、不引依赖。**非连续子序列（"mm3"）仍然没有**：
+   那要连同排序一起来，否则 "abc" 命中几乎所有模型；`command-score`/`cmdk`
+   都不在依赖里（reka-ui 的 `useFilter` 是 Intl.Collator 的 contains，不是评分）。
+2. **技能 chip 那一行不是「两个布局类」，是结构不同。** 上游是
+   `whitespace-pre-wrap break-all` 的**可滚容器**、chip 靠 `mr-2 align-top` 浮在文字里；
+   本仓是 `flex` 两列。差四处：正文不绕排、**没有 `max-h-48`**（长草稿撑到没上限）、
+   **chip 没有 45% 宽度上限**（长技能名把可编辑区挤没）、**点空白不聚焦末尾**。四处全补。
 
-- **上游**（`ui/sidebar.tsx:261`）：组件里 `isMobile ? openMobile : open`。
-- **本仓**：选择留在**调用点**（`open` 是必填 prop 是既定设计）。两处带 `md:hidden` 的
-  直接传 `mobileOpen`；侧栏自己头部那处在桌面与抽屉里都渲染，所以问一次 `isNarrow`。
+### 量完决定不做的两条
 
-**顺带把一条钉住了缺陷的守卫改掉**：`sidebar-trigger.dom.test.ts` 此前要求三处
-**都**传 `:open="sidebarOpen"`——它把 bug 钉成了合同。
+- **`Button` 的 as-child**：两边**仍然没有任何选择器**消费 `data-slot`/`data-variant`/
+  `data-size`，`data-*` 也不进 aria 快照——**零可观察收益**，而要动 L2 primitive 的
+  9 个消费者。**有意不做。**
+- **browser 面板剩余三处分叉**：`BrowserPanel.vue` 文件头逐条写着为什么，仍然成立。
 
-### 二、三条没量过的 unused，量完是「两真一假」
+### 守卫复查（线索 157 的推论）：到此为止
 
-`uploads.uploading`（上传中只有转圈图标、没有文字替代）与
-`toolCalls.skillInstallTooltip`（安装键缺一句「会做什么」）是真缺口，已补；
-**`uploads.uploadingFiles` 不是缺口**——上游边传边发所以插一条乐观 AI 消息，
-本仓的上传发生在 composer 里，**架构不同**。
+形如「N 处必须一样」的守卫**全仓只有两个**——`sidebar-trigger`（wave 36 已修）与
+`e2e-suite-contract`。后者**本来就是好的**，文件头写着「原来钉的是『恰好 29 文件
+169 测试』这类快照数字……现在钉的是每个 spec 恰好被一个 config 覆盖」。
+**这条教训代码库自己早就记下了，wave 36 那次是漏网的一处，不是普遍现象。**
+所以这一项不再扩大范围。
 
-### 三、自审：两条假绿，与 wave 34 同一条机制（连着三轮了）
+### wave 37 新增的踩坑线索（记忆里编号 158）
 
-又一次拿 `make i18n-unused` 当守卫，而叶子名撞车时它两边都看不见
-（`uploads.uploading` 的叶子撞 `session.uploading` / `:uploading=`）。
-补了真挂载的 `attachment-and-install-labels.dom.test.ts` 之后转红。
+- **158. 补判据时要问「新的是不是旧的超集」。** 模型筛选那条如果写成「只按折叠后比」，
+  会悄悄丢掉原来能搜到的一类查询。负向验证里专门加一条 A2 钉这个方向——
+  **只测「新功能能用」的变异，换成替换式实现也是绿的。**
 
-### wave 36 新增的踩坑线索（记忆里编号 157）
+## 下一轮（wave 38）：**收尾判据第一次可能成立**
 
-- **157. 守卫本身可能把缺陷钉成合同。** `sidebar-trigger.dom.test.ts` 要求三处调用
-  **都**传 `sidebarOpen`——而那正是 bug。**改行为之前先看守卫在钉什么**：
-  一条「三处必须一样」的断言，往往是在钉「当初三处碰巧一样」，不是在钉判据。
+wave 34 定的判据：**连着两轮翻不出记错的账才算真收尾。**
 
-## 下一轮（wave 37）：能不能收尾，看这一轮翻不翻得出记错的账
+- wave 34 翻出一条（memory 那六条记反了）
+- wave 35 翻出一条（`channels.connectedAs` 不是缺口）
+- wave 36 翻出一条（守卫本身把缺陷钉成了合同）
+- **wave 37 翻出一条**（chip 那条记成「两个布局类」，实际是四处结构差异）
 
-wave 34 定的收尾判据：**连着两轮翻不出记错的账才算真收尾。**
-34 翻出一条（memory 那六条）、35 翻出一条（`channels.connectedAs`）、
-36 翻出一条（**守卫本身把缺陷钉成了合同**，线索 157）。**三轮三条，还不能收尾。**
+**四轮四条，仍然没到。** 但 wave 37 之后，「挂着的账」里**已经没有未量过的条目了**——
+每一条要么做掉了、要么写着量过之后为什么不做。所以 wave 38 的正题是：
 
-1. **把剩下的小账逐条量一遍**（不是照着清单写代码，是先量）：
-   `Button` 的 as-child、模型选择器筛选、chip 的布局类、browser 面板剩余三处分叉。
-   **量的时候注意线索 155**：「上游有、本仓没有」不等于用户看不到。
-2. **顺手复查一批守卫在钉什么**（线索 157 的推论）：挑几条形如「N 处必须一样」
-   或「必须等于某个字面量」的断言，问一句「它钉的是判据还是当初的巧合」。
-3. **剩下的 20 条 unused** 已经逐条撞过上游，短期内不必再动。
+1. **把「挂着的账」整章通读一遍，只做一件事：找还有没有记错的。**
+   不写代码，只核对。**如果一条都翻不出**，加上 wave 38 自己这一轮，
+   就满足「连着两轮」——可以宣布收尾。
+2. **翻得出就照常做掉**，然后 wave 39 再试一次。
+3. 顺带复量一次那三条**跨域候选**（它们从来没被正面量过）：
+   「run 成功结束之后退回重新取的 checkpoint」、
+   「首次发送后那一屏的 `Completed in <1s` 与 `Edit and rerun`」（被上游竞态阻塞）、
+   `/auth/callback`（wave 33 已判定不做，只需确认判据还成立）。
 
-### 还剩几轮
-
-**别再报数字**。29~36 报过 7~9 / 6~8 / 5~6 / 4 / 2 / 2~3 / 2~3，**八轮没往下走过**，
-因为每一轮都在翻出新的记错的账——这本身就是这个阶段的产出形态。
-用判据代替数字：**连着两轮翻不出记错的账，就收尾。**
+**不要报「还剩几轮」**——29~37 报过 7~9 / 6~8 / 5~6 / 4 / 2 / 2~3 / 2~3 / 2~3，
+九轮没往下走过。用判据代替数字。
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -296,8 +304,11 @@ wave 34 定的收尾判据：**连着两轮翻不出记错的账才算真收尾�
   "Command Palette" / "Search for a command to run..."，走 `primitives.*`）。
   **剩下搜索框的可访问名**：上游撞 cmdk 的空 `<label>` 缺陷，本仓有 `aria-label`——
   本仓这一侧更好，有意保留。这一屏没被取样。
-- **模型选择器的筛选**：上游是 cmdk 的 command-score 模糊评分，本仓是子串匹配。
-  写在 `ComposerModelSelector.vue` 文件头。
+- **模型选择器的筛选** —— wave 37 补了**分隔符不敏感**那一档（列表写 `display_name`
+  而筛 `name`，照屏幕上的字打原来一条都搜不到）。**剩下的分叉**：cmdk 的非连续
+  子序列匹配 + 评分排序仍然没有，理由写在 `ComposerModelSelector.vue` 文件头
+  （要连排序一起来，否则 "abc" 命中几乎所有模型；而 `command-score`/`cmdk`
+  都不在依赖里）。
 - ~~上游 toast / 本仓静默或内联~~ —— **wave 31 做完了**（普查出 22 处，
   全部收进 workspace toaster）。判据写在 `AgentChat.vue` 的 `failedSend` 声明上：
   **一刻发生的事走 toaster，一段时间为真的事留在页面里**。
@@ -321,9 +332,11 @@ wave 34 定的收尾判据：**连着两轮翻不出记错的账才算真收尾�
   错的是它裸写在顶层因而赢过所有工具类；挪进 `@layer base` 之后，
   BrowserPanel 里那些裸 `border-b` 与上游落到同一个颜色，那条分叉不再存在。
   **`BrowserPanel.vue` 的文件头已同步改过**（四处 → 三处）。
-- **`Button` 的 as-child 没做**：上游 `<Button asChild>` 会把
+- **`Button` 的 as-child —— wave 37 量完决定不做。** 上游 `<Button asChild>` 会把
   `data-slot`/`data-variant`/`data-size` 放到 `<a>` 上，本仓裸调 `buttonVariants()`
-  只出 class。两边都 grep 过，**没有任何选择器消费它**，所以现在只是合同差异。
+  只出 class。wave 34 与 wave 37 两次复验：两边**都没有任何选择器**消费它，
+  `data-*` 也不进 aria 快照——**零可观察收益**，而要动 L2 primitive 的 9 个消费者。
+  哪天要翻案，判据是「有人真的写了 `[data-slot="button"]` 的选择器」。
 - **run 成功结束之后退回「重新取的 checkpoint」**（跨域候选）。
 - **上游种子取数失败会弹 toast**（`hooks.ts:1839`），本仓静默降级（S8 明写 403/404 属常态）。
   **这一条 wave 31 有意没动**：它不是「缺一层播报」，是 S8 写死的「403/404 属常态」，
@@ -400,7 +413,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 157 条在记忆文件里）
+## 其他常踩的坑（完整 158 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -435,7 +448,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 
 ## 背景在哪
 
-- 每一轮的实测记录、157 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、158 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
