@@ -27,7 +27,7 @@
       "frontend/src/content"
     ]
   },
-  "exemptModes": {
+  "$exemptModes": {
     "$comment": "整站无后端的静态回放部署。它由 frontend/src/core/static-mode.ts 的环境变量开关选中，Vue 不欠这个部署模式。注意 /showcase/[thread_id] 不属于它：那条路由走 mock client 靠的是路由前缀（frontend/src/components/workspace/chats/use-thread-chat.ts），与本开关无关，两边都有，因此在对齐范围内。",
     "modes": ["NEXT_PUBLIC_STATIC_WEBSITE_ONLY=true"]
   },
