@@ -62,6 +62,24 @@ describe("ARCHITECTURE.md 与源码一致", () => {
     // 每一个都必须在文档里被点名
     const unlisted = kinds.filter((kind) => !doc.includes(`\`${kind}\``));
     expect(unlisted, "这些 kind 源码里有、文档没提").toEqual([]);
+
+    /*
+      反方向也要查。上面三条都过得去、而文档多点名一个源码里没有的 kind：
+      数量那条比的是「九种」这个**词**与源码条数，列表本身不参与计数；
+      「每个 kind 都被点名」只从源码这一侧看。于是文档里躺一个已改名的旧 kind
+      不会有任何东西变红——正是 wave 48 在 baseline 键上撞过的那种单向断言。
+    */
+    const sentence = /`AgentErrorKind`[^：]*：([^。]*)。/.exec(doc)?.[1];
+    expect(sentence, "文档里找不到那句枚举 kind 的话").toBeTruthy();
+    const listed = [...(sentence ?? "").matchAll(/`([^`]+)`/g)].map(
+      (m) => m[1]!,
+    );
+    expect(listed.length).toBe(kinds.length);
+    const known = new Set<string>(kinds);
+    expect(
+      listed.filter((name) => !known.has(name)),
+      "文档点名了源码里没有的 kind",
+    ).toEqual([]);
   });
 
   it("只有 network 可以退避重连", () => {

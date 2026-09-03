@@ -421,7 +421,11 @@ wave 55 扫哪里：
   其中 `border-border` 那一条 **wave 32 已经结清**——本仓一直有那条基础层，
   错的是它裸写在顶层因而赢过所有工具类；挪进 `@layer base` 之后，
   BrowserPanel 里那些裸 `border-b` 与上游落到同一个颜色，那条分叉不再存在。
-  **`BrowserPanel.vue` 的文件头已同步改过**（四处 → 三处）。
+  **另一条「关闭按钮没有可访问名」wave 28 就两边同改结清了**，于是
+  `BrowserPanel.vue` 文件头现在写的是**两处**：`role="alert"` 的内联错误 + 重试，
+  以及画面上的 `@mousemove`（上游 forwardMouse 只接 onClick）。
+  **这里原来写着「四处 → 三处」，从 wave 39（`b700cf17`）起就过期了**——
+  记录与被记录的东西是两份（线索 180）。
 - **`Button` 的 as-child —— wave 37 量完决定不做。** 上游 `<Button asChild>` 会把
   `data-slot`/`data-variant`/`data-size` 放到 `<a>` 上，本仓裸调 `buttonVariants()`
   只出 class。wave 34 与 wave 37 两次复验：两边**都没有任何选择器**消费它，
