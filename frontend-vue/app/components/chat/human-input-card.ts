@@ -19,7 +19,7 @@
                    字符串一律 `trim()` 之后再判空。本仓此前把这条判定内联在 SFC 里写成
                    `value === ""`，于是一个只填了空格的必填项能通过校验直接提交；
                    上游用例明写 `amount: "  "` 必须被判为缺失
-                   （frontend/tests/.../human-input-card.test.ts:184）。
+                   （frontend/tests/unit/components/workspace/messages/human-input-card.test.ts:184）。
 */
 
 import { isImeComposing, type ImeKeyboardEvent } from "@/core/input/ime";
