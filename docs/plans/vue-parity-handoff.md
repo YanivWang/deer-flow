@@ -8,7 +8,7 @@
 
 ---
 
-## 当前状态（截至 wave 48，2026-09-03）
+## 当前状态（截至 wave 49，2026-09-03）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
@@ -55,7 +55,7 @@
 ### 门禁实测值（wave 44 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；247 文件 / 2051 单测，词典 945 key、18 unused
+make -C frontend-vue verify        exit 0；248 文件 / 2053 单测，词典 945 key、18 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 35 处 / 14 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -173,58 +173,49 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 47）做了什么
+## 上一轮（wave 48）做了什么
 
-**wave 46 验的是「引用指得到」，这一轮验「断言说得对」。结论：这一轮是干净的。**
+**扫从来没有被任何东西验过的那一类：`baseline/` 下的纯数据文件——它们说的话没有任何代码验。**
+翻出一条，**所以收尾判据重新计数**（47 干净、48 不干净）。
 
-### 38 条否定断言，22 条可机检的全部撞过，一条都没过期
+### 翻出来的：`exemptModes` 声明了一条豁免，零消费者
 
-`app/**` 的注释里有 **38 处「上游没有 X / 上游也零消费 / 上游从不 Y」**。
-这类断言一条行号都不带，机械判无从下手，只能逐条拿名字去 `frontend/src` 撞。
-抽几条（都是精确命中）：`onFollowupsVisibilityChange` 定义处之外 0 处；
-`input-box.tsx` 的 `aria-disabled` 0 处；`AuthProvider.tsx:54` 的
-`user !== null` 逐字相同；`ConversationScrollButton` 定义处之外 0 处；
-上游没有任何一条 spec 走到 `/workspace/agents/new`；上游从不裸调 `buttonVariants()`；
-上游 Sheet 抽屉里 `SheetClose` 0 处。
+`react-parity-scope.json` 的 `exemptModes` 写着「静态整站模式不欠」，**没有任何东西读它**。
+这是**线索 131 的第二次发作**（wave 29 的 `$pendingReasons` 挂了十几轮没人读）。
 
-### 两条我最怀疑的，结果是自己搞错了范围
+**它确实是纯说明，不是漏接**：`product-surface.test.ts` 比的是**路由**，
+而静态模式不是路由、是 env 开关（`NEXT_PUBLIC_STATIC_WEBSITE_ONLY`，上游 35 处）下的分支，
+路由级比对里天生没有它要排除的东西。**问题在归错了类**——本仓约定 `$` 开头 = 纯说明，
+它没带 `$`，长得像真数据。已改名 `$exemptModes`。
 
-- **「`isMock` 上游有 23 处」**：全仓 grep 得 119，一度以为差五倍——实际断言的作用域是
-  它对照的**那一个文件**，`core/threads/hooks.ts` 里**正好 23**。
-- **「subtask 展开区的失败重试上游没有」**：grep 到 6 处 `isLoading|retry`，读进去发现
-  上游 `subtask-card.tsx:107` 写的正是 "Allow a retry on the next expand if the fetch failed."
-  ——与本仓一字不差。
+### 把约定变成门禁，而不是只修这一个键
 
-**→ 线索 173：证伪本身也要量对范围，否则会凭空造出「发现」。**
+`tests/guards/baseline-keys-consumed.test.ts`：**`baseline/*.json` 里每个不带 `$` 前缀的
+顶层键都必须至少有一个 `.ts`/`.mjs`/`.vue` 读它。**
+`$` 开头 = 纯说明；不带 `$` = 真数据，没人读就是「写了没人看」——**改错了不会有任何门禁变红**。
+**只钉顶层键**（深层字段的消费方式太多，钉进去是噪声；顶层键是这些文件的目录）。
 
-### 做的事：把三条最有后果的断言钉进门禁
+### 守卫自己第一版假绿了 → 线索 174
 
-这类断言**一旦过期，挡住的是一次真的对齐**（wave 34 的 `settings.memory.*` 挂了十轮），
-而它们**没有任何门禁看着**。`tests/guards/upstream-zero-claims.test.ts` 钉三条，
-每条写清**它过期时本仓要重新做的那个决定**：`onFollowupsVisibilityChange`（本仓有意
-不照抄的死接口）、`ConversationScrollButton`（交接曾写成「React 多一颗滚动按钮」，
-实测两边都没有）、`PromptInputCommand`（wave 39 cmdk 修法的第三个调用点，当时无消费者）。
-
-**判据是「零消费」不是「不存在」**——上游留着定义不用是常态，**有人开始用才是信号**。
-配一条「定义处本身还在」，否则上游改名会让每条断言静默全绿。
-已声明进 `CROSS_APP_BY_DESIGN`：**BLOCKING 仍 0/0**，DECLARED 34/13 → **35/14**。
+第一版对 K1（把 `$exemptModes` 改回 `exemptModes`）**绿**：守卫扫 `tests/**`，
+而**它自己的文件头注释里提到了 `exemptModes`**，注释被算成了消费者。
+**这是线索 126 反咬守卫本身。** 改成**先剥注释再判**才红。
+**写「有没有人用 X」这类守卫时，第一件事是把注释剥掉**——否则守卫的文档会把被测对象救活。
 
 ---
 
-## 下一轮（wave 48）：**收尾判据只差这一轮**
+## 下一轮（wave 49）：**判据只差一轮，但别只盯着判据**
 
-**wave 47 是干净的**（翻不出记错的账）。判据是「连着两轮」——
-**wave 48 再干净一轮就可以宣布收尾**。34~46 十三轮每轮都翻出过，47 是第一次空。
+47 干净、48 不干净，所以**还要连着两轮**。34~46 十三轮每轮都翻出过，47 是第一次空。
 
-wave 48 该扫哪里（挑没被前几轮覆盖过的角度）：
+wave 49 扫哪里（继续挑没被覆盖的角度）：
 
-1. **正面断言**（wave 47 只扫了否定断言）。「上游是 X」「上游走 Y」这类**肯定句**同样
-   会过期，而且过期时的后果更隐蔽——本仓会照着一个不存在的形状继续"对齐"。
-   做法同 47：把断言里的名字拿去上游撞。
-2. **`baseline/` 下的数据文件**。`react-parity-scope.json`（豁免定义）、
-   `parity-scenario-coverage.json`（棘轮）、`i18n-keys.json`、`upstream-marker.json`
-   ——**这些是纯数据，它们说的话没有任何东西验**。线索 131 就是这么来的
-   （`$pendingReasons` 挂了十几轮没有任何消费者）。
+1. **正面断言**（wave 47 只扫了否定断言，wave 48 拐去了 baseline）。
+   「上游是 X」「上游走 Y」这类**肯定句**同样会过期，过期时后果更隐蔽——
+   本仓会照着一个不存在的形状继续「对齐」。做法同 47：把断言里的名字拿去上游撞。
+2. **`tests/` 下的夹具**。`tests/fixtures/**` 里签入的 golden 数据（比如
+   `react-markdown-dom.json`）说的是「上游当时长这样」，**同样没有任何东西验它还准不准**。
+   wave 41 的教训（`agent-chat.spec.ts` 的夹具只推进了一半）说明夹具会和真实后端脱节。
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -449,7 +440,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 173 条在记忆文件里）
+## 其他常踩的坑（完整 174 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
