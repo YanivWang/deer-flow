@@ -8,7 +8,7 @@
 
 ---
 
-## 当前状态（截至 wave 47，2026-09-03）
+## 当前状态（截至 wave 48，2026-09-03）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
@@ -55,8 +55,8 @@
 ### 门禁实测值（wave 44 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；246 文件 / 2046 单测，词典 945 key、18 unused
-                                   standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 34 处 / 13 个文件）
+make -C frontend-vue verify        exit 0；247 文件 / 2051 单测，词典 945 key、18 unused
+                                   standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 35 处 / 14 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
@@ -173,55 +173,58 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 46）做了什么
+## 上一轮（wave 47）做了什么
 
-**顺着线索 171 往下查：账会因为后来某一轮的顺带改动而过期，那源码注释呢？**
-翻出**一整类从来没有被任何门禁碰过的记录**。
+**wave 46 验的是「引用指得到」，这一轮验「断言说得对」。结论：这一轮是干净的。**
 
-### 先把「挂着的账」里的标识符全撞了一遍（干净）
+### 38 条否定断言，22 条可机检的全部撞过，一条都没过期
 
-抽出账里提到的 **61 个代码标识符**，逐个 `git log -S` 看它最后一次变动是哪一轮、
-那之后这条账还成不成立。**全部成立。** 两条「代码里从没出现过」的
-（`settings.memory.rawJson`、`conversation.startConversation`）逐条核实：
-两边都只在词典里、都零消费，**正是账里写的那样**。
+`app/**` 的注释里有 **38 处「上游没有 X / 上游也零消费 / 上游从不 Y」**。
+这类断言一条行号都不带，机械判无从下手，只能逐条拿名字去 `frontend/src` 撞。
+抽几条（都是精确命中）：`onFollowupsVisibilityChange` 定义处之外 0 处；
+`input-box.tsx` 的 `aria-disabled` 0 处；`AuthProvider.tsx:54` 的
+`user !== null` 逐字相同；`ConversationScrollButton` 定义处之外 0 处；
+上游没有任何一条 spec 走到 `/workspace/agents/new`；上游从不裸调 `buttonVariants()`；
+上游 Sheet 抽屉里 `SheetClose` 0 处。
 
-### 翻出来的：源码注释里 136 处对上游的行号引用，一次都没验过
+### 两条我最怀疑的，结果是自己搞错了范围
 
-`app/**` 的注释里有 **136 处 `上游文件.tsx:行号`** 形式的引用。
-**这是本仓最容易被信的一类记录**——它就贴在代码旁边，比交接文档更近。
-抽验十条：结构上精确命中的有五条（`reasoning.tsx:220` → `export const ReasoningContent`、
-`sidecar-panel.tsx:213` → `const disabled =`、`AuthProvider.tsx:117` →
-`let logoutFailed = false;`、`message-list.tsx:1328` → `{selectionToolbar && sidecar && (`…），
-**另有数条指向 `}` / `>` / `className={cn(` 这类结构上不说明问题的行**。
-逐条核实其中一条：`input-box.tsx:1328` 注释说的是 `composerLocked`，
-**那个符号实际在 1331——漂了 3 行**。
+- **「`isMock` 上游有 23 处」**：全仓 grep 得 119，一度以为差五倍——实际断言的作用域是
+  它对照的**那一个文件**，`core/threads/hooks.ts` 里**正好 23**。
+- **「subtask 展开区的失败重试上游没有」**：grep 到 6 处 `isLoading|retry`，读进去发现
+  上游 `subtask-card.tsx:107` 写的正是 "Allow a retry on the next expand if the fetch failed."
+  ——与本仓一字不差。
 
-**已加守卫 `tests/guards/upstream-citations.test.ts`**，只钉**能机械判的那一半**：
-被引文件必须存在、行号必须落在文件长度之内。**故意不判「那一行是不是还在说同一件事」**
-——那要语义判断，钉进门禁只会变成一条随上游任何改动就红的噪声；小幅漂几行不妨碍
-读者找到目标，**文件没了 / 行号越界才是「照着找什么都找不到」**。
-同名文件（上游有多份 `hooks.ts` / `page.tsx`）按路径后缀先精确匹配，
-只写 basename 时只要有一个候选够长就算过——再严会把合法简写判红。
+**→ 线索 173：证伪本身也要量对范围，否则会凭空造出「发现」。**
 
-顺带修掉唯一一条机检不了的引用：`human-input-card.ts` 里写的是省略号路径
-`frontend/tests/.../human-input-card.test.ts:184`，已补成完整路径（内容核实过，
-上游那一行正是 `amount: "  "` 必须判为缺失）。
+### 做的事：把三条最有后果的断言钉进门禁
 
-守卫要读 `../frontend`，按规矩声明进 `standalone-check.mjs` 的 `CROSS_APP_BY_DESIGN`：
-**BLOCKING 仍是 0 处 / 0 个文件**，DECLARED 32/12 → **34/13**。
+这类断言**一旦过期，挡住的是一次真的对齐**（wave 34 的 `settings.memory.*` 挂了十轮），
+而它们**没有任何门禁看着**。`tests/guards/upstream-zero-claims.test.ts` 钉三条，
+每条写清**它过期时本仓要重新做的那个决定**：`onFollowupsVisibilityChange`（本仓有意
+不照抄的死接口）、`ConversationScrollButton`（交接曾写成「React 多一颗滚动按钮」，
+实测两边都没有）、`PromptInputCommand`（wave 39 cmdk 修法的第三个调用点，当时无消费者）。
+
+**判据是「零消费」不是「不存在」**——上游留着定义不用是常态，**有人开始用才是信号**。
+配一条「定义处本身还在」，否则上游改名会让每条断言静默全绿。
+已声明进 `CROSS_APP_BY_DESIGN`：**BLOCKING 仍 0/0**，DECLARED 34/13 → **35/14**。
 
 ---
 
-## 下一轮（wave 47）：**把「上游写了什么」这类断言也验一遍**
+## 下一轮（wave 48）：**收尾判据只差这一轮**
 
-wave 46 只验了引用**指得到**，没验它**说得对**。同一类记录里还有一半是纯文字断言
-（「上游 X 是 Y」「上游没有 Z」），一条行号都不带，因此连机械判都无从下手。
+**wave 47 是干净的**（翻不出记错的账）。判据是「连着两轮」——
+**wave 48 再干净一轮就可以宣布收尾**。34~46 十三轮每轮都翻出过，47 是第一次空。
 
-1. **挑那些「上游没有 / 上游也零消费 / 上游写死了」的断言逐条撞**。
-   这类断言的特点是**它一旦过期就会挡住一次真的对齐**（wave 34 的
-   `settings.memory.*` 就是这么挂了十轮）。做法照 wave 34/40：
-   拿断言里的名字去 `frontend/src` grep，问「今天还成立吗」。
-2. **`git log -S` 那一步现在有先例了**（wave 45/46），复核任何一条账都先跑它。
+wave 48 该扫哪里（挑没被前几轮覆盖过的角度）：
+
+1. **正面断言**（wave 47 只扫了否定断言）。「上游是 X」「上游走 Y」这类**肯定句**同样
+   会过期，而且过期时的后果更隐蔽——本仓会照着一个不存在的形状继续"对齐"。
+   做法同 47：把断言里的名字拿去上游撞。
+2. **`baseline/` 下的数据文件**。`react-parity-scope.json`（豁免定义）、
+   `parity-scenario-coverage.json`（棘轮）、`i18n-keys.json`、`upstream-marker.json`
+   ——**这些是纯数据，它们说的话没有任何东西验**。线索 131 就是这么来的
+   （`$pendingReasons` 挂了十几轮没有任何消费者）。
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -446,7 +449,7 @@ cd frontend-vue && PROBE_OUT=/tmp/p.json node scripts/with-loopback-no-proxy.mjs
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 172 条在记忆文件里）
+## 其他常踩的坑（完整 173 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
