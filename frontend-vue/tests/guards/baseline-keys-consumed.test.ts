@@ -24,6 +24,31 @@
                    **判据只钉顶层键**：深层字段的消费方式太多（解构、索引、
                    `Object.entries` 遍历），钉进去会变成噪声。顶层键是这些文件的
                    「目录」，写错一个整块就静默失效。
+
+                   **wave 52 补的第二半：说明里「谁在引我」那句话本身也会烂。**
+                   `react-parity-scope.json` 的 `$comment` 写着
+                   「product-surface.test.ts 是它唯一的消费者」——而
+                   `scenario-coverage.test.ts` 在那句话落地 **30 分钟后**就开始读它
+                   （`07a1d766` → `23aa5ac2`），这句话**错了九天、约五十轮**，
+                   期间没有任何东西会红。它误导的正是最该被误导不得的那个判断：
+                   「我改这份数据，谁会跟着变红？」
+
+                   修法照本仓自己的教条——**散文改不出这个性质，数据可以**：
+                   手工维护的 baseline 各自声明一条 `$readers`，
+                   由下面那条用例与**实测引用集**逐字比对。
+
+                   **`$readers` 的定义是「引用」不是「读取」**：注释剥掉之后，
+                   本仓 `app`/`scripts`/`tests` 里凡是提到这份文件名的源文件都算。
+                   不缩窄成「真的 readFileSync 了」是因为那要靠正则猜——实测
+                   prettier 会把 `read("baseline/x.json")` 折成两行，
+                   按行匹配会把三个真读者判成没读（**假绿**）。而「引用」这个口径
+                   本身就是对的：`standalone-check.mjs` 只是在表里点名它，
+                   但那份表同样会因为改名而失效，同样需要有人跟着改。
+
+                   **生成出来的 baseline 不声明 `$readers`**（`i18n-keys.json`、
+                   `upstream-marker.json`、`parity-diff.json`、`openapi.snapshot.json`）：
+                   手加的键会在下一次重新生成时被写掉。它们的写入方就在
+                   `HAND_MAINTAINED` 之外，这里如实列出而不是假装能覆盖全部。
 */
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -73,6 +98,28 @@ const baselines = readdirSync(baselineDir).filter((name) =>
   name.endsWith(".json"),
 );
 
+/**
+ * 手工维护的 baseline —— 它们必须声明 `$readers`。
+ * 生成出来的那几份不在这里：手加的键会在下一次重新生成时被写掉。
+ * 下面第一条用例校验这张表自己（每一份都得真的在 baseline/ 里）。
+ */
+const HAND_MAINTAINED = [
+  "parity-scenario-coverage.json",
+  "react-parity-scope.json",
+  "route-payload-budget.json",
+];
+
+/** 注释剥掉之后，`app`/`scripts`/`tests` 里提到这份 baseline 文件名的源文件。 */
+function referencedBy(name: string): string[] {
+  const found: string[] = [];
+  sources.forEach((file, index) => {
+    if (sourceText[index]?.includes(name)) {
+      found.push(file.slice(root.length + 1));
+    }
+  });
+  return found.sort();
+}
+
 describe("baseline 数据文件的顶层键", () => {
   it("扫到了 baseline 文件与源码（两边空掉时不能假绿）", () => {
     expect(baselines.length).toBeGreaterThan(3);
@@ -101,6 +148,48 @@ describe("baseline 数据文件的顶层键", () => {
     expect(
       orphans,
       "这些键写了但没人读：要么接上消费者，要么加 $ 前缀声明它是纯说明",
+    ).toEqual([]);
+  });
+});
+
+describe("baseline 说明里「谁在引我」那句话", () => {
+  it("手工维护清单自己不会腐烂", () => {
+    const missing = HAND_MAINTAINED.filter((name) => !baselines.includes(name));
+    expect(missing, "文件没了就把它从 HAND_MAINTAINED 拿掉").toEqual([]);
+  });
+
+  it("每份手工维护的 baseline 都声明了 $readers", () => {
+    const undeclared = HAND_MAINTAINED.filter((name) => {
+      const parsed = JSON.parse(
+        readFileSync(join(baselineDir, name), "utf8"),
+      ) as Record<string, unknown>;
+      return !Array.isArray(parsed.$readers);
+    });
+    expect(
+      undeclared,
+      "少了这条，下面那条用例会静默没有被测对象（同线索 131）",
+    ).toEqual([]);
+  });
+
+  it("$readers 就是实测的引用集，一个不多一个不少", () => {
+    const drifted: { file: string; declared: string[]; actual: string[] }[] =
+      [];
+    for (const name of baselines) {
+      const parsed = JSON.parse(
+        readFileSync(join(baselineDir, name), "utf8"),
+      ) as Record<string, unknown>;
+      const declared = parsed.$readers;
+      if (!Array.isArray(declared)) continue;
+      const actual = referencedBy(name);
+      const sorted = [...(declared as string[])].sort();
+      if (JSON.stringify(sorted) !== JSON.stringify(actual)) {
+        drifted.push({ file: name, declared: sorted, actual });
+      }
+    }
+    expect(
+      drifted,
+      "谁在引这份 baseline 变了：把 $readers 改成实测的那一列——" +
+        "它回答的是「我改这份数据，谁会跟着变红」",
     ).toEqual([]);
   });
 });

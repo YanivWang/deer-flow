@@ -1,5 +1,11 @@
 {
-  "$comment": "React/Vue 对齐范围的机器可读定义。上一版是 ARCHITECTURE.md 里的一节散文；它被整节删除之后，/pricing 与 /about 当场被判成违规并删掉，而没有任何门禁能区分那是一次决定还是一次事故。写在这里，是为了让豁免既能被测试读取，也能在自己过期时变红。tests/parity/product-surface.test.ts 是它唯一的消费者。",
+  "$comment": "React/Vue 对齐范围的机器可读定义。上一版是 ARCHITECTURE.md 里的一节散文；它被整节删除之后，/pricing 与 /about 当场被判成违规并删掉，而没有任何门禁能区分那是一次决定还是一次事故。写在这里，是为了让豁免既能被测试读取，也能在自己过期时变红。谁在引它见 $readers——那一行是数据、由门禁逐字比对，不是散文：此前这里写着「product-surface.test.ts 是它唯一的消费者」，而 scenario-coverage.test.ts 在那句话落地 30 分钟后就开始读它（07a1d766 → 23aa5ac2），这句话错了九天。",
+  "$readers": [
+    "scripts/standalone-check.mjs",
+    "tests/guards/baseline-keys-consumed.test.ts",
+    "tests/parity/product-surface.test.ts",
+    "tests/parity/scenario-coverage.test.ts"
+  ],
   "$semantics": "豁免的含义是「Vue 不欠 React 这一部分」，不是「Vue 必须删掉它」。React 也有的东西，Vue 有并不违反「React 没有的 Vue 不许有」。唯一的例外是 contentExemptRoutes——那条路由两边都有，但 Vue 在它下面的内容是 React 没有的，所以必须显式写成双向豁免，否则下一轮反向清理会把它删掉。",
   "exemptRoutes": {
     "$comment": "React 有、Vue 永久不做的路由：Nextra 内容站（frontend/src/content 下 72 个 MDX / 8687 行 en+zh）。断言是 (React 路由集 - Vue 路由集) 必须恰好等于 exemptRoutes ∪ pendingRoutes，所以这份清单既不能悄悄变长，也不能在某条真被做出来之后还留在这里。",
