@@ -8,10 +8,10 @@
 
 ---
 
-## 当前状态（截至 wave 41，2026-09-03）
+## 当前状态（截至 wave 42，2026-09-03）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
-  `aef3618d` = wave 40（chore `2f9627fa`）。
+  `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41。
 - **wave 40 动了 `frontend/`**（重连预算耗尽后那颗键在说反话，两边同改），
   **marker 已推到 `aef3618d`**。
 - **wave 39 动了 `frontend/`**（命令面板搜索框的可访问名，两边同改）。
@@ -39,7 +39,8 @@
   **模型选择器筛选 + 技能 chip 那一行**（wave 37）与
   **掉线时的退出出路 + 登录页分隔**（wave 38，unused 20→18）与
   **命令面板搜索框的可访问名**（wave 39，两边同改）与
-  **重连预算耗尽后的模式键**（wave 40，两边同改）。
+  **重连预算耗尽后的模式键**（wave 40，两边同改）与
+  **run 结束后重取 checkpoint**（wave 41）。
 
 > **`app/pages/` 下的路由已经一条不剩地量过了**（wave 28 量完最后三条）。
 > **要找活只能去「挂着的账」里挑**，不要再指望「还有没量过的路由」。
@@ -48,19 +49,19 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 40 收工时逐条跑过）
+### 门禁实测值（wave 41 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；245 文件 / 2039 单测，词典 945 key、18 unused
+make -C frontend-vue verify        exit 0；245 文件 / 2041 单测，词典 945 key、18 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 32 处 / 12 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
-make -C frontend-vue e2e-mock      263 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
+make -C frontend-vue e2e-mock      264 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
 make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~40 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30~41 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1023**）/ `test:e2e`（**146**）。
 
 > **wave 40 实测：`test:e2e` 的 `webServer` 那 120 秒窗口在这台机器上喂不饱一次
@@ -169,92 +170,67 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 40）做了什么
+## 上一轮（wave 41）做了什么
 
-**正题：第一轮「没有已知成批理由可拆」的复量。翻出来了，所以判据仍未满足。**
+**做掉了 wave 38 量清、wave 40 复验为真的那条账：run 结束之后重取 checkpoint。**
 
-### 翻出来的账：`BrowserPanel.vue` 文件头的分叉 1，**两半都记错了**
+上游 SDK 在 `react/stream.lgp.js` 的 `onSuccess` 里 `await history.mutate(threadId)`，
+把取回来的 `lastHead` 当作新真相（那一支还 `return null` 清掉流的 values）。
+本仓只在 `threadId` 变化且 `status === "idle"` 时取一次——**run 内发生上下文压缩之后，
+上游立刻切到摘要视图，本仓要切走再回来才更新。**
 
-原文是：「上游走 toast，而且重连预算耗尽之后**什么都不显示**。本仓保留内联提示与重试。」
+### 三条不能省的判据（每条都有负向验证钉着）
 
-逐句量：
-
-| 记的 | 实际（wave 40 读源码） |
+| 判据 | 不这么做会怎样 |
 |---|---|
-| 上游耗尽之后什么都不显示 | 上游那颗模式键**永远画着 `"…"`**（`browser-view-panel.tsx:412`：`live ? (status === "open" ? "Live" : "…") : "Live"`）。`"…"` 的意思是「还在连」，而 `scheduleReconnect` 在 `connectionAttempt >= 6` 时已经彻底 `return`。**比什么都不显示更糟：界面在说反话。** |
-| （没记）出路 | 有——把它切走再切回来。`enabled` 转 false 的 effect 里有 `setConnectionAttempt(0)`，上游自己的注释也写着 "until the panel is toggled off/on"。**但界面没有任何地方说得出这一点**，因为它还在说「在连」。 |
-| 本仓保留内联提示与重试 | 只对了一半。内联 `role="alert"` + 重试确实是本仓独有（控制器耗尽时发 `status:"error", canRetry:true`）。但 **`liveLabel` 照抄的是上游那两态**：`requestedLive && status !== "open" → "…"`——本仓耗尽时 `status` 是 `"error"`，于是**本仓那颗键在说同一句反话**。 |
+| 不能复用 `seedDurableState` | run settle 之后状态停在 `completed`，**永远不会自己回到 `idle`**（只有 `reset()` 会），那道 `!== "idle"` 判据会把这一帧**无声丢掉** |
+| 也不能把 `seedDurableState` 一起放宽 | 那道 `idle` 守的是「run **之前**发出、run **之后**落地」的那一帧——它持有 run 之前的状态，放进来会把整个 run 抹掉 |
+| 线程 id 取 `adoptedThreadId` 不取路由 | `/chats/new` 提交后路由换得晚，run settle 时 `threadId.value` 可能还是 `null`，这次重取被静静跳过——而**首个回合恰恰最可能压缩**（E3 实测变红） |
 
-**这就是线索 162 的下一层**：「本仓这一侧更好」不但要拆成「本仓好不好 / 上游坏不坏」，
-还要再问一句——**「更好」是不是只在一部分上更好，另一部分照抄了同一处缺陷？**（线索 163）
+**只在 `completed` 上做，不含 `cancelled`**：上游的取消走 `stop()` → `onStop`，那条路不刷历史。
+顺带好处是本仓不会在只有本仓会发请求的时机上多打一条 `/history`，**台账的请求多重集仍然齐平**
+（实测 NEW=0 GONE=0）。
 
-### 修法：两边同改，但形状不同
+### 又纠正了两处记错
 
-- **上游给出路**：`useBrowserStream` 多一个 `onReconnectExhausted` 回调（照 `onNavRejected`
-  的 ref 写法，不进 effect deps），放弃时回调；面板拿到就 `setLive(false)`。
-  那颗键回到 `"Live"` / `"Take live control"`——**这是真话**，而且点一下就重连
-  （切走顺带把预算清零）。**零新字符串、零新 UI**。
-- **本仓只把标签改诚实**：`status !== "open" && status !== "error"` 才画 `"…"`。
-  本仓**不能**走上游那条路——`connection.ts` 的 `stop()` 会把快照重置成初始态，
-  连带抹掉那条 alert 与重试入口，那正是本仓比上游好的地方。
+- **e2e 范本路径是错的**：`tests/e2e-backend/thread-summarized-checkpoint.spec.ts` 不存在，
+  真身是 `tests/e2e-real/summarized-checkpoint.spec.ts`。
+- **「需要一个专门造后端状态的 e2e」只对一半**：`e2e-real` 的 replay gateway 驱动不了一次
+  真 run（没有录制也没有模型），而 **mock 后端的 `tests/e2e/` 恰恰能跑完整条流**——
+  落点在 `chat-dataflow.spec.ts`，断的是**可见后果**（摘要上屏、原文消失），
+  不是「打了 /history」——后者在 `refreshDurableState` 被 `idle` 吞掉时照样绿。
 
-对照台账看不见这一处（mock 后端没有 WS 端点时要 32 秒才耗尽 6 次预算，取样点在
-settle+700ms，那时两边都还在 `connecting`、都画 `"…"`）——所以 **NEW=0 GONE=0 不是「没改动」的证据**。
+### 一处夹具红是真后果，不是噪声
 
-### 顺着线索 161 把 primitive 的漏网调用点扫干净了
+`agent-chat.spec.ts` 的 edit-and-rerun 变红：它只推进 `/messages/page`（事件库）那份夹具，
+`/history`（checkpoint）还停在**编辑前**，于是 run 一结束旧 checkpoint 把编辑后的消息拉回原文。
+真实后端在 edit-regenerate 跑完之后两边写的都是替换后的消息，**夹具漏的是那一半**。
 
-| primitive | 扫描结果 |
-|---|---|
-| `SidebarTrigger`（wave 36） | 本仓 4 个调用点，展开态那颗读 `isNarrow ? mobileOpen : sidebarOpen`、收起态那颗读 `sidebarOpen`（窄屏收起时侧栏整棵子树不渲染）——**两处都对**。 |
-| cmdk `<Command label>`（wave 39） | 上游第三个调用点 `PromptInputCommand`（`prompt-input.tsx:1421`）**没有任何消费者**，是死的库导出。 |
-| 无可访问名的图标按钮（wave 28 那颗关闭键） | 按平衡括号重扫了上游**全部** `<Button size="icon">`（第一版正则被箭头函数里的 `>` 截断，13 条里 12 条是误报）：只剩 `ai-elements/queue.tsx:127` 一个泛型包装器，名字由调用方给，且**全仓无人 import**。**这一类清干净了。** |
+### 负向验证（7 条全红）
 
-### 还复验了两条账，都是对的（这次没记错）
+E1 不重取 / E2 走 `seedDurableState` / E3 线程 id 用路由 / E4 `refreshDurableState` 什么都收 /
+E5 收紧成和 seed 一样 / E6 夹具只推进事件库 / E7 编辑后的消息没写进 checkpoint。
 
-- **run 结束重取 checkpoint**：wave 38 引的证据里没有 `/history`，所以那条结论原本悬着。
-  现在有直接证据（SDK 的 `onSuccess` → `history.mutate`），**账成立，wave 41 做**。
-- **种子取数失败静默降级**：本仓 `seedThreadCheckpoint` 对 `!response.ok` 与 `catch` 一视同仁
-  地 return，理由写在原地（取不到种子 = 没有种子，分页历史仍然完整）。**没有「只在一部分上更好」。**
-
-### 负向验证
-
-| 变异 | 落盘 | 结果 |
-|---|---|---|
-| D1 本仓标签退回照抄的 `!== "open"` | ✓ | 红 |
-| D2 本仓标签永远画 Live（钉住「连接中仍画 `…`」那一半） | ✓ | 红 |
-| D3 上游放弃时不回调 | ✓ | 红 |
-| D4 上游把回调掏空 | ✓ | **第一次假绿 → 改判据后红** |
-| D5 本仓耗尽后不给重试入口 | ✓ | 红 |
-| D6 上游不把回调接给钩子 | ✓ | 红 |
-
-**D4 假绿的原因值得记（线索 164）**：上游这一块的测试是**源码扫描式**的，我照它的
-写法写了 `expect(panelSource).toContain("setLive(false)")`——而面板在 429 行另有一处
-`setLive(false)`（关闭面板），于是把回调掏空照样绿。**源码扫描断言必须钉住那一段的形状
-（正则匹配整个回调），不能钉一个在文件里不唯一的字符串。**
+**写测试时踩到的一条（线索 166）**：第一版 e2e 红在**前置条件**那一行——重取落得太快，
+流的原文还没被 Playwright 轮询到就已经被摘要换掉了。给 `/history` 加 1200ms 延迟之后
+两半才都可观测。**「断言先看见 A 再看见 B」时，要确保 A 真的有窗口。**
 
 ---
 
-## 下一轮（wave 41）：**做 checkpoint 重取，顺带第二次复量**
+## 下一轮（wave 42）：**复量**
 
-wave 40 又翻出一条（分叉 1 的两半），所以「连着两轮翻不出记错的账」**仍未满足**，
-34/35/36/37/38/39/40 **七轮七次一次都没空过**。别再报「还剩几轮」。
+wave 40 与 41 各翻出记错的账（40 是 browser 面板分叉 1 的两半，41 是 e2e 范本路径 +
+「需要造后端状态」那半句），所以「连着两轮翻不出记错的账」**仍未满足**——
+34~41 **八轮八次一次都没空过**。别再报「还剩几轮」。
 
-wave 41 有一件实打实的活，而且判据已经验实：
+wave 42 没有已知的活，只有复量。两条线：
 
-1. **run 结束之后重取 checkpoint。** 上游 SDK 每次 run 成功都
-   `await history.mutate(threadId)`（证据见上面「挂着的账」里那条），本仓只在
-   `threadId` 变化且 `status === "idle"` 时取一次。**后果**：run 内发生上下文压缩之后，
-   上游立刻切到摘要视图，本仓要切走再回来才更新。
-   **两道守卫都不能省**：`seedThreadCheckpoint` 里那道 `status !== "idle"` 省的是请求
-   （少了它台账上会多一条 Vue 独有的 `POST /history`），`seedDurableState` 里那道守的是
-   「晚到的响应不许覆盖正在流的消息」（少了它首个回合的流会被自己的种子抹掉）。
-   **在流结束点补重取要把这两条一起验。**
-   需要专门造后端状态的 e2e，范本 `tests/e2e-backend/thread-summarized-checkpoint.spec.ts`。
-2. **顺带把线索 163 那条问法（「更好」是不是只在一部分上更好）铺到剩下的账上。**
-   wave 40 已经撞过：`channels.connectedAs`、种子取数失败静默、`agents.saveRequested`、
-   `uploads.uploadingFiles`、`/showcase` 四条请求——都没有「照抄了另一半」。
-   还没撞的是那些**纯呈现的照抄**（10 处 `照抄上游`），wave 40 粗看都是类名/DOM 结构，
+1. **把线索 163 铺到剩下的账上。** wave 40 撞过 `channels.connectedAs`、种子取数失败静默、
+   `agents.saveRequested`、`uploads.uploadingFiles`、`/showcase` 四条请求——都没有「照抄了另一半」。
+   **还没逐处量的是那些纯呈现的照抄**（`grep 照抄上游` 有 10 处），wave 40 粗看都是类名/DOM 结构，
    没有第二个状态机被抄小，但没有逐处量。
+2. **每条账里引用的文件路径、行号、命令都当假设撞一遍。** wave 41 的教训：那条账挂了三轮，
+   引的 e2e 范本路径根本不存在——**账里的「怎么做」和账里的「是什么」一样会记错。**
 
 ## 挂着的账（有意没修；**当假设重新验**）
 
@@ -379,23 +355,20 @@ wave 41 有一件实打实的活，而且判据已经验实：
   只出 class。wave 34 与 wave 37 两次复验：两边**都没有任何选择器**消费它，
   `data-*` 也不进 aria 快照——**零可观察收益**，而要动 L2 primitive 的 9 个消费者。
   哪天要翻案，判据是「有人真的写了 `[data-slot="button"]` 的选择器」。
-- **run 成功结束之后退回「重新取的 checkpoint」** —— **wave 38 第一次量清**：
-  本仓只在 `threadId` 变化时取种子（`useThreadStream.ts` 的 watch，且要求
-  `status === "idle"`）；上游是 SDK 的 `fetchStateHistory: { limit: 1 }`，
-  **每次流结束也重取**（wave 29 量到的「终态 B」里那一轮
-  `threads/{id}` + `messages/page` + `token-usage` 重取就是它）。
-  **后果**：run 内发生上下文压缩之后，上游立刻切到摘要视图，本仓要切走再回来才更新。
-  **没有盲改**：`seedThreadCheckpoint` 的注释写着「少了 `status !== "idle"` 那道，
-  首个回合的流会被自己的种子抹掉」——在流结束点补重取要连这条一起验，
-  而且需要一个专门造后端状态的 e2e（范本
-  `tests/e2e-backend/thread-summarized-checkpoint.spec.ts`）。
-  **wave 40 把这条账当假设复验过了，它是对的**：wave 38 引的证据是 wave 29 量到的
-  `threads/{id}` + `messages/page` + `token-usage`，那三条里**没有 `/history`**，
-  所以「每次流结束也重取」原本是没有直接证据的。现在有了——SDK
-  `@langchain/langgraph-sdk/dist/react/stream.lgp.js` 的两处 `onSuccess` 都
-  `await history.mutate(threadId)`（一处受 `shouldRefetch` 约束，另一处无条件），
-  而 `history` 就是 `client.threads.getHistory(threadId, { limit })`。
-  **wave 41 做这条。**
+- ~~run 成功结束之后退回「重新取的 checkpoint」~~ —— **wave 41 做完了。**
+  `useThreadStream` 的 `onSettled` 在 `completed` 上重取一次，走新加的
+  `runner.refreshDurableState`（`seedDurableState` 的 `idle` 判据会把这一帧**无声丢掉**
+  ——run settle 之后状态停在 `completed`，永远不会自己回到 `idle`）。
+  **三条不能省的判据**：① 不能复用 `seedDurableState`；② 也不能把它一起放宽
+  （那道 `idle` 守的是「run 之前发出、run 之后落地」的那一帧，放进来会抹掉整个 run）；
+  ③ 线程 id 取 `adoptedThreadId` 不取路由（`/chats/new` 提交后路由换得晚，
+  run settle 时 `threadId.value` 还可能是 `null`，而首个回合最可能压缩）。
+  **只在 `completed` 上做**，取消跟上游一样不刷，台账的请求多重集因此仍然齐平。
+  **wave 38 记的 e2e 范本路径是错的**（`tests/e2e-backend/thread-summarized-checkpoint.spec.ts`
+  不存在，真身是 `tests/e2e-real/summarized-checkpoint.spec.ts`），而且「需要专门造后端状态」
+  只对一半——`e2e-real` 的 replay gateway 驱动不了一次真 run，**mock 后端的
+  `tests/e2e/` 才能跑完整条流**，落点在 `chat-dataflow.spec.ts`。
+
 - **上游种子取数失败会弹 toast**（`hooks.ts:1839`），本仓静默降级（S8 明写 403/404 属常态）。
   **这一条 wave 31 有意没动**：它不是「缺一层播报」，是 S8 写死的「403/404 属常态」，
   弹 toast 会在每次打开只读线程时报一次假故障。
