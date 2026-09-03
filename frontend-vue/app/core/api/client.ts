@@ -62,12 +62,34 @@ export interface DeerFlowApiClientOptions {
  * `search` 的 query 里 `signal` 是**传输参数不是过滤条件**，必须拆出来。
  * 连它一起 JSON.stringify 会得到 `"signal": {}`，后端把它当成一个未知过滤字段。
  */
+/**
+ * 选项对象 → wire 请求体。
+ *
+ * **`sortBy`/`sortOrder` 是 SDK 的 TS 选项名，线上叫 `sort_by`/`sort_order`。**
+ * SDK 在 `client.js` 的 `threads.search` 里逐字段做这一步转换
+ * （`sort_by: query?.sortBy`），本仓原来把整个选项对象直接摊上线，
+ * camelCase 就这么发了出去——**和 `run-protocol.ts` 文件头记的
+ * `streamMode` / `stream_mode` 是同一个坑**：SDK 的选项名与 wire 名不是一回事。
+ *
+ * 今天这条**还没炸**：Gateway 的 `ThreadSearchRequest`
+ * （`backend/app/gateway/routers/threads.py:383`）只有
+ * metadata/limit/offset/status，**根本没有排序字段**，多余的键被 pydantic 忽略，
+ * 两边因此都拿到同一份默认顺序。但那是「后端还没实现」而不是「本仓发对了」：
+ * 后端哪天认了排序，上游会生效、本仓会静默失效。
+ * 对照台账天生看不见这一类（它只比 method + path + query，见 wave 42）。
+ *
+ * 其余字段（metadata / limit / offset / status / select / ids / values）
+ * 两边同名，逐条对过 SDK 的那三处 `search`。
+ */
 function splitSearchQuery(query: ThreadSearchQuery<AgentThreadState> = {}): {
   signal: AbortSignal | undefined;
   body: Record<string, unknown>;
 } {
-  const { signal, ...body } = query;
-  return { signal, body: body as Record<string, unknown> };
+  const { signal, sortBy, sortOrder, ...rest } = query;
+  const body: Record<string, unknown> = { ...rest };
+  if (sortBy !== undefined) body.sort_by = sortBy;
+  if (sortOrder !== undefined) body.sort_order = sortOrder;
+  return { signal, body };
 }
 
 export function createDeerFlowApiClient(

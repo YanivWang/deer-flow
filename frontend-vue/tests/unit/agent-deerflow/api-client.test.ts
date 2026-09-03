@@ -86,6 +86,45 @@ describe("threads", () => {
     expect(result).toEqual([{ thread_id: "t-1" }]);
   });
 
+  /*
+    **排序键在线上叫 `sort_by`/`sort_order`，不是选项对象里的 camelCase。**
+    SDK 的 `threads.search` 是逐字段搭 body 的（`client.js`:
+    `sort_by: query?.sortBy`），本仓自己搭 body，那一步转换原来漏了——
+    wave 44 用 parity 探针实测出来的：两个应用打同一个 Gateway，
+    上游发 `sort_by,sort_order`，本仓发 `sortBy,sortOrder`。
+    **对照台账看不见这一类**（只比 method + path + query）。
+
+    今天不炸只是因为 Gateway 的 `ThreadSearchRequest` 没有排序字段，
+    多余的键被 pydantic 忽略——所以断言必须钉「线上的名字」，
+    不能靠「界面顺序对不对」来验，那个眼下两边都对。
+  */
+  it("search 把 sortBy/sortOrder 转成 wire 上的 snake_case", async () => {
+    const client = clientWith(() => jsonResponse([]));
+    await client.threads.search({
+      limit: 20,
+      sortBy: "updated_at",
+      sortOrder: "desc",
+    });
+    const body = JSON.parse(recorded[0]?.body ?? "{}") as Record<
+      string,
+      unknown
+    >;
+    expect(body).toEqual({
+      limit: 20,
+      sort_by: "updated_at",
+      sort_order: "desc",
+    });
+    // 两半都断：camelCase 一个字都不许留在线上。
+    expect(Object.keys(body)).not.toContain("sortBy");
+    expect(Object.keys(body)).not.toContain("sortOrder");
+  });
+
+  it("search 不发没给的排序键（上游同样是 undefined 就整键不发）", async () => {
+    const client = clientWith(() => jsonResponse([]));
+    await client.threads.search({ limit: 5 });
+    expect(JSON.parse(recorded[0]?.body ?? "{}")).toEqual({ limit: 5 });
+  });
+
   it("search 的 signal 是传输参数，不能混进 body", async () => {
     // 连它一起 stringify 会得到 `"signal": {}`，后端把它当成一个未知过滤字段。
     const client = clientWith(() => jsonResponse([]));
