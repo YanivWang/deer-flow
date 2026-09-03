@@ -280,8 +280,18 @@ const BARE_FILENAME =
  * 改成一个存在的名字反而会让注释说谎。加一条就要在这里写清楚为什么。
  * 下面第二条用例盯着这张表本身：条目还得真的缺席、也还得真的有人在引它。
  */
-/** 本模块顶层目录，两条路径检查共用。 */
-const TOP_DIRS = "app|tests|scripts|packages|baseline|server|config|lib";
+/**
+ * 路径检查认的第一段目录，两条检查共用。除了本模块自己的顶层目录，还收**兄弟树**
+ * （frontend / backend / docker / skills / contracts）——本仓的注释大量点名它们，
+ * 实测 172 处，此前一条都不查。
+ *
+ * **解析仍然按 basename**（同 172 号判据）：本仓写这类路径时惯于省略中间层
+ * （`backend/routers/browser.py` 的真身是 `backend/app/gateway/routers/browser.py`，
+ * `deerflow/skills/slash.py` 写的是 Python 的模块路径），钉全路径会把这些合法简写
+ * 全判红——而按名字搜它们都找得到。
+ */
+const TOP_DIRS =
+  "app|tests|scripts|packages|baseline|server|config|lib|frontend|backend|docker|skills|contracts";
 
 /** 反引号里的同形路径，只在非 Markdown 文件里查（Markdown 归 REPO_PATH）。 */
 const QUOTED_PATH = new RegExp(

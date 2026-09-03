@@ -1,7 +1,7 @@
 # React → Vue 对照对齐：轮次交接文档
 
 **这份文档是每一轮开工的第一读物。** 它记录「上一轮做完了什么、下一轮做什么、
-有哪些账挂着」。深度背景（176 条踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
+有哪些账挂着」。深度背景（踩坑线索、每一轮的实测记录）在 Claude 的记忆文件
 `deerflow-parity-harness-plan` 里；这里只放接手一轮所需的最小集合。
 
 **每推完一个阶段（一轮 wave），就地更新这份文档，然后开始下一轮。**
@@ -254,7 +254,7 @@ wave 56 扫哪里：
    这是已知最脏的一类，而且没有门禁。
 2. **`tests/e2e-parity/support/scenarios.ts` 的 1798 行场景说明**。wave 55 只抽了几条，
    里面每条 `实测（日期）` 都是一次没人复核过的测量，而它决定了台账取样什么。
-3. **`app/components/ui/**` 的 L2 primitive 文件头**（约 60 个文件）。
+3. **`app/components/ui/**` 的 L2 primitive 文件头**（**104 个 `.vue`**，实测）。
    它们写的是「上游这个 prop/分支为什么不移植」，是最容易随上游前进而过期的一类，
    而 wave 47/49 的抽样没有覆盖这一层。
 
@@ -602,7 +602,9 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 
 ## 背景在哪
 
-- 每一轮的实测记录、180 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录与踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+  （**条数只在上面那一节写一处**——同一个数字写三处，就会像 wave 56 撞见的那样，
+  改两处漏一处）
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
