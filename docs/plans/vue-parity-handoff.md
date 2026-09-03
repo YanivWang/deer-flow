@@ -11,7 +11,7 @@
 ## 当前状态（截至 wave 43，2026-09-03）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
-  `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41。
+  `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42。
 - **wave 40 动了 `frontend/`**（重连预算耗尽后那颗键在说反话，两边同改），
   **marker 已推到 `aef3618d`**。
 - **wave 39 动了 `frontend/`**（命令面板搜索框的可访问名，两边同改）。
