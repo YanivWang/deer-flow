@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 54，2026-09-04）
+## 当前状态（截至 wave 55，2026-09-04）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54。
 - **动过 `frontend/` 的是十四轮，不是三轮**（wave 52 实测订正）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -28,7 +28,7 @@
   wave 52 实测**无漂移**，marker 也确实是 HEAD 的祖先——
   **边界规则本身有机器在守，需要人记的只有「这类改动做过哪些轮」。**
   最近三轮的内容：wave 40 重连预算耗尽后那颗键在说反话；wave 39 命令面板搜索框的
-  可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~53 都没动过。
+  可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~54 都没动过。
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
 - 覆盖率棘轮：covered **24**，pending **仍是 1 条**（`chat-thread-init-ordering`）——
   wave 29 **实测**过，结论是**不能加**，翻案判据写在 `$pendingReasons` 里。
@@ -63,10 +63,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 53 收工时逐条跑过）
+### 门禁实测值（wave 54 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；249 文件 / 2066 单测，词典 945 key、18 unused
+make -C frontend-vue verify        exit 0；249 文件 / 2067 单测，词典 945 key、18 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 37 处 / 16 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -75,7 +75,7 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~53 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **215**（总 217，wave 30~54 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1023**）/ `test:e2e`（**146**）。
 
 > **wave 40 实测：`test:e2e` 的 `webServer` 那 120 秒窗口在这台机器上喂不饱一次
@@ -106,6 +106,14 @@ make -C frontend-vue e2e-external  3
 `ui-primitives-a11y.spec.ts:288` 的 hover tooltip 在 load 22 时红过一次。
 **load 降到 5 之后三套全绿。** 这台机器上 `webServer` 的 240s 在 load>20 时不够用，
 遇到就等负载，不要先去查产品。
+
+**第四条已知抖动（wave 54 新增）**：`tests/e2e/i18n-theme.spec.ts:45` 里
+`sidebarPanel.locator('[data-sidebar="trigger"]').click()` 30s 超时，
+call log 是 `element is not visible / not stable`——**一个 hover 才出现的控件**。
+因果够不着：那一轮改的 `app/` 两处**都在块注释里**（编译产物逐字节不变），
+其余改动是脚本注释、fixture 的 `$comment` 和一条门禁测试。
+负载降到 ~2.5 后 `--repeat-each=5` **35/35 全绿**，整套 `e2e-mock` 重跑到 265。
+机制与前三条同类：hover/滚动/异步 + 固定超时。
 
 **wave 30 与 wave 31 全程零重跑**；**wave 32 重跑过一次**：第一遍 `e2e-mock` 在
 **load 18** 时 `thread-list-infinite-scroll.spec.ts:74` 红了一次，因果够不着
@@ -193,65 +201,59 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 53）做了什么
+## 上一轮（wave 54）做了什么
 
-**扫 `BEHAVIOR_CONTRACTS.md` 的 A–S 十九组与 `app/**` 文件头的判据段落。
-翻出的是同一类：本仓引用了上游的一个具体「值」，上游一改就静默过期。**
+**扫 `BEHAVIOR_CONTRACTS.md` 剩下的组、`scripts/` 那些「不是门禁」的工具、`packages/`。
+翻出的是 wave 51 那一类的第二个盲区：wave 51 的守卫要求反引号，而这三条一条都没带。**
 
-### 翻出来的：三处过期的上游值
+### 翻出来的三条死引用
 
-| 引用 | 写着 | 实际 | 什么时候变的 |
-| --- | --- | --- | --- |
-| `message-merge.ts` + `message-identity.ts` 的 `message-merge.test.ts` | 1,740 行 | **2,095** | `44832a5e`（2026-08-14 合上游），错了三周 |
-| `css-source-scan.test.ts` 的 `globals.css` | 453 行 | **454** | `4804faa1`（2026-08-24，本仓自己动 `frontend/` 那次） |
-| H3 引的 React class | `[&>[data-panel]]:…` | 上游写 `*:data-panel:…` | Tailwind v4 变体写法 |
+| 位置 | 指向 | 真相 |
+| --- | --- | --- |
+| `scripts/i18n-manager.mjs:25` | `lib/source-facts.mjs` | **`1209651f` 删掉的**——同一次改名的**第三处**遗留 |
+| `useThreadStream.ts:550` | `tests/e2e-backend/thread-summarized-checkpoint.spec.ts` | **从没存在过**，真身在 `tests/e2e-real/` |
+| `types/message.ts:12` + `message-content-shapes.json` 的重建说明 | `tests/unit/core-types/message-round-trip.test.ts` | **从没存在过**，同一 commit 把测试建在了 `tests/guards/message-content-contract.test.ts` |
 
-**三处都是写下时准确的，不是记错、是过期**——当时验过一遍，之后再没人验第二遍。
-`文件:行号` 那一类 wave 46/51 已上门禁，**「多少行」这一类一直没有**。
+**后两条从写下的那一天起就是错的**——先写下计划中的文件名，再把测试归到别处。
+第二条**交接文档在 wave 41 就记过「这条路径是错的」，但没人回去改那行注释**，
+账记对了、引用照旧挂着，又挂了十三轮。**记对了不等于改掉了。**
 
-> **方法教训**：`git log -- <path>` 默认做历史简化，**合并进来的上游改动看不见**。
-> 三处里有两处是 `--full-history` 才露出来的。
+### 门禁补第四档
 
-### 门禁：行数断言必须等于实际行数
-
-`upstream-citations.test.ts` 加一条，形状是**反引号文件名紧挨着行数**，实测抓到 6 处。
-**判据是相等不是范围**：行号引用允许漂几行（照着还找得到），
-而「N 行」是关于整份文件的精确断言，它变红那一刻正是该去看上游改了什么的时候。
-顺手把两处说不清指哪份文件的写法改成可判的；`globals.css` 那句里数字不承重，
-**删掉数字而不是改数字——不承重的数字就别写**。
+`REPO_PATH` 只扫 Markdown 且要前缀；wave 51 的裸文件名档要反引号——两层都漏。
+新档查**第一段是本模块顶层目录**的路径（app/tests/scripts/packages/baseline/server/
+config/lib），**带不带反引号都查**。前缀收口是实测逼出来的：不限前缀则 781 个
+token 里 19 个不解析而 16 个本来就不是仓库文件；限住后只剩 5 个（3 真死 + 2 具名豁免）。
+**代价是本文件的文件头要排除**（它举的例子就是死路径，线索 126/174 第三次反咬），
+**只剥第一段块注释**，代码里再出现死路径仍然会红。
 
 ### 逐条撞过、成立的
 
-B15（上游调用点确实没传 `feedback`）、S8b/S8c 的 SDK 内部逐字存在、A1 `throttle: true`、
-H2/H9、E22 `inputPolishDisabled`、H3 的**机制**（splitpanes 4.1.2 自带 pane 过渡）、
-合同里 8 条 API 路径全在 openapi 快照里、`app/**` 里 **8 处「唯一的调用点/消费者」全部成立**、
-其余四处行数（98 / 34 / 471 / 498）与 runtime-core 3.5.40 全部仍然精确。
-
-### 一次真失败，不是抖动
-
-第一遍 `verify` RC=2，`format-check` 红——改短 H3 那串 class 之后 Markdown 表格列宽
-不再是 prettier 的写法。**是自己改出来的**，`prettier --write` 只动了那一行，重跑全绿。
+D12 的「7 值规则」（正好 7 个返回值）、D8 的 1 MiB（`1024 * 1024`）、
+I7 的 800ms/10s、Q4 的 `[0, 200, 500, 1000, 2000]`——全部逐值相同。
 
 ---
 
-## 下一轮（wave 54）：**收尾判据仍在重新计数**
+## 下一轮（wave 55）：**收尾判据仍在重新计数**
 
-47 干净，48/49/50/51/52/53 各翻出一条。别报「还剩几轮」。
+47 干净，48~54 七轮各翻出一条。别报「还剩几轮」。
 
-wave 54 扫哪里：
+wave 55 扫哪里：
 
-1. **`BEHAVIOR_CONTRACTS.md` 剩下的十几组**。wave 51 撞了 S8b/S10/N6/L14/A5，
-   wave 53 撞了 A1/B15/E22/H2/H3/H9/S8c + 8 条 API 路径，**C/D/F/G/I/J/K/M/O/P/Q/R
-   这些组基本没撞过**。它们是本仓所有取数与交互决定的宪法。
-2. **`scripts/` 下那些「不是门禁」的工具自己的判据**（`upstream-drift.mjs` 的
-   「不阻断构建」、`asset-budget.mjs`、`i18n-manager.mjs` 的扫描口径）。
-   它们没有门禁看着，而好几条门禁的结论建立在它们的口径上。
-3. **`packages/agent-core/` 那一层的文件头**。全仓唯一一个独立包，
-   它的 `AGENTS.md`/`ARCHITECTURE.md` 与合同版本号（`AGENTS_CORE_CONTRACT_VERSION = "m8"`）
-   只有一条 doc-facts 断言看着，其余判据一条都没撞过。
+1. **`packages/agent-core/`**——wave 54 只是路过。全仓唯一一个独立包，
+   它的 `AGENTS.md`/`ARCHITECTURE.md` 与合同版本号只有一条 doc-facts 断言看着，
+   其余判据一条都没撞过。
+2. **「账记对了但没改掉」这一整类。** wave 54 撞见一例：交接文档 wave 41 记下
+   「那条 e2e 路径是错的」，而代码里那行注释又挂了十三轮。
+   **把交接文档里所有「记错了 / 已翻案 / 是错的」的条目拉出来，逐条问「那处真的改了吗」。**
+3. **`tests/e2e-parity/support/scenarios.ts` 的场景说明**（1500+ 行，
+   本仓最长的一份判据集合），里面每条 `实测（日期）` 都是一次没人复核过的测量。
 
-## 更早几轮的记录（49~52 一句话，48 保留全文）
+## 更早几轮的记录（49~53 一句话，48 保留全文）
 
+- **wave 53**：`message-merge.test.ts` 的「上游 1,740 行」在 `44832a5e`（合上游）之后
+  变成 2,095，两个文件各挂一份、错了三周；`globals.css` 的 453→454 是本仓自己改的。
+  **三处都是写下时准确的——过期不是记错**。门禁是「行数断言 == 实际行数」（→ 线索 179）。
 - **wave 52**：`react-parity-scope.json` 的 `$comment` 说「product-surface.test.ts 是它
   唯一的消费者」，而 `scenario-coverage.test.ts` 在那句话落地 **30 分钟后**就开始读它，
   错了九天约五十轮。修法是 `$readers` 数组 + 门禁与实测引用集逐字比对（→ 线索 178）。
@@ -534,7 +536,7 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 179 条在记忆文件里）
+## 其他常踩的坑（完整 180 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -567,6 +569,9 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   所以**靠交互才出现的东西，位置永远进不了台账**，只能单测守（线索 137）。
 - **注释里带点写一条死词条会把它从 unused 集里弄没**（线索 126）。要写成
   「container 下的 leafName」，改完跑 `make i18n-unused` 核对。
+- **「账记对了」不等于「那处改掉了」**（线索 180）。交接文档在 wave 41 记下
+  「那条 e2e 路径是错的」，而代码里那行注释又挂了十三轮——**记录与被记录的东西
+  是两份，改一份不会改另一份**。翻旧账时要问的是「那处真的改了吗」，不是「记了吗」。
 - **引用上游的一个「值」（行数、class 串、常量）会随上游前进静默过期**（线索 179）。
   `文件:行号` 允许漂几行，**「N 行」不允许**——它是关于整份文件的精确断言。
   **不承重的数字干脆别写。** 另：`git log -- <path>` 默认做历史简化，
@@ -581,7 +586,7 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 
 ## 背景在哪
 
-- 每一轮的实测记录、179 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
+- 每一轮的实测记录、180 条踩坑线索：Claude 记忆 `deerflow-parity-harness-plan`
 - 判据与踩过的坑写在各文件头注释里，**不要跳过**：
   `frontend-vue/tests/e2e-parity/support/{capture,scenarios,react-preview,context-options,fixture-thread}.ts`、
   `frontend-vue/tests/e2e-parity/diff.spec.ts`、`frontend-vue/scripts/lib/aria-parity.mjs`、
