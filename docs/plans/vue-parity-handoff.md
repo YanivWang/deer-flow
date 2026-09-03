@@ -8,11 +8,12 @@
 
 ---
 
-## 当前状态（截至 wave 40，2026-09-03）
+## 当前状态（截至 wave 41，2026-09-03）
 
-- 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`）。
+- 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
+  `aef3618d` = wave 40（chore `2f9627fa`）。
 - **wave 40 动了 `frontend/`**（重连预算耗尽后那颗键在说反话，两边同改），
-  **marker 已推到本轮的 feat**。
+  **marker 已推到 `aef3618d`**。
 - **wave 39 动了 `frontend/`**（命令面板搜索框的可访问名，两边同改）。
 - **wave 36 动了 `frontend/`**（`SidebarTrigger` 的窄屏图标，两边同改），
   **upstream marker 已推到 `79afa765`**。wave 30~35 都没动过。
