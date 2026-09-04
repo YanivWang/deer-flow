@@ -178,6 +178,81 @@ describe("照抄上游的 class 串", () => {
   });
 
   /*
+    **图标选得对不对，只有源码看得见。**
+
+    这几条全是 `icon-parity` 的字形/尺寸档报出来、wave 75 逐条回源码核实的真差异。
+    它们一样都不进可访问性树（图标是装饰）、也不改几何，
+    所以对照台账、`dom-parity`、视觉基线三样全绿——而用户看到的是另一颗图标。
+
+    钉源码而不是渲染：这几处要么在下拉菜单里（要展开才在树上），
+    要么在设置面板深处，单独 mount 的成本远大于它挡住的回归。
+  */
+  it("这几处画的是上游那一颗图标", () => {
+    // web_fetch：上游 message-group.tsx:797 是 GlobeIcon(=Globe)，不是 Globe2(=Earth)。
+    const toolStep = stripped("components/chat/ProcessingToolStep.vue");
+    expect(toolStep).toContain('if (name.value === "web_fetch") return Globe;');
+    expect(toolStep).not.toContain("Globe2");
+
+    // 引用面板：上游 citation-sources-panel.tsx:40 是 BookOpenTextIcon，不是 Library。
+    const citations = stripped("components/chat/CitationSourcesPanel.vue");
+    expect(citations).toContain("<BookOpenText");
+    expect(citations).not.toContain("Library");
+
+    // 置顶菜单项按状态换图标（上游 recent-chat-list.tsx:370）。
+    const menu = stripped("components/workspace/ThreadActionsMenu.vue");
+    expect(menu).toContain("pinned ? PinOff : Pin");
+
+    // 单选指示器是 8px 实心圆点，不是对勾（上游 ui/dropdown-menu.tsx:136）。
+    const radio = stripped(
+      "components/ui/dropdown-menu/DropdownMenuRadioItem.vue",
+    );
+    expect(radio).toContain('<Circle class="size-2 fill-current"');
+    expect(radio).not.toContain("<Check");
+
+    // 渠道状态是带图标的 Badge（上游 channels-settings-page.tsx:181）。
+    const channels = stripped(
+      "components/workspace/channels/ChannelConnections.vue",
+    );
+    expect(channels).toContain("<CircleCheck");
+    expect(channels).toContain("<CircleAlert");
+    expect(channels).toContain("<Badge");
+  });
+
+  /*
+    **菜单项里的图标尺寸与颜色归 primitive，不归调用点。**
+    上游 `ui/dropdown-menu.tsx` 的三份 cva 都带
+    `[&_svg:not([class*='size-'])]:size-4` 与
+    `[&_svg:not([class*='text-'])]:text-muted-foreground`。
+    本仓此前一条都没有，于是每个调用点自己写 `:size="14"`——比上游小 2px，
+    颜色也没变灰。wave 75 补进 primitive 之后，侧栏那六颗改回裸标签。
+  */
+  it("下拉菜单项自带图标的尺寸与颜色", () => {
+    for (const f of [
+      "components/ui/dropdown-menu/DropdownMenuItem.vue",
+      "components/ui/dropdown-menu/DropdownMenuRadioItem.vue",
+      "components/ui/dropdown-menu/DropdownMenuSubTrigger.vue",
+    ]) {
+      const src = stripped(f);
+      expect(src, `${f} 少了图标默认尺寸`).toContain(
+        "[&_svg:not([class*='size-'])]:size-4",
+      );
+      expect(src, `${f} 少了 shrink-0`).toContain("[&_svg]:shrink-0");
+    }
+    for (const f of [
+      "components/ui/dropdown-menu/DropdownMenuItem.vue",
+      "components/ui/dropdown-menu/DropdownMenuSubTrigger.vue",
+    ]) {
+      expect(stripped(f), `${f} 少了图标的 muted 颜色`).toContain(
+        "[&_svg:not([class*='text-'])]:text-muted-foreground",
+      );
+    }
+    // 侧栏那六颗不再自己写尺寸。
+    expect(stripped("components/workspace/ThreadSidebar.vue")).not.toContain(
+      ':size="14"',
+    );
+  });
+
+  /*
     上游 workspace-nav-chat-list.tsx:56 的禁用「Agents」入口：外层
     `cursor-not-allowed`，按钮 `text-muted-foreground/50` + SidebarMenuButton
     cva 自带的 `aria-disabled:pointer-events-none aria-disabled:opacity-50`。

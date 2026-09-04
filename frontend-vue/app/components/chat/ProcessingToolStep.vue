@@ -10,7 +10,7 @@ import { computed } from "vue";
 import {
   BookOpenText,
   FolderOpen,
-  Globe2,
+  Globe,
   ListTodo,
   MessageCircleQuestionMark,
   Monitor,
@@ -55,7 +55,13 @@ const icon = computed(() => {
   if (name.value.startsWith("browser_")) return Monitor;
   if (name.value === "web_search" || name.value === "image_search")
     return Search;
-  if (name.value === "web_fetch") return Globe2;
+  /*
+    上游 message-group.tsx:797 是 `GlobeIcon`（= lucide 的 `Globe`）。
+    本仓原来写的是 `Globe2`——它是 `Earth` 的别名，**是另一颗图标**：
+    `Globe` 是经纬线地球，`Earth` 是画着大陆轮廓的那颗。
+    可访问性树里两者都不出现，`icon-parity` 的字形档是唯一看得见它的地方。
+  */
+  if (name.value === "web_fetch") return Globe;
   if (name.value === "ls") return FolderOpen;
   if (name.value === "read_file") return BookOpenText;
   if (

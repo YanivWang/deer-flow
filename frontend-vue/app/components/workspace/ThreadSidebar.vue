@@ -813,8 +813,17 @@ function openSettingsDialog(section: "appearance" | "about") {
               side="top"
               class="w-[calc(var(--reka-dropdown-menu-trigger-width))] min-w-56"
             >
+              <!--
+                这六颗图标**不写尺寸**：上游 workspace-nav-menu.tsx 里全是裸标签
+                （`<Settings2Icon />` / `<GlobeIcon />` / …），尺寸由
+                DropdownMenuItem 的 `[&_svg:not([class*='size-'])]:size-4` 给，
+                也就是 16px。本仓原来每颗手写 `:size="14"`——**比上游小 2px**，
+                而且那是因为本仓的 DropdownMenuItem 当时根本没有那条默认规则
+                （wave 75 一并补上了）。颜色同理：那一层的
+                `[&_svg:not([class*='text-'])]:text-muted-foreground` 让图标是中灰的。
+              -->
               <DropdownMenuItem @select="openSettingsDialog('appearance')">
-                <Settings2 :size="14" /> {{ $i18n.t.value.common.settings }}
+                <Settings2 /> {{ $i18n.t.value.common.settings }}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem as-child>
@@ -824,7 +833,7 @@ function openSettingsDialog(section: "appearance" | "about") {
                   rel="noopener noreferrer"
                   class="flex w-full items-center gap-2"
                 >
-                  <Globe :size="14" />
+                  <Globe />
                   {{ $i18n.t.value.workspace.officialWebsite }}
                 </a>
               </DropdownMenuItem>
@@ -835,7 +844,7 @@ function openSettingsDialog(section: "appearance" | "about") {
                   rel="noopener noreferrer"
                   class="flex w-full items-center gap-2"
                 >
-                  <Github :size="14" />
+                  <Github />
                   {{ $i18n.t.value.workspace.visitGithub }}
                 </a>
               </DropdownMenuItem>
@@ -847,7 +856,7 @@ function openSettingsDialog(section: "appearance" | "about") {
                   rel="noopener noreferrer"
                   class="flex w-full items-center gap-2"
                 >
-                  <Bug :size="14" /> {{ $i18n.t.value.workspace.reportIssue }}
+                  <Bug /> {{ $i18n.t.value.workspace.reportIssue }}
                 </a>
               </DropdownMenuItem>
               <DropdownMenuItem as-child>
@@ -855,12 +864,12 @@ function openSettingsDialog(section: "appearance" | "about") {
                   href="mailto:support@deerflow.tech"
                   class="flex w-full items-center gap-2"
                 >
-                  <Mail :size="14" /> {{ $i18n.t.value.workspace.contactUs }}
+                  <Mail /> {{ $i18n.t.value.workspace.contactUs }}
                 </a>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem @select="openSettingsDialog('about')">
-                <Info :size="14" /> {{ $i18n.t.value.workspace.about }}
+                <Info /> {{ $i18n.t.value.workspace.about }}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

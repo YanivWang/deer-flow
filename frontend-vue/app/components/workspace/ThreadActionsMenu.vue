@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   Pencil,
   Pin,
+  PinOff,
   Share2,
   Trash2,
 } from "lucide-vue-next";
@@ -125,8 +126,13 @@ async function exportConversation(format: ThreadExportFormat) {
       现有对照场景没有一条会点开这个菜单，所以台账一条都报不出来。
     -->
     <DropdownMenuContent align="end" class="min-w-48">
+      <!--
+        上游 recent-chat-list.tsx:370 **按置顶态换图标**：已置顶画 `PinOff`
+        （取消置顶），未置顶画 `Pin`。本仓原来两种状态都画 `Pin`——
+        文字换了、图标没换。
+      -->
       <DropdownMenuItem @select="emit('togglePin')">
-        <Pin :size="14" />
+        <component :is="pinned ? PinOff : Pin" :size="14" />
         {{
           pinned ? $i18n.t.value.chats.unpinChat : $i18n.t.value.chats.pinChat
         }}

@@ -18,7 +18,13 @@
 */
 
 import { computed, ref } from "vue";
-import { LoaderCircle, Plug, Unplug } from "lucide-vue-next";
+import {
+  CircleAlert,
+  CircleCheck,
+  LoaderCircle,
+  Plug,
+  Unplug,
+} from "lucide-vue-next";
 
 import ChannelProviderIcon from "./ChannelProviderIcon.vue";
 import ChannelRuntimeConfigDialog from "./ChannelRuntimeConfigDialog.vue";
@@ -32,6 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -123,6 +130,10 @@ function statusLabel(status: string) {
 */
 function providerStatusLabel(view: ChannelProviderView) {
   return statusLabel(getChannelProviderStatusKey(view));
+}
+/* 与上游 `isConnected(provider)` 同一条判据：徽标的变体与图标都看它。 */
+function providerConnected(view: ChannelProviderView) {
+  return getChannelProviderStatusKey(view) === "connected";
 }
 
 function beginSetup(provider: ChannelProvider) {
@@ -278,9 +289,32 @@ function connectLabel(view: ChannelProviderView) {
             :provider="view.provider.provider"
             class="shrink-0"
           />
+          <!--
+            状态是一颗**带图标的徽标，挨着渠道名**，不是描述下面一行裸文字。
+            上游 `channels-settings-page.tsx:181`：
+            `<Badge variant={isConnected ? "default" : "outline"}
+             className={cn(!isConnected && "text-muted-foreground")}>`
+            里面是 `CheckCircle2Icon`（已连接）或 `AlertCircleIcon`（未连接）加状态文字。
+
+            本仓原来是第三行一个 `text-muted-foreground text-xs` 的裸 span：
+            **没有徽标、没有图标，已连接与未连接看起来一模一样**（只有文字不同），
+            位置也在描述下面而不是名字旁边。`icon-parity` 的字形档是唯一报出
+            `CircleAlert` 的地方——可访问性树里图标不出现，文字两边又一样。
+          -->
           <div class="min-w-0 flex-1">
-            <div class="truncate text-sm font-medium">
-              {{ view.provider.display_name }}
+            <div class="flex w-full items-center gap-2">
+              <span class="truncate text-sm font-medium">
+                {{ view.provider.display_name }}
+              </span>
+              <Badge
+                :variant="providerConnected(view) ? 'default' : 'outline'"
+                :class="providerConnected(view) ? '' : 'text-muted-foreground'"
+                :data-testid="`channel-status-${view.provider.provider}`"
+              >
+                <CircleCheck v-if="providerConnected(view)" />
+                <CircleAlert v-else />
+                {{ providerStatusLabel(view) }}
+              </Badge>
             </div>
             <p class="text-muted-foreground text-xs">
               {{
@@ -288,12 +322,6 @@ function connectLabel(view: ChannelProviderView) {
                 view.provider.display_name
               }}
             </p>
-            <span
-              class="text-muted-foreground text-xs"
-              :data-testid="`channel-status-${view.provider.provider}`"
-            >
-              {{ providerStatusLabel(view) }}
-            </span>
           </div>
           <div class="flex shrink-0 flex-wrap justify-end gap-1">
             <!--

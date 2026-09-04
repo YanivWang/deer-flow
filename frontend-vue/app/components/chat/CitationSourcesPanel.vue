@@ -7,7 +7,7 @@
 -->
 
 <script setup lang="ts">
-import { Check, Copy, ExternalLink, Library } from "lucide-vue-next";
+import { BookOpenText, Check, Copy, ExternalLink } from "lucide-vue-next";
 import { ref } from "vue";
 
 import {
@@ -45,10 +45,17 @@ async function copySource(source: CitationSource) {
     class="border-border bg-muted/20 mt-3 rounded-md border text-xs"
     data-testid="citation-sources"
   >
+    <!--
+      上游 citation-sources-panel.tsx:40 那颗是 `BookOpenTextIcon`
+      （`size-3.5 shrink-0`），不是 `Library`——**两颗画的不是一回事**，
+      而可访问性树里图标不出现，只有 `icon-parity` 的字形档看得见。
+      `hover:text-foreground transition-colors` 也是上游那一行的：
+      这是一条可点的 summary，本仓原来悬停没有任何反馈。
+    -->
     <summary
-      class="text-muted-foreground flex cursor-pointer list-none items-center gap-2 px-3 py-2 [&::-webkit-details-marker]:hidden"
+      class="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-2 px-3 py-2 transition-colors [&::-webkit-details-marker]:hidden"
     >
-      <Library :size="14" />
+      <BookOpenText :size="14" class="shrink-0" />
       {{ $i18n.t.value.citations.sourcesSummary(sources.length) }}
     </summary>
     <ol

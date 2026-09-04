@@ -43,13 +43,22 @@ const canonical = (map, name) => {
 */
 const EXEMPT = new Set(["landing", "docs", "blog", "magicui"]);
 
+/*
+  **`.ts` 也要扫。**
+
+  wave 75 之前这里只收 `.tsx` 与 `.vue`，而**两边都把图标表放在 `.ts` 里**：
+  本仓 `core/artifacts/display.ts` 的 `Image as ImageIcon`、
+  `core/skills/slash-suggestions.ts` 的那一批；上游 `core/utils/files.tsx`
+  是 `.tsx` 所以看得见，但同类的 `.ts` 看不见。
+  于是「只有 React 用 Image」这种线索是**扫描范围造出来的**，不是差异。
+*/
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
     if (EXEMPT.has(name)) continue;
     const p = join(dir, name);
     const st = statSync(p);
     if (st.isDirectory()) walk(p, out);
-    else if ([".tsx", ".vue"].includes(extname(p))) out.push(p);
+    else if ([".tsx", ".ts", ".vue"].includes(extname(p))) out.push(p);
   }
   return out;
 }
@@ -121,10 +130,19 @@ const kinds = {
   roleStatus: (s) => (s.match(/role=["'{]?["']?status/g) ?? []).length,
 };
 
-const reactRoot = process.argv[2] ?? "../frontend/src/components";
+/*
+  **扫整个源码根，不只是 `components/`。**
+
+  wave 75 之前这两个默认值是 `.../src/components` 与 `app/components`，
+  于是 `core/` / `pages/` / `composables/` 下的图标一颗都看不见。
+  字形那一档比的是**全仓集合**，扫不全就等于在拿两个残缺集合做差——
+  实测「只有 React 用」那 13 条里有一半是这么来的。
+  逐文件配对那一档仍然只在两边都有同名文件时才成立，不受影响。
+*/
+const reactRoot = process.argv[2] ?? "../frontend/src";
 const REACT_DTS =
   "../frontend/node_modules/lucide-react/dist/lucide-react.d.ts";
-const vueRoot = process.argv[3] ?? "app/components";
+const vueRoot = process.argv[3] ?? "app";
 /*
   **先剥注释再解析**（线索 174）。实测被自己咬过一次：SubtaskCard 的 import 块里
   写了三行 `//` 注释解释为什么用 `CheckCircle`，收集器按逗号切块之后
@@ -138,10 +156,18 @@ const stripComments = (src) =>
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/^[ \t]*\/\/.*$/gm, "");
 
+/*
+  **按完整路径存，不按 basename。**
+
+  wave 75 之前 key 是 `basename.toLowerCase()`：同名文件后来的**静默覆盖**前面的
+  ——实测 React 侧 167 份 `.tsx` 只剩 162 个 key，扫到整个 src 之后 409 份只剩 267。
+  丢掉的那些既不出现在字形集合里，也不参与配对，而报告里看不出少了什么。
+  逐文件配对改用下面单独建的 basename 索引，并且**只在两边各自唯一时才配**。
+*/
 const load = (root, alias) => {
   const map = new Map();
   for (const f of walk(root)) {
-    const key = basename(f, extname(f)).toLowerCase().replace(/[-_]/g, "");
+    const key = f;
     const src = stripComments(readFileSync(f, "utf8"));
     map.set(key, {
       file: f,
@@ -187,15 +213,41 @@ for (const [label, map, probe, want] of [
 const R = load(reactRoot, REACT_ALIAS);
 const V = load(vueRoot, VUE_ALIAS);
 
-const pairs = [...V.keys()].filter((k) => R.has(k)).sort();
+/*
+  逐文件配对用 basename 索引，**只在两边各自唯一时才配**。
+  一边有两份同名的（React 的 `src` 下有 5 组），配哪一份都是猜——
+  报出条数而不是静默挑一个。
+*/
+const byBase = (map, exts) => {
+  const idx = new Map();
+  for (const [path, entry] of map) {
+    if (!exts.includes(extname(path))) continue;
+    const k = basename(path, extname(path)).toLowerCase().replace(/[-_]/g, "");
+    idx.set(k, [...(idx.get(k) ?? []), entry]);
+  }
+  return idx;
+};
+/*
+  **只拿组件文件配对**（`.tsx` ↔ `.vue`）。扫描面扩到 `.ts` 之后，
+  按 basename 配会把上游的 `ai-elements/message.tsx` 配到本仓的
+  `core/types/message.ts`——一个纯类型文件，报出来的「React 有 Tooltip、
+  Vue 没有」是纯噪声。`.ts` 仍然进全仓的字形与尺寸集合。
+*/
+const RB = byBase(R, [".tsx"]),
+  VB = byBase(V, [".vue"]);
+const pairs = [...VB.keys()].filter((k) => RB.has(k)).sort();
+const unique = pairs.filter(
+  (k) => RB.get(k).length === 1 && VB.get(k).length === 1,
+);
 console.log(
-  `React ${R.size} 份 / Vue ${V.size} 份 / 同名配对 ${pairs.length} 对\n`,
+  `React ${R.size} 份 / Vue ${V.size} 份 / 同名配对 ${unique.length} 对` +
+    `（另有 ${pairs.length - unique.length} 组同名文件不止一份，不配）\n`,
 );
 
 let issues = 0;
-for (const key of pairs) {
-  const r = R.get(key),
-    v = V.get(key);
+for (const key of unique) {
+  const r = RB.get(key)[0],
+    v = VB.get(key)[0];
   const lines = [];
   for (const [name, rs] of r.icons) {
     const vs = v.icons.get(name);
@@ -222,10 +274,9 @@ for (const key of pairs) {
   const vueMarkers = (k) => {
     let total = v[k];
     for (const m of v.src.matchAll(/from\s+"@\/(components\/[^"]+\.vue)"/g)) {
-      const child = V.get(
-        basename(m[1], ".vue").toLowerCase().replace(/[-_]/g, ""),
-      );
-      if (child) total += child[k];
+      const children =
+        VB.get(basename(m[1], ".vue").toLowerCase().replace(/[-_]/g, "")) ?? [];
+      for (const child of children) total += child[k];
     }
     return total;
   };
@@ -282,10 +333,51 @@ const allIcons = (map, alias) => {
   }
   return set;
 };
+/*
+  **已核实的排除项，一条一个理由。**
+
+  一条长期红着的线索等于没有（线索 194）：字形档从 wave 69 起挂着十几条，
+  每一轮都被重新读一遍、每一轮都得出同样的结论，真差异反而被它们淹掉。
+  wave 75 逐条回源码核完，把结论写在这里——**报告只列没核过的**。
+
+  这份表是**双向**的：某一条不再出现（上游删了、或本仓开始用了），
+  下面的 `stale` 会把它报出来，逼着回来重看一遍，而不是留一条过期的豁免。
+*/
+const VERIFIED = {
+  // —— 上游那一处是死代码，**禁止移植**（react-parity-scope.json 的既定判据）——
+  ArrowDown:
+    "ConversationScrollButton；`grep -rn ConversationScrollButton` 除定义处零命中",
+  Book: "ai-elements/sources.tsx 整份零消费者",
+  ChevronLeft:
+    "ai-elements/message.tsx 的 MessageBranchPrevious，MessageBranch* 零消费者",
+  ThumbsUp:
+    "message-list-item.tsx 的点赞；渲染条件 feedback!==undefined，没有一处传它",
+  ThumbsDown: "同 ThumbsUp",
+  // —— 两边 primitive 实现不同，不是产品面差异 ——
+  Bookmark: "ai-elements/ 的内部件，本仓那一层用 reka 自己的结构",
+  GripVertical: "ui/ 的 resizable 手柄，本仓走 splitpanes",
+  // —— 改动面板双视图结构不同（wave 69 核过）——
+  FileMinus: "workspace-change-panel 的双视图，本仓那一屏结构不同",
+  FilePlus: "同 FileMinus",
+  FilePenLine: "同 FileMinus",
+  // —— 名字撞车 / 第三方内部 ——
+  Github:
+    "上游画的是**本地组件** `components/workspace/github-icon.tsx`（手写 svg），" +
+    "不是 lucide 的 Github；本仓用 lucide 的同名图标，两边都画 GitHub 标志",
+  Maximize2:
+    "本仓 MarkdownTable 的全屏键；上游那一颗由 streamdown 内部渲染" +
+    "（`dist/chunk-BO2N2NFS.js` 的 `Maximize2Icon`），扫不到它的源码",
+};
+
 const ri = allIcons(R, REACT_ALIAS),
   vi = allIcons(V, VUE_ALIAS);
-const onlyR = [...ri].filter((n) => !vi.has(n)).sort();
-const onlyV = [...vi].filter((n) => !ri.has(n)).sort();
+const rawOnlyR = [...ri].filter((n) => !vi.has(n)).sort();
+const rawOnlyV = [...vi].filter((n) => !ri.has(n)).sort();
+const onlyR = rawOnlyR.filter((n) => !(n in VERIFIED));
+const onlyV = rawOnlyV.filter((n) => !(n in VERIFIED));
+const stale = Object.keys(VERIFIED)
+  .filter((n) => !rawOnlyR.includes(n) && !rawOnlyV.includes(n))
+  .sort();
 /* 形状断言：两边都必须解析出成百颗，否则下面的集合差是假的（线索 195）。 */
 if (ri.size < 50 || vi.size < 50) {
   console.error(`图标集合没解析出来：React ${ri.size} / Vue ${vi.size}`);
@@ -294,6 +386,13 @@ if (ri.size < 50 || vi.size < 50) {
 console.log(`## 字形（全仓）  React ${ri.size} 颗 / Vue ${vi.size} 颗`);
 console.log(`   只有 React 用：${onlyR.join("、") || "无"}`);
 console.log(`   只有 Vue  用：${onlyV.join("、") || "无"}`);
+console.log(
+  `   （另有 ${Object.keys(VERIFIED).length - stale.length} 条已核实并排除，理由写在 VERIFIED 表里）`,
+);
+if (stale.length)
+  console.log(
+    `   ⚠ VERIFIED 表里这几条已经不再出现，回去重看一遍再删：${stale.join("、")}`,
+  );
 /*
   **尺寸也要有一档全仓的。**
 

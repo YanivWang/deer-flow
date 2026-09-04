@@ -7,6 +7,27 @@
 -->
 
 <script setup lang="ts">
+/*
+  wave 75：class 合同逐条对上上游 `ui/dropdown-menu.tsx`。此前本仓这三份只抄了
+  一半，缺的每一条都看得见：
+
+  - `[&_svg:not([class*='size-'])]:size-4` —— **菜单项里的图标没有默认尺寸**，
+    于是每个调用点得自己写 `:size="14"`（写出来还比上游的 16px 小 2px），
+    漏写的就是 lucide 的默认 24px。
+  - `[&_svg:not([class*='text-'])]:text-muted-foreground` —— 上游菜单项里的图标
+    是**中灰**的，本仓继承前景色，深一档。
+  - `focus:text-accent-foreground` —— 键盘走到某一项时上游连文字也换色。
+  - `[&_svg]:pointer-events-none [&_svg]:shrink-0` —— 图标不吃指针、不被文字挤扁。
+  - destructive 那一支的三条（`focus:bg-destructive/10` + 深色档 +
+    `focus:text-destructive`）与 `*:[svg]:!text-destructive` —— 删除项在悬停/聚焦时
+    整行（含图标）变红，本仓只有静息态的文字是红的。
+  - `rounded-sm`（本仓写的是 `rounded`）、`text-sm`、`data-[inset]:pl-8`、
+    `outline-hidden`（本仓 `outline-none`）。
+
+  `hover:bg-accent` 是本仓多出来的一条，**保留**：Reka 的菜单项只在
+  `data-highlighted` 时才 focus，鼠标悬停不触发 focus，而上游 Radix 的
+  `focus:` 在鼠标移上去时就成立（它给高亮项打的就是 focus）。
+*/
 import { computed, type HTMLAttributes } from "vue";
 import {
   DropdownMenuItem,
@@ -41,7 +62,7 @@ const delegated = computed(() => {
     v-bind="delegated"
     :class="
       cn(
-        'hover:bg-accent focus:bg-accent data-[variant=destructive]:text-destructive flex w-full cursor-default items-center gap-2 rounded px-2 py-1.5 text-left outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        `hover:bg-accent focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
         props.class,
       )
     "
