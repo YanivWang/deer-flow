@@ -305,6 +305,25 @@ upstream-accept:
 dom-parity:
 	node scripts/dom-parity.mjs
 
+# `make audit` **当前预期是红的**，2026-09-04（wave 66）逐条查过可达性，结论记在这里，
+# 免得下一个人看到 "14 vulnerabilities" 再做一遍同样的分析。
+#
+#   js-yaml（high，!!omap 二次方 CPU）—— **0 个客户端 chunk**，构建期依赖，运行时无关。
+#   nanoid（high，自定义生成器可能死循环）—— 1 个 chunk，但漏洞要求传入自定义生成器，
+#           本仓没有这种用法。
+#   lodash-es（high，`_.template` 代码注入）—— 5 个 chunk，来路是
+#           mermaid → @mermaid-js/parser → langium → chevrotain → @chevrotain/gast。
+#           漏洞要求把攻击者可控的模板串喂给 `_.template`，chevrotain 不这么用。
+#   mermaid（moderate，radar 图 DoS，>=11.6.0 <11.16.1）—— **有意不升**，见下。
+#
+# **mermaid 有意锁在 11.12.2，不跟着 advisory 升。** 那不是保守，是判据：
+# 上游 React 侧的 mermaid 来自 `@streamdown/mermaid → streamdown → mermaid@^11.12.2`，
+# 实际解析成 **11.12.2**；本仓精确锁同一个版本，**为的是两个应用画出同一张图**。
+# mermaid 的渲染结果直接进对照取样面（`thread-history-mermaid` 是台账里的场景），
+# 单边升级会让台账立刻分叉。要升就得两边一起升，而 React 那边的版本由被 vendored 的
+# streamdown 的依赖树决定——覆盖它等于从上游的锁文件上分叉，正是本仓一直在避免的漂移。
+# **这条的正确归属方是上游 streamdown / DeerFlow，不是这个 fork。**
+# 该 advisory 是「渲染恶意 radar 图时卡住自己这一个标签页」，而图的来源是 agent 输出。
 audit:
 	$(PNPM) audit --audit-level moderate --registry https://registry.npmjs.org
 

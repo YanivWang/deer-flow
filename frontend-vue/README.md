@@ -86,6 +86,17 @@ make container-smoke    # production image, health, SIGTERM and rejection policy
 make coverage           # unit-test line coverage — a diagnostic, deliberately not a gate
 ```
 
+`make audit` is **expected to fail today**, and the triage is recorded next to the
+target in the `Makefile`: three of the four highs are unreachable (`js-yaml` never
+reaches a client chunk, `nanoid`'s advisory needs a custom generator we do not pass,
+`lodash-es` arrives through mermaid's parser and the advisory is about `_.template`).
+The fourth — mermaid's radar-diagram DoS — is **deliberately not patched here**:
+this app pins `mermaid` to the exact version React resolves through
+`@streamdown/mermaid`, because mermaid output is compared between the two apps
+(`thread-history-mermaid` is a ledger scenario). Bumping one side alone splits the
+ledger; bumping both means overriding a vendored library's dependency tree. That
+upgrade belongs upstream.
+
 `make coverage` is **not** part of `verify` and has no threshold. Two reasons:
 a coverage floor buys filler tests, and the number only sees code executed inside
 the unit-test process — `app/layouts/`, `server/routes/` and `app.vue` are covered

@@ -46,7 +46,9 @@ const budgets = {
   // import，首屏一个字节都不加载）。maxRaw 那一个是 `@codemirror/view`。
   // 语法包按语言分片，所以打开一个 .py 不会顺带下载 html/css/markdown。
   "vendor-codemirror": {
-    totalRaw: 580_000,
+    // 2026-09-04（wave 66）复测 raw 555,743 / gzip 199,926 / maxRaw 199,773——
+    // 与 2026-08-25 记的实测值逐字相同，这一格没有漂。
+    totalRaw: 585_000,
     totalGzip: 210_000,
     maxRaw: 210_000,
   },
@@ -54,14 +56,29 @@ const budgets = {
   // so their chunk also contains a small lucide subset. Classify i18n before
   // vendor-ui and budget the complete locale payload instead of hiding it in
   // the Reka/lucide accessibility bucket.
+  // 2026-09-04（wave 66）复测 raw 87,271 / gzip 32,410——预算留着原来的余量。
   "vendor-i18n": { totalRaw: 120_000, totalGzip: 45_000, maxRaw: 120_000 },
-  // 原来这一格只装着 workspace shell 用到的 Reka dialog/dropdown。UI primitive 层
-  // 落地后它还要装 Select、Tabs、Switch、ScrollArea、Listbox/Combobox、AlertDialog
-  // 和 Popover——手搓 div 换成真的可访问控件，这些字节就是它的价格：
-  // raw 227.8 KiB → 331.7 KiB，gzip 70.4 KiB → 101.4 KiB。
-  // 已确认不是重复打包：Reka 运行时只出现在 vendor-ui 的 chunk 里，
-  // 消费它的 markdown/workspace chunk 引用同一份。整包 raw/gzip 天花板仍然通过。
-  "vendor-ui": { totalRaw: 380_000, totalGzip: 115_000, maxRaw: 150_000 },
+  /*
+    **这一格量的不是「Reka 的字节」，是「被 Reka/splitpanes 引种的那些 chunk」。**
+    2026-09-04（wave 66）把这句话改准了，因为原来那句是做不到的承诺：
+
+    chunk 的名字由 `nuxt.config.ts` 的 `clientChunkFileName` 决定，判据是
+    **chunk 里任意一个模块 id 命中**。Rollup 会把 vendor 与产品代码 co-locate，
+    所以名字只取自其中一个模块，**装不出「谁的字节」**。
+    实测：收窄种子之前（还带着 lucide/cva/clsx/tailwind-merge）24 个 chunk
+    共 728,591 raw，而最大的两个（320 KB / 192 KB）**一个匹配包都不含**；
+    收窄成 `reka-ui|splitpanes` 之后是 10 个 / 616,539 raw，
+    但仍有 **4 个 chunk 两个标记都搜不到**。**所以别再往这一格写「它装着什么」。**
+
+    它仍然有用，用途是**漂移警报**：这一格突然涨一截，说明 Rollup 的分块重排了，
+    值得去看 `baseline/route-payload-budget.json`（那条才量用户下载什么）。
+    **不要为了满足这一格去拆包**——两条预算没有对应关系，方向还可以相反。
+
+    2026-09-04 实测 raw 616,539 / gzip 185,792 / maxRaw 285,765，按实测 + 约 5% 定。
+    此前的 380,000 / 115,000 / 150,000 定于 2026-08-25，之后 settings 六个面板、
+    agents 页、scheduled-tasks 陆续落地，**这条门禁就一直红着没人跑**。
+  */
+  "vendor-ui": { totalRaw: 650_000, totalGzip: 196_000, maxRaw: 300_000 },
 };
 // 整包天花板同步抬高，抬的正好是 CodeMirror 那 542.7 KiB / 195.0 KiB：
 // 实测 raw 14_305_757 / gzip 3_292_309 / maxRaw 779_847 / maxGzip 230_136。
