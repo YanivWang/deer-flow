@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 70，2026-09-05）
+## 当前状态（截至 wave 71，2026-09-05）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71。
 - **动过 `frontend/` 的是十五轮**（wave 52 实测订正，wave 62 又加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -65,10 +65,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 70 收工时逐条跑过）
+### 门禁实测值（wave 71 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；256 文件 / 2120 单测，词典 944 key、18 unused
+make -C frontend-vue verify        exit 0；257 文件 / 2132 单测，词典 945 key、18 unused
 make -C frontend-vue asset-budget  exit 0（wave 66 起才是绿的，**从此进每轮清单**）
 make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefile 的 audit 上方
 make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55% / 行 74.9%
@@ -77,11 +77,14 @@ make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55%
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
-make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
+make -C frontend-vue e2e-visual    8    **不在 make e2e 里**；wave 71 重录 7 张
+                                   （容差临时压到 0 跑两遍分稳定/抖动：五张逐像素稳定，
+                                   artifact panel 855/815 是已知抖动；**别用裸
+                                   `--update-snapshots`，它等于 `all`，`=changed` 才对**）
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **216**（总 218；wave 69 新增 `TruncatedTooltip.vue`，是 wave 30 以来第一个）。动了 `frontend/` 再加
+产品 SFC **217**（总 219；wave 71 新增 `SidecarTrigger.vue`）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1029**）/ `test:e2e`（**146**）。
 **wave 62 三条全真跑过**：check 0、test 1029 passed、test:e2e 146 passed。
 （1023 → 1029 是 wave 62 加的 6 条：3 条 auth-callback 路由位置 + 3 条图标按钮可访问名。）
@@ -216,7 +219,7 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 65~66）做了什么：**全套跑一遍,三处红全部定性并处理**
+## wave 65~66 做了什么：**全套跑一遍,三处红全部定性并处理**
 
 用户要求「全面测试 frontend-vue」，14 项门禁串行跑完，**3 项红**。
 
@@ -258,7 +261,120 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
 
-## 上一轮（wave 70）做了什么：**回答「全排查完了吗」——没有，并把数字量准**
+## 上一轮（wave 71）做了什么：**焦点环那条前提是错的，但那个池子是对的**
+
+提交 `32d71958`。**正题是「100 处没有焦点环的手写按钮」，量下来第一句就翻案了。**
+
+### 翻案：Vue 的手写按钮**有**焦点环，只是画得不一样
+
+`app/assets/css/main.css:135` 有一条基础层兜底：
+
+```css
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+```
+
+**上游没有这一条。** 于是同一颗控件上，两边画的是两种环：
+
+| 走的路径                      | React                                  | Vue                                     |
+| ----------------------------- | -------------------------------------- | --------------------------------------- |
+| `<Button>` primitive          | `ring-[3px]` + `ring-ring/50` 软阴影环 | **一模一样**（实测逐值相同）            |
+| 手写 `<button>`（本仓 98 处） | 走 UA 默认 `outline: auto 1px`         | 基础层兜底 `outline: 2px solid` off 2px |
+
+实测（parity 探针，六个场景两个应用同屏，按 role+名字+尺寸配对，
+先按一次 Tab 建立键盘模态再逐个 `.focus()`）：**115 颗按钮里 55 颗焦点样式不同、
+60 颗完全相同**，而相同的那 60 颗**全部是两边都走 `<Button>` 的**。
+
+所以 wave 70 记的「**没有 `focus-visible` 焦点环 100**」这句，
+**作为源码事实是对的**（本轮同口径复量 94/98），
+**作为渲染结论是错的**——「键盘用户看不见焦点在哪」不成立。
+判据：**任何关于「渲染成什么」的结论，都不能只从 class 串推**（新线索 204）。
+
+### 但那个池子里有更值钱的东西：**三处拿字符当图标**
+
+同一批手写按钮里翻出来的，全部是 `ariaSnapshot()` / 对照台账 / `dom-parity`
+几何档 / `icon-parity` **四样都看不见**的：
+
+| 处                        | 本仓画的            | 上游画的                                             |
+| ------------------------- | ------------------- | ---------------------------------------------------- |
+| AgentChat sidecar 触发器  | **文字 `◫`** U+25EB | `MessageSquareTextIcon` in `<Button size="icon">`    |
+| AgentChat agent 建成那屏  | **文字 `✓`** U+2713 | `CheckCircleIcon`(=CircleCheckBig) 40px text-primary |
+| AgentChat followup 关闭键 | **文字 `×`** U+00D7 | `XIcon` 16px in `<Button variant="outline">`         |
+
+`icon-parity` 看不见它们，是因为它只解析 `import ... from "lucide-vue-next"`
+收上来的名字，而**这三处压根没 import 任何图标**。
+wave 69 与 wave 70 两轮都从它眼皮底下漏过去了。
+
+**但「用了字符」本身不是缺陷**：上游 `message-list.tsx:1372` 的划词关闭键就是
+`<span aria-hidden="true">×</span>`，本仓照抄是对的。所以这一档**必须两边一起比**。
+
+### 一起修掉的（22 颗按钮改走 primitive）
+
+| 处                                        | 差在哪                                                                                                             |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| sidecar 触发器（新 `SidecarTrigger.vue`） | 文字 `◫`、32px vs 36px、无 Tooltip、开合不换 variant、**重查期间不置灰会发两次 restore**                           |
+| agent 新建会话键                          | 12px vs 14px、`gap-2` vs `gap-1.5`、无 `font-medium`、**窄屏收起文字后是纯图标却无 Tooltip**                       |
+| followup 关闭键 + 建议 chip               | 文字 `×`；chip `px-3 py-1.5` vs 上游 `px-4 py-2`                                                                   |
+| agent 建成那屏的 ✓                        | 文字 30px 继承色 vs 图标 40px `text-primary`                                                                       |
+| **改完重跑的两颗**                        | 无图标、无禁用；**上游禁用「草稿为空」与「一个字没改」两种提交，本仓两条都没有**——两种都会丢掉这一轮之后的全部消息 |
+| composer 附件/语音/优化/模式/思考档/提交  | 六颗；**提交键上游是描边圆钮（`variant="outline"` + `shadow-none`），本仓画的是实心 primary**                      |
+| composer 页脚颜色                         | 颜色归容器（上游 `InputGroupAddon` 的 `text-muted-foreground`），此前靠每颗按钮各写一遍                            |
+| memory 设置六颗                           | **导入/导出/新增三颗一条 hover 都没有**；清空键写死 `bg-red-600`（深色主题不翻转）且**没有 disabled 绑定**         |
+| channels 四颗                             | **一颗图标都没有**（上游 `PlugIcon`/`UnplugIcon`/转圈）、无 hover、连接键用描边而上游是实心主操作、`text-red-600`  |
+
+手写 `<button>` **98 → 76**；缺 hover **45 → 34**，缺 cursor **80 → 62**，
+缺焦点类 **94 → 72**。
+
+### 顺带量出来的两件事
+
+- **`cursor` 是这一类里最容易看见的一条。** Tailwind 4 的 preflight 不给按钮
+  `cursor: pointer`，上游所有 Button 变体都显式写了 `cursor-pointer`，
+  手写那些没有——**实测同一颗控件 React 是小手、本仓是箭头**。
+- **上游 `PromptInputSubmit` 的 `submitted`（转圈）分支够不着**：调用点只传
+  error / streaming / ready 三种（chat-page.tsx:414）。本仓三个分支就是全集，
+  不是少了一支（线索 199 又一例）。
+
+### 落地的两把尺子
+
+1. **`make icon-parity` 加「拿字符当图标」档**：两边一起比、按全仓比、
+   排除 emoji（scheduled-tasks 的示例配方带着一串），只报本仓独有的字形。
+   配 exit 2 形状断言（拿上游 `message-list` 的 `×` 当探针——
+   React 那边解析成 0 会让本仓每个符号都变线索，而那和「上游真的不用」长得一样）。
+   **实测会红**：把三处改回字符，它当场报出 `◫` 与 `✓`，而 `×` 正确地不报。
+2. **`tests/guards/glyph-as-icon.test.ts`**：钉住「用了符号字符的文件集合」，
+   **双向**（线索 186 的修法），每一条都写清上游那处画的是什么。
+
+### 这两把尺子当轮各自踩坑
+
+- **守卫把自己的说明文字报成违规**（线索 202 第三例，而且踩它的是专门为
+  这一类写的守卫本人）：第一版只剥 `<!-- -->`，而 `SidecarTrigger.vue` 的
+  块注释里正解释着「原来这里写的是 `◫`」。
+- **注释里写 `/* */` 会提前闭合块注释**，整个测试文件解析失败。
+- **形状断言写成了对着 `.source` 找 `u00D7`**，而正则里写的是字面字符——
+  那条断言必然失败。改成拿三个已知真样本 + 两个已知假样本双向探。
+
+### 一条我自己造出来又被探针抓回来的回归
+
+把三颗 composer 按钮改走 `<Button>` 时，我**从源码推断**「颜色由页脚容器提供」
+就删掉了每颗上的 `text-muted-foreground`。**推断是错的**：上游那层
+（`InputGroupAddon` 的 cva）有 `text-muted-foreground`，而本仓那层是 scoped CSS，
+**只写了布局没写颜色**。探针实测四颗算出来是 `foreground`（近黑）而上游是
+`muted-foreground`（中灰）。修法是把颜色补在容器上（与上游同一个 owner），
+不是每颗按钮各写一遍。**这正是新线索 204 的自证。**
+
+### 负向验证 13/13 全红，无假绿
+
+sidecar 触发器五条（画回 `◫` / 退回 size-8 / 丢 pending 锁 / 不换变体 / 脱 Tooltip）、
+提交键画回实心、memory 清空键画回 `bg-red-600` / 丢 disabled 绑定、
+改完重跑丢「一个字没改」那条、followup 关闭键画回 `×`、建成那屏画回 `✓`、
+icon-parity 形状断言被拿掉。
+
+**「脱 Tooltip」那条第一次是无效变异**（线索 198 原样重演）：单边替换开标签让
+SFC 编译不过，报表打的是 `条数=?`。成对替换后 **RED，13 条一条没少**。
+
+## wave 70 做了什么：**回答「全排查完了吗」——没有，并把数字量准**
 
 提交 `43d5f289`。用户问「所有页面和组件全部排查完毕了吗」，
 并明确了判据：**「只要功能和交互一致样式一致就行，拆的更细没问题」**。
@@ -285,9 +401,15 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 | `icon-parity` 未核实字形线索    | 30 → 剩 **20**（全在 `ai-elements/`、`ui/` 或豁免面） |
 | `dom-parity` 几何档             | 仍**只有 `/login`** 真验过                            |
 
-**焦点环那 100 处不能机械补**：有的按钮贴着容器边，加 3px 环会顶到别的元素，
-要逐处看。分布：AgentChat 9、ChatComposer 7、ThreadSidebar 6、MemorySettings 6、
-MermaidDownloadMenu 4、ChannelConnections 4，其余 1~3。
+> **wave 71 订正（不要照这一段做事）**：上面这张表是 wave 70 当时量的，
+> 数字保留原样；但「没有 `focus-visible` 焦点环 100」**只是源码事实，不是渲染结论**。
+> `main.css:135` 有一条上游没有的基础层兜底环，实测两边都有环、只是画得不一样
+> （55/115 不同，相同的那 60 颗全部是两边都走 `<Button>` 的）。
+> wave 71 同口径复量是 **Vue 98 / React 15**、无焦点类 94。详见 wave 71 那一节。
+
+~~**焦点环那 100 处不能机械补**：有的按钮贴着容器边，加 3px 环会顶到别的元素，
+要逐处看。~~ 分布（wave 70 记的）：AgentChat 9、ChatComposer 7、ThreadSidebar 6、
+MemorySettings 6、MermaidDownloadMenu 4、ChannelConnections 4，其余 1~3。
 
 ### icon-parity 自己的第 6~8 次
 
@@ -431,12 +553,30 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 撤销态画回 Sparkles 1、胶囊去 role/aria-live 1、取消键换 testid 2、
 页脚优化键润色时消失 1、语音键丢 disabled 1。
 
-## 下一轮：**三条**
+## 下一轮：**四条**
 
-### 零、100 处没有焦点环的手写按钮（**最大的一块**）
+### 零、剩下 **76 处**手写 `<button>`（wave 71 从 98 处修掉 22 处）
 
-键盘用户看不见焦点在哪。**不能机械补**——贴边的按钮加 3px 环会顶到相邻元素。
-先按文件分批，每批跑 `make e2e-visual` 看有没有把布局挤动。
+**不要再按「补焦点环」去做**——wave 71 实测证明那条前提是错的（基础层有兜底环）。
+**正确的问法是「上游同一颗控件走的是哪条路径」**：走 `<Button>` /
+`InputGroupButton` 的，本仓也改走 primitive，焦点环、hover、cursor、
+禁用态、字号、深色 hover 一次全对上；上游自己也手写的（实测 15 处，
+例如 `recent-chat-list.tsx:468` 的 `mt-1 underline` 重试链接），照抄不动。
+
+按剩余分布挑（`node scratchpad 的 affordance 扫描` 或直接数）：
+`MermaidDownloadMenu` 4、`MermaidZoomPan` 3、`MarkdownTable` 3、
+`MarkdownLinkSafetyModal` 3、`ArtifactPanel` 3、`WorkspaceChangesBadge` 3、
+`SidecarPanel` 3、`setup.vue` 3、`ThreadSidebar` 6。
+**先回上游看那一颗走的是什么**，再动手。每批跑 `make e2e-visual`。
+
+### 零点五、`WorkspaceToaster` 的关闭键是「React 没有的 Vue 不许有」
+
+实测：上游 `workspace-content.tsx:44` 是 `<Toaster position="top-center" />`，
+**没有传 `closeButton`**，所以上游每条 toast 根本没有关闭键；本仓每条都有一颗 `×`
+（`workspace.dismissNotification` 也是本仓独有的词条）。本仓 toast 5 秒自动消失。
+**wave 71 没有动它**，因为删掉是产品回归而这不是那一轮的正题；
+账记在 `tests/guards/glyph-as-icon.test.ts` 的 `ALLOWED` 注释里。
+要翻案得先决定「双向判据在这一处认不认」。
 
 ### 一、几何这一档只够得着免登录页
 
@@ -445,9 +585,11 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 这是线索 137 的正题），**要么给 `dom-parity` 接上两边的 mock 网关**——
 后者是重造一遍台账已有的东西，前者动的是有基线的门禁。**先想清楚再动。**
 
-### 二、`icon-parity` 还剩 30 条**没核实的**线索
+### 二、`icon-parity` 还剩 **23 条**没核实的线索（wave 71 复量）
 
-字形档 22 条「只有 React 用」+ 5 条「只有 Vue 用」，加上按文件的尺寸差。
+字形档 15 条「只有 React 用」+ 5 条「只有 Vue 用」+ 尺寸档 3 条
+（`Circle` React 8px ↔ Vue 15/16px、`Github` 24 ↔ 14、`Info` 16 ↔ 14）。
+按文件的尺寸差现在是 **0**。
 **它们是线索不是结论**——wave 69 核过的那批里，假线索比真差异还多。
 已核实并排除的：ThumbsUp/ThumbsDown（两边都是死代码）、
 Bookmark/GripVertical/OctagonX/TriangleAlert（在 `ui/` 与 `ai-elements/` 里，
