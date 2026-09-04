@@ -44,9 +44,18 @@ export function TodoList({
         className,
       )}
     >
-      <header
+      {/*
+        A button, not a clickable <header>. The element carries the only
+        collapse/expand affordance for this panel, so a plain header with an
+        onClick handler is unreachable by keyboard entirely (WCAG 2.1.1) and
+        exposes no state to assistive tech. `aria-expanded` names the state
+        the chevron already shows visually.
+      */}
+      <button
+        type="button"
+        aria-expanded={!collapsed}
         className={cn(
-          "bg-accent flex min-h-8 shrink-0 cursor-pointer items-center justify-between px-4 text-sm transition-all duration-300 ease-out",
+          "bg-accent flex min-h-8 w-full shrink-0 cursor-pointer items-center justify-between px-4 text-sm transition-all duration-300 ease-out",
         )}
         onClick={handleToggle}
       >
@@ -64,7 +73,7 @@ export function TodoList({
             )}
           />
         </div>
-      </header>
+      </button>
       <main
         className={cn(
           "bg-accent flex grow px-2 transition-all duration-300 ease-out",

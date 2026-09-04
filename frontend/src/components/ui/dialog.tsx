@@ -66,10 +66,18 @@ function DialogContent({
         {...props}
       >
         {children}
+        {/*
+          The close button is a 28px target, not a bare 16px icon. Without
+          `size-7` the hit area is exactly the glyph, which is below the 24x24
+          minimum in WCAG 2.5.8 (Target Size, Minimum) and is noticeably hard
+          to hit on a trackpad. `cursor-pointer` is explicit because Tailwind
+          4's preflight does not give buttons a pointer cursor; every Button
+          variant states it for the same reason.
+        */}
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 flex size-7 cursor-pointer items-center justify-center rounded-md opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />
             <span className="sr-only">Close</span>
