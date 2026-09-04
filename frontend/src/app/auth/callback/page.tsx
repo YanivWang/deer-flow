@@ -5,6 +5,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { resolveAuthNextPath } from "@/core/auth/next-path";
 
+/*
+  This page lives at `src/app/auth/callback/` and NOT under the `(auth)` route
+  group on purpose — see `src/app/auth/layout.tsx`. Moving it back would make
+  the `next` handling below dead code again, because the group layout redirects
+  authenticated users to `/workspace` before this component ever mounts.
+  `tests/unit/app/auth-callback-route.test.ts` pins the placement.
+*/
 export default function AuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();

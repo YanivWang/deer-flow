@@ -189,10 +189,13 @@ test.describe("artifacts accessibility shape", () => {
     await expect(sidebar.getByText("Recent chats")).toHaveCount(0);
     // 收起态的触发器是 display:none，直到悬停头部才出现。
     await expect(sidebar.locator('[data-sidebar="trigger"]')).toBeHidden();
-    // 设置入口此时没有可访问名：React 收起态只给它一个图标。
+    // **wave 62 反过来了，两边同改**：收起态这颗触发器只渲染一个 settings 图标，
+    // 上游同样没给名字（workspace-nav-menu.tsx 的 SidebarMenuButton 既不传
+    // tooltip 也没有 aria-label），读屏器只念得出一颗「按钮」。现在两边都念
+    // workspace.settingsAndMore——**展开态显示的就是这一句，可访问名与可见名一致**。
     await expect(
       page.getByTestId("workspace-nav-menu-trigger"),
-    ).toHaveAccessibleName("");
+    ).toHaveAccessibleName("Settings and more");
   });
 
   test("a finished write_file in history does not open the panel by itself", async ({

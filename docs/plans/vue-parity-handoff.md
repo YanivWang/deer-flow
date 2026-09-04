@@ -8,7 +8,7 @@
 
 ---
 
-## 当前状态（截至 wave 62，2026-09-04）
+## 当前状态（截至 wave 63，2026-09-04）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
@@ -202,7 +202,82 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 61）做了什么：**按 C2 跑了第一轮，清单已经空了**
+## 上一轮（wave 62）做了什么：**按产品价值挑了三条，做完；顺手翻出三颗无名控件**
+
+判据换了：**不是「哪里还没对齐」，是「哪一条对真实用户有好处」**（2026-09-04 用户
+明确「React 那一侧有 bug，你也得修」）。挑出三条，全部做完。
+
+### 一：`/auth/callback` 吞掉 `?next=` 深链（**改的是 `frontend/`**）
+
+上游 `(auth)/layout.tsx` 见到 `authenticated` 就服务端 `redirect("/workspace")`，
+而真实 OAuth 走到 callback 时 session cookie 已经在了——**那一页从来没渲染过**，
+它自己对 `next` 的处理是死代码。用户从别人分享的深链登录，登完被扔到工作区首页。
+
+**修法就是 wave 28 记的那条「更小的」**：`src/app/(auth)/auth/` → `src/app/auth/`，
+自带一个 `dynamic = "force-dynamic"` 的 layout（不带 AuthProvider / I18nProvider，
+那页本来就不用）。守卫按**结构**钉：`/auth/callback` 上方不许有任何 layout 在
+`authenticated` 时跳走。**本仓一个字都不用改**——它的全局 middleware 只在
+`/workspace/*` 上探 session，一直是对的。
+
+### 二：模型选择器补上 cmdk 的模糊匹配 + 评分排序
+
+把 `cmdk@1.1.1` 的 `command-score` **逐行移植**进
+`app/core/models/command-score.ts`，实测 **950 组逐值差 0**。
+筛选与排序改走 `app/core/models/filter.ts`。wave 37 那条「分隔符不敏感」删掉了
+——**不是放弃是被覆盖**（`formatInput` 把 `[\s-]` 归成空格，`MiniMax M3` 打
+`minimax-m3` 得 0.9996）。**原来的理由「引评分库不划算」成立，
+但结论应该是「移植算法」而不是「不做」。**
+
+### 三：首次发送那一屏 —— **量完发现三条账里有三条是过期的**
+
+wave 29 记的竞态（标题永远停在 `Loading…` + 没去重的用户消息）**已经没有了**：
+replay Gateway 上 React 取 14 个样本，`loadingCleared` 14/14、用户消息每次 1 份、
+Vue 逐条相同。`Completed in <1s` 本仓从 `524beace`（2026-08-13）就画了，
+比记这条账早两周。`Edit and rerun` 上游也早有 `aria-label`。**详见「挂着的账」那一节。**
+
+### 但同一次普查翻出了三颗真的无名控件，两边都有
+
+探针里顺手加了一条「跑完一轮之后，屏幕上还有哪些交互控件没有可访问名」：
+
+| 控件 | React | Vue |
+| --- | --- | --- |
+| 复制键（human turn） | 无名 | 无名（**照抄的**） |
+| 复制键（assistant turn） | 无名 | 无名（**照抄的**） |
+| 侧栏底部设置触发器（收起态） | 无名 | 无名 |
+
+**tooltip 不是可访问名** —— Radix / Reka 都把它挂成 `aria-describedby`，
+读屏器念出来就是一颗「按钮」。两个 Vue 文件头此前都写着「不给可访问名，
+因为上游只有图标和 tooltip」——**对上游的描述是准的，照抄的却是缺陷**。
+按 wave 28 的判据三处**两边同改**。
+
+### 门禁与负向验证
+
+见下面「门禁实测值」。**9 条有效变异全红**；**1 条第一次假绿**（排序那条用例的
+输入序恰好等于分数序，删掉 `.sort()` 照样绿，已补一条输入序≠分数序的）；
+**1 条无效变异**（空查询短路——所有分数都是 0.99，删掉它一条用例都不红，
+`filter.ts` 里那条「不短路会打乱顺序」的理由因此**是错的，已订正**）。
+
+## 下一轮（wave 63）：**没有必须做的了**
+
+wave 61 判定 C1/C2 都已满足，wave 62 又把「挂着的账」里**产品价值最高的三条**
+做完了（并顺手清掉三条过期账 + 三颗无名控件）。剩下的账分两类：
+
+1. **本仓已经比上游更好的九处**（browser 面板的 `@mousemove`、内联错误 + 重试、
+   发送失败留在页面上而不是飘走的 toast、建 agent 页的完整会话头、四态 + 行内错误、
+   种子取数静默降级、`channels.connectedAs` 的多账号形状、案例页不发那四条
+   需鉴权请求、`Edit and rerun` 有可访问名）。**按「对齐」去做等于把产品改差。**
+2. **零产品价值的记账**（欢迎区 DOM 父节点、`Button` as-child 的 `data-*`、
+   共有块死词条、棘轮 pending 那一条）。
+
+**唯一还剩的候选**（wave 62 新记，价值不高）：React 的 `/auth/callback`
+三句状态文案写死英文（`Signing you in...` / `Redirecting...` /
+`Authentication failed...`），本仓那三句走词典。要修得给新 layout 加回
+I18nProvider——**是另一件事，不是这一条的一部分**。
+
+**建议：到此为止。** 要再开，先说清楚「这一轮要让哪个用户的什么体验变好」，
+不要再按「还能不能找出东西」开。
+
+## 上上轮（wave 61）做了什么：**按 C2 跑了第一轮，清单已经空了**
 
 wave 60 提的新判据 C2 是「不数写错的记录，改数**还没有机器看着的记录类别**；
 一个类别要么上门禁，要么写下为什么上不了」。wave 61 就是按它跑的第一轮，
@@ -273,45 +348,7 @@ e2e 五套全绿、数字与 wave 59/60 逐条相同。
 
 ---
 
-## 下一轮（wave 62）：**C1 与 C2 都已满足——建议在这里结束**
-
-**C2 的清单空了。** 记录类别现在只有两种状态：有门禁（十条），或有写下来的
-「为什么上不了」（五条 + 本轮新增三条）。**新写的散文落进已有门禁的类别里会当场变红**，
-所以这个清单会一直空着——这正是当初选 C2 而不选「找下一个错」的理由。
-
-**C1 也已满足，而且远不止「连着两轮」——收工前真跑了一遍，结果比原来写的强四倍。**
-原来这里写着「连着四轮」，那是凭印象。`frontend-vue/scripts/product-surface-diff.mjs`
-（wave 61 新增，**是判据不是门禁，不进 `make verify`**）逐个 commit 剥掉注释再比：
-
-```bash
-cd frontend-vue && node scripts/product-surface-diff.mjs <commit> [<commit> ...]
-```
-
-实测 wave 41~61 二十一个 commit：
-
-- **最后一次改 `app/**` 的运行时代码是 wave 44**（`46f62dea`，`app/core/api/client.ts`
-  的 `sortBy`→`sort_by`）。**wave 45~61 十七轮，运行时零字节。**
-- 其后只有两次碰到 `baseline/` 数据：wave 48（`react-parity-scope.json` 改名
-  `$exemptModes`）与 wave 52（`$readers` + 那三份 baseline）。
-  按 C1 的严格口径这两次算「碰了产品面」（它们改变了门禁enforce 什么），
-  **所以严格口径下是 wave 53~61 连着九轮干净**。
-- wave 45~61 里动过 `app/**` 的六轮（45/46/53/54/57/60/61）**全部只改注释**——
-  脚本剥掉注释之后逐字相同。
-
-**别传上面这些数字，跑那条命令。** 这正是 wave 52 把十四轮记成三轮的那个坑。
-
-**建议：宣布结束。** 如果还要再开一轮，唯一有意义的正题不是继续扫，而是：
-
-1. **把 C1 的口径也变成一条门禁**——现在它靠人跑 `git diff -U0 -- app` 判断，
-   而这正是本项目反复栽的那种「靠人记」。可行做法：一条脚本，比较 `app/**` 剥掉
-   注释之后的字节、`baseline/*.json`、词典文件在两个 commit 之间有没有变化。
-   **但先问它值不值**：C1 是收尾判据，收尾之后没人会再跑它。
-2. **回到「挂着的账」**（下面那一节）——那里剩的都是**有意没做**的产品面取舍，
-   每一条都写了翻案判据。要动的话按判据走，不要按「还能不能找出东西」走。
-
-**不要再开一轮「扫记录」。** 那一类已经关闭了。
-
-## 上上轮（wave 60）做了什么（保留全文——两个新门禁的口径都在这里）
+## wave 60 做了什么（保留全文——两个新门禁的口径都在这里）
 
 **扫三类从来没被任何东西验过的记录：`describe` 标题、`app/**` 的 `【主要导出】`、
 `Makefile` 每条 target 的说明。三类各翻出一条，其中两类当场上了门禁。**
@@ -500,7 +537,33 @@ issue #3482 与上游逐字同、`ui/sidebar.tsx` 路径在）。
 - **上游那颗 `<Input>` 的可访问名来自 placeholder。** 本仓照抄了（去掉了自己加的
   `aria-label`）。这是「命名弱但存在」，按 wave 28 的判据不算缺陷；要改是两边同改。
 
-### `/auth/callback`（wave 28 新增，**wave 33 改判为不做**）
+### ~~`/auth/callback`~~ —— **wave 62 做掉了（改的是 `frontend/`）**
+
+> **判据是「有人真的因深链被吞而报障」——没等到报障就做了，理由写在这里。**
+> 2026-09-04 用户明确「React 那一侧有 bug，你也得修」，并要求按产品价值排序
+> 而不是按对齐价值。这一条的产品损失是实打实的：从别人分享的
+> `/workspace/chats/<id>` 深链发起 OAuth，登录完被扔到 `/workspace`，
+> 原本要去的那一屏丢了。**对齐价值仍然是零**（这一屏在 `AUTH_DISABLED` 下
+> 两边打开的不是同一个页面，进不了取样面），所以它**不占一轮平替**，
+> 是一次纯 React 缺陷修复。
+>
+> **做法就是 wave 28 记的那条「更小的修法」**：把 `auth/callback` 从
+> `(auth)` 路由组里移出来（`src/app/auth/callback/`），自带一个
+> `dynamic = "force-dynamic"` 的 layout，不带 AuthProvider 也不带 I18nProvider
+> ——那个页面本来就不用它们（一句 `t` 都没有）。`/login` 的服务端跳转不受影响。
+> 守卫 `frontend/tests/unit/app/auth-callback-route.test.ts`：**结构上**钉住
+> 「`/auth/callback` 上方不许有任何一个 layout 在 `authenticated` 时
+> `redirect("/workspace")`」，并钉 `?next=` 的处理还在。
+> 变异实测：把页面挪回 `(auth)` 组，守卫当场红。
+>
+> **剩下的一条没做**：React 的 callback 页三句状态文案是写死英文的
+> （`Signing you in...` / `Redirecting...` / `Authentication failed...`），
+> 而本仓那三句走词典。这一条**没有跟着修**——它要给新 layout 加回
+> I18nProvider，属于另一件事；记在这里当下一个候选。
+
+以下保留 wave 28/33 当时的分析。
+
+
 
 - **差异是真的**：上游 `(auth)/layout.tsx` 见到 authenticated 就服务端
   `redirect("/workspace")`。真实 OAuth 流程走到 callback 时 session cookie 已经在了，
@@ -518,21 +581,32 @@ issue #3482 与上游逐字同、`ui/sidebar.tsx` 路径在）。
 - **哪天要做**，判据是「有人真的因为深链被吞而报障」，做的时候按上面那条更小的修法，
   并且要跑一遍上游的 e2e-auth。401 与 5xx 两支两边**已经一致**。
 
-### 首次发送之后那一屏（wave 29 新增，**没有进台账**）
+### ~~首次发送之后那一屏~~ —— **wave 62 全部结清，四条里三条是过期账**
 
-候选场景没有加，但那 10 次取样把这一屏的差异照下来了。都是**只在提交之后**
-才看得见的（第①类），现在没有任何门禁守着：
+wave 29 记了四条，wave 62 逐条量了一遍（replay Gateway，React/Vue 各取样，
+探针跑完即删）：
 
-- **上游那条竞态本身**：见上面「上一轮做了什么」的表。终态 A 里标签页标题永远停在
-  `Loading…`，会话流里留着一条**没去重的用户消息**。判据成立
-  （「这处不改，React 自己是不是也是坏的？」——是），但根因在 LangGraph SDK 的
-  `fetchStateHistory` 与流之间，**不是一处两边同改能收掉的东西**，本轮只记账。
-- **上游画一行 `Completed in <1s`（回合耗时），本仓不画。**
-- **本仓在用户消息上多一颗 `button "Edit and rerun"`**，上游那个位置是一颗无名按钮。
-- 播报区：上游 settle 之后是**空的**，本仓是 `New chat - DeerFlow`。**这一条不算差异**
-  ——两边都是框架自带的路由播报区（线索 135），不是产品标记。
+- ~~上游那条竞态（标题永远停在 `Loading…` + 一条没去重的用户消息）~~ ——
+  **已经没有了。** 用录制里的原提示词在 replay Gateway 上 React 取 6 样本 +
+  另一轮 8 样本（共 14 次）：`loadingCleared` **14/14 为真**、用户消息 **每次 1 份**、
+  Vue 逐条相同。wave 29 当时是 15 样本约 8A/7B、显式等 `Loading…` 消失 5 次里
+  **2 次超时 30 秒**。**竞态在 29~62 之间被修掉了**（本仓 wave 41 的
+  `refreshDurableState` 与上游 `44832a5e` 都动过这条链），账没跟。
+- ~~上游画 `Completed in <1s`，本仓不画~~ —— **这条从写下那天就是错的。**
+  本仓 `MessageList.vue:1415` 从 `524beace`（**2026-08-13**）起就渲染回合耗时
+  （`data-testid="run-duration"` + 时钟图标），比 wave 29 早两周，
+  而且有两条测试守着（`thread-history.spec.ts:381` 断言 count 1、
+  `message-surfaces.dom.test.ts:126` 断言图标）。
+- ~~本仓多一颗 `Edit and rerun`，上游那个位置是无名按钮~~ —— **也过期了。**
+  上游 `message-list-item.tsx:246` 写着 `aria-label={t.common.editAndRerun}`。
+- 播报区那条**仍然不算差异**（框架自带的路由播报区，线索 135）。
 
-要动前两条，得先有一个稳的取样面，也就是要先等上游那条竞态。
+**但同一次普查翻出了三颗真的无名控件，两边都有，wave 62 两边同改**：
+两颗复制键（human/assistant turn，上游 `copy-button.tsx` 只有图标 + tooltip，
+而 tooltip 在 Radix / Reka 里挂的是 `aria-describedby`，**不是可访问名**）
+与侧栏底部的设置触发器（收起态只渲染一个图标，上游
+`workspace-nav-menu.tsx` 既不传 tooltip 也没有 `aria-label`）。
+**本仓此前是照抄了这处缺陷**，两个文件头都写着「不给可访问名，因为上游没有」。
 
 ### 跨域 / 更早挖出的
 
@@ -545,11 +619,17 @@ issue #3482 与上游逐字同、`ui/sidebar.tsx` 路径在）。
   "Command Palette"），搜索框的可访问名 **wave 39 两边同改**（上游根本没有名字，
   是 WCAG 4.1.2 缺陷；本仓从 `aria-label` 换成同一套 `label` 机制）。
   **这一屏仍然没被取样**，靠 `shell-components.dom.test.ts` 守着。
-- **模型选择器的筛选** —— wave 37 补了**分隔符不敏感**那一档（列表写 `display_name`
-  而筛 `name`，照屏幕上的字打原来一条都搜不到）。**剩下的分叉**：cmdk 的非连续
-  子序列匹配 + 评分排序仍然没有，理由写在 `ComposerModelSelector.vue` 文件头
-  （要连排序一起来，否则 "abc" 命中几乎所有模型；而 `command-score`/`cmdk`
-  都不在依赖里）。
+- ~~模型选择器的筛选~~ —— **wave 62 做完了，这一条已结清。** wave 37 补的
+  「分隔符不敏感」那一档已删掉——不是放弃而是**被覆盖**。现在走
+  `@/core/models/command-score`，**`cmdk@1.1.1` 的 `command-score` 逐行移植**：
+  实测 19 名 × 25 查询 × 带/不带 aliases = **950 组逐值差 0**。
+  于是本仓与 React **筛出同一批、排出同一序**（上游把 `value={m.name}` 交给
+  cmdk，cmdk 的默认 filter 就是这个函数）。
+  原来的理由是「要连排序一起来，而引评分库不划算」——**引依赖确实不划算，
+  移植算法划算**：`cmdk` 是 React 组件库（本仓用 Reka），`command-score` 也没有
+  可直接用的独立发布包。等价性那次比对**没有签入**（它要 require
+  `../frontend/node_modules`，撞 `standalone-check`），留存是
+  `tests/unit/models/command-score.test.ts` 里 22 组从真实现取回的定值。
 - ~~上游 toast / 本仓静默或内联~~ —— **wave 31 做完了**（普查出 22 处，
   全部收进 workspace toaster）。判据写在 `AgentChat.vue` 的 `failedSend` 声明上：
   **一刻发生的事走 toaster，一段时间为真的事留在页面里**。

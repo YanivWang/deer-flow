@@ -67,8 +67,16 @@ export function WorkspaceNavMenu() {
           {mounted ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
+                {/*
+                  Named in both states. When the sidebar is collapsed this
+                  button renders the settings icon alone, so without an
+                  explicit name a screen reader announced a bare "button".
+                  The label is the same string the expanded state shows, so
+                  the accessible name still matches the visible one.
+                */}
                 <SidebarMenuButton
                   size="lg"
+                  aria-label={t.workspace.settingsAndMore}
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <NavMenuButtonContent isSidebarOpen={isSidebarOpen} t={t} />

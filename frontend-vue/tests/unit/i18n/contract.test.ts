@@ -33,7 +33,6 @@ describe("locale contract", () => {
       "artifacts.noSelectionDescription",
       "sidecar.placeholder",
       "channels.connectionExpired",
-      "messages.actions.copyResponse",
       "navigation.deleteConversationFailed",
       "markdown.unsafeLink",
       "login.serviceUnavailableTitle",

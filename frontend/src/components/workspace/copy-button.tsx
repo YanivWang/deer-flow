@@ -32,10 +32,18 @@ export function CopyButton({
   }, [clipboardData, t.clipboard.failedToCopyToClipboard]);
   return (
     <Tooltip content={t.clipboard.copyToClipboard}>
+      {/*
+        The tooltip is not an accessible name: Radix wires it as
+        `aria-describedby`, so a screen reader announced this icon-only control
+        as a bare "button". Name it explicitly, the same way the sibling
+        "Edit and rerun" trigger in message-list-item.tsx already does.
+        `aria-label` stays ahead of `{...props}` so callers can still override.
+      */}
       <Button
         size="icon-sm"
         type="button"
         variant="ghost"
+        aria-label={t.clipboard.copyToClipboard}
         onClick={handleCopy}
         {...props}
       >

@@ -291,14 +291,25 @@ test("assistant actions keep their accessible name and gain a hover tooltip", as
   // 视觉层本身不承担语义。它被 1px clip 起来，所以按属性定位而不是按 role。
   await expect(tooltip.locator('[role="tooltip"]').first()).toHaveText(label!);
 
-  // 复制是这一排里唯一**没有**可访问名的一颗，因为 React 的 CopyButton 就没有
-  // （frontend/src/components/workspace/copy-button.tsx 只给了 tooltip）。
-  // 钉住这件事，免得下一次「顺手补个 aria-label」把两个应用又拆开。
+  // **wave 62 把这一条反过来了，两边同改。** 原来钉的是「复制那颗是这一排里唯一
+  // 没有可访问名的，因为 React 的 CopyButton 就没有」——上游确实没有，但那是一处
+  // 缺陷：tooltip 在 Radix / Reka 里挂的都是 aria-describedby，不是可访问名，
+  // 读屏器只念得出一颗「按钮」。React 侧已在
+  // frontend/src/components/workspace/copy-button.tsx 补上同一句。
+  //
+  // 名字与 tooltip 现在念的是**同一条词条**（clipboard.copyToClipboard）。
+  // 此前本仓的 tooltip 用的是自造的 messages.actions.copyResponse（"Copy response"），
+  // 上游根本没有这条——那处分叉一直藏在 tooltip 里、台账看不见，
+  // 直到 wave 62 把它顶到可访问名上才被对照门禁抓住。
   const copy = page
     .getByTestId("assistant-turn-actions")
     .getByRole("button")
     .first();
   await expect(copy).toBeVisible();
-  expect(await copy.getAttribute("aria-label")).toBeNull();
-  await expect(copy).toHaveAccessibleName("");
+  const copyLabel = await copy.getAttribute("aria-label");
+  expect(copyLabel?.trim()).toBeTruthy();
+  await expect(copy).toHaveAccessibleName(copyLabel!);
+
+  await copy.hover();
+  await expect(tooltip.first()).toContainText(copyLabel!);
 });

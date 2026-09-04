@@ -744,12 +744,20 @@ function openSettingsDialog(section: "appearance" | "about") {
               按钮本身不带前景色——收起态换的是**整块内容**（居中的单图标），
               不是给同一块加几个 class。
             -->
+              <!--
+                两个状态都要有名字：收起态只渲染一个 settings 图标，没有
+                aria-label 时读屏器只念得出「按钮」（wave 62 用 parity probe
+                普查出来的三颗无名控件之一）。名字取展开态显示的那一句，
+                所以可访问名与可见名一致。**上游同一处也没有名字，已两边同改**
+                （frontend/src/components/workspace/workspace-nav-menu.tsx）。
+              -->
               <button
                 ref="settingsTrigger"
                 type="button"
                 data-sidebar="menu-button"
                 data-size="lg"
                 data-testid="workspace-nav-menu-trigger"
+                :aria-label="$i18n.t.value.workspace.settingsAndMore"
                 class="peer/menu-button hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground flex h-12 w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm"
               >
                 <div

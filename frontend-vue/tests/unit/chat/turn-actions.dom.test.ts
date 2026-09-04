@@ -33,6 +33,19 @@ describe("AssistantTurnActions", () => {
     expect(wrapper.find(".lucide-refresh-cw-icon").exists()).toBe(false);
   });
 
+  /*
+    与 HumanTurnActions 那颗同一条修法（wave 62 两边同改）：tooltip 挂的是
+    `aria-describedby`，不是可访问名。这里钉的是 assistant 那一排也念得出来。
+  */
+  it("names the copy button", () => {
+    const copy = mount(AssistantTurnActions, {
+      props: assistantProps,
+    }).findAll("button")[0];
+
+    expect(copy?.attributes("aria-label")).toBe(assistantProps.copyLabel);
+    expect(copy?.text()).toBe("");
+  });
+
   it("leaves the row colour to the ghost buttons", () => {
     const row = mount(AssistantTurnActions, {
       props: assistantProps,
@@ -62,13 +75,17 @@ describe("HumanTurnActions", () => {
   });
 
   /*
-    复制那颗**不给可访问名**：上游 CopyButton 只有图标和 tooltip，而同一排的
-    编辑按钮写了 aria-label。两个应用必须念出同一句，所以这一条钉的是"确实没有"。
+    **wave 62 把这一条反过来了，两边同改。** 原来钉的是「复制那颗确实没有名字，
+    照着上游抄」——上游确实没有，但那是一处缺陷：tooltip 在 Radix / Reka 里挂的是
+    `aria-describedby`，不是可访问名，读屏器只念得出一颗「按钮」。
+    React 侧已在 `frontend/src/components/workspace/copy-button.tsx` 补上同一句。
+
+    仍然钉「按钮里没有可见文字」：名字只能来自 aria-label，图标按钮不该冒出文字。
   */
-  it("leaves the copy button unnamed, like upstream", () => {
+  it("names the copy button, matching upstream after the shared fix", () => {
     const copy = mount(HumanTurnActions, { props }).findAll("button")[0];
 
-    expect(copy?.attributes("aria-label")).toBeUndefined();
+    expect(copy?.attributes("aria-label")).toBe("Copy response");
     expect(copy?.text()).toBe("");
   });
 

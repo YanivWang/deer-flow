@@ -64,6 +64,23 @@ describe("侧栏骨架与上游 ui/sidebar.tsx 的结构合同", () => {
   });
 
   /*
+    收起态那颗触发器只渲染一个 settings 图标，没有名字时读屏器只念得出「按钮」
+    （wave 62 用 parity probe 普查出来的三颗无名控件之一）。上游同一处也没有名字
+    （workspace-nav-menu.tsx 的 SidebarMenuButton 既不传 tooltip 也没有
+    aria-label），**已两边同改**。名字取展开态显示的那一句，可访问名与可见名一致。
+  */
+  it("names the footer trigger in both sidebar states", () => {
+    const at = template.indexOf('data-testid="workspace-nav-menu-trigger"');
+    const button = template.slice(
+      template.lastIndexOf("<button", at),
+      template.indexOf(">", at),
+    );
+    expect(button).toContain(
+      ':aria-label="$i18n.t.value.workspace.settingsAndMore"',
+    );
+  });
+
+  /*
     上游 SidebarFooter 是独立容器（`flex flex-col gap-2 p-2`），不是给 ul 挂
     mt-auto。此前本仓没有这层，整块 footer 比上游矮 12px（按钮 h-9 对上游
     size="lg" 的 h-12），连带 sidebar-content 高 648 对 660。

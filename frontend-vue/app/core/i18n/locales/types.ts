@@ -1030,7 +1030,6 @@ export interface Translations {
     tryAgain: string;
     actions: {
       editAndRerun: string;
-      copyResponse: string;
       branch: string;
       regenerate: string;
     };

@@ -23,9 +23,14 @@
                    `-bottom-9` 不是 `-bottom-7`：这一排从 16px 高变成 32px 高，
                    底边偏移要跟着从 28 变成 36，气泡与按钮之间才还是 4px。
 
-                   复制那颗**不给可访问名**，与 AssistantTurnActions 同一条理由：
-                   上游 CopyButton（workspace/copy-button.tsx）只有图标和 tooltip，
-                   而同一处的编辑按钮写了 aria-label——不是「React 一律不写」。
+                   **复制那颗 wave 62 补上了可访问名，两边同改。** 此前这里写着
+                   「不给可访问名，因为上游 CopyButton 只有图标和 tooltip」——
+                   那句话对上游的描述是准的，但**照抄的是一处缺陷**：tooltip 在
+                   Radix / Reka 里都挂成 `aria-describedby`，不是可访问名，
+                   读屏器念出来就是一颗光秃秃的「按钮」。wave 62 用 parity probe
+                   普查了跑完一轮之后的整屏，React 2 个无名控件正是这两颗复制键。
+                   按 wave 28 的判据（没有可访问名的交互控件算缺陷）已在
+                   `frontend/src/components/workspace/copy-button.tsx` 一并改掉。
 -->
 
 <script setup lang="ts">
@@ -61,7 +66,12 @@ const emit = defineEmits<{ copy: []; edit: [] }>();
       <div class="pointer-events-auto flex gap-1">
         <Tooltip>
           <TooltipTrigger>
-            <Button variant="ghost" size="icon-sm" @click="emit('copy')">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              :aria-label="copyLabel"
+              @click="emit('copy')"
+            >
               <Check v-if="copied" class="text-green-500" />
               <Copy v-else />
             </Button>

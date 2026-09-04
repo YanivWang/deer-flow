@@ -1296,7 +1296,6 @@ export const enUS: Translations = {
     tryAgain: "Try again",
     actions: {
       editAndRerun: "Edit and rerun",
-      copyResponse: "Copy response",
       branch: "Branch conversation",
       regenerate: "Regenerate",
     },

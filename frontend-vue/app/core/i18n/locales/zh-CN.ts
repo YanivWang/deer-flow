@@ -1233,7 +1233,6 @@ export const zhCN: Translations = {
     tryAgain: "重试",
     actions: {
       editAndRerun: "编辑并重新运行",
-      copyResponse: "复制回复",
       branch: "创建对话分支",
       regenerate: "重新生成",
     },

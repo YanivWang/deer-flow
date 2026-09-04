@@ -61,6 +61,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { filterModelsByQuery } from "@/core/models/filter";
 import type { Model } from "@/core/models/types";
 
 /*
@@ -103,30 +104,22 @@ watch(open, (value) => {
 });
 
 /*
-  分隔符不参与比较。列表上写的是 `display_name`（"MiniMax M3"），筛的却是
-  `model.name`（`minimax-m3`）——字段选择跟着上游（cmdk 拿到的 `value` 就是 name），
-  但上游有 command-score 的模糊评分兜着，**照屏幕上的字打**照样命中；
-  本仓原来是纯子串，"minimax m3" 一条都搜不到。
+  筛选与排序都走 `@/core/models/filter`，它用的是 **cmdk 的 command-score 逐行移植**
+  （`@/core/models/command-score`，与 `cmdk@1.1.1` 实测 950 组逐值相同）。
 
-  这一条只把空格 / 连字符 / 下划线折掉，**仍然是子串**：它是原来那条判据的严格超集
-  （今天能搜到的明天照样搜得到）。**没有做 cmdk 的非连续子序列匹配**：
-  那需要连同 command-score 的排序一起来，否则 "abc" 会命中几乎所有模型，
-  比现在更难用；而引一个评分库只为这一处不划算。剩下的分叉记在交接文档里。
+  **wave 62 之前这里是分隔符不敏感的子串匹配**，注释写着「非连续子序列要连排序
+  一起来，为这一处引评分库不划算」。**引依赖确实不划算，移植算法划算**：
+  上游把 `value={m.name}` 交给 cmdk，cmdk 的默认 filter 就是 command-score，
+  所以移植之后本仓与 React **筛出同一批、排出同一序**。
+
+  wave 37 那条「分隔符不敏感」也一并删掉了，**不是放弃而是被覆盖**：
+  command-score 的 `formatInput` 把 `[\s-]` 一律归成空格，
+  「照屏幕上的字打」（`MiniMax M3` → `minimax-m3`）得分 0.9996。
+  `tests/unit/models/command-score.test.ts` 有专门用例钉这一条。
 */
-const collapseSeparators = (value: string) =>
-  value.toLocaleLowerCase().replaceAll(/[\s_-]+/g, "");
-
-const filteredModels = computed(() => {
-  const query = search.value.trim().toLocaleLowerCase();
-  if (!query) return props.models;
-  const collapsedQuery = collapseSeparators(query);
-  return props.models.filter((model) => {
-    const name = model.name.toLocaleLowerCase();
-    return (
-      name.includes(query) || collapseSeparators(name).includes(collapsedQuery)
-    );
-  });
-});
+const filteredModels = computed(() =>
+  filterModelsByQuery(props.models, search.value),
+);
 
 function selectModel(model: Model) {
   /*

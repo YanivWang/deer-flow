@@ -23,11 +23,16 @@
                    容器上**不写** `text-muted-foreground`：上游那一行只有布局与
                    淡入类，颜色由 ghost 按钮自己继承。多写一句会把三颗图标整体调暗。
 
-                   复制是例外，且是照着 React 抄的例外：React 的 CopyButton
-                   （frontend/src/components/workspace/copy-button.tsx）只有图标和 tooltip，
-                   同一个文件里的「编辑并重跑」却写了 aria-label——所以它不是「React
-                   一律不写」，是这一颗确实没有名字。两个应用必须念出同一句，
-                   这里就跟着不写。
+                   **复制那颗 wave 62 补上了可访问名，两边同改。** 此前这里写着
+                   「照着 React 抄的例外：上游 CopyButton 只有图标和 tooltip」——
+                   对上游的描述是准的，但**照抄的是一处缺陷**：tooltip 在 Radix / Reka
+                   里都挂成 `aria-describedby`，不是可访问名，读屏器念出来就是一颗
+                   光秃秃的「按钮」。wave 62 用 parity probe 普查跑完一轮之后的整屏，
+                   React 的 2 个无名控件正是这两颗复制键（本文件与 HumanTurnActions）。
+                   按 wave 28 的判据两边同改，React 侧改在
+                   `frontend/src/components/workspace/copy-button.tsx`。
+                   「两个应用必须念出同一句」这条不变——现在两边念的都是
+                   `clipboard.copyToClipboard`。
 -->
 
 <script setup lang="ts">
@@ -80,7 +85,12 @@ const emit = defineEmits<{
     >
       <Tooltip>
         <TooltipTrigger>
-          <Button variant="ghost" size="icon-sm" @click="emit('copy')">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            :aria-label="copyLabel"
+            @click="emit('copy')"
+          >
             <Check v-if="copied" class="text-green-500" />
             <Copy v-else />
           </Button>

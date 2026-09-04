@@ -1164,7 +1164,7 @@ onUnmounted(() => {
                   :copied="
                     copiedMessage === (message.id ?? `human:${entry.index}`)
                   "
-                  :copy-label="$i18n.t.value.messages.actions.copyResponse"
+                  :copy-label="$i18n.t.value.clipboard.copyToClipboard"
                   :edit-label="$i18n.t.value.messages.actions.editAndRerun"
                   :show-edit="
                     interactive !== false &&
@@ -1372,7 +1372,7 @@ onUnmounted(() => {
               :copied="
                 copiedMessage === `assistant:${entry.group.id ?? entry.index}`
               "
-              :copy-label="$i18n.t.value.messages.actions.copyResponse"
+              :copy-label="$i18n.t.value.clipboard.copyToClipboard"
               :branch-label="$i18n.t.value.messages.actions.branch"
               :regenerate-label="$i18n.t.value.messages.actions.regenerate"
               :show-branch="branchable.has(entry.group.id ?? '')"
