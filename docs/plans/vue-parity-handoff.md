@@ -14,9 +14,9 @@
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72。
-- **动过 `frontend/` 的是十五轮**（wave 52 实测订正，wave 62 又加一轮）：
-  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62**。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`）。
+- **动过 `frontend/` 的是十六轮**（wave 52 实测订正，wave 62 / 73 各加一轮）：
+  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
   而记忆里的压缩版把它读成了「总共三次」。**别再传这个数字，用命令量**：
 
@@ -24,8 +24,8 @@
   git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests
   ```
 
-  **marker 已推到 `ff9552d8`**（wave 62）；`node scripts/upstream-drift.mjs`
-  wave 52 实测**无漂移**，marker 也确实是 HEAD 的祖先——
+  **marker 已推到 `7630e6e3`**（wave 73 的 chore）；`node scripts/upstream-drift.mjs`
+  wave 73 实测**无漂移**，marker 也确实是 HEAD 的祖先——
   **边界规则本身有机器在守，需要人记的只有「这类改动做过哪些轮」。**
   最近三轮的内容：wave 40 重连预算耗尽后那颗键在说反话；wave 39 命令面板搜索框的
   可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~59 都没动过。
@@ -65,10 +65,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 72 收工时逐条跑过）
+### 门禁实测值（wave 73 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；259 文件 / 2146 单测，词典 943 key、18 unused
+make -C frontend-vue verify        exit 0；259 文件 / 2147 单测，词典 942 key、18 unused
 make -C frontend-vue asset-budget  exit 0（wave 72 把 vendor-ui 预算按实测重定了一次，
                                    见 scripts/asset-budget.mjs 里那段注释）
 make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefile 的 audit 上方
@@ -78,7 +78,14 @@ make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55%
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
-make -C frontend-vue e2e-visual    8    **不在 make e2e 里**；wave 72 重录 4 张
+make -C frontend-vue e2e-visual    8    **不在 make e2e 里**；wave 73 一张没重录
+                                   （容差压到 0 跑两遍：只有 artifact panel 红，
+                                   1807 / 1902——**两遍差 95px，是抖动不是改动**，
+                                   而且因果够不着：那一屏没有 toast、没有 todo、
+                                   没有对话框、没有附件。抖动的振幅比记的大得多，
+                                   历轮实测 855/815 → 258/167 → 1807/1902，
+                                   **不是「±40px」**，随基线录在哪个相位而定）；
+                                   wave 72 重录 4 张
                                    （容差临时压到 0 跑两遍：empty chat 990px 与
                                    reasoning/tool 49px **两遍逐像素相同 = 我改的**，
                                    artifact panel 258→167 是已知抖动；
@@ -88,10 +95,17 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**；wave 72 重录
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **217**（总 219；wave 72 没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **217**（总 219；wave 72/73 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1029**）/ `test:e2e`（**146**）。
-**wave 62 三条全真跑过**：check 0、test 1029 passed、test:e2e 146 passed。
-（1023 → 1029 是 wave 62 加的 6 条：3 条 auth-callback 路由位置 + 3 条图标按钮可访问名。）
+**wave 73 三条全真跑过**：check 0、test **1033** passed、test:e2e 146 passed。
+（1029 → 1033 是 wave 73 加的 4 条：
+`tests/unit/components/ui/interactive-affordances.dom.test.tsx`。）
+
+> **React 的 `test:e2e` 绕法**（wave 73 又用了一次，有效）：先自己
+> `SKIP_ENV_VALIDATION=1 pnpm exec next build`，再
+> `PORT=3002 SKIP_ENV_VALIDATION=1 DEER_FLOW_AUTH_DISABLED=1 npx next start -p 3002`，
+> 最后 `PLAYWRIGHT_SKIP_WEB_SERVER=1 PLAYWRIGHT_BASE_URL=http://localhost:3002 npx playwright test`。
+> **3000 端口本机常被占**，用 3002。跑完记得 `lsof -ti tcp:3002 | xargs kill`。
 
 > **wave 40 实测：`test:e2e` 的 `webServer` 那 120 秒窗口在这台机器上喂不饱一次
 > `next build`**（负载 30+ 时编译要 6.6 分钟，`Timed out waiting 120000ms from
@@ -264,6 +278,86 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 73）做了什么：**结清「本仓修掉了上游缺陷」那一整类，并把 toaster 补齐**
+
+提交 `209c49db`，React 侧 chore `7630e6e3`。
+**这一轮的产出一半是判据**：wave 72 留下五笔同形状的账，它们都不是「谁更像上游」，
+而是「上游那处本来就是坏的」。判据定成——**按业界主流做法**，
+而不是「与上游一致」。`ARCHITECTURE.md` 的双向规则管的是**产品面的有无**，
+管不了「上游那一处是不是缺陷」。
+
+### 一、WorkspaceToaster：这一轮最值钱的一处
+
+| 处             | 上游                                                                                                                                             | 本仓（改前）                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- |
+| **类型图标**   | `ui/sonner.tsx:19` 给 `<Toaster>` 传 `icons={{success, info, warning, error, loading}}`，sonner 的 `[data-icon]` 是 16×16 常驻槽位，**每条都画** | **一颗都不画**              |
+| **warning 档** | `toast.warning`，实测 3 处调用点                                                                                                                 | 折进 info                   |
+| **停留时长**   | sonner 的 `TOAST_LIFETIME = 4000`（两处调用点都没传 `duration`）                                                                                 | 5000                        |
+| **关闭键**     | `<Toaster position="top-center" />` **没传 `closeButton`**，sonner 默认关                                                                        | 每条一颗，还是拿 `×` 当图标 |
+
+调用点分布实测：error **86** / success **33** / info **10** / warning **3**。
+也就是说本仓每一次写操作播报，都比上游少一颗图标。
+
+**warning 那条尤其值得记**：本仓折叠它的理由写在文件头里——
+「warning 与 info 在可访问性上同一档，区别只有图标，而这个 toaster 一个图标都不画」。
+**前半句对，后半句是本仓自己的缺陷**。一条用「另一处缺陷」当论据的取舍，
+在那处缺陷修掉之后就该重新过一遍。
+
+`loading` 那一颗**够不着**：本仓 store 没有这一档，上游那颗只在 `toast.promise` 里用，
+DeerFlow 一处都没调（线索 199 又一例）。
+
+### 二、四条可达性账，两边同改
+
+| 处              | 上游原样                             | 判据                                                                                     |
+| --------------- | ------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Dialog 关闭键   | 没有任何尺寸类，命中区就是 16px 字形 | WCAG 2.5.8 的下限是 24×24 → 改成 `size-7`(28px) + `cursor-pointer`                       |
+| Switch          | 没有 `cursor-pointer`                | Tailwind 4 preflight 不给小手，鼠标停上去像不可点（线索 206 的同一条）                   |
+| TodoList 折叠头 | 挂 onClick 的 `<header>`             | 它是这块面板**唯一**的折叠入口，键盘完全够不着（WCAG 2.1.1），可访问性树里也读不出展开态 |
+| 附件移除键      | 只有 `group-hover` 才显形            | 键盘 Tab 到它时整颗透明，焦点落在看不见的控件上（WCAG 2.4.7 / 2.4.11）                   |
+
+本仓这四处**此前就是对的**（前三处是前几轮顺手做的，第四处是 wave 72 记的账），
+这一轮把上游改成同一个形状，两边的树仍逐行一致、台账不增行。
+**四条都补了 React 侧的守卫**
+（`frontend/tests/unit/components/ui/interactive-affordances.dom.test.tsx`），
+补之前逐条确认过是假绿。
+
+### 三、取舍
+
+- **Toaster 的关闭键选择删掉，而不是给上游加。** 判据「这处不改，React 自己是不是
+  也是坏的？」在这里是**否**——sonner/shadcn 的默认就是不给关闭键，一条 4 秒自动
+  消失的状态播报没有它不构成缺陷。既然不是缺陷，就走双向规则的另一半。
+  代价：一条 toast 只能等它自己走。
+- **附件移除键的可访问名仍带文件名**（上游写死 "Remove attachment"）：
+  一次多个附件时上游那串名字每颗都一样，读屏器听不出在删哪一个。**单方面保留。**
+- **`route-payload` 的 prefetch 文件数抬了**（/ 36→40，另两条 41→44）：
+  **只有文件数越线，三条路由的字节数全部还在预算之内而且比预算低**
+  （/ 765,306 vs 793,000；另两条 801,442 vs 831,000）。涨的是 chunk **个数**。
+  字节预算一个没动——**这条门禁真正要挡的是字节，文件数只是「有没有意外把大块
+  拆碎」的旁证**。
+
+### 四、探针没跑成，说清楚了
+
+原计划用 parity 探针触发一条真 toast 两边同读。**探针在 10 分钟超时里没跑完**
+（走 artifact 面板的复制键触发，locator 卡住），`toast.json` 是空的。
+所以**图标那条结论是源码级的**：上游的 `icons` prop + sonner 的 `[data-icon]` CSS +
+本仓 store 文件头自己写的「这个 toaster 一个图标都不画」，三方互证。
+**不是渲染读数**——按线索 204 的口径，这里降了一档，写在这里而不是假装量过。
+Vue 侧改完之后有单测直接数 svg，那一半是真读到的。
+
+**顺带没验的**：sonner 的宽度 356px / gap 14px / 视口偏移 24px，
+对本仓的 `w-[min(92vw,420px)]` / `gap-2`(8px) / `top-3`(12px)。
+**一条都没量、一条都没改**，记成一笔新账。
+
+### 五、负向验证 9 条，1 处假绿
+
+| #             | 变异                                                            | 结果                                                            |
+| ------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
+| W1            | 把 warning 的图标换成 info 的                                   | RED                                                             |
+| W2            | 把关闭键加回来                                                  | RED（handwritten / glyph / DOM 三份守卫都红）                   |
+| W3            | 时长改回 5000                                                   | **假绿**（一条守卫都没有）→ 补「传给 timer 的毫秒数是 4000」    |
+| W3b / W4 / W5 | 补完守卫再改时长 / warning 折回 info / replay-gap 播报改回 info | RED                                                             |
+| R1~R4         | React 侧四条逐条改回原样                                        | 四条全 RED（守卫是同一轮补的，补之前确认过 R1/R2/R3/R4 都假绿） |
 
 ## 上一轮（wave 72）做了什么：**把「上游走的是哪条路径」逐颗问完，76 → 49**
 
@@ -716,28 +810,23 @@ wave 72 逐颗回上游确认过，结果钉在
   `ArtifactFileCards`，不是一排文字按钮。
 - `WorkspaceToaster` 的关闭键（见下）。
 
-### 零点一、**两笔「本仓更好」的账，判据要先定**（wave 72 探针量出来的）
+### 零点一、~~两笔「本仓更好」的账~~ —— **wave 73 全部结清**
 
-1. **Dialog 的关闭键**：React 16×16 / `rounded-xs` / `cursor: default`；
-   本仓 28×28 / `rounded-md` / `cursor: pointer`。
-   上游那个 16px 点击区**够不到 WCAG 2.5.8 的 24px**。
-2. **Switch 的光标**：React `default`、本仓 `pointer`。
+判据已经定了：**这一类按业界主流做法两边同改**，不是「与上游一致」。
+五条（Dialog 关闭键、Switch 光标、TodoList 折叠头、附件移除键的焦点可见性、
+Toaster 关闭键）全部处理完，做法与理由见 wave 73 那一节。
+**下次再遇到「本仓修掉了上游的缺陷」，照那一节的判据走，不要再挂账。**
 
-这两条与 `WorkspaceToaster` 的关闭键、`ComposerAttachmentChip` 的
-`focus-visible:opacity-100`（上游那颗键盘聚焦时**整颗透明**）、
-`TodoList` 用 `<button>` 而上游用挂 onClick 的 `<header>`（键盘完全折不动）
-是**同一类**：本仓修掉了上游自己的可达性缺陷。
-**要么按 wave 28 的判据两边同改（改 `frontend/` + chore 提交），
-要么明写「这一类不双向」。挂着不决定是最差的一种。**
+### 零点五、~~`WorkspaceToaster` 的关闭键~~ —— **wave 73 删掉了**
 
-### 零点五、`WorkspaceToaster` 的关闭键是「React 没有的 Vue 不许有」
+上游 `<Toaster position="top-center" />` 没传 `closeButton`（sonner 默认关），
+所以上游那一排根本没有关闭键。wave 73 按「React 没有的 Vue 不许有」删掉了本仓那一颗，
+`workspace` 下那条独有词条一并删。**判据是「这处不改，React 自己是不是也是坏的？」
+在这里是否**——一条 4 秒自动消失的状态播报没有关闭键不构成缺陷。
 
-实测：上游 `workspace-content.tsx:44` 是 `<Toaster position="top-center" />`，
-**没有传 `closeButton`**，所以上游每条 toast 根本没有关闭键；本仓每条都有一颗 `×`
-（`workspace.dismissNotification` 也是本仓独有的词条）。本仓 toast 5 秒自动消失。
-**wave 71 没有动它**，因为删掉是产品回归而这不是那一轮的正题；
-账记在 `tests/guards/glyph-as-icon.test.ts` 的 `ALLOWED` 注释里。
-要翻案得先决定「双向判据在这一处认不认」。
+**同一轮把 toaster 剩下的三处也补齐了**（类型图标、warning 档、4000ms），
+见 wave 73 那一节。**没量也没改的**：sonner 的宽度 356px / gap 14px / 视口偏移 24px
+对本仓的 `w-[min(92vw,420px)]` / `gap-2` / `top-3`——**新账，一条都没验过。**
 
 ### 一、几何这一档只够得着免登录页
 
@@ -1450,7 +1539,7 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 208 条在记忆文件里）
+## 其他常踩的坑（完整 211 条在记忆文件里）
 
 - **`git checkout -- <file>` 还原的是 HEAD，不是「变异之前」**（线索 207，wave 72）。
   负向验证的还原步骤一旦用它，**整轮的改动会跟着一起没**，而报表看起来照样是绿的
@@ -1476,6 +1565,30 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   另外 `InputGroupButton` **不把 size 透给 Button**，于是 Button 用的是 default 档，
   `py-2` 会留在类串里——探针上表现为「React padding 8px 8px、本仓 0px 8px」，
   但两边 `h-8` 固定、内容居中，**这一条没有视觉差异，不要去追**。
+- **一条用「另一处缺陷」当论据的取舍，在那处缺陷修掉之后要重新过一遍**
+  （线索 211，wave 73）。toaster 把 `warning` 折进 `info` 的理由写在文件头里：
+  「两档在可访问性上同一档，区别只有图标，而这个 toaster 一个图标都不画」。
+  **前半句对，后半句是本仓自己的缺陷。** 补上图标之后那条取舍当场失效，
+  而没有任何门禁会因此变红——它是一条散文里的因果链。
+  **判据：写下「因为 X，所以这里可以不做 Y」时，把 X 也记成一笔账。**
+- **「本仓修掉了上游的缺陷」不是一种要挂着的状态**（wave 73）。
+  判据已经定死：**按业界主流做法两边同改**（改 `frontend/` + 单独 chore 提交 +
+  `upstream-accept`），而不是「与上游一致」。`ARCHITECTURE.md` 的双向规则管的是
+  **产品面的有无**，管不了「上游那一处是不是坏的」。
+  反过来也要问一句「这处不改，React 自己是不是也是坏的？」——**否**的时候
+  （例：sonner 默认不给 toast 关闭键）就走双向规则的另一半，把本仓多出来的删掉。
+- **React 的 `test:e2e` 用 3002，不用 3000**（wave 73）。本机 3000 常被占；
+  绕法是先自己 `next build`，起 `npx next start -p 3002`，再
+  `PLAYWRIGHT_SKIP_WEB_SERVER=1 PLAYWRIGHT_BASE_URL=http://localhost:3002 npx playwright test`。
+  跑完 `lsof -ti tcp:3002 | xargs kill`。
+- **`route-payload` 越线时先看是字节还是文件数**（wave 73）。
+  字节全在预算内、只有 prefetch 的 **files** 超了，说明 Rollup 多切了几个 chunk，
+  不是用户多下了流量。**抬文件数、不动字节预算**，并在 `$measured` 里写清哪一半没动。
+- **`artifact panel` 那张视觉基线的抖动振幅比记的大得多**（wave 73 复量）。
+  历轮实测 855/815 → 258/167 → **1807/1902**，**不是「±40px」**——
+  它随基线录在哪个相位而定，diff 图上是整条消息列的文字上下平移。
+  容差 0.01（≈9,216 px）之下一直是绿的。**遇到它先看 diff 图**：
+  只有文字平移、结构没变，就是它。
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
   `toHaveLength(215)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
