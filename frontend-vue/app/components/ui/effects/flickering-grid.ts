@@ -1,7 +1,7 @@
 /*
   【文件职责】     提供 flickering grid 的初始透明度与帧更新纯函数。
   【架构位置】     L3 product UI helper
-  【主要导出】     createInitialOpacities · updateFlickeringOpacities
+  【主要导出】     createInitialOpacities · prefersReducedMotion
   【依赖关系】     无
   【边界与注意】   仅服务 M7 产品特效，不进入 M8 L2 公共集合。
 */

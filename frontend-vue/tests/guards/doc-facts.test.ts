@@ -30,6 +30,85 @@ import { productVueInventory } from "../../scripts/lib/i18n-source-guard.mjs";
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const read = (rel: string) => readFileSync(join(ROOT, rel), "utf8");
 
+/*
+  `make verify` 的**步骤表**。左边是四处散文用的类别名，右边是它真正跑的 target。
+  这张表加上下面那条断言，把「verify 到底跑什么」从散文变成数据：
+  改 verify 的先决条件而不改这张表 → 红；改了表而四处散文没跟 → 红。
+
+  wave 60 实测的偏差（四处互不相同，且都和 recipe 对不上）：
+  - `ARCHITECTURE.md` 写着 `清单`——那是 `collected-check`，`1209651f`
+    （2026-08-25 00:11）已经把它从 verify 里删了，而这句话是同一天 12:57 的
+    `c6fc60b4` 写下的，**提交说明恰好是「make every documented command and path
+    real, and gate it」**——写下那一刻就是错的（同线索 178）；
+  - 四处都漏了 `gen-contract-constants-check`；
+  - `Makefile` 自己的 help 只列了 5 个，漏掉 i18n / OpenAPI / 契约常量 / 独立性——
+    而它们各自在 help 里另有一行，读的人会以为要在 verify 之外单独跑。
+*/
+const VERIFY_STEPS: Record<string, string[]> = {
+  lint: ["lint"],
+  格式: ["format-check"],
+  类型: ["typecheck", "typecheck-core"],
+  单测: ["test"],
+  i18n: ["i18n-check", "i18n-source-check"],
+  OpenAPI: ["gen-api-types-check"],
+  契约常量: ["gen-contract-constants-check"],
+  独立性: ["standalone-check"],
+  build: ["build"],
+};
+
+/** 四处散文各自的写法：`[文件, 那一行必须逐字包含的串]`。 */
+const VERIFY_PROSE: [string, string][] = [
+  [
+    "ARCHITECTURE.md",
+    "lint、格式、类型、单测、i18n、OpenAPI、契约常量、独立性、build",
+  ],
+  [
+    "README_zh.md",
+    "lint、格式、类型、单测、i18n、OpenAPI、契约常量、独立性、build",
+  ],
+  [
+    "README.md",
+    "lint, format, types, unit, i18n, OpenAPI, contracts, standalone, build",
+  ],
+  ["Makefile", "lint + format + types + unit + i18n + OpenAPI"],
+  ["Makefile", "+ contracts + standalone + build"],
+];
+
+describe("make verify 的步骤表", () => {
+  it("步骤表的并集逐个等于 verify 的先决条件", () => {
+    const recipe = /^verify:(.*)$/m.exec(read("Makefile"));
+    expect(recipe, "Makefile 里找不到 verify: 这一行").not.toBeNull();
+    const actual = (recipe?.[1] ?? "").trim().split(/\s+/).filter(Boolean);
+    expect(actual.length).toBeGreaterThan(5);
+    const declared = Object.values(VERIFY_STEPS).flat();
+    expect([...declared].sort()).toEqual([...actual].sort());
+  });
+
+  it("四处散文都按这张表写，一处不落", () => {
+    for (const [file, phrase] of VERIFY_PROSE) {
+      expect(
+        read(file),
+        `${file} 里 make verify 的说明与步骤表对不上`,
+      ).toContain(phrase);
+    }
+  });
+
+  it("散文里不许再出现 verify 已经不跑的步骤", () => {
+    const gone = ["collected-check", "header-check", "清单"];
+    for (const [file] of VERIFY_PROSE) {
+      const line = read(file)
+        .split("\n")
+        .find((l) => l.includes("make verify") && l.includes("#"));
+      for (const dead of gone) {
+        expect(
+          line ?? "",
+          `${file}: ${dead} 早就不在 verify 里了`,
+        ).not.toContain(dead);
+      }
+    }
+  });
+});
+
 describe("文档里的数字和代码一致", () => {
   it("I18N_INVENTORY 的 SFC 数就是 inventory 实际扫到的数", () => {
     const inventory = productVueInventory() as {

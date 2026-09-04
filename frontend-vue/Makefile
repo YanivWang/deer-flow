@@ -36,7 +36,8 @@ IMAGE ?= deer-flow-frontend-vue:ci
 help:
 	@echo "frontend-vue commands:"
 	@echo "  make dev / build / preview     Nuxt lifecycle (dev port $(DEV_PORT))"
-	@echo "  make verify                    lint + format-check + typecheck + unit + build"
+	@echo "  make verify                    lint + format + types + unit + i18n + OpenAPI"
+	@echo "                                 + contracts + standalone + build"
 	@echo ""
 	@echo "  E2E 套件（一个套件 = 一种后端拓扑，名字说的是测什么）:"
 	@echo "  make e2e                       product contracts on a mocked Gateway (default gate)"

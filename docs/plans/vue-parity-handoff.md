@@ -63,10 +63,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 59 收工时逐条跑过）
+### 门禁实测值（wave 60 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；249 文件 / 2067 单测，词典 945 key、18 unused
+make -C frontend-vue verify        exit 0；250 文件 / 2075 单测，词典 945 key、18 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 37 处 / 16 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -202,50 +202,146 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 59）做了什么
+## 上一轮（wave 60）做了什么
 
-**查 TSDoc 的 `{@link}` 符号引用、「挂着的账」剩下的条目、以及测试标题 vs 实际断言。**
+**扫三类从来没被任何东西验过的记录：`describe` 标题、`app/**` 的 `【主要导出】`、
+`Makefile` 每条 target 的说明。三类各翻出一条，其中两类当场上了门禁。**
 
-### 翻出来的：一条把时区符号写反的测试标题
+### 一：`【主要导出】` 点名了七个不存在的符号（**这一栏此前零消费者**）
 
-`tests/unit/core/scheduled-tasks/cron.test.ts:265` 写着
-`test("Asia/Shanghai is UTC-8 (wall 09:00 -> 01:00Z)")`。**断言是对的**
-（09:00 → 01:00Z 就是 **UTC+8**），**标题把符号写反了，而括号里就是它自己的反证**。
-同一个 `describe` 里另外三条同类断言的符号全对（EDT −04:00、EST −05:00、
-Kolkata +5:30）——**四条里唯一一条错的**。
+全模块 478 份文件写着这一行，而只有 `【架构位置】` 有人读
+（`tests/architecture.test.ts:373`，且只读 L2 那一档）。逐条撞了一遍：
 
-**不是错字级别**：标题是下一个人判断「这条测试还需不需要、期望对不对」的唯一依据，
-照标题去「修」代码会把一条正确的断言改坏。**wave 57 那条方法第三次命中**——
-这次矛盾就在同一行里。
+| 文件 | 头里点的名 | 文件真正导出的 |
+| --- | --- | --- |
+| `app/components/ui/chain-of-thought/context.ts` | `provideChainOfThought` | `injectChainOfThought`（+ key + interface） |
+| `app/components/ui/effects/confetti.ts` | `confettiOrigin` | `emitConfettiFrom` |
+| `app/components/ui/effects/flickering-grid.ts` | `updateFlickeringOpacities` | `prefersReducedMotion` |
+| `app/components/workspace/browser-view/frame-buffer.ts` | `createFrameBuffer` | `LatestBrowserFrameBuffer`（class） |
+| `app/composables/useSkillsCatalog.ts` | `SKILLS_CATALOG_QUERY_KEY` | `SKILLS_QUERY_KEY` |
+| `app/core/auth/session.ts` | `probeAuthSession` | `probeSession` |
+| `app/core/input/keyboard.ts` | `isEditableEventTarget` | `isEditableKeyboardTarget` |
+
+**七个幽灵名在整个 checkout 里各自只有一处——自己那一行。** 真名的引入提交
+早于或等于幽灵名的引入提交，所以**七条全都是写下那天就错的**，没有一条是改名漂掉的。
+五条出自同一个批量补文件头的提交 `fa2cde27`，其中 `keyboard.ts` 那条**真名就在
+错行下面三行、同一个 diff hunk 里**。
+
+**门禁**：`tests/guards/header-exports.test.ts`——`app`/`server`/`packages`/`scripts`
+下每份 `.ts`/`.mts`/`.mjs` 的 `【主要导出】` 里，凡是长得像标识符的 token 都必须真的被
+这个文件导出。实测 331 份文件 / 261 份写了这一行 / 209 份点了名 / 502 个 token /
+**0 条豁免**。只钉一个方向（点名的必须存在），反过来不钉——`主要`两个字就是说它是索引。
+`tests/` **有意不在范围里**：那边同一行写的是「被测对象是谁」，套上去会产 14 条误报
+（那 12 个被测符号逐条撞过，在 `app/` 里全找得到）。
+
+### 二：`reducer.test.ts` 的 describe 标题与同一份文件里的机器断言互相矛盾
+
+`describe("合成载荷（write_read_file.ultra 不产生这些帧）")` 里六条用例测的全是
+`updates` 与 `values`——而**同一份文件 90 行之外的帧普查一直在断言
+`updates: 50, values: 13`**。写下那天（`d6048f81`）录制里就已经是 50 / 13，
+**不是过期、是从头就说反了**。同一段里 `节点写 null（录制里 7 帧都是这样）`
+实测是 **38** 帧，当天也是 38。
+
+**这条比错字重**：这份文件存在的理由就是「分开写，读的人才知道哪条结论的证据强度是多少」，
+而这个标题把「有 50 帧真实录制佐证」说成了「录制里根本没有」——**恰好朝着它要防的
+方向说反**。修法是把分档说明搬进分节注释，并把「录制到底佐证了哪几条」加进普查那一条
+（38 个 null 节点写 / 10 帧写 messages 通道 / remove 与 values 重排各 0），
+**数字只留在那一处**。
+
+### 三：`make verify` 的步骤表，四处散文互不相同、且都和 recipe 对不上
+
+| 出处 | 写的 | 缺 / 多 |
+| --- | --- | --- |
+| `Makefile` help | lint + format-check + typecheck + unit + build | 缺 i18n / OpenAPI / 契约常量 / 独立性 |
+| `ARCHITECTURE.md:361` | …、**清单**、i18n、OpenAPI、独立性、build | **多一个幽灵步骤**，缺契约常量 |
+| `README_zh.md:66` | …、i18n、OpenAPI、独立性、build | 缺契约常量 |
+| `README.md:78` | …, i18n, OpenAPI, standalone, build | 缺契约常量 |
+
+`清单` 是 `collected-check`，`1209651f`（2026-08-25 **00:11**）已把它从 verify 里删掉，
+而这句话是同一天 **12:57** 的 `c6fc60b4` 写下的——**提交说明恰好是
+「make every documented command and path real, and gate it」**。
+写下那一刻就是错的，同线索 178。
+
+**门禁**：`doc-facts.test.ts` 里新的 `make verify 的步骤表`——一张
+「类别名 → 真实 target」的表，断言 ① 表的并集逐个等于 `verify:` 的先决条件、
+② 四处散文逐字按表写、③ 散文里不许再出现 `collected-check` / `header-check` / `清单`。
 
 ### 扫过没问题的
 
-**TSDoc `{@link}`**（全模块 8 处 / 7 个符号）全部解析得到；带数字的测试标题 25 条、
-断言上游事实的测试标题 20 条，除上面那条外全部与断言一致
-（`28px`=`size-7`、三个 `collapsible*` data-slot 来自上游 `ui/collapsible.tsx`、
-`mt-4`=`reasoning.tsx:224`、`ConversationEmptyState` 确是 bare div、
-虚拟化阈值上游两处都是 60）；案例页四条 react-only 请求的机制仍在。
+`describe` 标题 421 条：以 PascalCase 开头的 24 条全是英文散文不是符号引用；
+带数字/上游断言的 30 条逐条撞过（`13 个 checkpoint 夹具` 由 `toHaveLength(13)` 自守、
+issue #3482 与上游逐字同、`ui/sidebar.tsx` 路径在）。
+`.vue` 的 `【主要导出】` **217/217 全对**（184 份有可判 token）。
+`Makefile` 的 `.PHONY` 与实际 target **53 : 53 一一对应**，help 里点名的 35 条全部存在。
 
 ---
 
-## 下一轮（wave 60）：**收尾判据仍在重新计数**
+## 下一轮（wave 61）：**换判据，不要再数「记错的账」**
 
-47 干净，48~59 十二轮各翻出一条。**别报「还剩几轮」。**
+> **这一节是 wave 60 被点名要正面回答的问题，结论写在这里。**
 
-> **值得记一笔**：48~59 连着十二轮，每一轮都还能翻出一条，而**越往后越小**
-> （55 一个旧计数、56 两个自己写错的数、59 一个符号）。
-> 如果 60/61 仍然是这种量级，**下一轮该考虑的不是继续扫，而是问「这个判据本身
-> 是不是已经不区分好坏了」**——一个永远满足不了的收尾判据，和没有判据是一回事。
+### 旧判据已经失效，但不是因为「翻出来的东西越来越小」
 
-wave 60 扫哪里：
+上一版这里写着：如果 60 还是 55/56/59 那种量级（一个旧计数、两个自己写错的数、
+一个正负号），就该怀疑判据本身。**wave 60 的三条都不是那个量级**——七个幽灵符号、
+一条与机器断言正面冲突的标题、一张四处互不相同的步骤表，其中两类当场上了门禁。
+**所以「越来越小」这个前提是错的，而判据仍然是坏的。** 真正的毛病在别处：
 
-1. **`tests/` 下所有 `describe` 块的标题**（wave 59 只扫了 `it`/`test`）。
-2. **`app/**` 里 `【文件职责】`/`【主要导出】` 两行与文件实际导出的东西是否一致**——
-   `【主要导出】` 是可机械核对的（列的名字必须真的被 export），而它从来没被对过。
-3. **`Makefile` 里每条 target 的注释 vs 它实际跑的东西**（`make help` 打印的那些）。
+**「连着两轮翻不出记错的账」的满足与否，取决于上一轮自己写了多少字，
+而不取决于离 React 还有多远。** 每一轮都会新增文件头、守卫注释、交接段落、数字；
+散文按行数产出错误。于是「还能不能找到一条写错的记录」渐近于
+「上一轮有没有写东西」——**而收工本身就要写东西**。一个必须靠「什么都不写」
+才能满足的收尾判据，永远不会满足。这与翻出来的东西大小无关。
 
-## 更早几轮的记录（49~58 一句话，48 保留全文）
+### 建议的新判据（两条，都可量，都不自喂）
 
+**C1 —— 产品面（真正的目标）。** 连着两轮，没有任何一条发现改变
+「用户能看见的东西」或「开发者能执行的东西」。可量口径：`app/**` 的**运行时字节**
+没变、词典没增删改、`baseline/` 数据文件没变、没有 `make` target 的行为变化。
+**C1 已经满足了**：wave 58 零改动、wave 59 只改一条测试标题、
+wave 60 的七处 `app/**` 改动**全部落在文件头注释里**（`git diff -U0 -- app` 是七行
+`【主要导出】`，运行时零字节）。**C1 不自喂**：产品面不会因为我写了一段话而变大。
+
+**C2 —— 记录面（维护目标）。** 不再数「写错的记录」，改数
+**「还没有机器看着的记录类别」**。每一轮问的是「还有哪一类写下来的断言没人验」，
+而不是「还有没有写错的句子」。一个类别要么上门禁，要么写下为什么上不了
+（线索 177 推论三的历史标签、179 的 class 串启发式需要 13 条豁免、
+wave 55 量过的交接文档本身）。**清单空了就是结束，而且会一直空着**——
+新写的散文落进已经有门禁的类别里，当场变红。
+
+**C2 把「找出下一个错」（无界）换成「关掉下一个类」（有界且可枚举）。**
+wave 60 关掉了两个（`【主要导出】`、verify 步骤表）。
+
+### 剩下的清单（wave 61 直接接着做）
+
+已上门禁的记录类别（九条 prose→gate 守卫 + doc-facts 里的两张表）：
+doc-facts（文档里的数字 + verify 步骤表）/ doc-references（点名的东西存在吗）/
+upstream-citations / upstream-zero-claims / golden-fixture-provenance /
+baseline-keys-consumed / invariant-ownership / e2e-suite-contract /
+**header-exports（wave 60 新增）**。
+
+**还没上、也还没写下「为什么上不了」的，只剩两条**：
+
+1. **`【依赖关系】` vs 文件真正 import 的东西。** 与 `【主要导出】` 同一栏同一批写的，
+   同样零消费者，而且**同样可机械核对**（列的模块必须真的被 import）。
+   先量一遍误报率再决定收口——它比 `【主要导出】` 松（那边点的是名字，这边点的是模块，
+   写法有 `@/core/threads/*` 这种通配）。
+2. **`【架构位置】` 的 L1 / L3 标签。** L2 那一档 `architecture.test.ts:373` 已经在守，
+   L1/L3 没人看。判据要先想清楚：L3 标签错了会坏什么？如果答案是「什么都不坏」，
+   那正确做法是**写下这条理由**，而不是硬上一条门禁。
+
+已经写下「为什么上不了」的（不必再碰）：交接文档本身（wave 55 量过，6 处有意引用
+已死的东西，豁免会比门禁长）、录制的历史 commit 标签（线索 177 推论三）、
+上游 class 串（线索 179，13 条误报）、「N 次动过 frontend/」这类计数（线索 178 推论）、
+环境事实的实测标注（线索 181）。
+
+**两条做完，C2 的清单就空了。** 那时 C1 与 C2 同时满足，**可以宣布结束**——
+不要再报「还剩几轮」。
+
+## 更早几轮的记录（49~59 一句话，48 保留全文）
+
+- **wave 59**：`cron.test.ts:265` 的标题 `Asia/Shanghai is UTC-8` 符号写反，
+  **断言是对的、括号里就是它自己的反证**，同 describe 另三条同类断言符号全对。
 - **wave 58**：`Button` as-child 那条账说「两边都没有任何选择器消费 data-*」，
   **而本仓 14 个测试文件在消费它，最早那条比「两次复验」早十四轮**；
   **决定不变，错的是翻案判据太松**，已收紧成两条 grep 的交集（→ 线索 182）。
@@ -603,6 +699,19 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   「container 下的 leafName」，改完跑 `make i18n-unused` 核对。
 - **翻案判据写太松，会被毫不相干的东西误触发，和写错一样坏**（线索 182）。
   好判据要能把「该翻」和「不该翻」分开——as-child 那条收紧成两条 grep 的**交集**才够。
+- **一栏「零消费者」的元数据，写错了不会有任何征兆——它长得和写对的一模一样**
+  （线索 183）。`【主要导出】` 478 份文件写着它，零代码读它，七处点名的符号
+  在 checkout 里只剩自己那一行。**判「有没有人读」用 grep 剥掉自身头注释之后再看**，
+  别看「有多少文件写着它」。
+- **同一份文件里，散文和机器断言打起来时，信机器**（线索 184）。
+  `reducer.test.ts` 的 describe 标题说「录制不产生这些帧」，90 行之外的
+  `expect(byName).toEqual({... updates: 50, values: 13 ...})` 一直在说反话。
+  **线索 181 的升级版：那次是两句散文，这次一边是断言，冲突的一刻就该结束了。**
+- **一段「批量补文件头 / 批量对齐文档」的提交，是这一类错误的产地**（线索 185）。
+  `fa2cde27` 一次给几十份文件补头，七个幽灵名里五个出自它；
+  `c6fc60b4` 的提交说明写着「make every documented command and path real, and gate it」，
+  同一次落下的 `清单` 在 **12 小时 46 分钟前**就已经不存在了。
+  **翻这类提交时不要按「后来漂了吗」查，要按「当天就对吗」查。**
 - **先在本仓内部找「自相矛盾的两句」，比拿去撞上游更快**（线索 181）。
   冲突时**信带日期的实测标注**，不信不带日期的断言。
   **结论对、理由错比两者都错更危险**：结论让人以为这条验过了。
@@ -640,8 +749,9 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   `workspace/browser-view/BrowserPanel.vue`
 - 取数合同在 `frontend-vue/BEHAVIOR_CONTRACTS.md` 的 **S8 / S8a / S8b / S8c**
 - **文件头里写着「实测过、做不到」的结论，也要看它给的机制对不对。已经翻案十一次。**
-- **`tests/guards/` 下已有八条「把散文变门禁」的守卫**（doc-facts / doc-references /
+- **`tests/guards/` 下已有九条「把散文变门禁」的守卫**（doc-facts / doc-references /
   upstream-citations / upstream-zero-claims / golden-fixture-provenance /
-  baseline-keys-consumed / invariant-ownership / e2e-suite-contract）。
+  baseline-keys-consumed / invariant-ownership / e2e-suite-contract /
+  **header-exports**）。`doc-facts` 里现在有两张表：文档数字、`make verify` 步骤表。
   **加新守卫前先读它们的覆盖面**——wave 51 那条就躺在现成守卫的正则缝里。
   **上一轮写下的推断，下一轮仍要当假设重新验。**

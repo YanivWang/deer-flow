@@ -1,7 +1,7 @@
 /*
   【文件职责】     ChainOfThought 根与内容层之间的展开状态通道。
   【架构位置】     L2
-  【主要导出】     chainOfThoughtKey / provideChainOfThought / injectChainOfThought
+  【主要导出】     ChainOfThoughtContext / chainOfThoughtKey / injectChainOfThought
   【依赖关系】     Vue inject/provide
   【边界与注意】   inject 失败时抛错，与上游 `useChainOfThought` 同一条约束：内容层
                    拿不到 provider 就是用错了地方，静默当成折叠会把整段内容藏起来

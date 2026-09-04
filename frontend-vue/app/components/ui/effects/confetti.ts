@@ -1,7 +1,7 @@
 /*
   【文件职责】     计算 confetti 是否启用及其发射参数。
   【架构位置】     L3 product UI helper
-  【主要导出】     shouldEmitConfetti · confettiOrigin
+  【主要导出】     shouldEmitConfetti · emitConfettiFrom
   【依赖关系】     无
   【边界与注意】   仅服务 M7 产品特效，不进入 M8 L2 公共集合。
 */

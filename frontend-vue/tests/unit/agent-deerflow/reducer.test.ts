@@ -10,6 +10,13 @@
                    replay 场景（write_read_file.ultra）里根本不产生。拿合成载荷当
                    "覆盖了"是自欺；分开写，读的人才知道哪条结论的证据强度是多少。
 
+                   **第二个 describe 的名字曾把这件事说反了**：它写着
+                   「write_read_file.ultra 不产生这些帧」，而它测的 `updates` /
+                   `values` 恰恰是录制里最多的两种（50 / 13 帧）——同一份文件里
+                   90 行之外的帧普查一直在断言这两个数。写下那天（`d6048f81`）
+                   录制里就已经是 50 / 13，所以它不是过期、是从头就说反了。
+                   分档说明现在写在那一段的分节注释里，数字只留在普查那一条。
+
                    **`checkpoints` / `tasks` 已经不在合成那一档了**：M2 收尾时把这
                    两个请求模式加进了 M0 的录制（08 §402 点名要求），录制从 74 帧
                    涨到 226 帧，两者各 52 / 100 帧都是真实数据。
@@ -108,6 +115,63 @@ describe("golden trace 全流回放（M0 真实录制）", () => {
     });
   });
 
+  /*
+    下面这三个数是「哪些 reducer 规则有真实录制佐证」的**唯一出处**——
+    第二个 describe 里的合成用例不再各自抄一份（wave 56：一个数字只写一处）。
+    50 帧 updates 里 38 帧是「节点写 null」，10 帧写 messages 通道；
+    而 remove 型消息与 values 重排在整条录制里一次都不出现，
+    所以那两条规则只有合成佐证。**这条断言红了，就说明重录之后
+    第二个 describe 的分档说明要跟着改。**
+  */
+  it("录制对 updates / values 各条规则的佐证强度", () => {
+    const updates = events
+      .filter((e) => e.event === "updates")
+      .map((e) => JSON.parse(e.data) as Record<string, unknown>);
+
+    const nullNodeWrites = updates.filter((payload) =>
+      Object.values(payload).every((value) => value === null),
+    );
+    const messageChannelWrites = updates.filter((payload) =>
+      Object.values(payload).some(
+        (value) =>
+          typeof value === "object" && value !== null && "messages" in value,
+      ),
+    );
+    expect(nullNodeWrites).toHaveLength(38);
+    expect(messageChannelWrites).toHaveLength(10);
+
+    const removed = updates.flatMap((payload) =>
+      Object.values(payload).flatMap((value) =>
+        typeof value === "object" && value !== null && "messages" in value
+          ? (
+              (value as { messages?: { type?: string }[] }).messages ?? []
+            ).filter((message) => message.type === "remove")
+          : [],
+      ),
+    );
+    expect(removed, "录制里出现了 remove，合成那一档要重新分").toEqual([]);
+
+    const valueFrames = events
+      .filter((e) => e.event === "values")
+      .map(
+        (e) =>
+          (JSON.parse(e.data) as { messages?: { id?: string }[] }).messages ??
+          [],
+      )
+      .map((messages) => messages.map((message) => message.id));
+    const reorders = valueFrames.filter((ids, index) => {
+      const previous = valueFrames[index - 1];
+      if (!previous || previous.length !== ids.length) return false;
+      return (
+        [...previous].sort().join() === [...ids].sort().join() &&
+        previous.join() !== ids.join()
+      );
+    });
+    expect(reorders, "录制里出现了 values 重排，合成那一档要重新分").toEqual(
+      [],
+    );
+  });
+
   it("跑完整条流之后，消息集合逐字段等于最后一帧 values", () => {
     const { store } = harness();
     for (const event of events) store.dispatch(event);
@@ -180,10 +244,19 @@ describe("golden trace 全流回放（M0 真实录制）", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 合成载荷：录制场景不产生这些事件
+// 合成载荷：逐条隔离 reducer 规则
+//
+// **这一档不是「录制里没有的事件」**：updates 与 values 恰恰是录制里最多的两种
+// （50 / 13 帧，上面那条普查钉着）。合成的是**载荷形状**——把一条规则单独摆出来，
+// 让它失效时红的是这一条而不是整条流。
+//
+// 佐证强度分两级，上面那条「佐证强度」断言是它的机器口径：
+//   有录制佐证 —— 通道隔离、add_messages、节点写 null（录制里 38 帧都是这样）；
+//   只有合成佐证 —— remove 型消息、values 重排、subagent 命名空间（`updates|agent:…`）、
+//                   坏 JSON 与 error 帧：整条录制里一次都不出现。
 // ---------------------------------------------------------------------------
 
-describe("合成载荷（write_read_file.ultra 不产生这些帧）", () => {
+describe("合成载荷（逐条隔离 reducer 规则）", () => {
   it("updates 只写自己的通道，不碰别的通道", () => {
     const { store } = harness();
     send(store, "values", { messages: [], title: "t0", artifacts: ["a"] });
@@ -227,7 +300,7 @@ describe("合成载荷（write_read_file.ultra 不产生这些帧）", () => {
     expect(store.getSnapshot().messageIds).toEqual(["a"]);
   });
 
-  it("节点写 null（录制里 7 帧都是这样）时什么都不动", () => {
+  it("节点写 null 时什么都不动（录制里多数 updates 帧都是这样）", () => {
     const { store } = harness();
     send(store, "values", { messages: [], title: "t0" });
     const before = store.getSnapshot();
