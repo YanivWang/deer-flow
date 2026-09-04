@@ -82,6 +82,38 @@ function icons(src, alias) {
   return found;
 }
 
+/*
+  **拿字符当图标的那一档。**
+
+  `icons()` 只认 import 进来的 lucide 组件，于是「压根没 import 任何图标、
+  直接在标签之间写一个符号字符」这一整类**对它是隐形的**——wave 69 与 wave 70
+  两轮都从它眼皮底下漏过去了。实测漏掉的：`AgentChat.vue` 的 sidecar 触发器写着
+  `◫`（U+25EB）而上游画 `MessageSquareTextIcon`、agent 建成那一屏写着 `✓`
+  而上游画 `CheckCircleIcon`、followup 关闭键写着 `×` 而上游画 `XIcon`。
+  这三处 `ariaSnapshot()` 全看不见（可访问名两边一样），几何档也看不见
+  （它不量字形），对照台账自然全绿。
+
+  字符跟着正文字体渲染：字重、基线、光学重心都由系统字体决定，
+  和一颗 24×24 viewBox 的 svg 不是同一个东西。
+
+  **但「用了字符」本身不是缺陷**——上游 `message-list.tsx:1372` 的划词关闭键
+  就是 `<span aria-hidden="true">×</span>`，本仓照抄是对的。所以这一档
+  **必须两边一起比**，而且**按全仓比**（同字形档，理由见文件末尾：
+  两边组件切分方式不同，按文件问全是噪声）。
+
+  只认「独占一个文本节点」的符号：`>` 与 `<` 之间除了空白只有它。
+  emoji（U+1F300 以上）不算——那是正文内容，不是图标替身
+  （scheduled-tasks 的示例配方就带着一串）。
+*/
+const GLYPH_RE =
+  />\s*([\u00D7\u2190-\u21FF\u2200-\u22FF\u2300-\u23FF\u25A0-\u25FF\u2600-\u27BF\u2B00-\u2BFF])\s*</g;
+
+function glyphs(src) {
+  const set = new Set();
+  for (const m of src.matchAll(GLYPH_RE)) set.add(m[1]);
+  return set;
+}
+
 const kinds = {
   tooltip: (s) => (s.match(/<Tooltip\b/g) ?? []).length,
   nativeTitle: (s) => (s.match(/\btitle=[{"'`:]/g) ?? []).length,
@@ -115,6 +147,7 @@ const load = (root, alias) => {
       file: f,
       src,
       icons: icons(src, alias),
+      glyphs: glyphs(src),
       ...Object.fromEntries(
         Object.entries(kinds).map(([k, fn]) => [k, fn(src)]),
       ),
@@ -302,4 +335,42 @@ console.log(disjoint.length ? disjoint.sort().join("\n") : "   无");
 console.log(
   `\n共 ${issues + onlyR.length + onlyV.length + disjoint.length} 处待核` +
     `（**都是线索不是结论，逐条回源码确认**）`,
+);
+
+/* 拿字符当图标：全仓比，只报「本仓用了、上游一处都没用」的字形。 */
+const glyphSites = (map) => {
+  const out = new Map();
+  for (const v of map.values())
+    for (const g of v.glyphs) out.set(g, [...(out.get(g) ?? []), v.file]);
+  return out;
+};
+const rg = glyphSites(R),
+  vg = glyphSites(V);
+/*
+  形状断言：这一档的信号是「Vue 有、React 没有」，**React 那边解析成 0 会让
+  每一条 Vue 字形都变成线索**（假阳性洪水），而 React 那边解析成 0 又和
+  「上游真的一个都不用」长得一样。上游 `message-list.tsx:1372` 的 `×`
+  是一条已知的真样本，拿它当探针（线索 195：任何输出 0 的工具都要能回答
+  「这个 0 是算出来的、还是没算」）。
+*/
+if (!rg.has("\u00D7")) {
+  console.error(
+    `字符档没解析出来：上游 message-list 的 × 应当被认到，实际 React ${rg.size} 种`,
+  );
+  process.exit(2);
+}
+const onlyVueGlyphs = [...vg.entries()].filter(([g]) => !rg.has(g));
+console.log(
+  `\n## 拿字符当图标（全仓）  React ${rg.size} 种 / Vue ${vg.size} 种`,
+);
+console.log(
+  onlyVueGlyphs.length
+    ? onlyVueGlyphs
+        .map(
+          ([g, files]) =>
+            `   ${g}（U+${g.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}）` +
+            `只有 Vue 用：${files.join("、")}`,
+        )
+        .join("\n")
+    : "   无（两边用到的符号字符集合一致）",
 );

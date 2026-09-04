@@ -49,6 +49,23 @@ describe("icon-parity 自己的形状断言", () => {
     expect(source).toContain("lucide-(?:react|vue-next)");
   });
 
+  it("拿字符当图标那一档，上游解析不出来时退出", () => {
+    /*
+      这一档的信号是「Vue 有、React 没有」。React 那边解析成 0 会让本仓
+      每一个符号字符都变成线索（假阳性洪水），而它又和「上游真的一个都不用」
+      长得一模一样。上游 message-list.tsx 的 × 是一条已知真样本，拿它当探针。
+    */
+    expect(source).toContain("字符档没解析出来");
+    expect(source).toContain('rg.has("\\u00D7")');
+  });
+
+  it("字符档按全仓比，且排除 emoji", () => {
+    // 按文件问全是噪声（线索 200 ④）；emoji 是正文内容不是图标替身。
+    expect(source).toContain("拿字符当图标（全仓）");
+    expect(source).toContain("GLYPH_RE");
+    expect(source).not.toMatch(/GLYPH_RE\s*=[\s\S]{0,200}1F300/);
+  });
+
   it("豁免面不进报告", () => {
     // 落地页 / docs / blog 双向豁免，它们独占的图标会把真信号淹掉。
     expect(source).toMatch(/EXEMPT = new Set\(\[[^\]]*"landing"/);

@@ -10,6 +10,7 @@
 import { computed, reactive, ref } from "vue";
 import { Download, PenLine, Plus, Trash2, Upload } from "lucide-vue-next";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import SettingsActionDialog from "@/components/workspace/settings/SettingsActionDialog.vue";
@@ -419,17 +420,30 @@ async function confirmDelete() {
               </ToggleGroupItem>
             </ToggleGroup>
           </div>
+          <!--
+            上游 `memory-settings-page.tsx:592` 这一行四颗全走 Button：前三颗
+            `variant="outline"`，清空那颗 `variant="destructive" className="ml-auto"`。
+            手写那版有三处台账看不见的落差：
+
+            ① **前三颗一条 hover 都没有**——鼠标停上去毫无反应，而 outline 变体带着
+               `hover:bg-accent hover:text-accent-foreground`；
+            ② **清空键写死 `bg-red-600 text-white`**，不是 `bg-destructive`。深色主题下
+               destructive 会跟着 token 翻转，写死的 red-600 不会（同 wave 70 在
+               AgentCard 上修掉的那一处）；
+            ③ **清空键没有 `:disabled`**，而上游是 `disabled={clearMemory.isPending}`
+               ——清空正在飞的时候还能再点一次。
+          -->
           <div class="flex flex-wrap items-center gap-2">
-            <button
+            <Button
               type="button"
-              class="flex items-center rounded-md border px-3 py-2 text-sm disabled:pointer-events-none disabled:opacity-50"
+              variant="outline"
               :disabled="owner.importDocument.isPending.value"
               data-testid="memory-import-open"
               @click="importInput?.click()"
             >
               <Upload class="mr-2 h-4 w-4" aria-hidden="true" />
               {{ t.settings.memory.importButton }}
-            </button>
+            </Button>
             <input
               ref="importInput"
               type="file"
@@ -438,35 +452,37 @@ async function confirmDelete() {
               data-testid="memory-import-file"
               @change="selectImport"
             />
-            <button
+            <Button
               type="button"
-              class="flex items-center rounded-md border px-3 py-2 text-sm disabled:pointer-events-none disabled:opacity-50"
+              variant="outline"
               :disabled="owner.exportDocument.isPending.value"
               @click="exportDocument"
             >
               <Download class="mr-2 h-4 w-4" aria-hidden="true" />
               {{ t.settings.memory.exportButton }}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              class="flex items-center rounded-md border px-3 py-2 text-sm"
+              variant="outline"
               data-testid="memory-add-fact"
               @click="openCreateFact"
             >
               <Plus class="mr-2 h-4 w-4" aria-hidden="true" />
               {{ t.settings.memory.addFact }}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              class="ml-auto rounded-md bg-red-600 px-3 py-2 text-sm text-white"
+              variant="destructive"
+              class="ml-auto"
               data-testid="memory-clear-open"
+              :disabled="owner.clear.isPending.value"
               @click="
                 clearError = '';
                 clearDialogOpen = true;
               "
             >
               {{ t.settings.memory.clearAll }}
-            </button>
+            </Button>
           </div>
           <p v-if="importError" role="alert" class="text-sm text-red-600">
             {{ importError }}
@@ -583,26 +599,30 @@ async function confirmDelete() {
                 </p>
               </div>
               <div class="flex shrink-0 items-center gap-1 self-start sm:ml-3">
-                <button
+                <Button
                   type="button"
-                  class="hover:bg-accent flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md disabled:pointer-events-none disabled:opacity-50"
+                  variant="ghost"
+                  size="icon"
+                  class="shrink-0"
                   :disabled="owner.remove.isPending.value"
                   :title="factActionLabel(t.common.edit, fact)"
                   :aria-label="factActionLabel(t.common.edit, fact)"
                   @click="openEditFact(fact)"
                 >
                   <PenLine class="h-4 w-4" aria-hidden="true" />
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  class="text-destructive hover:bg-accent flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md disabled:pointer-events-none disabled:opacity-50"
+                  variant="ghost"
+                  size="icon"
+                  class="text-destructive hover:text-destructive shrink-0"
                   :disabled="owner.remove.isPending.value"
                   :title="factActionLabel(t.common.delete, fact)"
                   :aria-label="factActionLabel(t.common.delete, fact)"
                   @click="openDelete(fact)"
                 >
                   <Trash2 class="h-4 w-4" aria-hidden="true" />
-                </button>
+                </Button>
               </div>
             </div>
           </div>

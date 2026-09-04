@@ -24,6 +24,7 @@ import { ref } from "vue";
 
 import ArtifactTrigger from "@/components/workspace/artifacts/ArtifactTrigger.vue";
 import GoalStatus from "@/components/workspace/GoalStatus.vue";
+import SidecarTrigger from "@/components/workspace/sidecar/SidecarTrigger.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
 
 vi.stubGlobal("useNuxtApp", () => ({
@@ -108,5 +109,126 @@ describe("原生 title 换成 Tooltip 组件", () => {
     expect(wrapper.find("[data-testid='artifact-trigger']").exists()).toBe(
       false,
     );
+  });
+});
+
+/*
+  wave 71：**同一个池子里的另一半**——本仓手写了 98 处 `<button>`（上游同口径
+  15 处），其中 94 处没有任何 `focus-visible` 类。这一节钉的不是焦点环
+  （那一条实测下来是「两边都有环、但画得不一样」，见交接文档），
+  而是**手写按钮顺带丢掉的那些东西**：图标字形、Tooltip、变体、禁用绑定。
+*/
+describe("会话头部的 sidecar 触发器", () => {
+  it("画的是 lucide 图标，不是文字字符", () => {
+    const wrapper = mount(SidecarTrigger, { props: { open: false } });
+    /*
+      此前这里是 `<button class="... size-8 ...">◫</button>`——U+25EB，
+      一个跟着正文字体渲染的符号字符。上游 sidecar-trigger.tsx:59 画的是
+      `<MessageSquareTextIcon />`。可访问名两边一样，所以 aria 快照、
+      对照台账、dom-parity 的几何档三样全看不见。
+    */
+    expect(wrapper.find("svg").exists()).toBe(true);
+    expect(wrapper.text()).not.toContain("\u25EB");
+  });
+
+  it("走 Button primitive 的 icon 档（36px），不是手写的 32px", () => {
+    const wrapper = mount(SidecarTrigger, { props: { open: false } });
+    const button = wrapper.get("[data-testid='sidecar-header-trigger']");
+    /*
+      上游 `size="icon"` = `size-9` = 36×36；手写那版是 `size-8` = 32×32。
+      判据取 `data-size` 而不是 `data-slot`：两层 as-child 之后留在 DOM 上的
+      `data-slot` 是**最外层**那个（线索 62/63），这里是 TooltipTrigger——
+      Radix 与 Reka 一致，上游那颗也是 `tooltip-trigger`。
+    */
+    expect(button.attributes("data-slot")).toBe("tooltip-trigger");
+    expect(button.attributes("data-size")).toBe("icon");
+    expect(button.classes()).toContain("size-9");
+  });
+
+  it("包在 Tooltip 里，并按开合切换 secondary / ghost", () => {
+    const closed = mount(SidecarTrigger, { props: { open: false } });
+    expect(closed.find("[data-slot='tooltip-trigger']").exists()).toBe(true);
+    expect(
+      closed
+        .get("[data-testid='sidecar-header-trigger']")
+        .attributes("data-variant"),
+    ).toBe("ghost");
+
+    const open = mount(SidecarTrigger, { props: { open: true } });
+    // 上游 `variant={sidecar.open ? "secondary" : "ghost"}`——面板开着时这颗键
+    // 自己带底色，是「现在开着」的唯一视觉线索。
+    expect(
+      open
+        .get("[data-testid='sidecar-header-trigger']")
+        .attributes("data-variant"),
+    ).toBe("secondary");
+  });
+
+  it("重查 sidecar 线程期间置灰", () => {
+    /*
+      上游 `isReconciling`：打开前要带 force 重查一次（缓存里的 id 可能指向
+      别处删掉的线程，#3555），这期间按钮 disabled。本仓此前 await 了那次
+      重查却不锁按钮，连点两下会发两次 restore。
+    */
+    const wrapper = mount(SidecarTrigger, {
+      props: { open: false, pending: true },
+    });
+    expect(
+      wrapper
+        .get("[data-testid='sidecar-header-trigger']")
+        .attributes("disabled"),
+    ).toBeDefined();
+  });
+});
+
+describe("手写按钮丢掉的那些（源码档）", () => {
+  const read = async (path: string) => {
+    const raw = await import("node:fs").then((fs) =>
+      fs.readFileSync(path, "utf8"),
+    );
+    // 先剥注释再问「用没用」（线索 174/202）——解释修法的注释里全是这些串。
+    return raw
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+  };
+
+  it("composer 的提交键是描边圆钮，不是实心 primary", async () => {
+    const source = await read("app/components/chat/ChatComposer.vue");
+    /*
+      上游 `<PromptInputSubmit className="rounded-full" variant="outline" />`
+      （input-box.tsx:2729）。手写那版是 `bg-primary text-primary-foreground`，
+      于是这颗键一边空心一边实心蓝。`shadow-none` 也不能少：上游走
+      `InputGroupButton`，它的 base 把 outline 的 `shadow-xs` 盖掉了。
+    */
+    expect(source).toContain('class="rounded-full shadow-none"');
+    expect(source).not.toContain("bg-primary text-primary-foreground");
+  });
+
+  it("memory 的清空键用 destructive token，且清空进行中置灰", async () => {
+    const source = await read(
+      "app/components/workspace/settings/MemorySettings.vue",
+    );
+    /*
+      上游 `<Button variant="destructive" className="ml-auto"
+      disabled={clearMemory.isPending}>`。手写那版写死 `bg-red-600 text-white`
+      （深色主题不跟着 token 翻转），而且**没有 disabled 绑定**。
+    */
+    expect(source).toContain('variant="destructive"');
+    expect(source).toContain(':disabled="owner.clear.isPending.value"');
+    expect(source).not.toContain("bg-red-600");
+  });
+
+  it("改完重跑：草稿为空或一个字没改时不许提交", async () => {
+    const source = await read("app/components/chat/AgentChat.vue");
+    /*
+      上游 `editSubmitDisabled`（message-list-item.tsx:176）是四条或，
+      其中两条是「去空白后为空」与「与原文逐字相同」。两条都没有的话，
+      可以把一条 human 消息改成空串再重跑、也可以一个字不改就重跑，
+      而两种都会**丢掉这一轮之后的全部消息**。
+    */
+    expect(source).toContain("draft.length === 0");
+    expect(source).toContain("draft === state.original.trim()");
+    expect(source).toContain(':disabled="editSubmitDisabled"');
   });
 });

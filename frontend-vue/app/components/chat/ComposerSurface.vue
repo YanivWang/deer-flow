@@ -93,5 +93,16 @@ const classes = computed(() =>
   align-items: center;
   gap: 0.25rem;
   padding: 0.375rem 0.75rem 0.75rem;
+  /*
+    页脚里的控件默认是 muted，**颜色归容器**——上游同一层
+    （`InputGroupAddon` 的 cva，input-group.tsx:40）就带着
+    `text-muted-foreground`，里面那几颗 ghost Button 都不自己写颜色。
+
+    实测（wave 71 两个应用同屏取计算样式）：不写这一条时，纸夹 / 语音 /
+    优化 / 提交四颗算出来的 color 是 `foreground`（近黑）而上游是
+    `muted-foreground`（中灰）。此前是靠每颗按钮各写一遍 `text-muted-foreground`
+    盖住的——那样每加一颗控件就要记得再写一遍，漏一颗就黑一颗。
+  */
+  color: var(--muted-foreground);
 }
 </style>

@@ -18,6 +18,7 @@
 */
 
 import { computed, ref } from "vue";
+import { LoaderCircle, Plug, Unplug } from "lucide-vue-next";
 
 import ChannelProviderIcon from "./ChannelProviderIcon.vue";
 import ChannelRuntimeConfigDialog from "./ChannelRuntimeConfigDialog.vue";
@@ -295,37 +296,59 @@ function connectLabel(view: ChannelProviderView) {
             </span>
           </div>
           <div class="flex shrink-0 flex-wrap justify-end gap-1">
-            <button
+            <!--
+              上游 `channels-settings-page.tsx:199` 这一排全走 Button：连接键是
+              **默认（实心 primary）变体**，modify / disconnect 是
+              `variant="outline"`，三颗都是 `size="sm"`，而且**每颗都带一颗图标**
+              （`PlugIcon` / `UnplugIcon`，请求在飞的时候换成会转的
+              `LoaderCircleIcon`）。
+
+              手写那版：一颗图标都没有（所以「正在连接」除了置灰之外没有任何提示）、
+              一条 hover 都没有、连接键用的是**描边**而不是实心（用户看不出这一排里
+              哪一颗是主操作）、清配置那颗写死 `text-red-600` 而不是 destructive token。
+
+              `removeProviderConfig` 是本仓独有的管理员操作（上游没有这颗键），
+              所以它没有可抄的上游形状；这里只把它接进同一套 Button 规格。
+            -->
+            <Button
               type="button"
-              class="h-8 w-24 rounded-md border px-2 text-xs disabled:pointer-events-none disabled:opacity-50"
+              size="sm"
               :disabled="channels.isProviderPending(view.provider.provider)"
               :title="view.provider.unavailable_reason || undefined"
               @click="connectProvider(view.provider)"
             >
+              <LoaderCircle
+                v-if="channels.isProviderPending(view.provider.provider)"
+                class="animate-spin"
+              />
+              <Plug v-else />
               {{ connectLabel(view) }}
-            </button>
-            <button
+            </Button>
+            <Button
               v-if="
                 view.provider.configured &&
                 providerCanEditRuntimeConfig(view.provider)
               "
               type="button"
-              class="rounded-md border px-2 py-1 text-xs disabled:pointer-events-none disabled:opacity-50"
+              variant="outline"
+              size="sm"
               :disabled="channels.isProviderPending(view.provider.provider)"
               @click="beginSetup(view.provider)"
             >
               {{ text.modify }}
-            </button>
-            <button
+            </Button>
+            <Button
               v-if="isAdmin && view.provider.configured"
               type="button"
-              class="rounded-md border px-2 py-1 text-xs text-red-600 disabled:pointer-events-none disabled:opacity-50"
+              variant="outline"
+              size="sm"
+              class="text-destructive hover:text-destructive"
               :disabled="channels.isProviderPending(view.provider.provider)"
               :aria-label="`${text.removeProviderConfig}: ${view.provider.display_name}`"
               @click="removingProvider = view.provider"
             >
               {{ text.removeProviderConfig }}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -351,18 +374,24 @@ function connectLabel(view: ChannelProviderView) {
                 {{ statusLabel(connection.status) }}
               </div>
             </div>
-            <button
+            <Button
               v-if="connection.status !== 'revoked'"
               type="button"
-              class="rounded-md border px-2 py-1 text-xs disabled:pointer-events-none disabled:opacity-50"
+              variant="outline"
+              size="sm"
               :disabled="channels.isConnectionPending(connection.id)"
               :aria-label="
                 text.disconnectAccount(getChannelConnectionLabel(connection))
               "
               @click="disconnectConnection(connection)"
             >
+              <LoaderCircle
+                v-if="channels.isConnectionPending(connection.id)"
+                class="animate-spin"
+              />
+              <Unplug v-else />
               {{ text.disconnect }}
-            </button>
+            </Button>
           </div>
         </div>
       </article>

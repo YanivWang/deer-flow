@@ -17,16 +17,29 @@ import {
   watch,
 } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
-import { Bot, CalendarClock, Info, PlusSquare } from "lucide-vue-next";
+import {
+  Bot,
+  CalendarClock,
+  Check,
+  CircleCheckBig,
+  Info,
+  PlusSquare,
+  X,
+} from "lucide-vue-next";
 
 import AgentBootstrapComposer from "@/components/chat/AgentBootstrapComposer.vue";
 import AgentWelcome from "@/components/chat/AgentWelcome.vue";
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import AuroraText from "@/components/ui/effects/AuroraText.vue";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import ContextUsageBadge from "@/components/workspace/ContextUsageBadge.vue";
 import TodoList from "@/components/workspace/TodoList.vue";
 import TokenUsageIndicator from "@/components/chat/TokenUsageIndicator.vue";
@@ -37,6 +50,7 @@ import BrowserPanel from "@/components/workspace/browser-view/BrowserPanel.vue";
 import BrowserTrigger from "@/components/workspace/browser-view/BrowserTrigger.vue";
 import ExportTrigger from "@/components/workspace/ExportTrigger.vue";
 import SidecarPanel from "@/components/workspace/sidecar/SidecarPanel.vue";
+import SidecarTrigger from "@/components/workspace/sidecar/SidecarTrigger.vue";
 import { useArtifactsPanel } from "@/composables/useArtifactsPanel";
 import { useAgentCreationSession } from "@/composables/useAgentCreationSession";
 import { useSidecar } from "@/composables/useSidecar";
@@ -331,8 +345,21 @@ const threadPresence = ref<{ threadId: string; presence: ThreadPresence }>({
 const editState = ref<{
   messageId: string;
   text: string;
+  original: string;
   messageIds: string[];
 } | null>(null);
+/*
+  上游 `message-list-item.tsx:176` 的 `editSubmitDisabled` 是四条或：正在提交、
+  草稿去空白后为空、**草稿与原文逐字相同**。本仓此前一条都没有，于是可以把一条
+  human 消息改成空串再重跑，也可以一个字不改就重跑——两种都会**丢掉这一轮之后
+  的全部消息**（editRerunWarning 说的就是这件事），换来一次没有意义的运行。
+*/
+const editSubmitDisabled = computed(() => {
+  const state = editState.value;
+  if (!state) return true;
+  const draft = state.text.trim();
+  return draft.length === 0 || draft === state.original.trim();
+});
 const bootstrapConversationReady = ref(!props.bootstrap);
 const bootstrapConversationFinished = ref(!props.bootstrap);
 let finishAgentCreationRun: (messages: readonly Message[]) => void = () => {};
@@ -687,15 +714,26 @@ function openArtifact(path: string, automatic = false) {
   browserOpen.value = false;
   sidecar.close();
 }
+/*
+  上游 `sidecar-trigger.tsx` 在这次带 force 的重查期间把触发器置灰
+  （`isReconciling`）。缓存里的 sidecar id 可能指向别处删掉的线程（#3555），
+  重查要走一次网络；不锁按钮的话连点两下就发两次 restore。
+*/
+const sidecarReconciling = ref(false);
 async function toggleSidecar() {
   if (sidecar.open.value) {
     sidecar.close();
     return;
   }
-  const restored = await sidecarSession.restore({ force: true });
-  if (restored && artifactPanel.close()) {
-    browserOpen.value = false;
-    sidecar.open.value = true;
+  sidecarReconciling.value = true;
+  try {
+    const restored = await sidecarSession.restore({ force: true });
+    if (restored && artifactPanel.close()) {
+      browserOpen.value = false;
+      sidecar.open.value = true;
+    }
+  } finally {
+    sidecarReconciling.value = false;
   }
 }
 function openBrowser() {
@@ -1378,11 +1416,12 @@ async function regenerate(messageId: string, messageIds: string[]) {
 }
 function beginEdit(messageId: string, text: string, messageIds: string[]) {
   if (isDemo.value) return;
-  editState.value = { messageId, text, messageIds };
+  editState.value = { messageId, text, original: text, messageIds };
 }
 async function updateAndRerun() {
   if (isDemo.value) return;
   if (!routeThreadId.value || !editState.value) return;
+  if (editSubmitDisabled.value) return;
   const pending = editState.value;
   editState.value = null;
   await stream.editAndRegenerateMessage(
@@ -1625,18 +1664,35 @@ onUnmounted(() => {
               {{ headerTitle }}
             </FlipDisplay>
           </div>
-          <button
-            v-if="agentName && !bootstrap"
-            type="button"
-            :aria-label="$i18n.t.value.agents.newChat"
-            class="bg-secondary text-secondary-foreground hover:bg-secondary/80 flex h-8 items-center gap-2 rounded-md px-2 text-xs sm:px-3"
-            @click="startAgentChat"
-          >
-            <PlusSquare :size="16" />
-            <span class="hidden sm:inline">{{
-              $i18n.t.value.agents.newChat
-            }}</span>
-          </button>
+          <!--
+            上游 `agents/[agent_name]/chats/[thread_id]/page.tsx:279` 是
+            `<Tooltip content={t.agents.newChat}><Button className="px-2 sm:px-3"
+            size="sm" variant="secondary">`。手写那版少的不只是焦点环：
+            字号 `text-xs`（12px）而 Button base 是 `text-sm`（14px）、
+            `gap-2`（8px）而 size-sm 是 `gap-1.5`（6px）、没有 `font-medium`、
+            没有 Tooltip——窄屏下文字被 `hidden sm:inline` 收起来，
+            那时它是一颗纯图标键，没有 Tooltip 就没有任何说明（同 wave 69 的
+            ArtifactTrigger）。图标不传 `:size`，交给 buttonVariants 里的
+            `[&_svg:not([class*='size-'])]:size-4`。
+          -->
+          <Tooltip v-if="agentName && !bootstrap" :delay-duration="500">
+            <TooltipTrigger>
+              <Button
+                :aria-label="$i18n.t.value.agents.newChat"
+                class="px-2 sm:px-3"
+                size="sm"
+                type="button"
+                variant="secondary"
+                @click="startAgentChat"
+              >
+                <PlusSquare />
+                <span class="hidden sm:inline">{{
+                  $i18n.t.value.agents.newChat
+                }}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{{ $i18n.t.value.agents.newChat }}</TooltipContent>
+          </Tooltip>
           <!--
             右侧控件有一层分组容器，与上游 chat-page.tsx 同构：
             `<div class="flex shrink-0 items-center gap-2">`。它不改变横向节奏
@@ -1705,20 +1761,12 @@ onUnmounted(() => {
                       : $i18n.t.value.agents.save
               }}
             </button>
-            <button
+            <SidecarTrigger
               v-if="!isDemo && sidecar.sidecarThreadId.value && sidecarReady"
-              type="button"
-              data-testid="sidecar-header-trigger"
-              :aria-label="
-                sidecar.open.value
-                  ? $i18n.t.value.sidecar.close
-                  : $i18n.t.value.sidecar.open
-              "
-              class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
-              @click="toggleSidecar"
-            >
-              ◫
-            </button>
+              :open="sidecar.open.value"
+              :pending="sidecarReconciling"
+              @toggle="toggleSidecar"
+            />
             <BrowserTrigger
               v-if="browserEnabled"
               :open="activePanel === 'browser'"
@@ -1814,21 +1862,31 @@ onUnmounted(() => {
             <p class="text-muted-foreground mt-2 text-xs">
               {{ $i18n.t.value.common.editRerunWarning }}
             </p>
-            <div class="mt-2 flex justify-end gap-2">
-              <button
+            <!--
+              上游 `message-list-item.tsx:532` 两颗都是 `<Button size="sm">`，
+              各带一颗 12px 图标（`XIcon` / `CheckIcon`），间距 `gap-1`。
+              手写那版没有图标、圆角是 `rounded`（4px）而不是 size-sm 的
+              `rounded-md`（6px）、没有 hover 也没有禁用态。
+            -->
+            <div class="mt-2 flex justify-end gap-1">
+              <Button
+                size="sm"
                 type="button"
-                class="rounded border px-3 py-1"
+                variant="ghost"
                 @click="editState = null"
               >
+                <X class="size-3" />
                 {{ $i18n.t.value.common.cancel }}
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
                 type="button"
-                class="bg-primary text-primary-foreground rounded px-3 py-1"
+                :disabled="editSubmitDisabled"
                 @click="updateAndRerun"
               >
+                <Check class="size-3" />
                 {{ $i18n.t.value.common.updateAndRerun }}
-              </button>
+              </Button>
             </div>
           </div>
           <!--
@@ -1908,7 +1966,20 @@ onUnmounted(() => {
                 data-testid="agent-created"
                 class="bg-background mx-auto w-full max-w-lg rounded-xl border p-6 text-center shadow-sm"
               >
-                <div class="text-3xl" aria-hidden="true">✓</div>
+                <!--
+                  上游 `agents/new/page.tsx:424` 画的是
+                  `<CheckCircleIcon className="text-primary h-10 w-10" />`
+                  ——lucide 里 `CheckCircleIcon` 解析到 **`CircleCheckBig`**
+                  （wave 69 在 SubtaskCard 上踩过同一对别名）。
+                  此前这里是文字字符 `✓`（U+2713）撑成 `text-3xl`：
+                  尺寸 30px 对 40px，颜色继承正文而不是 `text-primary`，
+                  字形还随系统字体变。`aria-hidden` 两边一致，所以
+                  aria 快照与对照台账都看不见这一处。
+                -->
+                <CircleCheckBig
+                  class="text-primary mx-auto h-10 w-10"
+                  aria-hidden="true"
+                />
                 <h2 class="mt-2 text-xl font-semibold">
                   {{ $i18n.t.value.agents.agentCreated }}
                 </h2>
@@ -1981,24 +2052,41 @@ onUnmounted(() => {
                 >
                   {{ $i18n.t.value.inputBox.followupLoading }}
                 </span>
-                <button
+                <!--
+                  上游 `input-box.tsx:2131` 两颗都走 Button：建议 chip 是
+                  `<Suggestion>`（= `variant="outline" size="sm"` 加
+                  `h-auto rounded-full px-4 py-2 text-xs font-normal
+                  whitespace-normal dark:bg-background`），关闭键是
+                  `<Button variant="outline" size="sm" class="h-auto rounded-full
+                  px-2.5 py-1.5 text-xs font-normal"><XIcon class="size-4" /></Button>`。
+
+                  **关闭键此前画的是文字 `×`**（U+00D7 乘号），不是 lucide `X`——
+                  跟着正文字体渲染，字形、字重、光学重心都和 16px 的图标不是一回事。
+                  这条 aria 看不见（两边可访问名都是 `common.close`）。
+                  chip 的内边距也差一档：`px-3 py-1.5` 对上游 `px-4 py-2`。
+                -->
+                <Button
                   v-for="suggestion in followups"
                   :key="suggestion"
+                  class="text-muted-foreground dark:bg-background h-auto max-w-full rounded-full px-4 py-2 text-center text-xs font-normal whitespace-normal"
+                  size="sm"
                   type="button"
-                  class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-3 py-1.5 text-xs"
+                  variant="outline"
                   @click="composer?.offerFollowup(suggestion)"
                 >
                   {{ suggestion }}
-                </button>
-                <button
+                </Button>
+                <Button
                   v-if="followups.length"
-                  type="button"
                   :aria-label="$i18n.t.value.common.close"
-                  class="text-muted-foreground bg-background hover:bg-accent rounded-full border px-2.5 py-1.5 text-xs"
+                  class="text-muted-foreground h-auto rounded-full px-2.5 py-1.5 text-xs font-normal"
+                  size="sm"
+                  type="button"
+                  variant="outline"
                   @click="followups = []"
                 >
-                  ×
-                </button>
+                  <X class="size-4" />
+                </Button>
               </div>
               <TodoList
                 v-if="

@@ -1357,6 +1357,17 @@ function resolveFollowup(action: "append" | "replace" | "cancel") {
   流式输出期间这个按钮仍然是 type="submit"（与 React 一致），所以停止分支必须自己
   拦下表单提交，否则「停止」会顺手再发一条空消息。
 */
+/*
+  上游听写中是 `text-primary bg-primary/10 hover:bg-primary/15`
+  （input-box.tsx:2818）。手写那版少了 hover 那一档：正在听写时鼠标
+  停上去毫无反应。Button 的 `class` prop 只收字符串，所以在这里拼好。
+*/
+const voiceButtonClass = computed(() =>
+  voiceListening.value
+    ? "px-2! text-primary bg-primary/10 hover:bg-primary/15"
+    : "px-2!",
+);
+
 function onSubmitButtonClick(event: MouseEvent) {
   if (!props.streaming) return;
   event.preventDefault();
@@ -1670,16 +1681,31 @@ defineExpose({ replaceDraft, offerFollowup });
           <div class="relative">
             <Tooltip>
               <TooltipTrigger>
-                <button
+                <!--
+                  上游这三颗（附件 / 语音 / 优化）都是 `PromptInputButton`
+                  = `InputGroupButton size="sm"` = `<Button variant="ghost">`
+                  再叠 `h-8 px-2.5 gap-1.5 rounded-md`，调用点加 `px-2!`。
+                  手写那版尺寸抄对了，但少了 ghost 变体的
+                  `hover:text-accent-foreground` 与 `dark:hover:bg-accent/50`
+                  （深色主题下 hover 底色不一样）、少了 `transition-all`，
+                  而且禁用时用的是 `cursor-not-allowed` 而不是
+                  `pointer-events-none`——后者会连 tooltip 一起挡住，
+                  上游禁用的按钮是**不弹提示**的。
+                  颜色不用各自写：`input-group-footer` 容器本身就是
+                  `text-muted-foreground`（上游 input-group.tsx:40 同样）。
+                -->
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
+                  class="px-2!"
                   data-testid="add-attachments-button"
                   :aria-label="$i18n.t.value.inputBox.addAttachments"
-                  class="text-muted-foreground hover:bg-accent flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 disabled:cursor-not-allowed disabled:opacity-50"
                   :disabled="disabled || polishing"
                   @click="openFileDialog"
                 >
-                  <Paperclip :size="12" aria-hidden="true" />
-                </button>
+                  <Paperclip class="size-3" aria-hidden="true" />
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="top" align="start" class="w-56">
                 {{
@@ -1716,11 +1742,12 @@ defineExpose({ replaceDraft, offerFollowup });
           -->
           <Tooltip>
             <TooltipTrigger>
-              <button
+              <Button
                 data-testid="voice-input-button"
                 type="button"
-                class="text-muted-foreground hover:bg-accent flex h-8 items-center justify-center gap-1.5 rounded-md px-2"
-                :class="voiceListening ? 'bg-primary/10 text-primary' : ''"
+                variant="ghost"
+                size="sm"
+                :class="voiceButtonClass"
                 :aria-label="
                   voiceListening
                     ? $i18n.t.value.inputBox.voiceInputStopLabel
@@ -1732,9 +1759,9 @@ defineExpose({ replaceDraft, offerFollowup });
                 "
                 @click="toggleVoiceInput"
               >
-                <Square v-if="voiceListening" :size="12" class="fill-current" />
-                <Mic v-else :size="12" />
-              </button>
+                <Square v-if="voiceListening" class="size-3 fill-current" />
+                <Mic v-else class="size-3" />
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="top">
               {{
@@ -1761,10 +1788,12 @@ defineExpose({ replaceDraft, offerFollowup });
           -->
           <Tooltip>
             <TooltipTrigger>
-              <button
+              <Button
                 data-testid="polish-input-button"
                 type="button"
-                class="text-muted-foreground hover:bg-accent flex h-8 items-center justify-center gap-1.5 rounded-md px-2 disabled:cursor-not-allowed disabled:opacity-50"
+                variant="ghost"
+                size="sm"
+                class="px-2!"
                 :aria-label="
                   polishUndoAvailable
                     ? $i18n.t.value.inputBox.inputPolishUndo
@@ -1773,10 +1802,10 @@ defineExpose({ replaceDraft, offerFollowup });
                 :disabled="polishDisabled"
                 @click="polish"
               >
-                <Loader2 v-if="polishing" :size="12" class="animate-spin" />
-                <Undo2 v-else-if="polishUndoAvailable" :size="12" />
-                <Sparkles v-else :size="12" />
-              </button>
+                <Loader2 v-if="polishing" class="size-3 animate-spin" />
+                <Undo2 v-else-if="polishUndoAvailable" class="size-3" />
+                <Sparkles v-else class="size-3" />
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="top">
               {{
@@ -1801,10 +1830,12 @@ defineExpose({ replaceDraft, offerFollowup });
                   只读会话里它此前仍然是可聚焦、可展开的：菜单打得开、
                   选中一项还会写回 context，而这条会话根本发不出消息。
                 -->
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   data-testid="composer-mode-trigger"
-                  class="hover:bg-accent flex h-8 max-w-28 items-center gap-1 rounded-md px-2 text-xs disabled:pointer-events-none disabled:opacity-50 sm:max-w-none"
+                  class="max-w-28 gap-1! px-2! sm:max-w-none"
                   :disabled="disabled || polishing"
                 >
                   <!--
@@ -1828,7 +1859,7 @@ defineExpose({ replaceDraft, offerFollowup });
                   >
                     {{ explicitMode ? activeMode.label : "" }}
                   </div>
-                </button>
+                </Button>
               </ModeHoverGuide>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top" class="w-80">
@@ -1895,15 +1926,28 @@ defineExpose({ replaceDraft, offerFollowup });
             v-if="supportsReasoningEffort && explicitMode !== 'flash'"
           >
             <DropdownMenuTrigger>
-              <button
+              <!--
+                上游是 `PromptInputActionMenuTrigger className="hidden gap-1!
+                px-2! sm:inline-flex"`，也就是一颗 ghost Button，文字包在
+                `<div className="text-xs font-normal">` 里（input-box.tsx:2561）。
+                可见字号两边都是 12px/400；差的是**按钮自己**：手写那版没有
+                `cursor-pointer`（实测 React 是 pointer、本仓是 default——
+                鼠标停上去一个变小手一个不变）、没有焦点环、没有
+                `hover:text-accent-foreground` 与 `dark:hover:bg-accent/50`。
+              -->
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 data-testid="composer-reasoning-effort-trigger"
-                class="hover:bg-accent hidden h-8 rounded-md px-2 text-xs disabled:pointer-events-none disabled:opacity-50 sm:inline-flex sm:items-center"
+                class="hidden gap-1! px-2! sm:inline-flex"
                 :disabled="disabled"
               >
-                {{ $i18n.t.value.inputBox.reasoningEffort }}:
-                {{ activeReasoningEffort.label }}
-              </button>
+                <div class="text-xs font-normal">
+                  {{ $i18n.t.value.inputBox.reasoningEffort }}:
+                  {{ activeReasoningEffort.label }}
+                </div>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top" class="w-70">
               <DropdownMenuRadioGroup
@@ -1971,9 +2015,29 @@ defineExpose({ replaceDraft, offerFollowup });
             时禁用。禁用一个看得见的提交按钮会让读屏器连它为什么不能按都说不出来，
             而空提交本来就被 submit() 挡住了。
           -->
-          <button
+          <!--
+            上游是 `<PromptInputSubmit className="rounded-full" variant="outline"
+            status={status} />`（input-box.tsx:2729），也就是
+            `<Button variant="outline" size="icon-sm">`——**描边**的圆钮，
+            不是实心的。手写那版画的是 `bg-primary text-primary-foreground`，
+            于是这颗键在两个应用里一个是空心一个是实心蓝。
+            停止态的方块也差一档：上游 `SquareIcon className="size-4"`（16px），
+            手写那版是 12px。
+
+            `shadow-none` 不是多余的：上游这颗走 `InputGroupButton`，
+            它的 base 里写着 `shadow-none`，把 outline 变体的 `shadow-xs`
+            盖掉了。少这一条，本仓这颗圆钮底下会多出一层 1px 投影
+            （实测 R 无 box-shadow，V 是 `rgba(0,0,0,0.05) 0 1px 2px`）。
+
+            上游的 `submitted`（转圈）分支**够不着**：调用点只传
+            error / streaming / ready 三种（chat-page.tsx:414），
+            所以这里三个分支就是全集，不是少了一支。
+          -->
+          <Button
             type="submit"
-            class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full disabled:opacity-50"
+            variant="outline"
+            size="icon-sm"
+            class="rounded-full shadow-none"
             :aria-label="
               streaming
                 ? $i18n.t.value.primitives.stop
@@ -1982,10 +2046,10 @@ defineExpose({ replaceDraft, offerFollowup });
             :disabled="disabled || polishing"
             @click="onSubmitButtonClick"
           >
-            <Square v-if="streaming" :size="12" class="fill-current" />
-            <X v-else-if="errored" :size="16" />
-            <ArrowUp v-else :size="16" />
-          </button>
+            <Square v-if="streaming" class="size-4 fill-current" />
+            <X v-else-if="errored" class="size-4" />
+            <ArrowUp v-else class="size-4" />
+          </Button>
         </div>
       </ComposerSurface>
     </form>
