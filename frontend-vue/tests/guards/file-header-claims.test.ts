@@ -1,5 +1,6 @@
 /*
-  【文件职责】     钉住文件头 `【主要导出】` 里点名的符号，必须真的被这个文件导出。
+  【文件职责】     钉住文件头里**可机械核对**的那几条断言：`【主要导出】` 点名的符号
+                   必须真的被导出；`【依赖关系】` 说「无」的必须真的零 import。
   【架构位置】     门禁测试
   【主要导出】     无
   【依赖关系】     git ls-files（app / server / packages / scripts 下的 .ts/.mts/.mjs）
@@ -35,6 +36,29 @@
                    **形状先断言再计算**（线索 176）：扫不到文件、没有一个
                    token 能判、或者某份文件解析出零导出却点了名，都直接红——
                    一个算出来的 0 和一个没算的 0 长得一模一样。
+
+                   **`【依赖关系】` 整栏有意不钉，只钉「无」那一档。** wave 61 把这一栏
+                   逐条读了一遍：它同一个字段里混着**四种**东西——「我 import 什么」
+                   （`cn`、`Reka DialogRoot`）、「谁 import 我」（`被 Badge.vue 引用`，
+                   20 份写着「被产品组件显式导入」）、一个指路（23 份写「见下方 import。」）、
+                   和散文（`零运行时依赖，纯 type-only`）。**方向都不统一的字段没有单一真值**，
+                   要判就得先分类，而分类器的豁免表会比门禁本身长（线索 180）。
+                   **「无 / 零依赖」是这一栏里唯一可证伪的一档**：31 份文件这么写，
+                   实测 31 份全对——**这是「量过、成立、并且从此有机器看着」，
+                   不是「没查」**。
+
+                   **`【文件职责】` 与 `【边界与注意】` 整栏不可能上门禁，理由写在这里
+                   免得下一轮再问一遍**：它们是**解释**，不是断言——「这个文件干什么」
+                   「为什么这么写」没有可判真假的形式。它们里面**引用**的东西
+                   （路径、上游 file:line、行数、make target、裸文件名、词典 key）
+                   另有五条守卫在管（doc-references / upstream-citations /
+                   upstream-zero-claims / doc-facts / i18n）。**剩下的就是散文，
+                   靠的是读它的人**——wave 57/58/59/60 那几条正是这么翻出来的，
+                   而那不是门禁能替代的工作。
+
+                   `【架构位置】` 在 `tests/architecture.test.ts` 里，不在这里：
+                   L2 那一档双向钉死（自称 L2 的集合 == `l2Files`），
+                   L1/L3 有意不钉，理由写在那份文件的 L2 段前面。
 
                    **早年的 `【对应 frontend/】` 那一栏已经不存在了**——`fa2cde27`
                    写过，现在整个 checkout 里一处都没有。所以它不列进
@@ -164,6 +188,50 @@ for (const file of sourceFiles) {
     reExports: /^\s*export\s+\*/m.test(stripComments(source)),
   });
 }
+
+/** `【依赖关系】` 里唯一可证伪的一档：整栏就一个「无 / 零依赖」。 */
+function claimsNoDependency(source: string): boolean {
+  const value = /【依赖关系】\s*(.+)/.exec(source)?.[1]?.trim();
+  return value !== undefined && /^(无|零依赖)[。；;]?$/.test(value);
+}
+
+/** 静态与动态 import 的 specifier；注释先剥掉（线索 174）。 */
+function importSpecifiersOf(source: string): string[] {
+  return [
+    ...new Set(
+      [
+        ...stripComments(source).matchAll(
+          /(?:from|import)\s*\(?\s*["']([^"']+)["']/g,
+        ),
+      ].map((match) => match[1] as string),
+    ),
+  ];
+}
+
+describe("文件头的【依赖关系】", () => {
+  const claiming = sourceFiles
+    .concat(
+      execFileSync("git", ["ls-files", "app"], { cwd: root, encoding: "utf8" })
+        .split("\n")
+        .filter((file) => file.endsWith(".vue")),
+    )
+    .map((file) => ({ file, source: readFileSync(`${root}${file}`, "utf8") }))
+    .filter((entry) => claimsNoDependency(entry.source));
+
+  it("确实有文件这么写（形状先断言再计算）", () => {
+    expect(claiming.length).toBeGreaterThan(20);
+  });
+
+  it("写「无」的文件真的一个 import 都没有", () => {
+    const broken = claiming
+      .filter((entry) => importSpecifiersOf(entry.source).length > 0)
+      .map(
+        (entry) =>
+          `${entry.file}：头里写「无」，实际 import ${importSpecifiersOf(entry.source).join(" ")}`,
+      );
+    expect(broken).toEqual([]);
+  });
+});
 
 describe("文件头的【主要导出】", () => {
   it("扫到的文件与可判 token 都不是零（形状先断言再计算）", () => {

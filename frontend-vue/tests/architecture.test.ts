@@ -17,6 +17,7 @@
                    禁止的事。
 */
 
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { extname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -220,16 +221,6 @@ describe("agent-core 的 L1 禁入清单（08）", () => {
 });
 
 const l2Files = [
-  "app/lib/utils.ts",
-  "app/core/markdown/animate.ts",
-  "app/core/markdown/blocks.ts",
-  "app/core/markdown/index.ts",
-  "app/core/markdown/mermaid-export.ts",
-  "app/core/markdown/pipeline.ts",
-  "app/core/markdown/plugins.ts",
-  "app/core/markdown/render.ts",
-  "app/core/markdown/rendering-context.ts",
-  "app/core/markdown/safe-markdown.ts",
   "app/components/markdown/CodeBlock.vue",
   "app/components/markdown/MarkdownBlock.vue",
   "app/components/markdown/MarkdownCopyButton.vue",
@@ -238,6 +229,7 @@ const l2Files = [
   "app/components/markdown/MarkdownLinkSafetyModal.vue",
   "app/components/markdown/MarkdownPre.vue",
   "app/components/markdown/MarkdownSafeLink.vue",
+  "app/components/markdown/MarkdownTable.vue",
   "app/components/markdown/MermaidChart.vue",
   "app/components/markdown/MermaidDiagram.vue",
   "app/components/markdown/MermaidDownloadMenu.vue",
@@ -245,12 +237,6 @@ const l2Files = [
   "app/components/markdown/MermaidZoomPan.vue",
   "app/components/markdown/StreamMarkdown.vue",
   "app/components/markdown/components.ts",
-  "app/components/ui/button/Button.vue",
-  "app/components/ui/button/index.ts",
-  "app/components/ui/button/variants.ts",
-  "app/components/ui/sidebar/SidebarTrigger.vue",
-  "app/components/ui/sidebar/index.ts",
-  "app/lib/focusable.ts",
   "app/components/ui/alert-dialog/AlertDialog.vue",
   "app/components/ui/alert-dialog/AlertDialogAction.vue",
   "app/components/ui/alert-dialog/AlertDialogCancel.vue",
@@ -261,9 +247,25 @@ const l2Files = [
   "app/components/ui/alert-dialog/AlertDialogTitle.vue",
   "app/components/ui/alert-dialog/AlertDialogTrigger.vue",
   "app/components/ui/alert-dialog/index.ts",
-  "app/core/code-editor/editor.ts",
-  "app/core/code-editor/language.ts",
-  "app/core/code-editor/palette.ts",
+  "app/components/ui/alert/Alert.vue",
+  "app/components/ui/alert/AlertDescription.vue",
+  "app/components/ui/alert/AlertTitle.vue",
+  "app/components/ui/alert/index.ts",
+  "app/components/ui/alert/variants.ts",
+  "app/components/ui/badge/Badge.vue",
+  "app/components/ui/badge/index.ts",
+  "app/components/ui/badge/variants.ts",
+  "app/components/ui/button/Button.vue",
+  "app/components/ui/button/index.ts",
+  "app/components/ui/button/variants.ts",
+  "app/components/ui/card/Card.vue",
+  "app/components/ui/card/CardAction.vue",
+  "app/components/ui/card/CardContent.vue",
+  "app/components/ui/card/CardDescription.vue",
+  "app/components/ui/card/CardFooter.vue",
+  "app/components/ui/card/CardHeader.vue",
+  "app/components/ui/card/CardTitle.vue",
+  "app/components/ui/card/index.ts",
   "app/components/ui/chain-of-thought/ChainOfThought.vue",
   "app/components/ui/chain-of-thought/ChainOfThoughtContent.vue",
   "app/components/ui/chain-of-thought/ChainOfThoughtStep.vue",
@@ -275,11 +277,6 @@ const l2Files = [
   "app/components/ui/collapsible/CollapsibleContent.vue",
   "app/components/ui/collapsible/CollapsibleTrigger.vue",
   "app/components/ui/collapsible/index.ts",
-  "app/components/ui/reasoning/Reasoning.vue",
-  "app/components/ui/reasoning/ReasoningContent.vue",
-  "app/components/ui/reasoning/ReasoningTrigger.vue",
-  "app/components/ui/reasoning/context.ts",
-  "app/components/ui/reasoning/index.ts",
   "app/components/ui/command/Command.vue",
   "app/components/ui/command/CommandEmpty.vue",
   "app/components/ui/command/CommandInput.vue",
@@ -306,22 +303,37 @@ const l2Files = [
   "app/components/ui/dropdown-menu/DropdownMenuRadioGroup.vue",
   "app/components/ui/dropdown-menu/DropdownMenuRadioItem.vue",
   "app/components/ui/dropdown-menu/DropdownMenuSeparator.vue",
+  "app/components/ui/dropdown-menu/DropdownMenuSub.vue",
+  "app/components/ui/dropdown-menu/DropdownMenuSubContent.vue",
+  "app/components/ui/dropdown-menu/DropdownMenuSubTrigger.vue",
   "app/components/ui/dropdown-menu/DropdownMenuTrigger.vue",
   "app/components/ui/dropdown-menu/index.ts",
   "app/components/ui/hover-card/HoverCard.vue",
   "app/components/ui/hover-card/HoverCardContent.vue",
   "app/components/ui/hover-card/HoverCardTrigger.vue",
   "app/components/ui/hover-card/index.ts",
+  "app/components/ui/input/Input.vue",
+  "app/components/ui/input/index.ts",
   "app/components/ui/popover/Popover.vue",
   "app/components/ui/popover/PopoverAnchor.vue",
   "app/components/ui/popover/PopoverContent.vue",
   "app/components/ui/popover/PopoverTrigger.vue",
   "app/components/ui/popover/index.ts",
+  "app/components/ui/reasoning/Reasoning.vue",
+  "app/components/ui/reasoning/ReasoningContent.vue",
+  "app/components/ui/reasoning/ReasoningTrigger.vue",
+  "app/components/ui/reasoning/context.ts",
+  "app/components/ui/reasoning/index.ts",
   "app/components/ui/scroll-area/ScrollArea.vue",
   "app/components/ui/scroll-area/index.ts",
   "app/components/ui/select/Select.vue",
   "app/components/ui/select/SelectContent.vue",
+  "app/components/ui/select/SelectGroup.vue",
   "app/components/ui/select/SelectItem.vue",
+  "app/components/ui/select/SelectLabel.vue",
+  "app/components/ui/select/SelectScrollDownButton.vue",
+  "app/components/ui/select/SelectScrollUpButton.vue",
+  "app/components/ui/select/SelectSeparator.vue",
   "app/components/ui/select/SelectTrigger.vue",
   "app/components/ui/select/SelectValue.vue",
   "app/components/ui/select/index.ts",
@@ -335,6 +347,8 @@ const l2Files = [
   "app/components/ui/sheet/SheetTrigger.vue",
   "app/components/ui/sheet/index.ts",
   "app/components/ui/sheet/variants.ts",
+  "app/components/ui/sidebar/SidebarTrigger.vue",
+  "app/components/ui/sidebar/index.ts",
   "app/components/ui/switch/Switch.vue",
   "app/components/ui/switch/index.ts",
   "app/components/ui/tabs/Tabs.vue",
@@ -352,6 +366,22 @@ const l2Files = [
   "app/components/ui/tooltip/TooltipProvider.vue",
   "app/components/ui/tooltip/TooltipTrigger.vue",
   "app/components/ui/tooltip/index.ts",
+  "app/core/code-editor/editor.ts",
+  "app/core/code-editor/language.ts",
+  "app/core/code-editor/palette.ts",
+  "app/core/markdown/animate.ts",
+  "app/core/markdown/blocks.ts",
+  "app/core/markdown/index.ts",
+  "app/core/markdown/links.ts",
+  "app/core/markdown/math.ts",
+  "app/core/markdown/mermaid-export.ts",
+  "app/core/markdown/pipeline.ts",
+  "app/core/markdown/plugins.ts",
+  "app/core/markdown/render.ts",
+  "app/core/markdown/rendering-context.ts",
+  "app/core/markdown/safe-markdown.ts",
+  "app/lib/focusable.ts",
+  "app/lib/utils.ts",
 ] as const;
 
 const l2ForbiddenImports = [
@@ -362,7 +392,76 @@ const l2ForbiddenImports = [
   /^#(?:app|imports)(?:\/|$)/,
 ];
 
+/*
+  头里自称 L2 的文件，实测集合。**这是 `l2Files` 的反向口径**——原来只有正向
+  （名单上的每一份都要有 L2 头），于是「自称 L2 但没上名单」的文件**谁都不检查**：
+  下面那条进口边界只遍历名单。
+
+  wave 61 实测：162 份文件自称 L2，名单上只有 132 份。缺的 30 份全部创建于名单
+  最后一次改动（`fa2cde27`，2026-08-13）之后——MarkdownTable 是 08-24，
+  dropdown-menu 的 Sub 三件是 08-26，select、card、alert、input、badge 是 08-30——
+  也就是说，**「新增 L2 组件要加进 l2Files」这条成文规则，三周里每一次都被违反了，
+  而没有任何门禁变红**。其中 `app/core/auth/logout.ts` 拿这条边界一跑就违规
+  （import `@/core/auth/client-state`），它本来就不该是 L2，已改成 L3。
+
+  名单同时**改成全表字母序**：它此前是「按冻结时间追加」（`app/lib/focusable.ts`
+  卡在第 30 位、`app/core/code-editor/*` 在第 41 位），而交接文档一直写着「按字母序」。
+  顺序对这份名单没有任何语义（只被两个 for...of 消费），排序之后插入位置唯一，
+  下面那条断言把它钉住。
+*/
+function filesClaimingL2(): string[] {
+  const tracked = execFileSync(
+    "git",
+    ["ls-files", "app", "server", "packages", "scripts"],
+    { cwd: fileURLToPath(new URL("../", import.meta.url)), encoding: "utf8" },
+  )
+    .split("\n")
+    .filter((file) => /\.(ts|mts|mjs|vue)$/.test(file));
+  const claiming: string[] = [];
+  for (const file of tracked) {
+    const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    const label = /【架构位置】\s*(.+)/.exec(source)?.[1]?.trim();
+    if (label && /^L2(\s|$|—|，|\()/.test(label)) claiming.push(file);
+  }
+  return claiming;
+}
+
+/*
+  **L1 / L3 的标签有意不上门禁**（wave 61 量过之后写下的理由，别再重新问一遍）：
+  L2 这个标签有牙——它对应 `l2Files` 与 `l2ForbiddenImports`，写错会让一份产品
+  代码混进可复用层。L1 与 L3 没有任何被强制的后果：L1 的定义域就是
+  `packages/agent-core/`（实测 23 份 src 文件全部写着 L1，一份不漏），
+  L3 是「除此之外的一切」，标签错了不会让任何 import 变得合法或非法。
+  **一条只保护注释、不保护任何约束的门禁，不如把理由写下来**（同线索 179 的
+  「需要十三条豁免的门禁不如不立」）。
+
+  实测的唯一一处第二义：`app/core/channels/provider-state.ts` 写着
+  `L1 framework-neutral channel policy`。它在 `packages/agent-core/` 之外，
+  按分层表该是 L3；但它只 import 一个同目录的 type，那句 L1 说的是
+  「与框架无关的纯策略」这条**另一个轴**。**有意保留**：改成 L3 会丢掉那句信息，
+  而它没有误导任何 import 判断。`app/components/ui/effects/` 下九份文件反过来——
+  在 L2 目录里却写着 L3，理由写在各自文件头（只服务产品特效，不进 M8 公共集合），
+  下面那条集合断言因此按**标签**而不是按目录判。
+*/
 describe("L2 reusable UI boundary", () => {
+  it("扫到的文件数不是零（形状先断言再计算）", () => {
+    const claiming = filesClaimingL2();
+    expect(claiming.length).toBeGreaterThan(100);
+    expect(l2Files.length).toBeGreaterThan(100);
+  });
+
+  it("自称 L2 的文件集合逐个等于 l2Files", () => {
+    /*
+      两个方向都要：**多出来的**会绕过下面那条进口边界（wave 61 撞到 30 份），
+      **少掉的**说明名单里有份文件已经改了头或已经不是 L2 了。
+    */
+    expect([...filesClaimingL2()].sort()).toEqual([...l2Files].sort());
+  });
+
+  it("l2Files 按字母序，新增只有一个正确位置", () => {
+    expect([...l2Files]).toEqual([...l2Files].sort());
+  });
+
   it("freezes the exact reusable source set and final L2 headers", () => {
     const missing: string[] = [];
     for (const file of l2Files) {
