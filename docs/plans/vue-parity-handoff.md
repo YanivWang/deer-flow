@@ -14,9 +14,9 @@
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`）。
-- **动过 `frontend/` 的是十六轮**（wave 52 实测订正，wave 62 / 73 各加一轮）：
-  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73**。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`）。
+- **动过 `frontend/` 的是十七轮**（wave 52 实测订正，wave 62 / 73 / 74 各加一轮）：
+  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
   而记忆里的压缩版把它读成了「总共三次」。**别再传这个数字，用命令量**：
 
@@ -24,8 +24,8 @@
   git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests
   ```
 
-  **marker 已推到 `7630e6e3`**（wave 73 的 chore）；`node scripts/upstream-drift.mjs`
-  wave 73 实测**无漂移**，marker 也确实是 HEAD 的祖先——
+  **marker 已推到 `b0b7fcb6`**（wave 74 的 chore）；`node scripts/upstream-drift.mjs`
+  wave 74 实测**无漂移**，marker 也确实是 HEAD 的祖先——
   **边界规则本身有机器在守，需要人记的只有「这类改动做过哪些轮」。**
   最近三轮的内容：wave 40 重连预算耗尽后那颗键在说反话；wave 39 命令面板搜索框的
   可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~59 都没动过。
@@ -65,10 +65,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 73 收工时逐条跑过）
+### 门禁实测值（wave 74 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；259 文件 / 2147 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；259 文件 / 2151 单测，词典 942 key、18 unused
 make -C frontend-vue asset-budget  exit 0（wave 72 把 vendor-ui 预算按实测重定了一次，
                                    见 scripts/asset-budget.mjs 里那段注释）
 make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefile 的 audit 上方
@@ -78,7 +78,10 @@ make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55%
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
-make -C frontend-vue e2e-visual    8    **不在 make e2e 里**；wave 73 一张没重录
+make -C frontend-vue e2e-visual    8    **不在 make e2e 里**；wave 74 同样一张没重录
+                                   （容差压到 0 跑两遍：只有 artifact panel 红，
+                                   1926 / 2089，**两遍不同 = 抖动**；其余七张
+                                   在零容差下逐像素相同）；wave 73 一张没重录
                                    （容差压到 0 跑两遍：只有 artifact panel 红，
                                    1807 / 1902——**两遍差 95px，是抖动不是改动**，
                                    而且因果够不着：那一屏没有 toast、没有 todo、
@@ -97,8 +100,9 @@ make -C frontend-vue e2e-external  3
 
 产品 SFC **217**（总 219；wave 72/73 都没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1029**）/ `test:e2e`（**146**）。
-**wave 73 三条全真跑过**：check 0、test **1033** passed、test:e2e 146 passed。
-（1029 → 1033 是 wave 73 加的 4 条：
+**wave 74 三条全真跑过**：check 0、test **1034** passed、
+test:e2e **145 + 1 条已知抖动**（`landing.spec.ts:61`，`--repeat-each=5` 35/35）。
+（1029 → 1034 是 wave 73/74 加的 5 条，全在
 `tests/unit/components/ui/interactive-affordances.dom.test.tsx`。）
 
 > **React 的 `test:e2e` 绕法**（wave 73 又用了一次，有效）：先自己
@@ -278,6 +282,76 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 74）做了什么：**去补 wave 73 没量的那一半，翻出上游一处死代码**
+
+提交 `16ca870e`，React 侧 chore `b0b7fcb6`，marker 推到 `b0b7fcb6`。
+
+### 翻案：上游的 toast 走的根本不是那份 wrapper
+
+wave 73 写下「上游那五颗是 lucide 图标」，依据是 `ui/sonner.tsx:19` 的 `icons` prop。
+**这一轮的渲染读数说不是**：画出来的是 sonner **自带**的 20×20 资产
+（`viewBox="0 0 20 20"` 的实心圆叹号），不是 `OctagonXIcon`。
+
+根因：两处 `<Toaster />` 都写着 `import { Toaster } from "sonner"`
+——**`src/components/ui/sonner.tsx` 零消费者**。wrapper 存在的三件事全部落空：
+
+1. sonner 的 `theme` prop 默认 `'light'`，wrapper 是唯一喂它 `useTheme()` 的地方
+   ——**深色主题下上游的 toast 一直是白的**；
+2. `--normal-bg` / `--normal-text` / `--normal-border` / `--border-radius` 落回
+   sonner 自己的调色板（实测 `rgb(255,255,255)` / `rgb(237,237,237)` / 8px），
+   而不是应用的 popover token；
+3. 五颗 lucide 图标从没生效。
+
+**这是「一个写错的 import 长得和写对的一模一样」**：toast 照样出现、照样有图标、
+照样念得对，没有任何东西指向 wrapper 是死的。两边同改（判据「这处不改，
+React 自己是不是也是坏的？」→ 深色下不跟着翻，是）。
+**线索 204 的又一次自证**：读 prop 只能告诉你调用方传了什么。
+
+### 本仓这一侧：toast 尺寸逐条抄 sonner 的 CSS
+
+出处 `sonner/dist/index.mjs` 的 `[data-sonner-toast][data-styled=true]` 与
+`[dir=ltr]` 那组变量。**每一条都不一样**：
+
+|            | sonner                               | 本仓（改前）                  |
+| ---------- | ------------------------------------ | ----------------------------- |
+| 宽         | `--width` = 356                      | 420（**宽 64px**）            |
+| 内边距     | 16px                                 | `px-4 py-3`                   |
+| 字号       | 13px                                 | 14px                          |
+| 图标间距   | `gap:6px` + 图标 `-3px / 4px` 外边距 | `gap-3`(12px)、无外边距       |
+| 对齐       | `align-items:center`                 | `items-start` + 图标 `mt-0.5` |
+| 阴影       | `0 4px 12px rgba(0,0,0,.1)`          | Tailwind `shadow-lg`          |
+| 视口偏移   | `VIEWPORT_OFFSET` 24px               | `top-3`(12px)                 |
+| 条间距     | `GAP` 14px                           | `gap-2`(8px)                  |
+| 错误态边框 | 不按类型改色                         | `border-destructive/40`       |
+
+改完复量：**x / y / 宽 / 高 / 内边距 / 间距 / 字号 / 圆角 / 图标尺寸 / 按钮数
+十项逐值相同**（356×73 @ (462,24)，图标 16×16 @ x=475）。
+只剩两条**已知的非差异**：颜色 React 序列化成 `lab()`、本仓成 `oklch()`；
+本仓的 `shadow-[...]` 前面多两层 Tailwind 的空 ring 层。
+
+### 侧栏底部触发器：收起态换尺寸，不是只换内容
+
+上游 SidebarMenuButton 的 cva：base 有 `group-data-[collapsible=icon]:size-8!`，
+lg 档有 `group-data-[collapsible=icon]:p-0!`（两条都带 `!`，后定义的 `p-0` 赢）。
+本仓的收起态走自己的 `collapsed` ref，那两条选择器**永远不成立**——
+实测 React **32×32 / padding 0**，本仓 **31×48 / padding 8**，整块 footer 高出 16px。
+这就是 wave 72 探针里那一行「整份场景只有这一颗对不上、没查」的差异。
+**展开态两边本来就一样**（239×48）——wave 72 记的「React 43px」是没等 settle 读的。
+
+### 探针这一轮踩的两个坑
+
+1. **`page.route` 后注册的优先。** 第一版把 409 的路由覆盖写在 `runScenario`
+   **之前**，于是场景自己的 mock 后注册、赢了它——两边都没弹出 toast，
+   而探针**没有报错**（点击成功了，只是没有 toast）。
+   **判据：探针拿不到东西时，先问「我这一步真的生效了吗」，而不是先改断言。**
+2. 触发一条真 toast 比想象的难。走 artifact 面板复制键的那版（wave 73）
+   **10 分钟超时都没跑完**；换成 `scheduled-tasks` 场景 + 把 PATCH 打成 409，
+   一次就成——**上游与本仓的 e2e 里已经有的触发路径最稳**。
+
+### 负向验证 5 条全红
+
+toast 宽度 / 内边距 / 红边框 / 收起态尺寸 / React 的 Toaster 改回裸 sonner。
 
 ## 上一轮（wave 73）做了什么：**结清「本仓修掉了上游缺陷」那一整类，并把 toaster 补齐**
 
@@ -825,8 +899,9 @@ Toaster 关闭键）全部处理完，做法与理由见 wave 73 那一节。
 在这里是否**——一条 4 秒自动消失的状态播报没有关闭键不构成缺陷。
 
 **同一轮把 toaster 剩下的三处也补齐了**（类型图标、warning 档、4000ms），
-见 wave 73 那一节。**没量也没改的**：sonner 的宽度 356px / gap 14px / 视口偏移 24px
-对本仓的 `w-[min(92vw,420px)]` / `gap-2` / `top-3`——**新账，一条都没验过。**
+见 wave 73 那一节。**wave 74 把几何也量了并对齐**（356 宽 / 16px 内边距 / 13px 字 /
+6px 间距 / 24px 视口偏移 / 14px 条间距），并**翻出上游那两处 `<Toaster />` 用的
+根本不是 shadcn 的 wrapper**——见 wave 74 那一节。
 
 ### 一、几何这一档只够得着免登录页
 
@@ -835,11 +910,11 @@ Toaster 关闭键）全部处理完，做法与理由见 wave 73 那一节。
 这是线索 137 的正题），**要么给 `dom-parity` 接上两边的 mock 网关**——
 后者是重造一遍台账已有的东西，前者动的是有基线的门禁。**先想清楚再动。**
 
-### 一点五、`Settings and more` 那颗侧栏底部键，两边高度对不上
+### ~~一点五、`Settings and more` 那颗侧栏底部键~~ —— **wave 74 查完并修掉了**
 
-wave 72 探针实测：`sidebar` 场景里 React 43px / 本仓 48px，`artifact-preview`
-场景（侧栏收起）React 32×32 / 本仓 31×48。**整份场景里只有这一颗对不上，没查。**
-它是手写 `<button>`（上游 `SidebarMenuButton` 同样手写），所以不是 primitive 差异。
+收起态 React 32×32 / 本仓 31×48（上游 cva 的 `group-data-[collapsible=icon]` 两条
+在本仓永远不成立）。**展开态两边本来就一样**——wave 72 记的「React 43px」
+是没等 settle 读的假差异。
 
 ### 二、`icon-parity` 还剩 **23 条**没核实的线索（wave 71 复量，wave 72 复跑同数）
 
@@ -1539,7 +1614,7 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 211 条在记忆文件里）
+## 其他常踩的坑（完整 212 条在记忆文件里）
 
 - **`git checkout -- <file>` 还原的是 HEAD，不是「变异之前」**（线索 207，wave 72）。
   负向验证的还原步骤一旦用它，**整轮的改动会跟着一起没**，而报表看起来照样是绿的
@@ -1565,6 +1640,19 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   另外 `InputGroupButton` **不把 size 透给 Button**，于是 Button 用的是 default 档，
   `py-2` 会留在类串里——探针上表现为「React padding 8px 8px、本仓 0px 8px」，
   但两边 `h-8` 固定、内容居中，**这一条没有视觉差异，不要去追**。
+- **一个写错的 import 长得和写对的一模一样**（线索 212，wave 74）。
+  上游两处 `<Toaster />` 写的是 `from "sonner"` 而不是 `from "@/components/ui/sonner"`，
+  于是 shadcn 那份 wrapper **零消费者**：主题绑定、颜色 token、五颗 lucide 图标全落空
+  ——**深色主题下 toast 一直是白的**。而 toast 照样出现、照样有图标、照样念得对，
+  **没有任何东西指向 wrapper 是死的**。这是线索 183 的运行时版本：
+  一栏零消费者的元数据写错了没有征兆，一份零消费者的 wrapper 同理。
+  **判据：`ui/` 下的 wrapper 都要问一句「谁 import 它」——`grep components/ui/<name>`
+  返回空，就是它。**
+- **探针拿不到东西时，先问「我这一步真的生效了吗」，别先改断言**（wave 74）。
+  `page.route` **后注册的优先**：把路由覆盖写在 `runScenario` 之前，场景自己的 mock
+  会赢，而点击**不报错**（它成功了，只是没触发那条分支），两边一起读到空。
+  同一轮还证实：**触发一条真 toast，用上游与本仓 e2e 里已有的那条路径最稳**
+  （`scheduled-tasks` + PATCH 打成 409 一次就成；走 artifact 复制键的那版 10 分钟超时）。
 - **一条用「另一处缺陷」当论据的取舍，在那处缺陷修掉之后要重新过一遍**
   （线索 211，wave 73）。toaster 把 `warning` 折进 `info` 的理由写在文件头里：
   「两档在可访问性上同一档，区别只有图标，而这个 toaster 一个图标都不画」。
