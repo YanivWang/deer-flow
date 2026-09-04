@@ -5,7 +5,7 @@
 	e2e-protocol e2e-real e2e-scheduled e2e-channels e2e-agents e2e-settings e2e-shell \
 	e2e-browser e2e-external e2e-parity e2e-mock e2e-backend e2e-list \
 	proxy-security audit docker-build container-smoke \
-	upstream-drift upstream-accept dom-parity parity-accept \
+	upstream-drift upstream-accept dom-parity icon-parity parity-accept \
 	i18n-check i18n-diff i18n-unused i18n-source-check i18n-refresh \
 	gen-api-types gen-api-types-check gen-contract-constants gen-contract-constants-check \
 	consumer-check standalone-check coverage
@@ -66,6 +66,7 @@ help:
 	@echo "  make upstream-drift            report what ../frontend changed since the marker"
 	@echo "  make upstream-accept           advance the reviewed-upstream marker to HEAD"
 	@echo "  make dom-parity                diff React vs Vue semantic DOM (needs both apps running)"
+	@echo "  make icon-parity               diff React vs Vue icon glyphs/sizes and tooltips (source scan)"
 	@echo "  make parity-accept             re-record the checked-in parity difference list"
 	@echo "  make typecheck-core            standalone tsc for packages/agent-core"
 	@echo "  make gen-api-types             regenerate app/core/api/types.gen.ts from the snapshot"
@@ -304,6 +305,12 @@ upstream-accept:
 # 为什么不用词典比对：见 scripts/dom-parity.mjs 的文件头。
 dom-parity:
 	node scripts/dom-parity.mjs
+
+# 图标字形 / 尺寸 / tooltip 的对照报告。**只读源码，不用把两个应用跑起来**——
+# 这三样都不进可访问性树，dom-parity 的几何档也只在两边同时跑起来、
+# 且那个元素当时可见时才够得着。顾问性质：上游缺席时打印一行退出 0。
+icon-parity:
+	node scripts/icon-parity.mjs
 
 # `make audit` **当前预期是红的**，2026-09-04（wave 66）逐条查过可达性，结论记在这里，
 # 免得下一个人看到 "14 vulnerabilities" 再做一遍同样的分析。
