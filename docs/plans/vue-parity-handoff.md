@@ -14,7 +14,7 @@
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75。
 - **动过 `frontend/` 的是十七轮**（wave 52 实测订正，wave 62 / 73 / 74 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -65,10 +65,12 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 74 收工时逐条跑过）
+### 门禁实测值（wave 75 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；259 文件 / 2151 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；259 文件 / 2153 单测，词典 942 key、18 unused
+make -C frontend-vue icon-parity   **0 处待核**（wave 75 逐条核完；另有 12 条写进
+                                   脚本里的 `VERIFIED` 表，双向——某条不再出现会报 stale）
 make -C frontend-vue asset-budget  exit 0（wave 72 把 vendor-ui 预算按实测重定了一次，
                                    见 scripts/asset-budget.mjs 里那段注释）
 make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefile 的 audit 上方
@@ -282,6 +284,64 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 75）做了什么：**icon-parity 的清单归零，一半功劳属于尺子自己**
+
+提交 `7d2b7a30`。那份清单从 wave 69 挂到现在，每一轮都被重新读一遍、
+每一轮得出同样的结论。这一轮逐条核完——**21 → 0**。
+
+### 一、尺子看错了地方（三处，占掉将近一半线索）
+
+| 缺陷                                 | 后果                                                                                                                                                   |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 只扫 `components/`（两个默认根都是） | `core/` / `pages/` / `composables/` 下的图标一颗看不见，而**字形档比的是全仓集合**——扫不全等于拿两个残缺集合做差                                       |
+| 只收 `.tsx` / `.vue`                 | 两边都把图标表放在 `.ts` 里（本仓 `core/artifacts/display.ts` 的 `Image as ImageIcon`），「只有 React 用 Image」就是这么来的                           |
+| map 按 basename 存                   | **同名文件静默覆盖**：React 侧 167 份 `.tsx` 只剩 162 个 key，扫到整个 src 之后 409 份只剩 267。丢掉的既不进集合也不参与配对，**报告里看不出少了什么** |
+
+改成按完整路径存、逐文件配对另建 basename 索引且**只在两边各自唯一时才配**。
+顺带发现扫 `.ts` 会把上游 `ai-elements/message.tsx` 配到本仓 `core/types/message.ts`
+（纯类型文件），所以配对只认 `.tsx` ↔ `.vue`。
+**把扫描范围退回 `components/` 复跑，清单从 0 变回 8**——这三处修的是真问题。
+
+### 二、核出来的六处真差异
+
+| 处                      | 上游                                                          | 本仓（改前）                                             |
+| ----------------------- | ------------------------------------------------------------- | -------------------------------------------------------- |
+| `web_fetch` 步骤图标    | `GlobeIcon`(=`Globe`)                                         | `Globe2`(=`Earth`)——**两颗画的不是一回事**               |
+| 引用面板标题图标        | `BookOpenTextIcon`                                            | `Library`；顺带那条 summary 悬停无反应                   |
+| 置顶菜单项              | 按状态在 `PinOff` / `Pin` 之间切                              | 两种状态都画 `Pin`（文字换了图标没换）                   |
+| 渠道状态                | `<Badge>` + `CheckCircle2` / `AlertCircle`，挨着渠道名        | 描述下面一行裸文字，**已连接与未连接只差几个字**         |
+| 单选指示器              | `<CircleIcon className="size-2 fill-current" />` 8px 实心圆点 | `<Check :size="14" />`——**单选画成对勾会让人以为能多选** |
+| 下拉菜单项的 class 合同 | 见下                                                          | 只抄了一半                                               |
+
+**最后一条是前一条的根因。** 本仓三份 dropdown primitive 都缺
+`[&_svg:not([class*='size-'])]:size-4`、
+`[&_svg:not([class*='text-'])]:text-muted-foreground`、`[&_svg]:shrink-0`、
+`focus:text-accent-foreground`、destructive 那一支的三条、`rounded-sm`、`text-sm`、
+`data-[inset]:pl-8`。**图标没有默认尺寸**，所以每个调用点自己写 `:size="14"`
+（比上游小 2px、颜色也没变灰）——侧栏那六颗就是这么来的，补进 primitive 之后
+它们改回裸标签。
+
+### 三、剩下 12 条写进尺子，报告只列没核过的
+
+`VERIFIED` 表一条一个理由：五条上游死代码
+（`ConversationScrollButton` / `sources.tsx` / `MessageBranch*` / 点赞点踩）、
+两条 primitive 实现不同、三条改动面板双视图结构不同、
+`Github`（上游画的是**本地手写 svg**，不是 lucide 同名件）、
+`Maximize2`（streamdown 内部渲染，扫不到源码）。
+**表是双向的**：某一条不再出现会被报成 stale。
+
+### 取舍
+
+- **`hover:bg-accent` 保留**（上游只有 `focus:`）：Reka 的菜单项悬停不触发 focus，
+  而 Radix 给高亮项打的就是 focus——删掉本仓鼠标悬停就没有反馈了。
+- **渠道状态挪到了渠道名旁边**（上游的位置），这会改 aria 文本顺序；
+  `e2e-parity` 跑完仍是 0 行 / 39 场景，说明现有场景没取样到那一屏。
+
+### 负向验证 9 条全红
+
+其中一条第一次是**无效变异**：只改用处不改 import，`Globe2` 变成未定义标识符
+——模板里渲染成空而不是编译失败，报表看起来是绿的。成对改之后 RED。
 
 ## 上一轮（wave 74）做了什么：**去补 wave 73 没量的那一半，翻出上游一处死代码**
 
@@ -903,7 +963,7 @@ Toaster 关闭键）全部处理完，做法与理由见 wave 73 那一节。
 6px 间距 / 24px 视口偏移 / 14px 条间距），并**翻出上游那两处 `<Toaster />` 用的
 根本不是 shadcn 的 wrapper**——见 wave 74 那一节。
 
-### 一、几何这一档只够得着免登录页
+### 一、几何这一档只够得着免登录页（**现在是唯一还开着的大账**）
 
 `dom-parity` 现在只能扫 landing / login 两屏（setup 与 showcase 都跳登录）。
 **工作区那些屏要么把几何接进对照台账**（`sampleGeometry` 现在只量 settle 锚点，
@@ -916,18 +976,12 @@ Toaster 关闭键）全部处理完，做法与理由见 wave 73 那一节。
 在本仓永远不成立）。**展开态两边本来就一样**——wave 72 记的「React 43px」
 是没等 settle 读的假差异。
 
-### 二、`icon-parity` 还剩 **23 条**没核实的线索（wave 71 复量，wave 72 复跑同数）
+### ~~二、`icon-parity` 的未核实线索~~ —— **wave 75 归零**
 
-字形档 15 条「只有 React 用」+ 5 条「只有 Vue 用」+ 尺寸档 3 条
-（`Circle` React 8px ↔ Vue 15/16px、`Github` 24 ↔ 14、`Info` 16 ↔ 14）。
-按文件的尺寸差现在是 **0**。
-**它们是线索不是结论**——wave 69 核过的那批里，假线索比真差异还多。
-已核实并排除的：ThumbsUp/ThumbsDown（两边都是死代码）、
-Bookmark/GripVertical/OctagonX/TriangleAlert（在 `ui/` 与 `ai-elements/` 里，
-两边 primitive 实现不同）、FileMinus/FilePlus/FilePenLine（改动面板双视图结构不同）。
-
-**如果要开别的，先说清楚「这一轮要让哪个用户的什么体验变好」。**
-覆盖率地图（`app/components` 66%）**不是待办清单**。
+21 条逐条核完：六处真差异已修，12 条写进脚本的 `VERIFIED` 表（双向，
+某条不再出现会报 stale），另有三处是尺子自己的缺陷（扫描范围、文件类型、
+按 basename 存导致的静默覆盖）。**`make icon-parity` 现在是 0 处待核。**
+下一轮不必再读那份清单，只需要看它有没有重新长出来。
 
 ## wave 64 做了什么：**把覆盖率接上，并订正 wave 63 的误判**
 
@@ -1614,7 +1668,7 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 212 条在记忆文件里）
+## 其他常踩的坑（完整 213 条在记忆文件里）
 
 - **`git checkout -- <file>` 还原的是 HEAD，不是「变异之前」**（线索 207，wave 72）。
   负向验证的还原步骤一旦用它，**整轮的改动会跟着一起没**，而报表看起来照样是绿的
@@ -1640,6 +1694,16 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   另外 `InputGroupButton` **不把 size 透给 Button**，于是 Button 用的是 default 档，
   `py-2` 会留在类串里——探针上表现为「React padding 8px 8px、本仓 0px 8px」，
   但两边 `h-8` 固定、内容居中，**这一条没有视觉差异，不要去追**。
+- **一把尺子长期报同一批线索，先怀疑尺子**（线索 213，wave 75）。
+  `icon-parity` 的字形档从 wave 69 挂着十几条，每一轮重读一遍、每一轮同样的结论。
+  逐条核完发现**将近一半是扫描范围造出来的**：只扫 `components/`（`core/` 里的
+  图标表看不见）、只收 `.tsx`/`.vue`（两边都把图标表放在 `.ts` 里）、
+  map 按 basename 存（同名文件**静默覆盖**，React 侧 409 份只剩 267 个 key）。
+  **判据：一条线索连着三轮得出同样的「不是差异」，那多半不是线索，是口径。**
+- **核完的线索要写进尺子，不要写进文档**（wave 75）。
+  写进文档，下一轮还是得把整份清单重读一遍；写进脚本的 `VERIFIED` 表并做成
+  **双向**（某条不再出现就报 stale），报告才只列没核过的。
+  这是线索 194「长期红着等于没有」的正解。
 - **一个写错的 import 长得和写对的一模一样**（线索 212，wave 74）。
   上游两处 `<Toaster />` 写的是 `from "sonner"` 而不是 `from "@/components/ui/sonner"`，
   于是 shadcn 那份 wrapper **零消费者**：主题绑定、颜色 token、五颗 lucide 图标全落空
