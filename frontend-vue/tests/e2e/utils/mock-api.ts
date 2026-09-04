@@ -320,6 +320,42 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
     ];
   };
 
+  /*
+    「建 thread」只在它还不存在时插入，**永远不覆写已有 thread 的消息**。
+
+    真实后端的 create 只是分配一个 id；它不知道也不该知道消息。而在这份 mock 里
+    create 与 `POST /runs/stream` 是两个独立的 route，落地顺序不保证——
+    create 后到时，一个无条件的 upsert 会把这次 run 刚记下的消息**整段抹掉**。
+
+    原来这里没有这个区分，靠的是「create 时顺手塞一段写死的 Hello /
+    Hello from DeerFlow!」把覆盖的后果盖住。代价是**新建的 thread 一出生就带着
+    一段它从没发生过的对话**：`GET /threads/{id}/messages/page` 立刻返回一条 human，
+    `useThreadStream` 的「服务端 human 到了就清乐观消息」于是把**用户刚打的那条**
+    清掉。跑得快断言先到（绿）、跑得慢分页先到（红）——`thread-history.spec.ts:695`
+    因此在整套里约 50% 概率红，而红的原因与它测的东西毫无关系。
+  */
+  // 让 `handleRunStream`（含用例自己覆盖 stream 路由的那 4 个 spec）把流出去的
+  // 消息回写到这份 threads 数组，见该函数上方的说明。
+  streamRecorders.set(page, (threadId, messages) => {
+    const existing = threads.find((t) => t.thread_id === threadId);
+    upsertThread({
+      thread_id: threadId,
+      title: existing?.title ?? "New Chat",
+      updated_at: new Date().toISOString(),
+      goal: existing?.goal,
+      metadata: existing?.metadata,
+      agent_name: existing?.agent_name,
+      artifacts: existing?.artifacts,
+      messages: messages as MockThread["messages"],
+    });
+  });
+
+  const createThreadIfAbsent = (thread: MockThread) => {
+    if (threads.some((existing) => existing.thread_id === thread.thread_id))
+      return;
+    threads = [thread, ...threads];
+  };
+
   const threadSearchResult = (thread: MockThread) => ({
     thread_id: thread.thread_id,
     created_at: "2025-01-01T00:00:00Z",
@@ -779,11 +815,28 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
   // Thread create — called when user sends first message in a new chat
   void page.route("**/api/langgraph/threads", (route) => {
     if (route.request().method() === "POST") {
-      upsertThread({
+      /*
+        **建出来的 thread 是空的，而且不覆写已有的。** 这里原来写的是
+        `messages: mockStreamMessages()`——没有 route 参数，走的是那对写死的
+        `Hello` / `Hello from DeerFlow!` 兜底，**等于让「建 thread」这个动作
+        凭空造出一整段对话**，而任何真实后端建完 thread 都是空的。
+
+        它造成的不是一条假数据，是一处**竞态**：新 thread 一旦被采纳，
+        `GET /api/threads/{id}/messages/page` 就会把这段假对话返回，
+        `humanMessageCount` 从 0 跳到 1，于是
+        `useThreadStream` 的「服务端 human 到了就清乐观消息」把**用户刚打的那条**
+        清掉了。跑得快的时候断言先到（绿），跑得慢的时候分页先到（红）——
+        `thread-history.spec.ts:695` 因此在整套里约 50% 概率红，
+        而它红的原因和它测的东西毫无关系。
+
+        消息由**真正跑起来的 run** 写入（下面 handleMockRunStream 的 upsertThread
+        用的是 `mockStreamMessages(route)`，会回显这次提交的内容）。
+      */
+      createThreadIfAbsent({
         thread_id: MOCK_THREAD_ID,
         title: "New Chat",
         updated_at: new Date().toISOString(),
-        messages: mockStreamMessages(),
+        messages: [],
       });
       return route.fulfill({
         status: 200,
@@ -1544,12 +1597,35 @@ export function mockLangGraphAPI(page: Page, options?: MockAPIOptions) {
  * Build a minimal SSE stream that the LangGraph SDK can parse.
  * The stream returns a single AI message: "Hello from DeerFlow!".
  */
+/*
+  **一个 thread 的消息只有一个写入者：真正跑起来的那次 run。**
+
+  这份 mock 有两个真相源——SSE 流，和喂给 `/messages/page` 与 `/history` 的
+  `threads` 数组。它们会不一致，而不一致的后果是**产品级的**：流里刚渲染出来的
+  对话会被随后返回的空分页结果抹掉。
+
+  此前靠「建 thread 时顺手塞一段写死的 Hello / Hello from DeerFlow!」让两边
+  碰巧一致，代价是**新建的 thread 一出生就带着一段它从没发生过的对话**：
+  `/messages/page` 立刻返回一条 human，`useThreadStream` 的「服务端 human 到了
+  就清乐观消息」于是把**用户刚打的那条**清掉——`thread-history.spec.ts:695`
+  因此在整套里约 50% 概率红，而红的原因与它测的东西毫无关系。
+
+  改法是让**流自己回写**：`handleRunStream` 每次都把它发出去的消息记回当前 page
+  的 `threads` 数组。这样无论用例覆盖的是哪一条 stream 路由（有 4 个 spec 直接
+  用 `handleRunStream`），分页与历史都和刚才流出去的内容一致。
+*/
+type StreamRecorder = (threadId: string, messages: unknown[]) => void;
+const streamRecorders = new WeakMap<Page, StreamRecorder>();
+
 export function handleRunStream(
   route: Route,
   values: Record<string, unknown> = {},
   inputMessages?: unknown[],
 ) {
   const threadId = runStreamThreadId(route);
+  const streamedMessages = mockStreamMessages(route, inputMessages);
+  const recorder = streamRecorders.get(route.request().frame().page());
+  recorder?.(threadId, streamedMessages);
   const events = [
     {
       event: "metadata",
@@ -1559,7 +1635,7 @@ export function handleRunStream(
       event: "values",
       data: {
         ...values,
-        messages: mockStreamMessages(route, inputMessages),
+        messages: streamedMessages,
       },
     },
     { event: "end", data: {} },
