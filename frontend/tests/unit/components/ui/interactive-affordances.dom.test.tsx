@@ -82,6 +82,31 @@ describe("interactive affordances", () => {
     expect(removeButton).toContain("focus-visible:pointer-events-auto");
   });
 
+  /*
+    Both <Toaster /> call sites must go through `@/components/ui/sonner`, not
+    through `sonner` directly. The wrapper is the only place that binds the
+    theme, the popover colour tokens and the lucide type icons; importing the
+    library's Toaster silently skips all three, and sonner's `theme` prop
+    defaults to "light", so toasts stayed light while the app was dark.
+
+    Measured on 2026-09-05 against the built app: the rendered icon was
+    sonner's own 20x20 asset and the toast background was rgb(255,255,255)
+    rather than the popover token.
+  */
+  it("renders every toaster through the wrapper that binds theme and tokens", () => {
+    for (const file of [
+      "src/app/workspace/workspace-content.tsx",
+      "src/app/showcase/[thread_id]/layout.tsx",
+    ]) {
+      const source = readFileSync(path.join(process.cwd(), file), "utf8");
+      expect(source, `${file} still renders a Toaster`).toContain("<Toaster");
+      expect(source, `${file} imports Toaster from sonner directly`).toContain(
+        'from "@/components/ui/sonner"',
+      );
+      expect(source).not.toMatch(/import\s*\{[^}]*Toaster[^}]*\}\s*from\s*"sonner"/);
+    }
+  });
+
   it("exposes the to-do panel collapse control as a button with its state", () => {
     render(
       <TodoList

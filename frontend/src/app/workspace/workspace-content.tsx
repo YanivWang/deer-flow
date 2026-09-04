@@ -1,8 +1,16 @@
 import { cookies } from "next/headers";
-import { Toaster } from "sonner";
 
 import { QueryClientProvider } from "@/components/query-client-provider";
+/*
+  The wrapper, not `sonner` directly. Importing `Toaster` straight from the
+  library skips every binding the wrapper exists for, and all three are
+  visible: sonner's `theme` prop defaults to "light", so toasts stayed light
+  in dark mode; `--normal-bg` / `--normal-text` / `--normal-border` fall back
+  to sonner's own palette instead of the app's popover tokens; and the five
+  lucide type icons are replaced by sonner's built-in assets.
+*/
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { Toaster } from "@/components/ui/sonner";
 import { CommandPalette } from "@/components/workspace/command-palette";
 import { GatewayOfflineBanner } from "@/components/workspace/gateway-offline-banner";
 import { SettingsDialogHost } from "@/components/workspace/settings";
