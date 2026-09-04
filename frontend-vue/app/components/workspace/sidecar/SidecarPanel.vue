@@ -488,7 +488,8 @@ async function confirmDelete() {
               class="text-muted-foreground hover:bg-accent flex size-8 cursor-pointer items-center justify-center rounded-md"
               @click="fileInput?.click()"
             >
-              <Paperclip :size="14" aria-hidden="true" />
+              <!-- 上游 sidecar-panel.tsx:745 是 `size-3` = 12px。 -->
+              <Paperclip :size="12" aria-hidden="true" />
             </button>
             <input
               ref="fileInput"

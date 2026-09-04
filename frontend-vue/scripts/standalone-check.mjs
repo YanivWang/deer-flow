@@ -49,6 +49,8 @@ const CROSS_APP_BY_DESIGN = {
     "**禁止**跨应用 import 的守卫本身，命中的是它的 forbidden 正则。",
   "scripts/upstream-drift.mjs":
     "上游漂移报告；缺席时打印一行后退出 0，不进任何门禁。",
+  "scripts/icon-parity.mjs":
+    "图标字形 / 尺寸 / tooltip 的对照报告；要读上游装的 lucide 别名表（本仓装的是 lucide-vue-next，别名映射不同），所以路径写死。缺席时打印一行后退出 0，不进任何门禁。",
   "baseline/upstream-marker.json":
     "漂移报告的已审阅位置，命中的是它声明的监视路径（纯数据）。",
   "baseline/react-parity-scope.json":

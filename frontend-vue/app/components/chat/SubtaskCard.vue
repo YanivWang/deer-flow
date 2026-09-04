@@ -33,7 +33,10 @@
 */
 import { computed, onUnmounted, ref } from "vue";
 import {
-  CheckCircle2,
+  // 上游是 `CheckCircleIcon`，在 lucide 里解析到 **CircleCheckBig**；
+  // 本仓原来写 `CheckCircle2`，解析到 **CircleCheck**——两颗画得不一样
+  // （前者的勾冲出圆圈，后者的勾在圈内）。同 wave 68 的 WandSparkles 那条。
+  CheckCircle,
   ChevronUp,
   CircleX,
   ClipboardList,
@@ -264,7 +267,7 @@ onUnmounted(() => {
                   :title="runtimeUsageLabel"
                   >{{ runtimeUsageLabel }}</span
                 >
-                <CheckCircle2
+                <CheckCircle
                   v-if="viewModel.status === 'completed'"
                   class="size-3"
                 />
@@ -352,7 +355,7 @@ onUnmounted(() => {
         </ChainOfThoughtStep>
         <template v-if="viewModel.status === 'completed'">
           <ChainOfThoughtStep>
-            <template #icon><CheckCircle2 class="size-4" /></template>
+            <template #icon><CheckCircle class="size-4" /></template>
             <template #label>{{ $i18n.t.value.subtasks.completed }}</template>
           </ChainOfThoughtStep>
           <ChainOfThoughtStep>

@@ -55,6 +55,32 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+/*
+  agent 名与描述都是**用户自己填的、长度不可控**的文本，卡片上分别被
+  `truncate` 与 `line-clamp-2` 截掉，本仓原来没有任何办法看到全文
+  （上游 agent-card.tsx:141/157 各包一层只在真截断时才出的 TruncatedTooltip）。
+
+  这一条对照台账看不见：tooltip 挂的是 `aria-describedby`，不是可访问名，
+  而且它只在 pointerenter 量出「真的被截断了」之后才渲染内容——
+  aria 快照与几何档都是静态取一次，两处都够不着。
+*/
+describe("AgentCard 的截断提示", () => {
+  it("把被截断的名字与描述包进 TruncatedTooltip", () => {
+    const wrapper = mount(AgentCard, { props: { agent } });
+
+    const triggers = wrapper.findAll("[data-slot='tooltip-trigger']");
+    expect(triggers).toHaveLength(2);
+    expect(triggers[0]?.classes()).toContain("truncate");
+    expect(triggers[1]?.classes()).toContain("line-clamp-2");
+  });
+
+  it("没量到截断之前不渲染 tooltip 内容", () => {
+    // happy-dom 里 scrollWidth/clientWidth 都是 0，量出来就是「没截断」。
+    const wrapper = mount(AgentCard, { props: { agent } });
+    expect(wrapper.html()).not.toContain("tooltip-content");
+  });
+});
+
 describe("AgentCard", () => {
   it("renders the exact model, ordered duplicate skills, and ordered duplicate groups", () => {
     const wrapper = mount(AgentCard, {

@@ -9,6 +9,11 @@
 import { computed } from "vue";
 import { RefreshCw, Target } from "lucide-vue-next";
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { goalContinuation } from "@/core/threads/goal";
 import type { GoalState } from "@/core/threads/types";
 
@@ -42,13 +47,21 @@ const continuationLabel = computed(() =>
       }}</span>
       <span class="font-medium">{{ goal.objective }}</span>
     </div>
-    <span
-      v-if="continuation"
-      class="text-muted-foreground flex shrink-0 items-center gap-1 text-xs tabular-nums"
-      :title="continuationTitle"
-    >
-      <RefreshCw class="size-3" />
-      {{ continuationLabel }}
-    </span>
+    <!--
+      上游 goal-status.tsx:36 把这一段包在 `<Tooltip>` 里，本仓原来用原生
+      `title`。原生 title 的延迟、位置、配色都不受控（深色主题下尤其突兀），
+      触屏上根本不出现，也不进可访问性树的描述——同 wave 68 语音键那一条。
+    -->
+    <Tooltip v-if="continuation">
+      <TooltipTrigger>
+        <span
+          class="text-muted-foreground flex shrink-0 items-center gap-1 text-xs tabular-nums"
+        >
+          <RefreshCw class="size-3" />
+          {{ continuationLabel }}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{{ continuationTitle }}</TooltipContent>
+    </Tooltip>
   </div>
 </template>

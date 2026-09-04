@@ -77,7 +77,8 @@ async function copySource(source: CitationSource) {
           <span class="text-muted-foreground shrink-0">{{
             $i18n.t.value.citations.citeCount(source.count)
           }}</span>
-          <ExternalLink :size="13" />
+          <!-- 上游 citation-sources-panel.tsx:69 是 `size-3.5` = 14px。 -->
+          <ExternalLink :size="14" />
         </a>
         <!--
           复制之后按钮的名字要跟着换（上游 :126 是

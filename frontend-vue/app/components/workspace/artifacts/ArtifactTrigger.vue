@@ -14,21 +14,37 @@
 import { Files } from "lucide-vue-next";
 
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 defineProps<{ count: number }>();
 const emit = defineEmits<{ open: [] }>();
 </script>
 
 <template>
-  <Button
-    v-if="count > 0"
-    variant="ghost"
-    data-testid="artifact-trigger"
-    class="text-muted-foreground hover:text-foreground"
-    :aria-label="$i18n.t.value.common.showArtifacts"
-    @click="emit('open')"
-  >
-    <Files />
-    <span class="hidden sm:inline">{{ $i18n.t.value.common.artifacts }}</span>
-  </Button>
+  <!--
+    上游 artifact-trigger.tsx:20 把这颗键包在 `<Tooltip content=…>` 里。
+    窄屏下文字被 `hidden sm:inline` 收起来，那时它是一颗纯图标键——
+    没有 tooltip 就只剩 aria-label，鼠标用户看不到它是干什么的。
+  -->
+  <Tooltip v-if="count > 0">
+    <TooltipTrigger>
+      <Button
+        variant="ghost"
+        data-testid="artifact-trigger"
+        class="text-muted-foreground hover:text-foreground"
+        :aria-label="$i18n.t.value.common.showArtifacts"
+        @click="emit('open')"
+      >
+        <Files />
+        <span class="hidden sm:inline">{{
+          $i18n.t.value.common.artifacts
+        }}</span>
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>{{ $i18n.t.value.common.showArtifacts }}</TooltipContent>
+  </Tooltip>
 </template>

@@ -8,6 +8,7 @@
 */
 import { computed } from "vue";
 
+import TruncatedTooltip from "@/components/workspace/agents/TruncatedTooltip.vue";
 import { buildAgentCardViewModel } from "@/core/agents/presentation";
 import type { Agent } from "@/core/agents/types";
 
@@ -25,10 +26,21 @@ const view = computed(() => buildAgentCardViewModel(props.agent));
     :data-testid="`agent-card-${agent.name}`"
     class="flex min-w-0 flex-col rounded-xl border p-4"
   >
-    <h2 class="truncate font-semibold">{{ view.name }}</h2>
-    <p class="text-muted-foreground mt-2 line-clamp-2 text-sm">
-      {{ view.description }}
-    </p>
+    <!--
+      名字 `truncate`、描述 `line-clamp-2`，两者都是**用户自己填的、长度不可控**
+      的文本，截掉之后本仓原来没有任何办法看到全文。上游 agent-card.tsx:141/157
+      各包一层 TruncatedTooltip（只在真截断时才出）。
+      模型那颗 badge 本仓是 `break-all` + `max-w-full`，会折行不会截断，
+      所以**不需要**——上游那颗是 `truncate`，才要 TruncatedBadge。
+    -->
+    <TruncatedTooltip :text="view.name">
+      <h2 class="truncate font-semibold">{{ view.name }}</h2>
+    </TruncatedTooltip>
+    <TruncatedTooltip :text="view.description">
+      <p class="text-muted-foreground mt-2 line-clamp-2 text-sm">
+        {{ view.description }}
+      </p>
+    </TruncatedTooltip>
 
     <dl class="mt-4 space-y-3 text-xs">
       <div>
