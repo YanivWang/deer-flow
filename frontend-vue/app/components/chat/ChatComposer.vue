@@ -1957,17 +1957,38 @@ defineExpose({ replaceDraft, offerFollowup });
                 <DropdownMenuLabel class="text-muted-foreground text-xs">
                   {{ $i18n.t.value.inputBox.reasoningEffort }}
                 </DropdownMenuLabel>
+                <!--
+                  **每一项按选中态染色。** 上游 input-box.tsx:2597 给每个
+                  `DropdownMenuRadioItem` 传的是
+                  `context.reasoning_effort === id ? "text-accent-foreground"
+                   : "text-muted-foreground/65"`——**没选中的四档是暗的**，
+                  选中那一档才是正常前景色。本仓原来一项都不染，四档看起来一模一样，
+                  只有那颗单选圆点在区分。wave 76 把几何档接到交互后的锚点上之后
+                  当场量出来：React `rgba(115,115,115,166)`、本仓 `rgba(10,10,10,255)`。
+
+                  内层两层也照抄（`flex flex-col gap-2` + `font-bold` 标题 +
+                  `pl-2 text-xs` 说明）：本仓原来是 `block` + `text-sm font-medium`
+                  + `text-muted-foreground text-xs`，量出来整项比上游矮 4px，
+                  而且说明那一行自己写死了 muted——上游那一行跟着整项的颜色走。
+
+                  也**不再传 `py-2`**：上游这个调用点只传颜色，纵向内边距归
+                  primitive（`py-1.5`）。多出来的那 2px×2 就是量到的 Δ4。
+                -->
                 <DropdownMenuRadioItem
                   v-for="effort in reasoningEfforts"
                   :key="effort.id"
                   :value="effort.id"
-                  class="py-2"
+                  :class="
+                    selectedReasoningEffort === effort.id
+                      ? 'text-accent-foreground'
+                      : 'text-muted-foreground/65'
+                  "
                 >
-                  <span class="block">
-                    <span class="block text-sm font-medium">{{
+                  <span class="flex flex-col gap-2">
+                    <span class="flex items-center gap-1 font-bold">{{
                       effort.label
                     }}</span>
-                    <span class="text-muted-foreground block text-xs">{{
+                    <span class="block pl-2 text-xs">{{
                       effort.description
                     }}</span>
                   </span>

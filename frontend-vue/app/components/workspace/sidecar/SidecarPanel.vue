@@ -311,10 +311,15 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <section
-    data-testid="sidecar-panel"
-    class="bg-background flex size-full min-h-0 flex-col"
-  >
+  <!--
+    根元素**不画背景**：上游 sidecar-panel.tsx:527 是
+    `className={cn("flex size-full min-h-0 flex-col", className)}`，一条 `bg-*` 都没有
+    ——底色由外面那层容器给。本仓写了 `bg-background`，wave 76 把几何档接到
+    交互后的锚点上之后当场量出来：React 这一层是 `rgba(0,0,0,0)`（透明），
+    本仓是 `rgba(253,250,243,255)`（实心米白）。两层都涂底色时看不出差别，
+    外层一换主题/换容器就露馅。
+  -->
+  <section data-testid="sidecar-panel" class="flex size-full min-h-0 flex-col">
     <!--
       头部照 sidecar-panel.tsx:527 重排。原来这里有四处分叉，都不是笔误级别的：
 

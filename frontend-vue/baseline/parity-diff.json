@@ -1,77 +1,14 @@
 {
   "$comment": "React 与 Vue 在每个对照场景上的双向差异。这份清单只能缩短：修好一条就从这里删一条，新出现一条会让 e2e-parity 立刻红。空数组是目标状态，不是「还没测」。刷新用 make parity-accept，刷新前先逐条看清楚是修好了还是新坏了。键是 场景/断点/主题/语言；aria* 是可访问性树的双向逐行差异，requests* 是产品 API 请求的多重集差异，geometry 是锚点的盒模型与色板差异。",
   "entries": {
-    "agent-chat/desktop/light/en-US": {
+    "chat/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
     },
-    "agents-feature-disabled/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "artifact-batched-stream/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "artifact-panel-resize/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "artifact-preview/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "artifact-preview/mobile/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "artifact-stream-state/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "branch-thread/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "browser-feature/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "channels/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "channels/desktop/light/zh-CN": {
+    "chat/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -92,42 +29,14 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
-    "chat/desktop/light/en-US": {
+    "chat/tablet/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
     },
-    "chat/desktop/light/zh-CN": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "chat/mobile/dark/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "chat/mobile/dark/zh-CN": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "chat/mobile/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "chat/mobile/light/zh-CN": {
+    "chat/tablet/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -148,19 +57,120 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
-    "chat/tablet/light/en-US": {
+    "chat/mobile/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
     },
-    "chat/tablet/light/zh-CN": {
+    "chat/mobile/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
+    },
+    "chat/mobile/dark/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "chat/mobile/dark/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "sidebar/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "thread-history/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "agent-chat/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": [
+        "role:dialog[Model Selector] y React=332.2 Vue=320.2 Δ-12",
+        "role:dialog[Model Selector] height React=135.6 Vue=159.5 Δ23.9",
+        "role:option[/Parity Thinker/] x React=385 Vue=393 Δ8",
+        "role:option[/Parity Thinker/] width React=510 Vue=494 Δ-16",
+        "role:option[/Parity Thinker/] height React=42.3 Vue=46.3 Δ4"
+      ]
+    },
+    "agents-feature-disabled/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "browser-feature/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "sidecar-chat/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": [
+        "text:Ask a follow-up y React=321 Vue=327 Δ6",
+        "text:Ask a follow-up grounded in the referenced text. y React=345 Vue=351 Δ6"
+      ]
+    },
+    "thread-list-pin/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "thread-list-infinite-scroll/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "ui-polish-mobile/mobile/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": [
+        "role:menuitemradio[/^Flash /] x React=60 Vue=5 Δ-55",
+        "role:menuitemradio[/^Flash /] y React=338 Vue=184 Δ-154",
+        "role:menuitemradio[/^Flash /] height React=72 Vue=76 Δ4"
+      ]
+    },
+    "user-message-plain-text/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": [
+        "role:menuitemradio[/^Ultra /] x React=474 Vue=541 Δ67",
+        "role:menuitemradio[/^Ultra /] y React=658 Vue=653.8 Δ-4.2",
+        "role:menuitemradio[/^Ultra /] height React=72 Vue=76 Δ4"
+      ]
     },
     "integrations/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -170,6 +180,41 @@
       "geometry": []
     },
     "integrations/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "branch-thread/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "subtask-card/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "artifact-preview/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "artifact-preview/mobile/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "artifact-panel-resize/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -197,28 +242,14 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
-    "sidebar/desktop/light/en-US": {
+    "channels/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
     },
-    "sidecar-chat/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "streaming-reasoning-order/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "subtask-card/desktop/light/en-US": {
+    "channels/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -232,47 +263,46 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
-    "thread-history/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "thread-list-infinite-scroll/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "thread-list-pin/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "ui-polish-mobile/mobile/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
-    "user-message-plain-text/desktop/light/en-US": {
-      "ariaOnlyReact": [],
-      "ariaOnlyVue": [],
-      "requestsOnlyReact": [],
-      "requestsOnlyVue": [],
-      "geometry": []
-    },
     "workspace-changes/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
+      "geometry": [
+        "role:menuitemradio[/^Minimal /] x React=529 Vue=747 Δ218"
+      ]
+    },
+    "streaming-reasoning-order/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
       "geometry": []
+    },
+    "artifact-stream-state/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": [
+        "role:button[Load full file] y React=86 Vue=72 Δ-14",
+        "text:report.md x React=824.6 Vue=827.6 Δ3",
+        "text:report.md y React=37 Vue=29.5 Δ-7.5"
+      ]
+    },
+    "artifact-batched-stream/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": [
+        "role:button[Download] x React=1187 Vue=1180 Δ-7",
+        "role:button[Download] y React=31 Vue=23.5 Δ-7.5",
+        "role:link[the upstream repo] y React=137 Vue=123 Δ-14",
+        "text:batched-report.md x React=824.6 Vue=827.6 Δ3",
+        "text:batched-report.md y React=37 Vue=29.5 Δ-7.5",
+        "text:batched-report.md width React=126.7 Vue=97.4 Δ-29.3"
+      ]
     }
   }
 }

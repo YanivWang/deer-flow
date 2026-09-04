@@ -161,36 +161,63 @@ export async function sampleGeometry(
   scenario: ParityScenario,
 ): Promise<Record<string, GeometrySample | null>> {
   const samples: Record<string, GeometrySample | null> = {};
-  // 只取 settle 里的 visible 锚点：它们是场景定义的「稳定态可见元素」。
-  // click/fill 的目标在交互后可能已经移动或消失，拿它们量几何是在量时序。
-  for (const step of scenario.settle) {
+  /*
+    取 `settle` **与 `steps`** 里的 `visible` 锚点。
+
+    此前只取 settle 那一半，理由写的是「click/fill 的目标在交互后可能已经移动或
+    消失，拿它们量几何是在量时序」——**那句话只对 click/fill 成立**。
+    `steps` 里的 `visible` 是另一回事：它是「这次交互该让什么出现」，
+    场景本身就在等它稳定，拿它量几何与拿 settle 的锚点量没有区别。
+
+    漏掉这一半的代价是线索 137 的正题：**靠交互才出现的东西，位置永远进不了台账**
+    ——artifact 面板、agent 建成那屏、批量流的文件列表，几何档一格都没量过。
+    wave 76 把它接上，新增约 20 个锚点。
+
+    仍然**不取** click / fill 的目标：那些是「点哪里」，不是「该出现什么」，
+    点完之后它可能已经不在了。
+  */
+  for (const step of [...scenario.settle, ...(scenario.steps ?? [])]) {
     if (step.kind !== "visible") continue;
     const label = targetLabel(step.target);
     const locator = locateTarget(page, step.target).first();
-    samples[label] = await locator
-      .evaluate(async (element) => {
-        /** 未滚动布局里的文档坐标 + 尺寸。见函数头。 */
-        const layoutBox = () => {
-          const rect = element.getBoundingClientRect();
-          let scrolledLeft = 0;
-          let scrolledTop = 0;
-          for (
-            let ancestor = element.parentElement;
-            ancestor;
-            ancestor = ancestor.parentElement
-          ) {
-            scrolledLeft += ancestor.scrollLeft;
-            scrolledTop += ancestor.scrollTop;
-          }
-          return {
-            x: rect.x + scrolledLeft,
-            y: rect.y + scrolledTop,
-            width: rect.width,
-            height: rect.height,
-          };
-        };
+    /*
+      **每个锚点最多等 2 秒。**
 
-        /*
+      `steps` 里的 `visible` 锚点到取样时可能已经不在了——`artifact-batched-stream`
+      一路点过好几个文件，先前那几条 `visible` 早被换掉。`locator.evaluate` 自带
+      auto-wait，用默认超时的话每个消失的锚点要卡满 30 秒：wave 76 第一版就是这么
+      把整条 diff 用例从 4 分钟拖到 10 分钟超时的（报错是 context 被拆掉时的
+      `page.route: Target page ... has been closed`，看不出真正的原因）。
+
+      两秒够长：这里已经在 `settleMs` 之后，真还在的元素不需要等。
+      两秒之后仍拿不到就记 `null`——**两边都是 `null` 时 diffGeometry 会跳过**，
+      「两个应用都没有这个锚点」没有可比的几何。
+    */
+    samples[label] = await locator
+      .evaluate(
+        async (element) => {
+          /** 未滚动布局里的文档坐标 + 尺寸。见函数头。 */
+          const layoutBox = () => {
+            const rect = element.getBoundingClientRect();
+            let scrolledLeft = 0;
+            let scrolledTop = 0;
+            for (
+              let ancestor = element.parentElement;
+              ancestor;
+              ancestor = ancestor.parentElement
+            ) {
+              scrolledLeft += ancestor.scrollLeft;
+              scrolledTop += ancestor.scrollTop;
+            }
+            return {
+              x: rect.x + scrolledLeft,
+              y: rect.y + scrolledTop,
+              width: rect.width,
+              height: rect.height,
+            };
+          };
+
+          /*
           先等布局停下来再量。
 
           实测：mermaid 场景里 React 侧同一个锚点的 y 在两次运行之间差 1px——
@@ -204,56 +231,59 @@ export async function sampleGeometry(
           的容器里它永远等不到「不再变」——变的是滚动而不是布局，加长判据
           （试过连续 3 帧、6 帧）自然也不收敛。
         */
-        const frame = () =>
-          new Promise<void>((resolve) =>
-            requestAnimationFrame(() => resolve()),
-          );
-        const boxOf = () => {
-          const { x, y, width, height } = layoutBox();
-          return `${x}|${y}|${width}|${height}`;
-        };
-        let previous = boxOf();
-        for (let attempt = 0; attempt < 40; attempt++) {
-          await frame();
-          await frame();
-          const current = boxOf();
-          if (current === previous) break;
-          previous = current;
-        }
+          const frame = () =>
+            new Promise<void>((resolve) =>
+              requestAnimationFrame(() => resolve()),
+            );
+          const boxOf = () => {
+            const { x, y, width, height } = layoutBox();
+            return `${x}|${y}|${width}|${height}`;
+          };
+          let previous = boxOf();
+          for (let attempt = 0; attempt < 40; attempt++) {
+            await frame();
+            await frame();
+            const current = boxOf();
+            if (current === previous) break;
+            previous = current;
+          }
 
-        const box = layoutBox();
-        const style = globalThis.getComputedStyle(element);
-        const round = (value: number) => Math.round(value * 10) / 10;
-        /*
+          const box = layoutBox();
+          const style = globalThis.getComputedStyle(element);
+          const round = (value: number) => Math.round(value * 10) / 10;
+          /*
           计算样式给出的颜色**记法**两边不同：实测 React 侧序列化成
           `lab(2.75381 0 0)`，Vue 侧是 `oklch(0.145 0 0)`——而这两个是同一个颜色
           （都解析成 rgba(10,10,10,255)）。直接比字符串等于在比记法，会让台账里
           塞满假条目，而假条目比没有条目更糟：它会让人不再相信这份清单。
           让浏览器自己画一像素再读回来，比的就是最终呈现的颜色。
         */
-        const canvas = document.createElement("canvas");
-        canvas.width = 1;
-        canvas.height = 1;
-        const ctx = canvas.getContext("2d");
-        const toRgba = (value: string) => {
-          if (!ctx) return value;
-          ctx.clearRect(0, 0, 1, 1);
-          ctx.fillStyle = "#000";
-          ctx.fillStyle = value;
-          ctx.fillRect(0, 0, 1, 1);
-          const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
-          return `rgba(${r},${g},${b},${a})`;
-        };
-        return {
-          x: round(box.x),
-          y: round(box.y),
-          width: round(box.width),
-          height: round(box.height),
-          color: toRgba(style.color),
-          background: toRgba(style.backgroundColor),
-          fontSize: style.fontSize,
-        };
-      })
+          const canvas = document.createElement("canvas");
+          canvas.width = 1;
+          canvas.height = 1;
+          const ctx = canvas.getContext("2d");
+          const toRgba = (value: string) => {
+            if (!ctx) return value;
+            ctx.clearRect(0, 0, 1, 1);
+            ctx.fillStyle = "#000";
+            ctx.fillStyle = value;
+            ctx.fillRect(0, 0, 1, 1);
+            const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+            return `rgba(${r},${g},${b},${a})`;
+          };
+          return {
+            x: round(box.x),
+            y: round(box.y),
+            width: round(box.width),
+            height: round(box.height),
+            color: toRgba(style.color),
+            background: toRgba(style.backgroundColor),
+            fontSize: style.fontSize,
+          };
+        },
+        undefined,
+        { timeout: 2_000 },
+      )
       .catch(() => null);
   }
   return samples;

@@ -116,6 +116,14 @@ function diffGeometry(
   ].sort()) {
     const r = react[label] ?? null;
     const v = vue[label] ?? null;
+    /*
+      两边都没取到 → 跳过，不是差异。
+
+      wave 76 把 `steps` 里的 `visible` 也接成了锚点，而那些锚点到取样时
+      可能已经被后续步骤换掉了（`artifact-batched-stream` 一路点过好几个文件）。
+      **两个应用同时没有它，就没有可比的几何**；一边有一边没有仍然要报。
+    */
+    if (!r && !v) continue;
     if (!r || !v) {
       lines.push(
         `${label} 取样缺失 React=${r ? "有" : "无"} Vue=${v ? "有" : "无"}`,

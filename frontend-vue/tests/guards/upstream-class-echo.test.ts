@@ -253,6 +253,28 @@ describe("照抄上游的 class 串", () => {
   });
 
   /*
+    **wave 76 把几何档接到交互后的锚点上，当场量出来的两处颜色差。**
+    对照台账本身就在守它们（重新画上去 `e2e-parity` 会红），
+    但那一跑要 3.8 分钟；这两条钉在源码上，改坏时秒级就红。
+  */
+  it("sidecar 面板根不画底色，推理档位按选中态染色", () => {
+    // 上游 sidecar-panel.tsx:527 一条 bg-* 都没有；底色由外层容器给。
+    const sidecar = stripped("components/workspace/sidecar/SidecarPanel.vue");
+    const root = classOfTagContaining(sidecar, 'data-testid="sidecar-panel"');
+    expect(root.split(/\s+/)).not.toContain("bg-background");
+    expect(root).not.toMatch(/\bbg-/);
+
+    /*
+      上游 input-box.tsx:2597 每一项都传
+      `选中 ? "text-accent-foreground" : "text-muted-foreground/65"`
+      ——**没选中的几档是暗的**。本仓原来一项都不染，四档看起来一模一样。
+    */
+    const composer = stripped("components/chat/ChatComposer.vue");
+    expect(composer).toContain("selectedReasoningEffort === effort.id");
+    expect(composer).toContain("text-muted-foreground/65");
+  });
+
+  /*
     上游 workspace-nav-chat-list.tsx:56 的禁用「Agents」入口：外层
     `cursor-not-allowed`，按钮 `text-muted-foreground/50` + SidebarMenuButton
     cva 自带的 `aria-disabled:pointer-events-none aria-disabled:opacity-50`。
