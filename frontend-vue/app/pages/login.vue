@@ -10,7 +10,9 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
 
+import { Button } from "@/components/ui/button";
 import FlickeringGrid from "@/components/ui/effects/FlickeringGrid.vue";
+import { Input } from "@/components/ui/input";
 import { clearAuthenticatedClientState } from "@/core/auth/client-state";
 import { resolveAuthNextPath } from "@/core/auth/next-path";
 import {
@@ -241,51 +243,68 @@ onMounted(() => {
         >
       </div>
 
-      <form class="space-y-3" @submit.prevent="submit">
-        <label class="block text-sm font-medium" for="email">{{
-          $i18n.t.value.login.email
-        }}</label>
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          autocomplete="email"
-          required
-          class="border-input bg-background w-full rounded-md border px-3 py-2"
-          :placeholder="$i18n.t.value.login.emailPlaceholder"
-        />
-        <label class="block text-sm font-medium" for="password">{{
-          $i18n.t.value.login.password
-        }}</label>
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          :autocomplete="isLogin ? 'current-password' : 'new-password'"
-          required
-          :minlength="isLogin ? 6 : 8"
-          class="border-input bg-background w-full rounded-md border px-3 py-2"
-          :placeholder="$i18n.t.value.login.passwordPlaceholder"
-        />
-        <label class="flex items-start gap-2 text-sm">
-          <input v-model="rememberMe" type="checkbox" class="mt-1" />
-          <span
-            ><span class="font-medium">{{
+      <!--
+        表单里的每一个控件都走 **primitive**，不手写 class。
+        wave 68 用 `make dom-parity` 的几何档量出来，这一页此前**系统性地绕过了
+        L2 层**：输入框是裸 `<input class="… px-3 py-2">`（实测 h 42 / 字号 16px，
+        而上游的 `<Input>` 是 `h-9` + `md:text-sm` → h 36 / 14px），提交键与 SSO 键
+        是裸 `<button>`，勾选框只有 `mt-1`（13px，上游是 `h-4 w-4` = 16px）。
+        绕过 primitive 丢掉的不只是尺寸——焦点环、`aria-invalid` 态、深色模式、
+        禁用态全都不再跟着 L2 走。
+
+        字段分组 `flex flex-col space-y-1` 与 form 的 `space-y-2` 也照上游
+        （frontend/src/app/(auth)/login/page.tsx:265）；本仓原来没有分组容器、
+        form 用的是 `space-y-3`。
+      -->
+      <form class="space-y-2" @submit.prevent="submit">
+        <div class="flex flex-col space-y-1">
+          <label class="text-sm font-medium" for="email">{{
+            $i18n.t.value.login.email
+          }}</label>
+          <Input
+            id="email"
+            v-model="email"
+            type="email"
+            autocomplete="email"
+            required
+            :placeholder="$i18n.t.value.login.emailPlaceholder"
+          />
+        </div>
+        <div class="flex flex-col space-y-1">
+          <label class="text-sm font-medium" for="password">{{
+            $i18n.t.value.login.password
+          }}</label>
+          <Input
+            id="password"
+            v-model="password"
+            type="password"
+            :autocomplete="isLogin ? 'current-password' : 'new-password'"
+            required
+            :minlength="isLogin ? 6 : 8"
+            :placeholder="$i18n.t.value.login.passwordPlaceholder"
+          />
+        </div>
+        <!--
+          与上游 RememberSessionOption 逐字同构
+          （frontend/src/components/auth/remember-session-option.tsx:17）。
+        -->
+        <label class="text-muted-foreground flex items-start gap-2 text-sm">
+          <input
+            v-model="rememberMe"
+            type="checkbox"
+            class="border-input mt-1 h-4 w-4 rounded"
+          />
+          <span>
+            <span class="text-foreground block font-medium">{{
               $i18n.t.value.login.rememberMe
-            }}</span
-            ><span class="text-muted-foreground block text-xs">{{
-              $i18n.t.value.login.rememberMeDescription
-            }}</span></span
-          >
+            }}</span>
+            <span>{{ $i18n.t.value.login.rememberMeDescription }}</span>
+          </span>
         </label>
         <p v-if="error" role="alert" class="text-sm text-red-500">
           {{ error }}
         </p>
-        <button
-          type="submit"
-          class="bg-primary text-primary-foreground w-full rounded-md px-4 py-2"
-          :disabled="loading"
-        >
+        <Button type="submit" class="w-full" :disabled="loading">
           {{
             loading
               ? $i18n.t.value.login.pleaseWait
@@ -293,7 +312,7 @@ onMounted(() => {
                 ? $i18n.t.value.login.signIn
                 : $i18n.t.value.login.createAccount
           }}
-        </button>
+        </Button>
       </form>
 
       <div v-if="providers.length" class="space-y-2">
@@ -318,38 +337,50 @@ onMounted(() => {
         <p v-if="showSsoHint" class="text-muted-foreground text-center text-sm">
           {{ $i18n.t.value.login.ssoHint }}
         </p>
-        <button
+        <Button
           v-for="provider in providers"
           :key="provider.id"
           type="button"
-          class="w-full rounded-md border px-4 py-2"
+          variant="outline"
+          class="w-full"
           :disabled="loading"
           @click="startSso(provider)"
         >
           {{ $i18n.t.value.login.continueWith(provider.display_name) }}
+        </Button>
+      </div>
+      <!--
+        上游把它包在 `div.text-center.text-sm` 里、按钮本身是**行内**的
+        （login/page.tsx:347）。本仓原来给按钮加了 `w-full`，于是热区从 204px
+        撑到整行 382px——点空白处也会切换登录/注册。
+      -->
+      <div v-if="signupAllowed" class="text-center text-sm">
+        <button
+          type="button"
+          class="text-blue-500 hover:underline"
+          @click="
+            isLogin = !isLogin;
+            error = '';
+            showSsoHint = false;
+          "
+        >
+          {{
+            isLogin
+              ? $i18n.t.value.login.noAccountSignUp
+              : $i18n.t.value.login.haveAccountSignIn
+          }}
         </button>
       </div>
-      <button
-        v-if="signupAllowed"
-        type="button"
-        class="w-full text-sm text-blue-500 hover:underline"
-        @click="
-          isLogin = !isLogin;
-          error = '';
-          showSsoHint = false;
-        "
-      >
-        {{
-          isLogin
-            ? $i18n.t.value.login.noAccountSignUp
-            : $i18n.t.value.login.haveAccountSignIn
-        }}
-      </button>
-      <NuxtLink
-        to="/"
-        class="text-muted-foreground block text-center text-xs hover:underline"
-        >{{ $i18n.t.value.login.backToHome }}</NuxtLink
-      >
+      <!--
+        同理：上游是 `div.text-muted-foreground.text-center.text-xs` 包一个行内
+        `<Link class="hover:underline">`（login/page.tsx:362）。本仓原来把
+        `block` 与配色都堆在链接自己身上，热区同样撑满整行。
+      -->
+      <div class="text-muted-foreground text-center text-xs">
+        <NuxtLink to="/" class="hover:underline">{{
+          $i18n.t.value.login.backToHome
+        }}</NuxtLink>
+      </div>
     </section>
   </div>
 </template>

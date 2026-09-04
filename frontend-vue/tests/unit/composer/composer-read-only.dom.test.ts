@@ -139,14 +139,22 @@ describe("read-only composer", () => {
       `new URL(..., import.meta.url)` 交给 readFileSync 会直接抛
       "The URL must be of scheme file"。用相对 vitest 工作目录的路径。
     */
-    const source = readFileSync("app/components/chat/ChatComposer.vue", "utf8");
+    /*
+      **压掉空白再比。** 这条断言原来钉的是含换行与缩进的原样子串，于是
+      wave 68 给这颗按钮套上 `<Tooltip>` 之后，prettier 把同一个表达式折成三行，
+      表达式一个字没变，用例却红了——它钉的是格式不是语义。
+    */
+    const source = readFileSync(
+      "app/components/chat/ChatComposer.vue",
+      "utf8",
+    ).replace(/\s+/g, " ");
     // 上游 input-box.tsx:2340 传的是 composerLocked（= disabled || polishing）。
     expect(source).toContain(
-      ':disabled="disabled || !voiceSupported || polishing || streaming"',
+      ':disabled=" disabled || !voiceSupported || polishing || streaming "',
     );
     // 被 pointer-events-none 盖住不算禁用：读屏器听不到「不可用」。
     expect(source).not.toContain(
-      ':disabled="!voiceSupported || polishing || streaming"',
+      ':disabled=" !voiceSupported || polishing || streaming "',
     );
   });
 

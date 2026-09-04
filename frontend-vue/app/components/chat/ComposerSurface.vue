@@ -35,6 +35,33 @@ const classes = computed(() =>
     :data-testid="testId"
     :class="classes"
   >
+    <!--
+      `extraHeader` 浮在输入框**上方**，不占布局，与上游
+      `frontend/src/components/workspace/input-box.tsx:2220` 逐层同构：
+      外层 `absolute top-0` 是一个**零高度**的锚，贴住 surface 的上边线；
+      内层 `bottom-0` 于是把内容的**底边**顶到那条线上。
+
+      **两层都不能省，而且必须挂在 surface 内部。** wave 67 实测过合并/外挂的后果：
+      本仓原来把这两层塞在 AgentChat 里、作为输入框的**兄弟节点**，于是那个零高度锚
+      贴的是外层布局容器（`relative w-full max-w-[…] -translate-y-[…]`）而不是输入框。
+      同一屏、同一视口、两边都登录，实测：
+        React  锚 top 288（= surface 上边线），欢迎区 137→289，段落底→输入框顶 28px
+        Vue    锚 top 304（= 外层容器上边线），欢迎区 172→304，段落底→输入框顶 13px
+      也就是整块**低 15px 并压进输入框**。宽度也跟着差 2px（576 vs 574——surface 带
+      `border`，`right-0 left-0` 贴的是 padding box），段落因此少折一行，
+      整块高 132 vs 152。**两个现象是同一个根因。**
+
+      交接文档此前把这条记成「只是 DOM 父节点不同、零可观察收益」——**实测推翻了它**。
+      台账没抓到是因为 `sampleGeometry` 只量场景 settle 里的锚点，欢迎区不是锚点
+      （线索 137）。
+    -->
+    <div v-if="$slots.extraHeader" class="absolute top-0 right-0 left-0 z-10">
+      <div
+        class="absolute right-0 bottom-0 left-0 flex items-center justify-center"
+      >
+        <slot name="extraHeader" />
+      </div>
+    </div>
     <slot />
   </div>
 </template>

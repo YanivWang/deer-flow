@@ -20,13 +20,14 @@ import {
   ArrowUp,
   GraduationCap,
   Lightbulb,
+  Loader2,
   Mic,
   Paperclip,
   Rocket,
   Sparkles,
   Square,
   Target,
-  WandSparkles,
+  Undo2,
   X,
   Zap,
 } from "lucide-vue-next";
@@ -217,6 +218,11 @@ const limitsQuery = useUploadLimits(() =>
 const limits = computed(() => limitsQuery.data.value);
 const suggestionIndex = ref(0);
 const polishOriginal = ref<string | null>(null);
+/*
+  改写**之后**的文本。撤销态的判据是「输入框里现在还是那一版改写」，不是
+  「这一轮润色发生过」——见 polishUndoAvailable 的注释。
+*/
+const polishRewritten = ref<string | null>(null);
 const polishing = ref(false);
 const compactPending = ref(false);
 const submissionPending = ref(false);
@@ -471,8 +477,20 @@ const showSuggestions = computed(
   已经润色过之后，即使正在流式输出、即使草稿被清空，「撤销」也必须还能按，
   否则用户没有回到原文的路。
 */
+/*
+  上游 input-box.tsx:1339 的判据是三条与：**没在润色中**、有过一次成功的改写、
+  **而且输入框里现在的文本仍然逐字等于那一版改写**。第三条本仓原来没有，
+  后果不是样式：润色完之后用户接着往下打字，这颗键仍然显示「撤销优化」，
+  按下去 `input.value = polishOriginal.value` 会把**改写之后新输入的内容一起**
+  换回润色前那一版，且没有二次撤销。按上游的判据，用户一动键盘撤销就收回去
+  （改回一模一样的文本时又出现，因为它是无状态比较，不是一次性开关）。
+*/
 const polishUndoAvailable = computed(
-  () => !polishing.value && polishOriginal.value !== null,
+  () =>
+    !polishing.value &&
+    polishOriginal.value !== null &&
+    polishRewritten.value !== null &&
+    input.value === polishRewritten.value,
 );
 /*
   `/goal <objective>` 写到接近上限时，工具条右侧出现一个 length/max 计数器
@@ -1202,9 +1220,10 @@ function chooseFiles(event: Event) {
 }
 
 async function polish() {
-  if (polishOriginal.value !== null) {
+  if (polishUndoAvailable.value && polishOriginal.value !== null) {
     input.value = polishOriginal.value;
     polishOriginal.value = null;
+    polishRewritten.value = null;
     return;
   }
   if (!input.value.trim()) return;
@@ -1245,8 +1264,10 @@ async function polish() {
       if (!rewritten || !result.changed) {
         toast.info($i18n.t.value.inputBox.inputPolishNoChanges);
         polishOriginal.value = null;
+        polishRewritten.value = null;
       } else {
         input.value = rewritten;
+        polishRewritten.value = rewritten;
       }
     }
   } catch (error) {
@@ -1260,6 +1281,7 @@ async function polish() {
           : $i18n.t.value.inputBox.inputPolishFailed,
       );
       polishOriginal.value = null;
+      polishRewritten.value = null;
     }
   } finally {
     if (polishController.value === controller) {
@@ -1274,6 +1296,7 @@ function cancelPolish() {
   polishController.value = null;
   polishing.value = false;
   polishOriginal.value = null;
+  polishRewritten.value = null;
 }
 function replaceDraft(value: string) {
   input.value = value;
@@ -1352,6 +1375,7 @@ function stopRun() {
   polishGeneration.invalidate();
   polishing.value = false;
   polishOriginal.value = null;
+  polishRewritten.value = null;
   submissionGeneration += 1;
   submissionPending.value = false;
   if (activeSubmissionDraft) {
@@ -1491,6 +1515,10 @@ defineExpose({ replaceDraft, offerFollowup });
             .join(' ')
         "
       >
+        <!-- 欢迎区透传给 ComposerSurface，理由见那份文件里的注释。 -->
+        <template v-if="$slots.extraHeader" #extraHeader>
+          <slot name="extraHeader" />
+        </template>
         <!-- header / footer 都是 React 的 InputGroupAddon，role="group"。 -->
         <div
           v-if="selectedFiles.length || polishing || (references?.length ?? 0)"
@@ -1508,12 +1536,35 @@ defineExpose({ replaceDraft, offerFollowup });
               selectedFiles = selectedFiles.filter((item) => item !== file)
             "
           />
+          <!--
+            润色中的胶囊，逐条对着上游 input-box.tsx:2235。三处此前对不上：
+
+            ① **没有 role / 没有 aria-live**。上游写的是 `role="status"` +
+               `aria-live="polite"`：润色是个几秒钟、没有其它可见反馈的异步动作，
+               读屏器用户此前听不到它开始、也听不到它结束。
+            ② 指示器是一颗 8px 的脉冲圆点，上游是 12px 的 `Loader2` 转圈。
+               脉冲不表达进度，动效停下来跟做完了长得一样。
+            ③ **取消键此前在页脚**，把优化键整个换掉（还带一段可见文字"取消"）。
+               上游的取消键在这颗胶囊里——就在"正在优化"这句话旁边，
+               而页脚那颗优化键**原地不动**，只把图标换成转圈。
+          -->
           <div
             v-if="polishing"
+            role="status"
+            aria-live="polite"
             class="text-primary bg-primary/10 border-primary/20 relative z-30 flex h-7 items-center gap-1.5 rounded-full border py-0 pr-1 pl-2.5 text-xs font-medium"
           >
-            <span class="size-2 animate-pulse rounded-full bg-current" />
+            <Loader2 :size="12" class="animate-spin" />
             {{ $i18n.t.value.inputBox.inputPolishing }}
+            <button
+              data-testid="cancel-polish-input-button"
+              type="button"
+              class="hover:bg-primary/20 focus-visible:ring-primary/40 -mr-0.5 ml-0.5 flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              :aria-label="$i18n.t.value.inputBox.inputPolishCancel"
+              @click="cancelPolish"
+            >
+              <X :size="12" />
+            </button>
           </div>
           <!--
             引文块也在 header 里，排在附件与润色指示之后——上游 input-box.tsx:2229
@@ -1623,11 +1674,11 @@ defineExpose({ replaceDraft, offerFollowup });
                   type="button"
                   data-testid="add-attachments-button"
                   :aria-label="$i18n.t.value.inputBox.addAttachments"
-                  class="text-muted-foreground hover:bg-accent flex size-8 cursor-pointer items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-50"
+                  class="text-muted-foreground hover:bg-accent flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 disabled:cursor-not-allowed disabled:opacity-50"
                   :disabled="disabled || polishing"
                   @click="openFileDialog"
                 >
-                  <Paperclip :size="14" aria-hidden="true" />
+                  <Paperclip :size="12" aria-hidden="true" />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" align="start" class="w-56">
@@ -1657,60 +1708,86 @@ defineExpose({ replaceDraft, offerFollowup });
               @change="chooseFiles"
             />
           </div>
-          <button
-            data-testid="voice-input-button"
-            type="button"
-            class="text-muted-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md"
-            :class="voiceListening ? 'bg-primary/10 text-primary' : ''"
-            :aria-label="
-              voiceListening
-                ? $i18n.t.value.inputBox.voiceInputStopLabel
-                : $i18n.t.value.inputBox.voiceInputStartLabel
-            "
-            :aria-pressed="voiceListening"
-            :title="
-              voiceSupported
-                ? voiceListening
-                  ? $i18n.t.value.inputBox.voiceInputListening
-                  : $i18n.t.value.inputBox.voiceInputStart
-                : $i18n.t.value.inputBox.voiceInputUnsupported
-            "
-            :disabled="disabled || !voiceSupported || polishing || streaming"
-            @click="toggleVoiceInput"
-          >
-            <Square v-if="voiceListening" :size="12" class="fill-current" />
-            <Mic v-else :size="14" />
-          </button>
-          <button
-            v-if="polishing"
-            data-testid="cancel-polish-input-button"
-            type="button"
-            class="text-muted-foreground hover:bg-accent flex h-8 items-center gap-1 rounded-md px-2 text-xs"
-            :aria-label="$i18n.t.value.inputBox.inputPolishCancel"
-            @click="cancelPolish"
-          >
-            <X :size="14" /> {{ $i18n.t.value.common.cancel }}
-          </button>
-          <button
-            v-else
-            data-testid="polish-input-button"
-            type="button"
-            class="text-muted-foreground hover:bg-accent flex h-8 items-center gap-1 rounded-md px-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-            :aria-label="
-              polishOriginal === null
-                ? $i18n.t.value.inputBox.inputPolish
-                : $i18n.t.value.inputBox.inputPolishUndo
-            "
-            :disabled="polishDisabled"
-            @click="polish"
-          >
-            <WandSparkles :size="14" />
-            <span class="hidden sm:inline">{{
-              polishOriginal === null
-                ? $i18n.t.value.inputBox.inputPolish
-                : $i18n.t.value.inputBox.inputPolishUndo
-            }}</span>
-          </button>
+          <!--
+            提示走 Tooltip 组件，**不是 `title`**。上游 VoiceInputButton 外面包的是
+            `<Tooltip>`（input-box.tsx:2339）；原生 `title` 是浏览器自己的气泡：
+            延迟、位置、配色都不受控，深色主题下尤其突兀，而且触屏上根本不出现。
+            两边都用同一个 Tooltip 才是同一个可感知行为。
+          -->
+          <Tooltip>
+            <TooltipTrigger>
+              <button
+                data-testid="voice-input-button"
+                type="button"
+                class="text-muted-foreground hover:bg-accent flex h-8 items-center justify-center gap-1.5 rounded-md px-2"
+                :class="voiceListening ? 'bg-primary/10 text-primary' : ''"
+                :aria-label="
+                  voiceListening
+                    ? $i18n.t.value.inputBox.voiceInputStopLabel
+                    : $i18n.t.value.inputBox.voiceInputStartLabel
+                "
+                :aria-pressed="voiceListening"
+                :disabled="
+                  disabled || !voiceSupported || polishing || streaming
+                "
+                @click="toggleVoiceInput"
+              >
+                <Square v-if="voiceListening" :size="12" class="fill-current" />
+                <Mic v-else :size="12" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {{
+                voiceSupported
+                  ? voiceListening
+                    ? $i18n.t.value.inputBox.voiceInputListening
+                    : $i18n.t.value.inputBox.voiceInputStart
+                  : $i18n.t.value.inputBox.voiceInputUnsupported
+              }}
+            </TooltipContent>
+          </Tooltip>
+          <!--
+            **只有图标，没有可见文字**，提示走 Tooltip——与上游逐条一致
+            （input-box.tsx:2345 的 `<Tooltip>` 包着一颗只放 `SparklesIcon` 的
+            PromptInputButton）。本仓原来多渲染了一段 `优化输入` 文字且没有
+            Tooltip，实测这一颗从 28px 宽变成 82px，把左侧控件簇整体推宽 54px。
+
+            图标用 `Sparkles` 而不是 `WandSparkles`：上游是 `SparklesIcon`，
+            两个是不同的字形。
+
+            **润色中这颗键不消失**（上游 2354 的三目在同一颗 PromptInputButton
+            里换图标）：位置固定的一颗键换图标，和"这颗键被另一颗顶掉了"，
+            对键盘 tab 序与读屏器是两回事。
+          -->
+          <Tooltip>
+            <TooltipTrigger>
+              <button
+                data-testid="polish-input-button"
+                type="button"
+                class="text-muted-foreground hover:bg-accent flex h-8 items-center justify-center gap-1.5 rounded-md px-2 disabled:cursor-not-allowed disabled:opacity-50"
+                :aria-label="
+                  polishUndoAvailable
+                    ? $i18n.t.value.inputBox.inputPolishUndo
+                    : $i18n.t.value.inputBox.inputPolish
+                "
+                :disabled="polishDisabled"
+                @click="polish"
+              >
+                <Loader2 v-if="polishing" :size="12" class="animate-spin" />
+                <Undo2 v-else-if="polishUndoAvailable" :size="12" />
+                <Sparkles v-else :size="12" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {{
+                polishing
+                  ? $i18n.t.value.inputBox.inputPolishing
+                  : polishUndoAvailable
+                    ? $i18n.t.value.inputBox.inputPolishUndo
+                    : $i18n.t.value.inputBox.inputPolish
+              }}
+            </TooltipContent>
+          </Tooltip>
           <span class="flex-1" />
           <DropdownMenu>
             <DropdownMenuTrigger>

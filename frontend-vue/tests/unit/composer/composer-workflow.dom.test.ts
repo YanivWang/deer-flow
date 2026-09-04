@@ -791,13 +791,14 @@ describe("composer submission and stale lifecycle", () => {
       },
     ]);
     /*
-      按钮必须**重新查**：润色期间它被 v-if 换成取消按钮，结束时是一个新元素，
-      点击前拿到的 DOMWrapper 指向已经脱离文档的旧节点，`.text()` 会一直返回
-      点击前的字样——那样这条断言不修也是绿的。
+      **钉可访问名，不钉可见文字。** 上游这颗键三态都只有一颗图标
+      （input-box.tsx:2354），名字来自 aria-label；本仓原来多渲染了一段
+      「优化输入」，那段文字本身就是落差，拿它当断言等于把落差写进合同。
     */
-    expect(wrapper.get("[data-testid='polish-input-button']").text()).toBe(
-      enUS.inputBox.inputPolish,
-    );
+    const button = wrapper.get("[data-testid='polish-input-button']");
+    expect(button.attributes("aria-label")).toBe(enUS.inputBox.inputPolish);
+    expect(button.text()).toBe("");
+    expect(button.find(".lucide-sparkles").exists()).toBe(true);
   });
 
   it("applies a trimmed rewrite and offers undo when polishing did change the draft", async () => {
@@ -817,9 +818,105 @@ describe("composer submission and stale lifecycle", () => {
       "Polished draft",
     );
     expect(toastStore.toasts.value).toEqual([]);
-    expect(wrapper.get("[data-testid='polish-input-button']").text()).toBe(
-      enUS.inputBox.inputPolishUndo,
+    const button = wrapper.get("[data-testid='polish-input-button']");
+    expect(button.attributes("aria-label")).toBe(enUS.inputBox.inputPolishUndo);
+    expect(button.text()).toBe("");
+    // 上游撤销态换的是 Undo2Icon，不是继续画 SparklesIcon。
+    expect(button.find(".lucide-undo-2").exists()).toBe(true);
+    expect(button.find(".lucide-sparkles").exists()).toBe(false);
+  });
+
+  /*
+    **这一条钉的是一次数据丢失。** 上游 input-box.tsx:1339 的撤销判据里有一条
+    「输入框现在的文本仍逐字等于那一版改写」，本仓原来只看「这一轮润色发生过」。
+    差别在用户润色完接着往下打字的时候：那颗键仍写着「撤销优化」，按下去会把
+    **改写之后新输入的内容一起**换回润色前那一版，而且没有二次撤销。
+  */
+  it("retires the undo affordance once the polished draft is edited", async () => {
+    mocks.polishInputDraft.mockResolvedValue({
+      rewritten_text: "Polished draft",
+      changed: true,
+    });
+    const { wrapper } = mountComposer();
+    await flushPromises();
+
+    const textarea = wrapper.get("textarea[name='message']");
+    await textarea.setValue("Polish me");
+    await wrapper.get("[data-testid='polish-input-button']").trigger("click");
+    await flushPromises();
+
+    await textarea.setValue("Polished draft, and then some");
+    await flushPromises();
+
+    const button = wrapper.get("[data-testid='polish-input-button']");
+    expect(button.attributes("aria-label")).toBe(enUS.inputBox.inputPolish);
+    expect(button.find(".lucide-undo-2").exists()).toBe(false);
+
+    // 按下去不该回滚：这一颗现在是「再润色一次」。
+    await button.trigger("click");
+    await flushPromises();
+    expect((textarea.element as HTMLTextAreaElement).value).not.toBe(
+      "Polish me",
     );
+
+    // 改回一模一样的那一版，撤销又回来——它是无状态比较，不是一次性开关。
+    await textarea.setValue("Polished draft");
+    await flushPromises();
+    expect(
+      wrapper
+        .get("[data-testid='polish-input-button']")
+        .attributes("aria-label"),
+    ).toBe(enUS.inputBox.inputPolishUndo);
+  });
+
+  /*
+    润色**进行中**的那一屏。对照台账看不见它：胶囊只在一次请求飞在路上的那几百
+    毫秒里存在，而对照场景没有一个停在那个瞬间；`sampleGeometry` 又只量场景的
+    落点锚（线索 137）。三条都是那几百毫秒里才分叉的：
+
+    ① 上游 input-box.tsx:2236 的胶囊是 `role="status" aria-live="polite"`，
+       本仓原来两个都没有——润色是个没有其它可见反馈的异步动作，读屏器用户
+       此前听不到它开始、也听不到它结束。
+    ② 取消键在**胶囊里**，不是在页脚顶替优化键。
+    ③ 页脚那颗优化键原地不动，只换成转圈图标。
+  */
+  it("announces the in-flight polish and keeps the toolbar button in place", async () => {
+    // 请求一直飞着，把组件按在「润色中」这一态上。
+    mocks.polishInputDraft.mockReturnValue(new Promise(() => {}));
+    const { wrapper } = mountComposer();
+    await flushPromises();
+
+    await wrapper.get("textarea[name='message']").setValue("Polish me");
+    await wrapper.get("[data-testid='polish-input-button']").trigger("click");
+    await flushPromises();
+
+    const pill = wrapper.get("[role='status']");
+    expect(pill.attributes("aria-live")).toBe("polite");
+    expect(pill.text()).toContain(enUS.inputBox.inputPolishing);
+    expect(pill.find(".lucide-loader-circle").exists()).toBe(true);
+
+    // 取消键在胶囊里，而且是图标键（上游只放一颗 XIcon）。
+    const cancel = pill.get("[data-testid='cancel-polish-input-button']");
+    expect(cancel.attributes("aria-label")).toBe(
+      enUS.inputBox.inputPolishCancel,
+    );
+    expect(cancel.text()).toBe("");
+
+    // 页脚那颗还在，只是换了图标并禁用。
+    const button = wrapper.get("[data-testid='polish-input-button']");
+    expect(button.attributes("disabled")).toBeDefined();
+    expect(button.find(".lucide-loader-circle").exists()).toBe(true);
+    expect(button.find(".lucide-sparkles").exists()).toBe(false);
+
+    // 点一下取消，胶囊消失、优化键回到初始态。
+    await cancel.trigger("click");
+    await flushPromises();
+    expect(wrapper.find("[role='status']").exists()).toBe(false);
+    expect(
+      wrapper
+        .get("[data-testid='polish-input-button']")
+        .attributes("aria-label"),
+    ).toBe(enUS.inputBox.inputPolish);
   });
 
   /*

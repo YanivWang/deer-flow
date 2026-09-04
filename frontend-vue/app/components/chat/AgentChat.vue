@@ -1932,83 +1932,6 @@ onUnmounted(() => {
                 </div>
               </section>
               <!--
-              欢迎语是**浮在**输入框上方的一层，不占布局：React 把它作为 extraHeader
-              放进一对 absolute 容器里（frontend/src/components/workspace/input-box.tsx），
-              外层贴住输入框顶边、内层用 bottom-0 把内容顶到边线之上。
-              留在文档流里的话，问候语有多高，输入框就被往下推多少——同一块屏幕上
-              两个应用的输入框会差出一行的位置，而这正是几何比对量到的那 24px。
-            -->
-              <div
-                v-if="
-                  isWelcomeMode &&
-                  !(bootstrap && creation.status.value === 'created')
-                "
-                class="absolute top-0 right-0 left-0 z-10"
-              >
-                <!--
-                  agent 会话页与普通聊天页的欢迎区是**两个不同的东西**，上游也是
-                  两个组件（`AgentWelcome` vs `Welcome`）。同一个 AgentChat 服务两条
-                  路由，所以这一支要显式分开；此前只有通用那一支，打开自定义 agent
-                  的新会话时读到的是「👋 Hello, again!」而不是 agent 自己的名字。
-                -->
-                <AgentWelcome
-                  v-if="agentName"
-                  class="absolute right-0 bottom-0 left-0"
-                  :agent="agent"
-                  :agent-name="agentName"
-                />
-                <div
-                  v-else
-                  class="absolute right-0 bottom-0 left-0 mx-auto flex w-full flex-col items-center justify-center gap-2 px-4 py-4 text-center sm:px-8"
-                >
-                  <!--
-                    技能创建入口（?mode=skill）整段换掉标题与说明，上游
-                    welcome.tsx:48 与 :59 是两处独立的三元。本仓原来只有通用那一支，
-                    于是从设置页点「创建技能」跳过来，屏幕上仍然写着
-                    「👋 Hello, again!」——`welcome.createYourOwnSkill` 与
-                    `welcome.createYourOwnSkillDescription` 两条词条一直零消费，
-                    缺的就是这里。
-
-                    判据只看 query，与上游一致（它读 searchParams，不看 thread_id）；
-                    欢迎区本身已经被 isWelcomeMode 那一层挡住了。
-                  -->
-                  <div
-                    v-if="skillWelcome"
-                    class="max-w-full text-2xl font-bold"
-                  >
-                    ✨ {{ $i18n.t.value.welcome.createYourOwnSkill }} ✨
-                  </div>
-                  <div
-                    v-else
-                    class="flex flex-wrap items-center justify-center gap-2 text-2xl font-bold"
-                  >
-                    <!--
-                  这个 👋 **不能** aria-hidden：React 的 Welcome 把它当成正文
-                  （frontend/src/components/workspace/welcome.tsx 里它只是一个普通
-                  div），于是读屏器读到的是「👋 Hello, again!」。藏掉它，两边听到的
-                  欢迎语就不是同一句。
-
-                  ultra 档换成 🚀，与金色 welcomeColors 是同一个判据（上游
-                  welcome.tsx:53 的 `isUltra ? "🚀" : "👋"`）。本仓原来只换了颜色，
-                  于是 ultra 会话的欢迎语颜色变了、表情没变。
-                -->
-                    <span>{{ isUltraWelcome ? "🚀" : "👋" }}</span>
-                    <AuroraText :colors="welcomeColors">
-                      {{ $i18n.t.value.welcome.greeting }}
-                    </AuroraText>
-                  </div>
-                  <p
-                    class="text-muted-foreground max-w-full text-sm whitespace-pre-line"
-                  >
-                    {{
-                      skillWelcome
-                        ? $i18n.t.value.welcome.createYourOwnSkillDescription
-                        : $i18n.t.value.welcome.description
-                    }}
-                  </p>
-                </div>
-              </div>
-              <!--
                 上游 agents/new/page.tsx 整个创建流程都没有 follow-up 建议这一层
                 （见它的完整 return，没有 Suggestions 组件），不分「还没建出来」还是
                 「已建成」。原来这里只在已建成时隐藏，于是引导对话期间也会冒出建议
@@ -2134,7 +2057,103 @@ onUnmounted(() => {
                 @clear-references="sidecar.clearConversationQuotes()"
                 @context-change="updateContext"
                 @goal-change="localGoal = $event"
-              />
+              >
+                <!--
+                  欢迎语浮在输入框上方、不占布局。**它必须挂在输入框内部**，
+                  上游正是这么做的（`extraHeader` 传进 PromptInput，
+                  frontend/src/components/workspace/input-box.tsx:2220）：
+                  那对 absolute 容器由 ComposerSurface 提供，外层零高度锚贴住
+                  surface 上边线、内层 bottom-0 把内容底边顶到那条线上。
+
+                  **wave 67 之前这一块是输入框的兄弟节点**，于是零高度锚贴的是外层
+                  布局容器而不是输入框，实测整块低 15px 并压进输入框（React 段落底
+                  到输入框顶 28px，本仓只有 13px），宽度也差 2px 导致段落少折一行。
+                  判据与实测都记在 ComposerSurface.vue 的注释里。
+                -->
+                <template
+                  v-if="
+                    isWelcomeMode &&
+                    !(bootstrap && creation.status.value === 'created')
+                  "
+                  #extraHeader
+                >
+                  <!--
+                    agent 会话页与普通聊天页的欢迎区是**两个不同的东西**，上游也是
+                    两个组件（`AgentWelcome` vs `Welcome`）。同一个 AgentChat 服务两条
+                    路由，所以这一支要显式分开；此前只有通用那一支，打开自定义 agent
+                    的新会话时读到的是「👋 Hello, again!」而不是 agent 自己的名字。
+
+                    **不带定位 class**：上游把 AgentWelcome 原样交给 extraHeader
+                    （agents/[agent_name]/chats/[thread_id]/page.tsx:417），
+                    定位由那对容器负责。
+                  -->
+                  <AgentWelcome
+                    v-if="agentName"
+                    :agent="agent"
+                    :agent-name="agentName"
+                  />
+                  <!--
+                    根类逐字对上游 Welcome 的根（welcome.tsx:42）。
+                  -->
+                  <div
+                    v-else
+                    class="mx-auto flex w-full max-w-full flex-col items-center justify-center gap-2 px-4 py-4 text-center sm:px-8"
+                  >
+                    <!--
+                      技能创建入口（?mode=skill）整段换掉标题与说明，上游
+                      welcome.tsx:48 与 :59 是两处独立的三元。本仓原来只有通用那一支，
+                      于是从设置页点「创建技能」跳过来，屏幕上仍然写着
+                      「👋 Hello, again!」——`welcome.createYourOwnSkill` 与
+                      `welcome.createYourOwnSkillDescription` 两条词条一直零消费，
+                      缺的就是这里。
+
+                      判据只看 query，与上游一致（它读 searchParams，不看 thread_id）；
+                      欢迎区本身已经被 isWelcomeMode 那一层挡住了。
+                    -->
+                    <div class="max-w-full text-2xl font-bold">
+                      <template v-if="skillWelcome">
+                        ✨ {{ $i18n.t.value.welcome.createYourOwnSkill }} ✨
+                      </template>
+                      <!--
+                        这个 👋 **不能** aria-hidden：React 的 Welcome 把它当成正文
+                        （welcome.tsx 里它只是一个普通 div），于是读屏器读到的是
+                        「👋 Hello, again!」。藏掉它，两边听到的欢迎语就不是同一句。
+
+                        ultra 档换成 🚀，与金色 welcomeColors 是同一个判据（上游
+                        welcome.tsx:53 的 `isUltra ? "🚀" : "👋"`）。本仓原来只换了
+                        颜色，于是 ultra 会话的欢迎语颜色变了、表情没变。
+                      -->
+                      <div
+                        v-else
+                        class="flex max-w-full flex-wrap items-center justify-center gap-2"
+                      >
+                        <span>{{ isUltraWelcome ? "🚀" : "👋" }}</span>
+                        <AuroraText :colors="welcomeColors">
+                          {{ $i18n.t.value.welcome.greeting }}
+                        </AuroraText>
+                      </div>
+                    </div>
+                    <!--
+                      说明段落也照上游分两层：外层给颜色与字号，内层 `<p>` 给折行
+                      规则（welcome.tsx:14 的 `max-w-full text-wrap break-words
+                      whitespace-pre-line`）。本仓原来把两层并成一个 `<p>` 并且漏了
+                      `text-wrap break-words`。
+                    -->
+                    <div class="text-muted-foreground max-w-full text-sm">
+                      <p
+                        class="max-w-full text-wrap break-words whitespace-pre-line"
+                      >
+                        {{
+                          skillWelcome
+                            ? $i18n.t.value.welcome
+                                .createYourOwnSkillDescription
+                            : $i18n.t.value.welcome.description
+                        }}
+                      </p>
+                    </div>
+                  </div>
+                </template>
+              </ChatComposer>
             </div>
           </div>
         </main>
