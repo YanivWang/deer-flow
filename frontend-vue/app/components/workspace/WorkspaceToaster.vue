@@ -26,6 +26,26 @@
                    wave 71 记下这笔账、wave 73 结清：按「React 没有的 Vue 不许有」删掉。
                    代价是一条 toast 只能等它自己消失——**4 秒（sonner 的
                    `TOAST_LIFETIME`）**，与上游同一个数。
+
+                   **尺寸逐条抄 sonner 的 CSS**（`sonner/dist/index.mjs` 里
+                   `[data-sonner-toast][data-styled=true]` 那一条，wave 74 两边同屏实测）：
+                   `padding:16px`（本仓原来 `px-4 py-3`）、`font-size:13px`（原来 14px）、
+                   `gap:6px`（原来 12px）、`align-items:center`（原来 `items-start`，
+                   还给图标加了 `mt-0.5`）、`box-shadow:0 4px 12px rgba(0,0,0,.1)`
+                   （原来 Tailwind 的 `shadow-lg`）、`width:356px`（原来 420，**宽 64px**）、
+                   `border-radius:var(--radius)`（两边 `--radius` 都是 0.625rem，
+                   `rounded-lg` 已经对上）。外层：`VIEWPORT_OFFSET = 24px`
+                   （原来 `top-3` = 12px）、`GAP = 14px`（原来 `gap-2` = 8px）。
+
+                   图标那两条外边距也是 sonner 的：
+                   `--toast-icon-margin-start:-3px` / `--toast-icon-margin-end:4px`
+                   （`[dir=ltr]` 那一组变量）。少了它们，图标整体右移 3px、
+                   与正文只隔 6px 而不是 10px——wave 74 实测 React 的图标左边缘在
+                   x=475、本仓在 479。
+
+                   **错误态不染红边框。** 本仓原来给 error 加 `border-destructive/40`，
+                   sonner 不按类型改边框色（那是 `richColors` 才有的行为，上游没开）——
+                   类型由图标表达，与 role/aria-live 一致。
 */
 import { onMounted, onUnmounted, ref } from "vue";
 import { CircleCheck, Info, OctagonX, TriangleAlert } from "lucide-vue-next";
@@ -85,15 +105,14 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
       ref="list"
       data-testid="workspace-toaster"
       tabindex="-1"
-      class="pointer-events-none fixed inset-x-0 top-3 z-[120] mx-auto flex w-[min(92vw,420px)] flex-col gap-2"
+      class="pointer-events-none fixed inset-x-0 top-6 z-[120] mx-auto flex w-[min(92vw,356px)] flex-col gap-[14px]"
     >
       <li
         v-for="item in toast.toasts.value"
         :key="item.id"
         :role="item.kind === 'error' ? 'alert' : 'status'"
         :aria-live="item.kind === 'error' ? 'assertive' : 'polite'"
-        class="bg-popover text-popover-foreground border-border pointer-events-auto flex items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg"
-        :class="item.kind === 'error' ? 'border-destructive/40' : ''"
+        class="bg-popover text-popover-foreground border-border pointer-events-auto flex items-center gap-1.5 rounded-lg border p-4 text-[13px] shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
       >
         <!--
           图标是 `aria-hidden` 的装饰：kind 已经由 role（alert/status）与
@@ -102,7 +121,7 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
         -->
         <component
           :is="KIND_ICON[item.kind]"
-          class="mt-0.5 size-4 shrink-0"
+          class="mr-1 -ml-[3px] size-4 shrink-0"
           aria-hidden="true"
         />
         <span class="min-w-0 flex-1">{{ item.message }}</span>

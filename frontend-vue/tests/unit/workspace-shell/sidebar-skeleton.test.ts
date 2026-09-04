@@ -89,7 +89,13 @@ describe("侧栏骨架与上游 ui/sidebar.tsx 的结构合同", () => {
     expect(template).toMatch(
       /data-slot="sidebar-footer"[\s\S]{0,200}?class="[^"]*flex flex-col gap-2 p-2/,
     );
-    expect(template).toContain("h-12 w-full items-center gap-2");
+    /*
+      展开态才是 `h-12 w-full p-2`。wave 74 起收起态换成 `size-8 p-0`
+      （上游 cva 的 `group-data-[collapsible=icon]:size-8! / :p-0!`），
+      所以这一条只钉展开那一支，尺寸那一档由
+      `tests/guards/upstream-class-echo.test.ts` 双向钉。
+    */
+    expect(template).toContain("h-12 w-full p-2");
     expect(template).not.toContain("h-9 w-full items-center gap-2");
   });
 

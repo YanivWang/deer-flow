@@ -110,6 +110,74 @@ describe("照抄上游的 class 串", () => {
   });
 
   /*
+    **toast 的尺寸逐条抄 sonner 的 CSS**，不是随手挑的 Tailwind 档位。
+    出处是 `sonner/dist/index.mjs` 里 `[data-sonner-toast][data-styled=true]`：
+    `padding:16px; font-size:13px; gap:6px; align-items:center;
+     box-shadow:0 4px 12px rgba(0,0,0,.1); width:var(--width)`（`TOAST_WIDTH=356`），
+    外层 `VIEWPORT_OFFSET=24px`、`GAP=14`。
+    wave 74 两个应用同屏实测过一次：本仓原来是 420 宽 / `px-4 py-3` / 14px 字 /
+    12px 间距 / `items-start` / `shadow-lg` / `top-3` / `gap-2`——**每一条都不一样**。
+
+    错误态**不**染红边框：sonner 不按类型改边框色（那是 `richColors` 的行为，
+    上游没开），类型由图标表达。
+  */
+  it("toast 的尺寸抄的是 sonner 的那一串", () => {
+    const source = stripped("components/workspace/WorkspaceToaster.vue");
+    const item = classOfTagContaining(
+      source,
+      'v-for="item in toast.toasts',
+    ).split(/\s+/);
+    for (const token of [
+      "p-4",
+      "text-[13px]",
+      "gap-1.5",
+      "items-center",
+      "shadow-[0_4px_12px_rgba(0,0,0,0.1)]",
+    ]) {
+      expect(item, `toast 少了 ${token}`).toContain(token);
+    }
+    expect(item).not.toContain("items-start");
+    expect(source).not.toContain("border-destructive/40");
+
+    const list = classOfTagContaining(
+      source,
+      'data-testid="workspace-toaster"',
+    ).split(/\s+/);
+    expect(list).toContain("w-[min(92vw,356px)]");
+    expect(list).toContain("top-6");
+    expect(list).toContain("gap-[14px]");
+
+    /* sonner 的 `--toast-icon-margin-start:-3px` / `-end:4px`。 */
+    const icon = classOfTagContaining(source, "KIND_ICON[item.kind]").split(
+      /\s+/,
+    );
+    expect(icon).toContain("-ml-[3px]");
+    expect(icon).toContain("mr-1");
+  });
+
+  /*
+    **侧栏底部那颗触发器收起时换尺寸，不是只换内容。**
+    上游 SidebarMenuButton 的 cva：base 里 `group-data-[collapsible=icon]:size-8!`，
+    lg 档里 `group-data-[collapsible=icon]:p-0!`——收起时是一颗 32×32、内边距 0 的方钮。
+    本仓的收起态走自己的 `collapsed` ref，那两条选择器永远不成立。
+    wave 74 同屏实测：React 32×32 / padding 0，本仓 31×48 / padding 8，**高出 16px**。
+  */
+  it("侧栏底部触发器收起态是 32×32、内边距 0", () => {
+    const source = stripped("components/workspace/ThreadSidebar.vue");
+    const tag =
+      /<button\b[^>]*data-testid="workspace-nav-menu-trigger"[^>]*>/s.exec(
+        source,
+      )?.[0];
+    expect(tag, "找不到侧栏底部触发器").toBeDefined();
+    // 尺寸走 :class 的两支，不是写死在 class 里。
+    expect(/\bclass="([^"]*)"/.exec(tag!)?.[1] ?? "").not.toMatch(
+      /\b(h-12|p-2|w-full)\b/,
+    );
+    expect(tag).toContain("h-12 w-full p-2");
+    expect(tag).toContain("size-8 shrink-0 p-0");
+  });
+
+  /*
     上游 workspace-nav-chat-list.tsx:56 的禁用「Agents」入口：外层
     `cursor-not-allowed`，按钮 `text-muted-foreground/50` + SidebarMenuButton
     cva 自带的 `aria-disabled:pointer-events-none aria-disabled:opacity-50`。

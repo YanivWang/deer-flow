@@ -759,6 +759,15 @@ function openSettingsDialog(section: "appearance" | "about") {
 
               `h-12` 来自上游的 `<SidebarMenuButton size="lg">`（cva 的 lg 档就是
               `h-12 text-sm`），此前本仓写的是 h-9，整块 footer 因此矮 12px。
+
+              **收起态换尺寸，不是只换内容。** 上游 SidebarMenuButton 的 cva 里有
+              `group-data-[collapsible=icon]:size-8!`（base）与
+              `group-data-[collapsible=icon]:p-0!`（lg 档），两条都带 `!`，
+              后定义的 `p-0` 赢——收起时它是一颗 **32×32、内边距 0** 的方钮。
+              本仓的收起态不是 `data-collapsible=icon`，是自己的 `collapsed` ref，
+              所以那两条选择器永远不成立：此前收起时仍然是 `h-12 w-full p-2`。
+              wave 74 两个应用同屏实测：React 32×32 / padding 0，本仓 **31×48 / padding 8**
+              ——**整块 footer 高出 16px**。
               内层那个 div 也是上游的：图标与文字住在
               `text-muted-foreground flex w-full items-center gap-2` 里，
               按钮本身不带前景色——收起态换的是**整块内容**（居中的单图标），
@@ -778,7 +787,10 @@ function openSettingsDialog(section: "appearance" | "about") {
                 data-size="lg"
                 data-testid="workspace-nav-menu-trigger"
                 :aria-label="$i18n.t.value.workspace.settingsAndMore"
-                class="peer/menu-button hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground flex h-12 w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm"
+                class="peer/menu-button hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground flex items-center gap-2 overflow-hidden rounded-md text-left text-sm"
+                :class="
+                  sidebarExpanded ? 'h-12 w-full p-2' : 'size-8 shrink-0 p-0'
+                "
               >
                 <div
                   v-if="sidebarExpanded"
