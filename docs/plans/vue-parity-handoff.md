@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 65，2026-09-04）
+## 当前状态（截至 wave 67，2026-09-04）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66。
 - **动过 `frontend/` 的是十五轮**（wave 52 实测订正，wave 62 又加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -64,10 +64,12 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 64 收工时逐条跑过）
+### 门禁实测值（wave 66 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；252 文件 / 2095 单测，词典 944 key、18 unused
+make -C frontend-vue verify        exit 0；253 文件 / 2098 单测，词典 944 key、18 unused
+make -C frontend-vue asset-budget  exit 0（wave 66 起才是绿的，**从此进每轮清单**）
+make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefile 的 audit 上方
 make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55% / 行 74.9%
                                    **诊断工具，不进 verify，没有阈值**
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 37 处 / 16 个文件）
@@ -111,6 +113,13 @@ make -C frontend-vue e2e-external  3
 `ui-primitives-a11y.spec.ts:288` 的 hover tooltip 在 load 22 时红过一次。
 **load 降到 5 之后三套全绿。** 这台机器上 `webServer` 的 240s 在 load>20 时不够用，
 遇到就等负载，不要先去查产品。
+
+**第五条已知抖动（wave 66 新增）**：`tests/e2e/thread-history.spec.ts:695`
+（`new chat does not show previous optimistic user message after client-side navigation`）
+报 `element(s) not found`。**因果够不着**：那一轮唯一影响产物的改动是
+`chunkFileNames`，只改**文件名**、不改分组也不改执行，而**同一份改动在同一轮更早
+那次 `make e2e` 里这条是绿的**。整份 spec `--repeat-each=5` **90/90 全过**。
+机制与前四条同类：异步 + 固定超时。
 
 **第四条已知抖动（wave 54 新增）**：`tests/e2e/i18n-theme.spec.ts:45` 里
 `sidebarPanel.locator('[data-sidebar="trigger"]').click()` 30s 超时，
@@ -206,7 +215,59 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 64）做了什么：**把覆盖率接上，并订正 wave 63 的误判**
+## 上一轮（wave 65~66）做了什么：**全套跑一遍,三处红全部定性并处理**
+
+用户要求「全面测试 frontend-vue」，14 项门禁串行跑完，**3 项红**。
+
+### 红一：`e2e-mock` —— **是我 wave 62 埋的**（wave 65 修）
+
+`i18n-theme.spec.ts:45` 报
+`strict mode violation: getByLabel('复制到剪贴板') resolved to 2 elements`。
+wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元素从 1 个变 3 个，
+那条裸定位器能不能唯一**取决于轮次操作条那一刻渲染没渲染**。
+**它在 wave 62 与 wave 64 两次全跑里都是绿的**——**绿过两次不等于它是对的。**
+
+两颗同名按钮**不是缺陷**（上游 `artifact-file-detail.tsx:563` 用的也是同一句），
+所以改的是定位器：`ArtifactPanel.vue` 的 `<header>` 加 `data-testid`，用例限定作用域。
+变异实测（拿掉 testid → 当场红）+ `--repeat-each=6` **42/42**。
+
+### 红二：`asset-budget` —— **一个测错了东西的门禁**（wave 66）
+
+它报 `vendor-ui 728591 > 380000`，而注释写着这一格装的是 Reka 的那些 primitive。
+**量出来：最大的两个 chunk（320 KB / 192 KB）一个匹配包都不含。**
+根因是 chunk 名字按「chunk 里任意一个模块 id 命中」贴，而原来的种子里有
+`lucide-vue-next|cva|clsx|tailwind-merge`——**几乎每个组件都 import**。
+
+收窄种子（24→10 chunk）+ **删掉注释里那个做不到的承诺**（这一格是漂移警报，
+不是字节归属；收窄之后仍有 4 个 chunk 两个标记都搜不到）+ 按实测重定预算。
+新门禁 `chunk-buckets.test.ts` 钉「预算的桶 ↔ 命名规则的桶」双向对应。
+**route-payload 复跑全绿——改名不动分组，用户下载的东西一个字节没变。**
+
+### 红三：`audit` —— **逐条查可达性，结论是不动**（wave 66）
+
+三个 high 全部不可达（`js-yaml` 0 个客户端 chunk；`nanoid` 要传自定义生成器；
+`lodash-es` 的 `_.template` 注入，chevrotain 不这么用）。
+**mermaid 那条有意不升**：上游经 `@streamdown/mermaid` 解析成 **11.12.2**，
+本仓精确锁同一版**为的是两个应用画出同一张图**，而 mermaid 渲染直接进对照取样面。
+单边升级台账当场分叉；两边一起升要覆盖被 vendored 的依赖树。
+**归属方是上游，不是这个 fork。** 分诊写进 Makefile 与 README。
+
+### 顺带
+
+`asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
+之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 下一轮（wave 67）：**没有必须做的**
+
+产品面、记录面、工具链三条线都收口了。**唯一还挂着的是那条 pending 场景**
+（等上游 history/stream 竞态收敛，按 `$pendingReasons` 的脚本连取 20 次验证），
+**那不由本仓决定。**
+
+**如果要开，先说清楚「这一轮要让哪个用户的什么体验变好」。**
+覆盖率地图（`app/components` 66%）**不是待办清单**——那一块的行为大量由
+e2e + 对照台账守着，在那个数里看不见。
+
+## wave 64 做了什么：**把覆盖率接上，并订正 wave 63 的误判**
 
 ### 订正：不是「配置工程」，是一个 devDependency 装错了大版本
 
@@ -265,18 +326,7 @@ AssertionError: coverageFilesDirectory is required
 | **target 改名而 `.PHONY` 没跟** | **第一次 GREEN**——那条门禁当时还不存在，写出来之后 RED |
 | 反方向：`.PHONY` 里去掉 `coverage` | RED |
 
-## 下一轮（wave 65）：**仍然没有必须做的；但覆盖率给了第一份「往哪看」的地图**
-
-产品面的账没有变化（九处本仓更好、四条零价值记账、一条 React 写死英文文案），
-那条 pending 仍然要等上游竞态收敛。
-
-**新增的唯一线索是覆盖率地图**，而且要按它自己的说明书用：
-`app/components` **66%**（3995/6052 行）是最大的一块，但**低覆盖不等于该补测试**
-——先问「这一块出过 bug 吗 / 它的行为有没有别的门禁在守」。
-本仓 `app/components` 的行为大量由 **e2e + 对照台账**守着，那些在这个数里看不见。
-**别把 66% 当待办，把它当「下次真出 bug 时先看哪里」。**
-
-## 上上轮（wave 63）做了什么：**去补最后一条场景，量完是「补不了」**
+## wave 63 做了什么：**去补最后一条场景，量完是「补不了」**
 
 覆盖率棘轮里 `chat-thread-init-ordering` 的翻案判据是「竞态修好之后连取 5 次
 只出现一个终态」，而 wave 62 刚说竞态没了。去验证 —— **判据没满足，
@@ -903,7 +953,7 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 192 条在记忆文件里）
+## 其他常踩的坑（完整 194 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -942,6 +992,16 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   **mock 复现不了的要回到当初观测它的环境**，而且 replay Gateway 上**提示词要用
   录制里的原句**——换一句会 replay miss，量到的不是那一屏。
   **竞态类的账要记「怎么复现」，不要只记「什么现象」。**
+- **「按名字聚合」的预算，名字来自哪一个模块决定了它有多不像话**（线索 193，wave 66）。
+  `vendor-ui` 的种子里有 `lucide/cva/clsx/tailwind-merge`——几乎每个组件都 import，
+  于是任何产品 chunk 只要碰过一个图标就被叫成 vendor-ui，最大的两个（320/192 KB）
+  **一个匹配包都不含**。收窄种子只能减少误标（24→10），**「按 chunk 名字做字节归属」
+  本身做不到**：Rollup 把 vendor 与产品代码 co-locate，名字只取自其中一个模块。
+  **正确做法是把注释里那个做不到的承诺删掉**，而不是继续抬数字或去拆包——
+  真正量用户下载什么的是 `route-payload-budget.json`，两条没有对应关系。
+- **一条长期红着、又不在任何门禁清单里的 gate，等于不存在**（线索 194，wave 66）。
+  `asset-budget` 的预算定于 2026-08-25，之后 UI 一路加，它就一直红着；
+  `audit` 同理。**收工清单里没有的门禁，红多久都没人知道。**
 - **一个「看起来像架构不支持」的错，先查依赖版本**（线索 192，wave 64 补）。
   `coverageFilesDirectory is required` 出现在每个 worker 上、三个 project 全一样、
   summary 是 `0/14384`——**长得像「这套配置不支持覆盖率」，实际是 provider 装了
