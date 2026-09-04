@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 67，2026-09-04）
+## 当前状态（截至 wave 68，2026-09-04）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68。
 - **动过 `frontend/` 的是十五轮**（wave 52 实测订正，wave 62 又加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -29,6 +29,7 @@
   **边界规则本身有机器在守，需要人记的只有「这类改动做过哪些轮」。**
   最近三轮的内容：wave 40 重连预算耗尽后那颗键在说反话；wave 39 命令面板搜索框的
   可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~59 都没动过。
+
 - **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
 - 覆盖率棘轮：covered **24**，pending **仍是 1 条**（`chat-thread-init-ordering`）——
   **wave 63 用 23 个样本重测过，仍然不能加**（React 两个终态 19B/4A，Vue 23/23 单一）。
@@ -64,10 +65,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 66 收工时逐条跑过）
+### 门禁实测值（wave 68 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；253 文件 / 2098 单测，词典 944 key、18 unused
+make -C frontend-vue verify        exit 0；253 文件 / 2100 单测，词典 944 key、18 unused
 make -C frontend-vue asset-budget  exit 0（wave 66 起才是绿的，**从此进每轮清单**）
 make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefile 的 audit 上方
 make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55% / 行 74.9%
@@ -87,7 +88,7 @@ make -C frontend-vue e2e-external  3
 
 > **wave 40 实测：`test:e2e` 的 `webServer` 那 120 秒窗口在这台机器上喂不饱一次
 > `next build`**（负载 30+ 时编译要 6.6 分钟，`Timed out waiting 120000ms from
-> config.webServer` 在任何测试跑起来之前就炸）。**绕法**：先自己 `next build`，
+config.webServer` 在任何测试跑起来之前就炸）。**绕法**：先自己 `next build`，
 > 起 `PORT=3002 SKIP_ENV_VALIDATION=1 DEER_FLOW_AUTH_DISABLED=1 next start`，
 > 再 `PLAYWRIGHT_SKIP_WEB_SERVER=1 pnpm exec playwright test`。
 > **注意超时那一次会把 `.next` 留成半成品**（`next start` 会说
@@ -103,7 +104,7 @@ make -C frontend-vue e2e-external  3
    拿到 401、`fetchWithAuth` 才 `window.location.href`。wave 29 在 **load 41** 时红过
    一次，随后在 load 3~10 时 `--repeat-each=5` **5/5 全绿**。
    因果链是 `layouts/workspace.vue → ThreadSidebar → WorkspaceChannelsList →
-   useChannelConnections → providersQuery → fetchWithAuth 401`，
+useChannelConnections → providersQuery → fetchWithAuth 401`，
    wave 29 改的三个文件一个都不在这条链上；而且 **ThreadSidebar 本来就 import
    `ui/dialog`**，所以那一轮往 ChatComposer 里加的 Dialog 没给这条路由的
    critical path 添任何模块（同一次跑里 `/workspace/chats/new` 的 route-payload 是过的）。
@@ -257,15 +258,86 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
 
-## 下一轮（wave 67）：**没有必须做的**
+## 上一轮（wave 68）做了什么：**用户报了一处间距，量下来一屏十六处**
 
-产品面、记录面、工具链三条线都收口了。**唯一还挂着的是那条 pending 场景**
-（等上游 history/stream 竞态收敛，按 `$pendingReasons` 的脚本连取 20 次验证），
-**那不由本仓决定。**
+提交 `e775ba9e`。**入口是用户自己看出来的**：「标题和描述怎么跟输入框没有间距」。
 
-**如果要开，先说清楚「这一轮要让哪个用户的什么体验变好」。**
-覆盖率地图（`app/components` 66%）**不是待办清单**——那一块的行为大量由
-e2e + 对照台账守着，在那个数里看不见。
+### 最值钱的一条不是样式：撤销优化会吞掉用户后来打的字
+
+上游 `input-box.tsx:1339` 的撤销判据是三条与——没在润色中、有过一次成功改写、
+**而且输入框现在的文本仍逐字等于那一版改写**。本仓只有前两条。用户润色完接着
+往下打字时，那颗键仍写着「撤销优化」，按下去把新打的一起换回润色前那一版，
+且没有二次撤销。补第三条（新增 `polishRewritten`）。
+
+### 十六处的分布
+
+| 处    | 内容                                                                                                                                                            |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | 撤销判据缺第三条 → 数据丢失                                                                                                                                     |
+| 2~4   | 润色中的胶囊：没 `role="status"`/`aria-live`、8px 脉冲点而非 12px 转圈、取消键被放到页脚顶替优化键                                                              |
+| 5     | 撤销态不换 `Undo2Icon`                                                                                                                                          |
+| 6     | 欢迎区渲染成 composer 的**兄弟节点** → 零高度锚点挂到外层容器（top 304 而非 288），宽 2px 之差让段落少折一行                                                    |
+| 7~9   | 三颗图标键 `size-8`（32×32）而上游 `h-8 px-2` + 12px 图标（28×32）                                                                                              |
+| 10~11 | 优化键多渲染「优化输入」（28px→82px）、且没有 Tooltip                                                                                                           |
+| 12    | 语音键用原生 `:title` 而不是 Tooltip 组件                                                                                                                       |
+| 13    | 优化键图标 `WandSparkles` 而上游 `SparklesIcon`                                                                                                                 |
+| 14~16 | 登录页**整页绕开 Input/Button primitive** 手写 class：输入框 42/16px vs 36/14px、复选框 13px vs 16px、提交键 40px vs 36px、链接撑满整行 vs 行内、少一层字段分组 |
+
+**这十六处 `ariaSnapshot()` 一处都看不见**，对照台账也全绿——两边 role、可访问名、
+层级、顺序**全都一样**，只是画在不同位置和尺寸上；`sampleGeometry` 又只量场景
+settle 锚点（线索 137）。所以给 `dom-parity` 加了几何档（按 `data-testid`、
+否则 role+可访问名连接，比位置/尺寸/字号/内边距/圆角/边框）。
+
+### 加完当轮，这把新尺子自己踩了线索 176 三次
+
+1. **`diffBoxes` 不报连上了几个。** 补上计数后当场炸出问题——三个完全不同的页面
+   都恰好「连上 7 个」。
+2. **`waitUntil: "networkidle"` 在开发服务器上永不成立**（HMR 长连接）。landing 每次
+   走到 30s 超时，catch 里**静默返回空 boxes**，印出来是「几何差异 0 处」，
+   和「逐条量过、确实一样」长得一模一样。改 `domcontentloaded` + 有上限静置后
+   landing 才真的加载（连上 12 个 / 27 处差异，豁免区只记录）。
+3. **不校验落地 URL。** `/setup` 与 `/showcase/<id>` 在本机这套 Docker 栈上两边都要
+   登录、各自跳 `/login`，于是拍到的是**同一张登录页**，aria 与几何自然逐字相同。
+   `showcase` 是当轮刚加的场景，**差点把「第三次量登录页」当成「工作区对齐了」
+   写进结论**。现在跳转会明说「下面的 0 不构成这一屏的对齐证据」。
+
+### 视觉基线重录九张（取舍）
+
+零容差下逐张量两遍：六张逐像素稳定（dark-mode 11895 / empty-chat 9167 /
+streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
+只有 artifact panel 带 ~80px 抖动（249/332）。**全在 `maxDiffPixelRatio: 0.01`
+的地板之下才没红**——留着不录等于把容差预算花在一次已经发生的改动上。
+注意 `-u all` 会无条件重写（含逐像素相同的那张），字节差里混着编码噪声，
+**不能拿它当「变了」的证据**；正确做法是把容差临时压到 0 再 `--update-snapshots`。
+
+### 三条旧断言改了钉法（不是为了变绿）
+
+两条钉「按钮的可见文字」，而上游这颗键三态都只有一颗图标——**拿可见文字当断言
+等于把落差写进合同**，改成钉可访问名 + 图标类名。一条钉含换行缩进的源码子串，
+套上 Tooltip 后 prettier 折了行、表达式一个字没变就红了，改成压掉空白再比。
+
+### 量过的否定结论
+
+`next` 参数编码**不是缺陷**。实测 React 跳 `next=%2Fshowcase%2F…`、Vue 跳
+`next=/showcase/…`，但两边源码都调 `encodeURIComponent`，差别来自 vue-router
+导航后重新序列化 query 时不给 `/` 重新编码；登录页读的是 `route.query.next`
+（已解码），两种形态回跳一致。
+
+### 负向验证
+
+六条变异逐条落盘后只跑 composer 单测，全部转红，**无假绿**：撤销判据退回旧式 1、
+撤销态画回 Sparkles 1、胶囊去 role/aria-live 1、取消键换 testid 2、
+页脚优化键润色时消失 1、语音键丢 disabled 1。
+
+## 下一轮：**几何这一档只够得着免登录页**
+
+`dom-parity` 现在只能扫 landing / login 两屏（setup 与 showcase 都跳登录）。
+**工作区那些屏要么把几何接进对照台账**（`sampleGeometry` 现在只量 settle 锚点，
+这是线索 137 的正题），**要么给 `dom-parity` 接上两边的 mock 网关**——
+后者是重造一遍台账已有的东西，前者动的是有基线的门禁。**先想清楚再动。**
+
+**如果要开别的，先说清楚「这一轮要让哪个用户的什么体验变好」。**
+覆盖率地图（`app/components` 66%）**不是待办清单**。
 
 ## wave 64 做了什么：**把覆盖率接上，并订正 wave 63 的误判**
 
@@ -292,12 +364,12 @@ AssertionError: coverageFilesDirectory is required
 语句 73.22%   分支 64.72%   函数 70.55%   行 74.90%
 ```
 
-| 目录 | 行覆盖 | | 目录 | 行覆盖 |
-| --- | --- | --- | --- | --- |
-| `app/lib` | 100.0% | | `app/composables` | 72.4% |
-| `packages/agent-core` | 94.3% | | **`app/components`** | **66.0%**（3995/6052） |
-| `app/pages` | 91.6% | | `server/utils` | 21.9% |
-| `app/core` | 85.5% | | `app/layouts` / `server/routes` / `app.vue` | **0%** |
+| 目录                  | 行覆盖 |     | 目录                                        | 行覆盖                 |
+| --------------------- | ------ | --- | ------------------------------------------- | ---------------------- |
+| `app/lib`             | 100.0% |     | `app/composables`                           | 72.4%                  |
+| `packages/agent-core` | 94.3%  |     | **`app/components`**                        | **66.0%**（3995/6052） |
+| `app/pages`           | 91.6%  |     | `server/utils`                              | 21.9%                  |
+| `app/core`            | 85.5%  |     | `app/layouts` / `server/routes` / `app.vue` | **0%**                 |
 
 **那几个 0% 不代表没测**：layouts、Nitro 路由、`app.vue` 靠 **e2e** 覆盖，
 而 v8 只看得见单测进程里执行的代码。**这个数是「单测行覆盖」，不是「测试覆盖」。**
@@ -317,14 +389,14 @@ AssertionError: coverageFilesDirectory is required
 
 ### 负向验证 6/6 全红，其中两条第一次是假绿
 
-| 变异 | 结果 |
-| --- | --- |
-| provider 跳到大版本 5（正是踩过的坑） | RED |
-| 整条依赖被删掉 | RED |
-| 只升 vitest 不升 provider | RED |
-| **LOCKSTEP 清单清空** | **第一次 GREEN**——两个 for 都不进循环，断言全部落空却照样绿（**线索 176 本人**）。补 `expect(LOCKSTEP.length).toBeGreaterThan(0)` 后 RED |
-| **target 改名而 `.PHONY` 没跟** | **第一次 GREEN**——那条门禁当时还不存在，写出来之后 RED |
-| 反方向：`.PHONY` 里去掉 `coverage` | RED |
+| 变异                                  | 结果                                                                                                                                     |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| provider 跳到大版本 5（正是踩过的坑） | RED                                                                                                                                      |
+| 整条依赖被删掉                        | RED                                                                                                                                      |
+| 只升 vitest 不升 provider             | RED                                                                                                                                      |
+| **LOCKSTEP 清单清空**                 | **第一次 GREEN**——两个 for 都不进循环，断言全部落空却照样绿（**线索 176 本人**）。补 `expect(LOCKSTEP.length).toBeGreaterThan(0)` 后 RED |
+| **target 改名而 `.PHONY` 没跟**       | **第一次 GREEN**——那条门禁当时还不存在，写出来之后 RED                                                                                   |
+| 反方向：`.PHONY` 里去掉 `coverage`    | RED                                                                                                                                      |
 
 ## wave 63 做了什么：**去补最后一条场景，量完是「补不了」**
 
@@ -409,11 +481,11 @@ Vue 23/23 单一。变的只是 **A 不再是吸收态**（wave 29 时 5 次里 
 
 探针里顺手加了一条「跑完一轮之后，屏幕上还有哪些交互控件没有可访问名」：
 
-| 控件 | React | Vue |
-| --- | --- | --- |
-| 复制键（human turn） | 无名 | 无名（**照抄的**） |
-| 复制键（assistant turn） | 无名 | 无名（**照抄的**） |
-| 侧栏底部设置触发器（收起态） | 无名 | 无名 |
+| 控件                         | React | Vue                |
+| ---------------------------- | ----- | ------------------ |
+| 复制键（human turn）         | 无名  | 无名（**照抄的**） |
+| 复制键（assistant turn）     | 无名  | 无名（**照抄的**） |
+| 侧栏底部设置触发器（收起态） | 无名  | 无名               |
 
 **tooltip 不是可访问名** —— Radix / Reka 都把它挂成 `aria-describedby`，
 读屏器念出来就是一颗「按钮」。两个 Vue 文件头此前都写着「不给可访问名，
@@ -508,15 +580,15 @@ e2e 五套全绿、数字与 wave 59/60 逐条相同。
 全模块 478 份文件写着这一行，而只有 `【架构位置】` 有人读
 （`tests/architecture.test.ts:373`，且只读 L2 那一档）。逐条撞了一遍：
 
-| 文件 | 头里点的名 | 文件真正导出的 |
-| --- | --- | --- |
-| `app/components/ui/chain-of-thought/context.ts` | `provideChainOfThought` | `injectChainOfThought`（+ key + interface） |
-| `app/components/ui/effects/confetti.ts` | `confettiOrigin` | `emitConfettiFrom` |
-| `app/components/ui/effects/flickering-grid.ts` | `updateFlickeringOpacities` | `prefersReducedMotion` |
-| `app/components/workspace/browser-view/frame-buffer.ts` | `createFrameBuffer` | `LatestBrowserFrameBuffer`（class） |
-| `app/composables/useSkillsCatalog.ts` | `SKILLS_CATALOG_QUERY_KEY` | `SKILLS_QUERY_KEY` |
-| `app/core/auth/session.ts` | `probeAuthSession` | `probeSession` |
-| `app/core/input/keyboard.ts` | `isEditableEventTarget` | `isEditableKeyboardTarget` |
+| 文件                                                    | 头里点的名                  | 文件真正导出的                              |
+| ------------------------------------------------------- | --------------------------- | ------------------------------------------- |
+| `app/components/ui/chain-of-thought/context.ts`         | `provideChainOfThought`     | `injectChainOfThought`（+ key + interface） |
+| `app/components/ui/effects/confetti.ts`                 | `confettiOrigin`            | `emitConfettiFrom`                          |
+| `app/components/ui/effects/flickering-grid.ts`          | `updateFlickeringOpacities` | `prefersReducedMotion`                      |
+| `app/components/workspace/browser-view/frame-buffer.ts` | `createFrameBuffer`         | `LatestBrowserFrameBuffer`（class）         |
+| `app/composables/useSkillsCatalog.ts`                   | `SKILLS_CATALOG_QUERY_KEY`  | `SKILLS_QUERY_KEY`                          |
+| `app/core/auth/session.ts`                              | `probeAuthSession`          | `probeSession`                              |
+| `app/core/input/keyboard.ts`                            | `isEditableEventTarget`     | `isEditableKeyboardTarget`                  |
 
 **七个幽灵名在整个 checkout 里各自只有一处——自己那一行。** 真名的引入提交
 早于或等于幽灵名的引入提交，所以**七条全都是写下那天就错的**，没有一条是改名漂掉的。
@@ -546,12 +618,12 @@ e2e 五套全绿、数字与 wave 59/60 逐条相同。
 
 ### 三：`make verify` 的步骤表，四处散文互不相同、且都和 recipe 对不上
 
-| 出处 | 写的 | 缺 / 多 |
-| --- | --- | --- |
-| `Makefile` help | lint + format-check + typecheck + unit + build | 缺 i18n / OpenAPI / 契约常量 / 独立性 |
-| `ARCHITECTURE.md:361` | …、**清单**、i18n、OpenAPI、独立性、build | **多一个幽灵步骤**，缺契约常量 |
-| `README_zh.md:66` | …、i18n、OpenAPI、独立性、build | 缺契约常量 |
-| `README.md:78` | …, i18n, OpenAPI, standalone, build | 缺契约常量 |
+| 出处                  | 写的                                           | 缺 / 多                               |
+| --------------------- | ---------------------------------------------- | ------------------------------------- |
+| `Makefile` help       | lint + format-check + typecheck + unit + build | 缺 i18n / OpenAPI / 契约常量 / 独立性 |
+| `ARCHITECTURE.md:361` | …、**清单**、i18n、OpenAPI、独立性、build      | **多一个幽灵步骤**，缺契约常量        |
+| `README_zh.md:66`     | …、i18n、OpenAPI、独立性、build                | 缺契约常量                            |
+| `README.md:78`        | …, i18n, OpenAPI, standalone, build            | 缺契约常量                            |
 
 `清单` 是 `collected-check`，`1209651f`（2026-08-25 **00:11**）已把它从 verify 里删掉，
 而这句话是同一天 **12:57** 的 `c6fc60b4` 写下的——**提交说明恰好是
@@ -713,8 +785,6 @@ issue #3482 与上游逐字同、`ui/sidebar.tsx` 路径在）。
 
 以下保留 wave 28/33 当时的分析。
 
-
-
 - **差异是真的**：上游 `(auth)/layout.tsx` 见到 authenticated 就服务端
   `redirect("/workspace")`。真实 OAuth 流程走到 callback 时 session cookie 已经在了，
   于是**回跳带的 `?next=` 深链总是被丢掉**，那个页面对 `next` 的处理是死代码。
@@ -844,6 +914,7 @@ wave 29 记了四条，wave 62 逐条量了一遍（replay Gateway，React/Vue �
   ```
 
   两条的交集非空时才翻案。**wave 58 实测：交集为空。**
+
 - ~~run 成功结束之后退回「重新取的 checkpoint」~~ —— **wave 41 做完了。**
   `useThreadStream` 的 `onSettled` 在 `completed` 上重取一次，走新加的
   `runner.refreshDurableState`（`seedDurableState` 的 `idle` 判据会把这一帧**无声丢掉**
@@ -872,12 +943,12 @@ wave 29 记了四条，wave 62 逐条量了一遍（replay Gateway，React/Vue �
   122 条），那是一次工具投资而不是一轮平替，**先问它值不值**。
 - **inputBox 下的 voiceInputStop 是上游自己也零消费的死条目**，有意留着，**不是缺 UI**。
 - ~~chip 编辑区~~ —— **wave 33 做完了**（span + `aria-multiline` + `aria-placeholder`
-  + `data-empty`/`data-placeholder` 的空态占位 + `tabindex`）。
-  ~~只剩布局那两个类（`min-h-10 flex-1`）~~ —— **这条记错了，wave 45 翻案**：
-  那两个类从 **wave 37（`7eea78f0`）** 起就从元素上去掉了（那一轮把 chip 行改成上游的
-  行内可滚行），只有 `ChatComposer.vue` 的注释和这条账留在原地，**一挂八轮**。
-  现在那个 span 的 class 里没有任何布局类，尺寸由外层容器给，与上游同形。
-  **这一条已结清。**
+  - `data-empty`/`data-placeholder` 的空态占位 + `tabindex`）。
+    ~~只剩布局那两个类（`min-h-10 flex-1`）~~ —— **这条记错了，wave 45 翻案**：
+    那两个类从 **wave 37（`7eea78f0`）** 起就从元素上去掉了（那一轮把 chip 行改成上游的
+    行内可滚行），只有 `ChatComposer.vue` 的注释和这条账留在原地，**一挂八轮**。
+    现在那个 span 的 class 里没有任何布局类，尺寸由外层容器给，与上游同形。
+    **这一条已结清。**
 
 ### 剩余 18 条 unused 词条（**34 逐条撞过上游；35/36/38 各做掉四/二/二条**）
 
@@ -1034,6 +1105,22 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   **凡是「清单 + 逐条检查」的门禁，都要再问一句：清单本身谁在维护？**
   修法是让清单**可推导**（实测集合 == 清单，双向），再给它一条顺序断言，
   让插入位置唯一——顺序对这份清单没有语义，但没有顺序规则，下一个人只会往末尾追加。
+- **一把新尺子最先要量的是它自己**（线索 186~188，wave 68 一轮踩了三次）。
+  几何档加进 `dom-parity` 的当轮：① 不报「连上了几个元素」，于是三个完全不同的
+  页面都「连上 7 个」这种事没人看得见；② `waitUntil: "networkidle"` 在开发服务器上
+  永不成立，超时后 catch 里**静默返回空数据**，印出来的「差异 0 处」和「量过、
+  确实一样」逐字相同；③ 不校验落地 URL，两边都跳登录页时**拍到的是同一张页面**，
+  0 差异是白送的。**判据：任何输出 0 的工具，都要能回答「这个 0 是算出来的、
+  还是没算」**——这是线索 176 的同一条，只是这次踩它的是我自己刚写的工具。
+- **拿「可见文字」当断言，可能是把落差写进合同**（wave 68）。两条老用例钉
+  `button.text()` 等于「优化输入」，而上游那颗键三态都只有一颗图标——那段文字
+  本身就是差异。图标按钮钉**可访问名 + 图标类名**，不钉可见文字。
+  同理，钉「含换行缩进的源码子串」钉的是格式不是语义，包一层组件就会假红。
+- **视觉基线的容差地板会静默吃掉真实改动**（wave 68）。`maxDiffPixelRatio: 0.01`
+  之下，九张里八张都变了却全绿。**留着不录 = 把容差预算花在一次已经发生的改动上**，
+  下一次回归的余量就少了。量法：把容差**临时压到 0** 再 `--update-snapshots`，
+  并**跑两遍**分清「稳定 = 我改的」与「每次不同 = 固有抖动」。
+  **别用 `-u all`**：它无条件重写，字节差里混着 PNG 编码噪声，不构成「变了」的证据。
 - **翻案判据写太松，会被毫不相干的东西误触发，和写错一样坏**（线索 182）。
   好判据要能把「该翻」和「不该翻」分开——as-child 那条收紧成两条 grep 的**交集**才够。
 - **一栏「零消费者」的元数据，写错了不会有任何征兆——它长得和写对的一模一样**
