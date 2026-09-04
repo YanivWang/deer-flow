@@ -14,7 +14,7 @@
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76。
 - **动过 `frontend/` 的是十七轮**（wave 52 实测订正，wave 62 / 73 / 74 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -30,7 +30,9 @@
   最近三轮的内容：wave 40 重连预算耗尽后那颗键在说反话；wave 39 命令面板搜索框的
   可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~59 都没动过。
 
-- **对照台账 0 行**，**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
+- **对照台账 23 行**（wave 76 起——几何档接上了交互后的锚点，量出 27 处此前看不见的差异，
+  当轮修掉 4 处），**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
+  **这 23 行一条都不是回归**，逐条列在「下一轮」那一节。
 - 覆盖率棘轮：covered **24**，pending **仍是 1 条**（`chat-thread-init-ordering`）——
   **wave 63 用 23 个样本重测过，仍然不能加**（React 两个终态 19B/4A，Vue 23/23 单一）。
   翻案判据已从「连取 5 次」**收紧到连取 20 次**，连同复现脚本一起写在 `$pendingReasons` 里。
@@ -65,7 +67,7 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 75 收工时逐条跑过）
+### 门禁实测值（wave 76 收工时逐条跑过）
 
 ```
 make -C frontend-vue verify        exit 0；259 文件 / 2153 单测，词典 942 key、18 unused
@@ -77,7 +79,7 @@ make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefil
 make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55% / 行 74.9%
                                    **诊断工具，不进 verify，没有阈值**
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 39 处 / 17 个文件）
-make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
+make -C frontend-vue e2e-parity    47    台账 **23 行**，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
 make -C frontend-vue e2e-visual    8    **不在 make e2e 里**；wave 74 同样一张没重录
@@ -180,7 +182,12 @@ ls frontend/.next/BUILD_ID frontend-vue/.output/server/index.mjs frontend-vue/.o
 
 ## 四条硬规则
 
-1. **台账保持 0。** 不要用 `make parity-accept` 收工。
+1. **台账只能缩短。** 不要用 `make parity-accept` 收工。
+   （wave 76 之前这条写的是「保持 0」。那一轮把几何档接到交互后的锚点上，
+   量出 27 处**一直存在、此前没有任何工具够得着**的差异，accept 了其中 23 行
+   ——**破例的前提是先证明它们不是回归**：把那几轮动过的文件还原成 wave 72 之前
+   的版本重跑一次逐条对比。**这条规则防的是「新回归被顺手 accept 掉」，
+   不是「清单必须是空的」**——它从 1716 行开始，一直在缩。）
    **真正的判据是 `e2e-parity` 本身**——`diff.spec.ts` 做的是
    `expect(entries).toEqual(baseline.entries)`，**整棵结构深比**，
    新增、消失、内容变更、场景增减全覆盖，比「NEW/GONE 都是 0」更严。
@@ -284,6 +291,47 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 76）做了什么：**几何档接上交互后的锚点，量出 27 处此前看不见的差异**
+
+提交 `e96f0adf`。这是线索 137 的正题：`sampleGeometry` 只取 `settle` 里的
+`visible` 锚点，而 settle 跑在 steps 之前——**靠交互才出现的东西，位置永远进不了台账**。
+
+### 改法与两处配套
+
+`steps` 里的 `visible` 也当锚点。原来那句「click/fill 的目标在交互后可能已经移动
+或消失」**只对 click/fill 成立**——`visible` 是「这次交互该让什么出现」，
+场景本身就在等它稳定。click / fill 的目标仍然不取。
+
+- **每个锚点最多等 2 秒。** `steps` 里的 `visible` 到取样时可能已经被后续步骤换掉
+  （`artifact-batched-stream` 一路点过好几个文件），`locator.evaluate` 的 auto-wait
+  用默认超时就是每个 30 秒——**第一版把 diff 用例从 4 分钟拖到 10 分钟超时**，
+  而报错是 context 被拆时的 `page.route: Target page ... has been closed`，
+  **完全看不出真正的原因**。
+- **两边都没取到就跳过。** 两个应用同时没有这个锚点，就没有可比的几何；
+  一边有一边没有仍然报。
+
+### 先证明了一条都不是 waves 72~75 的回归
+
+把这几轮动过的四份文件（三份 dropdown primitive + SidecarPanel）**还原成 wave 72
+之前的版本重跑一次**，34 行新增逐条对比——只有一处不同，而那一处是**改好了**
+（mode 菜单项高度 Δ-12 → Δ4，wave 75 的 dropdown 合同修的）。
+**这一步是 accept 的前提**，不是事后解释。
+
+### 当轮修掉四行
+
+- **sidecar 面板根画了底色**：上游 `sidecar-panel.tsx:527` 一条 `bg-*` 都没有，
+  底色由外层容器给。实测 React `rgba(0,0,0,0)` / 本仓 `rgba(253,250,243,255)`。
+  两层都涂底色时看不出差别，**外层一换就露馅**。
+- **推理档位菜单不按选中态染色**：上游每项传
+  `选中 ? "text-accent-foreground" : "text-muted-foreground/65"`
+  ——**没选中的几档是暗的**；本仓一项都不染，四档看起来一模一样，
+  只有单选圆点在区分。内层结构与多余的 `py-2` 一并对齐（高度 Δ-4 → 0）。
+
+### 负向验证
+
+把 sidecar 的底色画回去，`e2e-parity` **当场红**并报出那一行——
+**那个锚点在 wave 76 之前根本不被取样**。两处颜色修改另有源码级守卫（秒级红）。
 
 ## 上一轮（wave 75）做了什么：**icon-parity 的清单归零，一半功劳属于尺子自己**
 
@@ -963,12 +1011,53 @@ Toaster 关闭键）全部处理完，做法与理由见 wave 73 那一节。
 6px 间距 / 24px 视口偏移 / 14px 条间距），并**翻出上游那两处 `<Toaster />` 用的
 根本不是 shadcn 的 wrapper**——见 wave 74 那一节。
 
-### 一、几何这一档只够得着免登录页（**现在是唯一还开着的大账**）
+### 一、把台账里那 **23 行几何**清掉（**这一轮的正题**）
 
-`dom-parity` 现在只能扫 landing / login 两屏（setup 与 showcase 都跳登录）。
-**工作区那些屏要么把几何接进对照台账**（`sampleGeometry` 现在只量 settle 锚点，
-这是线索 137 的正题），**要么给 `dom-parity` 接上两边的 mock 网关**——
-后者是重造一遍台账已有的东西，前者动的是有基线的门禁。**先想清楚再动。**
+wave 76 把几何档接到交互后的锚点上之后量出来的，**一条都不是回归**
+（那一轮做过「还原重跑」逐条对比）。它们此前没有任何工具够得着。
+
+- **agent-chat**
+  - `role:dialog[Model Selector] y React=332.2 Vue=320.2 Δ-12`
+  - `role:dialog[Model Selector] height React=135.6 Vue=159.5 Δ23.9`
+  - `role:option[/Parity Thinker/] x React=385 Vue=393 Δ8`
+  - `role:option[/Parity Thinker/] width React=510 Vue=494 Δ-16`
+  - `role:option[/Parity Thinker/] height React=42.3 Vue=46.3 Δ4`
+- **artifact-batched-stream**
+  - `role:button[Download] x React=1187 Vue=1180 Δ-7`
+  - `role:button[Download] y React=31 Vue=23.5 Δ-7.5`
+  - `role:link[the upstream repo] y React=137 Vue=123 Δ-14`
+  - `text:batched-report.md x React=824.6 Vue=827.6 Δ3`
+  - `text:batched-report.md y React=37 Vue=29.5 Δ-7.5`
+  - `text:batched-report.md width React=126.7 Vue=97.4 Δ-29.3`
+- **artifact-stream-state**
+  - `role:button[Load full file] y React=86 Vue=72 Δ-14`
+  - `text:report.md x React=824.6 Vue=827.6 Δ3`
+  - `text:report.md y React=37 Vue=29.5 Δ-7.5`
+- **sidecar-chat**
+  - `text:Ask a follow-up y React=321 Vue=327 Δ6`
+  - `text:Ask a follow-up grounded in the referenced text. y React=345 Vue=351 Δ6`
+- **ui-polish-mobile**
+  - `role:menuitemradio[/^Flash /] x React=60 Vue=5 Δ-55`
+  - `role:menuitemradio[/^Flash /] y React=338 Vue=184 Δ-154`
+  - `role:menuitemradio[/^Flash /] height React=72 Vue=76 Δ4`
+- **user-message-plain-text**
+  - `role:menuitemradio[/^Ultra /] x React=474 Vue=541 Δ67`
+  - `role:menuitemradio[/^Ultra /] y React=658 Vue=653.8 Δ-4.2`
+  - `role:menuitemradio[/^Ultra /] height React=72 Vue=76 Δ4`
+- **workspace-changes**
+  - `role:menuitemradio[/^Minimal /] x React=529 Vue=747 Δ218`
+
+**分三类看**：
+
+1. **弹层的落点**（`x` Δ-55 / Δ67 / Δ218，`y` Δ-154 / Δ16）——Reka 与 Radix 的
+   popper 放置策略不同，这一类要先量清楚「是碰撞翻转还是对齐基准不同」，
+   不要一处一处硬调偏移。
+2. **面板内的行高与列宽**（`height` Δ4、`width` Δ-16 / Δ-29.3）——多半是某一层
+   容器的内边距或字号，跟 wave 72~75 修过的那些同一族，逐条回上游对 class 就行。
+3. **artifact 头部那几条 `y` Δ-7.5 / Δ-14**——三个场景都出现，多半是同一处
+   （头部高度或上边距），**一处修好可能同时消掉五六行**，先找它。
+
+> **口径提醒**：`GEOMETRY_TOLERANCE_PX = 2` 不许动；这 23 行的 |Δ| 全部 ≥ 3。
 
 ### ~~一点五、`Settings and more` 那颗侧栏底部键~~ —— **wave 74 查完并修掉了**
 
@@ -1668,7 +1757,7 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 213 条在记忆文件里）
+## 其他常踩的坑（完整 214 条在记忆文件里）
 
 - **`git checkout -- <file>` 还原的是 HEAD，不是「变异之前」**（线索 207，wave 72）。
   负向验证的还原步骤一旦用它，**整轮的改动会跟着一起没**，而报表看起来照样是绿的
@@ -1694,6 +1783,16 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   另外 `InputGroupButton` **不把 size 透给 Button**，于是 Button 用的是 default 档，
   `py-2` 会留在类串里——探针上表现为「React padding 8px 8px、本仓 0px 8px」，
   但两边 `h-8` 固定、内容居中，**这一条没有视觉差异，不要去追**。
+- **给一把尺子加取样点，先问「这个点到取样时还在吗」**（线索 214，wave 76）。
+  `steps` 里的 `visible` 锚点到取样时可能已经被后续步骤换掉，
+  而 `locator.evaluate` 的 auto-wait 用的是**默认 30 秒**：加了 20 个锚点之后
+  diff 用例从 4 分钟变成 10 分钟超时，**报错是 context 被拆时的
+  `page.route: Target page ... has been closed`——完全看不出真正的原因**。
+  修法是每个锚点一个短超时（2s）+ 两边都取不到就跳过。
+- **`sed -i` / 写文件之前，别把 `cd` 放在 `&&` 链的开头**（线索 208 第三次踩）。
+  `cd frontend-vue && sed ... && nohup ... & echo started`——`cd` 失败时
+  整条链一步都不跑，而 `echo started` 照样打印。**写文件一律用绝对路径，
+  并让命令自己回读一次确认。**
 - **一把尺子长期报同一批线索，先怀疑尺子**（线索 213，wave 75）。
   `icon-parity` 的字形档从 wave 69 挂着十几条，每一轮重读一遍、每一轮同样的结论。
   逐条核完发现**将近一半是扫描范围造出来的**：只扫 `components/`（`core/` 里的
