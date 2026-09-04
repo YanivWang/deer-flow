@@ -22,6 +22,7 @@
 */
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ThreadChannelBadge from "@/components/workspace/ThreadChannelBadge.vue";
 import ThreadChannelIcon from "@/components/workspace/ThreadChannelIcon.vue";
@@ -149,11 +150,20 @@ onUnmounted(() => observer?.disconnect());
               v-if="threads.hasMore && isSearching"
               class="flex justify-center p-4"
             >
-              <button
-                type="button"
+              <!--
+                上游 `app/workspace/chats/page.tsx:135` 是
+                `<Button variant="outline">`。手写那版把 outline 变体抄了一半：
+                少 `cursor-pointer`（Tailwind 4 的 preflight 不给按钮小手，
+                上游每个变体都显式写了）、少 `focus-visible` 的 3px 软环，
+                还把 `bg-background` 写成 `bg-transparent`、`border` 写成
+                `border-input`，于是深色主题下上游那三条
+                （`dark:bg-input/30 dark:border-input dark:hover:bg-input/50`）
+                一条都没有——深色下这颗键是透明的，上游是浅一档的填色。
+              -->
+              <Button
+                variant="outline"
                 data-testid="chats-page-load-more"
                 :disabled="threads.loadingMore"
-                class="border-input hover:bg-accent hover:text-accent-foreground inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border bg-transparent px-4 py-2 text-sm font-medium shadow-xs transition-all disabled:pointer-events-none disabled:opacity-50"
                 @click="threads.loadMore()"
               >
                 {{
@@ -161,7 +171,7 @@ onUnmounted(() => observer?.disconnect());
                     ? $i18n.t.value.chats.loadingMore
                     : $i18n.t.value.chats.loadMoreToSearch
                 }}
-              </button>
+              </Button>
             </div>
           </div>
         </ScrollArea>

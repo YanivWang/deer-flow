@@ -10,6 +10,12 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { Code2, Download, Eye, X } from "lucide-vue-next";
 
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import ArtifactActions from "./ArtifactActions.vue";
 import ArtifactEditor from "./ArtifactEditor.vue";
@@ -562,35 +568,55 @@ onBeforeUnmount(() => {
         两个 radio 都只有图标、没有可访问名——React 的 ToggleGroupItem 里就只有一个
         图标，这一点也照抄。
       -->
-      <div
+      <!--
+        走 `ui/toggle-group`（与 MemorySettings 那一行同一个 primitive），
+        不再手搓两颗 radio。手搓那版**当前档位在视觉上根本看不出来**：
+        `aria-checked` 是对的，但两颗的 class 是常量，没有任何一条按选中态分叉；
+        上游 ToggleGroupItem 的 base 里写着
+        `data-[state=on]:bg-accent data-[state=on]:text-accent-foreground`。
+        读屏用户听得出「二选一、现在在第一档」，看得见的用户看不出。
+
+        一并对上的还有：Reka 的 ToggleGroupRoot 带 roving tabindex（左右方向键
+        在两档之间走、整组只占一个 Tab 位），手搓那版是两颗各自可 Tab 的普通按钮；
+        以及 `cursor-pointer`、3px 焦点环、`disabled:*`、`shadow-xs`、
+        `hover:text-accent-foreground` 与 sm 档的 `min-w-8 px-1.5`。
+      -->
+      <ToggleGroup
         v-if="
           policy.kind === 'text' &&
           ['html', 'markdown'].includes(policy.language) &&
           previewAllowed &&
           !truncated
         "
-        role="group"
-        class="flex items-center gap-0"
+        type="single"
+        variant="outline"
+        size="sm"
+        :model-value="viewMode"
+        @update:model-value="
+          (value) => {
+            if (value) viewMode = value as 'code' | 'preview';
+          }
+        "
       >
-        <button
-          type="button"
-          role="radio"
-          :aria-checked="viewMode === 'code'"
-          class="hover:bg-accent flex size-8 items-center justify-center rounded-md rounded-r-none border"
-          @click="viewMode = 'code'"
+        <ToggleGroupItem
+          value="code"
+          single
+          :checked="viewMode === 'code'"
+          variant="outline"
+          size="sm"
         >
           <Code2 class="size-4" />
-        </button>
-        <button
-          type="button"
-          role="radio"
-          :aria-checked="viewMode === 'preview'"
-          class="hover:bg-accent flex size-8 items-center justify-center rounded-md rounded-l-none border border-l-0"
-          @click="viewMode = 'preview'"
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value="preview"
+          single
+          :checked="viewMode === 'preview'"
+          variant="outline"
+          size="sm"
         >
           <Eye class="size-4" />
-        </button>
-      </div>
+        </ToggleGroupItem>
+      </ToggleGroup>
       <!--
         编辑态的状态要**播报**，不能只在按钮的禁用态里体现。React 在头部放了一个
         `aria-live="polite"` 的 span：保存中 / 远端已变 / 有未保存的改动
@@ -635,14 +661,29 @@ onBeforeUnmount(() => {
         @download="runGatewayAction('download')"
         @install="installArtifactSkill"
       />
-      <button
-        type="button"
-        :aria-label="$i18n.t.value.common.close"
-        class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-        @click="emit('close')"
-      >
-        <X :size="16" />
-      </button>
+      <!--
+        关闭键上游也是 `<ArtifactAction icon={XIcon} label tooltip>`
+        （artifact-file-detail.tsx:603），和它左边那八颗是同一个形状——
+        wave 70 把那八颗改走 Button 时漏了这一颗孤儿。差的是：
+        `text-muted-foreground hover:text-foreground` 这个静息/悬停色
+        （手写那版恒为前景色，比上游深一档）、**Tooltip**、
+        `cursor-pointer`、3px 焦点环与 `disabled:*`。
+      -->
+      <Tooltip>
+        <TooltipTrigger>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            :aria-label="$i18n.t.value.common.close"
+            class="text-muted-foreground hover:text-foreground size-8 p-0"
+            @click="emit('close')"
+          >
+            <X :size="16" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{{ $i18n.t.value.common.close }}</TooltipContent>
+      </Tooltip>
     </header>
 
     <p v-if="error" role="alert" class="text-destructive px-4 pt-3 text-sm">

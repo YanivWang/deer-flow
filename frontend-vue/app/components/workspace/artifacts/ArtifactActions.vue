@@ -170,58 +170,12 @@ const emit = defineEmits<{
     </Tooltip>
   </template>
   <!--
-    复制在截断或空内容时是**禁用**，不是消失——React 渲染它并传 disabled
-    （artifact-file-detail.tsx 的 `disabled={!content || truncated}`）。控件时有时无，
-    读屏器每次都要重新数一遍这排按钮。编辑态下这几颗则整体不渲染（React 的 `!isEditing`）。
+    这四颗的**顺序**照上游 artifact-file-detail.tsx 的渲染序：
+    安装(:533) → 在新窗口打开(:546) → 复制(:561) → 下载(:584)。
+    wave 72 探针实测（artifact-stream-state 场景）本仓是「复制 → 打开 → 下载」，
+    上游是「打开 → 复制 → 下载」，安装还被排到了最后。
+    **对照台账看不见顺序**：aria 快照去缩进后是按多重集比的（八类差异之④）。
   -->
-  <Tooltip v-if="canCopy && !editing">
-    <TooltipTrigger>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        :disabled="copyDisabled"
-        :aria-label="$i18n.t.value.clipboard.copyToClipboard"
-        class="text-muted-foreground hover:text-foreground size-8 p-0"
-        @click="emit('copy')"
-      >
-        <Copy :size="16" />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>{{
-      $i18n.t.value.clipboard.copyToClipboard
-    }}</TooltipContent>
-  </Tooltip>
-  <Tooltip v-if="canOpen && !editing">
-    <TooltipTrigger>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        :aria-label="$i18n.t.value.common.openInNewWindow"
-        class="text-muted-foreground hover:text-foreground size-8 p-0"
-        @click="emit('open')"
-      >
-        <SquareArrowOutUpRight :size="16" />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>{{ $i18n.t.value.common.openInNewWindow }}</TooltipContent>
-  </Tooltip>
-  <Tooltip v-if="canDownload && !editing">
-    <TooltipTrigger>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        :aria-label="$i18n.t.value.common.download"
-        class="text-muted-foreground hover:text-foreground size-8 p-0"
-        @click="emit('download')"
-      >
-        <Download :size="16" />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>{{ $i18n.t.value.common.download }}</TooltipContent>
-  </Tooltip>
   <!--
     安装键的名字与说明是**两句话**：上游 artifact-file-detail.tsx:532 传
     `label={t.common.install}` 与 `tooltip={t.toolCalls.skillInstallTooltip}`，
@@ -244,5 +198,58 @@ const emit = defineEmits<{
     <TooltipContent>{{
       $i18n.t.value.toolCalls.skillInstallTooltip
     }}</TooltipContent>
+  </Tooltip>
+  <Tooltip v-if="canOpen && !editing">
+    <TooltipTrigger>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        :aria-label="$i18n.t.value.common.openInNewWindow"
+        class="text-muted-foreground hover:text-foreground size-8 p-0"
+        @click="emit('open')"
+      >
+        <SquareArrowOutUpRight :size="16" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>{{ $i18n.t.value.common.openInNewWindow }}</TooltipContent>
+  </Tooltip>
+  <!--
+    复制在截断或空内容时是**禁用**，不是消失——React 渲染它并传 disabled
+    （artifact-file-detail.tsx 的 `disabled={!content || truncated}`）。控件时有时无，
+    读屏器每次都要重新数一遍这排按钮。编辑态下这几颗则整体不渲染（React 的 `!isEditing`）。
+  -->
+  <Tooltip v-if="canCopy && !editing">
+    <TooltipTrigger>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        :disabled="copyDisabled"
+        :aria-label="$i18n.t.value.clipboard.copyToClipboard"
+        class="text-muted-foreground hover:text-foreground size-8 p-0"
+        @click="emit('copy')"
+      >
+        <Copy :size="16" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>{{
+      $i18n.t.value.clipboard.copyToClipboard
+    }}</TooltipContent>
+  </Tooltip>
+  <Tooltip v-if="canDownload && !editing">
+    <TooltipTrigger>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        :aria-label="$i18n.t.value.common.download"
+        class="text-muted-foreground hover:text-foreground size-8 p-0"
+        @click="emit('download')"
+      >
+        <Download :size="16" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>{{ $i18n.t.value.common.download }}</TooltipContent>
   </Tooltip>
 </template>

@@ -8,7 +8,10 @@
 */
 import { onBeforeUnmount, ref } from "vue";
 
+import { Bell } from "lucide-vue-next";
+
 import SettingsSection from "./SettingsSection.vue";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useNotifications } from "@/composables/useNotifications";
 import {
@@ -72,17 +75,30 @@ function sendTestNotification() {
       </div>
     </template>
     <div class="flex flex-col gap-4">
-      <button
+      <!--
+        两颗都带一颗 `BellIcon`（上游 notification-settings-page.tsx:71 / 85，
+        `className="mr-2 size-4"`）。手写那两版**一颗图标都没有**，而且各自只抄了
+        变体的填色：请求权限那颗少 `hover:bg-primary/90`，测试那颗少
+        `hover:bg-accent hover:text-accent-foreground` 与三条 `dark:*`；
+        两颗都少 `cursor-pointer`、3px 焦点环、`h-9` 与 `disabled:*`。
+      -->
+      <Button
         v-if="notifications.permission.value === 'default'"
         type="button"
-        class="bg-primary text-primary-foreground rounded-md px-3 py-2"
         @click="requestPermission"
       >
+        <Bell class="mr-2 size-4" />
         {{ $i18n.t.value.settings.notification.requestPermission }}
-      </button>
+      </Button>
+      <!--
+        权限被拒那条提示上游是有底色的（`bg-amber-50` + `dark:bg-amber-950/50`），
+        文字走 `text-muted-foreground`，边框是 amber-200/amber-800。本仓原来只有
+        一条 amber-300 描边、没有底色也没有深色分支——深色主题下它和普通段落
+        长得一样，用户看不出这是一条警告。
+      -->
       <p
         v-if="notifications.permission.value === 'denied'"
-        class="rounded-md border border-amber-300 p-3 text-sm"
+        class="text-muted-foreground rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/50"
       >
         {{ $i18n.t.value.settings.notification.deniedHint }}
       </p>
@@ -90,13 +106,10 @@ function sendTestNotification() {
         v-if="notifications.permission.value === 'granted' && enabled"
         class="flex flex-col gap-4"
       >
-        <button
-          type="button"
-          class="rounded-md border px-3 py-2"
-          @click="sendTestNotification"
-        >
+        <Button type="button" variant="outline" @click="sendTestNotification">
+          <Bell class="mr-2 size-4" />
           {{ $i18n.t.value.settings.notification.testButton }}
-        </button>
+        </Button>
       </div>
     </div>
   </SettingsSection>

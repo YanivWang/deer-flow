@@ -187,6 +187,39 @@ describe("SidecarPanel session adapter", () => {
     );
   });
 
+  /*
+    **发送中要转圈。**
+
+    上游 sidecar-panel.tsx:653 给 `PromptInputSubmit` 传的 status 是
+    `thread.isLoading || creatingThread || queuedSubmit ? "submitted" : "ready"`，
+    而 `submitted` 那一支画的是 `<Loader2Icon className="size-4 animate-spin" />`。
+    wave 71 在 ChatComposer 里记过一句「submitted 分支够不着」——那只对
+    chat-page.tsx 那个调用点成立，**sidecar 这个调用点传的就是它**。
+    改走 primitive 之前这颗键恒为箭头：点下去之后没有任何进行中的反馈。
+
+    钉 `animate-spin` 而不是钉图标组件名：用户看见的是"它在转"。
+  */
+  it("swaps the submit arrow for a spinner while a submission is in flight", async () => {
+    const session = makeSession();
+    const { wrapper } = mountPanel(session);
+    const submit = () => wrapper.get("button[type='submit']");
+
+    expect(submit().find(".animate-spin").exists()).toBe(false);
+
+    session.submissionPending.value = true;
+    await nextTick();
+    expect(submit().find(".animate-spin").exists()).toBe(true);
+
+    session.submissionPending.value = false;
+    session.stream.isStreaming.value = true;
+    await nextTick();
+    expect(submit().find(".animate-spin").exists()).toBe(true);
+
+    session.stream.isStreaming.value = false;
+    await nextTick();
+    expect(submit().find(".animate-spin").exists()).toBe(false);
+  });
+
   it("uses the shared composer surface as the single focus-ring owner", () => {
     const { wrapper } = mountPanel();
     const surface = wrapper.get("[data-testid='sidecar-composer-surface']");

@@ -14,7 +14,7 @@
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`WAVE72SHA` = wave 72。
 - **动过 `frontend/` 的是十五轮**（wave 52 实测订正，wave 62 又加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -65,11 +65,12 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 71 收工时逐条跑过）
+### 门禁实测值（wave 72 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；257 文件 / 2132 单测，词典 945 key、18 unused
-make -C frontend-vue asset-budget  exit 0（wave 66 起才是绿的，**从此进每轮清单**）
+make -C frontend-vue verify        exit 0；259 文件 / 2146 单测，词典 943 key、18 unused
+make -C frontend-vue asset-budget  exit 0（wave 72 把 vendor-ui 预算按实测重定了一次，
+                                   见 scripts/asset-budget.mjs 里那段注释）
 make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefile 的 audit 上方
 make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55% / 行 74.9%
                                    **诊断工具，不进 verify，没有阈值**
@@ -77,14 +78,17 @@ make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55%
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
-make -C frontend-vue e2e-visual    8    **不在 make e2e 里**；wave 71 重录 7 张
-                                   （容差临时压到 0 跑两遍分稳定/抖动：五张逐像素稳定，
-                                   artifact panel 855/815 是已知抖动；**别用裸
-                                   `--update-snapshots`，它等于 `all`，`=changed` 才对**）
+make -C frontend-vue e2e-visual    8    **不在 make e2e 里**；wave 72 重录 4 张
+                                   （容差临时压到 0 跑两遍：empty chat 990px 与
+                                   reasoning/tool 49px **两遍逐像素相同 = 我改的**，
+                                   artifact panel 258→167 是已知抖动；
+                                   `=changed` 连带重录了 empty-chat-attachment——
+                                   **一条用例里的第二张截图，第一张不修好它根本跑不到**（坑 94）；
+                                   **别用裸 `--update-snapshots`，它等于 `all`**）
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **217**（总 219；wave 71 新增 `SidecarTrigger.vue`）。动了 `frontend/` 再加
+产品 SFC **217**（总 219；wave 72 没有新增 SFC）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1029**）/ `test:e2e`（**146**）。
 **wave 62 三条全真跑过**：check 0、test 1029 passed、test:e2e 146 passed。
 （1023 → 1029 是 wave 62 加的 6 条：3 条 auth-callback 路由位置 + 3 条图标按钮可访问名。）
@@ -260,6 +264,148 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 72）做了什么：**把「上游走的是哪条路径」逐颗问完，76 → 49**
+
+提交 `WAVE72SHA`。正题是 wave 71 留下的那批手写 `<button>`。
+**做法不是「补样式」，是逐颗回上游问「这一颗上游走的是什么」**，三种答案三种处理。
+
+### 先量准：73 颗产品手写 button，其中一半上游自己也手写
+
+同口径复量（剥掉 HTML 注释与 JS 块注释再数开标签）：**77 处，去掉 `Button.vue`
+本体与三处 `__m0` 夹具页，产品面 73 处**（交接文档写的 76 是没剥注释的数）。
+分成三档：
+
+| 档                                                                       | 处数 | 处理                     |
+| ------------------------------------------------------------------------ | ---- | ------------------------ |
+| **上游 streamdown 自己就手写**（markdown/ 整片）                         | 19   | **一条不动**，逐字核对过 |
+| **上游同一处也手写**（sidebar / recent-chat-list / settings-dialog / …） | ~16  | **照抄不动**             |
+| **上游走 primitive，本仓手搓**                                           | ~24  | **改走 primitive**       |
+
+markdown/ 那 19 颗是这一轮**最值钱的否定结论**：把 streamdown 2.5.0 的
+`dist/chunk-BO2N2NFS.js` 解出来逐条比，复制 / 下载 / 全屏那一档的 className 是
+`cursor-pointer p-1 text-muted-foreground transition-all hover:text-foreground
+disabled:cursor-not-allowed disabled:opacity-50`——**与本仓逐字相同**，
+ZoomPan 的三颗、link-safety 弹窗的三颗、图片下载、安全外链也都对得上。
+线索 199 的又一例：先问「上游那处是什么」，再问「本仓少了吗」。
+
+### 改走 primitive 的（24 颗按钮 + 3 处结构）
+
+| 处                                        | 上游走的是什么                                                           | 差在哪（都是用户看得见的）                                                                                                                                                                                                                                                     |
+| ----------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **ArtifactPanel 代码/预览**               | `ToggleGroup type="single" variant="outline" size="sm"`                  | **当前档位在视觉上根本看不出来**：`aria-checked` 对，但两颗 class 是常量，没有 `data-[state=on]:bg-accent`。顺带丢了 roving tabindex（左右键换档、整组只占一个 Tab 位）                                                                                                        |
+| **ArtifactPanel 文件下拉**                | shadcn `<Select>`                                                        | **触发器上没有下拉箭头**、选中项**没有对勾**、列表不 portal（被头部 overflow 裁）、整套键盘行为（上下键 / 首字母 / Escape / 打开时焦点落到当前项）一条没有；高度 32 vs 36                                                                                                      |
+| **ArtifactPanel 关闭键**                  | `ArtifactAction`（= ghost Button + Tooltip）                             | wave 70 修那八颗时漏的孤儿：静息色是前景色而上游是 muted、没有 Tooltip                                                                                                                                                                                                         |
+| **artifact 工具条顺序**                   | 安装 → 打开 → 复制 → 下载                                                | 本仓是复制 → 打开 → 下载 → 安装。**台账看不见顺序**（aria 去缩进后按多重集比，八类差异之④）                                                                                                                                                                                    |
+| **SidecarPanel 提交键**                   | `PromptInputSubmit variant="outline"` + Tooltip，status 会传 `submitted` | 画的是**实心 primary**（上游是描边圆钮）、**发送中不转圈**、没有 Tooltip                                                                                                                                                                                                       |
+| **SidecarPanel 纸夹 / 档位键**            | `PromptInputButton` / `PromptInputActionMenuTrigger`                     | 纸夹没有 Tooltip；两颗都少 cursor / 焦点环 / 禁用态                                                                                                                                                                                                                            |
+| **AgentBootstrapComposer 提交键**         | 裸 `PromptInputSubmit`（**不传 className**）                             | 本仓画成 `rounded-full` 的**圆**钮，上游是 `rounded-md` 的**方**钮——那两颗圆的之所以圆，是各自显式传了 `className="rounded-full"`，这一颗没传                                                                                                                                  |
+| **ComposerModelSelector 触发器**          | `PromptInputButton`                                                      | `text-xs` 写在按钮上（上游写在里层 name 上）、只有一层 span 所以 `truncate` 作用在错的盒子上；`px-2.5` 与 `shadow-none` 要显式写——**InputGroupButton 的 sm 是 `px-2.5`，shadcn Button 的 sm 是 `px-3`**，两套 sm 差 2px                                                        |
+| **ProcessingMessageGroup 两颗折叠键**     | `Button variant="ghost"`                                                 | 少 `hover:text-accent-foreground`、少 `dark:hover:bg-accent/50`（深色悬停底色差一档）、少 `text-sm font-medium`                                                                                                                                                                |
+| **MessageList 加载更早**                  | `Button variant="ghost" size="sm" rounded-full` + `ChevronUp`            | 本仓是**下划线文字、没有图标**；加载态**换成一段 span**（点完那一刻焦点所在元素被卸载，键盘用户被丢回 body）；哨兵挂在按钮上（加载中按钮卸载，IntersectionObserver 跟着掉）；文案自造了 loadEarlier / loadingEarlier，渲染出来是「Load earlier messages」而上游是「Load more」 |
+| **TokenUsageIndicator 徽标**              | `Button variant="ghost"`                                                 | 少 `hover:text-accent-foreground`（上游悬停时文字也变色）、cursor、焦点环                                                                                                                                                                                                      |
+| **ThreadSidebar 加载更早会话**            | `Button variant="ghost" size="sm"`                                       | 悬停色写成了 **sidebar-accent**，上游这一颗走的是普通 **accent**——深色主题下不是同一个值                                                                                                                                                                                       |
+| **ComposerAttachmentChip 移除键**         | `Button variant="ghost"`                                                 | 少 ghost 变体的另两条与焦点环                                                                                                                                                                                                                                                  |
+| **ReferenceAttachment 清除键 + 引用预览** | `Button variant="ghost" size="icon-sm"` + `Tooltip`                      | 预览走的是**整块的原生 `title`**：延迟/位置/配色不受控、触屏不出现，而且**连清除键也会弹**（上游那颗不弹）                                                                                                                                                                     |
+| **settings：通知 ×2 / 技能 ×1**           | `Button` + `BellIcon` / `Button size="sm"` + `SparklesIcon`              | **一颗图标都没有**；尺寸也差一档                                                                                                                                                                                                                                               |
+| **setup ×3 / login ×1 / chats 列表 ×1**   | `Button`（default / outline / submit）                                   | 只抄了填色或描边：悬停完全没反应、少 cursor、少 3px 焦点环、少 `dark:*` 三条（深色下 outline 是透明的，上游是浅一档填色）                                                                                                                                                      |
+
+### 顺带修的三处「上游写了本仓没抄」
+
+- **CitationSourcesPanel 复制键**（上游也手写，本仓抄漏）：没有任何悬停反馈、
+  少 `shrink-0`，而且**复制成功那颗对勾上游是 `text-green-500`**、本仓恒为 muted
+  ——可访问名换了、视觉没换，用户看不出复制成没成。
+- **TodoList 折叠头**：`min-h-9` vs 上游 `min-h-8`（高 4px）、没有 `cursor-pointer`、
+  没有 300ms 过渡，箭头也少了 `text-muted-foreground`（本仓继承前景色，比上游深一档）。
+- **禁用的「Agents」入口**：上游 `text-muted-foreground/50` + `cursor-not-allowed` +
+  `aria-disabled:pointer-events-none aria-disabled:opacity-50`，本仓一条都没有
+  ——**这个点不动的入口还会跟着鼠标高亮**。
+- **侧栏 rail 的光标**：上游展开时 `cursor-w-resize`、**收起时翻成 `cursor-e-resize`**；
+  本仓写死 w-resize——侧栏已经最窄了，鼠标还在说「往左拖」。探针实测同一屏
+  React `e-resize` / 本仓 `w-resize`。
+
+### 探针实测：改完之后四个场景逐行相同
+
+重建 wave 71 的 parity 探针（两个应用同屏、按 role + 可访问名配对、逐颗读计算样式）。
+**第一遍读出一堆假差异**——`captureScenario` 在 runScenario 之后还等 `settleMs=700`，
+探针没等，React 的异步面板还没挂上，于是 artifact-preview 报「Vue 多 4 颗控件」、
+settings 报「每颗导航键 svg 15×15 vs 16×16、高 34 vs 36」。**补上等待之后全部消失。**
+**判据：探针的取样点必须与它要佐证的那个门禁同一个点**（线索 191 的同一条）。
+
+补齐之后：
+
+| 场景                    | 行数     | 剩余差异                                                                              |
+| ----------------------- | -------- | ------------------------------------------------------------------------------------- |
+| `artifact-preview`      | 17 vs 17 | **0**（两颗 radio 的选中底色两边同值，只是 React 序列化成 `lab()`、Vue 成 `oklch()`） |
+| `artifact-stream-state` | 22 vs 22 | 只剩工具条顺序（本轮已修）与 `Settings and more`                                      |
+| `sidecar-chat`          | 23 vs 23 | **0**                                                                                 |
+| `thread-history`        | 18 vs 18 | **0**                                                                                 |
+| `settings-notification` | 28 vs 28 | 只剩两条 primitive 的旧账（见下）                                                     |
+
+### 探针顺带量出来的三笔新账（**都不是这一轮的正题，一条没动**）
+
+1. **Dialog 的关闭键两边差一倍**：React 16×16 / `rounded-xs`(2px) / `cursor: default`，
+   本仓 28×28 / `rounded-md`(8px) / `cursor: pointer`。上游那个 16px 的点击区
+   够不到 WCAG 2.5.8 的 24px，**本仓这一处更好**——要翻案得先决定「双向判据在
+   上游自己的可达性缺陷上认不认」，与 `WorkspaceToaster` 那条同一类。
+2. **Switch 的光标**：React `default`、本仓 `pointer`。同上。
+3. **`Settings and more` 那颗侧栏底部键**：React 32×32（收起态）/ 43px（展开态），
+   本仓 48px。整份 `sidebar` 场景里只有这一颗对不上，**没查**。
+
+### 落地的两把新尺子
+
+1. **`tests/guards/handwritten-button.test.ts`**：钉住「哪些文件还在手写 `<button>`」
+   这份集合，**双向 + 逐份计数 + 字典序**（线索 186 的修法）。每一条都写清
+   **上游那处是什么**——判据不是「手写是缺陷」，是「上游走的是哪条路径」。
+   加一颗新的手写 button 之前先回上游看；上游走 primitive 的，本仓也要走，
+   **而不是把文件加进 ALLOWED**。
+2. **`tests/guards/upstream-class-echo.test.ts`**：收「照抄上游 class 串」里
+   **没有任何别的守卫盯着**的那几条（TodoList 的行高与光标、rail 的光标方向、
+   禁用 Agents 入口的三条、设置面板里上游有图标的三颗键）。
+   负向验证当场撞出四处假绿，这份就是补出来的。
+
+**`disabled-affordance.test.ts` 的形状断言改了钉法**：原来是
+`expect(scanned.length).toBeGreaterThan(60)`——一个贴着实测值的下限，
+**池子每一轮都在缩，调它的人分不清「因为修好了」和「因为扫挂了」**。
+改成一条很松的下限 + 一个**按契约永远手写**的正样本（MermaidZoomPan 的三颗缩放键）。
+
+### 负向验证 21 条，**撞出 5 处假绿，4 处当场补上守卫**
+
+| #                 | 变异                                       | 结果                                                                                                                                                     |
+| ----------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| N1                | ToggleGroupItem → 手写 radio               | RED（新守卫 + DOM 各一条）                                                                                                                               |
+| N2                | sidecar 提交键去掉转圈分支                 | RED                                                                                                                                                      |
+| N3                | sidecar 回形针 size-3 → size-3.5           | RED                                                                                                                                                      |
+| N4                | model selector 去掉 `px-2.5`               | RED                                                                                                                                                      |
+| N5                | ArtifactFileList 加一颗手写 button         | RED                                                                                                                                                      |
+| N6                | ProcessingMessageGroup `Button` → `button` | RED                                                                                                                                                      |
+| N7 / N9           | 新守卫 ALLOWED 里删/改一条                 | RED（过期条目 + 清单之外各一条）                                                                                                                         |
+| N8                | 换回已删的 loadEarlier 词条                | **假绿**：i18n 的 7 份测试全过，实际由 `typecheck` 拦下（TS2339）                                                                                        |
+| N10               | CitationSourcesPanel 去掉悬停              | **假绿**（无守卫）→ 补断言                                                                                                                               |
+| N10b              | 补完守卫再变异一次                         | **还是假绿**：断言在整份源码里找 class 名，而**我刚写的注释逐字引用了它们**（坑 202 第四次，又是自己踩）→ 收紧成「剥注释 + 只看那颗按钮自己的 class 串」 |
+| N10c / N10d       | 对勾去掉绿色 / 收紧后再去掉悬停            | RED                                                                                                                                                      |
+| N13               | ReferenceAttachment 退回整块 `title`       | RED                                                                                                                                                      |
+| N14 / N15         | TodoList 退回 `min-h-9` / rail 光标写死    | **假绿**（无守卫）→ 新建 `upstream-class-echo`                                                                                                           |
+| N14b / N15b / N16 | 补完守卫再变异                             | RED                                                                                                                                                      |
+| N17               | artifact 工具条顺序换回去                  | RED（`artifact-actions` 单测就在盯）                                                                                                                     |
+| N18               | 去掉一颗 BellIcon                          | **假绿**：`icon-parity` 也盯不住——它比的是**全仓**图标集合，Bell 在别处还用着，删掉之后集合一点没变 → 补守卫                                             |
+| N18b / N20        | 补完守卫再去掉 Bell / Sparkles             | RED                                                                                                                                                      |
+| N21               | 新守卫自己定位失败时                       | RED                                                                                                                                                      |
+
+### 三处自己造出来的坑
+
+1. **`git checkout -- <file>` 把整轮改动一起还原了。** 负向验证的还原步骤
+   第一版写的是 `git checkout`——它还原到 **HEAD**，而 HEAD 是这一轮开始之前。
+   ArtifactPanel 的全部改动（ToggleGroup + 关闭键 + 两个 import）一次没了，
+   而**当时的报表看起来是绿的**。修法：变异前 `cp` 一份备份，还原时 `cp` 回来
+   并 `diff` 确认。**新线索 207。**
+2. **`cd X && <整条链>`：`cd` 失败时后面一条都不跑，而最后一条命令的退出码是绿的。**
+   往 `artifact-panel.dom.test.ts` 里加的那条 DOM 测试**根本没写进去**，
+   而同一次输出里 vitest 报「17 passed」——那是**改动之前**的条数。
+   两次都以为加上了。**判据：写文件的命令必须自己打印一句确认，并且要去看那句
+   确认有没有出现，而不是只看整条链的退出码。新线索 208。**
+3. **改完 SFC 的第一轮负向验证读错了报表**：`Test Files 1 failed | 1 passed`
+   我读成了「守卫过、DOM 红」，实际相反。`--reporter=verbose` 一跑就分清了。
 
 ## 上一轮（wave 71）做了什么：**焦点环那条前提是错的，但那个池子是对的**
 
@@ -555,19 +701,34 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 
 ## 下一轮：**四条**
 
-### 零、剩下 **76 处**手写 `<button>`（wave 71 从 98 处修掉 22 处）
+### 零、手写 `<button>` 这一档**已经问完了**，剩下的 49 处都有出处
 
-**不要再按「补焦点环」去做**——wave 71 实测证明那条前提是错的（基础层有兜底环）。
-**正确的问法是「上游同一颗控件走的是哪条路径」**：走 `<Button>` /
-`InputGroupButton` 的，本仓也改走 primitive，焦点环、hover、cursor、
-禁用态、字号、深色 hover 一次全对上；上游自己也手写的（实测 15 处，
-例如 `recent-chat-list.tsx:468` 的 `mt-1 underline` 重试链接），照抄不动。
+wave 72 逐颗回上游确认过，结果钉在
+`tests/guards/handwritten-button.test.ts` 的 `ALLOWED` 里（双向 + 逐份计数）。
+**不要再把它当待办清单**：19 处是 streamdown 自己手写的、约 16 处上游同一处也手写、
+其余是上游根本没有对应控件的错误恢复出口。
+真正剩下的三笔账在那份清单的注释里点了名：
 
-按剩余分布挑（`node scratchpad 的 affordance 扫描` 或直接数）：
-`MermaidDownloadMenu` 4、`MermaidZoomPan` 3、`MarkdownTable` 3、
-`MarkdownLinkSafetyModal` 3、`ArtifactPanel` 3、`WorkspaceChangesBadge` 3、
-`SidecarPanel` 3、`setup.vue` 3、`ThreadSidebar` 6。
-**先回上游看那一颗走的是什么**，再动手。每批跑 `make e2e-visual`。
+- `AgentChat` 的**保存 agent** 键：上游在页头的 `⋯` 菜单里
+  （`agents/new/page.tsx:316` 的 `DropdownMenuItem` + `SaveIcon`），
+  本仓是工具条上一颗可见按钮。**位置与形状都不同**，改动面比样式大。
+- `MessageList` 的 **artifactTargets 文件名键**：上游那一支渲染的是
+  `ArtifactFileCards`，不是一排文字按钮。
+- `WorkspaceToaster` 的关闭键（见下）。
+
+### 零点一、**两笔「本仓更好」的账，判据要先定**（wave 72 探针量出来的）
+
+1. **Dialog 的关闭键**：React 16×16 / `rounded-xs` / `cursor: default`；
+   本仓 28×28 / `rounded-md` / `cursor: pointer`。
+   上游那个 16px 点击区**够不到 WCAG 2.5.8 的 24px**。
+2. **Switch 的光标**：React `default`、本仓 `pointer`。
+
+这两条与 `WorkspaceToaster` 的关闭键、`ComposerAttachmentChip` 的
+`focus-visible:opacity-100`（上游那颗键盘聚焦时**整颗透明**）、
+`TodoList` 用 `<button>` 而上游用挂 onClick 的 `<header>`（键盘完全折不动）
+是**同一类**：本仓修掉了上游自己的可达性缺陷。
+**要么按 wave 28 的判据两边同改（改 `frontend/` + chore 提交），
+要么明写「这一类不双向」。挂着不决定是最差的一种。**
 
 ### 零点五、`WorkspaceToaster` 的关闭键是「React 没有的 Vue 不许有」
 
@@ -585,7 +746,13 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 这是线索 137 的正题），**要么给 `dom-parity` 接上两边的 mock 网关**——
 后者是重造一遍台账已有的东西，前者动的是有基线的门禁。**先想清楚再动。**
 
-### 二、`icon-parity` 还剩 **23 条**没核实的线索（wave 71 复量）
+### 一点五、`Settings and more` 那颗侧栏底部键，两边高度对不上
+
+wave 72 探针实测：`sidebar` 场景里 React 43px / 本仓 48px，`artifact-preview`
+场景（侧栏收起）React 32×32 / 本仓 31×48。**整份场景里只有这一颗对不上，没查。**
+它是手写 `<button>`（上游 `SidebarMenuButton` 同样手写），所以不是 primitive 差异。
+
+### 二、`icon-parity` 还剩 **23 条**没核实的线索（wave 71 复量，wave 72 复跑同数）
 
 字形档 15 条「只有 React 用」+ 5 条「只有 Vue 用」+ 尺寸档 3 条
 （`Circle` React 8px ↔ Vue 15/16px、`Github` 24 ↔ 14、`Info` 16 ↔ 14）。
@@ -1283,8 +1450,32 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 194 条在记忆文件里）
+## 其他常踩的坑（完整 208 条在记忆文件里）
 
+- **`git checkout -- <file>` 还原的是 HEAD，不是「变异之前」**（线索 207，wave 72）。
+  负向验证的还原步骤一旦用它，**整轮的改动会跟着一起没**，而报表看起来照样是绿的
+  （那些测试本来就该在改动前是绿的）。修法：变异前 `cp` 一份备份，还原时 `cp` 回来
+  再 `diff -q` 确认。
+- **`cd X && <整条链>`：`cd` 失败时后面一条都不跑，而整条链的退出码看起来是绿的**
+  （线索 208，wave 72 连踩两次）。这台机器上工具调用之间 cwd 会被重置，
+  `cd frontend-vue` 在已经身处该目录时**会失败**。**判据：写文件的命令必须自己
+  打印一句确认（`print("WROTE-OK", ...)`），而且要真的去看那句有没有出现。**
+  wave 72 有一条 DOM 测试两次都以为加上了，实际一次都没写进去——
+  同一次输出里 vitest 报的「17 passed」是**改动之前**的条数。
+- **探针的取样点必须与它要佐证的那个门禁同一个点**（线索 191 的同一条，wave 72 重演）。
+  parity 探针第一版没等 `settleMs=700`，于是 React 的异步面板还没挂上，
+  一次报出「Vue 多 4 颗控件」「每颗导航键 svg 15×15 vs 16×16」等一整批**假差异**。
+  补上等待之后全部消失。
+- **一个「按全仓集合比」的门禁，看不见「某一处少了一颗」**（wave 72）。
+  `icon-parity` 比的是两边用到的图标名集合；把 `BellIcon` 从通知设置那两颗键上删掉，
+  Bell 在别处还用着，集合一点没变、它一声不吭。**集合口径挡不住分布问题。**
+- **`InputGroupButton` 的 sm ≠ shadcn `Button` 的 sm**（wave 72）。
+  前者 `h-8 px-2.5 gap-1.5`，后者 `h-8 px-3 gap-1.5`——**水平内边距差 2px**，
+  而且 `shadow-none` 只在 InputGroupButton 的 base 里。上游 composer 那一排走的是
+  前者，本仓走 `<Button size="sm">` 时这两条要显式补。
+  另外 `InputGroupButton` **不把 size 透给 Button**，于是 Button 用的是 default 档，
+  `py-2` 会留在类串里——探针上表现为「React padding 8px 8px、本仓 0px 8px」，
+  但两边 `h-8` 固定、内容居中，**这一条没有视觉差异，不要去追**。
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
   `toHaveLength(215)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死

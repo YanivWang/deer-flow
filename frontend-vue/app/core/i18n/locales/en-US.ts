@@ -46,6 +46,8 @@ export const enUS: Translations = {
     stop: "Stop",
     skillSuggestions: "Skill suggestions",
     modelSelector: "Model Selector",
+    /* 上游 artifact-file-detail.tsx:415 的 `<SelectValue placeholder="Select a file" />`，同样写死英文、同样不进它自己的词典。 */
+    selectAFile: "Select a file",
     /*
       上游 `<CommandDialog>` 用的是 shadcn 的默认值（ui/command.tsx:32/33），
       同样写死英文、同样不进它自己的 i18n。本仓此前把这两处读成
@@ -1291,8 +1293,6 @@ export const enUS: Translations = {
     copyFailed: "Failed to copy message.",
     loadEarlierFailed: "Failed to load earlier messages.",
     loadingConversation: "Loading conversation…",
-    loadEarlier: "Load earlier messages",
-    loadingEarlier: "Loading earlier messages…",
     tryAgain: "Try again",
     actions: {
       editAndRerun: "Edit and rerun",

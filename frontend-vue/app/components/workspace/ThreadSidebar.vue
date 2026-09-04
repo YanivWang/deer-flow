@@ -513,13 +513,22 @@ function openSettingsDialog(section: "appearance" | "about") {
                 $i18n.t.value.sidebar.agents
               }}</span>
             </NuxtLink>
-            <div v-else class="group relative">
+            <!--
+              禁用那一支的**外观**照上游 workspace-nav-chat-list.tsx:56 抄三条：
+              ① 包裹层 `cursor-not-allowed`——上游明写在这一层（还留了注释说明
+                 为什么在 span 上而不在按钮上：按钮已经 pointer-events:none）；
+              ② 按钮 `aria-disabled:pointer-events-none aria-disabled:opacity-50`
+                 ——上游 SidebarMenuButton 的 cva 自带这两条，本仓原来一条都没有，
+                 于是这个禁用的入口**还会跟着鼠标高亮**，看起来和能点的一样；
+              ③ 颜色是 `text-muted-foreground/50`（半透明），不是全实的 muted。
+            -->
+            <div v-else class="group relative block w-full cursor-not-allowed">
               <button
                 type="button"
                 :aria-label="$i18n.t.value.sidebar.agents"
                 aria-disabled="true"
                 aria-describedby="agents-disabled-description"
-                class="text-muted-foreground hover:bg-sidebar-accent flex h-8 w-full items-center gap-2 rounded-md px-2"
+                class="text-muted-foreground/50 hover:bg-sidebar-accent flex h-8 w-full items-center gap-2 rounded-md px-2 aria-disabled:pointer-events-none aria-disabled:opacity-50"
               >
                 <Bot :size="16" class="shrink-0" />
                 <span v-if="sidebarExpanded">{{
@@ -656,11 +665,22 @@ function openSettingsDialog(section: "appearance" | "about") {
                 </template>
               </VirtualThreadList>
               <template v-if="threads.hasMore && threads.canLoadMore">
-                <button
+                <!--
+                  上游 `recent-chat-list.tsx:434` 是
+                  `<Button variant="ghost" size="sm"
+                  className="mx-2 my-1 w-[calc(100%-1rem)] justify-center text-xs">`。
+                  手写那版把悬停色写成了 **sidebar-accent**，而上游这一颗走的是
+                  Button 的 ghost 变体、用的是普通 **accent**——两套变量在深色主题下
+                  不是同一个值。另外少 `cursor-pointer`、3px 焦点环、
+                  `dark:hover:bg-accent/50`、`gap-1.5` 与 `font-medium`。
+                -->
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   data-testid="recent-chat-list-load-more"
                   :disabled="threads.loadingMore"
-                  class="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground mx-2 my-1 inline-flex h-8 w-[calc(100%-1rem)] items-center justify-center rounded-md px-3 text-xs disabled:pointer-events-none disabled:opacity-50"
+                  class="mx-2 my-1 w-[calc(100%-1rem)] justify-center text-xs"
                   @click="threads.loadMore()"
                 >
                   {{
@@ -668,7 +688,7 @@ function openSettingsDialog(section: "appearance" | "about") {
                       ? $i18n.t.value.chats.loadingMore
                       : $i18n.t.value.chats.loadOlderChats
                   }}
-                </button>
+                </Button>
                 <div
                   ref="sentinel"
                   aria-hidden="true"
@@ -844,6 +864,13 @@ function openSettingsDialog(section: "appearance" | "about") {
       640~767px 这一档 rail 是**看得见的**。此前这里调的是 `setCollapsed`，
       在那一档点它会去改桌面收起态、而不是关掉眼前的抽屉；上游 SidebarRail 调的
       是 `toggleSidebar()`（认窄屏）。
+
+      **光标要跟着收起态翻。** 上游 ui/sidebar.tsx:301 是两条：
+      展开（`[data-side=left]`）时 `cursor-w-resize`（往左＝收起），
+      收起（`[data-state=collapsed]`）时翻成 `cursor-e-resize`（往右＝展开）。
+      本仓原来写死 `cursor-w-resize`：侧栏已经收到最窄了，鼠标还在说「往左拖」。
+      wave 72 探针实测（artifact-preview 场景、侧栏收起态）：React `e-resize`、
+      本仓 `w-resize`。`transition-all ease-linear` 也是上游那一层的。
     -->
     <button
       type="button"
@@ -852,7 +879,8 @@ function openSettingsDialog(section: "appearance" | "about") {
       :aria-label="$i18n.t.value.primitives.toggleSidebar"
       :title="$i18n.t.value.primitives.toggleSidebar"
       tabindex="-1"
-      class="hover:after:bg-sidebar-border absolute inset-y-0 -right-4 z-20 hidden w-4 -translate-x-1/2 cursor-w-resize after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex"
+      class="hover:after:bg-sidebar-border absolute inset-y-0 -right-4 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex"
+      :class="collapsed ? 'cursor-e-resize' : 'cursor-w-resize'"
       @click="toggleSidebar"
     />
   </div>

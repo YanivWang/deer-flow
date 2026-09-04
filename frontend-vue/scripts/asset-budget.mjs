@@ -77,8 +77,16 @@ const budgets = {
     2026-09-04 实测 raw 616,539 / gzip 185,792 / maxRaw 285,765，按实测 + 约 5% 定。
     此前的 380,000 / 115,000 / 150,000 定于 2026-08-25，之后 settings 六个面板、
     agents 页、scheduled-tasks 陆续落地，**这条门禁就一直红着没人跑**。
+
+    2026-09-05（wave 72）重测 raw 650,516 / gzip 195,402 / maxRaw 288,648，
+    totalRaw 超了 516 字节（0.08%）。原因是那一轮把二十多颗手写 `<button>`
+    改走 `ui/button` / `ui/toggle-group` / `ui/select` / `ui/tooltip`：
+    primitive 本身一份没多，但**引它的 chunk 多了**，而这一格是按 chunk 名字
+    归属字节的（见上面那段：装不出「谁的字节」）。按同样的「实测 + 约 5%」
+    重定一次，不是为了绕过——是因为这条数字量的就是「有多少 chunk 碰过 Reka」，
+    改走 primitive 必然让它涨，而那正是这一轮想要的方向。
   */
-  "vendor-ui": { totalRaw: 650_000, totalGzip: 196_000, maxRaw: 300_000 },
+  "vendor-ui": { totalRaw: 683_000, totalGzip: 205_000, maxRaw: 305_000 },
 };
 // 整包天花板同步抬高，抬的正好是 CodeMirror 那 542.7 KiB / 195.0 KiB：
 // 实测 raw 14_305_757 / gzip 3_292_309 / maxRaw 779_847 / maxGzip 230_136。

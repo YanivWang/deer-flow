@@ -259,6 +259,48 @@ describe("ArtifactPanel", () => {
     wrapper.unmount();
   });
 
+  /*
+    代码 / 预览这一对**当前档位要看得见**。
+
+    wave 72 之前这里是两颗手写的 `<button role="radio">`，`aria-checked` 是对的，
+    但两颗的 class 是常量、没有任何一条按选中态分叉：读屏用户听得出「二选一、
+    现在在第一档」，看得见的用户看不出。上游走的是 ToggleGroup，
+    它的 item 基础 class 里有 `data-[state=on]:bg-accent`。
+
+    钉 `data-state` 而不是钉具体的背景色：`data-[state=on]:bg-accent` 是
+    primitive 那一层的合同，这里只保证**档位真的传下去了**。
+  */
+  it("marks the active view mode on the toggle group items", async () => {
+    mocks.load.mockResolvedValue(loaded("# hi"));
+    const { wrapper } = mountPanel("/mnt/user-data/outputs/notes.md");
+    await flushPromises();
+
+    /* 能预览的文件默认落在 preview 档（ArtifactPanel.vue:234，同上游的
+       `artifactViewState.initialViewMode`），所以初始是 [code=off, preview=on]。 */
+    const items = () => wrapper.findAll('[data-slot="toggle-group-item"]');
+    expect(items()).toHaveLength(2);
+    expect(items().map((item) => item.attributes("data-state"))).toEqual([
+      "off",
+      "on",
+    ]);
+    expect(items().map((item) => item.attributes("aria-checked"))).toEqual([
+      "false",
+      "true",
+    ]);
+
+    await items()[0]!.trigger("click");
+    await flushPromises();
+    expect(items().map((item) => item.attributes("data-state"))).toEqual([
+      "on",
+      "off",
+    ]);
+    expect(items().map((item) => item.attributes("aria-checked"))).toEqual([
+      "true",
+      "false",
+    ]);
+    wrapper.unmount();
+  });
+
   it("keeps incomplete full HTML out of srcdoc and ignores stale path loads", async () => {
     let resolveFirst!: (value: ReturnType<typeof loaded>) => void;
     mocks.load

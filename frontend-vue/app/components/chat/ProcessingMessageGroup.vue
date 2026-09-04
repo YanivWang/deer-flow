@@ -16,6 +16,7 @@ import {
 
 import ProcessingToolStep from "@/components/chat/ProcessingToolStep.vue";
 import MessageMarkdown from "@/components/chat/MessageMarkdown.vue";
+import { Button } from "@/components/ui/button";
 import {
   deriveProcessingMessageView,
   type BrowserViewMeta,
@@ -53,11 +54,21 @@ function visibleEarlierSteps(): readonly ProcessingStep[] {
     data-testid="processing-message-group"
     class="not-prose w-full gap-2 rounded-lg border p-0.5"
   >
-    <button
+    <!--
+      两颗折叠键上游都是
+      `<Button variant="ghost" className="w-full items-start justify-start text-left">`
+      （message-group.tsx:322 与 :389）。手写那版只留了 `hover:bg-accent`，
+      于是少 `hover:text-accent-foreground`（悬停时上游文字也变色）、
+      少 **`dark:hover:bg-accent/50`**（深色主题下上游的悬停底色浅一半，
+      本仓用的是浅色那一档）、少 `cursor-pointer`、少 3px 焦点环、
+      少 `text-sm font-medium`（整行字重比上游轻一档）与 `disabled:*`。
+    -->
+    <Button
       v-if="view.collapsibleSteps.length"
       data-testid="toggle-earlier-steps"
       type="button"
-      class="hover:bg-accent flex w-full items-start justify-start rounded-md px-4 py-2 text-left"
+      variant="ghost"
+      class="w-full items-start justify-start text-left"
       :aria-expanded="showEarlierSteps"
       @click="showEarlierSteps = !showEarlierSteps"
     >
@@ -75,7 +86,7 @@ function visibleEarlierSteps(): readonly ProcessingStep[] {
           }}
         </span>
       </div>
-    </button>
+    </Button>
 
     <div
       v-if="visibleEarlierSteps().length || view.lastToolCall"
@@ -142,10 +153,11 @@ function visibleEarlierSteps(): readonly ProcessingStep[] {
     </div>
 
     <template v-if="view.trailingReasoning">
-      <button
+      <Button
         data-testid="toggle-trailing-reasoning"
         type="button"
-        class="hover:bg-accent flex w-full items-start justify-start rounded-md px-4 py-2 text-left"
+        variant="ghost"
+        class="w-full items-start justify-start text-left"
         :aria-expanded="showTrailingReasoning"
         @click="showTrailingReasoning = !showTrailingReasoning"
       >
@@ -161,7 +173,7 @@ function visibleEarlierSteps(): readonly ProcessingStep[] {
             :class="showTrailingReasoning ? '' : 'rotate-180'"
           />
         </div>
-      </button>
+      </Button>
       <div
         v-if="showTrailingReasoning"
         class="text-popover-foreground mt-2 space-y-3 px-4 pb-2"

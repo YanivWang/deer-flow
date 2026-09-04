@@ -212,9 +212,19 @@ onMounted(() => {
         <p class="text-muted-foreground mt-1">
           {{ $i18n.t.value.login.serviceUnavailableDescription }}
         </p>
-        <button
+        <!--
+          上游 `(auth)/login/page.tsx:232` 是
+          `<Button variant="outline" size="sm" className="mt-3">`。手写那版只留了
+          `border`：少 `hover:bg-accent hover:text-accent-foreground`（悬停无反应）、
+          少 `cursor-pointer`、少 3px 焦点环、少 `shadow-xs` 与那三条
+          `dark:*`，尺寸也差一档（sm 是 `h-8 px-3 gap-1.5`，手写那版是
+          `px-3 py-1.5` 没有固定高度）。
+        -->
+        <Button
           type="button"
-          class="mt-3 rounded-md border px-3 py-1.5 disabled:pointer-events-none disabled:opacity-50"
+          variant="outline"
+          size="sm"
+          class="mt-3"
           :disabled="setupPhase === 'checking'"
           @click="setupAttempt += 1"
         >
@@ -223,7 +233,7 @@ onMounted(() => {
               ? $i18n.t.value.login.pleaseWait
               : $i18n.t.value.login.retry
           }}
-        </button>
+        </Button>
       </div>
 
       <div

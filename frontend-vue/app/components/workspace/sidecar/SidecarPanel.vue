@@ -11,6 +11,7 @@ import { computed, reactive, ref, watch } from "vue";
 import {
   ArrowUp,
   GraduationCap,
+  Loader2,
   Lightbulb,
   MessageSquareText,
   Paperclip,
@@ -481,16 +482,35 @@ async function confirmDelete() {
               原来就是那个写法，而且名字读的是 `inputBox.uploadFiles`，上游读的是
               `inputBox.addAttachments`。
             -->
-            <button
-              type="button"
-              data-testid="sidecar-add-attachments-button"
-              :aria-label="$i18n.t.value.inputBox.addAttachments"
-              class="text-muted-foreground hover:bg-accent flex size-8 cursor-pointer items-center justify-center rounded-md"
-              @click="fileInput?.click()"
-            >
-              <!-- 上游 sidecar-panel.tsx:745 是 `size-3` = 12px。 -->
-              <Paperclip :size="12" aria-hidden="true" />
-            </button>
+            <!--
+              上游 sidecar-panel.tsx:738 是
+              `<Tooltip content={…}><PromptInputButton className="px-2!">`，
+              也就是 `<Button variant="ghost" size="sm">`——与主输入框那颗纸夹
+              **同一个形状**，wave 71 改了主输入框那一份、漏了 sidecar 这一份。
+              差的是 Tooltip（上游那句提示写着单文件与总量上限）、
+              `h-8 px-2!` 的尺寸、3px 焦点环与 `disabled:*`。
+              颜色不写在按钮上：`input-group-footer` 容器（ComposerSurface 的
+              scoped CSS）已经是 muted-foreground。
+            -->
+            <Tooltip>
+              <TooltipTrigger>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  class="px-2!"
+                  data-testid="sidecar-add-attachments-button"
+                  :aria-label="$i18n.t.value.inputBox.addAttachments"
+                  @click="fileInput?.click()"
+                >
+                  <!-- 上游 sidecar-panel.tsx:745 是 `size-3` = 12px。 -->
+                  <Paperclip class="size-3" aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="start" class="w-56">
+                {{ $i18n.t.value.inputBox.addAttachments }}
+              </TooltipContent>
+            </Tooltip>
             <input
               ref="fileInput"
               type="file"
@@ -505,10 +525,18 @@ async function confirmDelete() {
                   :label="activeMode.label"
                   :description="activeMode.description"
                 >
-                  <button
+                  <!--
+                    上游 sidecar-panel.tsx:768 是
+                    `<PromptInputActionMenuTrigger className="max-w-20 min-w-0 gap-1! px-2!">`
+                    ——同样是 `<Button variant="ghost" size="sm">`。
+                    与主输入框那颗档位键写法一致（wave 71 已改那一份）。
+                  -->
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     data-testid="sidecar-mode-trigger"
-                    class="hover:bg-accent flex h-8 max-w-20 min-w-0 items-center gap-1 rounded-md px-2 text-xs"
+                    class="max-w-20 min-w-0 gap-1! px-2!"
                   >
                     <div>
                       <component
@@ -523,7 +551,7 @@ async function confirmDelete() {
                     >
                       {{ activeMode.label }}
                     </div>
-                  </button>
+                  </Button>
                 </ModeHoverGuide>
               </DropdownMenuTrigger>
               <!--
@@ -595,14 +623,50 @@ async function confirmDelete() {
               :selected-model="selectedModel"
               @select="selectModel"
             />
-            <button
-              type="submit"
-              :aria-label="$i18n.t.value.inputBox.submit"
-              class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full disabled:opacity-50"
-              :disabled="composerDisabled"
-            >
-              <ArrowUp :size="16" />
-            </button>
+            <!--
+              上游 sidecar-panel.tsx:652 是
+              `<Tooltip content={t.sidecar.send}><PromptInputSubmit
+              className="rounded-full" variant="outline"
+              status={thread.isLoading || creatingThread || queuedSubmit
+                ? "submitted" : "ready"} /></Tooltip>`。
+              手写那版差三样：
+
+              ① **实心 vs 描边。** 上游是 `variant="outline"` 的描边圆钮，
+                 手写那版画的是 `bg-primary text-primary-foreground` 实心蓝。
+                 与主输入框那颗同一条（wave 71 已改那一份）。
+                 `shadow-none` 不能省：InputGroupButton 的 base 里有它，
+                 用来盖掉 outline 变体的 `shadow-xs`。
+
+              ② **提交中要转圈。** 上游这个调用点**会**传 `submitted`，
+                 于是发送期间图标换成 `Loader2Icon animate-spin`。
+                 wave 71 在 ChatComposer 里记过一句「submitted 分支够不着」——
+                 那句话只对 chat-page.tsx 那个调用点成立，**sidecar 这个调用点
+                 传的就是它**。手写那版恒为箭头：点下去之后没有任何进行中的反馈。
+
+              ③ **没有 Tooltip。** 上游包了一层，提示语是 sidecar 下的 send。
+
+              另外可访问名照上游写死的英文走 primitives 下的 submit
+              （PromptInputSubmit 的 aria-label 是硬编码 "Submit"，只有
+              streaming 时才变 "Stop"，而这个调用点算不出 streaming）。
+            -->
+            <Tooltip>
+              <TooltipTrigger>
+                <Button
+                  type="submit"
+                  variant="outline"
+                  size="icon-sm"
+                  class="rounded-full shadow-none"
+                  :aria-label="$i18n.t.value.primitives.submit"
+                  :disabled="composerDisabled"
+                >
+                  <Loader2 v-if="composerBusy" class="size-4 animate-spin" />
+                  <ArrowUp v-else class="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                {{ $i18n.t.value.sidecar.send }}
+              </TooltipContent>
+            </Tooltip>
           </div>
         </ComposerSurface>
       </form>

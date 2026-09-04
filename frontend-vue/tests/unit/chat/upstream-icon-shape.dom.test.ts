@@ -24,6 +24,7 @@ import { ref } from "vue";
 
 import ArtifactTrigger from "@/components/workspace/artifacts/ArtifactTrigger.vue";
 import GoalStatus from "@/components/workspace/GoalStatus.vue";
+import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import SidecarTrigger from "@/components/workspace/sidecar/SidecarTrigger.vue";
 import { enUS } from "@/core/i18n/locales/en-US";
 
@@ -55,6 +56,43 @@ describe("上游图标字形", () => {
     expect(source).not.toContain("CheckCircle2");
   });
 
+  /*
+    wave 72：复制键上游也是手写 `<button>`（citation-sources-panel.tsx:122），
+    所以不改走 Button——但本仓照抄时**漏了三条**，而这三条一条测试都没盯着：
+    悬停反馈、`shrink-0`，以及复制成功那颗对勾的 `text-green-500`
+    （可访问名换了、视觉没换，用户看不出复制成没成）。
+    钉源码串而不是渲染：这一颗要挂在 MessageList 的引用面板里才渲染，
+    单独 mount 的成本远大于它挡住的回归。
+  */
+  it("引用面板的复制键抄全了上游那一串", async () => {
+    const source = await import("node:fs").then((fs) =>
+      fs.readFileSync("app/components/chat/CitationSourcesPanel.vue", "utf8"),
+    );
+    /*
+      **先剥注释再找**（坑 202，这一节自己踩的第四次）：第一版直接在整份源码里
+      找那四个 class 名，而上面那段说明文字**逐字引用了它们**——把 class 从按钮上
+      删掉，断言照样绿。剥完之后再从复制键**自己的 class 串**里找。
+    */
+    const stripped = source
+      .replaceAll(/<!--[\s\S]*?-->/g, "")
+      .replaceAll(/\/\*[\s\S]*?\*\//g, "");
+    const copyButton = /<button\b[^>]*copySource\(source\)[^>]*>/s.exec(
+      stripped,
+    )?.[0];
+    expect(copyButton, "找不到引用面板的复制键").toBeDefined();
+    const copyClass = /\bclass="([^"]*)"/.exec(copyButton!)?.[1] ?? "";
+    for (const token of [
+      "hover:bg-muted",
+      "hover:text-foreground",
+      "shrink-0",
+      "transition-colors",
+    ]) {
+      expect(copyClass.split(/\s+/), `复制键少了 ${token}`).toContain(token);
+    }
+    // 复制成功那颗对勾上游是绿的。
+    expect(stripped).toContain('class="text-green-500"');
+  });
+
   it("引用面板的外链图标是上游的 14px", async () => {
     const source = await import("node:fs").then((fs) =>
       fs.readFileSync("app/components/chat/CitationSourcesPanel.vue", "utf8"),
@@ -71,8 +109,15 @@ describe("上游图标字形", () => {
         "utf8",
       ),
     );
-    // 上游 sidecar-panel.tsx:745 是 `size-3`。
-    expect(source).toContain('<Paperclip :size="12" aria-hidden="true" />');
+    /*
+      上游 sidecar-panel.tsx:745 是 `size-3`（12px）。
+      wave 72 把这颗键改走 `<Button>` 之后写法从 `:size="12"` 换成 `class="size-3"`
+      ——与 ChatComposer 那颗同一种写法。**尺寸没变，钉法要跟着换**：
+      钉源码写法而不是钉渲染出来的尺寸，本来就是这条断言的已知弱点
+      （它只保证「没人手滑改成 14」）。
+    */
+    expect(source).toContain('<Paperclip class="size-3" aria-hidden="true" />');
+    expect(source).not.toContain('<Paperclip class="size-3.5"');
   });
 });
 
@@ -92,6 +137,31 @@ describe("原生 title 换成 Tooltip 组件", () => {
     expect(counter).toBeDefined();
     // 原生 title 的延迟 / 位置 / 配色都不受控，触屏上根本不出现。
     expect(wrapper.html()).not.toContain("title=");
+    expect(wrapper.find("[data-slot='tooltip-trigger']").exists()).toBe(true);
+  });
+
+  /*
+    wave 72：ReferenceAttachment 原来把 `title` 挂在**整个 chip** 上，
+    上游 reference-attachments.tsx:78 是把 `<Tooltip>` 包在图标 + 标签那一层
+    span 上、内容是一个 `w-72` 的引用预览块。挂在容器上时**连清除键也会弹**
+    原生气泡，而上游那颗按钮是不弹的。
+  */
+  it("ReferenceAttachment 的引用预览走 Tooltip，不走整块的原生 title", () => {
+    const wrapper = mount(ReferenceAttachment, {
+      props: {
+        references: [
+          {
+            id: "r1",
+            context: { content: "  selected   text  " },
+          },
+        ] as never,
+        clearable: true,
+      },
+    });
+
+    expect(wrapper.html()).not.toContain("title=");
+    expect(wrapper.find("[data-slot='tooltip-trigger']").exists()).toBe(true);
+    /* 空白折叠成单空格（上游 formatPreviewText）。 */
     expect(wrapper.find("[data-slot='tooltip-trigger']").exists()).toBe(true);
   });
 

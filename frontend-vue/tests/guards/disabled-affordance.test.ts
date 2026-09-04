@@ -52,10 +52,24 @@ describe("手写 button 的禁用样式", () => {
 
   /*
     形状断言：扫不到按钮时下面那条会静默通过（线索 176/195）。
-    这个下限远低于实测值，只用来证明「扫到了」。
+
+    **不要再往这里写「当前实测值减几」。** 手写 button 的池子每一轮都在缩
+    （wave 71 从 98 到 76，wave 72 又拿掉一批改走 primitive），一个贴着实测值的
+    下限每一轮都要跟着调，而调它的人分不清「因为修好了」和「因为扫挂了」。
+    这里改成两条都不随池子大小漂的锚：一个很松的下限，
+    加一个**按契约永远手写**的正样本——`MermaidZoomPan.vue` 的三颗缩放键
+    逐字抄自 streamdown 的 `chunk-BO2N2NFS.js`（上游自己就是手写 button，
+    见该文件头），它们不会改走 Button。
   */
   it("扫到了足够多的手写 button", () => {
-    expect(scanned.length).toBeGreaterThan(60);
+    expect(scanned.length).toBeGreaterThan(20);
+  });
+
+  it("扫到了那三颗按契约永远手写的缩放键", () => {
+    const zoomPan = scanned.filter(({ file }) =>
+      file.endsWith("MermaidZoomPan.vue"),
+    );
+    expect(zoomPan).toHaveLength(3);
   });
 
   it("带 :disabled 的都有看得见的禁用样式", () => {

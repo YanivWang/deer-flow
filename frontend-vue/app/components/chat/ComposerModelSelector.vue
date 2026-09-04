@@ -49,6 +49,8 @@
 import { computed, ref, watch } from "vue";
 import { Check } from "lucide-vue-next";
 
+import { Button } from "@/components/ui/button";
+
 import {
   Command,
   CommandInput,
@@ -140,15 +142,40 @@ function selectModel(model: Model) {
   -->
   <Dialog v-model:open="open">
     <DialogTrigger>
-      <button
+      <!--
+        上游 input-box.tsx:2693 是
+        `<PromptInputButton className="max-w-40 min-w-0 sm:max-w-56" disabled>`，
+        也就是 `<Button variant="ghost" size="sm">`。手写那版只留了
+        `hover:bg-accent`：少 `hover:text-accent-foreground`、
+        少 `dark:hover:bg-accent/50`（深色主题悬停底色差一档）、
+        少 `cursor-pointer`、少 3px 焦点环、少 `disabled:pointer-events-none`
+        （禁用时还能收到 hover），并且把 `text-xs` 写在了按钮上——
+        上游按钮是 `text-sm`，`text-xs` 只落在里层的 ModelSelectorName 上。
+
+        `px-2.5` 与 `shadow-none` 要显式写：上游这颗走的是 **InputGroupButton**，
+        它的 sm 档是 `h-8 px-2.5 gap-1.5 rounded-md`，而 shadcn **Button** 的 sm 档是
+        `h-8 gap-1.5 rounded-md px-3`——两套 sm 的水平内边距差 2px，
+        `shadow-none` 也只在 InputGroupButton 的 base 里。
+
+        内层两层照抄上游（一个 flex-col 容器 + 一个
+        `flex-1 truncate text-left text-xs` 的 span）：只有一层 span 时
+        `truncate` 作用在错误的盒子上，长模型名会把按钮撑过 max-w 而不是省略。
+      -->
+      <Button
         v-bind="$attrs"
         type="button"
+        variant="ghost"
+        size="sm"
         :data-testid="testId"
         :disabled="disabled"
-        class="hover:bg-accent h-8 max-w-40 min-w-0 rounded-md px-2.5 text-xs disabled:opacity-50 sm:max-w-56"
+        class="max-w-40 min-w-0 px-2.5 shadow-none sm:max-w-56"
       >
-        <span class="block truncate">{{ selectedModel?.display_name }}</span>
-      </button>
+        <div class="flex min-w-0 flex-col items-start text-left">
+          <span class="flex-1 truncate text-left text-xs">{{
+            selectedModel?.display_name
+          }}</span>
+        </div>
+      </Button>
     </DialogTrigger>
     <DialogContent
       class="gap-0 overflow-hidden p-0"

@@ -22,9 +22,21 @@ const collapsed = ref(true);
     class="border-border bg-background overflow-hidden rounded-xl border"
     data-testid="thread-todos"
   >
+    <!--
+      上游 todo-list.tsx:45 这一层是一个**挂着 onClick 的 `<header>`**，不是按钮：
+      键盘用户根本折不动这块面板。本仓这里是 `<button` + `aria-expanded`，
+      **有意不跟**（那是上游自己的可达性缺陷，按 wave 28 的判据属于「两边同改」，
+      账记在交接文档，不在这一轮改 `frontend/`）。
+
+      外观照抄上游那一层：`min-h-8`（上游 32px，本仓原来 `min-h-9` 高 4px）、
+      `cursor-pointer`（上游显式写了；Tailwind 4 的 preflight 不给按钮小手，
+      本仓这颗此前是箭头）、`transition-all duration-300 ease-out`，
+      以及箭头自己的 `text-muted-foreground`——上游那颗箭头是中灰的，
+      本仓原来继承前景色，比上游深一档（坑 204：颜色只能从渲染读，不能从 class 推）。
+    -->
     <button
       type="button"
-      class="bg-accent flex min-h-9 w-full items-center justify-between px-4 text-sm"
+      class="bg-accent flex min-h-8 w-full cursor-pointer items-center justify-between px-4 text-sm transition-all duration-300 ease-out"
       :aria-expanded="!collapsed"
       @click="collapsed = !collapsed"
     >
@@ -33,7 +45,7 @@ const collapsed = ref(true);
       </span>
       <ChevronUp
         :size="16"
-        class="transition-transform"
+        class="text-muted-foreground transition-transform duration-300 ease-out"
         :class="collapsed ? '' : 'rotate-180'"
       />
     </button>

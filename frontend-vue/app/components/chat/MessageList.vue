@@ -21,7 +21,9 @@ import {
 } from "vue";
 import {
   CheckCircle2,
+  ChevronUp,
   Clock3,
+  Loader2,
   MessageCircle,
   MessageSquarePlus,
   Wrench,
@@ -984,8 +986,36 @@ onUnmounted(() => {
       <div v-if="loading" class="py-8 text-center text-sm text-gray-500">
         {{ $i18n.t.value.messages.loadingConversation }}
       </div>
+      <!--
+        「加载更早」整块照 `message-list.tsx:159` 的 `LoadMoreHistoryIndicator` 重排，
+        三处可观察差异都由此而来：
+
+        ① **加载态是同一颗按钮，不是换成一段文字。** 上游把 loading 折进按钮里
+           （置灰 + `Loader2Icon animate-spin` + `common.loading`）；本仓原来把按钮
+           整个卸载、换成一个 `<span role="status">`。点完的那一刻焦点所在的元素
+           消失，键盘用户被丢回 body——和 composer 里「发送/停止是同一颗键」
+           同一条理由。
+
+        ② **哨兵挂在外层 div 上，不在按钮上**（上游 `<div ref={sentinelRef}>`）。
+           挂在按钮上时，加载中按钮被卸载，IntersectionObserver 也跟着掉，
+           连续滚动加载要等按钮重新挂上才恢复。
+
+        ③ **按钮不是下划线文字，是一颗 ghost 圆角键，而且带 `ChevronUp` 图标**
+           （上游 `variant="ghost" size="sm"
+           className="text-muted-foreground hover:text-foreground rounded-full px-3"`）。
+           文案也回到上游 common 下的 loadMore / loading——本仓原来在 messages 下
+           自造了 loadEarlier / loadingEarlier 两条词条（本轮已删），
+           渲染出来是「Load earlier messages」而上游是「Load more」。
+           这里不写带点的键名：注释里的 `a.b` 会被 i18n 扫描器当成一处消费，
+           把死词条从 unused 集里抹掉（坑 126）。
+
+        出错那一支是本仓独有的（上游这一处没有错误态，失败后按钮原样留着、
+        用户看不出发生过什么）。**保留**：删掉是产品回归，
+        与 GatewayStatusBanner 上那颗重试同一条取舍。
+      -->
       <div
         v-if="hasMoreHistory || historyLoadingMore || historyError"
+        ref="historySentinel"
         class="mx-auto flex w-full max-w-[var(--container-width-md)] justify-center pt-3"
       >
         <span v-if="historyError" role="alert" class="text-destructive text-xs">
@@ -998,23 +1028,25 @@ onUnmounted(() => {
             {{ $i18n.t.value.messages.tryAgain }}
           </button>
         </span>
-        <button
-          v-else-if="hasMoreHistory && !historyLoadingMore"
-          ref="historySentinel"
+        <Button
+          v-else
           data-testid="load-earlier-messages"
           type="button"
-          class="text-muted-foreground hover:text-foreground rounded px-3 py-1 text-xs underline"
+          variant="ghost"
+          size="sm"
+          class="text-muted-foreground hover:text-foreground rounded-full px-3"
+          :disabled="historyLoadingMore || !hasMoreHistory"
           @click="requestHistoryLoad"
         >
-          {{ $i18n.t.value.messages.loadEarlier }}
-        </button>
-        <span
-          v-else-if="historyLoadingMore"
-          role="status"
-          class="text-muted-foreground text-xs"
-        >
-          {{ $i18n.t.value.messages.loadingEarlier }}
-        </span>
+          <template v-if="historyLoadingMore">
+            <Loader2 class="mr-2 size-4 animate-spin" />
+            {{ $i18n.t.value.common.loading }}
+          </template>
+          <template v-else>
+            <ChevronUp class="mr-2 size-4" />
+            {{ $i18n.t.value.common.loadMore }}
+          </template>
+        </Button>
       </div>
       <div
         :ref="setContentElement"

@@ -10,6 +10,7 @@
 import { computed } from "vue";
 import { ChevronDown, Coins } from "lucide-vue-next";
 
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -98,8 +99,16 @@ function presetDescription(value: TokenUsageViewPreset) {
 <template>
   <DropdownMenu v-if="enabled" data-testid="token-usage-indicator">
     <DropdownMenuTrigger>
-      <button
+      <!--
+        上游 `token-usage-indicator.tsx:80` 是 `<Button variant="ghost">` 加同一串
+        className。手写那版把 className 抄全了，缺的是 ghost 变体与 base 里没被
+        className 盖掉的那几条：`cursor-pointer`、3px 焦点环、`disabled:*`、
+        `whitespace-nowrap`、`transition-all`，以及 **`hover:text-accent-foreground`**
+        ——上游悬停时整颗徽标的文字也会变色，本仓只有底色在动。
+      -->
+      <Button
         type="button"
+        variant="ghost"
         class="border-border bg-background/70 text-muted-foreground hover:bg-background/90 flex h-auto items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-normal"
       >
         <Coins :size="14" />
@@ -121,7 +130,7 @@ function presetDescription(value: TokenUsageViewPreset) {
           {{ percentage }}%
         </span>
         <ChevronDown :size="12" />
-      </button>
+      </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" side="bottom" class="w-80">
       <DropdownMenuLabel class="text-foreground text-sm font-semibold">

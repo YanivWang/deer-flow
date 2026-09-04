@@ -86,17 +86,35 @@ async function copySource(source: CitationSource) {
           「Copy reference…」，而唯一会变的图标是 aria-hidden 的装饰——
           读屏器听不出复制到底成没成。
         -->
+        <!--
+          **上游这一颗也是手写 `<button>`**（citation-sources-panel.tsx:122），
+          所以不改走 Button；本仓照抄时漏掉的是三样：
+          `hover:bg-muted hover:text-foreground transition-colors`
+          （原来悬停时完全没有反应）、`shrink-0`（长标题会把它挤扁），
+          以及复制成功那颗对勾的 **`text-green-500`**——上游变绿，
+          本仓恒为 muted，用户看不出复制成没成（可访问名换了，视觉没换）。
+          `title` 也补上：上游同时给了 aria-label 和 title。
+        -->
         <button
           type="button"
-          class="text-muted-foreground rounded p-1.5"
+          class="text-muted-foreground hover:bg-muted hover:text-foreground shrink-0 rounded p-1.5 transition-colors"
           :aria-label="
+            copied === source.id
+              ? $i18n.t.value.citations.copiedReference(source.title)
+              : $i18n.t.value.citations.copyReference(source.title)
+          "
+          :title="
             copied === source.id
               ? $i18n.t.value.citations.copiedReference(source.title)
               : $i18n.t.value.citations.copyReference(source.title)
           "
           @click="copySource(source)"
         >
-          <Check v-if="copied === source.id" :size="14" />
+          <Check
+            v-if="copied === source.id"
+            :size="14"
+            class="text-green-500"
+          />
           <Copy v-else :size="14" />
         </button>
       </li>

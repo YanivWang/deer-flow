@@ -22,6 +22,7 @@ export interface Translations {
     stop: string;
     skillSuggestions: string;
     modelSelector: string;
+    selectAFile: string;
     commandPalette: string;
     commandPaletteDescription: string;
     suggestions: string;
@@ -1025,8 +1026,6 @@ export interface Translations {
     copyFailed: string;
     loadEarlierFailed: string;
     loadingConversation: string;
-    loadEarlier: string;
-    loadingEarlier: string;
     tryAgain: string;
     actions: {
       editAndRerun: string;

@@ -46,6 +46,7 @@ export const zhCN: Translations = {
     stop: "Stop",
     skillSuggestions: "Skill suggestions",
     modelSelector: "Model Selector",
+    selectAFile: "Select a file",
     commandPalette: "Command Palette",
     commandPaletteDescription: "Search for a command to run...",
     suggestions: "Suggestions",
@@ -1228,8 +1229,6 @@ export const zhCN: Translations = {
     copyFailed: "复制消息失败。",
     loadEarlierFailed: "加载更早消息失败。",
     loadingConversation: "正在加载会话…",
-    loadEarlier: "加载更早消息",
-    loadingEarlier: "正在加载更早消息…",
     tryAgain: "重试",
     actions: {
       editAndRerun: "编辑并重新运行",

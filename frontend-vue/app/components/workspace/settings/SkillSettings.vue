@@ -9,7 +9,10 @@
 
 import { computed, ref } from "vue";
 
+import { Sparkles } from "lucide-vue-next";
+
 import SettingsSection from "./SettingsSection.vue";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSettingsDialog } from "@/composables/useSettingsDialog";
@@ -70,14 +73,16 @@ async function createSkill() {
   >
     <div class="space-y-4">
       <div class="flex items-start justify-end gap-4">
-        <button
-          type="button"
-          class="bg-primary text-primary-foreground rounded-md px-3 py-2"
-          data-testid="create-skill"
-          @click="createSkill"
-        >
+        <!--
+          上游 `skill-settings-page.tsx:94` 是
+          `<Button size="sm">` 里放一颗 `<SparklesIcon className="size-4" />`。
+          手写那版**没有图标**，尺寸也是 default 一档（sm 是 `h-8 gap-1.5 px-3`），
+          而且少 `hover:bg-primary/90`、`cursor-pointer`、3px 焦点环与 `disabled:*`。
+        -->
+        <Button size="sm" data-testid="create-skill" @click="createSkill">
+          <Sparkles class="size-4" />
           {{ t.settings.skills.createSkill }}
-        </button>
+        </Button>
       </div>
 
       <p

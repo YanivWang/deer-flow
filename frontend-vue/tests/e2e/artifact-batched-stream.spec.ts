@@ -295,13 +295,15 @@ test("fails closed for Office/archive files and requires a full D3-valid HTML re
   await expect(panel.getByTestId("artifact-download-fallback")).toBeVisible();
   await expect(panel.getByLabel("Edit", { exact: true })).toHaveCount(0);
 
+  // 文件下拉是 `ui/select`，弹层 portal 到 body：`role="option"` 不能用
+  // `panel.` 限定（上游同样是 Radix 的 SelectPortal）。
   await panel.getByRole("combobox").click();
-  await panel.getByRole("option", { name: "bundle.zip" }).click();
+  await page.getByRole("option", { name: "bundle.zip" }).click();
   await expect(panel.getByTestId("artifact-download-fallback")).toBeVisible();
   expect(nonTextLoads).toBe(0);
 
   await panel.getByRole("combobox").click();
-  await panel.getByRole("option", { name: "large.html" }).click();
+  await page.getByRole("option", { name: "large.html" }).click();
   await expect(
     panel.getByRole("button", { name: "Load full file" }),
   ).toBeVisible();
@@ -351,7 +353,7 @@ test("uses the same dirty guard for file switch and panel close", async ({
 
   page.once("dialog", (dialog) => dialog.dismiss());
   await panel.getByRole("combobox").click();
-  await panel.getByRole("option", { name: "second.txt" }).click();
+  await page.getByRole("option", { name: "second.txt" }).click();
   await expect(artifactEditorInput(panel)).toHaveText("dirty draft");
   await expect(panel.getByRole("combobox")).toContainText("first.txt");
 

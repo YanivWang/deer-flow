@@ -27,6 +27,7 @@
 import { onMounted, ref } from "vue";
 import { ArrowUp } from "lucide-vue-next";
 import ComposerSurface from "@/components/chat/ComposerSurface.vue";
+import { Button } from "@/components/ui/button";
 import { isImeComposing } from "@/core/input/ime";
 
 const props = defineProps<{ disabled?: boolean }>();
@@ -79,15 +80,29 @@ onMounted(() => textarea.value?.focus());
         />
       </div>
       <div role="group" data-slot="input-group-footer" class="justify-end">
-        <button
+        <!--
+          上游 `workspace/agents/new/page.tsx:455` 是**裸的**
+          `<PromptInputSubmit disabled={thread.isLoading} />`——不传 className，
+          于是它是 `<InputGroupButton variant="default" size="icon-sm">`：
+          **`rounded-md` 的圆角方钮**，不是圆的。主输入框与 sidecar 那两颗
+          之所以是圆的，是因为它们各自显式传了 `className="rounded-full"`；
+          这一颗没有。手写那版画成了 `rounded-full`，于是建 agent 那一屏
+          发送键在两个应用里一个是圆的一个是方的。
+
+          另外少 `hover:bg-primary/90`（悬停无反应）、`cursor-pointer`、
+          3px 焦点环、`disabled:pointer-events-none` 与 `shadow-none`
+          （InputGroupButton 的 base 有它）。
+        -->
+        <Button
           type="submit"
+          size="icon-sm"
+          class="shadow-none"
           data-testid="agent-bootstrap-composer-submit"
           :aria-label="$i18n.t.value.primitives.submit"
-          class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full disabled:opacity-50"
           :disabled="disabled"
         >
-          <ArrowUp :size="16" />
-        </button>
+          <ArrowUp class="size-4" />
+        </Button>
       </div>
     </ComposerSurface>
   </form>

@@ -11,6 +11,7 @@
 import { onMounted, ref, watch } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
 
+import { Button } from "@/components/ui/button";
 import FlickeringGrid from "@/components/ui/effects/FlickeringGrid.vue";
 import { fetch as fetchWithAuth } from "@/core/api/fetcher";
 import { clearAuthenticatedClientState } from "@/core/auth/client-state";
@@ -168,13 +169,15 @@ onMounted(() => {
         {{ $i18n.t.value.login.serviceUnavailableDescription }}
       </p>
       <div class="flex justify-center gap-3">
-        <button
-          type="button"
-          class="bg-primary text-primary-foreground rounded-md px-4 py-2"
-          @click="setupAttempt += 1"
-        >
+        <!--
+          上游 `(auth)/setup/page.tsx:187` 是裸 `<Button>`（default 变体、default
+          尺寸）。手写那版只抄了填色：少 `hover:bg-primary/90`（悬停时完全没反应）、
+          少 `cursor-pointer`、少 3px 焦点环、少 `h-9`（`px-4 py-2` 算出来的高度
+          与上游的 36px 不一样）、也少 `disabled:*`。
+        -->
+        <Button type="button" @click="setupAttempt += 1">
           {{ $i18n.t.value.login.retry }}
-        </button>
+        </Button>
         <!--
           按钮而不是链接，且走 replace。React 这里是
           `<Button onClick={() => router.replace("/login")}>`（setup/page.tsx 的
@@ -183,13 +186,13 @@ onMounted(() => {
           会把这个不可用页留在历史里，用户后退又撞回来；链接还多出右键、中键和
           新标签页打开这些按钮没有的能力。
         -->
-        <button
+        <Button
           type="button"
-          class="rounded-md border px-4 py-2"
+          variant="outline"
           @click="navigateTo('/login', { replace: true })"
         >
           {{ $i18n.t.value.login.signIn }}
-        </button>
+        </Button>
       </div>
     </section>
     <section
@@ -270,11 +273,8 @@ onMounted(() => {
         <p v-if="error" role="alert" class="text-sm text-red-500">
           {{ error }}
         </p>
-        <button
-          type="submit"
-          class="bg-primary text-primary-foreground w-full rounded-md px-4 py-2 disabled:pointer-events-none disabled:opacity-50"
-          :disabled="loading"
-        >
+        <!-- 上游 `(auth)/setup/page.tsx:276` 是 `<Button type="submit" className="w-full">`。 -->
+        <Button type="submit" class="w-full" :disabled="loading">
           {{
             loading
               ? $i18n.t.value.login.pleaseWait
@@ -282,7 +282,7 @@ onMounted(() => {
                 ? $i18n.t.value.setup.createAdmin
                 : $i18n.t.value.setup.completeSetup
           }}
-        </button>
+        </Button>
       </form>
     </section>
   </div>

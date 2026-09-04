@@ -10,6 +10,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Paperclip, X } from "lucide-vue-next";
 
+import { Button } from "@/components/ui/button";
 import {
   HoverCard,
   HoverCardContent,
@@ -68,14 +69,32 @@ onBeforeUnmount(releasePreview);
               aria-hidden="true"
             />
           </div>
-          <button
+          <!--
+            上游 prompt-input.tsx:336 是
+            `<Button variant="ghost" className="absolute inset-0 size-5 cursor-pointer
+            rounded p-0 opacity-0 transition-opacity group-hover:pointer-events-auto
+            group-hover:opacity-100 [&>svg]:size-2.5">`。手写那版自己写了
+            `hover:bg-accent`，缺的是 ghost 变体剩下的两条
+            （`hover:text-accent-foreground` / `dark:hover:bg-accent/50`）、
+            3px 焦点环与 `disabled:*`。
+
+            **两处有意不跟上游：**
+            ① `focus-visible:opacity-100` 是本仓加的。上游这颗只有 `group-hover`
+               才显形，键盘 Tab 到它时**整颗是透明的**——焦点在一个看不见的按钮上。
+               那是上游自己的可达性缺陷（判据同 wave 28），删掉是回归。
+            ② 可访问名带文件名（`artifacts.actions.removeFile(file.name)`），
+               上游写死 "Remove attachment"。一次带多个附件时，上游那串名字
+               每颗都一样，读屏器听不出在删哪一个。
+          -->
+          <Button
             type="button"
+            variant="ghost"
             :aria-label="$i18n.t.value.artifacts.actions.removeFile(file.name)"
-            class="hover:bg-accent absolute inset-0 flex size-5 cursor-pointer items-center justify-center rounded p-0 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:opacity-100"
+            class="absolute inset-0 size-5 cursor-pointer rounded p-0 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:opacity-100 [&>svg]:size-2.5"
             @click.stop="emit('remove')"
           >
-            <X :size="10" aria-hidden="true" />
-          </button>
+            <X aria-hidden="true" />
+          </Button>
         </div>
         <span class="min-w-0 flex-1 truncate">{{ file.name }}</span>
       </div>
