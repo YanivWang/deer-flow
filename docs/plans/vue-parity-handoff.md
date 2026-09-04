@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 68，2026-09-04）
+## 当前状态（截至 wave 69，2026-09-04）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`）。
 - **动过 `frontend/` 的是十五轮**（wave 52 实测订正，wave 62 又加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -65,15 +65,15 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 68 收工时逐条跑过）
+### 门禁实测值（wave 69 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；253 文件 / 2100 单测，词典 944 key、18 unused
+make -C frontend-vue verify        exit 0；255 文件 / 2113 单测，词典 944 key、18 unused
 make -C frontend-vue asset-budget  exit 0（wave 66 起才是绿的，**从此进每轮清单**）
 make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefile 的 audit 上方
 make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55% / 行 74.9%
                                    **诊断工具，不进 verify，没有阈值**
-                                   standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 37 处 / 16 个文件）
+                                   standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 39 处 / 17 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
@@ -81,7 +81,7 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~62 都没有新增 SFC）。动了 `frontend/` 再加
+产品 SFC **216**（总 218；wave 69 新增 `TruncatedTooltip.vue`，是 wave 30 以来第一个）。动了 `frontend/` 再加
 `python3 scripts/pnpm.py --dir frontend check` / `test`（**1029**）/ `test:e2e`（**146**）。
 **wave 62 三条全真跑过**：check 0、test 1029 passed、test:e2e 146 passed。
 （1023 → 1029 是 wave 62 加的 6 条：3 条 auth-callback 路由位置 + 3 条图标按钮可访问名。）
@@ -258,7 +258,64 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
 
-## 上一轮（wave 68）做了什么：**用户报了一处间距，量下来一屏十六处**
+## 上一轮（wave 69）做了什么：**把 wave 68 的手法做成机械扫描，又扫出六处**
+
+提交 `585e0bc7`（chore `eec54d3c`）。wave 68 那十六处是**读 React 源码**读出来的，
+而「图标字形 / 图标尺寸 / 有没有 Tooltip」这三样都不进可访问性树，几何档也只在
+两边同时跑起来、且元素当时可见时才够得着。做成 `make icon-parity`
+（`scripts/icon-parity.mjs`，**只读源码，不用把应用跑起来**，所以够得着登录后的屏），
+扫出 30 条线索，逐条回源码核实后确认六处。
+
+| 处  | 内容                                                                                                      |
+| --- | --------------------------------------------------------------------------------------------------------- |
+| 1~2 | `SubtaskCard` 画 `CheckCircle2`(=CircleCheck)，上游 `CheckCircleIcon`(=**CircleCheckBig**)——两颗不同字形  |
+| 3   | `CitationSourcesPanel` 外链图标 13px，上游 `size-3.5` = 14px                                              |
+| 4   | `SidecarPanel` 回形针 14px，上游 `size-3` = 12px                                                          |
+| 5   | `GoalStatus` 续跑计数用原生 `title`，上游包在 `<Tooltip>` 里                                              |
+| 6   | `ArtifactTrigger` 没有 Tooltip；窄屏下文字被 `hidden sm:inline` 收起来，那时它是纯图标键                  |
+| 7~8 | `AgentCard` 的名字与描述被截断后**没有任何办法看到全文**（新增 `TruncatedTooltip.vue`，只在真截断时才出） |
+
+### 两条量过的否定结论
+
+- **消息点赞/点踩不是「Vue 缺功能」。** 本仓 `core/api/feedback.ts` 零消费者，
+  看着像少了一整个功能；但**全 React 仓库没有一处**传 `feedback={...}`，
+  而 `FeedbackButtons` 的渲染条件是 `feedback !== undefined`，
+  `MessageListItem` 又只被 `message-list.tsx` 引用——**上游那套 UI 也从来不渲染**，
+  也没有任何测试。两边都带着死的反馈代码，位置不同而已。
+- **workspace 改动面板的逐文件 `+N/-N` 不是缺失**，本仓放在内联徽章列表里、
+  上游放在展开面板里；状态本仓用文字、上游用带色图标。**两边双视图结构不同，
+  记成待核线索，没有半修。**
+
+### 这把新尺子自己被修了五次（与 wave 68 的 `dom-parity` 同源）
+
+1. `size-3.5` 被 `size-(\d+)` 读成 `size-3` → 14px 报成 12px，
+   **三条里两条是这么来的假线索**。
+2. 只比「两边同名的图标」，名字不同就完全看不见——而 wave 68 一轮已被这一类咬两次。
+   改成按两个包各自的 `.d.ts` 解析成 lucide 规范名。
+3. 字形档拿「写了尺寸的」当「用没用过」，把 composer 在用的 `Zap` 报成「只有 React 用」。
+   改成从 import 语句收集。
+4. 按文件问「有没有这颗」全是噪声（两边组件切分方式不同）。
+   **尺寸按文件比，字形按全仓比。**
+5. `DialogPrimitive` 这类也带 `size-*` 但不是图标。只认在别名表里的名字。
+
+配两条 exit 2 形状断言 + `tests/guards/icon-parity-tool.test.ts` 钉「那些断言还在」。
+工具按 `upstream-drift.mjs` 的先例进 `CROSS_APP_BY_DESIGN`，
+**并真的做到「上游缺席时打印一行退出 0」**（否则声明就是假的）。
+
+### 负向验证
+
+五条变异全部转红。**头两次 N5/N6 是无效变异**：单边替换开标签把 SFC 改坏了，
+整个测试文件加载失败（14 条变 8 条 / 6 条）——**「跑出来少了几条」和「红了几条」
+要分清**，重做成成对替换才算数。
+
+### 一条负载抖动
+
+`thread-list-infinite-scroll.spec.ts:74`（已登记的第四条）。因果够不着：
+侧栏子树的传递闭包是 **88 文件 / 31 SFC**，七个改动件一个都不在。
+（第一版遍历只跟 `@/….vue`、漏了桶导出，只数出 7 个 SFC——
+**从少算的集合里得出「无命中」不算数**。）`--repeat-each=5` **15/15**。
+
+## wave 68 做了什么：**用户报了一处间距，量下来一屏十六处**
 
 提交 `e775ba9e`。**入口是用户自己看出来的**：「标题和描述怎么跟输入框没有间距」。
 
@@ -329,12 +386,22 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 撤销态画回 Sparkles 1、胶囊去 role/aria-live 1、取消键换 testid 2、
 页脚优化键润色时消失 1、语音键丢 disabled 1。
 
-## 下一轮：**几何这一档只够得着免登录页**
+## 下一轮：**两条**
+
+### 一、几何这一档只够得着免登录页
 
 `dom-parity` 现在只能扫 landing / login 两屏（setup 与 showcase 都跳登录）。
 **工作区那些屏要么把几何接进对照台账**（`sampleGeometry` 现在只量 settle 锚点，
 这是线索 137 的正题），**要么给 `dom-parity` 接上两边的 mock 网关**——
 后者是重造一遍台账已有的东西，前者动的是有基线的门禁。**先想清楚再动。**
+
+### 二、`icon-parity` 还剩 30 条**没核实的**线索
+
+字形档 22 条「只有 React 用」+ 5 条「只有 Vue 用」，加上按文件的尺寸差。
+**它们是线索不是结论**——wave 69 核过的那批里，假线索比真差异还多。
+已核实并排除的：ThumbsUp/ThumbsDown（两边都是死代码）、
+Bookmark/GripVertical/OctagonX/TriangleAlert（在 `ui/` 与 `ai-elements/` 里，
+两边 primitive 实现不同）、FileMinus/FilePlus/FilePenLine（改动面板双视图结构不同）。
 
 **如果要开别的，先说清楚「这一轮要让哪个用户的什么体验变好」。**
 覆盖率地图（`app/components` 66%）**不是待办清单**。
@@ -1105,7 +1172,21 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   **凡是「清单 + 逐条检查」的门禁，都要再问一句：清单本身谁在维护？**
   修法是让清单**可推导**（实测集合 == 清单，双向），再给它一条顺序断言，
   让插入位置唯一——顺序对这份清单没有语义，但没有顺序规则，下一个人只会往末尾追加。
-- **一把新尺子最先要量的是它自己**（线索 186~188，wave 68 一轮踩了三次）。
+- **「跑出来少了几条」和「红了几条」是两回事**（wave 69）。负向验证时单边替换
+  一个开标签，SFC 编译不过，**整个测试文件不加载**——报表上是「8 passed」，
+  看起来像绿的，实际是那个文件的 8 条根本没跑。**变异必须保持文件可编译**，
+  并且核对总条数有没有变。
+- **「上游那边有、本仓没有」不等于本仓缺功能**（wave 69）。`core/api/feedback.ts`
+  零消费者，看着像少了点赞点踩；实测**上游那套 UI 也从来不渲染**
+  （没有一处传 `feedback={...}`，而渲染条件是 `feedback !== undefined`）。
+  **先问「上游那边真的活着吗」，再问「本仓少了吗」。**
+- **一把新尺子最先要量的是它自己**（线索 186~188，wave 68 一轮踩了三次；
+  wave 69 的 `icon-parity` 又五次）。wave 69 那五次分别是：正则漏掉 `size-3.5`
+  的小数点（14px 报成 12px，**三条线索里两条是假的**）、只比同名图标（名字不同
+  就完全看不见，而这正是要找的那一类）、拿「写了尺寸的」当「用没用过」、
+  按文件问「有没有这颗」（两边组件切分方式不同，全是噪声）、
+  把 `DialogPrimitive` 这类非图标也算进来。
+  **收口原则：尺寸按文件比，字形按全仓比；名字先解析成规范名再比。**
   几何档加进 `dom-parity` 的当轮：① 不报「连上了几个元素」，于是三个完全不同的
   页面都「连上 7 个」这种事没人看得见；② `waitUntil: "networkidle"` 在开发服务器上
   永不成立，超时后 catch 里**静默返回空数据**，印出来的「差异 0 处」和「量过、
