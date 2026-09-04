@@ -84,13 +84,118 @@ describe("skill install action", () => {
         canDownload: true,
         canInstall: true,
         installing: false,
-        truncated: false,
+        copyDisabled: false,
       },
     });
 
+    /*
+      **名字与说明是两句话**（上游 artifact-file-detail.tsx:532 传
+      `label={t.common.install}` 与 `tooltip={t.toolCalls.skillInstallTooltip}`）。
+      wave 69 之前本仓把说明挂在原生 `title` 上，这一排八颗纯图标键里
+      只有它 hover 有反应；现在整排都走 `<Tooltip>`，与上游的
+      `ArtifactAction` 一致。
+
+      **浮层文字要 hover 才进 DOM**（Reka 把 TooltipContent 渲染在 portal 里），
+      挂载后断言不到——那一档归 e2e。这里钉的是结构：这颗键在触发器里、
+      名字仍是 `common.install` 而不是被说明顶替。
+    */
     const install = wrapper.get(`button[aria-label="${enUS.common.install}"]`);
-    expect(install.attributes("title")).toBe(
-      enUS.toolCalls.skillInstallTooltip,
+    expect(install.attributes("title")).toBeUndefined();
+    expect(install.element.closest("[data-slot='tooltip-trigger']")).not.toBe(
+      null,
     );
+    expect(enUS.common.install).not.toBe(enUS.toolCalls.skillInstallTooltip);
+  });
+
+  /*
+    这一排此前只有安装那颗 hover 有反应（原生 title），其余七颗纯图标键
+    鼠标悬停什么都不出——aria-label 只解决读屏器那半边。
+  */
+  /*
+    附件卡上游画的是 `FileIcon`（=File，素页），本仓此前画 `FileText`
+    （带横线的页）——两颗不同字形。本仓另外两处用 FileText 的地方
+    （ExportTrigger / ThreadActionsMenu）与上游一致，那两处不动。
+  */
+  it("attachment cards draw the upstream plain File glyph", async () => {
+    const source = await import("node:fs").then((fs) =>
+      fs
+        .readFileSync("app/components/chat/MessageAttachments.vue", "utf8")
+        // 先剥注释：解释这条修法的注释里就写着 FileText（线索 174）。
+        .replace(/<!--[\s\S]*?-->/g, "")
+        .replace(/^[ \t]*\/\/.*$/gm, ""),
+    );
+
+    expect(source).toContain("FileIcon");
+    expect(source).not.toContain("FileText");
+  });
+
+  it("wraps every action in a tooltip, not just the install one", () => {
+    const wrapper = mount(ArtifactActions, {
+      props: {
+        canEdit: true,
+        editing: false,
+        dirty: false,
+        saving: false,
+        conflict: false,
+        streaming: false,
+        canCopy: true,
+        copyDisabled: false,
+        canOpen: true,
+        canDownload: true,
+        canInstall: true,
+        installing: false,
+      },
+    });
+
+    const buttons = wrapper.findAll("button");
+    expect(buttons.length).toBeGreaterThanOrEqual(5);
+    for (const button of buttons) {
+      expect(button.element.closest("[data-slot='tooltip-trigger']")).not.toBe(
+        null,
+      );
+      // 图标是上游的 16px，不是 15。
+      expect(button.find("svg").attributes("width")).toBe("16");
+      /*
+        走 Button primitive 才有这四样。手写 `<button>` 时它们全没有：
+        禁用的保存与复制**看起来和能点一模一样**，键盘焦点也没有可见指示。
+      */
+      expect(button.classes()).toContain("disabled:opacity-50");
+      expect(button.classes()).toContain("disabled:pointer-events-none");
+      expect(button.classes()).toContain("focus-visible:ring-[3px]");
+      expect(button.classes()).toContain("hover:text-foreground");
+    }
+  });
+
+  /*
+    三颗此前画的是**别的字形**：编辑 `Edit3`(=PenLine) 而上游 `PencilIcon`(=Pencil)、
+    退出编辑 `X` 而上游 `PencilOffIcon`（带斜线的铅笔，"停止编辑" ≠ "关闭"）、
+    新窗口打开 `ExternalLink` 而上游 `SquareArrowOutUpRightIcon`。
+  */
+  it("draws the upstream glyphs for edit, exit-editing and open-in-new-window", () => {
+    const base = {
+      canEdit: true,
+      dirty: true,
+      saving: false,
+      conflict: false,
+      streaming: false,
+      canCopy: false,
+      copyDisabled: false,
+      canOpen: true,
+      canDownload: false,
+      canInstall: false,
+      installing: false,
+    };
+
+    const idle = mount(ArtifactActions, { props: { ...base, editing: false } });
+    expect(idle.find(".lucide-pencil").exists()).toBe(true);
+    expect(idle.find(".lucide-pen-line").exists()).toBe(false);
+    expect(idle.find(".lucide-square-arrow-out-up-right").exists()).toBe(true);
+    expect(idle.find(".lucide-external-link").exists()).toBe(false);
+
+    const editing = mount(ArtifactActions, {
+      props: { ...base, editing: true },
+    });
+    expect(editing.find(".lucide-pencil-off").exists()).toBe(true);
+    expect(editing.find(".lucide-x").exists()).toBe(false);
   });
 });

@@ -422,7 +422,7 @@ async function confirmDelete() {
           <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              class="flex items-center rounded-md border px-3 py-2 text-sm"
+              class="flex items-center rounded-md border px-3 py-2 text-sm disabled:pointer-events-none disabled:opacity-50"
               :disabled="owner.importDocument.isPending.value"
               data-testid="memory-import-open"
               @click="importInput?.click()"
@@ -440,7 +440,7 @@ async function confirmDelete() {
             />
             <button
               type="button"
-              class="flex items-center rounded-md border px-3 py-2 text-sm"
+              class="flex items-center rounded-md border px-3 py-2 text-sm disabled:pointer-events-none disabled:opacity-50"
               :disabled="owner.exportDocument.isPending.value"
               @click="exportDocument"
             >

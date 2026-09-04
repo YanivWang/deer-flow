@@ -1804,7 +1804,7 @@ defineExpose({ replaceDraft, offerFollowup });
                 <button
                   type="button"
                   data-testid="composer-mode-trigger"
-                  class="hover:bg-accent flex h-8 max-w-28 items-center gap-1 rounded-md px-2 text-xs sm:max-w-none"
+                  class="hover:bg-accent flex h-8 max-w-28 items-center gap-1 rounded-md px-2 text-xs disabled:pointer-events-none disabled:opacity-50 sm:max-w-none"
                   :disabled="disabled || polishing"
                 >
                   <!--
@@ -1898,7 +1898,7 @@ defineExpose({ replaceDraft, offerFollowup });
               <button
                 type="button"
                 data-testid="composer-reasoning-effort-trigger"
-                class="hover:bg-accent hidden h-8 rounded-md px-2 text-xs sm:inline-flex sm:items-center"
+                class="hover:bg-accent hidden h-8 rounded-md px-2 text-xs disabled:pointer-events-none disabled:opacity-50 sm:inline-flex sm:items-center"
                 :disabled="disabled"
               >
                 {{ $i18n.t.value.inputBox.reasoningEffort }}:

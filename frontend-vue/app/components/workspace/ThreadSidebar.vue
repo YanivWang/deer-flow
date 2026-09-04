@@ -691,7 +691,7 @@ function openSettingsDialog(section: "appearance" | "about") {
       <button
         v-if="failedDeleteThread"
         type="button"
-        class="mt-1 underline"
+        class="mt-1 underline disabled:pointer-events-none disabled:opacity-50"
         :disabled="Boolean(deletingThreadId)"
         @click="removeThread(failedDeleteThread)"
       >

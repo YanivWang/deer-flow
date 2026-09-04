@@ -272,7 +272,7 @@ onMounted(() => {
         </p>
         <button
           type="submit"
-          class="bg-primary text-primary-foreground w-full rounded-md px-4 py-2"
+          class="bg-primary text-primary-foreground w-full rounded-md px-4 py-2 disabled:pointer-events-none disabled:opacity-50"
           :disabled="loading"
         >
           {{

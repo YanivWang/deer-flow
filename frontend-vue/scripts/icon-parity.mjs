@@ -93,11 +93,24 @@ const reactRoot = process.argv[2] ?? "../frontend/src/components";
 const REACT_DTS =
   "../frontend/node_modules/lucide-react/dist/lucide-react.d.ts";
 const vueRoot = process.argv[3] ?? "app/components";
+/*
+  **先剥注释再解析**（线索 174）。实测被自己咬过一次：SubtaskCard 的 import 块里
+  写了三行 `//` 注释解释为什么用 `CheckCircle`，收集器按逗号切块之后
+  注释粘在名字前面，整段被当成无效名**静默丢掉**——报告于是说
+  「`CircleCheckBig` 只有 React 用」，而那一处当轮刚改对。
+  **方向是漏报，比误报更难发现。**
+*/
+const stripComments = (src) =>
+  src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/^[ \t]*\/\/.*$/gm, "");
+
 const load = (root, alias) => {
   const map = new Map();
   for (const f of walk(root)) {
     const key = basename(f, extname(f)).toLowerCase().replace(/[-_]/g, "");
-    const src = readFileSync(f, "utf8");
+    const src = stripComments(readFileSync(f, "utf8"));
     map.set(key, {
       file: f,
       src,
@@ -163,15 +176,39 @@ for (const key of pairs) {
         `  图标 ${name}：React ${[...rs].join("/")}px  →  Vue ${[...vs].join("/")}px`,
       );
   }
+  /*
+    **tooltip / aria 这一档要跟一层委托。**
+
+    本仓把组件拆得比上游细：`AssistantTurnActions.vue` 是上游 `message-list.tsx`
+    的一部分，`TruncatedTooltip.vue` 与 `SettingsPageLoading.vue` 在上游是同一份
+    文件里的内部函数。不跟委托的话这三条永远红着，而**一条长期红着的线索
+    等于没有**（线索 194）——真差异会被它们淹掉。
+
+    只跟一层：够消掉这一类，又不至于把整棵子树的 tooltip 都算成自己的。
+  */
+  const vueMarkers = (k) => {
+    let total = v[k];
+    for (const m of v.src.matchAll(/from\s+"@\/(components\/[^"]+\.vue)"/g)) {
+      const child = V.get(
+        basename(m[1], ".vue").toLowerCase().replace(/[-_]/g, ""),
+      );
+      if (child) total += child[k];
+    }
+    return total;
+  };
   for (const [k, label] of [
     ["tooltip", "Tooltip"],
     ["ariaLive", "aria-live"],
     ["roleStatus", 'role="status"'],
   ]) {
-    if (r[k] > 0 && v[k] === 0)
-      lines.push(`  ${label}：React ${r[k]} 处，Vue 0 处`);
+    if (r[k] > 0 && vueMarkers(k) === 0)
+      lines.push(`  ${label}：React ${r[k]} 处，Vue 0 处（含直接子组件）`);
   }
-  if (r.tooltip > 0 && v.nativeTitle > r.nativeTitle - 0 && v.tooltip === 0)
+  if (
+    r.tooltip > 0 &&
+    v.nativeTitle > r.nativeTitle &&
+    vueMarkers("tooltip") === 0
+  )
     lines.push(`  Vue 用原生 title 而 React 用 Tooltip 组件`);
   if (lines.length) {
     issues += lines.length;
@@ -224,7 +261,45 @@ if (ri.size < 50 || vi.size < 50) {
 console.log(`## 字形（全仓）  React ${ri.size} 颗 / Vue ${vi.size} 颗`);
 console.log(`   只有 React 用：${onlyR.join("、") || "无"}`);
 console.log(`   只有 Vue  用：${onlyV.join("、") || "无"}`);
+/*
+  **尺寸也要有一档全仓的。**
+
+  按文件比只覆盖「两边同名的那些文件」——实测 57 / 199，也就是本仓 **71%**
+  的组件从没被这一档看过：两边的组件切分方式不同（`AssistantTurnActions.vue`
+  是上游 `message-list.tsx` 的一部分，settings 十一个面板、markdown 十四个
+  在上游都是别的名字）。全仓这一档问的是另一个问题：
+  **同一颗图标，两边用过的尺寸集合一不一样。**
+
+  它比按文件那一档钝——一颗图标在两边各有多处、尺寸本来就可以不同——
+  所以只报「集合完全不相交」的那些：那种情况下不可能是「上游那处本来就用别的尺寸」。
+*/
+const sizesOf = (map) => {
+  const out = new Map();
+  for (const v of map.values())
+    for (const [n, set] of v.icons)
+      out.set(n, new Set([...(out.get(n) ?? []), ...set]));
+  return out;
+};
+const rs = sizesOf(R),
+  vs = sizesOf(V);
+const disjoint = [];
+for (const [name, a] of rs) {
+  const b = vs.get(name);
+  if (!b) continue;
+  if ([...a].some((x) => b.has(x))) continue;
+  disjoint.push(
+    `   ${name}：React ${[...a].sort((x, y) => x - y).join("/")}px  ` +
+      `↔  Vue ${[...b].sort((x, y) => x - y).join("/")}px`,
+  );
+}
 console.log(
-  `\n共 ${issues + onlyR.length + onlyV.length} 处待核` +
+  `\n## 尺寸（全仓，只报完全不相交的）  两边都用到的 ${
+    [...rs.keys()].filter((n) => vs.has(n)).length
+  } 颗`,
+);
+console.log(disjoint.length ? disjoint.sort().join("\n") : "   无");
+
+console.log(
+  `\n共 ${issues + onlyR.length + onlyV.length + disjoint.length} 处待核` +
     `（**都是线索不是结论，逐条回源码确认**）`,
 );

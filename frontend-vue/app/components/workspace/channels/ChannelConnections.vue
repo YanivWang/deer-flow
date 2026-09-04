@@ -297,7 +297,7 @@ function connectLabel(view: ChannelProviderView) {
           <div class="flex shrink-0 flex-wrap justify-end gap-1">
             <button
               type="button"
-              class="h-8 w-24 rounded-md border px-2 text-xs"
+              class="h-8 w-24 rounded-md border px-2 text-xs disabled:pointer-events-none disabled:opacity-50"
               :disabled="channels.isProviderPending(view.provider.provider)"
               :title="view.provider.unavailable_reason || undefined"
               @click="connectProvider(view.provider)"
@@ -310,7 +310,7 @@ function connectLabel(view: ChannelProviderView) {
                 providerCanEditRuntimeConfig(view.provider)
               "
               type="button"
-              class="rounded-md border px-2 py-1 text-xs"
+              class="rounded-md border px-2 py-1 text-xs disabled:pointer-events-none disabled:opacity-50"
               :disabled="channels.isProviderPending(view.provider.provider)"
               @click="beginSetup(view.provider)"
             >
@@ -319,7 +319,7 @@ function connectLabel(view: ChannelProviderView) {
             <button
               v-if="isAdmin && view.provider.configured"
               type="button"
-              class="rounded-md border px-2 py-1 text-xs text-red-600"
+              class="rounded-md border px-2 py-1 text-xs text-red-600 disabled:pointer-events-none disabled:opacity-50"
               :disabled="channels.isProviderPending(view.provider.provider)"
               :aria-label="`${text.removeProviderConfig}: ${view.provider.display_name}`"
               @click="removingProvider = view.provider"
@@ -354,7 +354,7 @@ function connectLabel(view: ChannelProviderView) {
             <button
               v-if="connection.status !== 'revoked'"
               type="button"
-              class="rounded-md border px-2 py-1 text-xs"
+              class="rounded-md border px-2 py-1 text-xs disabled:pointer-events-none disabled:opacity-50"
               :disabled="channels.isConnectionPending(connection.id)"
               :aria-label="
                 text.disconnectAccount(getChannelConnectionLabel(connection))

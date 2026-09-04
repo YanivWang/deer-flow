@@ -1685,7 +1685,7 @@ onUnmounted(() => {
               v-if="bootstrap"
               type="button"
               data-testid="agent-save"
-              class="rounded-md border px-3 py-1.5 text-xs"
+              class="rounded-md border px-3 py-1.5 text-xs disabled:pointer-events-none disabled:opacity-50"
               :disabled="
                 !bootstrapConversationReady ||
                 stream.isStreaming.value ||

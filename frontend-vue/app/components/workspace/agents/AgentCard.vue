@@ -8,6 +8,10 @@
 */
 import { computed } from "vue";
 
+import { MessageSquare, Settings2, Trash2 } from "lucide-vue-next";
+
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button/variants";
 import TruncatedTooltip from "@/components/workspace/agents/TruncatedTooltip.vue";
 import { buildAgentCardViewModel } from "@/core/agents/presentation";
 import type { Agent } from "@/core/agents/types";
@@ -102,30 +106,50 @@ const view = computed(() => buildAgentCardViewModel(props.agent));
       </div>
     </dl>
 
+    <!--
+      这一排此前整个绕开了 Button primitive，用手写 class 画了三颗键，
+      结果是三处用户看得见的落差（上游 agent-card.tsx:188）：
+
+      ① 聊天键**没有图标**，上游是 `MessageSquareIcon` + 文字；
+      ② 设置键画的是**文字字符 `⚙`**、删除键是 `×`——不是图标组件，
+         字形随系统 emoji 字体变，尺寸也不受 `[&_svg]:size-4` 那条控制；
+      ③ 删除键用 `text-red-600`（固定色）而不是 `text-destructive`
+         （CSS 变量，深色主题下跟着变）。
+
+      聊天那颗保留 `NuxtLink`：上游是一颗 `onClick={router.push(...)}` 的按钮，
+      而链接能中键打开、能新标签页打开、能复制地址——**功能相同、交互更好**，
+      所以只把外观对齐（裸调 buttonVariants，它的导出口已经内置 cn 合并）。
+    -->
     <div class="mt-auto flex gap-2 pt-5">
       <NuxtLink
         :to="`/workspace/agents/${encodeURIComponent(agent.name)}/chats/new`"
-        class="bg-primary text-primary-foreground flex-1 rounded-md px-3 py-2 text-center text-sm"
-        >{{ $i18n.t.value.agents.chat }}</NuxtLink
+        :class="buttonVariants({ size: 'sm', class: 'flex-1' })"
       >
-      <button
+        <MessageSquare class="mr-1.5 size-3.5" />
+        {{ $i18n.t.value.agents.chat }}
+      </NuxtLink>
+      <Button
         type="button"
-        class="rounded-md border px-3"
+        variant="ghost"
+        size="icon-sm"
+        class="shrink-0"
         :aria-label="`${$i18n.t.value.agents.settings}: ${agent.name}`"
         :disabled="pending"
         @click="emit('settings', agent)"
       >
-        ⚙
-      </button>
-      <button
+        <Settings2 class="size-3.5" />
+      </Button>
+      <Button
         type="button"
-        class="rounded-md border px-3 text-red-600"
+        variant="ghost"
+        size="icon-sm"
+        class="text-destructive hover:text-destructive shrink-0"
         :aria-label="`${$i18n.t.value.agents.delete}: ${agent.name}`"
         :disabled="pending"
         @click="emit('delete', agent)"
       >
-        ×
-      </button>
+        <Trash2 class="size-3.5" />
+      </Button>
     </div>
   </article>
 </template>

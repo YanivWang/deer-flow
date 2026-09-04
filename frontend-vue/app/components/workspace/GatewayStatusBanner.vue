@@ -75,7 +75,7 @@ watch(
     <div class="flex shrink-0 items-center gap-2">
       <button
         type="button"
-        class="hover:bg-background rounded-md border px-3 py-1 text-xs"
+        class="hover:bg-background rounded-md border px-3 py-1 text-xs disabled:pointer-events-none disabled:opacity-50"
         :disabled="isFetching"
         @click="refresh()"
       >

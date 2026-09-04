@@ -13,18 +13,26 @@
                    同一个动作在两个应用里必须叫同一个名字，否则一份共用的读屏脚本
                    在其中一边找不到控件。
 */
+import { computed } from "vue";
 import {
   Copy,
   Download,
-  Edit3,
-  ExternalLink,
   Package,
+  Pencil,
+  PencilOff,
   RotateCcw,
   Save,
-  X,
+  SquareArrowOutUpRight,
 } from "lucide-vue-next";
 
-defineProps<{
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+const props = defineProps<{
   canEdit: boolean;
   editing: boolean;
   dirty: boolean;
@@ -38,6 +46,18 @@ defineProps<{
   canInstall: boolean;
   installing: boolean;
 }>();
+const { $i18n } = useNuxtApp();
+/*
+  保存键的名字随状态变（上游把 tooltip 原样写进 sr-only，所以两处是同一句）。
+  抽成 computed 是因为模板里要用两次——写两遍迟早分叉。
+*/
+const saveLabel = computed(() =>
+  props.streaming
+    ? $i18n.t.value.artifactEditing.runInProgress
+    : props.conflict
+      ? $i18n.t.value.artifactEditing.conflict
+      : $i18n.t.value.common.save,
+);
 const emit = defineEmits<{
   edit: [];
   save: [];
@@ -51,15 +71,47 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <button
-    v-if="canEdit && !editing"
-    type="button"
-    :aria-label="$i18n.t.value.common.edit"
-    class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-    @click="emit('edit')"
-  >
-    <Edit3 :size="15" />
-  </button>
+  <!--
+    上游 `ArtifactAction`（ai-elements/artifact.tsx:109）三件事本仓此前都差着：
+
+    ① **每一颗都包 `<Tooltip>`**。本仓只有安装那颗挂了原生 `title`，
+       其余七颗纯图标键**鼠标 hover 什么都不出**——aria-label 只解决读屏器，
+       不解决看得见的那半边。文件头原来写着「用 aria-label 代替上游的 tooltip
+       机制」，那句只对了一半。
+    ② 图标是 `size-4` = **16px**，本仓八颗全写着 15px。
+    ③ 三颗画的是**别的字形**：编辑 `Edit3`(=PenLine) 而上游 `PencilIcon`(=Pencil)；
+       退出编辑 `X` 而上游 `PencilOffIcon`（带斜线的铅笔，"停止编辑"，
+       跟"关闭"不是一个意思）；新窗口打开 `ExternalLink` 而上游
+       `SquareArrowOutUpRightIcon`。
+
+    tooltip 的文案与 aria-label 同源（上游 `label || tooltip` 写进 sr-only、
+    tooltip 显示同一句），只有安装那颗是两句：名字 `common.install`，
+    说明 `toolCalls.skillInstallTooltip`。
+
+    ④ 八颗全是**手写 `<button>` 自己画外观**（`hover:bg-accent flex size-8
+       items-center justify-center rounded-md`），少了 Button primitive 的四样：
+       **`disabled:opacity-50` / `disabled:pointer-events-none`**——保存与复制
+       在禁用时和能点长得一模一样；**`focus-visible` 的 3px 焦点环**——键盘
+       用户看不出焦点在哪；`hover:text-foreground`——上游 hover 时图标变深；
+       以及 `text-muted-foreground` 这个静息色。改成走 Button，
+       props 与上游 `ArtifactAction` 逐条相同（`variant="ghost"` `size="sm"`
+       `className="text-muted-foreground hover:text-foreground size-8 p-0"`）。
+  -->
+  <Tooltip v-if="canEdit && !editing">
+    <TooltipTrigger>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        :aria-label="$i18n.t.value.common.edit"
+        class="text-muted-foreground hover:text-foreground size-8 p-0"
+        @click="emit('edit')"
+      >
+        <Pencil :size="16" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>{{ $i18n.t.value.common.edit }}</TooltipContent>
+  </Tooltip>
   <template v-if="editing">
     <!--
       保存键**禁用时要说得出为什么**。上游 artifact-file-detail.tsx:493 把 tooltip
@@ -67,88 +119,130 @@ const emit = defineEmits<{
       sr-only——也就是说上游这颗按钮的**可访问名**会跟着状态变。本仓此前恒为
       "Save"：按钮灰着、读屏器只念得出「保存」，用户无从知道为什么点不动。
     -->
-    <button
-      type="button"
-      :aria-label="
-        streaming
-          ? $i18n.t.value.artifactEditing.runInProgress
-          : conflict
-            ? $i18n.t.value.artifactEditing.conflict
-            : $i18n.t.value.common.save
-      "
-      class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-      :disabled="streaming || saving || !dirty || conflict"
-      @click="emit('save')"
-    >
-      <Save :size="15" />
-    </button>
+    <Tooltip>
+      <TooltipTrigger>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          :aria-label="saveLabel"
+          class="text-muted-foreground hover:text-foreground size-8 p-0"
+          :disabled="streaming || saving || !dirty || conflict"
+          @click="emit('save')"
+        >
+          <Save :size="16" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{{ saveLabel }}</TooltipContent>
+    </Tooltip>
     <!-- 放弃在编辑态**恒显**，不看 dirty：React 的三颗（保存/退出/放弃）是一组。 -->
-    <button
-      type="button"
-      :aria-label="$i18n.t.value.artifactEditing.discard"
-      class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-      @click="emit('discard')"
-    >
-      <RotateCcw :size="15" />
-    </button>
-    <button
-      type="button"
-      :aria-label="$i18n.t.value.artifactEditing.exit"
-      class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-      @click="emit('exit')"
-    >
-      <X :size="15" />
-    </button>
+    <Tooltip>
+      <TooltipTrigger>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          :aria-label="$i18n.t.value.artifactEditing.discard"
+          class="text-muted-foreground hover:text-foreground size-8 p-0"
+          @click="emit('discard')"
+        >
+          <RotateCcw :size="16" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{{
+        $i18n.t.value.artifactEditing.discard
+      }}</TooltipContent>
+    </Tooltip>
+    <Tooltip>
+      <TooltipTrigger>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          :aria-label="$i18n.t.value.artifactEditing.exit"
+          class="text-muted-foreground hover:text-foreground size-8 p-0"
+          @click="emit('exit')"
+        >
+          <PencilOff :size="16" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{{ $i18n.t.value.artifactEditing.exit }}</TooltipContent>
+    </Tooltip>
   </template>
   <!--
     复制在截断或空内容时是**禁用**，不是消失——React 渲染它并传 disabled
     （artifact-file-detail.tsx 的 `disabled={!content || truncated}`）。控件时有时无，
     读屏器每次都要重新数一遍这排按钮。编辑态下这几颗则整体不渲染（React 的 `!isEditing`）。
   -->
-  <button
-    v-if="canCopy && !editing"
-    type="button"
-    :disabled="copyDisabled"
-    :aria-label="$i18n.t.value.clipboard.copyToClipboard"
-    class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-    @click="emit('copy')"
-  >
-    <Copy :size="15" />
-  </button>
-  <button
-    v-if="canOpen && !editing"
-    type="button"
-    :aria-label="$i18n.t.value.common.openInNewWindow"
-    class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-    @click="emit('open')"
-  >
-    <ExternalLink :size="15" />
-  </button>
-  <button
-    v-if="canDownload && !editing"
-    type="button"
-    :aria-label="$i18n.t.value.common.download"
-    class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-    @click="emit('download')"
-  >
-    <Download :size="15" />
-  </button>
+  <Tooltip v-if="canCopy && !editing">
+    <TooltipTrigger>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        :disabled="copyDisabled"
+        :aria-label="$i18n.t.value.clipboard.copyToClipboard"
+        class="text-muted-foreground hover:text-foreground size-8 p-0"
+        @click="emit('copy')"
+      >
+        <Copy :size="16" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>{{
+      $i18n.t.value.clipboard.copyToClipboard
+    }}</TooltipContent>
+  </Tooltip>
+  <Tooltip v-if="canOpen && !editing">
+    <TooltipTrigger>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        :aria-label="$i18n.t.value.common.openInNewWindow"
+        class="text-muted-foreground hover:text-foreground size-8 p-0"
+        @click="emit('open')"
+      >
+        <SquareArrowOutUpRight :size="16" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>{{ $i18n.t.value.common.openInNewWindow }}</TooltipContent>
+  </Tooltip>
+  <Tooltip v-if="canDownload && !editing">
+    <TooltipTrigger>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        :aria-label="$i18n.t.value.common.download"
+        class="text-muted-foreground hover:text-foreground size-8 p-0"
+        @click="emit('download')"
+      >
+        <Download :size="16" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>{{ $i18n.t.value.common.download }}</TooltipContent>
+  </Tooltip>
   <!--
-    安装键外面上游还套了一层 `<Tooltip content={t.toolCalls.skillInstallTooltip}>`
-    （artifact-file-detail.tsx:532），说的是「这颗按钮会做什么」，与按钮自己的名字
-    （`common.install`）是两句话。本仓这一排动作用 aria-label 代替上游的 tooltip
-    机制（见文件头），所以这句说明落到 `title` 上：hover 时能看见，
-    读屏器把它当描述念（已经有 aria-label 顶着名字那一格）。
+    安装键的名字与说明是**两句话**：上游 artifact-file-detail.tsx:532 传
+    `label={t.common.install}` 与 `tooltip={t.toolCalls.skillInstallTooltip}`，
+    前者进 sr-only（可访问名），后者进浮层（这颗按钮会做什么）。
   -->
-  <button
-    v-if="canInstall && !editing"
-    type="button"
-    :aria-label="$i18n.t.value.common.install"
-    :title="$i18n.t.value.toolCalls.skillInstallTooltip"
-    class="hover:bg-accent flex size-8 items-center justify-center rounded-md"
-    :disabled="installing"
-    @click="emit('install')"
-  >
-    <Package :size="15" />
-  </button>
+  <Tooltip v-if="canInstall && !editing">
+    <TooltipTrigger>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        :aria-label="$i18n.t.value.common.install"
+        class="text-muted-foreground hover:text-foreground size-8 p-0"
+        :disabled="installing"
+        @click="emit('install')"
+      >
+        <Package :size="16" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>{{
+      $i18n.t.value.toolCalls.skillInstallTooltip
+    }}</TooltipContent>
+  </Tooltip>
 </template>

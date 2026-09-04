@@ -74,6 +74,32 @@ describe("AgentCard 的截断提示", () => {
     expect(triggers[1]?.classes()).toContain("line-clamp-2");
   });
 
+  /*
+    页脚三颗键此前整个绕开 Button primitive：聊天键**没有图标**，
+    设置键画的是**文字字符 `⚙`**、删除键是 `×`——不是图标组件，
+    字形随系统 emoji 字体变；删除键还用 `text-red-600`（固定色）
+    而不是 `text-destructive`（CSS 变量，深色主题下跟着变）。
+  */
+  it("页脚三颗键画的是图标，不是文字字符", () => {
+    const wrapper = mount(AgentCard, { props: { agent } });
+
+    expect(wrapper.find(".lucide-message-square").exists()).toBe(true);
+    expect(wrapper.find(".lucide-settings-2").exists()).toBe(true);
+    expect(wrapper.find(".lucide-trash-2").exists()).toBe(true);
+    expect(wrapper.text()).not.toContain("⚙");
+    expect(wrapper.text()).not.toContain("×");
+  });
+
+  it("删除键用主题变量色，不是固定红", () => {
+    const wrapper = mount(AgentCard, { props: { agent } });
+    const remove = wrapper.get(
+      `[aria-label="${enUS.agents.delete}: ${agent.name}"]`,
+    );
+
+    expect(remove.classes()).toContain("text-destructive");
+    expect(remove.classes()).not.toContain("text-red-600");
+  });
+
   it("没量到截断之前不渲染 tooltip 内容", () => {
     // happy-dom 里 scrollWidth/clientWidth 都是 0，量出来就是「没截断」。
     const wrapper = mount(AgentCard, { props: { agent } });

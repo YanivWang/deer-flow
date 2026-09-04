@@ -125,7 +125,7 @@ function canOpen(file: WorkspaceFileChange) {
     <p>{{ summaryError }}</p>
     <button
       type="button"
-      class="mt-2 underline"
+      class="mt-2 underline disabled:pointer-events-none disabled:opacity-50"
       :disabled="summaryOwner.fetching.value"
       @click="summaryOwner.refetch()"
     >
@@ -238,7 +238,7 @@ function canOpen(file: WorkspaceFileChange) {
           <button
             data-testid="workspace-changes-retry"
             type="button"
-            class="mt-2 underline"
+            class="mt-2 underline disabled:pointer-events-none disabled:opacity-50"
             :disabled="detailOwner.fetching.value"
             @click="detailOwner.refetch()"
           >

@@ -214,7 +214,7 @@ onMounted(() => {
         </p>
         <button
           type="button"
-          class="mt-3 rounded-md border px-3 py-1.5"
+          class="mt-3 rounded-md border px-3 py-1.5 disabled:pointer-events-none disabled:opacity-50"
           :disabled="setupPhase === 'checking'"
           @click="setupAttempt += 1"
         >

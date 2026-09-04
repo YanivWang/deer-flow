@@ -8,7 +8,10 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { FileText, LoaderCircle } from "lucide-vue-next";
+// 上游 message-list-item.tsx:735 画的是 `FileIcon`（素页），不是 `FileTextIcon`
+// （带横线的页）——两颗不同字形。本仓另外两处用 FileText 的地方
+// （ExportTrigger / ThreadActionsMenu）与上游一致，不动。
+import { FileIcon, LoaderCircle } from "lucide-vue-next";
 
 import { resolveArtifactURL } from "@/core/artifacts/utils";
 import {
@@ -54,7 +57,7 @@ function formatBytes(bytes: number) {
           :size="16"
           class="animate-spin"
         />
-        <FileText v-else :size="16" />
+        <FileIcon v-else :size="16" />
         <span class="truncate">{{ file.filename }}</span>
         <!--
           「还在上传」这件事此前只有那颗转圈图标在说，而它没有任何文字替代——
@@ -90,7 +93,7 @@ function formatBytes(bytes: number) {
         rel="noopener noreferrer"
         class="border-border bg-background flex max-w-56 items-center gap-2 rounded-lg border p-3 text-sm"
       >
-        <FileText :size="16" class="shrink-0" />
+        <FileIcon :size="16" class="shrink-0" />
         <span class="min-w-0">
           <span class="block truncate">{{ file.filename }}</span>
           <span class="text-muted-foreground block text-[10px]">{{
