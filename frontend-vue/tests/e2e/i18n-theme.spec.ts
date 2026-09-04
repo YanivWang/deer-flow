@@ -83,7 +83,18 @@ test("locale switch updates an open dialog, product surfaces, future errors and 
   await expect(page.getByLabel(zhCN.common.showBrowser)).toBeVisible();
   // 面板不会自己打开（React 只在流式写入途中才自动打开），点一下产物路径。
   await page.getByText(ARTIFACT_PATH).click();
-  await expect(page.getByLabel(zhCN.clipboard.copyToClipboard)).toBeVisible();
+  /*
+    **必须限定在面板头部里。** wave 62 给消息轮次的复制键也补上了可访问名
+    （两边同改，上游同一屏也是两颗同名按钮），于是裸
+    `page.getByLabel(zhCN.clipboard.copyToClipboard)` 会命中两个元素——
+    strict mode violation。它在 wave 62/64 两次全跑里都碰巧绿了，
+    绿不绿取决于轮次操作条那一刻有没有渲染出来：**典型的裸定位器定时炸弹。**
+  */
+  await expect(
+    page
+      .getByTestId("artifact-panel-header")
+      .getByLabel(zhCN.clipboard.copyToClipboard),
+  ).toBeVisible();
   const sidebar = page.locator("#workspace-sidebar");
   await expect(
     sidebar.getByRole("link", { name: zhCN.sidebar.agents }),

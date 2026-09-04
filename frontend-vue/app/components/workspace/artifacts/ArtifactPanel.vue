@@ -525,7 +525,17 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="flex size-full min-h-0 flex-col">
+    <!--
+      `data-testid` 是给 e2e 定位用的锚点，不进 aria 快照、不影响对照台账。
+      加它的直接原因：wave 62 给消息轮次的复制键补上可访问名之后，
+      「复制到剪贴板」这句在这一屏上会同时命中**面板的**复制键和**消息的**复制键，
+      裸 `getByLabel(...)` 从此是 strict-mode 的定时炸弹（wave 64 实测红过一次，
+      而它在此之前两次全跑里都碰巧是绿的——取决于轮次操作条有没有渲染出来）。
+      **两颗同名按钮本身不是缺陷**：上游 artifact-file-detail.tsx:563 用的也是
+      `t.clipboard.copyToClipboard`，同一屏同样有两颗。
+    -->
     <header
+      data-testid="artifact-panel-header"
       class="border-border flex h-12 shrink-0 items-center gap-2 border-b px-3"
     >
       <ArtifactFileList
