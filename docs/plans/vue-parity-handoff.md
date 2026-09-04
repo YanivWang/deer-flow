@@ -14,9 +14,9 @@
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61。
-- **动过 `frontend/` 的是十四轮，不是三轮**（wave 52 实测订正）：
-  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40**。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`）。
+- **动过 `frontend/` 的是十五轮**（wave 52 实测订正，wave 62 又加一轮）：
+  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
   而记忆里的压缩版把它读成了「总共三次」。**别再传这个数字，用命令量**：
 
@@ -24,7 +24,7 @@
   git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests
   ```
 
-  **marker 已推到 `aef3618d`**（wave 40）；`node scripts/upstream-drift.mjs`
+  **marker 已推到 `ff9552d8`**（wave 62）；`node scripts/upstream-drift.mjs`
   wave 52 实测**无漂移**，marker 也确实是 HEAD 的祖先——
   **边界规则本身有机器在守，需要人记的只有「这类改动做过哪些轮」。**
   最近三轮的内容：wave 40 重连预算耗尽后那颗键在说反话；wave 39 命令面板搜索框的
@@ -63,10 +63,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 61 收工时逐条跑过）
+### 门禁实测值（wave 62 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；250 文件 / 2080 单测，词典 945 key、18 unused
+make -C frontend-vue verify        exit 0；251 文件 / 2090 单测，词典 944 key、18 unused
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 37 处 / 16 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -75,9 +75,10 @@ make -C frontend-vue e2e-visual    8    **不在 make e2e 里**
 make -C frontend-vue e2e-external  3
 ```
 
-产品 SFC **215**（总 217，wave 30~59 都没有新增 SFC）。动了 `frontend/` 再加
-`python3 scripts/pnpm.py --dir frontend check` / `test`（**1023**）/ `test:e2e`（**146**）。
-**这两个数 wave 56 真跑过一遍复核：1023 passed；`--list` 报 146 tests in 27 files。**
+产品 SFC **215**（总 217，wave 30~62 都没有新增 SFC）。动了 `frontend/` 再加
+`python3 scripts/pnpm.py --dir frontend check` / `test`（**1029**）/ `test:e2e`（**146**）。
+**wave 62 三条全真跑过**：check 0、test 1029 passed、test:e2e 146 passed。
+（1023 → 1029 是 wave 62 加的 6 条：3 条 auth-callback 路由位置 + 3 条图标按钮可访问名。）
 
 > **wave 40 实测：`test:e2e` 的 `webServer` 那 120 秒窗口在这台机器上喂不饱一次
 > `next build`**（负载 30+ 时编译要 6.6 分钟，`Timed out waiting 120000ms from
@@ -791,7 +792,7 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 186 条在记忆文件里）
+## 其他常踩的坑（完整 190 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -824,6 +825,27 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   所以**靠交互才出现的东西，位置永远进不了台账**，只能单测守（线索 137）。
 - **注释里带点写一条死词条会把它从 unused 集里弄没**（线索 126）。要写成
   「container 下的 leafName」，改完跑 `make i18n-unused` 核对。
+- **一条「有意保留」的账，越老越可能已经被别人修掉了**（线索 187）。
+  wave 62 拿 wave 29 记的竞态去复现，**14 个样本一次都没复现**，同一条账里
+  另外两句也过期。**复现优先于修复**：先花五分钟量一遍，比照着账改代码省一整轮。
+  **mock 复现不了的要回到当初观测它的环境**，而且 replay Gateway 上**提示词要用
+  录制里的原句**——换一句会 replay miss，量到的不是那一屏。
+  **竞态类的账要记「怎么复现」，不要只记「什么现象」。**
+- **顺手加一条普查，往往比正题更值钱**（线索 188）。wave 62 的探针本来只为复现竞态，
+  顺手加了「还有哪些交互控件没有可访问名」，一次跑出三颗真缺陷、两个应用都有。
+  **`tooltip` 不是可访问名**（Radix / Reka 都挂 `aria-describedby`）。
+  **最值钱的一半**：本仓两个文件头写着「不给可访问名，因为上游只有图标和 tooltip」
+  ——**对上游的描述完全准确，照抄的却是缺陷**。**「与上游一致」不是正确性论据**，
+  还要问「上游那处对吗」。
+- **「引一个库不划算」的正确结论常常是「移植那段算法」**（线索 189）。
+  `command-score` 只有 60 行；移植进来与 `cmdk@1.1.1` 实测 950 组逐值差 0。
+  **等价性比对不能签入**（要 require `../frontend/node_modules`，撞
+  `standalone-check`），**留存方式是把真实现算出来的值当定值签进单测**。
+- **测排序的用例，输入序必须与期望序不同，否则删掉 `sort()` 照样绿**（线索 190）。
+  同轮还撞到一次无效变异（空查询短路——所有分数都是 0.99，删掉它产出不变），
+  **而它顺带证伪了我自己刚写下的那句理由**。
+  **变异跑出假绿时先别急着补用例：先看被删的那段到底保证了什么，
+  它旁边那句注释可能一起错了。**
 - **只从白名单出发的门禁，看不见「自称是、但没上名单」的那些**（线索 186）。
   `architecture.test.ts` 的两条 L2 断言都遍历 `l2Files`，于是 30 份自称 L2 的文件
   三周里一直不受进口边界约束，其中一份（`app/core/auth/logout.ts`）一跑就违规。
