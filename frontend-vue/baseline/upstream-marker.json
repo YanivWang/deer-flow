@@ -1,7 +1,7 @@
 {
   "$comment": "已审阅到的上游位置。--accept 表示「这个 commit 之前 React 的改动我都看过并决定了跟进与否」，不表示两边代码相同。",
-  "commit": "aef3618d977e400258c65034c5f3716f76ff7bb5",
-  "acceptedAt": "2026-09-03T06:30:09.404Z",
+  "commit": "ff9552d800d5a8269a01f6027f021ef9d313b874",
+  "acceptedAt": "2026-09-04T07:20:50.967Z",
   "watched": [
     "frontend/src",
     "frontend/tests/e2e"
