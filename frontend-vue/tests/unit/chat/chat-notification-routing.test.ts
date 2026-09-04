@@ -29,9 +29,14 @@ function sourceOf(relative: string) {
 const agentChat = sourceOf("../../../app/components/chat/AgentChat.vue");
 
 describe("流的两条播报走 workspace toaster", () => {
-  /* 上游 `core/threads/hooks.ts:1805` 是 toast.warning，本仓 warning 映到 info。 */
+  /*
+    上游 `core/threads/hooks.ts:1805` 是 `toast.warning`。
+    **wave 73 之前本仓把 warning 折进 info**，理由是「toaster 一个图标都不画，
+    两档没有可观察差别」——补上类型图标之后那条理由就不成立了。
+  */
   it("routes the replay-gap warning to the toaster", () => {
-    expect(agentChat).toContain("warn: (message) =>\n      toast.info(");
+    expect(agentChat).toContain("warn: (message) =>\n      toast.warning(");
+    expect(agentChat).not.toContain("warn: (message) =>\n      toast.info(");
   });
 
   /* 上游 `:1846` 是 toast.error；toaster 会把 error 播成 assertive。 */

@@ -819,7 +819,7 @@ async function submit() {
       `toast.warning(t.inputBox.suggestionPlaceholderRequired)` 再选中
       （input-box.tsx:1071）。
     */
-    toast.info($i18n.t.value.inputBox.suggestionPlaceholderRequired);
+    toast.warning($i18n.t.value.inputBox.suggestionPlaceholderRequired);
     await nextTick();
     const element = textarea.value;
     element?.focus();

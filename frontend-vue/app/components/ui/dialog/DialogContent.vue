@@ -104,7 +104,7 @@ const delegated = computed(() => {
         v-if="props.showClose"
         data-slot="dialog-close"
         :aria-label="props.closeLabel"
-        class="ring-offset-background focus-visible:ring-ring absolute top-4 right-4 flex size-7 cursor-pointer items-center justify-center rounded-md opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none"
+        class="ring-offset-background focus-visible:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 flex size-7 cursor-pointer items-center justify-center rounded-md opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none"
       >
         <X :size="16" aria-hidden="true" />
       </DialogClose>

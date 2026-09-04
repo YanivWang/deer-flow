@@ -78,19 +78,20 @@ onBeforeUnmount(releasePreview);
             （`hover:text-accent-foreground` / `dark:hover:bg-accent/50`）、
             3px 焦点环与 `disabled:*`。
 
-            **两处有意不跟上游：**
-            ① `focus-visible:opacity-100` 是本仓加的。上游这颗只有 `group-hover`
-               才显形，键盘 Tab 到它时**整颗是透明的**——焦点在一个看不见的按钮上。
-               那是上游自己的可达性缺陷（判据同 wave 28），删掉是回归。
+            **两处与上游不同：**
+            ① `focus-visible:opacity-100 focus-visible:pointer-events-auto`
+               ——上游此前只有 `group-hover` 才显形，键盘 Tab 到它时**整颗是透明的**，
+               焦点落在一个看不见的按钮上（WCAG 2.4.7 / 2.4.11）。
+               **wave 73 两边同改**，已补进 `ai-elements/prompt-input.tsx`。
             ② 可访问名带文件名（`artifacts.actions.removeFile(file.name)`），
                上游写死 "Remove attachment"。一次带多个附件时，上游那串名字
-               每颗都一样，读屏器听不出在删哪一个。
+               每颗都一样，读屏器听不出在删哪一个。**这一条本仓单方面保留。**
           -->
           <Button
             type="button"
             variant="ghost"
             :aria-label="$i18n.t.value.artifacts.actions.removeFile(file.name)"
-            class="absolute inset-0 size-5 cursor-pointer rounded p-0 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:opacity-100 [&>svg]:size-2.5"
+            class="absolute inset-0 size-5 cursor-pointer rounded p-0 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 [&>svg]:size-2.5"
             @click.stop="emit('remove')"
           >
             <X aria-hidden="true" />

@@ -620,7 +620,6 @@ export const enUS: Translations = {
     gatewayRecovered: "Gateway connection restored.",
     retryNow: "Try again",
     retrying: "Retrying...",
-    dismissNotification: "Dismiss notification",
   },
 
   // Conversation

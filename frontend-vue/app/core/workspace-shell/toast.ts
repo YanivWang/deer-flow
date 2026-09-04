@@ -5,15 +5,21 @@
   【依赖关系】     Vue ref/provide/inject
   【边界与注意】   每个 workspace layout 只创建一次；卸载时 clear，避免残留 timer。
 
-                   kind 与 React 用的 sonner 一一对应（success/error/info）；WorkspaceToaster
-                   只把 error 播成 assertive，其余都是 polite。
+                   kind 与 React 用的 sonner 一一对应（success/error/info/warning）；
+                   WorkspaceToaster 只把 error 播成 assertive，其余都是 polite。
 
-                   **上游的 `toast.warning` 映到 info，不另开一个 kind。** sonner 的
-                   warning 与 info 在可访问性上是同一档（都是 polite 的 status），
-                   区别只有那个图标，而这个 toaster 一个图标都不画——多一个 kind 会是
-                   一处没有任何可观察差别的分叉。上游用到 warning 的两处
-                   （`core/threads/hooks.ts:1805` 的 replay gap、
-                   `browser-view-panel.tsx:185` 的截图失败）都按 info 走。
+                   **wave 73 把 warning 从「映到 info」改回一个独立的 kind。**
+                   原来那条理由是「warning 与 info 在可访问性上同一档，区别只有图标，
+                   而这个 toaster 一个图标都不画」——**前半句对，后半句是本仓自己的缺陷**：
+                   上游 `ui/sonner.tsx:19` 给 `<Toaster>` 传了
+                   `icons={{success, info, warning, error, loading}}`（五颗 lucide 图标），
+                   sonner 的 `[data-icon]` 是 16×16 的常驻槽位，**每一条 toast 都画**。
+                   本仓补上图标之后，warning 与 info 就有了可观察差别，
+                   继续折叠等于把上游的三处 `toast.warning` 降级成 info。
+
+                   **`durationMs` 是 4000，不是 5000**：sonner 的 `TOAST_LIFETIME`
+                   就是 4000（`sonner/dist/index.mjs`）。此前 5000 是本仓自己定的，
+                   同一条提示在两个应用里停留的时间不一样。
 
                    show 接受一个已存在的 id 就地更新那一条，而不是再插一条：多步流程
                    （Lark 授权轮询）会对同一句提示反复改写「还在等待 / 已完成」，各插一条
@@ -22,7 +28,7 @@
 */
 import { inject, provide, ref, type InjectionKey, type Ref } from "vue";
 
-export type WorkspaceToastKind = "success" | "error" | "info";
+export type WorkspaceToastKind = "success" | "error" | "info" | "warning";
 
 export type WorkspaceToast = {
   id: number;
@@ -40,6 +46,7 @@ export interface WorkspaceToastStore {
   success(message: string, options?: WorkspaceToastOptions): number;
   error(message: string, options?: WorkspaceToastOptions): number;
   info(message: string, options?: WorkspaceToastOptions): number;
+  warning(message: string, options?: WorkspaceToastOptions): number;
   dismiss(id: number): void;
   clear(): void;
 }
@@ -59,7 +66,7 @@ export function createWorkspaceToastStore(options?: {
   durationMs?: number;
 }): WorkspaceToastStore {
   const timer = options?.timer ?? browserTimer;
-  const durationMs = options?.durationMs ?? 5_000;
+  const durationMs = options?.durationMs ?? 4_000;
   const toasts = ref<WorkspaceToast[]>([]);
   const timers = new Map<number, number>();
   let nextId = 0;
@@ -115,6 +122,7 @@ export function createWorkspaceToastStore(options?: {
     success: (message, options) => show("success", message, options),
     error: (message, options) => show("error", message, options),
     info: (message, options) => show("info", message, options),
+    warning: (message, options) => show("warning", message, options),
     dismiss,
     clear,
   };

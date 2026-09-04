@@ -754,7 +754,8 @@ describe("composer submission and stale lifecycle", () => {
     expect(toastStore.toasts.value).toEqual([
       {
         id: expect.any(Number),
-        kind: "info",
+        // 上游 input-box.tsx:1074 是 `toast.warning`；wave 73 起本仓有 warning 档。
+        kind: "warning",
         message: enUS.inputBox.suggestionPlaceholderRequired,
       },
     ]);

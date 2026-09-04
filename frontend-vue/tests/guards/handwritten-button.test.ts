@@ -115,10 +115,6 @@ const ALLOWED: Record<string, [number, string]> = {
     "上游 todo-list.tsx:45 是挂 onClick 的 <header>；本仓改成 button 是有意的" +
       "（那是上游的键盘可达性缺陷），外观逐条对齐",
   ],
-  "components/workspace/WorkspaceToaster.vue": [
-    1,
-    "**待决**：上游 <Toaster /> 没传 closeButton，每条 toast 根本没有关闭键",
-  ],
   "components/workspace/browser-view/BrowserPanel.vue": [
     2,
     "浏览器面板的两条错误重试，上游没有错误态",

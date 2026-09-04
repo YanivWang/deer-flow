@@ -380,11 +380,12 @@ const stream = useThreadStream({
     的 `toast.warning` 与 `:1846` 的 `toast.error`）。此前它们 push 进一个
     **只增不减**的数组，渲染成 `absolute right-4 bottom-36` 的 `<p role="status">`：
     ① 一条一次性的警告会永远挂在屏幕上；② 错误只播成 polite，而 toaster 会把
-    error 播成 assertive。warning 映到 info 的理由写在 workspace-shell/toast.ts 的文件头。
+    error 播成 assertive。**wave 73 起 warn 走 toaster 的 warning 档**——
+    补上图标之后 warning 与 info 有了可观察差别（见 workspace-shell/toast.ts 的文件头）。
   */
   notify: {
     warn: (message) =>
-      toast.info(
+      toast.warning(
         message === "conversation.streamReplayGap"
           ? $i18n.t.value.conversation.streamReplayGap
           : message,

@@ -587,7 +587,6 @@ export const zhCN: Translations = {
     gatewayRecovered: "网关连接已恢复。",
     retryNow: "立即重试",
     retrying: "正在重试...",
-    dismissNotification: "关闭通知",
   },
 
   // Conversation

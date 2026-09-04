@@ -12,8 +12,9 @@
                    `translate-x-[calc(100%-2px)]`，否则窄了 4px 之后滑块会滑出边框。
                    另外补回 `peer`、`shadow-xs`、`focus-visible:border-ring` 与两条
                    dark 变体——它们都是选择器/视觉合同的一部分。
-                   `cursor-pointer` 是本仓多出来的一条，**保留**：上游那颗开关没有它，
-                   鼠标停上去还是箭头，而它明明可点。
+                   `cursor-pointer` **两边同改**（wave 73）：Tailwind 4 的 preflight
+                   不给按钮小手，上游那颗开关此前也没有这一条，鼠标停上去还是箭头，
+                   而它明明可点。已同时补进 `frontend/src/components/ui/switch.tsx`。
 -->
 
 <script setup lang="ts">

@@ -47,7 +47,7 @@ afterEach(() => {
 });
 
 describe("WorkspaceToaster", () => {
-  it("renders live success/error toasts and dismisses one", async () => {
+  it("renders live success/error toasts", async () => {
     const { wrapper, toast } = mountWithToast(WorkspaceToaster);
     toast.success("Copied");
     toast.error("Denied");
@@ -58,12 +58,45 @@ describe("WorkspaceToaster", () => {
     expect(document.querySelector('[role="alert"]')?.textContent).toContain(
       "Denied",
     );
-    const dismiss = document.querySelector<HTMLButtonElement>(
-      '[aria-label="Dismiss notification"]',
-    )!;
-    dismiss.click();
+    wrapper.unmount();
+    toast.clear();
+  });
+
+  /*
+    **每条 toast 一颗类型图标，一颗关闭键都没有。**
+
+    上游 `ui/sonner.tsx:19` 给 `<Toaster>` 传了
+    `icons={{success, info, warning, error, loading}}`（五颗 lucide 图标），
+    sonner 的 `[data-icon]` 是 16×16 的常驻槽位——**上游每一条 toast 都画一颗**。
+    本仓此前一颗都不画，还反过来自己加了一颗上游没有的关闭键
+    （`<Toaster position="top-center" />` 没传 `closeButton`，sonner 默认是关的）。
+
+    图标是 aria-hidden 的装饰：kind 已经由 role/aria-live 表达，
+    再让读屏器念一遍是重复播报。所以这里数的是 svg，不是可访问名。
+  */
+  it("draws one type icon per toast and no close button", async () => {
+    const { wrapper, toast } = mountWithToast(WorkspaceToaster);
+    toast.success("Copied");
+    toast.error("Denied");
+    toast.info("Heads up");
+    toast.warning("Careful");
     await flushPromises();
-    expect(document.body.textContent).not.toContain("Copied");
+
+    const items = [...document.querySelectorAll("ol > li")];
+    expect(items).toHaveLength(4);
+    for (const item of items) {
+      const icon = item.querySelector("svg");
+      expect(icon, `「${item.textContent}」那一条没有图标`).not.toBeNull();
+      expect(icon!.getAttribute("aria-hidden")).toBe("true");
+    }
+    // 四个 kind 画的是四种不同的图标，不是同一颗。
+    const shapes = new Set(
+      items.map((item) => item.querySelector("svg")!.innerHTML),
+    );
+    expect(shapes.size).toBe(4);
+
+    expect(document.querySelectorAll("ol button")).toHaveLength(0);
+
     wrapper.unmount();
     toast.clear();
   });

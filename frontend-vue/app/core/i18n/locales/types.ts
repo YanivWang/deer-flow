@@ -492,7 +492,6 @@ export interface Translations {
     gatewayRecovered: string;
     retryNow: string;
     retrying: string;
-    dismissNotification: string;
   };
 
   // Conversation

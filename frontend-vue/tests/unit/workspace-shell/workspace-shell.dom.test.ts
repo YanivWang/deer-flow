@@ -56,6 +56,55 @@ describe("workspace toast owner", () => {
     expect(cleared).toEqual(expect.arrayContaining([1, 2]));
     expect(errorId).toBeGreaterThan(successId);
   });
+
+  /*
+    **默认停留时长是 4000ms，就是 sonner 的 `TOAST_LIFETIME`。**
+
+    上游用的是 sonner，两处调用点（`workspace-content.tsx:44`、
+    `showcase/[thread_id]/layout.tsx:29`）都没有传 `duration`，所以走的是库的
+    默认值 4000（`sonner/dist/index.mjs` 里那行 `const TOAST_LIFETIME = 4000`）。
+    本仓此前写的是 5000——**同一句提示在两个应用里停留的时间不一样**，
+    而这一档正是「上游没有关闭键」能成立的前提：toast 只能等它自己走。
+
+    这里断言的是**传给 timer 的那个毫秒数**，不是常量本身：
+    默认值改了但 `schedule()` 忘了用它，钉常量的写法看不出来。
+  */
+  it("defaults to sonner's 4000ms lifetime", () => {
+    const delays: number[] = [];
+    const timer: ToastTimer = {
+      set(_callback, delayMs) {
+        delays.push(delayMs);
+        return delays.length;
+      },
+      clear() {},
+    };
+    const store = createWorkspaceToastStore({ timer });
+    store.success("Export complete");
+    store.warning("Careful");
+    expect(delays).toEqual([4_000, 4_000]);
+  });
+
+  /*
+    四个 kind 与上游 sonner 的四种 toast 一一对应
+    （`toast.success/error/info/warning`，实测调用点 33/86/10/3 处）。
+    warning 此前折进 info，理由是「toaster 一个图标都不画，两档没有可观察差别」
+    ——wave 73 补上图标之后那条理由不成立了。
+  */
+  it("exposes the same four toast kinds sonner does", () => {
+    const store = createWorkspaceToastStore({
+      timer: { set: () => 1, clear() {} },
+    });
+    store.success("a");
+    store.error("b");
+    store.info("c");
+    store.warning("d");
+    expect(store.toasts.value.map((toast) => toast.kind)).toEqual([
+      "success",
+      "error",
+      "info",
+      "warning",
+    ]);
+  });
 });
 
 describe("workspace shortcuts", () => {

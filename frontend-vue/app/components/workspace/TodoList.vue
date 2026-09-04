@@ -23,10 +23,11 @@ const collapsed = ref(true);
     data-testid="thread-todos"
   >
     <!--
-      上游 todo-list.tsx:45 这一层是一个**挂着 onClick 的 `<header>`**，不是按钮：
-      键盘用户根本折不动这块面板。本仓这里是 `<button` + `aria-expanded`，
-      **有意不跟**（那是上游自己的可达性缺陷，按 wave 28 的判据属于「两边同改」，
-      账记在交接文档，不在这一轮改 `frontend/`）。
+      这一层是 `<button>` + `aria-expanded`。上游 todo-list.tsx:45 原来是一个
+      **挂着 onClick 的 `<header>`**：它是这块面板唯一的折叠入口，
+      键盘用户完全折不动（WCAG 2.1.1），可访问性树里也读不出展开态。
+      **wave 73 两边同改**，`frontend/src/components/workspace/todo-list.tsx`
+      已改成同一个形状。
 
       外观照抄上游那一层：`min-h-8`（上游 32px，本仓原来 `min-h-9` 高 4px）、
       `cursor-pointer`（上游显式写了；Tailwind 4 的 preflight 不给按钮小手，
@@ -36,7 +37,7 @@ const collapsed = ref(true);
     -->
     <button
       type="button"
-      class="bg-accent flex min-h-8 w-full cursor-pointer items-center justify-between px-4 text-sm transition-all duration-300 ease-out"
+      class="bg-accent flex min-h-8 w-full shrink-0 cursor-pointer items-center justify-between px-4 text-sm transition-all duration-300 ease-out"
       :aria-expanded="!collapsed"
       @click="collapsed = !collapsed"
     >

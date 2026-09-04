@@ -81,13 +81,11 @@ const ALLOWED: Record<string, string> = {
   // 上游 message-list.tsx:1372 的划词关闭键就是 `<span aria-hidden="true">×</span>`。
   "app/components/chat/MessageList.vue": "×",
   /*
-    本仓独有：上游的 toast 是 sonner，`<Toaster position="top-center" />`
-    没有传 `closeButton`，所以**上游那一排根本没有关闭键**。
-    本仓的 toast 5 秒自动消失，这颗 `×` 是额外的出路。
-    记在这里而不是悄悄删掉——它是「React 没有的 Vue 不许有」那一半的一条
-    待决账，见交接文档。
+    **wave 73 结清了 WorkspaceToaster 那条账，所以这里少了一行。**
+    那颗 `×` 是本仓自己加的关闭键，而上游 `<Toaster position="top-center" />`
+    没有传 `closeButton`（sonner 的默认值是关的）——上游那一排根本没有关闭键。
+    按「React 没有的 Vue 不许有」删掉，`workspace` 下那条独有词条一并删了。
   */
-  "app/components/workspace/WorkspaceToaster.vue": "×",
 };
 
 describe("不许拿符号字符当图标", () => {
