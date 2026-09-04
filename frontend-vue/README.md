@@ -83,7 +83,15 @@ make e2e-visual         # product screenshots; local-only, the baselines are `-d
 make e2e-list           # collect every suite and print its test count
 make consumer-check     # changes to packages/agent-core
 make container-smoke    # production image, health, SIGTERM and rejection policy
+make coverage           # unit-test line coverage — a diagnostic, deliberately not a gate
 ```
+
+`make coverage` is **not** part of `verify` and has no threshold. Two reasons:
+a coverage floor buys filler tests, and the number only sees code executed inside
+the unit-test process — `app/layouts/`, `server/routes/` and `app.vue` are covered
+by the E2E suites and read as 0% here. Use it to find _which_ module nobody tests,
+not as a pass mark. Current reading: 73% statements, 75% lines, with
+`app/components/` (66%) the largest gap.
 
 One suite is one backend topology, and the name says what it tests. Pick the
 narrowest one while iterating:

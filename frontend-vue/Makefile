@@ -8,7 +8,7 @@
 	upstream-drift upstream-accept dom-parity parity-accept \
 	i18n-check i18n-diff i18n-unused i18n-source-check i18n-refresh \
 	gen-api-types gen-api-types-check gen-contract-constants gen-contract-constants-check \
-	consumer-check standalone-check
+	consumer-check standalone-check coverage
 
 PYTHON ?= python3
 PNPM = $(PYTHON) ../scripts/pnpm.py --dir frontend-vue
@@ -60,6 +60,7 @@ help:
 	@echo "  make e2e-backend               every suite that needs a real Gateway"
 	@echo "  make e2e-list                  collect every suite and print its test count"
 	@echo ""
+	@echo "  make coverage                  unit-test line coverage (diagnostic, not a gate)"
 	@echo "  make asset-budget              build and enforce raw/gzip client asset budgets"
 	@echo "  make container-smoke           non-root /health / SIGTERM production image smoke"
 	@echo "  make upstream-drift            report what ../frontend changed since the marker"
@@ -141,6 +142,21 @@ standalone-check:
 
 test:
 	$(EXEC) vitest run
+
+# 覆盖率**有意不进 verify**：把它当门禁会逼着写凑数的测试，而这个数本身也只看得见
+# 单测进程里执行的代码——layouts、Nitro 路由、app.vue 全靠 e2e 覆盖，在这里恒为 0。
+# 它是**诊断工具**，用来找「哪一块没人测」，不是及格线。
+#
+# provider 的版本必须跟 vitest 走：裸 `pnpm add @vitest/coverage-v8` 会装最新大版本
+# （实测装成 5.0.0 配 vitest 4.1.10），报的是 `coverageFilesDirectory is required`
+# ——一句完全看不出是版本问题的错。`tests/guards/tooling-contracts.test.ts` 钉住这一条。
+coverage:
+	$(EXEC) vitest run --coverage.enabled --coverage.provider=v8 \
+		--coverage.include='app/**' --coverage.include='server/**' \
+		--coverage.include='packages/*/src/**' \
+		--coverage.reporter=text-summary --coverage.reporter=html \
+		--coverage.reportsDirectory=coverage
+	@echo "HTML 报告：frontend-vue/coverage/index.html"
 
 # 词典体检（06 §M1 1d）。只读签入的词典与基线，不碰 git 历史，所以能进 verify。
 # 基线必须趁词典还是上游原样时取——等 M4b 重写完再补，「这次漏了哪个 key」就无从判断。

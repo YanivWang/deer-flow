@@ -8,7 +8,7 @@
 
 ---
 
-## 当前状态（截至 wave 64，2026-09-04）
+## 当前状态（截至 wave 65，2026-09-04）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
@@ -64,10 +64,12 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 62 收工时逐条跑过）
+### 门禁实测值（wave 64 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；251 文件 / 2090 单测，词典 944 key、18 unused
+make -C frontend-vue verify        exit 0；252 文件 / 2095 单测，词典 944 key、18 unused
+make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55% / 行 74.9%
+                                   **诊断工具，不进 verify，没有阈值**
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 37 处 / 16 个文件）
 make -C frontend-vue e2e-parity    47    台账 0 行，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -204,7 +206,77 @@ wave 29 已经做掉**）。
 
 ---
 
-## 上一轮（wave 63）做了什么：**去补最后一条场景，量完是「补不了」**
+## 上一轮（wave 64）做了什么：**把覆盖率接上，并订正 wave 63 的误判**
+
+### 订正：不是「配置工程」，是一个 devDependency 装错了大版本
+
+wave 63 说「要出真数字得先做配置工程」——**错的**。裸
+`pnpm add -Dw @vitest/coverage-v8` 装到了 **5.0.0**（peer 要 vitest 5.0.0），
+而本仓是 **vitest 4.1.10**。报出来的是
+
+```
+AssertionError: coverageFilesDirectory is required
+```
+
+出现在**每一个 worker** 上、一次 251 个未处理错误、summary 是
+`0/14384 statements`，而且 node / dom / nuxt 三个 project **全都一样**
+——**看起来像「这套三-project 配置不支持覆盖率」，实际是 v5 的 provider
+在跟 v4 的核心说话**。装同一条 range 之后一次就过，
+**`vitest.config.ts` 一个字都不用改**（试过加 `coverage` 块，再还原成
+只用命令行参数，一样跑通）。
+
+### 实测的覆盖率
+
+```
+语句 73.22%   分支 64.72%   函数 70.55%   行 74.90%
+```
+
+| 目录 | 行覆盖 | | 目录 | 行覆盖 |
+| --- | --- | --- | --- | --- |
+| `app/lib` | 100.0% | | `app/composables` | 72.4% |
+| `packages/agent-core` | 94.3% | | **`app/components`** | **66.0%**（3995/6052） |
+| `app/pages` | 91.6% | | `server/utils` | 21.9% |
+| `app/core` | 85.5% | | `app/layouts` / `server/routes` / `app.vue` | **0%** |
+
+**那几个 0% 不代表没测**：layouts、Nitro 路由、`app.vue` 靠 **e2e** 覆盖，
+而 v8 只看得见单测进程里执行的代码。**这个数是「单测行覆盖」，不是「测试覆盖」。**
+
+### 落地的三样
+
+1. **`@vitest/coverage-v8` 与 `vitest` 用同一条 range**（`^4.1.10`）。
+2. **`make coverage`** —— **有意不进 `verify`，也没有阈值**。覆盖率当门禁会逼着
+   写凑数的测试；它是**诊断工具**，用来找「哪一块没人测」。
+3. **`tests/guards/tooling-contracts.test.ts`**（新）：
+   - **成组依赖的 range 必须逐字相同**——钉的不是版本号（那会让每次升级都要改守卫），
+     是「这两条一起动」。变异实测：把 provider 跳到 `^5.0.0` 当场红。
+   - **`.PHONY` 与实际 target 一一对应**。wave 60 手工量过一次（53:53 全对）
+     **但没留门禁**；wave 64 变异实测：把 `coverage:` 改名而 `.PHONY` 不动，
+     **当时一条用例都不红**。两个方向都钉（有 target 没声明最阴——
+     目录里有同名文件时 make 会静默什么都不做）。
+
+### 负向验证 6/6 全红，其中两条第一次是假绿
+
+| 变异 | 结果 |
+| --- | --- |
+| provider 跳到大版本 5（正是踩过的坑） | RED |
+| 整条依赖被删掉 | RED |
+| 只升 vitest 不升 provider | RED |
+| **LOCKSTEP 清单清空** | **第一次 GREEN**——两个 for 都不进循环，断言全部落空却照样绿（**线索 176 本人**）。补 `expect(LOCKSTEP.length).toBeGreaterThan(0)` 后 RED |
+| **target 改名而 `.PHONY` 没跟** | **第一次 GREEN**——那条门禁当时还不存在，写出来之后 RED |
+| 反方向：`.PHONY` 里去掉 `coverage` | RED |
+
+## 下一轮（wave 65）：**仍然没有必须做的；但覆盖率给了第一份「往哪看」的地图**
+
+产品面的账没有变化（九处本仓更好、四条零价值记账、一条 React 写死英文文案），
+那条 pending 仍然要等上游竞态收敛。
+
+**新增的唯一线索是覆盖率地图**，而且要按它自己的说明书用：
+`app/components` **66%**（3995/6052 行）是最大的一块，但**低覆盖不等于该补测试**
+——先问「这一块出过 bug 吗 / 它的行为有没有别的门禁在守」。
+本仓 `app/components` 的行为大量由 **e2e + 对照台账**守着，那些在这个数里看不见。
+**别把 66% 当待办，把它当「下次真出 bug 时先看哪里」。**
+
+## 上上轮（wave 63）做了什么：**去补最后一条场景，量完是「补不了」**
 
 覆盖率棘轮里 `chat-thread-init-ordering` 的翻案判据是「竞态修好之后连取 5 次
 只出现一个终态」，而 wave 62 刚说竞态没了。去验证 —— **判据没满足，
@@ -235,30 +307,18 @@ React 仍是**两个终态、19 B / 4 A（约 17%）**；Vue **23/23 单一**。
 
 ### 顺带答了「frontend-vue 全面测过吗」
 
-**本仓从来没有测过行覆盖率** —— 没有配任何覆盖率工具。本轮临时装
-`@vitest/coverage-v8` 想给个数，**在这套三-project（node / happy-dom / nuxt）
-配置下挂不上**（`0/14416 statements`，跑到 18/251 就失败）。要出真数字得先做
-配置工程。**依赖已还原。**
+**本仓此前从来没有测过行覆盖率**（没配任何工具）。wave 63 临时装
+`@vitest/coverage-v8` 挂不上，当时判成「要做配置工程」——**那句 wave 64 订正了，
+是错的**：真正的原因是裸 `pnpm add` 装到了 **5.0.0** 而本仓是 vitest **4.1.10**，
+报的 `coverageFilesDirectory is required` 完全看不出是版本问题。
+**装同一条 range 之后一次就过，`vitest.config.ts` 一个字都不用改。**
 
 规模是：单测 251 文件 / 2090 条；e2e-mock 310、e2e-backend 22、e2e-parity 47
 （台账 0 行 / 39 样本）、visual 8、external 3;门禁测试 13 文件。
 **已知盲区**：台账天生看不见的八类差异、六个 settings 面板没有合法场景 id、
 命令面板那一屏没被取样、以及这条 pending。
 
-## 下一轮（wave 64）：**仍然没有必须做的**
-
-wave 62 把产品面值得做的三条做完了；wave 63 去验证最后一条覆盖缺口，
-结论是**不能补**（判据已收紧并写下复现脚本）。
-
-**唯一有明确下一步的是那条 pending**：等上游那条 history/stream 竞态真正收敛，
-按 `$pendingReasons` 里的脚本连取 20 次验证，再把场景挪进 covered。
-**那不由本仓决定。**
-
-其余候选与判断同上一版：九处「本仓已经更好」（做了会变差）、四条零产品价值的记账、
-一条 React callback 页写死英文文案。**要再开，先说清楚「这一轮要让哪个用户的
-什么体验变好」。**
-
-## 上上轮（wave 62）做了什么：**按产品价值挑了三条，做完；顺手翻出三颗无名控件**
+## wave 62 做了什么：**按产品价值挑了三条，做完；顺手翻出三颗无名控件**
 
 判据换了：**不是「哪里还没对齐」，是「哪一条对真实用户有好处」**（2026-09-04 用户
 明确「React 那一侧有 bug，你也得修」）。挑出三条，全部做完。
@@ -843,7 +903,7 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 191 条在记忆文件里）
+## 其他常踩的坑（完整 192 条在记忆文件里）
 
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
   「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
@@ -882,6 +942,12 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   **mock 复现不了的要回到当初观测它的环境**，而且 replay Gateway 上**提示词要用
   录制里的原句**——换一句会 replay miss，量到的不是那一屏。
   **竞态类的账要记「怎么复现」，不要只记「什么现象」。**
+- **一个「看起来像架构不支持」的错，先查依赖版本**（线索 192，wave 64 补）。
+  `coverageFilesDirectory is required` 出现在每个 worker 上、三个 project 全一样、
+  summary 是 `0/14384`——**长得像「这套配置不支持覆盖率」，实际是 provider 装了
+  大版本 5 配 vitest 4**。裸 `pnpm add` 默认抓 latest，这类错会被伪装成架构问题。
+  **判据：报错来自工具链内部断言（不是你的代码）+ 全环境一致复现 → 先对版本。**
+  修法是把成组依赖的 range 钉成逐字相同（不钉版本号，那会让每次升级都要改守卫）。
 - **但「复现不出来」要先问「我量的是不是它量的那个点」**（线索 191，wave 63 补）。
   wave 62 据此宣布竞态「已经没有了」——**说过头了**：它等了 30 秒才读，
   而棘轮在 `settleMs=700` 就取样。**换个取样点重测，两个终态原样还在（19 B / 4 A）。**
