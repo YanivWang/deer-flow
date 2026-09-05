@@ -540,9 +540,20 @@ onBeforeUnmount(() => {
       **两颗同名按钮本身不是缺陷**：上游 artifact-file-detail.tsx:563 用的也是
       `t.clipboard.copyToClipboard`，同一屏同样有两颗。
     -->
+    <!--
+      头部的三条尺寸照抄上游 `ai-elements/artifact.tsx` 的 `ArtifactHeader`
+      （`bg-muted/50 flex items-center justify-between border-b px-4 py-3`）
+      加调用点的 `className="px-2"`（artifact-file-detail.tsx:400）：
+
+      ① **`py-3` 而不是 `h-12`。** 上游没有固定高度，高度由内容 + 上下各 12px
+         内边距决定；本仓写死 48px，比上游矮 8px——wave 76 把几何档接到交互后的
+         锚点上之后，三个 artifact 场景一共报出五条 `y Δ-7.5` / `Δ-14` 就是它。
+      ② **`px-2` 而不是 `px-3`**（上游的 `px-4` 被调用点的 `px-2` 盖掉）。
+      ③ **`bg-muted/50`**——本仓这一条整个没有，头部与正文之间只有一条下边框。
+    -->
     <header
       data-testid="artifact-panel-header"
-      class="border-border flex h-12 shrink-0 items-center gap-2 border-b px-3"
+      class="bg-muted/50 border-border flex shrink-0 items-center gap-2 border-b px-2 py-3"
     >
       <ArtifactFileList
         v-if="!isWrite"
