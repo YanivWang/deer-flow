@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 85，2026-09-05）
+# React → Vue 平替：挂账总清单（截至 wave 86，2026-09-05）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -37,7 +37,7 @@
 
 ---
 
-## 三、这一轮（wave 78~85）清掉的
+## 三、这一轮（wave 78~86）清掉的
 
 - **台账 16 → 0**（wave 78，五处根因：页脚两组 / 菜单 align+side / 模式项多传的 `py-2` / `ui/command` 的 class 合同 / artifact 头部三栏 / sidecar 页脚的 `pt-3`）
 - **守卫注释里点名的两笔**（wave 79：保存 agent 键的位置与形状、MessageList 的 artifactTargets 文件名键）
@@ -55,6 +55,9 @@
   （对「数 import」那一半是**静默放过**）
 - **「只能变短」那三句话**（wave 85）：`parity-accept` 从「无条件覆盖」变成
   「有新增行就拒写」；另两句守不了的改成实话，并写清真要机器守该用什么判据
+- **三处交互态第一次进取样面**（wave 86）：会话行的 ⋯ 菜单量出 7 处（三处根因）、
+  侧栏 nav 菜单量出 9 行（少一个 group + 上游的 `menu > link > menuitem` 嵌套，
+  **两边同改**）；定时任务的编辑表单 **0 差异**
 
 ---
 
@@ -62,6 +65,7 @@
 
 ```
 verify           exit 0    260 文件 / 2168 单测；词典 942 key / 18 unused
+                           产品 SFC 218（总 220）
 standalone-sim   exit 0    跑过 12 / 未跑 5（4 data + 1 e2e）/ 红 0      ← wave 83 新增
                            --with-e2e 实测 13 / 4 / 0（那一条：exit 0，47 条跳过）
 e2e-parity       47        台账 0 行 / 39 场景（NEW=0 GONE=0）
@@ -74,7 +78,7 @@ audit            预期红 14（分诊写在 Makefile 的 audit 上方）
 standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 39 处 / 17 个文件）
                  ——**只是静态证明**；「移走还能跑」由 standalone-sim 管
 覆盖率棘轮       covered 24 + pending 1 + exempt 2 = 27 = React spec 总数（坐标系已用尽）
-React 侧         check 0 / test 1034 / test:e2e 146（wave 83 未动 frontend/，读数沿用 wave 82）
+React 侧         check 0 / test 1034 / test:e2e 146（wave 86 三条全真跑过）
 ```
 
 ---
@@ -86,8 +90,12 @@ React 侧         check 0 / test 1034 / test:e2e 146（wave 83 未动 frontend/�
 
 1. **给取样面加交互态**（台账看不见的第①⑦类）。判据：一个域收工前，把它所有
    「点一下才出现」的东西列出来，逐个问「这一屏进过取样面没有」。
-   wave 76 刚证明这条还有货——一次接上就量出 27 处。**挂展开态很便宜**：
-   场景 id 受棘轮约束，夹具与 steps 不受。
+   wave 76 量出 27 处、**wave 86 又量出 16 行**（两个菜单），这条一直有货。
+   **挂展开态很便宜**：场景 id 受棘轮约束，夹具与 steps 不受。
+   **锚点要在这个场景的每一个维度上都成立**（语言维度最容易漏），
+   而且别照着词典 key 猜——先量一遍它有没有被渲染。
+   **还没接的交互态**：`channels` 的连接对话框、`integrations` 的权限面板、
+   `branch-thread`、`thread-history-mermaid`、`chat` 那一屏的 composer 菜单。
 2. **给现成的尺子加一档**（wave 75 的 `icon-parity`、wave 76 的几何锚点都是这么来的）。
    注意坑 213 / 186：**一把新尺子最先要量的是它自己**——wave 75 那批线索有近一半
    是扫描范围造出来的。
@@ -106,5 +114,5 @@ React 侧         check 0 / test 1034 / test:e2e 146（wave 83 未动 frontend/�
 > **这条尾巴没有自然终点。** 历史命中率：wave 75 捞出 6 处真差异、wave 76 捞出 27 处、
 > wave 82 捞出一个**两个应用都存在**的产品缺陷、wave 83 证伪了**验收判据自己**、
 > wave 84 捞出三条「扫描器盖不全自己声称的范围」、wave 85 把一条只靠人记得的
-> 闸门变成了机器守的。**什么时候收，是个停止规则问题，
+> 闸门变成了机器守的、wave 86 一次接上三处交互态就量出 16 行。**什么时候收，是个停止规则问题，
 > 不是一个能算出来的轮数。**

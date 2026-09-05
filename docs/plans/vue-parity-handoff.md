@@ -8,15 +8,15 @@
 
 ---
 
-## 当前状态（截至 wave 85，2026-09-05）
+## 当前状态（截至 wave 86，2026-09-05）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85。
-- **动过 `frontend/` 的是十八轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 各加一轮）：
-  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82**。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`）。
+- **动过 `frontend/` 的是十九轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 各加一轮）：
+  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
   而记忆里的压缩版把它读成了「总共三次」。**别再传这个数字，用命令量**：
 
@@ -24,10 +24,11 @@
   git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests
   ```
 
-  **marker 已推到 `809237ec`**（wave 82 的 chore）；`node scripts/upstream-drift.mjs`
-  wave 82 实测**无漂移**，marker 也确实是 HEAD 的祖先——
+  **marker 已推到 `3bfec0f9`**（wave 86 的两边同改）；`node scripts/upstream-drift.mjs`
+  wave 86 实测**无漂移**，marker 也确实是 HEAD 的祖先——
   **边界规则本身有机器在守，需要人记的只有「这类改动做过哪些轮」。**
-  最近几轮的内容：**wave 82 长文件名把 artifact 面板整排动作键推出可视区**；
+  最近几轮的内容：**wave 86 侧栏 nav 菜单去掉 `menu > link > menuitem` 的嵌套可交互元素**；
+  wave 82 长文件名把 artifact 面板整排动作键推出可视区；
   wave 74 两处 `<Toaster />` 用的不是 shadcn wrapper；wave 73 五条「本仓修掉了上游缺陷」；
   wave 62 `/auth/callback` 吞掉 `?next=` 深链。wave 41~~59、75~~81 都没动过。
 
@@ -70,10 +71,11 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 85 收工时逐条跑过）
+### 门禁实测值（wave 86 收工时逐条跑过）
 
 ```
 make -C frontend-vue verify        exit 0；**260** 文件 / **2168** 单测，词典 942 key、18 unused
+                                   产品 SFC **218**（总 **220**，wave 86 新增 DropdownMenuGroup）
 make -C frontend-vue standalone-sim exit 0（wave 83 新增）**判据的动态那一半**：真把
                                    ../frontend rename 走，跑 CROSS_APP_BY_DESIGN 表里
                                    点名的每一条，再移回来。跑过 12 条 / 未跑 5 条
@@ -318,6 +320,70 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 86）做了什么：**给取样面接上三处交互态，两处有货一处干净**
+
+提交 `3bfec0f9`，React 侧同一条提交（两边同改），chore `1677e96b`，
+**marker 推到 `3bfec0f9`**。**动过 `frontend/` 的从此是十九轮。**
+
+连做三轮尺子之后回到产品面。判据照 wave 20/21：**一个域收工前，把它所有
+「点一下才出现」的东西列出来，逐个问「这一屏进过取样面没有」。**
+
+### 一、会话行的 ⋯ 菜单（挂在 `thread-history`）：一次量出 7 处
+
+```
+role:menuitem[Delete]             x React=252 Vue=56    Δ-196
+role:menuitem[Delete]             y React=400 Vue=423.9 Δ23.9
+role:menuitem[Delete]             color React=rgba(10,10,10,255) Vue=rgba(231,0,11,255)
+role:menuitem[Export as Markdown] x React=439 Vue=243   Δ-196
+role:menuitem[Export as Markdown] y React=364 Vue=388   Δ24
+role:menuitem[Rename]             x React=252 Vue=56    Δ-196
+role:menuitem[Rename]             y React=295 Vue=319   Δ24
+```
+
+三处根因（x 全差 -196、y 全差 24 是同一处的两个投影，坑 215）：
+① 本仓 `align="end"` 且**不传 side**，上游 `side="right" align="start"`
+——菜单整个落在侧栏**里面**而不是侧栏右侧；
+② 内容盒 `min-w-48` vs 上游 `w-48 rounded-lg`；
+③ 删除项本仓传了 `variant="destructive"`，而上游那颗是普通项——
+**全仓没有一处**给 `DropdownMenuItem` 传过 destructive（那个 variant 只用在
+Button 与 Alert 上）。按双向规则删掉本仓多出来的这一处。
+
+### 二、侧栏页脚的「设置和更多」菜单（挂在 `thread-list-pin`）：两边同改
+
+`ariaOnlyReact` 9 行：四条外链各多一个 `link` 节点 + `/url`，外加一个 `group:`。
+
+**几何 0 差异**——本仓那颗菜单的 `align` / `side` / 圆角三处都与上游不同，
+而两个取样锚点的位置逐像素相同（碰撞翻转把差异抵消了）。**先量再改救了这一处**：
+照着「形状看着像 wave 78 那次」去改，会改出一个真差异来（坑 236）。
+
+两处根因，方向相反：
+① **本仓少一个 `DropdownMenuGroup`**（上游用它把「设置 + 四条外链」括成一组），
+补了这个 primitive；
+② **上游把 `<DropdownMenuItem>` 套在 `<a>` 里面**，于是菜单里出现
+`link > menuitem` 这种嵌套可交互元素——`menu` 的子节点该是 menuitem，
+外层那个 `<a>` 还会自己进 tab 序、不受 Radix 的 roving tabindex 管。
+**Radix/shadcn 文档给的写法正是本仓用的 `asChild`**，所以按判据两边同改，
+把上游那四处改成 `<DropdownMenuItem asChild><a>`。
+
+### 三、定时任务的编辑表单（挂在 `scheduled-tasks`）：**0 差异**
+
+整块只在点「Edit」之后才存在。接上之后一处差异都没有。**不必再量。**
+
+### 锚点自己先量错了两次
+
+① 内层锚点写成 `text: "Timezone"`，**两边都到不了**——`fields.timezone`
+这条词条在两个应用的 schedule input 里都没有被渲染成可见文字（坑 235）。
+② 按可访问名找「Edit」/「Save edit」，**en-US 过、zh-CN 当场超时**——
+这个场景有**两个语言维度**（坑 234）。改成覆盖两种语言的正则；
+内层两个锚点用两边逐字相同的 testid。
+
+### 门禁
+
+Vue：verify 0（**260** 文件 / **2168** 单测）· e2e-parity **47**（台账 **0 行**）·
+e2e-mock 265+22+15+2+6 · e2e-visual 8（一张没重录）· asset-budget 0 ·
+standalone-sim 0 · icon-parity 0 处待核。
+React：check 0 · test **1034** · test:e2e **146**。
 
 ## 上一轮（wave 85）做了什么：**「只能变短」那三句话——一句补成门禁，两句改成实话**
 
@@ -2163,7 +2229,22 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 233 条在记忆文件里）
+## 其他常踩的坑（完整 236 条在记忆文件里）
+
+- **一个锚点加进来之前，先问它在这个场景的每一个维度上都成立吗**（线索 234，wave 86）。
+  `scheduled-tasks` 有 **en-US 与 zh-CN 两个语言维度**，而按可访问名找的锚点
+  天生只在一种语言下成立：en-US 过、zh-CN 当场 30 秒超时。
+  两边没有共用的 testid 时，名字写成覆盖两种语言的正则；内层锚点优先用
+  两边逐字相同的 `data-testid`。
+- **照着词典 key 猜锚点，会猜到一条从来没被渲染过的 key 上**（线索 235，wave 86）。
+  `fields.timezone` 在两个应用的 schedule input 里都只是个 Select 的值，
+  标签根本没画出来，于是 `text: "Timezone"` 两边都到不了——
+  报出来是「Vue 没能到达场景」，看着像产品缺陷。**锚点自己先量一遍。**
+- **「形状看着像上一次那处」不等于「同一处差异」**（线索 236，wave 86）。
+  侧栏 nav 菜单的 `align` / `side` / 圆角三处都与上游不同，长得和 wave 78
+  修过的那处一模一样——而几何量出来是 **0 差异**（碰撞翻转把它们抵消了），
+  真正的差异在别处（少一个 group + 上游的嵌套 link）。
+  **照着形状去改会改出一个真差异来。先量再改。**
 
 - **「只能缩短」这类单调性判据，要按「集合包含」判，不能按数量判**（线索 232，wave 85）。
   修好一条、同时新坏一条，**行数不变**——按行数判会放行，而台账里多了一行
