@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 71，2026-09-05）
+## 当前状态（截至 wave 80，2026-09-05）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80。
 - **动过 `frontend/` 的是十七轮**（wave 52 实测订正，wave 62 / 73 / 74 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -30,9 +30,11 @@
   最近三轮的内容：wave 40 重连预算耗尽后那颗键在说反话；wave 39 命令面板搜索框的
   可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~59 都没动过。
 
-- **对照台账 16 行**（wave 76 起——几何档接上了交互后的锚点，量出 27 处此前看不见的差异；
-  wave 76 修掉 4 处，wave 77 一处改动又关掉 7 处），**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
-  **这 23 行一条都不是回归**，逐条列在「下一轮」那一节。
+- **对照台账 0 行**（wave 78 清零），**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
+  路径是 1716 → …… → 23（wave 76 接上交互后的锚点，量出 27 处此前看不见的差异）
+  → 16（wave 77 一处改动关掉 7 行）→ **0**（wave 78 把剩下的 16 行归到五处根因）。
+  **这里的 0 是「当前这 39 个取样点上量不出差异」，不是「两个应用一样」**——
+  台账天生看不见的八类见下。
 - 覆盖率棘轮：covered **24**，pending **仍是 1 条**（`chat-thread-init-ordering`）——
   **wave 63 用 23 个样本重测过，仍然不能加**（React 两个终态 19B/4A，Vue 23/23 单一）。
   翻案判据已从「连取 5 次」**收紧到连取 20 次**，连同复现脚本一起写在 `$pendingReasons` 里。
@@ -67,10 +69,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 77 收工时逐条跑过）
+### 门禁实测值（wave 80 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；259 文件 / 2154 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；259 文件 / 2155 单测，词典 942 key、18 unused
 make -C frontend-vue icon-parity   **0 处待核**（wave 75 逐条核完；另有 12 条写进
                                    脚本里的 `VERIFIED` 表，双向——某条不再出现会报 stale）
 make -C frontend-vue asset-budget  exit 0（wave 72 把 vendor-ui 预算按实测重定了一次，
@@ -79,10 +81,25 @@ make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefil
 make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55% / 行 74.9%
                                    **诊断工具，不进 verify，没有阈值**
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 39 处 / 17 个文件）
-make -C frontend-vue e2e-parity    47    台账 **16 行**，39 样本（NEW=0 GONE=0）
+make -C frontend-vue e2e-parity    47    台账 **0 行**，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
-make -C frontend-vue e2e-visual    8    **不在 make e2e 里**；wave 74 同样一张没重录
+                                   **这一行 wave 65~78 一直是抄下来的，没人真跑过**：
+                                   wave 79 跑全套，`e2e-channels` 当场红，而且单独跑
+                                   两遍也红——wave 72 给渠道那颗连接键补上图标那天起
+                                   就红着（坑 220/222）。**它现在是收工清单的一项**，
+                                   不是「顺带跑跑」。注意 `make e2e-backend` 是 8 个
+                                   套件**串行、第一个失败就停**，channels 排第四，
+                                   它红之后后面四个套件的状态是**未知**不是绿（坑 221）。
+make -C frontend-vue e2e-visual    8    **不在 make e2e 里**；wave 78 重录 3 张
+                                   （容差压到 0 跑两遍：empty chat **两遍都是 595px**
+                                   ——稳定＝我改的，diff 图上就是模式键与推理档从右边
+                                   挪回左边；artifact panel 2006 / 2082 **两遍不同**，
+                                   但 diff 图上除了已知的整条消息列文字平移，
+                                   右上角那排动作键也在高亮里——**抖动与我的改动叠在
+                                   同一张图上**，两样都在，所以照样要重录。
+                                   `=changed` 连带重录了 empty-chat-attachment，
+                                   同 wave 72，机制见坑 94）；wave 74 同样一张没重录
                                    （容差压到 0 跑两遍：只有 artifact panel 红，
                                    1926 / 2089，**两遍不同 = 抖动**；其余七张
                                    在零容差下逐像素相同）；wave 73 一张没重录
@@ -291,6 +308,98 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 80）做了什么：**修一条红了七轮没人知道的 e2e**
+
+提交 `e1028406`。wave 79 收工时跑全套 `e2e-backend`——**它自 wave 64 起就不在任何一轮的
+收工清单里**——`e2e-channels/channels.spec.ts:64` 当场红，**单独跑两遍也红**，不是抖动。
+
+根因见坑 220：`filter({ hasText: /^Add account$/ })` 匹配的是**没归一过的** textContent，
+而这颗按钮是 `<Plug />` 图标 + 插值，Vue 模板在两者之间留下一个文本节点，
+`textContent` 因此是 `" Add account"`。实测 `allTextContents()` 返回
+`[" Add account","Modify","Remove provider configuration"]`——只有带图标的那几颗有前导空格。
+报错是 `element(s) not found`，**而同一次失败的 page snapshot 里那颗按钮明明在、
+状态也正是断言要的 `[disabled]`**。
+
+**不是这一轮弄的**：图标是 wave 72（`32d71958`）加的，定位器从 `18b7ad2c`（08-30）就在；
+图标本身是对的（上游 `channels-settings-page.tsx:281` 同样带 `PlugIcon`），
+所以修的是定位器不是产品。**因果与 wave 78/79 够不着**：`ChannelConnections.vue` 的
+传递闭包 48 份文件，这两轮动过的 12 份一份都不在里面。
+
+配套：**把 `e2e-backend` 写进收工清单**（坑 222），并记下 `make e2e-backend` 是 8 个套件
+**串行、第一个失败就停**——channels 排第四，它红之后后面四个套件的状态是**未知**不是绿
+（坑 221）。
+
+## 上一轮（wave 79）做了什么：**清掉守卫注释里点名的最后两笔账**
+
+提交 `b79695de`。`tests/guards/handwritten-button.test.ts` 的 `ALLOWED` 注释里点名两笔，
+wave 72 点了名没做——两处都是「位置与形状」而不是样式。
+
+### 一、保存 agent 键：工具条上一颗手写 button → 页头右上角的 ⋯ 菜单
+
+上游 `agents/new/page.tsx:309` 是 header 右端一颗 `ghost / icon-sm` 的 More 触发器，
+菜单里一个 `DropdownMenuItem` + `SaveIcon`。先按线索 199 确认上游那颗**活着**
+（`step === "chat"` 渲染、`handleSaveAgent` 接 `sendMessage`；没有 e2e 走到那条路由，
+但那是取样面的问题不是死代码）。
+
+**决定性的证据是文案自己**（线索 216）：`agents.saveHint`（两个应用共用的上游文案）
+写的是 "You can save this agent at any time **from the top-right menu**"，
+而本仓的保存是工具条上一颗可见按钮——**界面和它自己的说明打架**。
+这不是「本仓更好」的取舍。顺带把 agents 那条 more 接上（wave 28 记的「永远没有消费点」
+到此结束；扫描器按叶子名匹配，词典 942 / 18 不变）。
+
+### 二、MessageList 的 artifactTargets 文件名键：删掉
+
+ALLOWED 里写着「上游那一支渲染的是 ArtifactFileCards」——**这句是错的**（线索 217），
+`frontend/src` 里没有这个名字，那是本仓自己的组件。逐条量下来：写文件那三个工具调用
+在**两个应用**里都归 `assistant:processing` 组画成 chain-of-thought 的一步
+（上游 `message-group.tsx:853` ↔ 本仓 `ProcessingToolStep.vue`），`present_files`
+两边都走各自的 present-files 分支。剩下唯一走得到那排按钮的缝是 `assistant:subagent`
+组，而上游那一支只画「执行 N 个子任务」+ reasoning + SubtaskCard，同样不画文件名键。
+零测试覆盖 → 按双向规则删掉（线索 218）。
+
+## 上一轮（wave 78）做了什么：**16 行几何归到五处根因，台账清零**
+
+提交 `ba84b142`。做法沿用 wave 77：**把同形的一组归因到一处，先找那一处**。
+每一处都先用临时探针在两个应用上取一次渲染读数（线索 204）再动代码，
+没有一处是照着 Δ 值硬调偏移调出来的。
+
+| 根因                                                                                                                      | 关掉        | 出处                                |
+| ------------------------------------------------------------------------------------------------------------------------- | ----------- | ----------------------------------- |
+| 页脚被拍平成一排 + 一根 `flex-1` 撑杆（上游是 `justify-between` 里两个 `PromptInputTools`）                               | 3 行 x      | `input-box.tsx:2323`                |
+| 菜单写死 `align="end" side="top"`（上游 `align="start"`、不传 side）                                                      | 3 行 x/y    | `prompt-input.tsx:1066`             |
+| 模式菜单项多传一个 `py-2`（primitive 已经是 `py-1.5`）                                                                    | 2 行 height | 推理档那个菜单 wave 76 已拆过同一条 |
+| `ui/command` 的 class 合同只抄了一半（`CommandList` 多 `p-2`；`CommandItem` 是 `gap-3 px-3 py-2 rounded-md`）             | 5 行        | `ui/command.tsx:102/159`            |
+| artifact 头部是**三栏**不是一排（动作键 gap 8 vs 4；标题那层的 `min-w-0 flex-1` + 触发器 `max-w-full` 把文件名截掉 21px） | 2 行        | `artifact-file-detail.tsx:400`      |
+| sidecar 页脚少一条 `pt-3`（页脚矮 12px → 内容区高 12px → 垂直居中的空态下移 6px）                                         | 2 行        | `sidecar-panel.tsx:602`             |
+
+**触发器本身不在取样面里**（几何只取 `visible` 锚点，`click` 目标不取），所以
+「一根撑杆把模式键从 x=468.5 推到 805.2」这件事只能从菜单项的 x 差里反推——
+判据见线索 215。
+
+顺带补的：`DropdownMenuContent` 缺 `max-h-(--reka-dropdown-menu-content-available-height)`
+
+- `overflow-y-auto`（**比视口高的菜单滚不动**，实测本仓 max-height 恒为 `none`，
+  上游同屏 507 / 735px）与 zoom/slide/transform-origin 那几条；`Command` 根缺
+  `bg-popover text-popover-foreground`（模型选择器整块底色是 `--background` 而不是
+  `--popover`，两个 token 在明暗两套里都不是同一个值，同 wave 76 的 sidecar 底色）。
+
+### 取舍
+
+- **artifact 标题不再截断**，照抄上游。代价是文件名足够长时头部被撑开、右边的动作键
+  被推出可视区——**上游同样如此**，所以这是一笔要两边同改的账，记在「挂着的账」里，
+  不是本仓单边保留的理由。
+- `z-80`（上游 `z-50`）与 `hover:bg-accent`（上游只有 `focus:`）继续保留，理由同前几轮。
+
+### 负向验证：16/16，第一次跑只报出 15 行
+
+把五处一次性反转成改动前的**效果**（`display:contents` 拍平两处容器 + 撑杆 +
+align/side + py-2 + CommandList/Item 的内边距 + 去掉 sidecar 的 pt-3 + 标题那两条），
+`e2e-parity` 当场红，报出的 16 行与改动前的台账**逐字相同**。
+
+第一次跑只报出 **15** 行：`text:batched-report.md width` 没回来。**是变异不完整**——
+标题的截断需要 `min-w-0 flex-1`（外层）与 `max-w-full`（触发器）**两条同时在**，
+第一版只还原了外层。补上之后 16/16。
 
 ## 上一轮（wave 77）做了什么：**验了 wave 76 记下的那条假设，一处改动关掉七行**
 
@@ -999,100 +1108,53 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 撤销态画回 Sparkles 1、胶囊去 role/aria-live 1、取消键换 testid 2、
 页脚优化键润色时消失 1、语音键丢 disabled 1。
 
-## 下一轮：**四条**
+## 下一轮：**三条**
 
-### 零、手写 `<button>` 这一档**已经问完了**，剩下的 49 处都有出处
+### 一、~~台账里那 16 行几何~~ —— **wave 78 清零**
 
-wave 72 逐颗回上游确认过，结果钉在
-`tests/guards/handwritten-button.test.ts` 的 `ALLOWED` 里（双向 + 逐份计数）。
-**不要再把它当待办清单**：19 处是 streamdown 自己手写的、约 16 处上游同一处也手写、
-其余是上游根本没有对应控件的错误恢复出口。
-真正剩下的三笔账在那份清单的注释里点了名：
-
-- `AgentChat` 的**保存 agent** 键：上游在页头的 `⋯` 菜单里
-  （`agents/new/page.tsx:316` 的 `DropdownMenuItem` + `SaveIcon`），
-  本仓是工具条上一颗可见按钮。**位置与形状都不同**，改动面比样式大。
-- `MessageList` 的 **artifactTargets 文件名键**：上游那一支渲染的是
-  `ArtifactFileCards`，不是一排文字按钮。
-- `WorkspaceToaster` 的关闭键（见下）。
-
-### 零点一、~~两笔「本仓更好」的账~~ —— **wave 73 全部结清**
-
-判据已经定了：**这一类按业界主流做法两边同改**，不是「与上游一致」。
-五条（Dialog 关闭键、Switch 光标、TodoList 折叠头、附件移除键的焦点可见性、
-Toaster 关闭键）全部处理完，做法与理由见 wave 73 那一节。
-**下次再遇到「本仓修掉了上游的缺陷」，照那一节的判据走，不要再挂账。**
-
-### 零点五、~~`WorkspaceToaster` 的关闭键~~ —— **wave 73 删掉了**
-
-上游 `<Toaster position="top-center" />` 没传 `closeButton`（sonner 默认关），
-所以上游那一排根本没有关闭键。wave 73 按「React 没有的 Vue 不许有」删掉了本仓那一颗，
-`workspace` 下那条独有词条一并删。**判据是「这处不改，React 自己是不是也是坏的？」
-在这里是否**——一条 4 秒自动消失的状态播报没有关闭键不构成缺陷。
-
-**同一轮把 toaster 剩下的三处也补齐了**（类型图标、warning 档、4000ms），
-见 wave 73 那一节。**wave 74 把几何也量了并对齐**（356 宽 / 16px 内边距 / 13px 字 /
-6px 间距 / 24px 视口偏移 / 14px 条间距），并**翻出上游那两处 `<Toaster />` 用的
-根本不是 shadcn 的 wrapper**——见 wave 74 那一节。
-
-### 一、把台账里那 **16 行几何**清掉（**继续是正题**）
-
-wave 76 量出来、wave 77 关掉 7 行之后剩下的。**一条都不是回归**。
-
-- **agent-chat**
-  - `role:dialog[Model Selector] y React=332.2 Vue=320.2 Δ-12`
-  - `role:dialog[Model Selector] height React=135.6 Vue=159.5 Δ23.9`
-  - `role:option[/Parity Thinker/] x React=385 Vue=393 Δ8`
-  - `role:option[/Parity Thinker/] width React=510 Vue=494 Δ-16`
-  - `role:option[/Parity Thinker/] height React=42.3 Vue=46.3 Δ4`
-- **artifact-batched-stream**
-  - `role:button[Download] x React=1187 Vue=1184 Δ-3`
-  - `text:batched-report.md width React=126.7 Vue=105.4 Δ-21.3`
-- **sidecar-chat**
-  - `text:Ask a follow-up y React=321 Vue=327 Δ6`
-  - `text:Ask a follow-up grounded in the referenced text. y React=345 Vue=351 Δ6`
-- **ui-polish-mobile**
-  - `role:menuitemradio[/^Flash /] x React=60 Vue=5 Δ-55`
-  - `role:menuitemradio[/^Flash /] y React=338 Vue=184 Δ-154`
-  - `role:menuitemradio[/^Flash /] height React=72 Vue=76 Δ4`
-- **user-message-plain-text**
-  - `role:menuitemradio[/^Ultra /] x React=474 Vue=541 Δ67`
-  - `role:menuitemradio[/^Ultra /] y React=658 Vue=653.8 Δ-4.2`
-  - `role:menuitemradio[/^Ultra /] height React=72 Vue=76 Δ4`
-- **workspace-changes**
-  - `role:menuitemradio[/^Minimal /] x React=529 Vue=747 Δ218`
-
-**分三类看**（wave 77 已经证明「一处改动关掉一整组」是可行的路子）：
-
-1. **弹层的落点**（`menuitemradio` 的 `x` Δ-55 / Δ67 / Δ218，`y` Δ-154）
-   ——Reka 与 Radix 的 popper 放置策略不同。**这一类占了 6 行**，
-   先量清楚「是碰撞翻转、对齐基准、还是 sideOffset 不同」，不要一处一处硬调偏移。
-   注意 `ui-polish-mobile` 那三行是**窄屏**，`user-message-plain-text` 是桌面
-   ——同一个菜单两种视口，很可能是同一个根因。
-2. **模型选择对话框**（`agent-chat` 那 5 行）：`height Δ23.9` 与选项的
-   `width Δ-16` / `height Δ4` 像是同一处（列表项的行高与内边距），
-   `dialog y Δ-12` 多半是高度变了之后居中跟着变——**先修行高，再看 y 还剩多少**。
-3. **零头两条**：`Download x Δ-3`（刚过 2px 容差）、
-   `text:batched-report.md width Δ-21.3`（同一个文件名两边宽度差 21px，
-   wave 77 收窄了 8px 但没查完；两边都是 `text-sm font-medium`，
-   **需要一次渲染读数**看是字体族、字重还是被 `line-clamp` 截在不同位置）。
-4. **`sidecar-chat` 那两行 `y Δ6`**：空态两行文字整体下移 6px，
-   多半是空态容器的上边距或行高。
-
-> **口径提醒**：`GEOMETRY_TOLERANCE_PX = 2` 不许动。
-
-### ~~一点五、`Settings and more` 那颗侧栏底部键~~ —— **wave 74 查完并修掉了**
-
-收起态 React 32×32 / 本仓 31×48（上游 cva 的 `group-data-[collapsible=icon]` 两条
-在本仓永远不成立）。**展开态两边本来就一样**——wave 72 记的「React 43px」
-是没等 settle 读的假差异。
-
-### ~~二、`icon-parity` 的未核实线索~~ —— **wave 75 归零**
-
-21 条逐条核完：六处真差异已修，12 条写进脚本的 `VERIFIED` 表（双向，
-某条不再出现会报 stale），另有三处是尺子自己的缺陷（扫描范围、文件类型、
-按 basename 存导致的静默覆盖）。**`make icon-parity` 现在是 0 处待核。**
+16 行归到五处根因（页脚两组 / 菜单 align+side / 模式项多传的 py-2 /
+`ui/command` 的 class 合同 / artifact 头部三栏 / sidecar 页脚的 pt-3），
+逐条见 wave 78 那一节。**台账现在是 0 行 / 39 场景。**
 下一轮不必再读那份清单，只需要看它有没有重新长出来。
+
+### 二、`/showcase` 的请求层落差（第②类，**没量就别改**）
+
+wave 27/28 两次逐条复量的结果：
+
+```
+react-only /api: GET /api/features · GET /api/skills · GET /api/suggestions/config
+                 · GET /api/threads/«generated»/uploads/limits
+vue-only   /api: （空）
+```
+
+wave 28 把它从「待办」改成「已决定」：四条都打向需要鉴权的端点，而案例页是公开只读的
+（上游发它们只是因为 `showcase/[thread_id]/page.tsx` 直接渲染整个 `ChatPage`，
+没有为 demo 分支特判）。**翻案判据是「有没有哪个只读能力因为缺了这四条而在案例页上
+失灵」，不是「上游发了所以要发」。**
+
+**这条账已经放了五十轮，先复现再修（线索 187）**：花五分钟量一遍比照着账改代码
+省一整轮。探针写法见「很省时间的调查手段」。
+
+### 三、建 agent 页确认名字之后那一步（chat step）的外壳
+
+上游 `new/page.tsx` 自己画一张极简页：同一个 header（返回 + 标题）再加一颗 More
+下拉；本仓走 `AgentChat` 的完整会话头。wave 28 **有意保留本仓这一侧**（把上游那个
+header 叠上去会让这一屏有两个 header）。
+
+**wave 79 把两边拉近了一步**：保存已经搬进页头右上角的 ⋯ 菜单，形状与位置都对上了
+上游，`agents.more` 也有了消费点。剩下的差异是「本仓那个 header 还带侧栏触发器、
+用量、导出、artifact 触发器」。**同样先复量再决定**——这一屏不在取样面里
+（覆盖率棘轮要求场景 id 逐字等于 React spec 文件名，而上游没有任何一条 spec 走到
+`/workspace/agents/new`，坑 107），台账天生看不见，只能靠 probe + 单测。
+
+### 新挂上的一笔账（wave 78）
+
+- **artifact 头部的标题不截断，长文件名会把动作键推出可视区。** wave 78 照抄上游
+  之后，标题按内容宽（上游 `ArtifactTitle` 没有任何截断，中间那一栏才是 `grow`）。
+  文件名足够长时头部被撑开，右边的 Download / 关闭被推出面板的 `overflow-hidden`。
+  **上游同样如此**，所以这是一笔要**两边同改**的账，不是本仓单边加回 `truncate`
+  的理由。做之前先量一次：拿一个 60 字符的文件名在两个应用上各开一次，
+  确认动作键真的够不着。
 
 ## wave 64 做了什么：**把覆盖率接上，并订正 wave 63 的误判**
 
