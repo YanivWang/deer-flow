@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 83，2026-09-05）
+## 当前状态（截至 wave 84，2026-09-05）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84。
 - **动过 `frontend/` 的是十八轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -70,10 +70,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 83 收工时逐条跑过）
+### 门禁实测值（wave 84 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；259 文件 / **2158** 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；259 文件 / **2159** 单测，词典 942 key、18 unused
 make -C frontend-vue standalone-sim exit 0（wave 83 新增）**判据的动态那一半**：真把
                                    ../frontend rename 走，跑 CROSS_APP_BY_DESIGN 表里
                                    点名的每一条，再移回来。跑过 12 条 / 未跑 5 条
@@ -318,6 +318,68 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 84）做了什么：**把「扫描面盖全了没有」当成一条判据，量出三处**
+
+提交 `55022f02`。**没动 `frontend/`**——仍是十八轮，marker 仍是 `809237ec`。
+
+把 wave 83 的方法（**真跑一遍那句声明**）套到「扫描器的扫描面」上。
+三处的形状完全一样：**一张白名单出发的门禁，看不见「自称是、但不在名单里」的那些**
+（坑 186），而报表上「没有违规」与「没有扫过」逐字相同（坑 176）。
+
+### 一、`.vue` 的扫描面漏在白名单之外——**真的能溜过去**
+
+`PRODUCT_ROOTS`（`app/components` / `app/pages` / `app/layouts`）+ `app/app.vue`
+是白名单。实测：往 `app/error.vue`（Nuxt 的约定文件之一）塞四条硬编码英文——
+
+```
+make i18n-source-check   exit 0   "no core English literals"
+make i18n-check          exit 0
+source-guard.test.ts     绿（checked 仍是 217，toHaveLength(217) 一动不动）
+doc-facts.test.ts        绿（「共有 219 个 Vue SFC」照旧，实际已经是 220）
+```
+
+**四道门禁全绿，而那四条英文会照常发给用户。**
+修法：`productVueInventory()` 多返回 `unscanned`（checkout 里没被白名单盖住的
+`.vue`），**恒为空**；CLI 先判扫描面盖全没有、再判扫到的干不干净；
+`doc-facts` 的 total 改成从 checkout 算，那句「当前 checkout 共有 N 个」才真是
+关于 checkout 的。**有意不加豁免表**（坑 180）。
+
+### 二、三处 `git ls-files` 看不见还没提交的文件
+
+`standalone-check.mjs` 早就诊断并修好了这个盲区，而同一个盲区在
+`tests/architecture.test.ts`（L2 边界）与 `tests/guards/file-header-claims.test.ts`
+（两处）**一直开着**。抽成 `scripts/lib/checkout-files.mjs` 共用。
+**一条已经被诊断过的坑，在另一个文件里照样是新的**（坑 231）。
+
+### 三、剥注释的正则不认字符串——**静默放过的那一半**
+
+顺手把 `file-header-claims` 的扫描面补上 `config/` 与 `shared/`（都是生产源码：
+Nuxt 4 的 `shared/` 被 app 与 server 自动导入，`config/routes.ts` 被 nuxt.config 消费），
+**补进来当场红了一条**：
+
+```
+config/routes.ts：【主要导出】点名了 buildProxyRules，文件没有导出它
+```
+
+它导出着。是这条门禁自己的 `source.replace(/\/\*[\s\S]*?\*\//g, "")` 不认字符串：
+`"/workspace/**"` 开了一个假注释，**一口吃掉 1886 个字符**。扫描面内有 **8 份**
+文件的字符串里带 `/*`——这条门禁一直在半截源码上工作。
+`【主要导出】` 那一半会误报（吵，看得见），`【依赖关系】 无` 那一半**静默放过**
+（被吃掉的 import 数不到）。`standalone-check` 那份按字符走的实现是对的，
+抽成 `scripts/lib/strip-comments.mjs` 共用（抽取前后 standalone-check 输出逐字相同），
+`architecture.test.ts` 的同名副本一并换掉（它靠数 import 判 L2 边界，同一个方向）。
+
+**剩下那批（9 份单测里扫 `.vue` 的正则剥法）实测今天一处都没错**——219 份 SFC
+逐个比对，两种剥法产出的 token 集合完全相同。**不必再量一遍。**
+
+### 负向验证（3 条全过）
+
+| 变异                                        | 期望       | 实测                                                          |
+| ------------------------------------------- | ---------- | ------------------------------------------------------------- |
+| 放回带硬编码英文的 `app/error.vue`          | 三条路径红 | i18n-source-check exit 2；source-guard 点名；doc-facts 要 220 |
+| 剥注释换回正则版                            | 守卫红     | 1 failed / 5 passed，点名 `config/routes.ts`                  |
+| 未提交的违规 L2 文件 + 退回「只看已跟踪」   | 抓不到     | **15 passed（漏掉）**；带 `--others` 时 1 failed（抓住）      |
 
 ## 上一轮（wave 83）做了什么：**第一次真做验收实验——判据自己是假的**
 
@@ -2053,7 +2115,26 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 228 条在记忆文件里）
+## 其他常踩的坑（完整 231 条在记忆文件里）
+
+- **一张白名单出发的扫描器，加一个白名单外的文件就能全绿溜过去**（线索 229，wave 84）。
+  `app/error.vue` 塞四条硬编码英文，`i18n-source-check` / `i18n-check` /
+  `source-guard.test.ts` / `doc-facts.test.ts` **四道全绿**——`checked` 是 217，
+  它不在里面，所以 `toHaveLength(217)` 一动不动。
+  **判据：扫描器要能自证盖全**——返回一个 `unscanned` 并断言它恒为空，
+  而不是只断言「扫到的那些干净」。坑 186 的又一次，这次是本仓的产品面门禁。
+- **正则剥注释不认字符串，一个 `"/workspace/**"` 就能开出假注释**（线索 230，wave 84）。
+  `file-header-claims` 的 `source.replace(/\/\*[\s\S]*?\*\//g, "")` 在
+  `config/routes.ts` 上一口吃掉 **1886 个字符**，连 `export function buildProxyRules`
+  一起。扫描面内 **8 份**文件的字符串里带 `/*`。
+  **两个方向不对称**：靠「点名的必须存在」那一半会误报（吵，看得见），
+  靠「数 import」那一半**静默放过**。修法是用按字符走、跟踪引号与转义的那份
+  （`scripts/lib/strip-comments.mjs`）。**扩扫描面最先量到的是尺子自己**（线索 213）。
+- **一条已经被诊断并修好的坑，在另一个文件里照样是新的**（线索 231，wave 84）。
+  `git ls-files` 看不见未跟踪文件这件事，`standalone-check.mjs` 的注释里写得清清楚楚
+  （「本脚本自己就踩过一次」），而 `architecture.test.ts` 与
+  `file-header-claims.test.ts` 三处一直开着——**修好的是那一处，不是那一类**。
+  抽成共享库比在第二处重新发现它便宜。**判据：修完一条坑，grep 一遍同形的写法。**
 
 - **`describe.skipIf(cond)` 跳过的是「用例」，不是「收集」**（线索 225，wave 83）。
   工厂函数照样执行一次，所以工厂里那句读兄弟应用的 `readFileSync` 在缺席时照样跑，
