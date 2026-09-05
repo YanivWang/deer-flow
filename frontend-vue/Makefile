@@ -269,8 +269,19 @@ e2e-external:
 e2e-parity:
 	$(call run_suite,parity)
 
-# 刷新对照差异清单。accept 只**记录**测量结果，不判断对错——刷新之前必须逐条
-# 看清楚每一条变化是修好了还是新坏了，否则这个目标会变成把回归洗白的按钮。
+# 刷新对照差异清单。
+#
+# **它现在会判一件事：台账不许变长。** accept 时把新旧逐行比对，只要出现一行
+# 基线里没有的，就拒写并把那些行打出来（判据是集合包含，不是行数——修好一条、
+# 同时新坏一条，行数不变而台账里多了一行没人看过的东西）。确实要接受就
+# `PARITY_ACCEPT_GROW=1 make parity-accept`，并在提交说明里写清楚每一行是什么。
+#
+# 这道闸门之前只是一句散文（「否则这个目标会变成把回归洗白的按钮」），
+# 没有任何机器在守；wave 85 补上。判据的算法在
+# tests/e2e-parity/support/ledger.ts，单测在 tests/unit/parity/ledger.test.ts
+# ——台账 0 行时真跑 accept 永远走不到那条分支，所以它只能在单测里打。
+#
+# 剩下那一半仍然是人的事：**每一条变化是修好了还是新坏了，得逐条看清楚。**
 parity-accept:
 	@$(MAKE) --no-print-directory e2e-preflight
 	PARITY_ACCEPT=1 $(E2E_EXEC) playwright test -c playwright.parity.config.ts diff.spec.ts

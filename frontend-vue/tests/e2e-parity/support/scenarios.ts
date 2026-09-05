@@ -557,8 +557,13 @@ const HISTORY_THREADS = [
  * 场景目录。
  *
  * id 与 `frontend/tests/e2e/*.spec.ts` 的文件名一一对应，缺哪个由
- * `baseline/parity-scenario-coverage.json` 显式列出——目录只能变长，
- * 待办清单只能变短。
+ * `baseline/parity-scenario-coverage.json` 显式列出。
+ *
+ * **「目录只能变长、待办清单只能变短」是评审政策，不是门禁**（wave 85 逐条查过：
+ * 没有任何检查在守这个方向，没有历史参照也判不了单调性）。真正上了门禁的是
+ * 那份 baseline 的 `$semantics` 里标着「门禁」的四条。从这里删掉一个场景，
+ * 会同时逼出「covered 少一个」和「pending 多一条理由」两处 diff——
+ * 它靠的是这个，不是靠一条断言。
  */
 export const PARITY_SCENARIOS: ParityScenario[] = [
   {

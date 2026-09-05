@@ -39,24 +39,32 @@ import {
   type ParityDimension,
 } from "./support/scenarios";
 
+import { type DiffEntry, addedRows } from "./support/ledger";
+
 const VUE_APP = process.env.E2E_APP_URL ?? "http://localhost:3115";
 const REACT_APP = process.env.E2E_REACT_APP_URL ?? "http://localhost:3116";
 const ACCEPT = process.env.PARITY_ACCEPT === "1";
+/**
+ * 明知台账会变长、仍然要写进去时的开关。
+ *
+ * **「这份清单只能缩短」此前是一句纯散文**：`make parity-accept` 无条件覆盖基线，
+ * 没有任何东西比对新旧（wave 85 量出来的；同一句话在
+ * `baseline/parity-scenario-coverage.json` 与 `support/scenarios.ts` 里还各有一份）。
+ * Makefile 里那句「否则这个目标会变成把回归洗白的按钮」说的正是这件事，
+ * 而它一直只靠人记得。
+ *
+ * 现在把它挡在**唯一能让台账变长的那条路**上：accept 时逐行比对，
+ * 有新增行就拒写并把它们打出来。真要接受（比如接上一档新尺子、量出一批
+ * 此前看不见的差异），`PARITY_ACCEPT_GROW=1 make parity-accept`，
+ * 并在提交说明里写清楚每一行是什么。
+ */
+const ACCEPT_GROW = process.env.PARITY_ACCEPT_GROW === "1";
 
 const BASELINE = new URL("../../baseline/parity-diff.json", import.meta.url);
 const REPORT = new URL(
   "../../test-results/e2e-parity/report.json",
   import.meta.url,
 );
-
-type DiffEntry = {
-  ariaOnlyReact: string[];
-  ariaOnlyVue: string[];
-  requestsOnlyReact: string[];
-  requestsOnlyVue: string[];
-  /** 锚点的几何与色板差异，一行一处。 */
-  geometry: string[];
-};
 
 /**
  * 几何容差。
@@ -192,6 +200,22 @@ test("每个场景的双向差异都与签入的清单一致", async ({ browser 
   writeFileSync(REPORT, JSON.stringify(entries, null, 2));
 
   if (ACCEPT) {
+    const previous = existsSync(BASELINE)
+      ? ((
+          (await import(BASELINE.href, { with: { type: "json" } })).default as {
+            entries?: Record<string, DiffEntry>;
+          }
+        ).entries ?? {})
+      : {};
+    const added = addedRows(previous, entries);
+    if (!ACCEPT_GROW) {
+      expect(
+        added,
+        "台账只能缩短，而这次 accept 会**新增**下面这些行。先逐条弄清楚是新坏的" +
+          "还是有意接受的；确实要接受就 PARITY_ACCEPT_GROW=1 再跑一次，" +
+          "并在提交说明里写清楚每一行是什么。基线这次没有被改写。",
+      ).toEqual([]);
+    }
     writeFileSync(
       BASELINE,
       JSON.stringify(
@@ -199,7 +223,9 @@ test("每个场景的双向差异都与签入的清单一致", async ({ browser 
           $comment:
             "React 与 Vue 在每个对照场景上的双向差异。这份清单只能缩短：修好一条就从这里删一条，" +
             "新出现一条会让 e2e-parity 立刻红。空数组是目标状态，不是「还没测」。" +
-            "刷新用 make parity-accept，刷新前先逐条看清楚是修好了还是新坏了。" +
+            "刷新用 make parity-accept——它会逐行比对新旧，**有新增行就拒写**，" +
+            "真要接受得 PARITY_ACCEPT_GROW=1 再跑一次（wave 85 之前这句「只能缩短」" +
+            "没有任何机器在守，accept 是无条件覆盖）。" +
             "键是 场景/断点/主题/语言；aria* 是可访问性树的双向逐行差异，" +
             "requests* 是产品 API 请求的多重集差异，geometry 是锚点的盒模型与色板差异。",
           entries,

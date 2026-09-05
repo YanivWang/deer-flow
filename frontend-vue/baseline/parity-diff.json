@@ -1,5 +1,5 @@
 {
-  "$comment": "React 与 Vue 在每个对照场景上的双向差异。这份清单只能缩短：修好一条就从这里删一条，新出现一条会让 e2e-parity 立刻红。空数组是目标状态，不是「还没测」。刷新用 make parity-accept，刷新前先逐条看清楚是修好了还是新坏了。键是 场景/断点/主题/语言；aria* 是可访问性树的双向逐行差异，requests* 是产品 API 请求的多重集差异，geometry 是锚点的盒模型与色板差异。",
+  "$comment": "React 与 Vue 在每个对照场景上的双向差异。这份清单只能缩短：修好一条就从这里删一条，新出现一条会让 e2e-parity 立刻红。空数组是目标状态，不是「还没测」。刷新用 make parity-accept——它会逐行比对新旧，**有新增行就拒写**，真要接受得 PARITY_ACCEPT_GROW=1 再跑一次（wave 85 之前这句「只能缩短」没有任何机器在守，accept 是无条件覆盖）。键是 场景/断点/主题/语言；aria* 是可访问性树的双向逐行差异，requests* 是产品 API 请求的多重集差异，geometry 是锚点的盒模型与色板差异。",
   "entries": {
     "chat/desktop/light/en-US": {
       "ariaOnlyReact": [],

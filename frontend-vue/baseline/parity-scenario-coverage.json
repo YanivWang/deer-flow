@@ -5,7 +5,7 @@
   "tests/guards/baseline-keys-consumed.test.ts",
   "tests/parity/scenario-coverage.test.ts"
  ],
- "$semantics": "covered 由 tests/e2e-parity/support/scenarios.ts 的目录反查，必须逐字相等；pending 只能变短——把一个场景写进目录就从这里删掉；exempt 不是「太难所以不做」的垃圾桶，每一条都必须写出它所在的路由，而那条路由必须已经在 baseline/react-parity-scope.json 里被豁免。",
+ "$semantics": "covered 由 tests/e2e-parity/support/scenarios.ts 的目录反查，必须逐字相等（门禁）；三个桶必须恰好划分上游的 spec 清单（门禁）；每条 pending 都要有一条不短于 20 字的理由、且不许有多余的理由（门禁）；exempt 不是「太难所以不做」的垃圾桶，每一条都必须写出它所在的路由，而那条路由必须已经在 baseline/react-parity-scope.json 里被豁免（门禁）。**「pending 只能变短」不是门禁，是评审政策**——没有历史参照就判不了单调性，wave 85 逐条查过：没有任何检查在守这个方向。它靠的是「把一个场景从目录里删掉、并给它补一条理由」这两件事都会出现在 diff 里。真要机器守，可行的判据是「不许有 id 从 covered/exempt 退回 pending」，而那需要一份只增不减的 covered 底线。对照台账 baseline/parity-diff.json 的同一句话已经有机器守了（accept 时逐行比对，见 tests/e2e-parity/support/ledger.ts）。",
  "covered": [
   "agent-chat",
   "agents-feature-disabled",
