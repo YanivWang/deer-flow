@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 94 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 95 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，接手时 HEAD 是 wave 88 的 docs 提交。
@@ -19,10 +19,10 @@
    先看「还欠什么」。三分钟读完。
 2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，2500 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（251 条里最近的十几条）。中间各轮的记录按需查。
+   结尾的「其他常踩的坑」（253 条里最近的十几条）。中间各轮的记录按需查。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **251 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **253 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -66,7 +66,7 @@
 ### 收工门禁（逐条真跑，命令与上一轮实测读数）
 
 ```bash
-make -C <abs>/frontend-vue verify          # exit 0；262 文件 / 2174 单测；词典 942 key / 18 unused
+make -C <abs>/frontend-vue verify          # exit 0；262 文件 / 2180 单测；词典 942 key / 18 unused
 make -C <abs>/frontend-vue standalone-sim  # exit 0；跑过 13 / 未跑 5 / 红 0
 make -C <abs>/frontend-vue e2e-parity      # 81 passed；台账 44 行 / 73 样本
 make -C <abs>/frontend-vue e2e-mock        # 265 + 22 + 15 + 2 + 6
@@ -134,12 +134,17 @@ wave 93 查明**是过期的**——四个能展开的控件都已经在取样�
 还是没算」；而任何输出**很多行**的新档，先问「其中几行是它自己造的」——
 wave 94 的焦点档第一版 17 行里有 **10 行是描述器的噪声**。
 
-**「天生看不见的八类」现在只剩前七类**：第八类（焦点）wave 94 补完了。
-剩下的没被覆盖的量还有：`visibility` / `display` / `pointer-events` /
-`z-index` 实际堆叠、滚动位置（**故意不比**，见 capture.ts 文件头）、
-键盘 tab 序。加之前先问「它是不是真的三档都看不见」。
+**「天生看不见的八类」现在少了两类半**：第⑧类（焦点）wave 94 补完，
+第④类的**顺序**那一半 wave 95 补完（层级那一半仍看不见）。
+剩下没被覆盖的量：`pointer-events`、`z-index` 实际堆叠、**键盘 tab 序**、
+第④类的层级那一半、滚动位置（**故意不比**，见 capture.ts 文件头）。
+加之前先问「它是不是真的几档都看不见」，加完先问「其中几行是它自己造的」。
 
 ### C. 把散文里的断言变成守卫
+
+> **wave 95 量过一条，结果是「货很少」**：「各文件头『实测过、做不到』的结论」
+> 全仓只有 10 处，**多数是过去式的历史说明**（「本仓*此前*……做不到」讲的是修好
+> 之前的状态），真正的活断言两三条而且成立。**别再照旧文档追这一条。**
 
 wave 83/84/85 连着三轮证明这条最值钱，**wave 89 又证一次**（把 wave 88 的线索 238
 做成守卫，当场扫出两边各 12 颗）。判据**三**条：**「哪一行代码读它」**、

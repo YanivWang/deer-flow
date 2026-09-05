@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 94，2026-09-06）
+## 当前状态（截至 wave 95，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94（五轮都**没动 `frontend/`**）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95（六轮都**没动 `frontend/`**）。
 - **动过 `frontend/` 的是二十一轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -36,9 +36,10 @@
 
 - **对照台账 51 行**，**73** 个样本，`make -C frontend-vue e2e-parity` **81** 条全绿。
   **51 行里没有一行是「还欠的」**：2 行 reka-ui 的 tooltip 播报节点（wave 91）+
-  42 行「上游把字写死成英文、本仓翻译了」（wave 92/93）+ **7 行焦点差异**
+  42 行「上游把字写死成英文、本仓翻译了」（wave 92/93）+ 7 行焦点差异
   （wave 94：4 行本仓的 settings 深链焦点更好、1 行是上面那一类的重复、
   2 行是改动面板打开后的 incidental 初始焦点）。
+  **wave 95 新加的「顺序」档一行都没留下**——它量出的两行是真差异，当轮就修掉了。
   **「只能缩短」这条规则对「新出现、还没定过的行」依然有效。**
   （39 → 40：wave 87 的 `states` 轴；40 → 44：wave 88 给 `integrations` 挂上
   `default` / `permission-request` / `change-app`；44 → **48**：wave 90 给 `channels`
@@ -84,10 +85,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 94 收工时逐条跑过）
+### 门禁实测值（wave 95 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；**262** 文件 / **2174** 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；**262** 文件 / **2180** 单测，词典 942 key、18 unused
                                    产品 SFC **218**（总 **220**，wave 86 新增 DropdownMenuGroup）
 make -C frontend-vue standalone-sim exit 0（wave 83 新增）**判据的动态那一半**：真把
                                    ../frontend rename 走，跑 CROSS_APP_BY_DESIGN 表里
@@ -107,7 +108,8 @@ make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55%
                                    ——**它只是静态证明**，证不了「移走之后还能跑」：
                                    wave 83 第一次真做实验时它早已是 0，而 verify 当场红。
 make -C frontend-vue e2e-parity    **81**  台账 **51 行**，**73** 样本
-                                   （wave 94 起多一档 `focus`：7 行）
+                                   （wave 94 起多一档 `focus`：7 行；
+                                   wave 95 起多一档 `order`：**0 行**）
                                    2 行 = reka-ui 的 tooltip 播报节点被打上
                                    aria-hidden（wave 91）；42 行 = 上游把字写死成
                                    英文而本仓翻译了（wave 92 的 28 行 + wave 93
@@ -276,7 +278,9 @@ ls frontend/.next/BUILD_ID frontend-vue/.output/server/index.mjs frontend-vue/.o
 ### 台账天生看不见的八类差异
 
 ① 需要交互才看得见的；② 藏在请求 body 里的；③ portal 出去还会遮蔽页面的浮层；
-④ 顺序与层级（aria 去缩进后按多重集比）；⑤ primitive 的默认值；
+④ ~~顺序与层级~~ —— **顺序那一半 wave 95 补上了**（`diffAriaOrder`：先取公共多重集
+再比相对顺序，所以「多包一层容器」不误报）；**层级那一半仍然看不见**；
+⑤ primitive 的默认值；
 ⑥ 只在某种后端状态下才分叉的渲染路径；⑦ **这一屏压根没被取样**；
 ⑧ **焦点**（`document.activeElement`，见下）。
 
@@ -347,6 +351,69 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 95）做了什么：**顺序进取样面，第一跑就抓到子菜单被 portal 走**
+
+提交 `855c209c`。**没动 `frontend/`。** 样本仍 **73**，e2e-parity 仍 **81**，
+台账仍 **51 行**——**新档没留下任何一行**，它量出的两行是真差异，当轮修掉了。
+
+### 一、本来要做的那件事没做成，如实记
+
+冷启动清单上方向 C 的下一个同形目标是「各文件头『实测过、做不到』的结论
+（已经翻案十一次）」。**量了一遍，这个类比文档说的小得多**：
+按 `做不到 / 不可能 / 测不出 / 办不到` 扫全仓产品与工具源码只有 **10 处**，
+逐条读完，多数是**过去式的历史说明**（`HumanInputCard.vue` 那句
+「本仓**此前**……于是这件事在 Vue 上做不到」讲的是修好之前的状态）。
+真正「现在仍然做不到」的活断言只有两三条，而且成立。
+**下一轮别再照文档去追这条。**
+
+### 二、但其中一条活断言指出了真的空白
+
+`core/workspace-shell/settings-query.ts` 文件头：「对照台账按多重集比可访问性树，
+**顺序天然测不出来**」——这条是对的，而它正是「天生看不见的八类」里的**第④类**。
+wave 94 补完第⑧类（焦点），这一轮补第④类的顺序那一半。
+
+`diffAriaOrder`：**先取两边的公共多重集**，再比这些公共节点的**相对顺序**。
+这样「多包一层容器」不会误报（那正是 `diffAriaLines` 当初去缩进的原因）。
+只报**第一处**分岔（一次重排会让后面全部错位，坑 219）。**五条单测钉住算法。**
+
+### 三、第一跑就抓到一处真差异
+
+```
+thread-history/en-US 与 /zh-CN：第 7 个公共节点 React=menu "Export" Vue=separator
+```
+
+读两边的树才看清：
+
+```
+上游：… Export ▸ → [Export as Markdown, Export as JSON] → 分隔线 → Delete
+本仓：… Export ▸ → 分隔线 → Delete （父菜单读完）→（页面末尾）子菜单那两项
+```
+
+**根因：`DropdownMenuSubContent.vue` 包了一层 `DropdownMenuPortal`，上游没有。**
+上游 shadcn 里 `DropdownMenuContent` 包 Portal、`DropdownMenuSubContent` **不包**。
+本仓那一层是照着 Content 抄的，文件头写的理由是「同样 portal 到 body」——
+**抄来的假设，不是量出来的**。后果是**子菜单两项与打开它的触发器被拆开**。
+去掉那层 Portal，两行消失。
+
+### 四、另加一条单测（台账只钉「一不一致」）
+
+两边一起改成 portal 时台账照样 0 行（线索 238）。所以在
+`tests/unit/ui/primitives.dom.test.ts` 里钉：打开子菜单后
+`dropdown-menu-sub-content` 必须是 `dropdown-menu-content` 的**后代**。
+
+### 负向验证 2 条，全红
+
+| #   | 变异                          | 结果                                    |
+| --- | ----------------------------- | ---------------------------------------- |
+| N1  | Portal 装回去，跑对照         | 两行顺序差异回来 → 台账红                |
+| N2  | Portal 装回去，只跑单测       | 新加的那条当场红                          |
+
+### 门禁（逐条真跑）
+
+verify 0（**262** 文件 / **2180** 单测）· e2e-parity **81**（台账 **51 行 / 73 样本**）·
+e2e-mock 265+22+15+2+6 · e2e-visual 8 · asset-budget 0 · standalone-sim 13 / 5 / 0 ·
+icon-parity 0 处待核 · e2e-backend 2+5+2+3+3+5+1+1 · audit 预期红 **14**。
 
 ## 上一轮（wave 94）做了什么：**焦点进取样面（天生看不见的第八类）**
 
@@ -2814,7 +2881,20 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 251 条在记忆文件里）
+## 其他常踩的坑（完整 253 条在记忆文件里）
+
+- **「文件头里的历史说明」不是「活断言」，别混着追**（线索 252，wave 95）。
+  照文档去追「各文件头『实测过、做不到』的结论」，扫出 10 处，
+  **多数是过去式**（「本仓**此前**……于是这件事做不到」讲的是修好之前）。
+  真正「现在仍然做不到」的只有两三条，而且成立。
+  **判据：先看时态与主语**——讲的是「此前的本仓」还是「现在的这套工具」。
+- **一个 wrapper 照着它的兄弟抄，抄错的地方注释还会替它圆回来**（线索 253，wave 95）。
+  `DropdownMenuSubContent` 照着 `DropdownMenuContent` 包了一层 Portal，
+  而上游 shadcn **只给前者包**；文件头写的理由是「与 DropdownMenuContent 同样
+  portal 到 body」——**读起来像是查过的，其实是抄的时候顺手写的**。
+  后果是子菜单内容被挂到 body 末尾，与打开它的触发器在可访问性树里拆开。
+  **判据：`ui/` 下成对的 wrapper（Content / SubContent、Menu / SubMenu）
+  要逐个对着上游确认，别假设「同一族就同一种包法」。**
 
 - **给「元素」做一句话描述时，要分清「这是哪个元素」和「它怎么声明的」**
   （线索 251，wave 94）。焦点描述器第一版把 `type` 与 `textContent` 一律取进来，
