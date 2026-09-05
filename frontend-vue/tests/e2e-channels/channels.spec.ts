@@ -158,11 +158,24 @@ test("admin completes real scoped multi-account lifecycle through the Vue UI", a
     `hasText` 是文本内容，三者都不走可访问性树，因此与 `aria-hidden` 无关。
     断言本身不变，仍然是「等待期间这颗按钮是 disabled」。
   */
+  /*
+    正则**要容忍首尾空白**。这颗按钮是 `<Plug />` 图标 + `{{ connectLabel(view) }}`
+    （上游 channels-settings-page.tsx:281 同样带 PlugIcon），Vue 模板在图标与插值
+    之间留下一个文本节点，于是 `textContent` 是 **" Add account"**——实测
+    `allTextContents()` 返回 `[" Add account","Modify","Remove provider configuration"]`，
+    只有带图标的那两颗有前导空格。`hasText` 传 RegExp 时**不做空白归一**，
+    `/^Add account$/` 因此一个都匹配不到，报的是「element(s) not found」，
+    看起来像「这颗按钮不在」而不是「正则没写对」。
+
+    wave 72 给这颗键补上图标那天起这条就红着，一直没人知道——`e2e-backend`
+    自 wave 64 起就不在任何一轮的收工清单里（坑 194：一条长期红着、又不在任何门禁
+    清单里的 gate，等于不存在）。wave 79 收工时跑全套才撞出来。
+  */
   await expect(
     page
       .getByTestId("channel-provider-slack")
       .locator("button")
-      .filter({ hasText: /^Add account$/ }),
+      .filter({ hasText: /^\s*Add account\s*$/ }),
   ).toBeDisabled();
 
   const completed = await context.request.post(
