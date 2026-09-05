@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 89，2026-09-06）
+## 当前状态（截至 wave 90，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90（**没动 `frontend/`**）。
 - **动过 `frontend/` 的是二十一轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -34,9 +34,10 @@
   wave 74 两处 `<Toaster />` 用的不是 shadcn wrapper；wave 73 五条「本仓修掉了上游缺陷」；
   wave 62 `/auth/callback` 吞掉 `?next=` 深链。wave 41~~59、75~~81 都没动过。
 
-- **对照台账 0 行**（wave 78 清零），**44** 个样本，`make -C frontend-vue e2e-parity` **52** 条全绿。
-  （39 → 40：wave 87 的 `states` 轴；40 → **44**：wave 88 给 `integrations` 挂上
-  `default` / `permission-request` / `change-app` 三个终态 × 两个语言维度。）
+- **对照台账 0 行**（wave 78 清零），**48** 个样本，`make -C frontend-vue e2e-parity` **56** 条全绿。
+  （39 → 40：wave 87 的 `states` 轴；40 → 44：wave 88 给 `integrations` 挂上
+  `default` / `permission-request` / `change-app`；44 → **48**：wave 90 给 `channels`
+  挂上 `default` / `runtime-config` / `runtime-config-edit`——都是三个终态 × 两个语言维度。）
   路径是 1716 → …… → 23（wave 76 接上交互后的锚点，量出 27 处此前看不见的差异）
   → 16（wave 77 一处改动关掉 7 行）→ **0**（wave 78 把剩下的 16 行归到五处根因）。
   **这里的 0 是「当前这 39 个取样点上量不出差异」，不是「两个应用一样」**——
@@ -75,7 +76,7 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 89 收工时逐条跑过）
+### 门禁实测值（wave 90 收工时逐条跑过）
 
 ```
 make -C frontend-vue verify        exit 0；**262** 文件 / **2174** 单测，词典 942 key、18 unused
@@ -97,7 +98,7 @@ make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55%
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED **40** 处 / **18** 个文件）
                                    ——**它只是静态证明**，证不了「移走之后还能跑」：
                                    wave 83 第一次真做实验时它早已是 0，而 verify 当场红。
-make -C frontend-vue e2e-parity    **52**  台账 **0 行**，**44** 样本（NEW=0 GONE=0）
+make -C frontend-vue e2e-parity    **56**  台账 **0 行**，**48** 样本（NEW=0 GONE=0）
                                    wave 87 加了 `states` 轴：键是 `场景#终态/断点/主题/语言`；
                                    wave 88 用它给 `integrations` 挂了三个终态（× 两种语言）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -330,6 +331,77 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 90）做了什么：**channels 的连接对话框进取样面，两条互斥分支都接上**
+
+提交 `1e5a2815`。**没动 `frontend/`。** 台账仍 **0 行**，样本 44 → **48**，
+e2e-parity 52 → **56**。
+
+### 一、触发器怎么定位（这一处挂了好几轮就卡在这里）
+
+两个应用**没有共用的 testid**（本仓按钮上有 `channel-provider-*`，上游没有），
+按钮文案又都是 "Connect"/"Connected" 的翻译，一屏上好几颗一模一样。
+唯一两边都成立、又与语言无关的坐标是**夹具自己给的 `display_name`**——
+它不进词典，两种语言下逐字相同：
+
+```
+[data-sidebar="menu-item"]:has-text("Feishu") button
+```
+
+`data-sidebar` 是两个应用都写死的 data-* 选择器（场景文件头允许的四种定位之一）。
+对话框里的字段锚点同理：`Token` 来自夹具的 `credential_fields`，
+所以 `role: textbox` + `name: "Token"` **连正则都不用写**。
+**这条对下一轮通用：两边没有共用 testid 时，先去找夹具里的字符串——
+它天然与语言无关，而且两个应用拿到的是同一份。**
+
+### 二、两条互斥分支，各挂一个终态
+
+- `providerNeedsRuntimeConfig`（enabled 且未 configured 且有 credential_fields）
+  → **新建**分支（`setupTitle` / `saveAndConnect`），夹具里只有 **Feishu**
+  （Discord 也未 configured，但 `enabled: false`，整行不渲染）。
+- 已连接 + `providerCanEditRuntimeConfig` → **编辑**分支
+  （`setupEditTitle` / `saveChanges`），取 **DingTalk**。
+
+提交键的文案是这两条分支**唯一在可访问树上分得开**的地方，拿它当锚点等于顺手
+钉住「点已连接的那一行进的是编辑分支」。
+
+### 三、读数：四个新样本三档全 0，而且是算出来的
+
+raw 几何里对话框 512×244、Token 输入框 462×36、两颗页脚键的位置与色板逐字相同；
+zh-CN 下对话框高度变成 224、提交键宽度 149.3 → 102（文案变短），**两边一起变**。
+
+### 四、按 wave 88 的判据问了一句「这一块本身对不对」
+
+台账 0 只说明两个应用一致（线索 238）。这个对话框逐条看过：`<label for>` 给了
+输入框可访问名、两颗页脚键有文字名、对话框有标题与描述、`required` 在。
+唯一扎眼的是**密文字段用 `type="text"` + `-webkit-text-security` 而不是
+`type="password"`**——两个应用都这么写，**而且文件头写了理由**：后端回的是掩码
+占位串，不该让浏览器与密码管理器当成一次真实登录输入。**这是决定不是漏**，不动。
+
+### 负向验证 2 条，全红
+
+| #   | 变异                                | 结果                                                       |
+| --- | ----------------------------------- | ---------------------------------------------------------- |
+| M1  | Vue 的 `<label>` 去掉 `:for`        | **两个新终态 Vue 双双「没能到达场景」**，`default` 不受影响 |
+| M2  | Vue 的 `isEditing` 恒为 false       | **只有 `runtime-config-edit` 到不了**，另两个仍是 0        |
+
+M1 证这两个新键**是承重的**——一处单边的可访问名回归，门禁当场红在**可达性**
+那一层（比台账多一行还早）。M2 证锚点选得准：`Save changes` 真的在区分分支。
+
+### 顺带：探针自己错了一次
+
+第一版探针想在 `page.evaluate` 里用 `document.querySelectorAll(TRIGGER)` 复核触发器，
+而 `:has-text()` 是 **Playwright 的 CSS 扩展、原生 DOM 不认**，那条用例当场抛错。
+真正验证触发器的是另一条用例（点开了、对话框出来了）。
+**教训：复核锚点要用与门禁同一套定位引擎，别换一套。**
+
+### 门禁（逐条真跑）
+
+verify 0（**262** 文件 / **2174** 单测）· e2e-parity **56**（台账 **0 行 / 48 样本**）·
+e2e-mock 265+22+15+2+6 · e2e-visual 8（一张没重录）· asset-budget 0 ·
+standalone-sim 13 / 5 / 0 · icon-parity 0 处待核 ·
+e2e-backend 2+5+2+3+3+5+1+1 · audit 预期红 **14**。
+**没动 `frontend/`，所以 React 三条不在本轮清单里。**
 
 ## 上一轮（wave 89）做了什么：**把「选中态只靠换色」做成守卫，顺手清掉两边各 12 颗**
 
@@ -2486,7 +2558,18 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 241 条在记忆文件里）
+## 其他常踩的坑（完整 243 条在记忆文件里）
+
+- **两边没有共用 testid 时，先去夹具里找字符串**（线索 242，wave 90）。
+  `channels` 侧栏一屏好几颗一模一样的 "Connect"，两个应用又没有共用的 testid，
+  这一处因此挂了好几轮。真正的坐标在**夹具自己给的 `display_name`**——
+  它不进词典，两种语言下逐字相同，而且两个应用拿到的是同一份响应。
+  `[data-sidebar="menu-item"]:has-text("Feishu") button` 一次就成。
+  对话框里的字段标签 `Token` 同理，连跨语言正则都省了。
+- **复核锚点要用与门禁同一套定位引擎**（线索 243，wave 90）。
+  探针想在 `page.evaluate` 里 `document.querySelectorAll(TRIGGER)` 复核触发器，
+  而 `:has-text()` 是 **Playwright 的 CSS 扩展、原生 DOM 不认**，当场抛错——
+  看起来像「锚点不成立」，实际是复核工具用错了引擎。
 
 - **朴素的 `<Tag ...>` 正则会在属性值里的 `>` 上把标签切断，而错的方向由属性顺序
   决定**（线索 241，wave 89）。`/<Button\b[^>]*>/` 碰上
