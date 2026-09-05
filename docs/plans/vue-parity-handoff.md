@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 86，2026-09-05）
+## 当前状态（截至 wave 87，2026-09-05）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87。
 - **动过 `frontend/` 的是十九轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -71,7 +71,7 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 86 收工时逐条跑过）
+### 门禁实测值（wave 87 收工时逐条跑过）
 
 ```
 make -C frontend-vue verify        exit 0；**260** 文件 / **2168** 单测，词典 942 key、18 unused
@@ -93,7 +93,8 @@ make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55%
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 39 处 / 17 个文件）
                                    ——**它只是静态证明**，证不了「移走之后还能跑」：
                                    wave 83 第一次真做实验时它早已是 0，而 verify 当场红。
-make -C frontend-vue e2e-parity    47    台账 **0 行**，39 样本（NEW=0 GONE=0）
+make -C frontend-vue e2e-parity    **48**  台账 **0 行**，**40** 样本（NEW=0 GONE=0）
+                                   wave 87 加了 `states` 轴：键是 `场景#终态/断点/主题/语言`
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
                                    **这一行 wave 65~78 一直是抄下来的，没人真跑过**：
@@ -320,6 +321,57 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 87）做了什么：**给对照场景加一条 `states` 轴，量出改动面板的 7 处**
+
+提交 `289cb588`。**没动 `frontend/`。**
+
+### 起因：一个场景只有一个终态，而互斥的交互态谁也进不去
+
+`workspace-changes` 上的推理档菜单与改动面板**都是模态的**——开了一个就点不到
+另一个。此前只能二选一，于是改动面板那一整块从来没进过取样面。
+**不能靠加场景绕过去**：场景 id 受棘轮约束，必须逐字等于上游 spec 文件名。
+夹具与步骤不受约束，所以把「多个终态」做成场景内部的一个轴是唯一不动坐标系的做法。
+
+`ParityScenario.states?: { id, steps }[]`，与 `steps` 二选一（两个都写会抛）。
+台账键变成 `场景#终态/断点/主题/语言`，**没声明 `states` 的场景键逐字不变**
+（换名字的话台账会一次报出「全部消失 + 全部新增」，那和真差异长得一模一样）。
+样本 39 → **40**，e2e-parity 47 → **48**。
+
+### 量出来的 7 处，四处根因，全清
+
+① **Sheet 头部结构**：上游图标在 `SheetTitle` 里面，本仓是标题旁边一列
+（`flex-row gap-3 pr-14`）——标题右移 28px、可用宽度少 64px。
+② **文件行是 `<details>` 不是 `Collapsible`**：`<details>` 的隐式 role 是 **group**
+（树里多一行 `group:`），原生 `<summary role="button">` 不广播 `aria-expanded`。
+③ **少了 `+N -M` 增删数**；两个 span 之间要有**真的文本节点**（用 `{{ " " }}`，
+靠源码里那个空格不行——prettier 一换行 Vue 就把它 condense 掉）。
+④ **「打开文件」链接挂的是 `aria-label`**，它会被算进**外层按钮**的可访问名；
+上游用 `title`，链接自己仍有名字而按钮名里没有它。
+
+两条断言「不展开就看得到理由」的用例跟着改成「点开再断言」——
+**是用例过期不是产品回归**：上游那一行本来就是 `defaultOpen={hasDiff}`，
+折叠时 Radix / reka 不渲染子节点。
+
+### 顺带：**我的改动把一条流式 e2e 的红率从 0/6 抬到 2/6**
+
+`real-stream.spec.ts` 里「流式期间用户上滚后不该被拽回底部」那条开始间歇红。
+**因果查到底，过程如实记**：干净树 3/3 绿 → 我的树 3 次红 2 → `git stash` 后
+3/3 绿 → 只还原 `WorkspaceChangesBadge.vue` 也 3/3 绿。
+**第一次归因说过头了**：怀疑是新加的 `watch(files, …, { immediate: true })`
+把组件订阅到了 detail 查询上，删掉之后红率 2/3 → 1/3，**没有消失**
+（那个 watch 本来就多余，删得对，但它不是原因）。
+真正的机制：**这条 spec 里根本没有 workspace changes，被改的组件一次都没渲染**
+——能影响它的只剩包体与时序。
+所以改的是**测量方式**：`page.mouse.wheel` 只发一个事件，落在两次程序化滚动
+之间才留得下来；改成「滚到它真的动为止」。契约没放宽（契约在下半段），
+硬化后同一棵树 **6/6 全绿**（坑 237）。
+
+### 门禁
+
+verify 0（**260** 文件 / **2168** 单测）· e2e-parity **48**（台账 **0 行 / 40 样本**）·
+e2e-mock 265+22+15+2+6 · e2e-visual 8 · asset-budget 0 · standalone-sim 0。
+`make parity-accept` **放行**（新键 0 行，正是 wave 85 那道闸门要放行的情形）。
 
 ## 上一轮（wave 86）做了什么：**给取样面接上三处交互态，两处有货一处干净**
 
@@ -2229,7 +2281,16 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 236 条在记忆文件里）
+## 其他常踩的坑（完整 237 条在记忆文件里）
+
+- **别拿一次输入去赌一个动着的界面**（线索 237，wave 87；wave 86 那两处 drag
+  助手是同族）。`page.mouse.wheel` 只发**一个**事件，而流式期间应用每收到一个
+  delta 就把列表拉回底部——那一个滚轮落在两次程序化滚动之间才留得下来。
+  实测同一棵树 **6 次红 2 次**。修法是「滚到它真的动为止」（每次 poll 再发一个），
+  **契约不放宽**：真正被测的那一半在后面（后续 delta 到了仍然不把它抢回底部）。
+  同一轮还学到：**归因要一路查到「被改的东西真的被执行了吗」**——
+  那条 spec 里根本没有 workspace changes，被改的组件一次都没渲染，
+  所以「删掉那个 watch」只是顺手删对了一件事，不是原因。
 
 - **一个锚点加进来之前，先问它在这个场景的每一个维度上都成立吗**（线索 234，wave 86）。
   `scheduled-tasks` 有 **en-US 与 zh-CN 两个语言维度**，而按可访问名找的锚点
