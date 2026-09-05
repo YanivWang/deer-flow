@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 82，2026-09-05）
+## 当前状态（截至 wave 83，2026-09-05）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝）。
 - **动过 `frontend/` 的是十八轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -70,10 +70,17 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 82 收工时逐条跑过）
+### 门禁实测值（wave 83 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；259 文件 / 2155 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；259 文件 / **2158** 单测，词典 942 key、18 unused
+make -C frontend-vue standalone-sim exit 0（wave 83 新增）**判据的动态那一半**：真把
+                                   ../frontend rename 走，跑 CROSS_APP_BY_DESIGN 表里
+                                   点名的每一条，再移回来。跑过 12 条 / 未跑 5 条
+                                   （4 data + 1 e2e）/ 红 0。**有意不进 verify**
+                                   （动文件系统，且不能与任何构建并发）。
+                                   `--with-e2e` 额外跑一次 e2e-parity，实测
+                                   **13 / 4 / 0**，那一条报「exit 0，47 条跳过」。
 make -C frontend-vue icon-parity   **0 处待核**（wave 75 逐条核完；另有 12 条写进
                                    脚本里的 `VERIFIED` 表，双向——某条不再出现会报 stale）
 make -C frontend-vue asset-budget  exit 0（wave 72 把 vendor-ui 预算按实测重定了一次，
@@ -82,6 +89,8 @@ make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefil
 make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55% / 行 74.9%
                                    **诊断工具，不进 verify，没有阈值**
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 39 处 / 17 个文件）
+                                   ——**它只是静态证明**，证不了「移走之后还能跑」：
+                                   wave 83 第一次真做实验时它早已是 0，而 verify 当场红。
 make -C frontend-vue e2e-parity    47    台账 **0 行**，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
@@ -309,6 +318,95 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 83）做了什么：**第一次真做验收实验——判据自己是假的**
+
+提交 `3703ae61`，另有 `5a5580d5`（两处 drag 助手）。**没动 `frontend/`**——
+仍是十八轮，marker 仍是 `809237ec`。
+
+一页纸挂账清单上排第一的那条（「验收判据本身没被验过」）这一轮做掉了。
+做法就是它写的那句：**把 `frontend/` 移出 checkout，跑一遍，再移回来。**
+
+### 结果：BLOCKING 早已是 0，而 `make verify` 当场红
+
+```
+install (frozen lockfile)   exit 0
+verify                      **exit 1**  ← test 这一步红
+build / asset-budget        exit 0
+e2e-mock                    **exit 2**  ← 与兄弟应用无关，见下
+e2e-visual                  8 passed
+e2e-parity                  47 skipped, exit 0     （声明的行为，逐条对上）
+upstream-drift / icon-parity / record-react-markdown   都打印一行后 exit 0
+```
+
+红的是 `tests/unit/i18n/upstream-key-coverage.test.ts`：
+
+```
+Error: ENOENT: no such file or directory,
+  open '.../frontend/src/core/i18n/locales/en-US.ts'
+❯ readDictionary tests/unit/i18n/upstream-key-coverage.test.ts:66:25
+ Test Files  1 failed | 255 passed | 3 skipped (259)
+```
+
+它的文件头写着「上游缺席则整组 skipIf」，`standalone-check` 的
+`CROSS_APP_BY_DESIGN` 也照抄了这句话。**两句都是假的**——
+`describe.skipIf` 跳过的是**用例**，不是**收集**：工厂函数照样执行一次，
+里面那句 `readFileSync` 于是照样跑（坑 225）。表里另外两个
+`describe.skipIf` 的作者都自己挡了（`present ? walk(...) : []`），只有这一个没挡。
+
+**这就是线索 183 的正面靶子**：`CROSS_APP_BY_DESIGN` 的 `note` 那一栏挂了几十轮，
+**零消费者**。写错了不会有任何征兆——它长得和写对的一模一样。
+
+### 顺手量出第二条假话
+
+修完之后跑新尺子，`doc-references.test.ts` 报 **12 过 / 0 跳过**，
+而表里写的是「缺席时只有那一条用例跳过」。**两处都不准**：受影响的是**三条**用例，
+而且它们根本不是跳过——是函数体里 `if (known === null) return;` **报绿**（坑 226）。
+一条什么都没查的用例和一条查过、干净的用例，在报表上逐字相同。
+改成 `it.skipIf(!checkoutComplete)`，并让 `checkoutBasenames()` **不再返回 null**
+——真少了东西就该炸。改完实测 **12 过 / 3 跳过**。
+
+### 落地的四样
+
+1. **`scripts/lib/cross-app-by-design.mjs`（新）**——表搬出来，每条从「一句散文」
+   变成 `{ kind, note }`。`kind ∈ test | script | data | e2e` 说的是
+   **「兄弟应用缺席时靠什么保证不红」**，也就是那句 note 该怎么验。
+   17 条 = 9 test + 3 script + 4 data + 1 e2e。
+2. **`make standalone-sim`（新）**——判据的**动态**那一半：真 rename 兄弟应用
+   （`<repoRoot>/.frontend-standalone-sim-parked`），跑完 `finally` 移回来，
+   SIGINT / 未捕获异常 / process exit 三条路径都挂了还原，**下次启动先自愈**。
+   逐条打印每个文件的「过 / 跳过 / 红」。**有意不进 `verify`**：它动文件系统，
+   而且不能与任何构建并发。它是**收工清单**的一项。
+3. **`tooling-contracts.test.ts` 加一组守卫**（进 verify）——每条都分了类、
+   类与路径形状对得上、点名的文件还在。这样「新加一条却没想清楚缺席怎么办」
+   当场红，不必等谁去跑 sim。
+4. **`standalone-check` 文件头**补一句：它是**静态**证明，证不了「移走之后还能跑」。
+
+### 那条 e2e 的红：与兄弟应用无关，是尺子自己的一条老缝
+
+`artifact-panel-resize.spec.ts:100`（drag-collapse）在整套 265 条里红了一次，
+**单独跑三遍 15/15 全绿**。因果够不着兄弟应用（这条 spec 一个字都不碰它）。
+
+但翻 `dragPanel` 时找到一条真缝：`hover()` 把光标放到**它当时**量到的中心，
+`boundingBox()` 是**之后**另一次观测。两次之间布局再动一下，`mouse.down()`
+就按在旧位置——**按空了整个拖拽什么都不发生**，报出来却是「面板没关」这种离得很远的断言。
+`tests/e2e-infra/splitpanes.spec.ts` 的注释里记的正是同一件事，**而它自己也没挡**。
+两处都在 `mouse.down()` 前补一次 `mouse.move(x, y)`（挪到**这次**量到的坐标）。
+**没有证据说这就是那一次红的原因**——一次观测不足以定性；补的是无条件正确的一条。
+
+### 门禁（收工时逐条实跑）
+
+```
+verify           exit 0    259 文件 / 2158 单测（+3 = 新守卫）；词典 942 key / 18 unused
+standalone-sim   exit 0    跑过 12 条、未跑 5 条（4 data + 1 e2e）、红 0
+                           `--with-e2e` 本轮也跑过一次：**13 / 4 / 0**，
+                           那一条报「make e2e-parity exit 0，47 条跳过」
+e2e-parity       47        台账 0 行 / 39 场景
+e2e-mock         265 + 22 + 15 + 2 + 6
+e2e-visual       8         一张没重录
+asset-budget     exit 0
+standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 39 处 / 17 个文件）
+```
 
 ## 上一轮（wave 82）做了什么：**长文件名把整排动作键推出可视区——两边同改**
 
@@ -1203,6 +1301,8 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 > （More 菜单 wave 79 已经对上），结论同样不变。
 > **这两条从此不必再复量**，除非上游那两屏自己变了。
 > **wave 82 又把「下一轮」的第一条做掉了**（artifact 标题的长文件名，两边同改）。
+> **wave 83 把一页纸清单上排第一那条做掉了**（验收判据本身没被验过）——
+> 实验真跑了，判据当场被证伪并修好，动态那一半现在是 `make standalone-sim`。
 
 剩下的：
 
@@ -1214,7 +1314,15 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 溢出的是标题那一侧、不含任何动作键。台账那条场景用的是短文件名，这 18px 进不了取样面。
 要追它，先决定「这算不算差异」。
 
-### 二、往下挖什么
+### 二、~~验收判据本身没被验过~~ —— **wave 83 跑完，判据是假的，已修**
+
+一页纸清单上排第一的那条。实验就是它写的那句：移走 `frontend/`、跑、移回来。
+**BLOCKING 已经 0 了几十轮，而 `make verify` 当场红**（`describe.skipIf` 跳过用例
+不跳过收集，坑 225）。顺带量出第二条假话（`doc-references` 三条用例是函数体里
+`return` 报绿，不是跳过，坑 226）。落地见 wave 83 那一节。
+**这条从此有机器守着**：`make standalone-sim` 每次都真做一遍。
+
+### 三、往下挖什么
 
 `app/pages/` 下的路由一条不剩地量过了，台账清零，`icon-parity` 归零，
 守卫注释里点名的账也清完了。**下一轮要找活，只能从这三个方向选**：
@@ -1225,7 +1333,12 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
    **挂展开态很便宜**：场景 id 受棘轮约束，夹具与 steps 不受。
 2. **给现成的尺子加一档**（wave 75 的 icon-parity、wave 76 的几何锚点都是这么来的）。
    注意线索 213/186：**一把新尺子最先要量的是它自己**。
-3. **把散文里的断言变成守卫**（`tests/guards/` 下已有九条）。加之前先读它们的覆盖面。
+3. **把散文里的断言变成守卫**（`tests/guards/` 下已有九条 + `tooling-contracts`
+   里 wave 83 新加的一组）。加之前先读它们的覆盖面。
+   **wave 83 又证明这条最值钱**：那张表的 `note` 挂了几十轮、零消费者，
+   17 条里有 2 条是假的，而**两条假话在报表上都长得和真话一模一样**。
+   下一个同形的目标：`baseline/*.json` 的 `$semantics`、
+   各文件头「实测过、做不到」的结论——**判据是「哪一行代码读它」**。
 
 ## wave 64 做了什么：**把覆盖率接上，并订正 wave 63 的误判**
 
@@ -1940,7 +2053,28 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 214 条在记忆文件里）
+## 其他常踩的坑（完整 228 条在记忆文件里）
+
+- **`describe.skipIf(cond)` 跳过的是「用例」，不是「收集」**（线索 225，wave 83）。
+  工厂函数照样执行一次，所以工厂里那句读兄弟应用的 `readFileSync` 在缺席时照样跑，
+  ENOENT 让整个文件报「Failed Suite / 0 test」，`make verify` 当场红。
+  **正确写法是把读放进 `it()`，或者像 `upstream-zero-claims` 那样
+  `present ? walk(...) : []` 自己挡一下。**
+  这条挂了几十轮没人知道，因为**没有任何门禁真的在缺席状态下跑过**。
+- **「缺席时跳过」如果是函数体里 `return`，报表上和「查过、干净」逐字相同**
+  （线索 226，wave 83）。`doc-references.test.ts` 三条用例这么写，
+  `make standalone-sim` 报出来是「12 过 / **0 跳过**」——而表里声明的是
+  「那一条用例跳过」。**跳过要用 `it.skipIf`，让它在报表上真的显示为跳过**；
+  取数函数则**不要返回 null**——真少了东西就该炸，别安静地返回。
+  （线索 176 的又一例，这次踩它的是本仓自己的守卫。）
+- **`run_in_background: true` 又加 `nohup … &` 会立刻收到一条「completed (exit 0)」**
+  （线索 227，wave 83）。被追踪的是外层 shell，它 fork 完就退了；
+  真活还在后台跑，日志停在半路。**两者选一个**：要么让 harness 追踪真命令，
+  要么自己 poll 进程，别信那条通知。
+- **zsh 里 `${PIPESTATUS[0]}` 是空的**（zsh 用 `$pipestatus[1]`），
+  而 `cmd | head` 之后的 `$?` 是 **head 的**（线索 228，wave 83 连踩两次：
+  一次把两个脚本的退出码读成空，一次把一条本该 exit 1 的负向验证读成 0）。
+  **量退出码就不要接管道**：`cmd > file 2>&1; echo $?`。
 
 - **`git checkout -- <file>` 还原的是 HEAD，不是「变异之前」**（线索 207，wave 72）。
   负向验证的还原步骤一旦用它，**整轮的改动会跟着一起没**，而报表看起来照样是绿的
