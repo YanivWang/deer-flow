@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 93 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 94 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，接手时 HEAD 是 wave 88 的 docs 提交。
@@ -19,10 +19,10 @@
    先看「还欠什么」。三分钟读完。
 2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，2500 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（250 条里最近的十几条）。中间各轮的记录按需查。
+   结尾的「其他常踩的坑」（251 条里最近的十几条）。中间各轮的记录按需查。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **250 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **251 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -38,9 +38,9 @@
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
   推到我喊停为止；**不要停下来问「要不要继续」**。
 - **台账的规则现在是「新出现、还没定过的行只能减不能增」**，不再是「保持 0」。
-  `frontend-vue/baseline/parity-diff.json` 当前 **44 行 / 73 样本**，
-  **44 行没有一行是「还欠的」**：2 行 reka-ui 的 tooltip 播报节点（wave 91）+
-  42 行「上游把字写死成英文、本仓翻译了」（wave 92/93）。两类都在一页纸清单第一节
+  `frontend-vue/baseline/parity-diff.json` 当前 **51 行 / 73 样本**，
+  **51 行没有一行是「还欠的」**：2 行 reka-ui 的 tooltip 播报节点（wave 91）+
+  42 行「上游把字写死成英文、本仓翻译了」（wave 92/93）+ 7 行焦点差异（wave 94）。两类都在一页纸清单第一节
   逐条交代，各带翻案判据。
   **注意它钉的是「两个应用一不一致」，不是「这一处对不对」**——wave 88 量出
   22 颗按钮两边都缺 `aria-pressed`，三档全是 0 行。接上一块新表面之后，
@@ -128,9 +128,16 @@ wave 93 查明**是过期的**——四个能展开的控件都已经在取样�
 
 ### B. 给现成的尺子加一档
 
-`icon-parity`（wave 75）、几何锚点（wave 76）、`states` 轴（wave 87）都是这么来的。
+`icon-parity`（wave 75）、几何锚点（wave 76）、`states` 轴（wave 87）、
+`opacity` 与 `hover`（wave 91）、`focus`（wave 94）都是这么来的。
 **一把新尺子最先要量的是它自己**：任何输出 0 的工具，都要能回答「这个 0 是算出来的、
-还是没算」。
+还是没算」；而任何输出**很多行**的新档，先问「其中几行是它自己造的」——
+wave 94 的焦点档第一版 17 行里有 **10 行是描述器的噪声**。
+
+**「天生看不见的八类」现在只剩前七类**：第八类（焦点）wave 94 补完了。
+剩下的没被覆盖的量还有：`visibility` / `display` / `pointer-events` /
+`z-index` 实际堆叠、滚动位置（**故意不比**，见 capture.ts 文件头）、
+键盘 tab 序。加之前先问「它是不是真的三档都看不见」。
 
 ### C. 把散文里的断言变成守卫
 
