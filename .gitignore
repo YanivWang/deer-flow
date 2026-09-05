@@ -64,6 +64,9 @@ config.yaml.bak
 .playwright-mcp
 /frontend/test-results/
 /frontend/playwright-report/
+# frontend-vue/scripts/standalone-sim.mjs 跑到一半崩掉时 frontend/ 的落脚点。
+# 正常路径下它只存在几十秒，下一次 standalone-sim 启动会自愈。
+/.frontend-standalone-sim-parked/
 .gstack/
 .worktrees
 

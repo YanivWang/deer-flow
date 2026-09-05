@@ -8,7 +8,7 @@
 	upstream-drift upstream-accept dom-parity icon-parity parity-accept \
 	i18n-check i18n-diff i18n-unused i18n-source-check i18n-refresh \
 	gen-api-types gen-api-types-check gen-contract-constants gen-contract-constants-check \
-	consumer-check standalone-check coverage
+	consumer-check standalone-check standalone-sim coverage
 
 PYTHON ?= python3
 PNPM = $(PYTHON) ../scripts/pnpm.py --dir frontend-vue
@@ -73,6 +73,7 @@ help:
 	@echo "  make gen-contract-constants    regenerate backend contract constants from contracts/*.json"
 	@echo "  make consumer-check            clean-install packages/agent-core into a temp consumer"
 	@echo "  make standalone-check          P0 gate: no cross-app reference to ../frontend"
+	@echo "  make standalone-sim            P0 gate (dynamic): move ../frontend away and run"
 	@echo "  make i18n-check                dictionary health: locales in sync, no key lost"
 	@echo "  make i18n-diff / i18n-unused   exact key and audited-unused drift against baseline"
 	@echo "  make i18n-source-check         reject core English literals in product Vue SFCs"
@@ -140,6 +141,17 @@ consumer-check:
 # BLOCKING 已归零并接进 verify：任何新的跨应用引用都会当场变红。
 standalone-check:
 	node scripts/standalone-check.mjs
+
+# 同一条判据的**动态**那一半：真把 ../frontend 移出 checkout 跑一遍，再移回来。
+#
+# 为什么两条都要：`standalone-check` 是静态证明（没有代码级跨应用引用），
+# wave 83 之前它已经 0 了几十轮，而第一次真做实验时 `make verify` 当场红——
+# `upstream-key-coverage.test.ts` 的 `describe.skipIf` 工厂函数照样执行。
+#
+# **有意不进 verify**：它动文件系统，而且不能与任何构建/测试并发。它是收工清单
+# 的一项，和 e2e-backend / asset-budget 同级。
+standalone-sim:
+	node scripts/standalone-sim.mjs
 
 test:
 	$(EXEC) vitest run

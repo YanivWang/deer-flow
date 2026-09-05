@@ -349,11 +349,20 @@ const NON_REPO_FILENAMES: Record<string, string> = {
  * upstream-citations / upstream-zero-claims 同一条规矩，已声明进 standalone-check
  * 的 CROSS_APP_BY_DESIGN。本文件其余的检查（make target、相对链接、仓库内路径）
  * 都不依赖它，照常跑。
+ *
+ * **跳过必须是 `it.skipIf`，不能是函数体里 `return`。** wave 83 用
+ * `make standalone-sim` 真把兄弟应用移走量了一遍：这三条当时**报绿、跳过 0 条**
+ * ——一条什么都没查的用例和一条查过、干净的用例，在报表上逐字相同（线索 176）。
+ * 顺带订正两处：受影响的是**三条**用例，不是表里写的「那一条」。
+ * 所以 `checkoutBasenames()` 现在**不返回 null**：真少了东西就该炸，
+ * 而不是安静地返回。
  */
 const siblingApp = join(ROOT, "../frontend/src");
 
-function checkoutBasenames(): Set<string> | null {
-  if (rootTargets === null || !existsSync(siblingApp)) return null;
+/** checkout 完整（有仓库根 Makefile，且兄弟应用在场）才量得了这一档。 */
+const checkoutComplete = rootTargets !== null && existsSync(siblingApp);
+
+function checkoutBasenames(): Set<string> {
   const repoRoot = join(ROOT, "..");
   const listed = [
     execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" }),
@@ -548,9 +557,8 @@ describe("文档指名的文件都存在", () => {
     这一条扫的是全部文本文件，不只是 Markdown：死掉的文件名躺在源码文件头注释里
     和躺在文档里烂得一样彻底，而注释正是本仓写「为什么这么做」的地方。
   */
-  it("反引号里的裸文件名在 checkout 里搜得到", () => {
+  it.skipIf(!checkoutComplete)("反引号里的裸文件名在 checkout 里搜得到", () => {
     const known = checkoutBasenames();
-    if (known === null) return;
     const violations: string[] = [];
     let scanned = 0;
     for (const rel of trackedTextFiles()) {
@@ -575,62 +583,66 @@ describe("文档指名的文件都存在", () => {
     ).toEqual([]);
   });
 
-  it("仓库路径（带不带反引号都算）在 checkout 里搜得到", () => {
-    const known = checkoutBasenames();
-    if (known === null) return;
-    const violations: string[] = [];
-    let scanned = 0;
-    for (const rel of trackedTextFiles()) {
-      const source = withoutOwnHeader(
-        rel,
-        stripHistoricalRegions(readFileSync(join(ROOT, rel), "utf8")),
-      );
-      const quotedToo = extname(rel) !== ".md";
-      for (const [index, line] of source.split("\n").entries()) {
-        const bare = line.replaceAll(/`[^`]*`/g, " ");
-        const patterns: [RegExp, string][] = quotedToo
-          ? [
-              [BARE_PATH, bare],
-              [QUOTED_PATH, line],
-            ]
-          : [[BARE_PATH, bare]];
-        for (const [pattern, text] of patterns) {
-          for (const match of text.matchAll(pattern)) {
-            const path = match[1] ?? "";
-            scanned += 1;
-            if (path in NON_REPO_PATHS) continue;
-            const name = path.slice(path.lastIndexOf("/") + 1);
-            if (known.has(name)) continue;
-            violations.push(`${rel}:${index + 1}: ${path}`);
+  it.skipIf(!checkoutComplete)(
+    "仓库路径（带不带反引号都算）在 checkout 里搜得到",
+    () => {
+      const known = checkoutBasenames();
+      const violations: string[] = [];
+      let scanned = 0;
+      for (const rel of trackedTextFiles()) {
+        const source = withoutOwnHeader(
+          rel,
+          stripHistoricalRegions(readFileSync(join(ROOT, rel), "utf8")),
+        );
+        const quotedToo = extname(rel) !== ".md";
+        for (const [index, line] of source.split("\n").entries()) {
+          const bare = line.replaceAll(/`[^`]*`/g, " ");
+          const patterns: [RegExp, string][] = quotedToo
+            ? [
+                [BARE_PATH, bare],
+                [QUOTED_PATH, line],
+              ]
+            : [[BARE_PATH, bare]];
+          for (const [pattern, text] of patterns) {
+            for (const match of text.matchAll(pattern)) {
+              const path = match[1] ?? "";
+              scanned += 1;
+              if (path in NON_REPO_PATHS) continue;
+              const name = path.slice(path.lastIndexOf("/") + 1);
+              if (known.has(name)) continue;
+              violations.push(`${rel}:${index + 1}: ${path}`);
+            }
           }
         }
       }
-    }
-    expect(scanned).toBeGreaterThan(50);
-    expect(
-      violations,
-      "照着这个路径的文件名在整个 checkout 里搜，一个文件都搜不到",
-    ).toEqual([]);
-  });
+      expect(scanned).toBeGreaterThan(50);
+      expect(
+        violations,
+        "照着这个路径的文件名在整个 checkout 里搜，一个文件都搜不到",
+      ).toEqual([]);
+    },
+  );
 
-  it("豁免名单自己不会腐烂：每一条都还缺席、也还有人在引", () => {
-    const known = checkoutBasenames();
-    if (known === null) return;
-    const cited = new Set<string>();
-    for (const rel of trackedTextFiles()) {
-      const source = stripHistoricalRegions(
-        readFileSync(join(ROOT, rel), "utf8"),
-      );
-      for (const match of source.matchAll(BARE_FILENAME)) {
-        cited.add(match[1] ?? "");
+  it.skipIf(!checkoutComplete)(
+    "豁免名单自己不会腐烂：每一条都还缺席、也还有人在引",
+    () => {
+      const known = checkoutBasenames();
+      const cited = new Set<string>();
+      for (const rel of trackedTextFiles()) {
+        const source = stripHistoricalRegions(
+          readFileSync(join(ROOT, rel), "utf8"),
+        );
+        for (const match of source.matchAll(BARE_FILENAME)) {
+          cited.add(match[1] ?? "");
+        }
       }
-    }
-    const stale = Object.keys(NON_REPO_FILENAMES).filter(
-      (name) => known.has(name) || !cited.has(name),
-    );
-    expect(
-      stale,
-      "文件出现了、或者没人再引它——把这一条从 NON_REPO_FILENAMES 拿掉",
-    ).toEqual([]);
-  });
+      const stale = Object.keys(NON_REPO_FILENAMES).filter(
+        (name) => known.has(name) || !cited.has(name),
+      );
+      expect(
+        stale,
+        "文件出现了、或者没人再引它——把这一条从 NON_REPO_FILENAMES 拿掉",
+      ).toEqual([]);
+    },
+  );
 });

@@ -1,7 +1,7 @@
 {
  "$comment": "对照场景的覆盖率棘轮。id 是 frontend/tests/e2e/*.spec.ts 的文件名（去掉 .spec.ts）——拿 React 自己的用例清单当坐标系，是因为它是唯一一份「React 认为哪些行为值得守住」的机器可读事实。三个桶必须恰好划分这份清单：上游新增一个 spec 而三个桶都没有它，门禁立刻红。",
  "$readers": [
-  "scripts/standalone-check.mjs",
+  "scripts/lib/cross-app-by-design.mjs",
   "tests/guards/baseline-keys-consumed.test.ts",
   "tests/parity/scenario-coverage.test.ts"
  ],

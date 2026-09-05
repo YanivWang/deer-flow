@@ -130,7 +130,8 @@ and `e2e-stream`; `make e2e-backend` aggregates `e2e-protocol`, `e2e-real`,
 `e2e-scheduled`, `e2e-channels`, `e2e-agents`, `e2e-settings`, `e2e-shell` and
 `e2e-browser`. `make e2e-parity` is in neither either, for a different reason:
 it is the only suite that needs the sibling React app, and this workspace's
-install, build, test and e2e must all work without it (`make standalone-check`).
+install, build, test and e2e must all work without it (`make standalone-check`
+proves it statically, `make standalone-sim` proves it by actually doing it).
 When `../frontend` is absent it does not start React and its cases skip.
 
 `make e2e-visual` is deliberately in neither: its screenshot
@@ -147,10 +148,20 @@ Targeted checks:
 make parity-accept      # re-record baseline/parity-diff.json after a parity change
 make proxy-security     # Nitro body limits, bodyless/chunked DELETE, SSE and traversal
 make i18n-source-check  # AST guard for every product Vue SFC
-make standalone-check   # no cross-app reference to ../frontend
+make standalone-check   # no cross-app reference to ../frontend (static)
+make standalone-sim     # move ../frontend away, run what claims to cope, move it back
 make typecheck-core     # standalone tsc for packages/agent-core
 make upstream-drift     # report what ../frontend changed since the reviewed marker
 ```
+
+The two standalone gates also measure different things. `make standalone-check`
+is a static scan: it proves no file references `../frontend` from code.
+`make standalone-sim` renames the sibling app out of the checkout, runs every
+entry the exemption table claims can cope without it, and moves it back — it is
+deliberately out of `make verify` because it touches the filesystem and must not
+run next to a build. The distinction is not academic: the static count had been
+zero for dozens of changes while `make verify` was in fact red without the
+sibling, because a `describe.skipIf` factory still runs at collection time.
 
 Two size gates measure different things and are easy to confuse.
 `make asset-budget` sums **all** emitted chunks and guards against total build

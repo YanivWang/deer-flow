@@ -84,8 +84,22 @@ function readDictionary(path: string) {
   return { keys, values };
 }
 
-describe.skipIf(!existsSync(upstreamDictionary))("上游词典的覆盖", () => {
-  const upstream = readDictionary(upstreamDictionary);
+/**
+ * **`describe.skipIf` 跳过的是用例，不是收集。** 工厂函数照样执行一次，所以
+ * 上游缺席时在这里裸调 `readDictionary(upstreamDictionary)` 会 ENOENT——
+ * 报出来是「Failed Suite / 0 test」，`make verify` 当场红。
+ *
+ * wave 83 把 `../frontend` 真的移走跑了一遍才撞出来：文件头写着「整组 skipIf」、
+ * `standalone-check` 也照抄了这句话，而那句话此前从来没有机器验过。
+ * 同表里另外两个 `describe.skipIf` 的写法是对的（`upstream-zero-claims` 的
+ * `present ? walk(...) : []`），照它来。
+ */
+const upstreamPresent = existsSync(upstreamDictionary);
+
+describe.skipIf(!upstreamPresent)("上游词典的覆盖", () => {
+  const upstream = upstreamPresent
+    ? readDictionary(upstreamDictionary)
+    : { keys: new Set<string>(), values: new Map<string, string>() };
   const vue = readDictionary(vueDictionary);
   const missing = [...upstream.keys].filter((key) => !vue.keys.has(key)).sort();
 

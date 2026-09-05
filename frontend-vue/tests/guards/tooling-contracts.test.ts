@@ -26,10 +26,16 @@
                    是正常的，也实测能跑。真正会炸的是跨大版本。
 */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import {
+  CROSS_APP_BY_DESIGN,
+  KINDS,
+} from "../../scripts/lib/cross-app-by-design.mjs";
 
 const packageJson = JSON.parse(
   readFileSync(
@@ -117,6 +123,64 @@ describe("Makefile 的 .PHONY 与 target", () => {
     expect(
       [...targets].filter((name) => !phony.has(name)).sort(),
       "有 target 没进 .PHONY——同名文件存在时 make 会静默什么都不做",
+    ).toEqual([]);
+  });
+});
+
+/*
+  第三条：`CROSS_APP_BY_DESIGN` 的每一条都得说清「兄弟应用缺席时靠什么不红」。
+
+  **起因**：这张表的 `note` 挂了几十轮，**没有任何机器读过它**（线索 183）。
+  wave 83 第一次真把 `../frontend` 移走跑了一遍，17 条里当场倒了一条——
+  `upstream-key-coverage.test.ts` 写着「整组 skipIf 跳过」，而
+  `describe.skipIf` 跳过的是用例、不是收集，工厂函数里那句 readFileSync
+  照样执行，`make verify` 当场红。另有一条（`doc-references.test.ts`）
+  写着「那一条用例跳过」，实测是**三条**、而且根本不是跳过，是函数体里
+  `return` 掉、报绿。
+
+  真跑那一遍的是 `make standalone-sim`（不进 verify：它动文件系统）。
+  这里只钉**结构**——每条都分了类、类和路径形状对得上、点名的文件还在——
+  这样「新加一条却忘了想清楚缺席怎么办」当场红，而不必等谁去跑 sim。
+*/
+const CROSS_APP_ROOT = fileURLToPath(new URL("../../", import.meta.url));
+
+describe("跨应用对照工具的登记表", () => {
+  const entries = Object.entries(CROSS_APP_BY_DESIGN);
+
+  it("形状先断言：表非空，且每条都有 kind 和 note", () => {
+    expect(entries.length).toBeGreaterThan(10);
+    expect(
+      entries
+        .filter(([, value]) => !KINDS.includes(value.kind) || !value.note)
+        .map(([file]) => file),
+      "有条目没分类或没写理由",
+    ).toEqual([]);
+  });
+
+  it("kind 和路径形状对得上", () => {
+    const expected = (file: string) => {
+      if (file.endsWith(".test.ts")) return "test";
+      if (file.startsWith("scripts/") && file.endsWith(".mjs")) return "script";
+      if (file.endsWith(".json")) return "data";
+      return null; // 形状看不出来的（e2e 支持模块）由 note 自己解释
+    };
+    expect(
+      entries
+        .filter(([file, value]) => {
+          const want = expected(file);
+          return want !== null && want !== value.kind;
+        })
+        .map(([file, value]) => `${file} 标成了 ${value.kind}`),
+      "分类和路径形状矛盾",
+    ).toEqual([]);
+  });
+
+  it("表里点名的文件都还在", () => {
+    expect(
+      entries
+        .map(([file]) => file)
+        .filter((file) => !existsSync(join(CROSS_APP_ROOT, file))),
+      "登记表指着一个不存在的文件",
     ).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 {
   "$comment": "React/Vue 对齐范围的机器可读定义。上一版是 ARCHITECTURE.md 里的一节散文；它被整节删除之后，/pricing 与 /about 当场被判成违规并删掉，而没有任何门禁能区分那是一次决定还是一次事故。写在这里，是为了让豁免既能被测试读取，也能在自己过期时变红。谁在引它见 $readers——那一行是数据、由门禁逐字比对，不是散文：此前这里写着「product-surface.test.ts 是它唯一的消费者」，而 scenario-coverage.test.ts 在那句话落地 30 分钟后就开始读它（07a1d766 → 23aa5ac2），这句话错了九天。",
   "$readers": [
-    "scripts/standalone-check.mjs",
+    "scripts/lib/cross-app-by-design.mjs",
     "tests/guards/baseline-keys-consumed.test.ts",
     "tests/parity/product-surface.test.ts",
     "tests/parity/scenario-coverage.test.ts"

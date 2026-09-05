@@ -7,12 +7,20 @@
   【依赖关系】     git（已跟踪 + 未忽略的未跟踪文件）；无运行时依赖
   【边界与注意】   BLOCKING 计数必须归零才算平替达成。COMMENT / DOCS 计数不阻断构建，
                    但会一起打印，避免「注释里还写着对应哪个 React 文件」被当成已经解耦。
+
+                   **这一条只是静态证明。** 它证的是「没有代码级跨应用引用」，
+                   证不了「兄弟应用真的移走之后还能跑」——wave 83 真做了一次实验，
+                   BLOCKING 早已是 0，而 `make verify` 当场红（见
+                   scripts/lib/cross-app-by-design.mjs 的文件头）。
+                   动态那一半是 `make standalone-sim`。
 */
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { CROSS_APP_BY_DESIGN } from "./lib/cross-app-by-design.mjs";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 
@@ -22,50 +30,6 @@ const SIBLING_G = /frontend(?!-vue)[/\\]/g;
 
 /** 生成物：随其来源一起消失，不单独计数。 */
 const GENERATED = new Set(["pnpm-lock.yaml"]);
-
-/**
- * 目的**就是**与兄弟应用对照的文件。它们仍然打印出来，但不计入 BLOCKING。
- *
- * 进这张表只有一个条件：`../frontend` 不存在时，本仓的 install / build / test / e2e
- * 必须照常全绿。也就是说每一条都得自己处理「对方不在」——跳过、退出 0，或者压根
- * 只是数据里的一句出处说明。任何一条做不到，它就不是对照工具，而是依赖。
- */
-const CROSS_APP_BY_DESIGN = {
-  "tests/parity/product-surface.test.ts":
-    "产品表面对照；缺席时整组 describe.skipIf 跳过。",
-  "tests/guards/doc-references.test.ts":
-    "「反引号里的裸文件名在 checkout 里搜得到」那一档要拿兄弟应用的文件名当坐标系；缺席时只有那一条用例跳过，其余检查照常跑。",
-  "tests/guards/upstream-citations.test.ts":
-    "钉本仓源码/测试/文档里对上游的『文件:行号』引用还指得到东西；缺席时整组 describe.skipIf 跳过。",
-  "tests/guards/upstream-zero-claims.test.ts":
-    "把「上游这东西没人用」这类散文断言变成门禁；缺席时整组 describe.skipIf 跳过。",
-  "tests/guards/golden-fixture-provenance.test.ts":
-    "钉 golden 夹具的出处标签 == 上游实际装的 streamdown 版本；缺席时整组 describe.skipIf 跳过。",
-  "scripts/record-react-markdown.mjs":
-    "golden 夹具录制器；夹具已签入，缺席时退出 0 不重录。",
-  "tests/fixtures/react-markdown-dom.json":
-    "签入的 golden 夹具，命中的只是 $comment 里的出处说明。",
-  "tests/architecture.test.ts":
-    "**禁止**跨应用 import 的守卫本身，命中的是它的 forbidden 正则。",
-  "scripts/upstream-drift.mjs":
-    "上游漂移报告；缺席时打印一行后退出 0，不进任何门禁。",
-  "scripts/icon-parity.mjs":
-    "图标字形 / 尺寸 / tooltip 的对照报告；要读上游装的 lucide 别名表（本仓装的是 lucide-vue-next，别名映射不同），所以路径写死。缺席时打印一行后退出 0，不进任何门禁。",
-  "baseline/upstream-marker.json":
-    "漂移报告的已审阅位置，命中的是它声明的监视路径（纯数据）。",
-  "baseline/react-parity-scope.json":
-    "对齐范围的豁免定义（纯数据），命中的是它点名的上游路径；唯一消费者整组 skipIf 跳过。",
-  "tests/e2e-parity/support/react-preview.ts":
-    "对照套件启动兄弟应用的地方；缺席时不启动它，e2e-parity 整组跳过，不进任何聚合入口。",
-  "tests/parity/scenario-coverage.test.ts":
-    "场景覆盖率棘轮；坐标系是上游的 spec 清单，缺席时那条用例 skipIf 跳过。",
-  "baseline/parity-scenario-coverage.json":
-    "覆盖率棘轮的数据（纯数据），命中的是它说明坐标系来自哪里。",
-  "tests/unit/i18n/vue-only-keys.test.ts":
-    "本仓独有词典块的守卫；坐标系是上游词典的顶层块清单，缺席时那条用例 skipIf 跳过。",
-  "tests/unit/i18n/upstream-key-coverage.test.ts":
-    "「上游的每一条本仓都答得上」的守卫；坐标系是上游词典，缺席时整组 skipIf 跳过。",
-};
 
 const COMMENT_STYLES = {
   ".ts": ["line", "block"],
@@ -253,8 +217,8 @@ if (process.argv.includes("--json")) {
   console.log(
     `  DECLARED 声明的对照工具   : ${declared.length} 处 / ${Object.keys(CROSS_APP_BY_DESIGN).length} 个文件`,
   );
-  for (const [file, reason] of Object.entries(CROSS_APP_BY_DESIGN)) {
-    console.log(`             ${file}\n               ${reason}`);
+  for (const [file, { note }] of Object.entries(CROSS_APP_BY_DESIGN)) {
+    console.log(`             ${file}\n               ${note}`);
   }
   if (blocking.length > 0) {
     console.log("");
