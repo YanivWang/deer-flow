@@ -5,6 +5,11 @@
   【主要导出】     CLI
   【依赖关系】     scripts/lib/i18n-source-guard.mjs
   【边界与注意】   --inventory 输出完整分类；门禁不维护按组件放行的大 allowlist。
+
+                   **先判扫描面盖全了没有，再判扫到的干不干净。** 否则这句
+                   "product Vue SFCs contain no core English literals" 说的
+                   只是「我读过的那些没有」——wave 84 实测过，一个
+                   `app/error.vue` 就能让它在四道门禁全绿的情况下变成假话。
 */
 
 import {
@@ -19,12 +24,23 @@ if (process.argv.includes("--inventory")) {
       {
         checkedLocalizedOrDynamicProductSfc: inventory.checked,
         excludedTestFixtureSfc: inventory.excludedTestFixtures,
+        unscannedSfc: inventory.unscanned,
       },
       null,
       2,
     )}\n`,
   );
   process.exit(0);
+}
+
+const { unscanned } = productVueInventory();
+if (unscanned.length) {
+  for (const file of unscanned) process.stderr.write(`${file}\n`);
+  process.stderr.write(
+    `i18n source guard failed: ${unscanned.length} Vue SFC(s) outside the scanned roots. ` +
+      "Add the directory to PRODUCT_ROOTS, or say why it is not product UI.\n",
+  );
+  process.exit(1);
 }
 
 const issues = scanProductVueFiles();

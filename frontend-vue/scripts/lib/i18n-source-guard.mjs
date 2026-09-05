@@ -4,8 +4,23 @@
   【主要导出】     productVueInventory · scanVueSource · scanProductVueFiles
   【依赖关系】     vue/compiler-sfc · TypeScript · app product SFCs
   【边界与注意】   动态 backend/user/code/file/URL 不含字面量；测试 fixture 不属于产品清单。
+
+                   **扫描面必须能自证覆盖全。** `PRODUCT_ROOTS` 是一张白名单，
+                   而只从白名单出发的门禁看不见「自称是产品 SFC、但不在名单目录下」
+                   的那些（线索 186）。wave 84 实测过一次：往 `app/error.vue`
+                   （Nuxt 的约定文件之一）塞四条硬编码英文，
+                   `make i18n-source-check`、`make i18n-check`、
+                   `source-guard.test.ts` 与 `doc-facts.test.ts` **全绿**——
+                   `checked` 仍是 217，而 `I18N_INVENTORY.md` 那句
+                   「当前 checkout 共有 N 个 Vue SFC」当场变成假话。
+                   所以 `productVueInventory()` 现在还返回 `unscanned`：
+                   checkout 里没被这张白名单盖住的 `.vue`。**它必须恒为空**，
+                   不为空时要么把那个目录加进 `PRODUCT_ROOTS`，
+                   要么说清楚为什么它不是产品 UI——**不要加豁免表**
+                   （豁免表为空才说明收口选对了，线索 180）。
 */
 
+import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, extname, join, relative, resolve } from "node:path";
@@ -310,16 +325,37 @@ function vueFiles(relRoot) {
   return files;
 }
 
+/**
+ * checkout 里全部 `.vue`：**已跟踪 + 未跟踪且未被忽略**。
+ *
+ * 后半截不能省：新写的 SFC 在提交之前只看 `git ls-files` 是看不见的，
+ * 而「这次改动引入了一个没人扫的 SFC」正是要当场拦住的那件事
+ * （`scripts/standalone-check.mjs` 里同一条理由）。
+ */
+function allVueFiles() {
+  return execFileSync(
+    "git",
+    ["ls-files", "--cached", "--others", "--exclude-standard", "*.vue"],
+    { cwd: ROOT, encoding: "utf8" },
+  )
+    .split("\n")
+    .filter(Boolean)
+    .sort();
+}
+
 export function productVueInventory() {
   const discovered = [
     ...PRODUCT_ENTRY_FILES,
     ...PRODUCT_ROOTS.flatMap(vueFiles),
   ].sort();
+  const covered = new Set(discovered);
   return {
     checked: discovered.filter((file) => !file.startsWith(TEST_FIXTURE_PREFIX)),
     excludedTestFixtures: discovered.filter((file) =>
       file.startsWith(TEST_FIXTURE_PREFIX),
     ),
+    // 白名单没盖住的 `.vue`。恒为空；不为空说明扫描面漏了一块。
+    unscanned: allVueFiles().filter((file) => !covered.has(file)),
   };
 }
 

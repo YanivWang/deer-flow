@@ -330,6 +330,8 @@ const NON_REPO_PATHS: Record<string, string> = {
     "i18n source guard 的单测在内存里编出来的假 SFC 路径，用来喂扫描器，不是仓库文件。",
   "app/components/workspace/DynamicFixture.vue":
     "同上，同一份单测里的第二个假路径。",
+  "app/error.vue":
+    "i18n 扫描面那条守卫的**反例**：wave 84 实测把一份带硬编码英文的 SFC 放在这个位置，四道门禁全绿。整段话的意思就是「它不在扫描面里、也不在仓库里」——换成一个真实存在的路径，那句话反而变成假的。真有人把它加进来时，这条豁免会作为过期条目变红，正好逼人回头读那几段注释。",
 };
 
 const NON_REPO_FILENAMES: Record<string, string> = {

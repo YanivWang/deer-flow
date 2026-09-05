@@ -21,6 +21,7 @@ import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { CROSS_APP_BY_DESIGN } from "./lib/cross-app-by-design.mjs";
+import { stripComments } from "./lib/strip-comments.mjs";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 
@@ -50,77 +51,6 @@ function commentStylesFor(file) {
   if (file === "Makefile") return ["hash"];
   if (file === "Dockerfile" || file.startsWith("Dockerfile.")) return ["hash"];
   return COMMENT_STYLES[extname(file)] ?? ["line", "block"];
-}
-
-/**
- * 把注释内容替换成空格，保留行号与列宽。
- * 这样同一次扫描既能判定「这行还有代码级引用吗」，又能定位原始行。
- */
-function stripComments(source, styles) {
-  const out = source.split("");
-  const has = (style) => styles.includes(style);
-  let i = 0;
-  let state = "code";
-  let quote = "";
-  const blank = (from, to) => {
-    for (let k = from; k < to && k < out.length; k += 1) {
-      if (out[k] !== "\n") out[k] = " ";
-    }
-  };
-  while (i < source.length) {
-    const two = source.slice(i, i + 2);
-    const four = source.slice(i, i + 4);
-    if (state === "code") {
-      const ch = source[i];
-      if (ch === '"' || ch === "'" || ch === "`") {
-        quote = ch;
-        state = "string";
-        i += 1;
-        continue;
-      }
-      if (has("block") && two === "/*") {
-        const end = source.indexOf("*/", i + 2);
-        const stop = end === -1 ? source.length : end + 2;
-        blank(i, stop);
-        i = stop;
-        continue;
-      }
-      if (has("html") && four === "<!--") {
-        const end = source.indexOf("-->", i + 4);
-        const stop = end === -1 ? source.length : end + 3;
-        blank(i, stop);
-        i = stop;
-        continue;
-      }
-      if (has("line") && two === "//") {
-        const end = source.indexOf("\n", i);
-        const stop = end === -1 ? source.length : end;
-        blank(i, stop);
-        i = stop;
-        continue;
-      }
-      if (has("hash") && ch === "#") {
-        const end = source.indexOf("\n", i);
-        const stop = end === -1 ? source.length : end;
-        blank(i, stop);
-        i = stop;
-        continue;
-      }
-      i += 1;
-      continue;
-    }
-    // state === "string"
-    if (source[i] === "\\") {
-      i += 2;
-      continue;
-    }
-    if (source[i] === quote) {
-      state = "code";
-      quote = "";
-    }
-    i += 1;
-  }
-  return out.join("");
 }
 
 /**

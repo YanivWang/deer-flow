@@ -17,11 +17,13 @@
                    禁止的事。
 */
 
-import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+
+import { checkoutFiles } from "../scripts/lib/checkout-files.mjs";
+import { stripComments as stripJsComments } from "../scripts/lib/strip-comments.mjs";
 
 const sourceRoot = new URL("../packages/agent-core/src/", import.meta.url);
 
@@ -112,11 +114,17 @@ function appSourceFiles(relRoot: string): string[] {
   return found;
 }
 
-/** 注释里出现业务词是允许的——禁的是代码认识它们，不是文档提到它们。 */
+/*
+  注释里出现业务词是允许的——禁的是代码认识它们，不是文档提到它们。
+
+  **用共享那份、别再写正则。** 正则版不认字符串：一个 `"/workspace/**"`
+  就能开出假注释，把后面的代码（连同 import）一口吃掉，而这条边界正是靠
+  数 import 判违规的——被吃掉的 import 数不到，是**静默放过**。
+  wave 84 在 `file-header-claims` 上撞见过一次真的（`config/routes.ts`），
+  同一轮把这一份也换掉：实测切换前后本仓的 import 集合逐个文件相同。
+*/
 function stripComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^[ \t]*\/\/.*$/gm, "");
+  return stripJsComments(source, ["line", "block"]);
 }
 
 const files = sourceFiles(sourceRoot).map((file) => {
@@ -410,15 +418,14 @@ const l2ForbiddenImports = [
   下面那条断言把它钉住。
 */
 function filesClaimingL2(): string[] {
-  const tracked = execFileSync(
-    "git",
-    ["ls-files", "app", "server", "packages", "scripts"],
-    { cwd: fileURLToPath(new URL("../", import.meta.url)), encoding: "utf8" },
-  )
-    .split("\n")
-    .filter((file) => /\.(ts|mts|mjs|vue)$/.test(file));
+  // 【坑】扫描面要含**未跟踪且未被忽略**的文件：只看 `git ls-files` 的话，
+  // 一份刚写出来、还没提交的 L2 文件是隐形的——而这条边界最该拦住它的时刻
+  // 正是提交之前。理由与去重/存在性过滤都在 scripts/lib/checkout-files.mjs。
+  const present = checkoutFiles(["app", "server", "packages", "scripts"], {
+    cwd: fileURLToPath(new URL("../", import.meta.url)),
+  }).filter((file) => /\.(ts|mts|mjs|vue)$/.test(file));
   const claiming: string[] = [];
-  for (const file of tracked) {
+  for (const file of present) {
     const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     const label = /【架构位置】\s*(.+)/.exec(source)?.[1]?.trim();
     if (label && /^L2(\s|$|—|，|\()/.test(label)) claiming.push(file);

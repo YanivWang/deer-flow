@@ -3,7 +3,7 @@
                    必须真的被导出；`【依赖关系】` 说「无」的必须真的零 import。
   【架构位置】     门禁测试
   【主要导出】     无
-  【依赖关系】     git ls-files（app / server / packages / scripts 下的 .ts/.mts/.mjs）
+  【依赖关系】     checkout 里 SCAN_ROOTS 下的 .ts/.mts/.mjs（见下方 SCAN_ROOTS 注释）
   【边界与注意】   **`【主要导出】` 此前零消费者。** 全模块 478 份文件写着它，
                    而只有 `【架构位置】` 有人读（`tests/architecture.test.ts` 的
                    L2 那一条）。wave 60 逐条量了一遍，七份文件点名的符号在
@@ -22,10 +22,10 @@
                    （`browser API helpers`、`list/get/create Agent`、`Nitro API route`），
                    判据取三种命名法：camelCase、多驼峰 PascalCase、带下划线的全大写。
                    全小写单词（helpers/errors/config）与纯首字母缩写（MCP/CLI/GET/API）
-                   一律跳过——它们是散文，不是名字。实测：本模块 331 份
-                   `.ts`/`.mts`/`.mjs`，261 份写了这一行，209 份点了至少一个名字，
-                   共 502 个 token、**0 条豁免**；**豁免表为空，才说明收口选对了**
-                   （线索 180）。
+                   一律跳过——它们是散文，不是名字。**豁免表为空，才说明收口选对了**
+                   （线索 180）。具体扫到多少份、多少个 token **有意不写在这里**：
+                   那种数字不承重，写下来必然过期（线索 179）；量它的是下面
+                   「形状先断言再计算」那条用例，跑一次就有当下的读数。
 
                    **`tests/` 有意不在范围里**：那边同一行写的是「被测对象是谁」
                    （`probeArtifactAction 回归`），不是「本文件导出什么」，
@@ -67,11 +67,13 @@
                    跨应用引用。哪天要复活那一栏，连同这句一起改。
 */
 
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { checkoutFiles } from "../../scripts/lib/checkout-files.mjs";
+import { stripComments } from "../../scripts/lib/strip-comments.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -84,13 +86,26 @@ const HEADER_MARKERS = [
   "【边界与注意】",
 ];
 
-const sourceFiles = execFileSync(
-  "git",
-  ["ls-files", "app", "server", "packages", "scripts"],
-  { cwd: root, encoding: "utf8" },
-)
-  .split("\n")
-  .filter((file) => /\.(ts|mts|mjs)$/.test(file));
+/*
+  扫描面。`config/` 与 `shared/` 是 wave 84 补的：两者都是这个应用的生产源码
+  （Nuxt 4 的 `shared/` 同时被 app 与 server 自动导入，`config/routes.ts` 被
+  nuxt.config 消费），而此前它们完全在这条门禁之外。
+
+  **补进来当场红了一条**，而且不是欠账：`config/routes.ts` 的 `buildProxyRules`
+  明明导出着，是这条门禁自己的剥注释函数把它吃了（见下方 `stripJs` 那段）。
+  换成认字符串的剥法之后**零违规**——头里点名的符号全都真的导出着。
+  **扩扫描面最先量到的是尺子自己**（线索 213）。
+
+  仍然在外面的两类，各有理由：**仓库根上的 config 文件**（playwright.*.config.ts、
+  nuxt.config.ts、vitest.config.ts、eslint.config.mjs）那一行按惯例写的是散文
+  （"Playwright config"），不是符号名；**`examples/`** 是一个独立的消费方样例，
+  由 `make consumer-check` 单独装起来跑。
+*/
+const SCAN_ROOTS = ["app", "config", "packages", "scripts", "server", "shared"];
+
+const sourceFiles = checkoutFiles(SCAN_ROOTS, { cwd: root }).filter((file) =>
+  /\.(ts|mts|mjs)$/.test(file),
+);
 
 /** `【主要导出】` 那一行加上它后面所有缩进续行，拼成一句。 */
 function exportBlockOf(source: string): string | null {
@@ -112,15 +127,21 @@ function exportBlockOf(source: string): string | null {
 /*
   注释要先剥掉，否则头注释自己提到的名字会把被测对象救活——线索 174 里
   `baseline-keys-consumed` 的第一版就是这样假绿的。
+
+  **不能用正则剥。** 这里原来写的是
+  `source.replace(/\/\*[\s\S]*?\*\//g, "")`，它不认字符串：
+  `config/routes.ts` 里的 `"/workspace/**"` 开了一个假注释，一口吃掉 1886 个字符，
+  连 `export function buildProxyRules` 一起。扫描面内有 8 份文件的字符串里带
+  `/*`，也就是说这条门禁一直在半截源码上工作——`【主要导出】` 那一半会误报，
+  而 `【依赖关系】 无` 那一半会**静默放过**（被吃掉的 import 数不到）。
+  现在用 `scripts/lib/strip-comments.mjs`，按字符走、跟踪引号与转义，
+  与 `standalone-check` 共用一份（wave 84）。
 */
-function stripComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/(^|[^:])\/\/.*$/gm, "$1");
-}
+const stripJs = (source: string): string =>
+  stripComments(source, ["line", "block"]);
 
 function exportedNamesOf(source: string): Set<string> {
-  const code = stripComments(source);
+  const code = stripJs(source);
   const names = new Set<string>();
   const collect = (pattern: RegExp) => {
     for (const match of code.matchAll(pattern)) names.add(match[1] as string);
@@ -185,7 +206,7 @@ for (const file of sourceFiles) {
     block,
     tokens,
     exported: exportedNamesOf(source),
-    reExports: /^\s*export\s+\*/m.test(stripComments(source)),
+    reExports: /^\s*export\s+\*/m.test(stripJs(source)),
   });
 }
 
@@ -200,7 +221,7 @@ function importSpecifiersOf(source: string): string[] {
   return [
     ...new Set(
       [
-        ...stripComments(source).matchAll(
+        ...stripJs(source).matchAll(
           /(?:from|import)\s*\(?\s*["']([^"']+)["']/g,
         ),
       ].map((match) => match[1] as string),
@@ -211,9 +232,9 @@ function importSpecifiersOf(source: string): string[] {
 describe("文件头的【依赖关系】", () => {
   const claiming = sourceFiles
     .concat(
-      execFileSync("git", ["ls-files", "app"], { cwd: root, encoding: "utf8" })
-        .split("\n")
-        .filter((file) => file.endsWith(".vue")),
+      checkoutFiles(["app"], { cwd: root }).filter((file) =>
+        file.endsWith(".vue"),
+      ),
     )
     .map((file) => ({ file, source: readFileSync(`${root}${file}`, "utf8") }))
     .filter((entry) => claimsNoDependency(entry.source));

@@ -119,4 +119,20 @@ const errorCode = "permission_denied"
     ]);
     expect(scanProductVueFiles()).toEqual([]);
   });
+
+  /*
+    `PRODUCT_ROOTS` 是白名单，而只从白名单出发的门禁看不见「不在名单目录下」
+    的那些（线索 186）。**上面那条 `toHaveLength(217)` 挡不住它**：一个
+    `app/error.vue` 不进 `checked`，217 一动不动。wave 84 实测过——四道门禁
+    （i18n-source-check / i18n-check / 本文件 / doc-facts）**全绿**，
+    而那份 SFC 里四条硬编码英文会照常发给用户。
+  */
+  it("checkout 里没有任何 .vue 落在扫描面之外", () => {
+    expect(
+      productVueInventory().unscanned,
+      "这些 .vue 不在 PRODUCT_ROOTS/PRODUCT_ENTRY_FILES 覆盖范围里，" +
+        "所以从来没有被扫过：把它们所在的目录加进 PRODUCT_ROOTS，" +
+        "或者说清楚为什么它不是产品 UI。",
+    ).toEqual([]);
+  });
 });

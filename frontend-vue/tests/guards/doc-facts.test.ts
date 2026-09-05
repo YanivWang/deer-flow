@@ -114,9 +114,15 @@ describe("文档里的数字和代码一致", () => {
     const inventory = productVueInventory() as {
       checked: string[];
       excludedTestFixtures: string[];
+      unscanned: string[];
     };
+    // 那句话说的是「当前 checkout 共有 N 个 Vue SFC」，所以 N 必须来自 checkout，
+    // 不能只来自扫描面——`unscanned` 不算进来的话，一个白名单外的 SFC
+    // 会让这句话变成假的而这条用例照样绿（wave 84 实测）。
     const total =
-      inventory.checked.length + inventory.excludedTestFixtures.length;
+      inventory.checked.length +
+      inventory.excludedTestFixtures.length +
+      inventory.unscanned.length;
     const doc = read("I18N_INVENTORY.md");
     expect(doc).toContain(`当前 checkout 共有 ${total} 个 Vue SFC`);
     expect(doc).toContain(`${inventory.checked.length} 个产品 SFC 全部进入`);
