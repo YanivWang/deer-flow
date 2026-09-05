@@ -203,6 +203,7 @@ export function ScheduledTaskScheduleInput({
             variant={scheduleType === "cron" ? "default" : "outline"}
             size="sm"
             onClick={() => setScheduleType("cron")}
+            aria-pressed={scheduleType === "cron"}
           >
             {labels.scheduleType.cron}
           </Button>
@@ -210,6 +211,7 @@ export function ScheduledTaskScheduleInput({
             variant={scheduleType === "once" ? "default" : "outline"}
             size="sm"
             onClick={() => setScheduleType("once")}
+            aria-pressed={scheduleType === "once"}
           >
             {labels.scheduleType.once}
           </Button>

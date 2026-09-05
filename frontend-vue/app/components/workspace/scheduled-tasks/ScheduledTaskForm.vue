@@ -102,6 +102,7 @@ const textareaClass =
         :variant="
           draft.contextMode === 'fresh_thread_per_run' ? 'default' : 'outline'
         "
+        :aria-pressed="draft.contextMode === 'fresh_thread_per_run'"
         size="sm"
         @click="patch({ contextMode: 'fresh_thread_per_run' })"
       >
@@ -110,6 +111,7 @@ const textareaClass =
       <Button
         data-testid="scheduled-task-context-reuse"
         :variant="draft.contextMode === 'reuse_thread' ? 'default' : 'outline'"
+        :aria-pressed="draft.contextMode === 'reuse_thread'"
         size="sm"
         @click="patch({ contextMode: 'reuse_thread' })"
       >

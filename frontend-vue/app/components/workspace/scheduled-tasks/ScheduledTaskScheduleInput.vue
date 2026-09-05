@@ -188,6 +188,7 @@ const inputClass =
     >
       <Button
         :variant="scheduleType === 'cron' ? 'default' : 'outline'"
+        :aria-pressed="scheduleType === 'cron'"
         size="sm"
         @click="scheduleType = 'cron'"
       >
@@ -195,6 +196,7 @@ const inputClass =
       </Button>
       <Button
         :variant="scheduleType === 'once' ? 'default' : 'outline'"
+        :aria-pressed="scheduleType === 'once'"
         size="sm"
         @click="scheduleType = 'once'"
       >

@@ -49,11 +49,17 @@ const TYPES = [
 
 <template>
   <div class="flex flex-wrap gap-2" data-testid="scheduled-task-filters">
+    <!--
+      选中只是换了个 variant，不加 aria-pressed 的话读屏器听不出当前筛的是哪一档
+      ——颜色是唯一的线索。与 ScheduledTaskScheduleInput 的星期几按钮同一个形状，
+      那边一直写着 aria-pressed。守卫在 tests/guards/toggle-variant-pressed.test.ts。
+    -->
     <Button
       v-for="[value, labelKey] in STATUSES"
       :key="`status-${value}`"
       :data-testid="`scheduled-task-status-filter-${value}`"
       :variant="status === value ? 'default' : 'outline'"
+      :aria-pressed="status === value"
       size="sm"
       @click="emit('update:status', value)"
     >
@@ -64,6 +70,7 @@ const TYPES = [
       :key="`type-${value}`"
       :data-testid="`scheduled-task-type-filter-${value}`"
       :variant="scheduleType === value ? 'default' : 'outline'"
+      :aria-pressed="scheduleType === value"
       size="sm"
       @click="emit('update:scheduleType', value)"
     >

@@ -293,7 +293,20 @@ test("detail pane falls back to a visible task after filters hide the selected t
     page.getByTestId("scheduled-task-detail").getByText("Paused task"),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Enabled", exact: true }).click();
+  // These filters show which one is active only through a variant swap, so
+  // aria-pressed is the sole cue a screen reader gets. The cross-app parity
+  // ledger compares React against Vue and stays silent when both sides drop it,
+  // so presence has to be pinned here.
+  const enabledFilter = page.getByRole("button", {
+    name: "Enabled",
+    exact: true,
+  });
+  await expect(enabledFilter).toHaveAttribute("aria-pressed", "false");
+  await enabledFilter.click();
+  await expect(enabledFilter).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("button", { name: "All statuses", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
 
   await expect(
     page.getByTestId("scheduled-task-detail").getByText("Enabled task"),

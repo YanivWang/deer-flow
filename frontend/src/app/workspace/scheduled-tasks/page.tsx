@@ -229,6 +229,10 @@ export default function ScheduledTasksPage() {
                 }
                 size="sm"
                 onClick={() => setContextMode("fresh_thread_per_run")}
+                // Selection is a variant swap, so aria-pressed is the only cue a
+                // screen reader gets. Same shape as the weekday toggles in
+                // scheduled-task-schedule-input.tsx.
+                aria-pressed={contextMode === "fresh_thread_per_run"}
               >
                 {st.context.fresh}
               </Button>
@@ -236,6 +240,7 @@ export default function ScheduledTasksPage() {
                 variant={contextMode === "reuse_thread" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setContextMode("reuse_thread")}
+                aria-pressed={contextMode === "reuse_thread"}
               >
                 {st.context.reuse}
               </Button>
@@ -339,6 +344,7 @@ export default function ScheduledTasksPage() {
               variant={statusFilter === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => setStatusFilter("all")}
+              aria-pressed={statusFilter === "all"}
             >
               {st.filters.allStatuses}
             </Button>
@@ -346,6 +352,7 @@ export default function ScheduledTasksPage() {
               variant={statusFilter === "enabled" ? "default" : "outline"}
               size="sm"
               onClick={() => setStatusFilter("enabled")}
+              aria-pressed={statusFilter === "enabled"}
             >
               {st.filters.enabled}
             </Button>
@@ -353,6 +360,7 @@ export default function ScheduledTasksPage() {
               variant={statusFilter === "paused" ? "default" : "outline"}
               size="sm"
               onClick={() => setStatusFilter("paused")}
+              aria-pressed={statusFilter === "paused"}
             >
               {st.filters.paused}
             </Button>
@@ -360,6 +368,7 @@ export default function ScheduledTasksPage() {
               variant={statusFilter === "completed" ? "default" : "outline"}
               size="sm"
               onClick={() => setStatusFilter("completed")}
+              aria-pressed={statusFilter === "completed"}
             >
               {st.filters.completed}
             </Button>
@@ -367,6 +376,7 @@ export default function ScheduledTasksPage() {
               variant={statusFilter === "failed" ? "default" : "outline"}
               size="sm"
               onClick={() => setStatusFilter("failed")}
+              aria-pressed={statusFilter === "failed"}
             >
               {st.filters.failed}
             </Button>
@@ -374,6 +384,7 @@ export default function ScheduledTasksPage() {
               variant={typeFilter === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => setTypeFilter("all")}
+              aria-pressed={typeFilter === "all"}
             >
               {st.filters.allTypes}
             </Button>
@@ -381,6 +392,7 @@ export default function ScheduledTasksPage() {
               variant={typeFilter === "cron" ? "default" : "outline"}
               size="sm"
               onClick={() => setTypeFilter("cron")}
+              aria-pressed={typeFilter === "cron"}
             >
               {st.filters.cron}
             </Button>
@@ -388,6 +400,7 @@ export default function ScheduledTasksPage() {
               variant={typeFilter === "once" ? "default" : "outline"}
               size="sm"
               onClick={() => setTypeFilter("once")}
+              aria-pressed={typeFilter === "once"}
             >
               {st.filters.once}
             </Button>
