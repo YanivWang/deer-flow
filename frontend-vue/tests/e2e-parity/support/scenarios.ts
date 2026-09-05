@@ -1591,6 +1591,88 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       { kind: "visible", target: { text: "Telegram" } },
       { kind: "visible", target: { text: "DingTalk" } },
     ],
+    /*
+      侧栏这一行上「点一下才出现」的只有一样：运行时配置对话框。它有**两条互斥的
+      分支**，走哪一条由 provider 的状态决定（见 core/channels/provider-state.ts）：
+
+      - `providerNeedsRuntimeConfig`（enabled 且未 configured 且有 credential_fields）
+        → 新建分支，标题 `setupTitle`、提交键 `saveAndConnect`。夹具里只有 **Feishu**
+        落在这一支（Discord 也未 configured，但它 `enabled: false`，整行不渲染）。
+      - 已连接 + `providerCanEditRuntimeConfig` → 编辑分支，标题 `setupEditTitle`、
+        提交键 `saveChanges`。夹具里 buzz / slack / dingtalk 都已连接，取 **DingTalk**
+        （它本来就是 settle 的锚点之一）。
+
+      两条分支都是模态的，所以只能用 `states` 分开挂（wave 87 那条轴）。
+
+      **触发器为什么这么定位**：两个应用**没有共用的 testid**（本仓的按钮上有
+      `channel-provider-*`，上游没有），而按钮文案两边都是 "Connect"/"Connected"
+      的翻译，一屏上有好几颗。唯一两边都成立、又与语言无关的坐标是
+      **夹具自己给的 `display_name`**——它不进词典，两种语言下逐字相同。
+      所以按 `[data-sidebar="menu-item"]`（两个应用都写死的 data-* 选择器）
+      加 `:has-text(<display_name>)` 收窄到那一行，再取行内那颗按钮。
+
+      对话框里的锚点同理：字段标签 `Token` 来自夹具的 `credential_fields`，
+      两种语言下也逐字相同，所以 `role: textbox` + `name: "Token"` 不用写正则。
+    */
+    states: [
+      { id: "default", steps: [] },
+      {
+        id: "runtime-config",
+        steps: [
+          {
+            kind: "click",
+            target: {
+              selector: '[data-sidebar="menu-item"]:has-text("Feishu") button',
+            },
+          },
+          { kind: "visible", target: { selector: "[role=dialog]" } },
+          {
+            kind: "visible",
+            target: { selector: '[role=dialog] [data-slot="dialog-title"]' },
+          },
+          { kind: "visible", target: { role: "textbox", name: "Token" } },
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Save and connect|保存并连接)$/ },
+          },
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Cancel|取消)$/ },
+          },
+        ],
+      },
+      {
+        id: "runtime-config-edit",
+        steps: [
+          {
+            kind: "click",
+            target: {
+              selector:
+                '[data-sidebar="menu-item"]:has-text("DingTalk") button',
+            },
+          },
+          { kind: "visible", target: { selector: "[role=dialog]" } },
+          {
+            kind: "visible",
+            target: { selector: '[role=dialog] [data-slot="dialog-title"]' },
+          },
+          { kind: "visible", target: { role: "textbox", name: "Token" } },
+          /*
+            提交键的文案是这两条分支唯一在可访问树上分得开的地方
+            （`saveChanges` vs `saveAndConnect`）。拿它当锚点，等于顺手钉住
+            「点已连接的那一行进的是编辑分支」。
+          */
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Save changes|保存修改)$/ },
+          },
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Cancel|取消)$/ },
+          },
+        ],
+      },
+    ],
     dimensions: [
       DEFAULT_DIMENSION,
       { viewport: "desktop", theme: "light", locale: "zh-CN" },
