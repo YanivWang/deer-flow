@@ -566,7 +566,15 @@ onBeforeUnmount(() => {
       data-testid="artifact-panel-header"
       class="bg-muted/50 border-border flex shrink-0 items-center justify-between border-b px-2 py-3"
     >
-      <div class="flex items-center gap-2">
+      <!--
+        标题栏必须**能缩**。flex item 默认 `min-width:auto`，不写 `min-w-0` 它就
+        不肯缩到内容宽度以下：实测（1280 宽、59 字符的文件名）整排动作键被推出面板的
+        `overflow-hidden` 盒子——**编辑 / 新窗口 / 复制 / 下载 / 关闭五颗全部落在
+        可视区之外**，本仓超出 181px、上游超出 199px，也就是这份产物既下载不了、
+        面板也关不掉。**两边同改**（判据「这处不改，React 自己是不是也是坏的？」→ 是）。
+        中间那一栏本来就有 `min-w-0` 且 `grow`，该让位的是标题。
+      -->
+      <div class="flex min-w-0 items-center gap-2">
         <ArtifactFileList
           v-if="!isWrite"
           :current="filepath"
@@ -580,7 +588,7 @@ onBeforeUnmount(() => {
         isWriteFile 分支）。strong 会让读屏器把文件名念成强调内容。
       -->
         <div v-else class="text-foreground text-sm font-medium">
-          <div class="px-2">{{ filename }}</div>
+          <div class="truncate px-2">{{ filename }}</div>
         </div>
       </div>
       <div class="flex min-w-0 grow items-center justify-center gap-2">
@@ -666,7 +674,11 @@ onBeforeUnmount(() => {
           }}
         </span>
       </div>
-      <div class="flex items-center gap-2">
+      <!--
+        `shrink-0`：标题让位之后，这一栏不能跟着缩。里面那几颗 Button 自己带
+        `shrink-0`，容器一缩它们就溢出容器盒子。
+      -->
+      <div class="flex shrink-0 items-center gap-2">
         <div class="flex items-center gap-1">
           <ArtifactActions
             :can-edit="canEdit"

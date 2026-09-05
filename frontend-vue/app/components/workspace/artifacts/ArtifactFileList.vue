@@ -54,8 +54,11 @@ function fileName(path: string): string {
     而上游那颗是自然宽 126.7px。
     该 `grow` 的是头部中间那一栏（见 ArtifactPanel.vue 的头部注释），不是标题。
 
-    代价照抄上游：**文件名足够长时头部会被撑开、右边的动作键被推出可视区**
-    （上游同样没有任何截断）。这一条记在交接文档里当一笔新账，要修是两边同改。
+    **wave 82 补上了另一半**：宽度归标题栏（ArtifactPanel 的第一栏，`min-w-0`），
+    这里只负责让触发器跟着缩——`SelectTrigger` 是 `w-fit`，不写 `max-w-full`
+    它不理会外层的收缩，里面的 `SelectValue` 自带 `line-clamp-1`。
+    实测不写这一条时，59 字符的文件名会把整排动作键推出面板的 `overflow-hidden`
+    盒子（本仓 181px、上游 199px），下载与关闭都点不到。**两边同改。**
   -->
   <div class="text-foreground text-sm font-medium">
     <Select
@@ -68,7 +71,7 @@ function fileName(path: string): string {
       "
     >
       <SelectTrigger
-        class="border-none bg-transparent! shadow-none select-none focus:outline-0 active:outline-0"
+        class="max-w-full border-none bg-transparent! shadow-none select-none focus:outline-0 active:outline-0"
       >
         <SelectValue :placeholder="$i18n.t.value.primitives.selectAFile" />
       </SelectTrigger>

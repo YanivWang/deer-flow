@@ -398,10 +398,18 @@ export function ArtifactFileDetail({
   return (
     <Artifact className={cn(className)}>
       <ArtifactHeader className="px-2">
-        <div className="flex items-center gap-2">
+        {/* The title column must be allowed to shrink. A flex item defaults to
+            min-width:auto, so without min-w-0 this column refuses to go below
+            its content width: a long artifact name (measured with a 59-char
+            file name at 1280px) pushes the whole action row past the panel's
+            overflow-hidden box — Edit/Open/Copy/Download/Close all end up
+            entirely off-screen, 199px beyond the clip edge, so the file cannot
+            be downloaded or the panel closed. The middle column already carries
+            min-w-0 and grows; it is the title that has to give. */}
+        <div className="flex min-w-0 items-center gap-2">
           <ArtifactTitle>
             {isWriteFile ? (
-              <div className="px-2">{getFileName(filepath)}</div>
+              <div className="truncate px-2">{getFileName(filepath)}</div>
             ) : (
               <Select
                 value={filepath}
@@ -414,7 +422,10 @@ export function ArtifactFileDetail({
                   }
                 }}
               >
-                <SelectTrigger className="border-none bg-transparent! shadow-none select-none focus:outline-0 active:outline-0">
+                {/* max-w-full lets the trigger follow the shrunken column;
+                    SelectTrigger is w-fit, which otherwise ignores it. The
+                    value inside is already line-clamp-1. */}
+                <SelectTrigger className="max-w-full border-none bg-transparent! shadow-none select-none focus:outline-0 active:outline-0">
                   <SelectValue placeholder="Select a file" />
                 </SelectTrigger>
                 <SelectContent className="select-none">
@@ -468,7 +479,10 @@ export function ArtifactFileDetail({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        {/* shrink-0 keeps the actions at their natural width once the title
+            column starts giving way. The buttons themselves are shrink-0, so
+            without it this box would shrink and let them overflow it. */}
+        <div className="flex shrink-0 items-center gap-2">
           <ArtifactActions>
             {canEdit && !isEditing && (
               <ArtifactAction
