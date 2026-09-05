@@ -54,6 +54,9 @@ test("@splitpanes one group supports three right panes, declarative collapse and
   const resizedBefore = Number(
     await page.locator("[data-resized-count]").textContent(),
   );
+  // hover() 放光标用的是它自己那一次观测，上面的 box 是另一次；两次之间布局再动
+  // 一下，mousedown 就按在旧位置上。按下之前先挪到**这次量到的**坐标。
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + 80, box.y + box.height / 2, { steps: 5 });
   await expect

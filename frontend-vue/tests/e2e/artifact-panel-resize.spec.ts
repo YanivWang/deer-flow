@@ -50,6 +50,12 @@ async function dragPanel(handle: Locator, ...deltas: number[]): Promise<void> {
   const x = box!.x + box!.width / 2;
   const y = box!.y + box!.height / 2;
   const mouse = handle.page().mouse;
+  // 【坑】`hover()` 把光标放到**它当时**量到的中心，`boundingBox()` 是**之后**
+  // 另一次观测。两次之间只要布局再动一下（面板刚打开时会），mousedown 就按在
+  // 上一位置上——按空了整个拖拽什么都不发生，报出来是「面板没关」这种离得很远的
+  // 断言。`tests/e2e-infra/splitpanes.spec.ts` 的注释里记的是同一件事。
+  // 所以按下之前先把光标挪到**这次量到的**坐标上。
+  await mouse.move(x, y);
   await mouse.down();
   let currentX = x;
   for (const delta of deltas) {
