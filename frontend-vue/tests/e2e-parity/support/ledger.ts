@@ -21,6 +21,14 @@ export type DiffEntry = {
   requestsOnlyVue: string[];
   /** 锚点的几何与色板差异，一行一处。 */
   geometry: string[];
+  /**
+   * 取样时刻焦点落在哪里。差异时一行，相同时空数组。
+   *
+   * 台账天生看不见的第八类（wave 28 记下、wave 94 才补上）：
+   * `document.activeElement` 不进 aria 快照、不是几何量、也不是请求，
+   * 所以「打开这一屏之后光标在哪」在这之前只能靠临时 probe 量。
+   */
+  focus: string[];
 };
 
 /** 摊平成 `场景键 · 字段: 那一行` 的形式，排序后返回。 */

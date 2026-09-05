@@ -50,6 +50,8 @@ export type ParityCapture = {
   requests: string[];
   /** 场景锚点的盒模型与关键计算样式。 */
   geometry: Record<string, GeometrySample | null>;
+  /** 取样时刻的 `document.activeElement`，归一成一句话。见 describeFocus。 */
+  focus: string;
 };
 
 /**
@@ -306,6 +308,54 @@ export async function sampleGeometry(
   return samples;
 }
 
+/**
+ * 把取样时刻的焦点归一成一句可比的话。
+ *
+ * **这是台账天生看不见的第八类**（交接文档里 wave 28 就记下了，wave 94 才补上）：
+ * `document.activeElement` 不进 aria 快照、不是几何量、也不进请求，
+ * 所以「打开这一屏之后光标在哪」这件事，此前**三档同时报不出来**，
+ * 只能靠临时 probe 里顺手加一行——而临时 probe 跑完就没了。
+ * wave 28 正是这样发现建 agent 页与 composer 都少了 autoFocus 的。
+ *
+ * **取什么、不取什么**——三条都是第一版量出来才定的（尺子先量自己，坑 213）：
+ *
+ * 1. **`type` 只对 `input` 取。** 第一版对所有标签都取，于是 `subtask-card` 与
+ *    `scheduled-tasks` 各报一行 `button "X"` vs `button[button] "X"`——
+ *    **同一颗按钮、同一个名字**，差的只是上游没写 `type="button"` 而本仓写了。
+ *    那是「按钮怎么声明」，不是「焦点在哪」。`input` 留着，因为 text/password
+ *    对使用者是两回事。
+ * 2. **文字只对「文字就是它名字」的标签取**（button / a / summary / label / option）。
+ *    第一版对所有标签兜底取 `textContent`，于是三个场景各报一行
+ *    `div "SettingsDeerFlow's official website…"` vs `div "Settings DeerFlow's…"`
+ *    ——焦点在**同一个没有名字的容器**上，差的只是子节点之间有没有空白文本节点。
+ *    那是 aria 树该管的事，不该在焦点这一档里再报一遍。
+ * 3. **不取 `data-testid` / `id` / `class`**：testid 两个应用本来就不是一一对应
+ *    （本仓补了不少上游没有的），`id` 是 reka/radix 生成的（aria 归一化里已经
+ *    抹掉一批），`class` 是 ARCHITECTURE 明写不对齐的三处之一。
+ *
+ * 剩下的形状只有两种：`body` / `(none)`，或者 `标签[类型] "名字"`。
+ */
+export async function describeFocus(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const element = document.activeElement;
+    if (!element) return "(none)";
+    if (element === document.body) return "body";
+    const tag = element.tagName.toLowerCase();
+    const type = tag === "input" ? element.getAttribute("type") : null;
+    const textIsName = ["button", "a", "summary", "label", "option"].includes(
+      tag,
+    );
+    const name =
+      element.getAttribute("aria-label") ??
+      element.getAttribute("placeholder") ??
+      element.getAttribute("title") ??
+      (textIsName
+        ? (element.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 40)
+        : "");
+    return `${tag}${type ? `[${type}]` : ""}${name ? ` "${name}"` : ""}`;
+  });
+}
+
 export async function captureScenario(
   page: Page,
   base: string,
@@ -327,7 +377,8 @@ export async function captureScenario(
       await page.locator("body").ariaSnapshot(),
     );
     const geometry = await sampleGeometry(page, scenario, state);
-    return { aria, requests, geometry };
+    const focus = await describeFocus(page);
+    return { aria, requests, geometry, focus };
   } finally {
     page.off("request", onRequest);
   }

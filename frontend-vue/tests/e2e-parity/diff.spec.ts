@@ -219,6 +219,10 @@ test("每个场景的双向差异都与签入的清单一致", async ({ browser 
           requestsOnlyReact: requests.onlyReact,
           requestsOnlyVue: requests.onlyVue,
           geometry: diffGeometry(react.geometry, vue.geometry),
+          focus:
+            react.focus === vue.focus
+              ? []
+              : [`React=${react.focus} Vue=${vue.focus}`],
         };
       }
   }
