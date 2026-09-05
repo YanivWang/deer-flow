@@ -74,7 +74,7 @@ const errorCode = "permission_denied"
 
   it("keeps the full product Vue surface free of untranslated core English", () => {
     const inventory = productVueInventory();
-    expect(inventory.checked).toHaveLength(217);
+    expect(inventory.checked).toHaveLength(218);
     expect(inventory.checked).toContain("app/app.vue");
     expect(inventory.checked).toContain(
       "app/components/chat/AssistantTurnActions.vue",
@@ -122,7 +122,7 @@ const errorCode = "permission_denied"
 
   /*
     `PRODUCT_ROOTS` 是白名单，而只从白名单出发的门禁看不见「不在名单目录下」
-    的那些（线索 186）。**上面那条 `toHaveLength(217)` 挡不住它**：一个
+    的那些（线索 186）。**上面那条 `toHaveLength(218)` 挡不住它**：一个
     `app/error.vue` 不进 `checked`，217 一动不动。wave 84 实测过——四道门禁
     （i18n-source-check / i18n-check / 本文件 / doc-facts）**全绿**，
     而那份 SFC 里四条硬编码英文会照常发给用户。

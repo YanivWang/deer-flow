@@ -125,7 +125,14 @@ async function exportConversation(format: ThreadExportFormat) {
       的是「导出，子菜单」，在 Vue 上听到的是两个并列动作，菜单的形状根本不是一个。
       现有对照场景没有一条会点开这个菜单，所以台账一条都报不出来。
     -->
-    <DropdownMenuContent align="end" class="min-w-48">
+    <!--
+      定位与盒子照上游 recent-chat-list.tsx:362：`side="right" align="start"`，
+      内容盒 `w-48 rounded-lg`。原来写的是 `align="end"` 且**不传 side**（默认 bottom）
+      加 `min-w-48`——菜单整个落在侧栏**里面**而不是侧栏右侧。
+      wave 86 把这个菜单接进取样面之后一次量到：三个菜单项 **x 全差 -196、y 全差 24**
+      （坑 215 的同一条：一条 x 差比 popper 的任何参数都大，先去量朝向）。
+    -->
+    <DropdownMenuContent side="right" align="start" class="w-48 rounded-lg">
       <!--
         上游 recent-chat-list.tsx:370 **按置顶态换图标**：已置顶画 `PinOff`
         （取消置顶），未置顶画 `Pin`。本仓原来两种状态都画 `Pin`——
@@ -173,9 +180,17 @@ async function exportConversation(format: ThreadExportFormat) {
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSeparator />
+      <!--
+        **不传 `variant="destructive"`**：上游这颗删除项是普通项
+        （recent-chat-list.tsx:419，图标走 `[&_svg:not([class*='text-'])]:text-muted-foreground`），
+        而且**全仓没有一处**给 `DropdownMenuItem` 传过 destructive——那个 variant
+        只用在 Button 与 Alert 上。本仓原来把它画成红的，量出来是
+        `color React=rgba(10,10,10,255) Vue=rgba(231,0,11,255)`。
+        红色在这里不是可访问性要求（项本身有 "Delete" 文字和垃圾桶图标），
+        所以按双向规则删掉本仓多出来的这一处。
+      -->
       <DropdownMenuItem
         as="button"
-        variant="destructive"
         :disabled="deleting"
         @select="emit('delete')"
       >

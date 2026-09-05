@@ -39,6 +39,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -822,51 +823,59 @@ function openSettingsDialog(section: "appearance" | "about") {
                 （wave 75 一并补上了）。颜色同理：那一层的
                 `[&_svg:not([class*='text-'])]:text-muted-foreground` 让图标是中灰的。
               -->
-              <DropdownMenuItem @select="openSettingsDialog('appearance')">
-                <Settings2 /> {{ $i18n.t.value.common.settings }}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem as-child>
-                <a
-                  href="https://deerflow.tech/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="flex w-full items-center gap-2"
-                >
-                  <Globe />
-                  {{ $i18n.t.value.workspace.officialWebsite }}
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuItem as-child>
-                <a
-                  href="https://github.com/bytedance/deer-flow"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="flex w-full items-center gap-2"
-                >
-                  <Github />
-                  {{ $i18n.t.value.workspace.visitGithub }}
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem as-child>
-                <a
-                  href="https://github.com/bytedance/deer-flow/issues"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="flex w-full items-center gap-2"
-                >
-                  <Bug /> {{ $i18n.t.value.workspace.reportIssue }}
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuItem as-child>
-                <a
-                  href="mailto:support@deerflow.tech"
-                  class="flex w-full items-center gap-2"
-                >
-                  <Mail /> {{ $i18n.t.value.workspace.contactUs }}
-                </a>
-              </DropdownMenuItem>
+              <!--
+                上游 workspace-nav-menu.tsx:90 把「设置 + 四条外链」括成一个
+                `DropdownMenuGroup`（role="group"）。本仓此前没有这个 primitive，
+                对照树里 `group:` 那一行只在 React 那边有——wave 86 把这颗菜单
+                接进取样面之后一次量到。
+              -->
+              <DropdownMenuGroup>
+                <DropdownMenuItem @select="openSettingsDialog('appearance')">
+                  <Settings2 /> {{ $i18n.t.value.common.settings }}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem as-child>
+                  <a
+                    href="https://deerflow.tech/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex w-full items-center gap-2"
+                  >
+                    <Globe />
+                    {{ $i18n.t.value.workspace.officialWebsite }}
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem as-child>
+                  <a
+                    href="https://github.com/bytedance/deer-flow"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex w-full items-center gap-2"
+                  >
+                    <Github />
+                    {{ $i18n.t.value.workspace.visitGithub }}
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem as-child>
+                  <a
+                    href="https://github.com/bytedance/deer-flow/issues"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex w-full items-center gap-2"
+                  >
+                    <Bug /> {{ $i18n.t.value.workspace.reportIssue }}
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem as-child>
+                  <a
+                    href="mailto:support@deerflow.tech"
+                    class="flex w-full items-center gap-2"
+                  >
+                    <Mail /> {{ $i18n.t.value.workspace.contactUs }}
+                  </a>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem @select="openSettingsDialog('about')">
                 <Info /> {{ $i18n.t.value.workspace.about }}

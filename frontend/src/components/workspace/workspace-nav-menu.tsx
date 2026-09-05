@@ -97,43 +97,43 @@ export function WorkspaceNavMenu() {
                     {t.common.settings}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <a
-                    href="https://deerflow.tech/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a
+                      href="https://deerflow.tech/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <GlobeIcon />
                       {t.workspace.officialWebsite}
-                    </DropdownMenuItem>
-                  </a>
-                  <a
-                    href="https://github.com/bytedance/deer-flow"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <DropdownMenuItem>
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a
+                      href="https://github.com/bytedance/deer-flow"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <GithubIcon />
                       {t.workspace.visitGithub}
-                    </DropdownMenuItem>
-                  </a>
+                    </a>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <a
-                    href="https://github.com/bytedance/deer-flow/issues"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a
+                      href="https://github.com/bytedance/deer-flow/issues"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <BugIcon />
                       {t.workspace.reportIssue}
-                    </DropdownMenuItem>
-                  </a>
-                  <a href="mailto:support@deerflow.tech">
-                    <DropdownMenuItem>
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a href="mailto:support@deerflow.tech">
                       <MailIcon />
                       {t.workspace.contactUs}
-                    </DropdownMenuItem>
-                  </a>
+                    </a>
+                  </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

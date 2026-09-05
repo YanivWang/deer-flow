@@ -306,6 +306,7 @@ const l2Files = [
   "app/components/ui/dialog/index.ts",
   "app/components/ui/dropdown-menu/DropdownMenu.vue",
   "app/components/ui/dropdown-menu/DropdownMenuContent.vue",
+  "app/components/ui/dropdown-menu/DropdownMenuGroup.vue",
   "app/components/ui/dropdown-menu/DropdownMenuItem.vue",
   "app/components/ui/dropdown-menu/DropdownMenuLabel.vue",
   "app/components/ui/dropdown-menu/DropdownMenuRadioGroup.vue",

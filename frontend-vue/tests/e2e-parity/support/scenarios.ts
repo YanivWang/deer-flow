@@ -630,13 +630,35 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
   },
   {
     id: "thread-history",
-    title: "侧栏列出已有会话",
+    title: "侧栏列出已有会话 + 会话行的 ⋯ 菜单",
     backend: "mock",
     path: "/workspace/chats/new",
     mock: { threads: HISTORY_THREADS },
     settle: [
       { kind: "visible", target: { text: "First conversation" } },
       { kind: "visible", target: { text: "Second conversation" } },
+    ],
+    /*
+      会话行的 ⋯ 菜单**此前一行都没进过取样面**：它只在点一下之后才存在，
+      而这个场景原来没有 steps（wave 86 按 wave 20/21 的判据逐个域清点时找到的）。
+      两边的结构本来就该一样——置顶/重命名/分享 + 导出子菜单（Markdown / JSON）
+      + 分隔线 + 删除——所以任何差异都是真差异。
+
+      **按可访问名点，不按属性点**（坑 224）：上游把 "More" 放在一个 sr-only 的
+      span 里，本仓写的是 `aria-label`，两边的可访问名相同而属性完全不同。
+
+      展开子菜单那一步是有意的：`common.exportAsMarkdown` / `exportAsJSON`
+      两条词条只在子菜单里出现，不点开就永远比不到。
+    */
+    steps: [
+      { kind: "click", target: { role: "button", name: "More" } },
+      { kind: "visible", target: { role: "menuitem", name: "Rename" } },
+      { kind: "visible", target: { role: "menuitem", name: "Delete" } },
+      { kind: "click", target: { role: "menuitem", name: "Export" } },
+      {
+        kind: "visible",
+        target: { role: "menuitem", name: "Export as Markdown" },
+      },
     ],
   },
   {
@@ -816,6 +838,31 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     settle: [
       { kind: "visible", target: { text: "Newest chat" } },
       { kind: "visible", target: { text: "Older chat" } },
+    ],
+    /*
+      侧栏页脚那颗「设置和更多」菜单挂在这个场景上。
+
+      **为什么不挂在 `sidebar` 上**：那个场景明写着不能有 click 步骤——活动项跟着
+      指针走，点过一下之后取样到的 `[selected]` 就变成「上一步把鼠标留在哪儿」。
+      这个场景只比会话列表的排序，没有那种敏感度。
+
+      这颗菜单此前一行都没进过取样面，而它和会话行的 ⋯ 菜单同一形状：
+      一个 popper，朝向与内容盒宽度全靠 props。锚点用覆盖两种语言的正则
+      （这个场景目前只有 en-US 一档，但按名字找的锚点该一开始就写成语言无关的，
+      免得哪天加了语言维度才发现——wave 86 在 scheduled-tasks 上正好踩过一次）。
+    */
+    steps: [
+      {
+        kind: "click",
+        target: { role: "button", name: /^(Settings and more|设置和更多)$/ },
+      },
+      {
+        kind: "visible",
+        target: {
+          role: "menuitem",
+          name: /^(About DeerFlow|关于 DeerFlow)$/,
+        },
+      },
     ],
   },
   {
@@ -1319,6 +1366,40 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     },
     settle: [
       { kind: "visible", target: { role: "button", name: /Daily summary/i } },
+    ],
+    /*
+      **详情里的编辑表单此前一行都没进过取样面。** 这个场景的夹具刻意只走
+      「由数据决定」的分叉（见上面那段注释），而编辑态是纯交互态：点一下
+      「Edit」才存在。里面是标题输入框 + 提示词文本域 +
+      `ScheduledTaskScheduleInput`（`scheduleTypeLocked`）+ 「Save edit」，
+      两边结构本来就该一样，所以任何差异都是真差异。
+
+      锚点选「Save edit」这颗按钮，加上 schedule input 里面的两个 testid
+      （`schedule-preset` / `schedule-timezone`，两边逐字相同）：只钉外壳的话，
+      那一整块换了位置也看不见。
+
+      **两次锚点都先量错了，都记在这里**：
+
+      ① 第一版内层锚点写成 `text: "Timezone"`，**两边都到不了**——
+         `fields.timezone` 这条词条在两个应用的 schedule input 里都没有被渲染成
+         可见文字（它只是个 Select，标签没画出来）。照着词典猜锚点会猜到一条
+         从来没被渲染的 key 上（坑 214 的同一条）。
+      ② 第二版按可访问名找「Edit」/「Save edit」，**en-US 过、zh-CN 当场超时**——
+         这个场景**有两个语言维度**，而按名字找的锚点天生只在一种语言下成立。
+         这一页两边的按钮都没有共用的 testid（本仓多了几个，上游没有），
+         所以名字写成覆盖两种语言的正则；内层两个锚点用两边逐字相同的 testid，
+         不受语言影响。
+
+      **判据：一个锚点在加进来之前，要问它在这个场景的每一个维度上都成立吗。**
+    */
+    steps: [
+      { kind: "click", target: { role: "button", name: /^(Edit|编辑)$/ } },
+      {
+        kind: "visible",
+        target: { role: "button", name: /^(Save edit|保存编辑)$/ },
+      },
+      { kind: "visible", target: { testId: "schedule-preset" } },
+      { kind: "visible", target: { testId: "schedule-timezone" } },
     ],
     dimensions: [
       DEFAULT_DIMENSION,
