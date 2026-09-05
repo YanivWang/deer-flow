@@ -246,7 +246,14 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
-    "workspace-changes/desktop/light/en-US": {
+    "workspace-changes#reasoning-menu/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "workspace-changes#changes-panel/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],

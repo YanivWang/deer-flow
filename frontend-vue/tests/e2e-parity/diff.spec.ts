@@ -34,6 +34,8 @@ import { reactAppPresent } from "./support/react-preview";
 import {
   DEFAULT_DIMENSION,
   PARITY_SCENARIOS,
+  type ParityState,
+  scenarioStates,
   locateTarget,
   runScenario,
   type ParityDimension,
@@ -88,8 +90,20 @@ test.skip(
   "兄弟 React 应用不在 checkout 里；本模块的其余门禁都不依赖它。",
 );
 
-function key(scenarioId: string, dimension: ParityDimension) {
-  return `${scenarioId}/${dimension.viewport}/${dimension.theme}/${dimension.locale}`;
+/**
+ * 台账的键。
+ *
+ * 有具名终态时插一段 `#终态`；没有 `states` 的场景键**逐字不变**——
+ * 加这一档不能让既有的 39 个样本换名字（换了名字，台账会一次报出
+ * 「全部消失 + 全部新增」，而那和真差异长得一模一样）。
+ */
+function key(
+  scenarioId: string,
+  state: ParityState,
+  dimension: ParityDimension,
+) {
+  const suffix = state.id ? `#${state.id}` : "";
+  return `${scenarioId}${suffix}/${dimension.viewport}/${dimension.theme}/${dimension.locale}`;
 }
 
 /** 多重集差异，与 aria 用同一套办法：同一条出现三次和出现一次不是一回事。 */
@@ -161,8 +175,9 @@ test("每个场景的双向差异都与签入的清单一致", async ({ browser 
   const entries: Record<string, DiffEntry> = {};
 
   for (const scenario of PARITY_SCENARIOS) {
-    for (const dimension of scenario.dimensions ?? [DEFAULT_DIMENSION]) {
-      /*
+    for (const state of scenarioStates(scenario))
+      for (const dimension of scenario.dimensions ?? [DEFAULT_DIMENSION]) {
+        /*
         一个场景一个 context，不是一个 page。
 
         起初两个 page 共用整条用例的 context，实测在 channels 上超时：那条场景
@@ -170,30 +185,37 @@ test("每个场景的双向差异都与签入的清单一致", async ({ browser 
         它偶发拿不到。取样之间必须互不影响——这跟归一化只在必要处抹信息是同一条
         纪律：样本的差异只能来自被测应用，不能来自它排在第几个跑。
       */
-      const vueContext = await browser.newContext(PARITY_CONTEXT_OPTIONS);
-      const reactContext = await browser.newContext(PARITY_CONTEXT_OPTIONS);
-      const vuePage: Page = await vueContext.newPage();
-      const reactPage: Page = await reactContext.newPage();
-      const vue = await captureScenario(vuePage, VUE_APP, scenario, dimension);
-      const react = await captureScenario(
-        reactPage,
-        REACT_APP,
-        scenario,
-        dimension,
-      );
-      await vueContext.close();
-      await reactContext.close();
+        const vueContext = await browser.newContext(PARITY_CONTEXT_OPTIONS);
+        const reactContext = await browser.newContext(PARITY_CONTEXT_OPTIONS);
+        const vuePage: Page = await vueContext.newPage();
+        const reactPage: Page = await reactContext.newPage();
+        const vue = await captureScenario(
+          vuePage,
+          VUE_APP,
+          scenario,
+          dimension,
+          state,
+        );
+        const react = await captureScenario(
+          reactPage,
+          REACT_APP,
+          scenario,
+          dimension,
+          state,
+        );
+        await vueContext.close();
+        await reactContext.close();
 
-      const aria = diffAriaLines(react.aria, vue.aria);
-      const requests = diffMultiset(react.requests, vue.requests);
-      entries[key(scenario.id, dimension)] = {
-        ariaOnlyReact: aria.onlyReact,
-        ariaOnlyVue: aria.onlyVue,
-        requestsOnlyReact: requests.onlyReact,
-        requestsOnlyVue: requests.onlyVue,
-        geometry: diffGeometry(react.geometry, vue.geometry),
-      };
-    }
+        const aria = diffAriaLines(react.aria, vue.aria);
+        const requests = diffMultiset(react.requests, vue.requests);
+        entries[key(scenario.id, state, dimension)] = {
+          ariaOnlyReact: aria.onlyReact,
+          ariaOnlyVue: aria.onlyVue,
+          requestsOnlyReact: requests.onlyReact,
+          requestsOnlyVue: requests.onlyVue,
+          geometry: diffGeometry(react.geometry, vue.geometry),
+        };
+      }
   }
 
   mkdirSync(dirname(REPORT.pathname), { recursive: true });
@@ -273,6 +295,7 @@ test("同一应用两次取样的请求序列", async ({ browser }) => {
         base,
         scenario,
         DEFAULT_DIMENSION,
+        scenarioStates(scenario)[0]!,
       );
       samples[name]!.push(capture.requests);
       await roundContext.close();
@@ -330,7 +353,8 @@ test("锚点的几何与滚到哪里无关", async ({ browser }) => {
   ] as const) {
     const context = await browser.newContext(PARITY_CONTEXT_OPTIONS);
     const page: Page = await context.newPage();
-    await runScenario(page, base, scenario!, DEFAULT_DIMENSION);
+    const state = scenarioStates(scenario!)[0]!;
+    await runScenario(page, base, scenario!, DEFAULT_DIMENSION, state);
     await page.waitForTimeout(700);
 
     const locator = locateTarget(page, anchor!.target).first();
@@ -340,11 +364,11 @@ test("锚点的几何与滚到哪里无关", async ({ browser }) => {
       );
 
     await scrollEverything(page, "top");
-    const atTop = await sampleGeometry(page, scenario!);
+    const atTop = await sampleGeometry(page, scenario!, state);
     const viewportAtTop = await viewportY();
 
     await scrollEverything(page, "bottom");
-    const atBottom = await sampleGeometry(page, scenario!);
+    const atBottom = await sampleGeometry(page, scenario!, state);
     const viewportAtBottom = await viewportY();
 
     if (viewportAtTop !== viewportAtBottom) moved = true;

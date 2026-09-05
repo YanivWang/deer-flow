@@ -280,6 +280,23 @@ test("workspace changes exposes truncated/status/reasons and retries detail erro
     page.getByRole("alert").filter({ hasText: "workspace snapshot expired" }),
   ).toBeVisible();
   await page.getByTestId("workspace-changes-retry").click();
+
+  /*
+    **理由躺在折叠内容里，要先逐行展开。** 上游那一行是
+    `<Collapsible defaultOpen={hasDiff}>`——没有 diff 的文件默认折叠，
+    而 Radix / reka 的 CollapsibleContent 折叠时不渲染子节点。
+    本仓原来把理由画在摘要行上（一直可见），wave 87 把这一屏接进对照取样面
+    之后按上游改掉了；这里跟着改成「点开每一行再断言」，断言内容一个字没动。
+  */
+  const triggers = page.locator('[data-slot="collapsible-trigger"]');
+  const triggerCount = await triggers.count();
+  expect(triggerCount).toBeGreaterThan(0);
+  for (let index = 0; index < triggerCount; index += 1) {
+    const trigger = triggers.nth(index);
+    if ((await trigger.getAttribute("data-state")) === "closed")
+      await trigger.click();
+  }
+
   for (const reason of [
     "Binary file. Diff unavailable.",
     "Large file. Diff omitted.",

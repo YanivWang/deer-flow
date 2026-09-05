@@ -40,6 +40,7 @@ import {
   runScenario,
   type ParityDimension,
   type ParityScenario,
+  type ParityState,
   type ParityTarget,
 } from "./scenarios";
 
@@ -159,6 +160,7 @@ export function targetLabel(target: ParityTarget): string {
 export async function sampleGeometry(
   page: Page,
   scenario: ParityScenario,
+  state: ParityState,
 ): Promise<Record<string, GeometrySample | null>> {
   const samples: Record<string, GeometrySample | null> = {};
   /*
@@ -176,7 +178,7 @@ export async function sampleGeometry(
     仍然**不取** click / fill 的目标：那些是「点哪里」，不是「该出现什么」，
     点完之后它可能已经不在了。
   */
-  for (const step of [...scenario.settle, ...(scenario.steps ?? [])]) {
+  for (const step of [...scenario.settle, ...state.steps]) {
     if (step.kind !== "visible") continue;
     const label = targetLabel(step.target);
     const locator = locateTarget(page, step.target).first();
@@ -294,6 +296,7 @@ export async function captureScenario(
   base: string,
   scenario: ParityScenario,
   dimension: ParityDimension,
+  state: ParityState,
   settleMs = 700,
 ): Promise<ParityCapture> {
   const requests: string[] = [];
@@ -303,12 +306,12 @@ export async function captureScenario(
   };
   page.on("request", onRequest);
   try {
-    await runScenario(page, base, scenario, dimension);
+    await runScenario(page, base, scenario, dimension, state);
     await page.waitForTimeout(settleMs);
     const aria = normalizeAriaSnapshot(
       await page.locator("body").ariaSnapshot(),
     );
-    const geometry = await sampleGeometry(page, scenario);
+    const geometry = await sampleGeometry(page, scenario, state);
     return { aria, requests, geometry };
   } finally {
     page.off("request", onRequest);

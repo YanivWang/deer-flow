@@ -19,8 +19,20 @@
                    读屏器念出来是两个数字还是一个数字。
 */
 import { computed, ref, watch } from "vue";
-import { ArrowUpRight, ExternalLink, FileDiff } from "lucide-vue-next";
+import {
+  ArrowUpRight,
+  ExternalLink,
+  FileDiff,
+  FileMinus,
+  FilePenLine,
+  FilePlus,
+} from "lucide-vue-next";
 
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Sheet,
   SheetContent,
@@ -112,6 +124,39 @@ function reasonText(file: WorkspaceFileChange) {
 
 function canOpen(file: WorkspaceFileChange) {
   return file.status !== "deleted" && !file.sensitive;
+}
+
+function fileKey(file: WorkspaceFileChange) {
+  return `${file.status}:${file.path}`;
+}
+
+/*
+  上游的每行是 `<Collapsible defaultOpen={hasDiff}>`；本仓这一层是**受控**的
+  （见 ui/collapsible/Collapsible.vue 的文件头），所以展开态放在这里。
+
+  **只记用户翻过的那几行，默认值在模板里用 `?? Boolean(file.diff)` 兜底。**
+  第一版是 `watch(files, …, { immediate: true })` 预填一张全表——功能上等价，
+  但它在 setup 阶段就**读了 `files`**，于是把这个组件订阅到了 detail 查询上，
+  而这块 UI 只在 Sheet 打开时才渲染。代价不在本组件：实测
+  `real-stream.spec.ts` 里「流式期间用户上滚后不该被拽回底部」那条
+  **三次里红两次**，而干净树上三次全绿、只还原这一个文件也三次全绿。
+  **一个「预热缓存」式的 watch，代价会落在别人身上。**
+  （本仓自己的路径**不要写成 `文件:行号`**——`upstream-citations`
+  会把那种形状当成对上游的引用，然后报「文件不存在」。）
+*/
+const openFiles = ref<Record<string, boolean>>({});
+
+/** 状态图标照上游 workspace-change-panel.tsx:188 的 StatusIcon。 */
+function statusIcon(file: WorkspaceFileChange) {
+  if (file.status === "created") return FilePlus;
+  if (file.status === "deleted") return FileMinus;
+  return FilePenLine;
+}
+
+function statusIconClass(file: WorkspaceFileChange) {
+  if (file.status === "created") return "text-emerald-500";
+  if (file.status === "deleted") return "text-red-500";
+  return "text-sky-500";
 }
 </script>
 
@@ -205,22 +250,27 @@ function canOpen(file: WorkspaceFileChange) {
       class="w-[min(92vw,900px)] gap-0 p-0 sm:max-w-none"
       :close-label="$i18n.t.value.primitives.close"
     >
-      <SheetHeader
-        class="border-border flex-row items-start gap-3 border-b px-5 py-4 pr-14"
-      >
-        <FileDiff class="text-muted-foreground mt-1 size-4 shrink-0" />
-        <div class="min-w-0 flex-1">
-          <SheetTitle>{{ $i18n.t.value.workspaceChanges.title }}</SheetTitle>
-          <SheetDescription>
-            {{
-              $i18n.t.value.workspaceChanges.badge(
-                count,
-                summary.summary.additions,
-                summary.summary.deletions,
-              )
-            }}
-          </SheetDescription>
-        </div>
+      <!--
+        头部照上游 workspace-change-panel.tsx:68：图标在 `SheetTitle` **里面**
+        （`flex items-center gap-2 text-base`），不是标题旁边的一列。
+        本仓原来是 `flex-row ... gap-3 pr-14` + 一个同级图标，于是标题
+        往右挪 28px、可用宽度少 64px——wave 87 把这一屏接进取样面时量到的
+        两行几何差异就是它。
+      -->
+      <SheetHeader class="border-border border-b px-5 py-4">
+        <SheetTitle class="flex items-center gap-2 text-base">
+          <FileDiff class="text-muted-foreground size-4" />
+          {{ $i18n.t.value.workspaceChanges.title }}
+        </SheetTitle>
+        <SheetDescription>
+          {{
+            $i18n.t.value.workspaceChanges.badge(
+              count,
+              summary.summary.additions,
+              summary.summary.deletions,
+            )
+          }}
+        </SheetDescription>
       </SheetHeader>
       <div class="min-h-0 flex-1 overflow-y-auto p-5">
         <p
@@ -252,49 +302,86 @@ function canOpen(file: WorkspaceFileChange) {
           {{ $i18n.t.value.workspaceChanges.noChanges }}
         </p>
         <div v-else class="flex flex-col gap-3">
-          <details
+          <!--
+            每行照上游的 `Collapsible`，不是 `<details>`。三处可观察差异：
+            ① `<details>` 的隐式 role 是 **group**，对照树里多一行 `group:`；
+            ② 原生 `<summary role="button">` 不广播 `aria-expanded`，
+               上游那颗触发器是 `[expanded]`；
+            ③ 「打开文件」那个链接原来挂 `aria-label`，**它会被算进外层按钮的
+               可访问名**（读出来是「…… Modified Open file」）；上游用 `title`，
+               链接自己仍然有名字，而按钮的名字里没有它。
+          -->
+          <Collapsible
             v-for="file in files"
-            :key="`${file.status}:${file.path}`"
-            class="border-border rounded-lg border"
-            :open="Boolean(file.diff)"
+            :key="fileKey(file)"
+            :open="openFiles[fileKey(file)] ?? Boolean(file.diff)"
+            @update:open="openFiles[fileKey(file)] = $event"
           >
-            <summary
-              role="button"
-              class="flex cursor-pointer list-none items-start gap-2 px-3 py-2"
-            >
-              <span class="min-w-0 flex-1">
-                <span class="block font-mono text-xs">{{ file.path }}</span>
-                <span
-                  v-if="!file.diff"
-                  class="text-muted-foreground mt-1 block text-xs"
+            <div class="border-border/70 bg-background rounded-lg border">
+              <CollapsibleTrigger
+                class="flex w-full items-start justify-between gap-3 px-3 py-2 text-left"
+              >
+                <div class="flex min-w-0 items-start gap-2">
+                  <component
+                    :is="statusIcon(file)"
+                    :class="['mt-0.5 size-4 shrink-0', statusIconClass(file)]"
+                  />
+                  <div class="min-w-0">
+                    <div class="text-foreground truncate font-mono text-xs">
+                      {{ file.path }}
+                    </div>
+                    <div
+                      class="text-muted-foreground mt-1 flex items-center gap-2 text-xs"
+                    >
+                      <span>{{ statusText(file) }}</span>
+                      <!--
+                        两个 span 之间**必须有一个真的文本节点**：上游写的是
+                        JSX 的 `{" "}`，读屏器念出来是「+1 -1」两个数字。
+                        Vue 模板里换行之间的空白会被 condense 掉，所以用
+                        `{{ " " }}` 显式产生它，而不是靠源码里的那个空格
+                        （prettier 一换行就没了）。
+                      -->
+                      <span v-if="file.additions > 0 || file.deletions > 0">
+                        <span class="text-emerald-500"
+                          >+{{ file.additions }}</span
+                        >{{ " "
+                        }}<span class="text-red-500"
+                          >-{{ file.deletions }}</span
+                        >
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <a
+                  v-if="canOpen(file)"
+                  :href="resolveArtifactURL(file.path, threadId)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors"
+                  :title="$i18n.t.value.workspaceChanges.openFile"
+                  @click.stop
+                >
+                  <ExternalLink class="size-3.5" />
+                </a>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <pre
+                  v-if="file.diff"
+                  class="border-border/70 bg-muted/30 max-h-[520px] overflow-auto border-t p-0 font-mono text-xs leading-5"
+                ><div
+                    v-for="(line, index) in file.diff.split('\n')"
+                    :key="`${index}:${line}`"
+                    :class="['min-w-max px-3 whitespace-pre', lineClass(line)]"
+                  >{{ line || " " }}</div></pre>
+                <div
+                  v-else
+                  class="border-border/70 text-muted-foreground border-t px-3 py-3 text-xs"
                 >
                   {{ reasonText(file) }}
-                </span>
-              </span>
-              <span class="text-muted-foreground shrink-0 text-xs">
-                {{ statusText(file) }}
-              </span>
-              <a
-                v-if="canOpen(file)"
-                :href="resolveArtifactURL(file.path, threadId)"
-                target="_blank"
-                rel="noopener noreferrer"
-                :aria-label="$i18n.t.value.workspaceChanges.openFile"
-                @click.stop
-              >
-                <ExternalLink :size="14" />
-              </a>
-            </summary>
-            <pre
-              v-if="file.diff"
-              class="border-border max-h-[520px] overflow-auto border-t py-2 font-mono text-xs leading-5"
-            ><span
-                  v-for="(line, index) in file.diff.split('\n')"
-                  :key="`${index}:${line}`"
-                  :class="['block min-w-max px-3 whitespace-pre', lineClass(line)]"
-                  >{{ line || " " }}</span
-                ></pre>
-          </details>
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
         </div>
       </div>
     </SheetContent>

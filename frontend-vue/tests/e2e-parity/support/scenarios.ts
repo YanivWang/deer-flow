@@ -60,6 +60,9 @@ export type ParityTarget =
   | { role: Parameters<Page["getByRole"]>[0]; name: string | RegExp }
   | { text: string | RegExp };
 
+/** 一个具名终态：`id` 进台账的键，`steps` 是走到它的交互。 */
+export type ParityState = { id: string; steps: ParityStep[] };
+
 export type ParityStep =
   | { kind: "visible"; target: ParityTarget }
   | { kind: "hidden"; target: ParityTarget }
@@ -146,8 +149,24 @@ export type ParityScenario = {
   routes?: ParityRouteOverride[];
   /** 打开后等到这些锚点，保证两边取样时机一致。 */
   settle: ParityStep[];
-  /** 取样前的交互。 */
+  /** 取样前的交互。与 `states` 二选一。 */
   steps?: ParityStep[];
+  /*
+    同一个场景里**互斥**的多个终态。
+
+    **为什么需要它**：一个场景只有一个终态，而「点一下才出现」的东西彼此常常
+    互斥——`workspace-changes` 上的推理档菜单与改动面板都是模态的，开了一个就
+    点不到另一个。此前的办法是二选一，于是另一半永远进不了取样面
+    （wave 87 在这条上撞到才加的这一档）。
+
+    **不能靠加场景绕过去**：场景 id 受覆盖率棘轮约束，必须逐字等于上游的
+    spec 文件名，编不出新的来。夹具与步骤不受约束，所以把「多个终态」做成
+    场景内部的一个轴是唯一不动棘轮坐标系的做法。
+
+    台账的键因此变成 `场景#终态/断点/主题/语言`；没声明 `states` 的场景
+    键不变（`场景/断点/主题/语言`），所以既有的 39 个样本一行都不动。
+  */
+  states?: ParityState[];
   /** 页面加载前要装的夹具；见 ParityStubs。 */
   stubs?: ParityStubs;
   /** 要跑的采样维度；缺省只跑 DEFAULT_DIMENSION。 */
@@ -306,11 +325,29 @@ async function runStep(page: Page, step: ParityStep, timeout: number) {
 }
 
 /** 在一个应用上执行一个场景，返回稳定后的页面，供调用方取样。 */
+/**
+ * 场景要跑的终态列表。
+ *
+ * 没声明 `states` 的场景有且只有一个**匿名**终态（id 为空串），它的步骤就是
+ * `steps`——这样调用方只有一条路径，不需要到处写 `scenario.states ?? ...`。
+ */
+export function scenarioStates(scenario: ParityScenario): ParityState[] {
+  if (scenario.states === undefined)
+    return [{ id: "", steps: scenario.steps ?? [] }];
+  if (scenario.steps !== undefined)
+    throw new Error(
+      `${scenario.id}: steps 与 states 只能二选一——两个都写的话，` +
+        "读的人无法判断哪一半会被跑。",
+    );
+  return scenario.states;
+}
+
 export async function runScenario(
   page: Page,
   base: string,
   scenario: ParityScenario,
   dimension: ParityDimension = DEFAULT_DIMENSION,
+  state: ParityState = scenarioStates(scenario)[0]!,
   timeout = 30_000,
 ) {
   await applyScenarioBackend(page, scenario);
@@ -318,7 +355,7 @@ export async function runScenario(
   await applyDimension(page, base, dimension);
   await page.goto(`${base}${scenario.path}`);
   for (const step of scenario.settle) await runStep(page, step, timeout);
-  for (const step of scenario.steps ?? []) await runStep(page, step, timeout);
+  for (const step of state.steps) await runStep(page, step, timeout);
   return page;
 }
 
@@ -1616,11 +1653,38 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     settle: [
       { kind: "visible", target: { text: "I updated the workspace report." } },
     ],
-    steps: [
-      { kind: "click", target: { role: "button", name: /^Reasoning Effort:/ } },
+    /*
+      两个终态，都是模态的：推理档菜单开着的时候点不到「View changes」，
+      反过来也一样。此前只能二选一，改动面板那一整块因此从来没进过取样面
+      ——`states` 这一档就是为这件事加的（见 ParityScenario.states）。
+
+      「View changes」这个可访问名是上游自己的 e2e 在用的
+      （frontend/tests/e2e/workspace-changes.spec.ts:111），两边逐字相同；
+      面板里那个 heading 的断言也照抄它下一行。
+    */
+    states: [
       {
-        kind: "visible",
-        target: { role: "menuitemradio", name: /^Minimal / },
+        id: "reasoning-menu",
+        steps: [
+          {
+            kind: "click",
+            target: { role: "button", name: /^Reasoning Effort:/ },
+          },
+          {
+            kind: "visible",
+            target: { role: "menuitemradio", name: /^Minimal / },
+          },
+        ],
+      },
+      {
+        id: "changes-panel",
+        steps: [
+          { kind: "click", target: { role: "button", name: "View changes" } },
+          {
+            kind: "visible",
+            target: { role: "heading", name: /workspace changes/i },
+          },
+        ],
       },
     ],
   },

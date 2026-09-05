@@ -19,6 +19,7 @@ import {
   DEFAULT_DIMENSION,
   PARITY_SCENARIOS,
   runScenario,
+  scenarioStates,
   type ParityDimension,
 } from "./support/scenarios";
 
@@ -36,27 +37,29 @@ function label(dimension: ParityDimension) {
 
 for (const scenario of PARITY_SCENARIOS) {
   const dimensions = scenario.dimensions ?? [DEFAULT_DIMENSION];
-  for (const dimension of dimensions) {
-    test(`${scenario.id} · ${label(dimension)} · 两个应用都到得了`, async ({
-      page,
-      context,
-    }) => {
-      // 一个应用一个 page：mock 路由、init script 和视口都是 page 级状态，
-      // 复用同一个 page 会让第二个应用带着第一个的残留。
-      const vuePage: Page = page;
-      const reactPage = await context.newPage();
+  for (const state of scenarioStates(scenario))
+    for (const dimension of dimensions) {
+      const name = state.id ? `${scenario.id}#${state.id}` : scenario.id;
+      test(`${name} · ${label(dimension)} · 两个应用都到得了`, async ({
+        page,
+        context,
+      }) => {
+        // 一个应用一个 page：mock 路由、init script 和视口都是 page 级状态，
+        // 复用同一个 page 会让第二个应用带着第一个的残留。
+        const vuePage: Page = page;
+        const reactPage = await context.newPage();
 
-      await expect(
-        runScenario(vuePage, VUE_APP, scenario, dimension),
-        `Vue 没能到达场景 ${scenario.id}（${label(dimension)}）`,
-      ).resolves.toBeTruthy();
+        await expect(
+          runScenario(vuePage, VUE_APP, scenario, dimension, state),
+          `Vue 没能到达场景 ${name}（${label(dimension)}）`,
+        ).resolves.toBeTruthy();
 
-      await expect(
-        runScenario(reactPage, REACT_APP, scenario, dimension),
-        `React 没能到达场景 ${scenario.id}（${label(dimension)}）`,
-      ).resolves.toBeTruthy();
+        await expect(
+          runScenario(reactPage, REACT_APP, scenario, dimension, state),
+          `React 没能到达场景 ${name}（${label(dimension)}）`,
+        ).resolves.toBeTruthy();
 
-      await reactPage.close();
-    });
-  }
+        await reactPage.close();
+      });
+    }
 }

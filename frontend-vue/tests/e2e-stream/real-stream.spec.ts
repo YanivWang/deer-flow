@@ -94,10 +94,28 @@ test.describe("真流 gate", () => {
       (element) => element.scrollTop,
     );
 
+    /*
+      **一次滚轮不一定能赢。** 这一步跑在流式中间：每个 delta 到达时应用都会
+      把列表拉回底部，而 `page.mouse.wheel` 只发一个事件——它落在两次程序化
+      滚动之间时才留得下来。实测发生率不低：同一棵树上跑六遍，
+      **两遍在这一行超时**（而干净树六遍全绿），而这条 spec 里根本没有
+      workspace changes、被改的组件一次都没渲染——扰动来自包体与时序，不是行为。
+
+      所以改成**滚到它真的动为止**：每次 poll 再发一个滚轮，直到 scrollTop
+      真的掉下去。这不放宽被测的契约——**契约在下面那一半**（后续 delta 到了
+      仍然不把它抢回底部），这里只是把「用户上滚了」这个前置条件做实。
+      真的坏了的话，poll 会一直等不到、照样红。
+      与 wave 86 那两处 drag 助手同族：**别拿一次输入去赌一个动着的界面。**
+    */
     await scroller.hover();
-    await page.mouse.wheel(0, -1000);
     await expect
-      .poll(() => scroller.evaluate((element) => element.scrollTop))
+      .poll(
+        async () => {
+          await page.mouse.wheel(0, -1000);
+          return scroller.evaluate((element) => element.scrollTop);
+        },
+        { timeout: 15_000 },
+      )
       .toBeLessThan(scrollTopBeforeWheel - 200);
     await expect(answer).toContainText("Streaming paragraph 18", {
       timeout: 20_000,

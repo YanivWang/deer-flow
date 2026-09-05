@@ -180,6 +180,24 @@ describe("WorkspaceChangesBadge", () => {
     )!;
     retry.click();
     await flushPromises();
+
+    /*
+      **理由躺在折叠内容里，要先展开。** 上游那一行是
+      `<Collapsible defaultOpen={hasDiff}>`——没有 diff 的文件默认是**折叠**的，
+      而 Radix / reka 的 CollapsibleContent 折叠时不渲染子节点，所以「为什么没有
+      diff」这句话在展开之前根本不在 DOM 里。本仓原来把它画在摘要行上（一直可见），
+      wave 87 把这一屏接进对照取样面之后按上游改掉了；这条用例跟着改成
+      「点开每一行再断言」，断言的内容一个字没动。
+    */
+    const triggers = [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '[data-slot="collapsible-trigger"]',
+      ),
+    ];
+    expect(triggers.length).toBeGreaterThan(0);
+    for (const trigger of triggers) trigger.click();
+    await flushPromises();
+
     expect(document.body.textContent).toContain(
       "Binary file. Diff unavailable.",
     );
