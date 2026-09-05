@@ -257,18 +257,34 @@ test("real Gateway owns auth, thread state, workspace changes, recovery and brow
   });
   await expect(page.getByText("Some changes were truncated.")).toBeVisible();
   await page.getByTestId("workspace-changes-open").click();
-  for (const text of [
-    "Created",
-    "Modified",
-    "Deleted",
-    "Symlink created",
+  for (const text of ["Created", "Modified", "Deleted", "Symlink created"]) {
+    await expect(page.getByText(text, { exact: true }).first()).toBeVisible();
+  }
+
+  /*
+    **理由躺在折叠内容里，要先逐行展开。** 与 tests/e2e/workspace-shell.spec.ts
+    里那一段同一件事：上游每行是 `<Collapsible defaultOpen={hasDiff}>`，没有 diff
+    的文件默认折叠，而 reka 的 CollapsibleContent 折叠时不渲染子节点。
+    wave 87 按上游把本仓的摘要行改成折叠内容时，改了 e2e-mock 那一份、
+    **漏了这一份**——因为那一轮没有跑 e2e-backend（e2e-shell 在它里面）。
+    断言内容一个字没动，改的只是「先点开」。
+  */
+  const changeRows = page.locator('[data-slot="collapsible-trigger"]');
+  const rowCount = await changeRows.count();
+  expect(rowCount).toBeGreaterThan(0);
+  for (let index = 0; index < rowCount; index += 1) {
+    const row = changeRows.nth(index);
+    if ((await row.getAttribute("data-state")) === "closed") await row.click();
+  }
+
+  for (const reason of [
     "Binary file. Diff unavailable.",
     "Large file. Diff omitted.",
     "Sensitive path. Content hidden.",
     "Diff omitted because the change set is too large.",
     "Symlink change. Diff unavailable.",
   ]) {
-    await expect(page.getByText(text, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(reason, { exact: true }).first()).toBeVisible();
   }
   await page.getByRole("button", { name: "Close" }).click();
 
