@@ -14,7 +14,7 @@
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77。
 - **动过 `frontend/` 的是十七轮**（wave 52 实测订正，wave 62 / 73 / 74 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -30,8 +30,8 @@
   最近三轮的内容：wave 40 重连预算耗尽后那颗键在说反话；wave 39 命令面板搜索框的
   可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~59 都没动过。
 
-- **对照台账 23 行**（wave 76 起——几何档接上了交互后的锚点，量出 27 处此前看不见的差异，
-  当轮修掉 4 处），**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
+- **对照台账 16 行**（wave 76 起——几何档接上了交互后的锚点，量出 27 处此前看不见的差异；
+  wave 76 修掉 4 处，wave 77 一处改动又关掉 7 处），**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
   **这 23 行一条都不是回归**，逐条列在「下一轮」那一节。
 - 覆盖率棘轮：covered **24**，pending **仍是 1 条**（`chat-thread-init-ordering`）——
   **wave 63 用 23 个样本重测过，仍然不能加**（React 两个终态 19B/4A，Vue 23/23 单一）。
@@ -67,10 +67,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 76 收工时逐条跑过）
+### 门禁实测值（wave 77 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；259 文件 / 2153 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；259 文件 / 2154 单测，词典 942 key、18 unused
 make -C frontend-vue icon-parity   **0 处待核**（wave 75 逐条核完；另有 12 条写进
                                    脚本里的 `VERIFIED` 表，双向——某条不再出现会报 stale）
 make -C frontend-vue asset-budget  exit 0（wave 72 把 vendor-ui 预算按实测重定了一次，
@@ -79,7 +79,7 @@ make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefil
 make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55% / 行 74.9%
                                    **诊断工具，不进 verify，没有阈值**
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 39 处 / 17 个文件）
-make -C frontend-vue e2e-parity    47    台账 **23 行**，39 样本（NEW=0 GONE=0）
+make -C frontend-vue e2e-parity    47    台账 **16 行**，39 样本（NEW=0 GONE=0）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
 make -C frontend-vue e2e-visual    8    **不在 make e2e 里**；wave 74 同样一张没重录
@@ -291,6 +291,30 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 77）做了什么：**验了 wave 76 记下的那条假设，一处改动关掉七行**
+
+提交 `60b8f1e8`。wave 76 在待办里写着「artifact 头部那几条 `y Δ-7.5` / `Δ-14`
+三个场景都出现，多半是同一处，**一处修好可能同时消掉五六行**，先找它」。
+**这一轮验了，是对的。**
+
+上游 `ai-elements/artifact.tsx` 的 `ArtifactHeader` 是
+`bg-muted/50 flex items-center justify-between border-b px-4 py-3`，
+调用点再传 `className="px-2"`（artifact-file-detail.tsx:400）。本仓三条都不一样：
+
+|      | 上游                              | 本仓（改前）         | 后果                                                                 |
+| ---- | --------------------------------- | -------------------- | -------------------------------------------------------------------- |
+| 高度 | `py-3`（上下各 12px，高度随内容） | **`h-12` 写死 48px** | **比上游矮 8px**，底下的东西整体上移——五条 `y Δ-7.5` / `Δ-14` 全是它 |
+| 横向 | `px-2`                            | `px-3`               | 右侧那排动作键左移，`Download x Δ-7`                                 |
+| 底色 | `bg-muted/50`                     | **没有**             | 头部与正文之间只有一条下边框                                         |
+
+**结果**：`artifact-stream-state` 3 行 → **0**；`artifact-batched-stream` 6 行 → **2**
+（`Download x` Δ-7 收到 Δ-3；文件名宽度 Δ-29.3 收到 Δ-21.3，**没查完**）。
+台账 **23 → 16**。
+
+**视觉基线重录一张**：容差压到 0 跑两遍，`artifact panel` **两遍都是 5866 像素**
+——稳定，就是这次改动。其余七张零容差逐像素相同。
+**这一轮那条已知抖动没出现**，两遍完全一致。
 
 ## 上一轮（wave 76）做了什么：**几何档接上交互后的锚点，量出 27 处此前看不见的差异**
 
@@ -1011,10 +1035,9 @@ Toaster 关闭键）全部处理完，做法与理由见 wave 73 那一节。
 6px 间距 / 24px 视口偏移 / 14px 条间距），并**翻出上游那两处 `<Toaster />` 用的
 根本不是 shadcn 的 wrapper**——见 wave 74 那一节。
 
-### 一、把台账里那 **23 行几何**清掉（**这一轮的正题**）
+### 一、把台账里那 **16 行几何**清掉（**继续是正题**）
 
-wave 76 把几何档接到交互后的锚点上之后量出来的，**一条都不是回归**
-（那一轮做过「还原重跑」逐条对比）。它们此前没有任何工具够得着。
+wave 76 量出来、wave 77 关掉 7 行之后剩下的。**一条都不是回归**。
 
 - **agent-chat**
   - `role:dialog[Model Selector] y React=332.2 Vue=320.2 Δ-12`
@@ -1023,16 +1046,8 @@ wave 76 把几何档接到交互后的锚点上之后量出来的，**一条都�
   - `role:option[/Parity Thinker/] width React=510 Vue=494 Δ-16`
   - `role:option[/Parity Thinker/] height React=42.3 Vue=46.3 Δ4`
 - **artifact-batched-stream**
-  - `role:button[Download] x React=1187 Vue=1180 Δ-7`
-  - `role:button[Download] y React=31 Vue=23.5 Δ-7.5`
-  - `role:link[the upstream repo] y React=137 Vue=123 Δ-14`
-  - `text:batched-report.md x React=824.6 Vue=827.6 Δ3`
-  - `text:batched-report.md y React=37 Vue=29.5 Δ-7.5`
-  - `text:batched-report.md width React=126.7 Vue=97.4 Δ-29.3`
-- **artifact-stream-state**
-  - `role:button[Load full file] y React=86 Vue=72 Δ-14`
-  - `text:report.md x React=824.6 Vue=827.6 Δ3`
-  - `text:report.md y React=37 Vue=29.5 Δ-7.5`
+  - `role:button[Download] x React=1187 Vue=1184 Δ-3`
+  - `text:batched-report.md width React=126.7 Vue=105.4 Δ-21.3`
 - **sidecar-chat**
   - `text:Ask a follow-up y React=321 Vue=327 Δ6`
   - `text:Ask a follow-up grounded in the referenced text. y React=345 Vue=351 Δ6`
@@ -1047,17 +1062,24 @@ wave 76 把几何档接到交互后的锚点上之后量出来的，**一条都�
 - **workspace-changes**
   - `role:menuitemradio[/^Minimal /] x React=529 Vue=747 Δ218`
 
-**分三类看**：
+**分三类看**（wave 77 已经证明「一处改动关掉一整组」是可行的路子）：
 
-1. **弹层的落点**（`x` Δ-55 / Δ67 / Δ218，`y` Δ-154 / Δ16）——Reka 与 Radix 的
-   popper 放置策略不同，这一类要先量清楚「是碰撞翻转还是对齐基准不同」，
-   不要一处一处硬调偏移。
-2. **面板内的行高与列宽**（`height` Δ4、`width` Δ-16 / Δ-29.3）——多半是某一层
-   容器的内边距或字号，跟 wave 72~75 修过的那些同一族，逐条回上游对 class 就行。
-3. **artifact 头部那几条 `y` Δ-7.5 / Δ-14**——三个场景都出现，多半是同一处
-   （头部高度或上边距），**一处修好可能同时消掉五六行**，先找它。
+1. **弹层的落点**（`menuitemradio` 的 `x` Δ-55 / Δ67 / Δ218，`y` Δ-154）
+   ——Reka 与 Radix 的 popper 放置策略不同。**这一类占了 6 行**，
+   先量清楚「是碰撞翻转、对齐基准、还是 sideOffset 不同」，不要一处一处硬调偏移。
+   注意 `ui-polish-mobile` 那三行是**窄屏**，`user-message-plain-text` 是桌面
+   ——同一个菜单两种视口，很可能是同一个根因。
+2. **模型选择对话框**（`agent-chat` 那 5 行）：`height Δ23.9` 与选项的
+   `width Δ-16` / `height Δ4` 像是同一处（列表项的行高与内边距），
+   `dialog y Δ-12` 多半是高度变了之后居中跟着变——**先修行高，再看 y 还剩多少**。
+3. **零头两条**：`Download x Δ-3`（刚过 2px 容差）、
+   `text:batched-report.md width Δ-21.3`（同一个文件名两边宽度差 21px，
+   wave 77 收窄了 8px 但没查完；两边都是 `text-sm font-medium`，
+   **需要一次渲染读数**看是字体族、字重还是被 `line-clamp` 截在不同位置）。
+4. **`sidecar-chat` 那两行 `y Δ6`**：空态两行文字整体下移 6px，
+   多半是空态容器的上边距或行高。
 
-> **口径提醒**：`GEOMETRY_TOLERANCE_PX = 2` 不许动；这 23 行的 |Δ| 全部 ≥ 3。
+> **口径提醒**：`GEOMETRY_TOLERANCE_PX = 2` 不许动。
 
 ### ~~一点五、`Settings and more` 那颗侧栏底部键~~ —— **wave 74 查完并修掉了**
 
