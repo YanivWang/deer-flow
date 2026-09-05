@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 91，2026-09-06）
+## 当前状态（截至 wave 92，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91（两轮都**没动 `frontend/`**）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92（三轮都**没动 `frontend/`**）。
 - **动过 `frontend/` 的是二十一轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -34,14 +34,16 @@
   wave 74 两处 `<Toaster />` 用的不是 shadcn wrapper；wave 73 五条「本仓修掉了上游缺陷」；
   wave 62 `/auth/callback` 吞掉 `?next=` 深链。wave 41~~59、75~~81 都没动过。
 
-- **对照台账 2 行**（wave 78 清零后第一次有意接受；两行都是有名有姓的 primitive
-  分叉，见 wave 91 那一节与一页纸清单），**51** 个样本，
-  `make -C frontend-vue e2e-parity` **59** 条全绿。
+- **对照台账 30 行**，**71** 个样本，`make -C frontend-vue e2e-parity` **79** 条全绿。
+  **30 行里没有一行是「还欠的」**：2 行是 reka-ui 的 tooltip 播报节点（wave 91），
+  28 行是**同一类**「上游把字写死成英文、本仓翻译了」（wave 92，逐条在一页纸清单里）。
+  **「只能缩短」这条规则对「新出现、还没定过的行」依然有效。**
   （39 → 40：wave 87 的 `states` 轴；40 → 44：wave 88 给 `integrations` 挂上
   `default` / `permission-request` / `change-app`；44 → **48**：wave 90 给 `channels`
   挂上 `default` / `runtime-config` / `runtime-config-edit`——都是三个终态 × 两个语言维度；
-  48 → **51**：wave 91 给 `branch-thread` 挂 `default` / `turn-actions` 两个终态，
-  并给它**补上 zh-CN 维度**。）
+  48 → 51：wave 91 给 `branch-thread` 挂 `default` / `turn-actions` 两个终态，
+  并给它**补上 zh-CN 维度**；51 → **71**：wave 92 把**19 个只跑 en-US 的场景
+  全部补上 zh-CN**。）
   路径是 1716 → …… → 23（wave 76 接上交互后的锚点，量出 27 处此前看不见的差异）
   → 16（wave 77 一处改动关掉 7 行）→ **0**（wave 78 把剩下的 16 行归到五处根因）。
   **这里的 0 是「当前这 39 个取样点上量不出差异」，不是「两个应用一样」**——
@@ -80,7 +82,7 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 91 收工时逐条跑过）
+### 门禁实测值（wave 92 收工时逐条跑过）
 
 ```
 make -C frontend-vue verify        exit 0；**262** 文件 / **2174** 单测，词典 942 key、18 unused
@@ -102,9 +104,10 @@ make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55%
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED **40** 处 / **18** 个文件）
                                    ——**它只是静态证明**，证不了「移走之后还能跑」：
                                    wave 83 第一次真做实验时它早已是 0，而 verify 当场红。
-make -C frontend-vue e2e-parity    **59**  台账 **2 行**，**51** 样本
-                                   两行都是 reka-ui 的 tooltip 播报节点被打上
-                                   aria-hidden（wave 91 逐条交代过，见下）
+make -C frontend-vue e2e-parity    **79**  台账 **30 行**，**71** 样本
+                                   2 行 = reka-ui 的 tooltip 播报节点被打上
+                                   aria-hidden（wave 91）；28 行 = 上游把字写死成
+                                   英文而本仓翻译了（wave 92）。两类都已决定。
                                    wave 87 加了 `states` 轴：键是 `场景#终态/断点/主题/语言`；
                                    wave 88 用它给 `integrations` 挂了三个终态（× 两种语言）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -337,6 +340,66 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 92）做了什么：**19 个只跑英文的场景全部补上 zh-CN**
+
+提交 `d36c2d60`。**没动 `frontend/`。** 样本 51 → **71**，e2e-parity 59 → **79**，
+台账 2 → **30 行**（新增 28 行是**同一类、已决定保留**的差异）。
+
+### 一、把坑 244 系统地扫完
+
+24 个场景里 **19 个只跑 en-US**，全部补上。**一个场景补一维就够**——语言轴与
+断点/主题轴正交，翻译分叉在哪个断点上都一样，给每个既有维度都配中文孪生
+只会让取样时间翻倍而不多查出东西。
+
+### 二、先用可达性层探路，不拿大用例去撞
+
+19 个新维度里 **10 个当场到不了**。**没有直接跑 `diff.spec.ts`**——一个坏锚点卡满
+30 秒，10 个就是 300 秒，会把那条 600 秒的用例拖垮。改跑 `scenarios.spec.ts`
+（一个键一条用例、各自计时），三轮把锚点收干净：**10 → 7 → 3 → 0**。
+**这条方法本身值得记住**：批量加维度/加场景时，可达性层是廉价的探路工具。
+
+**zh 文案一个都不是猜的**：写脚本把 en 文案反查成词典 key，再取同一 key 的 zh 值，
+两个应用各查一遍确认一致（坑 235）。一共 **21 处锚点**改成跨语言正则。
+
+### 三、量出来的 28 行是同一类：上游把字写死成英文
+
+```
+browser-feature/zh          12 行  Back / Forward / 地址栏 placeholder /
+                                   「Connecting to live browser…」/「Waiting for…」
+thread-history-mermaid/zh   14 行  mermaid 工具条六颗键 + 图片 alt
+artifact-stream-state/zh     2 行  「Text file」vs「Text 文件」
+```
+
+逐条查过出处：`browser-view-panel.tsx:401/462` 是**内联英文字面量**（词典里没有
+对应 key）；mermaid 工具条来自 **`streamdown` npm 包**，上游连改都改不了；
+`fileTypeLabel` 是**本仓独有的 key**，上游内联拼。
+
+**取舍：保留本仓的翻译。** 判据是 fork-boundary 里那条已授权的例外
+——「**vue 有更好的可以保留**」。把 13 处译文改回英文，是在**这个要留下来的应用**上
+做一次用户可见的退化；两边同改也不成立（mermaid 那半在依赖包里）。
+
+**为什么进台账而不是只写进文档**：**台账自己就是这一类的守卫**——`diff.spec.ts`
+是整棵结构深比，这一类多一条、少一条、或译文改一个字，它立刻红（N2/N3 实测）。
+写进文档就没有任何机器看着了。
+
+### 负向验证 3 条，全红
+
+| #   | 变异                              | 结果                                          |
+| --- | --------------------------------- | --------------------------------------------- |
+| N1  | Rename 锚点还原成只认英文         | thread-history zh 当场「到不了」→ 红          |
+| N2  | 拿掉 thread-list-pin 的 zh 维度   | 台账深比少一个键 → diff 用例红                |
+| N3  | `browser.back` 中文改一个字       | 锚点先不匹配 → 红（**来自可达性层，不是台账行**） |
+
+**N3 如实记**：跨语言正则**同时也是一道译文守卫**，改译文会先在锚点上撞停，
+比台账更早。
+
+### 门禁（逐条真跑）
+
+verify 0（**262** 文件 / **2174** 单测）· e2e-parity **79**（台账 **30 行 / 71 样本**）·
+e2e-mock 265+22+15+2+6 · e2e-visual 8（一张没重录）· asset-budget 0 ·
+standalone-sim 13 / 5 / 0 · icon-parity 0 处待核 ·
+e2e-backend 2+5+2+3+3+5+1+1 · audit 预期红 **14**。**没动 `frontend/`。**
 
 ## 上一轮（wave 91）做了什么：**几何加 opacity、步骤加 hover，branch-thread 17 行清到 2 行**
 
@@ -2634,7 +2697,20 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 246 条在记忆文件里）
+## 其他常踩的坑（完整 248 条在记忆文件里）
+
+- **批量加维度/加场景，先拿可达性层探路，别直接跑 diff**（线索 247，wave 92）。
+  一次给 19 个场景补 zh-CN，10 个当场到不了；`diff.spec.ts` 是**一条**用例跑完
+  所有样本、总预算 600 秒，一个坏锚点卡 30 秒，10 个就把它拖垮，
+  而且报错是 context 被拆时的假象（坑 214 的同一件事）。
+  `scenarios.spec.ts` 是**一个键一条用例、各自计时**，坏锚点逐个点名。
+  三轮 10 → 7 → 3 → 0。
+- **一整类「已决定不改」的差异，该进台账还是该进文档？看有没有机器读它**
+  （线索 248，wave 92）。28 行「上游写死英文、本仓翻译了」进了台账，
+  理由是 `diff.spec.ts` 的整棵深比**就是这一类的守卫**——多一条、少一条、
+  或译文改一个字都会红（实测）。写进文档则零消费者（坑 183/225 那一类）。
+  **代价要说清楚：「台账 0 行」这个目标从此不成立**，规则改成
+  「**新出现、还没定过的行只能减不能增**」，已决定的行在一页纸清单里有名有姓。
 
 - **只跑一种语言的场景，等于把「翻译分叉」整类排除在取样之外**（线索 244，wave 91）。
   `branch-thread` 此前只有 en-US 一维，而两个应用的分支键取的是**不同的词典键**

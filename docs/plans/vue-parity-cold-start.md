@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 91 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 92 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，接手时 HEAD 是 wave 88 的 docs 提交。
@@ -19,10 +19,10 @@
    先看「还欠什么」。三分钟读完。
 2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，2500 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（246 条里最近的十几条）。中间各轮的记录按需查。
+   结尾的「其他常踩的坑」（248 条里最近的十几条）。中间各轮的记录按需查。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **246 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **248 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -37,9 +37,11 @@
 - **不要中途提问。** 取舍自己定，写进提交说明。分歧的兜底判据是**按业界主流做法**。
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
   推到我喊停为止；**不要停下来问「要不要继续」**。
-- **对照台账只能缩短。** `frontend-vue/baseline/parity-diff.json` 当前 **2 行 / 51 样本**
-  （wave 78 清零后第一次有意接受；两行都是 reka-ui 的 tooltip 播报节点被打上
-  `aria-hidden`，逐条交代在一页纸清单第一节）。
+- **台账的规则现在是「新出现、还没定过的行只能减不能增」**，不再是「保持 0」。
+  `frontend-vue/baseline/parity-diff.json` 当前 **30 行 / 71 样本**，
+  **30 行没有一行是「还欠的」**：2 行 reka-ui 的 tooltip 播报节点（wave 91）+
+  28 行「上游把字写死成英文、本仓翻译了」（wave 92）。两类都在一页纸清单第一节
+  逐条交代，各带翻案判据。
   **注意它钉的是「两个应用一不一致」，不是「这一处对不对」**——wave 88 量出
   22 颗按钮两边都缺 `aria-pressed`，三档全是 0 行。接上一块新表面之后，
   要另问一句「这一块本身对不对」，并把答案钉进**各自**的用例里。
@@ -66,7 +68,7 @@
 ```bash
 make -C <abs>/frontend-vue verify          # exit 0；262 文件 / 2174 单测；词典 942 key / 18 unused
 make -C <abs>/frontend-vue standalone-sim  # exit 0；跑过 13 / 未跑 5 / 红 0
-make -C <abs>/frontend-vue e2e-parity      # 59 passed；台账 2 行 / 51 样本
+make -C <abs>/frontend-vue e2e-parity      # 79 passed；台账 30 行 / 71 样本
 make -C <abs>/frontend-vue e2e-mock        # 265 + 22 + 15 + 2 + 6
 make -C <abs>/frontend-vue e2e-visual      # 8 passed（只有 -darwin 基线，本机门禁）
 make -C <abs>/frontend-vue asset-budget    # exit 0
@@ -133,9 +135,11 @@ wave 88 又接一处（`integrations`），量出的是**两个应用一起漏�
   按可访问名找的锚点天生只在一种语言下成立；两边有共用 testid 就优先用 testid）。
 - **别照着词典 key 猜锚点**——先量一遍它到底有没有被渲染成可见文字。
 
-**再加一条便宜的路**：给场景**补一个语言维度**。wave 91 给 `branch-thread` 加上
-zh-CN 就撞出「两个应用在中文下取了不同词典键」（en-US 下两条恰好一样，
-所以只跑 en-US 永远看不出来，线索 244）。**加维度不动棘轮。**
+~~**再加一条便宜的路**：给场景补一个语言维度~~ —— **wave 92 已经扫完**：
+24 个场景现在都跑两种语言了。方法留着：批量加维度时**先拿 `scenarios.spec.ts`
+（可达性层）探路**，一个键一条用例、各自计时，坏锚点逐个点名；
+别直接跑 `diff.spec.ts`（一条用例跑完所有样本，一个坏锚点卡 30 秒就拖垮它，
+线索 247）。
 
 ### B. 给现成的尺子加一档
 
