@@ -23,7 +23,10 @@ import { dirname } from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { diffAriaLines } from "../../scripts/lib/aria-parity.mjs";
+import {
+  diffAriaLines,
+  diffAriaOrder,
+} from "../../scripts/lib/aria-parity.mjs";
 import {
   captureScenario,
   sampleGeometry,
@@ -223,6 +226,7 @@ test("每个场景的双向差异都与签入的清单一致", async ({ browser 
             react.focus === vue.focus
               ? []
               : [`React=${react.focus} Vue=${vue.focus}`],
+          order: diffAriaOrder(react.aria, vue.aria),
         };
       }
   }

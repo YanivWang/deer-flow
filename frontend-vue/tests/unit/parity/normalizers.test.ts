@@ -15,6 +15,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   diffAriaLines,
+  diffAriaOrder,
   normalizeAriaSnapshot,
 } from "../../../scripts/lib/aria-parity.mjs";
 import { normalizeRequest } from "../../e2e-parity/support/capture";
@@ -117,5 +118,42 @@ describe("可访问性树差异", () => {
       onlyReact: ["- listitem"],
       onlyVue: [],
     });
+  });
+});
+
+describe("可访问性树的顺序差异", () => {
+  const tree = (...lines: string[]) => lines.map((l) => `  - ${l}`).join("\n");
+
+  it("节点相同、顺序也相同时不报", () => {
+    const a = tree('button "A"', 'button "B"', 'button "C"');
+    expect(diffAriaOrder(a, a)).toEqual([]);
+  });
+
+  it("多包一层容器（缩进变了）不算顺序差异", () => {
+    const react = ['- button "A"', '- button "B"'].join("\n");
+    const vue = ["- main:", '  - button "A"', '  - button "B"'].join("\n");
+    // `main:` 只在一边有，属于 diffAriaLines 那一档；公共节点的相对顺序没变。
+    expect(diffAriaOrder(react, vue)).toEqual([]);
+  });
+
+  it("同一组节点被摆成另一个次序时，只报第一处分岔", () => {
+    const react = tree('button "A"', 'button "B"', 'button "C"');
+    const vue = tree('button "B"', 'button "A"', 'button "C"');
+    expect(diffAriaOrder(react, vue)).toEqual([
+      '第 1 个公共节点 React=- button "A" Vue=- button "B"',
+    ]);
+  });
+
+  it("一边多出来的节点不参与顺序比对", () => {
+    const react = tree('button "A"', 'button "C"');
+    const vue = tree('button "A"', 'button "B"', 'button "C"');
+    expect(diffAriaOrder(react, vue)).toEqual([]);
+  });
+
+  it("重复出现的节点按出现次数的较小值参与", () => {
+    // React 有两颗 A、Vue 只有一颗：公共多重集里 A 只算一次。
+    const react = tree('button "A"', 'button "A"', 'button "B"');
+    const vue = tree('button "A"', 'button "B"');
+    expect(diffAriaOrder(react, vue)).toEqual([]);
   });
 });

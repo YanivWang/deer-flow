@@ -31,6 +31,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -231,6 +234,39 @@ describe("DropdownMenu", () => {
       get<HTMLElement>('[data-slot="dropdown-menu-item"][data-variant]').dataset
         .variant,
     ).toBe("destructive");
+  });
+
+  it("把子菜单内容留在父菜单的子树里，不 portal 到 body 末尾", async () => {
+    /*
+      **上游 shadcn 的 `DropdownMenuContent` 包 Portal、`DropdownMenuSubContent`
+      不包**；本仓此前照着前者也给后者包了一层，于是子菜单内容被挂到 body 末尾，
+      可访问性树读起来变成「整个父菜单读完 → 页面末尾才是子菜单那两项」，
+      **与打开它的触发器被拆开**。
+
+      wave 95 给对照加了「公共节点相对顺序」这一档才量出来——aria 那一档按多重集比，
+      顺序天然测不出来。这条用例把结论钉在本仓这一侧：**台账只钉「两边一不一致」，
+      两边一起改成 portal 时它照样是 0 行**（线索 238）。
+    */
+    await mountPortal(() =>
+      h(DropdownMenu, { open: true }, () => [
+        h(DropdownMenuTrigger, null, () => [
+          h("button", { type: "button", "aria-label": "More" }, "More"),
+        ]),
+        h(DropdownMenuContent, null, () => [
+          h(DropdownMenuItem, null, () => "Rename"),
+          h(DropdownMenuSub, { open: true }, () => [
+            h(DropdownMenuSubTrigger, null, () => "Export"),
+            h(DropdownMenuSubContent, null, () => [
+              h(DropdownMenuItem, null, () => "Export as Markdown"),
+            ]),
+          ]),
+        ]),
+      ]),
+    );
+
+    const sub = get<HTMLElement>('[data-slot="dropdown-menu-sub-content"]');
+    const parent = get<HTMLElement>('[data-slot="dropdown-menu-content"]');
+    expect(parent.contains(sub)).toBe(true);
   });
 
   it("fires select for keyboard activation, not only for clicks", async () => {

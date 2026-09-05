@@ -48,6 +48,62 @@ export function normalizeAriaSnapshot(snapshot) {
  * 用多重集而不是集合：同一行出现三次和出现一次不是一回事（列表少了一项，
  * 按集合比对会完全看不见）。
  */
+/**
+ * 两个应用**共有**的那些可访问节点，出现顺序一不一样。
+ *
+ * **为什么单开一档**：`diffAriaLines` 按多重集比，**顺序天然测不出来**——
+ * 交接文档「台账天生看不见的八类」里的第④类，`core/workspace-shell/settings-query.ts`
+ * 的文件头也把这一条当成「只能靠单测守」的理由写着。wave 95 把它补上。
+ *
+ * **为什么不能直接比整棵序列**：那正是 `diffAriaLines` 去缩进的原因——
+ * 一边多包一层容器，整棵子树的缩进全变，2 处真差异会刷成 24 行。
+ * 所以这里**先取两边的公共多重集**（一边多出来的节点由 aria 那一档负责报），
+ * 再看这些公共节点在两边的**相对顺序**是否一致。多包一层容器不影响相对顺序，
+ * 而「同样一组节点被摆成了另一个次序」会被逐字抓住。
+ *
+ * 只报**第一处**分岔：一次真的重排会让后面全部错位，全报出来是同一处差异的 N 个投影
+ * （坑 219）。
+ */
+export function diffAriaOrder(reactSnapshot, vueSnapshot) {
+  const strip = (text) =>
+    text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+  const react = strip(reactSnapshot);
+  const vue = strip(vueSnapshot);
+  const count = (lines) => {
+    const map = new Map();
+    for (const line of lines) map.set(line, (map.get(line) ?? 0) + 1);
+    return map;
+  };
+  const reactCount = count(react);
+  const vueCount = count(vue);
+  /** 公共多重集：每一行取两边出现次数的较小值。 */
+  const budget = new Map();
+  for (const [line, n] of reactCount)
+    budget.set(line, Math.min(n, vueCount.get(line) ?? 0));
+  const keepCommon = (lines) => {
+    const left = new Map(budget);
+    const out = [];
+    for (const line of lines) {
+      const remaining = left.get(line) ?? 0;
+      if (remaining > 0) {
+        out.push(line);
+        left.set(line, remaining - 1);
+      }
+    }
+    return out;
+  };
+  const a = keepCommon(react);
+  const b = keepCommon(vue);
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i])
+      return [`第 ${i + 1} 个公共节点 React=${a[i]} Vue=${b[i]}`];
+  }
+  return [];
+}
+
 export function diffAriaLines(reactSnapshot, vueSnapshot) {
   const strip = (text) =>
     text

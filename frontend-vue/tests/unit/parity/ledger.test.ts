@@ -26,6 +26,7 @@ const empty = (): DiffEntry => ({
   requestsOnlyVue: [],
   geometry: [],
   focus: [],
+  order: [],
 });
 
 const entry = (patch: Partial<DiffEntry>): DiffEntry => ({
