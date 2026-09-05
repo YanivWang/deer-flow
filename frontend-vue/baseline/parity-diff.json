@@ -104,13 +104,7 @@
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "role:dialog[Model Selector] y React=332.2 Vue=320.2 Δ-12",
-        "role:dialog[Model Selector] height React=135.6 Vue=159.5 Δ23.9",
-        "role:option[/Parity Thinker/] x React=385 Vue=393 Δ8",
-        "role:option[/Parity Thinker/] width React=510 Vue=494 Δ-16",
-        "role:option[/Parity Thinker/] height React=42.3 Vue=46.3 Δ4"
-      ]
+      "geometry": []
     },
     "agents-feature-disabled/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -131,10 +125,7 @@
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "text:Ask a follow-up y React=321 Vue=327 Δ6",
-        "text:Ask a follow-up grounded in the referenced text. y React=345 Vue=351 Δ6"
-      ]
+      "geometry": []
     },
     "thread-list-pin/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -155,22 +146,14 @@
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "role:menuitemradio[/^Flash /] x React=60 Vue=5 Δ-55",
-        "role:menuitemradio[/^Flash /] y React=338 Vue=184 Δ-154",
-        "role:menuitemradio[/^Flash /] height React=72 Vue=76 Δ4"
-      ]
+      "geometry": []
     },
     "user-message-plain-text/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "role:menuitemradio[/^Ultra /] x React=474 Vue=541 Δ67",
-        "role:menuitemradio[/^Ultra /] y React=658 Vue=653.8 Δ-4.2",
-        "role:menuitemradio[/^Ultra /] height React=72 Vue=76 Δ4"
-      ]
+      "geometry": []
     },
     "integrations/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -268,9 +251,7 @@
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "role:menuitemradio[/^Minimal /] x React=529 Vue=747 Δ218"
-      ]
+      "geometry": []
     },
     "streaming-reasoning-order/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -291,10 +272,7 @@
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
-      "geometry": [
-        "role:button[Download] x React=1187 Vue=1184 Δ-3",
-        "text:batched-report.md width React=126.7 Vue=105.4 Δ-21.3"
-      ]
+      "geometry": []
     }
   }
 }

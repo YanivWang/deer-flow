@@ -1677,11 +1677,33 @@ defineExpose({ replaceDraft, offerFollowup });
             @compositionend="compositionActive = false"
           />
         </div>
-        <div role="group" data-slot="input-group-footer">
-          <div class="relative">
-            <Tooltip>
-              <TooltipTrigger>
-                <!--
+        <!--
+          页脚是**两组**控件，不是一排加一根撑杆。上游
+          `input-box.tsx:2323` 是 `PromptInputFooter`（= `InputGroupAddon
+          align="block-end"`，带 `justify-between`）里放两个 `PromptInputTools`
+          （= `flex items-center gap-1`）：左边 `min-w-0 flex-1 flex-wrap`
+          装附件/语音/优化/模式/推理档，右边 `min-w-0 justify-end` 装字数、
+          模型选择器与提交。
+
+          本仓原来是一排平铺 + 一颗 `<span class="flex-1" />` 当撑杆，位置**看着**
+          一样，实际把左半边整体推到了右边：实测模式键 React x=468.5 / 本仓 805.2，
+          推理档 React 523.6 / 本仓 860.3（窄屏同理，121 vs 160.1）。台账上
+          `menuitemradio` 那几条 x 差（Δ-55 / Δ67 / Δ218）全是从这里来的——
+          弹层贴着触发器走，触发器错了多少，菜单就错多少。
+
+          `flex-wrap sm:flex-nowrap` 也照抄：窄屏放不下时上游是换行，
+          本仓原来只会把这一排压扁。
+        -->
+        <div
+          role="group"
+          data-slot="input-group-footer"
+          class="flex-wrap justify-between sm:flex-nowrap"
+        >
+          <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+            <div class="relative">
+              <Tooltip>
+                <TooltipTrigger>
+                  <!--
                   上游这三颗（附件 / 语音 / 优化）都是 `PromptInputButton`
                   = `InputGroupButton size="sm"` = `<Button variant="ghost">`
                   再叠 `h-8 px-2.5 gap-1.5 rounded-md`，调用点加 `px-2!`。
@@ -1694,86 +1716,88 @@ defineExpose({ replaceDraft, offerFollowup });
                   颜色不用各自写：`input-group-footer` 容器本身就是
                   `text-muted-foreground`（上游 input-group.tsx:40 同样）。
                 -->
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  class="px-2!"
-                  data-testid="add-attachments-button"
-                  :aria-label="$i18n.t.value.inputBox.addAttachments"
-                  :disabled="disabled || polishing"
-                  @click="openFileDialog"
-                >
-                  <Paperclip class="size-3" aria-hidden="true" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" align="start" class="w-56">
-                {{
-                  $i18n.t.value.uploads.limitsHint(
-                    limits?.max_files ?? 10,
-                    formatUploadSize(limits?.max_file_size ?? 50 * 1024 * 1024),
-                    formatUploadSize(
-                      limits?.max_total_size ?? 100 * 1024 * 1024,
-                    ),
-                  )
-                }}
-              </TooltipContent>
-            </Tooltip>
-            <!--
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    class="px-2!"
+                    data-testid="add-attachments-button"
+                    :aria-label="$i18n.t.value.inputBox.addAttachments"
+                    :disabled="disabled || polishing"
+                    @click="openFileDialog"
+                  >
+                    <Paperclip class="size-3" aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="start" class="w-56">
+                  {{
+                    $i18n.t.value.uploads.limitsHint(
+                      limits?.max_files ?? 10,
+                      formatUploadSize(
+                        limits?.max_file_size ?? 50 * 1024 * 1024,
+                      ),
+                      formatUploadSize(
+                        limits?.max_total_size ?? 100 * 1024 * 1024,
+                      ),
+                    )
+                  }}
+                </TooltipContent>
+              </Tooltip>
+              <!--
               hidden 而不是 sr-only。React 的同一个 input 也带 aria-label，但它是
               display:none（frontend/src/components/ai-elements/prompt-input.tsx 的
               className="hidden"），因此**不进**可访问性树。sr-only 会让读屏器在纸夹
               按钮旁边再念出一个同义的「上传文件」按钮，多出一个并不存在的入口。
             -->
-            <input
-              ref="fileInput"
-              type="file"
-              multiple
-              :aria-label="$i18n.t.value.inputBox.uploadFiles"
-              class="hidden"
-              @change="chooseFiles"
-            />
-          </div>
-          <!--
+              <input
+                ref="fileInput"
+                type="file"
+                multiple
+                :aria-label="$i18n.t.value.inputBox.uploadFiles"
+                class="hidden"
+                @change="chooseFiles"
+              />
+            </div>
+            <!--
             提示走 Tooltip 组件，**不是 `title`**。上游 VoiceInputButton 外面包的是
             `<Tooltip>`（input-box.tsx:2339）；原生 `title` 是浏览器自己的气泡：
             延迟、位置、配色都不受控，深色主题下尤其突兀，而且触屏上根本不出现。
             两边都用同一个 Tooltip 才是同一个可感知行为。
           -->
-          <Tooltip>
-            <TooltipTrigger>
-              <Button
-                data-testid="voice-input-button"
-                type="button"
-                variant="ghost"
-                size="sm"
-                :class="voiceButtonClass"
-                :aria-label="
-                  voiceListening
-                    ? $i18n.t.value.inputBox.voiceInputStopLabel
-                    : $i18n.t.value.inputBox.voiceInputStartLabel
-                "
-                :aria-pressed="voiceListening"
-                :disabled="
-                  disabled || !voiceSupported || polishing || streaming
-                "
-                @click="toggleVoiceInput"
-              >
-                <Square v-if="voiceListening" class="size-3 fill-current" />
-                <Mic v-else class="size-3" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              {{
-                voiceSupported
-                  ? voiceListening
-                    ? $i18n.t.value.inputBox.voiceInputListening
-                    : $i18n.t.value.inputBox.voiceInputStart
-                  : $i18n.t.value.inputBox.voiceInputUnsupported
-              }}
-            </TooltipContent>
-          </Tooltip>
-          <!--
+            <Tooltip>
+              <TooltipTrigger>
+                <Button
+                  data-testid="voice-input-button"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  :class="voiceButtonClass"
+                  :aria-label="
+                    voiceListening
+                      ? $i18n.t.value.inputBox.voiceInputStopLabel
+                      : $i18n.t.value.inputBox.voiceInputStartLabel
+                  "
+                  :aria-pressed="voiceListening"
+                  :disabled="
+                    disabled || !voiceSupported || polishing || streaming
+                  "
+                  @click="toggleVoiceInput"
+                >
+                  <Square v-if="voiceListening" class="size-3 fill-current" />
+                  <Mic v-else class="size-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                {{
+                  voiceSupported
+                    ? voiceListening
+                      ? $i18n.t.value.inputBox.voiceInputListening
+                      : $i18n.t.value.inputBox.voiceInputStart
+                    : $i18n.t.value.inputBox.voiceInputUnsupported
+                }}
+              </TooltipContent>
+            </Tooltip>
+            <!--
             **只有图标，没有可见文字**，提示走 Tooltip——与上游逐条一致
             （input-box.tsx:2345 的 `<Tooltip>` 包着一颗只放 `SparklesIcon` 的
             PromptInputButton）。本仓原来多渲染了一段 `优化输入` 文字且没有
@@ -1786,147 +1810,160 @@ defineExpose({ replaceDraft, offerFollowup });
             里换图标）：位置固定的一颗键换图标，和"这颗键被另一颗顶掉了"，
             对键盘 tab 序与读屏器是两回事。
           -->
-          <Tooltip>
-            <TooltipTrigger>
-              <Button
-                data-testid="polish-input-button"
-                type="button"
-                variant="ghost"
-                size="sm"
-                class="px-2!"
-                :aria-label="
-                  polishUndoAvailable
-                    ? $i18n.t.value.inputBox.inputPolishUndo
-                    : $i18n.t.value.inputBox.inputPolish
-                "
-                :disabled="polishDisabled"
-                @click="polish"
-              >
-                <Loader2 v-if="polishing" class="size-3 animate-spin" />
-                <Undo2 v-else-if="polishUndoAvailable" class="size-3" />
-                <Sparkles v-else class="size-3" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              {{
-                polishing
-                  ? $i18n.t.value.inputBox.inputPolishing
-                  : polishUndoAvailable
-                    ? $i18n.t.value.inputBox.inputPolishUndo
-                    : $i18n.t.value.inputBox.inputPolish
-              }}
-            </TooltipContent>
-          </Tooltip>
-          <span class="flex-1" />
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <ModeHoverGuide
-                :label="activeMode.label"
-                :description="activeMode.description"
-              >
-                <!--
+            <Tooltip>
+              <TooltipTrigger>
+                <Button
+                  data-testid="polish-input-button"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  class="px-2!"
+                  :aria-label="
+                    polishUndoAvailable
+                      ? $i18n.t.value.inputBox.inputPolishUndo
+                      : $i18n.t.value.inputBox.inputPolish
+                  "
+                  :disabled="polishDisabled"
+                  @click="polish"
+                >
+                  <Loader2 v-if="polishing" class="size-3 animate-spin" />
+                  <Undo2 v-else-if="polishUndoAvailable" class="size-3" />
+                  <Sparkles v-else class="size-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                {{
+                  polishing
+                    ? $i18n.t.value.inputBox.inputPolishing
+                    : polishUndoAvailable
+                      ? $i18n.t.value.inputBox.inputPolishUndo
+                      : $i18n.t.value.inputBox.inputPolish
+                }}
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenu>
+              <DropdownMenuTrigger>
+                <ModeHoverGuide
+                  :label="activeMode.label"
+                  :description="activeMode.description"
+                >
+                  <!--
                   触发器要接 disabled，与上游同一个 `composerLocked`
                   （input-box.tsx:2391 的 `disabled={composerLocked}`）。
                   只读会话里它此前仍然是可聚焦、可展开的：菜单打得开、
                   选中一项还会写回 context，而这条会话根本发不出消息。
                 -->
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  data-testid="composer-mode-trigger"
-                  class="max-w-28 gap-1! px-2! sm:max-w-none"
-                  :disabled="disabled || polishing"
-                >
-                  <!--
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    data-testid="composer-mode-trigger"
+                    class="max-w-28 gap-1! px-2! sm:max-w-none"
+                    :disabled="disabled || polishing"
+                  >
+                    <!--
                     图标与文字各占一层，与上游同构（input-box.tsx:2393 的两个 div）。
                     没有显式 mode 时上游四条判断全不成立、什么也不画，所以这里同样
                     挂在 explicitMode 上——按钮此时是一颗无名的空按钮，两边一致。
                   -->
-                  <div>
-                    <component
-                      :is="activeMode.icon"
-                      v-if="explicitMode"
-                      class="size-3"
-                      :class="activeMode.golden ? 'text-[#dabb5e]' : ''"
-                    />
-                  </div>
-                  <div
-                    class="truncate text-xs font-normal"
-                    :class="
-                      explicitMode && activeMode.golden ? 'golden-text' : ''
-                    "
-                  >
-                    {{ explicitMode ? activeMode.label : "" }}
-                  </div>
-                </Button>
-              </ModeHoverGuide>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="top" class="w-80">
+                    <div>
+                      <component
+                        :is="activeMode.icon"
+                        v-if="explicitMode"
+                        class="size-3"
+                        :class="activeMode.golden ? 'text-[#dabb5e]' : ''"
+                      />
+                    </div>
+                    <div
+                      class="truncate text-xs font-normal"
+                      :class="
+                        explicitMode && activeMode.golden ? 'golden-text' : ''
+                      "
+                    >
+                      {{ explicitMode ? activeMode.label : "" }}
+                    </div>
+                  </Button>
+                </ModeHoverGuide>
+              </DropdownMenuTrigger>
               <!--
+              `align="start"`、**不传 `side`**——上游
+              `PromptInputActionMenuContent`（ai-elements/prompt-input.tsx:1066）
+              就是 `<DropdownMenuContent align="start" />`，也就是 side 走
+              primitive 的默认 `bottom` 再交给碰撞检测。本仓原来写死
+              `align="end" side="top"`：桌面上因为触发器贴着视口底、两边都翻到
+              top，看着一样；**窄屏上就露馅**——上游的菜单在触发器下方
+              （实测 y=305），本仓恒在上方（y=151），台账那条 `y Δ-154` 就是它。
+            -->
+              <DropdownMenuContent align="start" class="w-80">
+                <!--
                 分组标题在 radio group **里面**，与上游同构（上游原来把它放在外面
                 一层 DropdownMenuGroup 里，两层 role="group" 中有一层什么都不命名，
                 已两边同改成这一种）。`inputBox.mode` 此前在本仓零消费，而未引用扫描
                 器按叶子名匹配看不见它——缺的就是这一行。
               -->
-              <DropdownMenuRadioGroup
-                :model-value="explicitMode"
-                @update:model-value="selectModeById(String($event))"
-              >
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  {{ $i18n.t.value.inputBox.mode }}
-                </DropdownMenuLabel>
-                <!--
+                <DropdownMenuRadioGroup
+                  :model-value="explicitMode"
+                  @update:model-value="selectModeById(String($event))"
+                >
+                  <DropdownMenuLabel class="text-muted-foreground text-xs">
+                    {{ $i18n.t.value.inputBox.mode }}
+                  </DropdownMenuLabel>
+                  <!--
                   条目的排版照上游（input-box.tsx:2450）：选中的一条整条是
                   `text-accent-foreground`，其余是 `text-muted-foreground/65`；
                   标题行 `font-bold` 带图标，说明行 `pl-7 text-xs` 缩进到标题文字
                   的起点下面。本仓原来是 `font-medium` + 说明行自己写死
                   `text-muted-foreground`，于是选中态在说明行上看不出来。
                 -->
-                <DropdownMenuRadioItem
-                  v-for="mode in availableModes"
-                  :key="mode.id"
-                  :value="mode.id"
-                  class="py-2"
-                  :class="
-                    explicitMode === mode.id
-                      ? 'text-accent-foreground'
-                      : 'text-muted-foreground/65'
-                  "
-                >
-                  <span class="flex flex-col gap-2">
-                    <span class="flex items-center gap-1 font-bold">
-                      <component
-                        :is="mode.icon"
-                        class="mr-2 size-4"
-                        :class="
-                          explicitMode === mode.id
-                            ? mode.golden
-                              ? 'text-[#dabb5e]'
-                              : 'text-accent-foreground'
-                            : ''
-                        "
-                      />
-                      <span
-                        :class="
-                          explicitMode === mode.id && mode.golden
-                            ? 'golden-text'
-                            : ''
-                        "
-                        >{{ mode.label }}</span
-                      >
+                  <!--
+                  **不传 `py-2`**：上游这个调用点只传颜色，纵向内边距归
+                  primitive（`py-1.5`）。多出来的 2px×2 就是台账上
+                  `menuitemradio` 那两条 `height Δ4`。推理档那个菜单 wave 76
+                  已经拆过同一条，模式菜单漏了。
+                -->
+                  <DropdownMenuRadioItem
+                    v-for="mode in availableModes"
+                    :key="mode.id"
+                    :value="mode.id"
+                    :class="
+                      explicitMode === mode.id
+                        ? 'text-accent-foreground'
+                        : 'text-muted-foreground/65'
+                    "
+                  >
+                    <span class="flex flex-col gap-2">
+                      <span class="flex items-center gap-1 font-bold">
+                        <component
+                          :is="mode.icon"
+                          class="mr-2 size-4"
+                          :class="
+                            explicitMode === mode.id
+                              ? mode.golden
+                                ? 'text-[#dabb5e]'
+                                : 'text-accent-foreground'
+                              : ''
+                          "
+                        />
+                        <span
+                          :class="
+                            explicitMode === mode.id && mode.golden
+                              ? 'golden-text'
+                              : ''
+                          "
+                          >{{ mode.label }}</span
+                        >
+                      </span>
+                      <span class="pl-7 text-xs">{{ mode.description }}</span>
                     </span>
-                    <span class="pl-7 text-xs">{{ mode.description }}</span>
-                  </span>
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu
-            v-if="supportsReasoningEffort && explicitMode !== 'flash'"
-          >
-            <DropdownMenuTrigger>
-              <!--
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu
+              v-if="supportsReasoningEffort && explicitMode !== 'flash'"
+            >
+              <DropdownMenuTrigger>
+                <!--
                 上游是 `PromptInputActionMenuTrigger className="hidden gap-1!
                 px-2! sm:inline-flex"`，也就是一颗 ghost Button，文字包在
                 `<div className="text-xs font-normal">` 里（input-box.tsx:2561）。
@@ -1935,29 +1972,30 @@ defineExpose({ replaceDraft, offerFollowup });
                 鼠标停上去一个变小手一个不变）、没有焦点环、没有
                 `hover:text-accent-foreground` 与 `dark:hover:bg-accent/50`。
               -->
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                data-testid="composer-reasoning-effort-trigger"
-                class="hidden gap-1! px-2! sm:inline-flex"
-                :disabled="disabled"
-              >
-                <div class="text-xs font-normal">
-                  {{ $i18n.t.value.inputBox.reasoningEffort }}:
-                  {{ activeReasoningEffort.label }}
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="top" class="w-70">
-              <DropdownMenuRadioGroup
-                :model-value="selectedReasoningEffort"
-                @update:model-value="selectReasoningEffort(String($event))"
-              >
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  {{ $i18n.t.value.inputBox.reasoningEffort }}
-                </DropdownMenuLabel>
-                <!--
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  data-testid="composer-reasoning-effort-trigger"
+                  class="hidden gap-1! px-2! sm:inline-flex"
+                  :disabled="disabled"
+                >
+                  <div class="text-xs font-normal">
+                    {{ $i18n.t.value.inputBox.reasoningEffort }}:
+                    {{ activeReasoningEffort.label }}
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <!-- 同上：align/side 都归 PromptInputActionMenuContent 的默认值。 -->
+              <DropdownMenuContent align="start" class="w-70">
+                <DropdownMenuRadioGroup
+                  :model-value="selectedReasoningEffort"
+                  @update:model-value="selectReasoningEffort(String($event))"
+                >
+                  <DropdownMenuLabel class="text-muted-foreground text-xs">
+                    {{ $i18n.t.value.inputBox.reasoningEffort }}
+                  </DropdownMenuLabel>
+                  <!--
                   **每一项按选中态染色。** 上游 input-box.tsx:2597 给每个
                   `DropdownMenuRadioItem` 传的是
                   `context.reasoning_effort === id ? "text-accent-foreground"
@@ -1974,59 +2012,61 @@ defineExpose({ replaceDraft, offerFollowup });
                   也**不再传 `py-2`**：上游这个调用点只传颜色，纵向内边距归
                   primitive（`py-1.5`）。多出来的那 2px×2 就是量到的 Δ4。
                 -->
-                <DropdownMenuRadioItem
-                  v-for="effort in reasoningEfforts"
-                  :key="effort.id"
-                  :value="effort.id"
-                  :class="
-                    selectedReasoningEffort === effort.id
-                      ? 'text-accent-foreground'
-                      : 'text-muted-foreground/65'
-                  "
-                >
-                  <span class="flex flex-col gap-2">
-                    <span class="flex items-center gap-1 font-bold">{{
-                      effort.label
-                    }}</span>
-                    <span class="block pl-2 text-xs">{{
-                      effort.description
-                    }}</span>
-                  </span>
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <span
-            v-if="goalObjectiveCounter"
-            data-testid="goal-length-counter"
-            :aria-label="
-              $i18n.t.value.inputBox.goalLengthCounter
-                .replace('{length}', String(goalObjectiveCounter.length))
-                .replace('{max}', String(goalObjectiveCounter.max))
-            "
-            class="shrink-0 text-xs tabular-nums"
-            :class="
-              goalObjectiveCounter.overLimit
-                ? 'text-destructive font-medium'
-                : 'text-muted-foreground'
-            "
-            >{{ goalObjectiveCounter.length }}/{{
-              goalObjectiveCounter.max
-            }}</span
-          >
-          <!--
+                  <DropdownMenuRadioItem
+                    v-for="effort in reasoningEfforts"
+                    :key="effort.id"
+                    :value="effort.id"
+                    :class="
+                      selectedReasoningEffort === effort.id
+                        ? 'text-accent-foreground'
+                        : 'text-muted-foreground/65'
+                    "
+                  >
+                    <span class="flex flex-col gap-2">
+                      <span class="flex items-center gap-1 font-bold">{{
+                        effort.label
+                      }}</span>
+                      <span class="block pl-2 text-xs">{{
+                        effort.description
+                      }}</span>
+                    </span>
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <div class="flex min-w-0 items-center justify-end gap-1">
+            <span
+              v-if="goalObjectiveCounter"
+              data-testid="goal-length-counter"
+              :aria-label="
+                $i18n.t.value.inputBox.goalLengthCounter
+                  .replace('{length}', String(goalObjectiveCounter.length))
+                  .replace('{max}', String(goalObjectiveCounter.max))
+              "
+              class="shrink-0 text-xs tabular-nums"
+              :class="
+                goalObjectiveCounter.overLimit
+                  ? 'text-destructive font-medium'
+                  : 'text-muted-foreground'
+              "
+              >{{ goalObjectiveCounter.length }}/{{
+                goalObjectiveCounter.max
+              }}</span
+            >
+            <!--
             disabled 跟着 React 的 composerLocked 走（input-box.tsx:1328 =
             `isComposerDisabled || polishingInput`，2673 行把它交给
             ModelSelectorTrigger 的按钮）：润色期间草稿正被改写，这时换模型
             会让请求打到一个用户还没看见的文本上。
           -->
-          <ComposerModelSelector
-            :models="models"
-            :selected-model="selectedModel"
-            :disabled="disabled || polishing"
-            @select="selectModel"
-          />
-          <!--
+            <ComposerModelSelector
+              :models="models"
+              :selected-model="selectedModel"
+              :disabled="disabled || polishing"
+              @select="selectModel"
+            />
+            <!--
             发送与停止是**同一个**按钮，和 React 的 PromptInputSubmit 一样：
             换的是可访问名和图标，不是元素。拆成两个 v-if 分支的话，开始流式输出的
             那一刻焦点所在的按钮被卸载，键盘用户会被丢回 body——而「按回车发出去、
@@ -2036,7 +2076,7 @@ defineExpose({ replaceDraft, offerFollowup });
             时禁用。禁用一个看得见的提交按钮会让读屏器连它为什么不能按都说不出来，
             而空提交本来就被 submit() 挡住了。
           -->
-          <!--
+            <!--
             上游是 `<PromptInputSubmit className="rounded-full" variant="outline"
             status={status} />`（input-box.tsx:2729），也就是
             `<Button variant="outline" size="icon-sm">`——**描边**的圆钮，
@@ -2054,23 +2094,24 @@ defineExpose({ replaceDraft, offerFollowup });
             error / streaming / ready 三种（chat-page.tsx:414），
             所以这里三个分支就是全集，不是少了一支。
           -->
-          <Button
-            type="submit"
-            variant="outline"
-            size="icon-sm"
-            class="rounded-full shadow-none"
-            :aria-label="
-              streaming
-                ? $i18n.t.value.primitives.stop
-                : $i18n.t.value.primitives.submit
-            "
-            :disabled="disabled || polishing"
-            @click="onSubmitButtonClick"
-          >
-            <Square v-if="streaming" class="size-4 fill-current" />
-            <X v-else-if="errored" class="size-4" />
-            <ArrowUp v-else class="size-4" />
-          </Button>
+            <Button
+              type="submit"
+              variant="outline"
+              size="icon-sm"
+              class="rounded-full shadow-none"
+              :aria-label="
+                streaming
+                  ? $i18n.t.value.primitives.stop
+                  : $i18n.t.value.primitives.submit
+              "
+              :disabled="disabled || polishing"
+              @click="onSubmitButtonClick"
+            >
+              <Square v-if="streaming" class="size-4 fill-current" />
+              <X v-else-if="errored" class="size-4" />
+              <ArrowUp v-else class="size-4" />
+            </Button>
+          </div>
         </div>
       </ComposerSurface>
     </form>

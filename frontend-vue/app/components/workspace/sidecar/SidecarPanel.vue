@@ -426,7 +426,20 @@ async function confirmDelete() {
       @selection-add="addSelectedReference"
     />
 
-    <div class="relative flex shrink-0 flex-col gap-2 px-3 pb-4">
+    <!--
+      页脚照上游 `sidecar-panel.tsx:602`
+      （`bg-background/95 shrink-0 px-3 pt-3 pb-4 sm:px-4`）。本仓少了三条：
+      **`pt-3`** —— 页脚因此比上游矮 12px，上面那块 `flex-1` 的内容区就高 12px，
+      而空态是**垂直居中**的，于是两行字整体下移 6px：台账上 sidecar-chat 那两条
+      `y Δ6` 就是它；`bg-background/95` —— 页脚原来是透明的，
+      内容滚到底时会从输入框底下透出来；`sm:px-4` —— 宽屏下输入框比上游宽 8px。
+
+      `relative flex flex-col gap-2` 保留：下面那段错误提示是本仓自己的出路
+      （上游这一层只有一个 PromptInput），gap 只在它出现时才起作用。
+    -->
+    <div
+      class="bg-background/95 relative flex shrink-0 flex-col gap-2 px-3 pt-3 pb-4 sm:px-4"
+    >
       <form
         class="mx-auto w-full"
         :aria-busy="composerBusy"

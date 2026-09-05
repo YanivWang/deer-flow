@@ -45,7 +45,19 @@ function fileName(path: string): string {
 </script>
 
 <template>
-  <div class="text-foreground min-w-0 flex-1 text-sm font-medium">
+  <!--
+    这一层就是上游的 `ArtifactTitle`（ai-elements/artifact.tsx:67 =
+    `text-foreground text-sm font-medium`），**按内容宽**。本仓原来多写了
+    `min-w-0 flex-1`，加上触发器上的 `max-w-full`：头部平铺成一排时它会去抢
+    剩余宽度，再被右边的动作键挤回来，于是文件名**被截断**——实测
+    artifact-batched-stream 那一屏的文件名内容宽 127px、可视只剩 105px，
+    而上游那颗是自然宽 126.7px。
+    该 `grow` 的是头部中间那一栏（见 ArtifactPanel.vue 的头部注释），不是标题。
+
+    代价照抄上游：**文件名足够长时头部会被撑开、右边的动作键被推出可视区**
+    （上游同样没有任何截断）。这一条记在交接文档里当一笔新账，要修是两边同改。
+  -->
+  <div class="text-foreground text-sm font-medium">
     <Select
       :model-value="current"
       @update:model-value="
@@ -56,7 +68,7 @@ function fileName(path: string): string {
       "
     >
       <SelectTrigger
-        class="max-w-full border-none bg-transparent! shadow-none select-none focus:outline-0 active:outline-0"
+        class="border-none bg-transparent! shadow-none select-none focus:outline-0 active:outline-0"
       >
         <SelectValue :placeholder="$i18n.t.value.primitives.selectAFile" />
       </SelectTrigger>

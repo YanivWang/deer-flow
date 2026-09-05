@@ -71,7 +71,12 @@ function onHighlight(item: HighlightPayload) {
     data-slot="command"
     v-bind="delegated"
     :model-value="activeValue"
-    :class="cn('flex w-full flex-col overflow-hidden', props.class)"
+    :class="
+      cn(
+        'bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md',
+        props.class,
+      )
+    "
     @update:model-value="emits('update:modelValue', $event)"
     @highlight="onHighlight"
     @entry-focus="emits('entryFocus', $event)"

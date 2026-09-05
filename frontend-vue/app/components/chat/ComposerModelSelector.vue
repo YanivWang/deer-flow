@@ -177,10 +177,13 @@ function selectModel(model: Model) {
         </div>
       </Button>
     </DialogTrigger>
-    <DialogContent
-      class="gap-0 overflow-hidden p-0"
-      :close-label="$i18n.t.value.primitives.close"
-    >
+    <!--
+      上游 `ModelSelectorContent`（ai-elements/model-selector.tsx:45）只往
+      DialogContent 传 `p-0`，圆角与裁剪归里面那层 Command
+      （`overflow-hidden rounded-md`，wave 78 已补进 primitive）。
+      本仓原来还传了 `gap-0 overflow-hidden`，两条都是在替 Command 做它自己的事。
+    -->
+    <DialogContent class="p-0" :close-label="$i18n.t.value.primitives.close">
       <!--
         上游只给了一个 sr-only 的标题、没有 DialogDescription，默认文案是写死的
         英文 "Model Selector"（model-selector.tsx:40）。按「primitive 的可访问名

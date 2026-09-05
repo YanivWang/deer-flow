@@ -550,27 +550,41 @@ onBeforeUnmount(() => {
          锚点上之后，三个 artifact 场景一共报出五条 `y Δ-7.5` / `Δ-14` 就是它。
       ② **`px-2` 而不是 `px-3`**（上游的 `px-4` 被调用点的 `px-2` 盖掉）。
       ③ **`bg-muted/50`**——本仓这一条整个没有，头部与正文之间只有一条下边框。
+
+      **头部是三栏，不是一排。** 上游 artifact-file-detail.tsx:400 往
+      `justify-between` 的 ArtifactHeader 里塞三个容器：标题（`flex items-center
+      gap-2`）、中间的**伸缩栏**（`flex min-w-0 grow items-center justify-center
+      gap-2`，装视图切换与编辑态播报）、动作栏（`flex items-center gap-2` 里再套
+      `ArtifactActions` = `flex items-center gap-1`）。本仓原来把五个东西平铺成
+      一排、靠 header 自己的 `gap-2` 排版，量出来两处差异：
+      - 动作键之间是 8px 而上游是 4px，于是 `Download x` 差 3px；
+      - 标题那一层带 `min-w-0 flex-1`，被伸缩栏挤成 153px 宽、文件名**被截断**
+        （实测 span 内容宽 127、可视宽 105，上游那颗是自然宽 126.7）。
+      伸缩栏才是该 `grow` 的那一个，标题按内容宽。
     -->
     <header
       data-testid="artifact-panel-header"
-      class="bg-muted/50 border-border flex shrink-0 items-center gap-2 border-b px-2 py-3"
+      class="bg-muted/50 border-border flex shrink-0 items-center justify-between border-b px-2 py-3"
     >
-      <ArtifactFileList
-        v-if="!isWrite"
-        :current="filepath"
-        :options="options"
-        @select="emit('select', $event)"
-      />
-      <!--
+      <div class="flex items-center gap-2">
+        <ArtifactFileList
+          v-if="!isWrite"
+          :current="filepath"
+          :options="options"
+          @select="emit('select', $event)"
+        />
+        <!--
         write_file 草稿的标题是**普通文字**，不是 strong：React 这一支渲染的是
         `<div className="px-2">{getFileName(filepath)}</div>`
         （frontend/src/components/workspace/artifacts/artifact-file-detail.tsx 的
         isWriteFile 分支）。strong 会让读屏器把文件名念成强调内容。
       -->
-      <div v-else class="min-w-0 flex-1 truncate px-2 text-sm font-medium">
-        {{ filename }}
+        <div v-else class="text-foreground text-sm font-medium">
+          <div class="px-2">{{ filename }}</div>
+        </div>
       </div>
-      <!--
+      <div class="flex min-w-0 grow items-center justify-center gap-2">
+        <!--
         代码 / 预览是一对**单选**，不是一颗会变名字的开关。
 
         React 用 ToggleGroup type="single"，也就是一个 group 里两个 radio，当前档位
@@ -579,7 +593,7 @@ onBeforeUnmount(() => {
         两个 radio 都只有图标、没有可访问名——React 的 ToggleGroupItem 里就只有一个
         图标，这一点也照抄。
       -->
-      <!--
+        <!--
         走 `ui/toggle-group`（与 MemorySettings 那一行同一个 primitive），
         不再手搓两颗 radio。手搓那版**当前档位在视觉上根本看不出来**：
         `aria-checked` 是对的，但两颗的 class 是常量，没有任何一条按选中态分叉；
@@ -592,43 +606,44 @@ onBeforeUnmount(() => {
         以及 `cursor-pointer`、3px 焦点环、`disabled:*`、`shadow-xs`、
         `hover:text-accent-foreground` 与 sm 档的 `min-w-8 px-1.5`。
       -->
-      <ToggleGroup
-        v-if="
-          policy.kind === 'text' &&
-          ['html', 'markdown'].includes(policy.language) &&
-          previewAllowed &&
-          !truncated
-        "
-        type="single"
-        variant="outline"
-        size="sm"
-        :model-value="viewMode"
-        @update:model-value="
-          (value) => {
-            if (value) viewMode = value as 'code' | 'preview';
-          }
-        "
-      >
-        <ToggleGroupItem
-          value="code"
-          single
-          :checked="viewMode === 'code'"
+        <ToggleGroup
+          class="mx-auto"
+          v-if="
+            policy.kind === 'text' &&
+            ['html', 'markdown'].includes(policy.language) &&
+            previewAllowed &&
+            !truncated
+          "
+          type="single"
           variant="outline"
           size="sm"
+          :model-value="viewMode"
+          @update:model-value="
+            (value) => {
+              if (value) viewMode = value as 'code' | 'preview';
+            }
+          "
         >
-          <Code2 class="size-4" />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="preview"
-          single
-          :checked="viewMode === 'preview'"
-          variant="outline"
-          size="sm"
-        >
-          <Eye class="size-4" />
-        </ToggleGroupItem>
-      </ToggleGroup>
-      <!--
+          <ToggleGroupItem
+            value="code"
+            single
+            :checked="viewMode === 'code'"
+            variant="outline"
+            size="sm"
+          >
+            <Code2 class="size-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="preview"
+            single
+            :checked="viewMode === 'preview'"
+            variant="outline"
+            size="sm"
+          >
+            <Eye class="size-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
+        <!--
         编辑态的状态要**播报**，不能只在按钮的禁用态里体现。React 在头部放了一个
         `aria-live="polite"` 的 span：保存中 / 远端已变 / 有未保存的改动
         （frontend/src/components/workspace/artifacts/artifact-file-detail.tsx）。
@@ -636,43 +651,46 @@ onBeforeUnmount(() => {
         在词典里躺着、从没被渲染过，于是读屏用户改完文件既听不到"有未保存的改动"，
         也听不到"这个文件在你编辑期间被别人改了"。
       -->
-      <span
-        v-if="saving || dirty || activeDraft.conflict"
-        aria-live="polite"
-        class="text-muted-foreground max-w-32 truncate text-xs"
-        :class="activeDraft.conflict ? 'text-destructive' : ''"
-      >
-        {{
-          saving
-            ? $i18n.t.value.artifactEditing.saving
-            : activeDraft.conflict
-              ? $i18n.t.value.artifactEditing.conflictShort
-              : $i18n.t.value.artifactEditing.unsaved
-        }}
-      </span>
-      <ArtifactActions
-        :can-edit="canEdit"
-        :editing="editing"
-        :dirty="dirty"
-        :conflict="activeDraft.conflict"
-        :streaming="streaming"
-        :saving="saving"
-        :can-copy="canCopy"
-        :copy-disabled="copyDisabled"
-        :can-open="hasGatewayArtifact"
-        :can-download="hasGatewayArtifact"
-        :can-install="canInstall"
-        :installing="installing"
-        @edit="beginEdit"
-        @save="save"
-        @exit="exitEdit"
-        @discard="discard"
-        @copy="copyArtifact"
-        @open="runGatewayAction('open')"
-        @download="runGatewayAction('download')"
-        @install="installArtifactSkill"
-      />
-      <!--
+        <span
+          v-if="saving || dirty || activeDraft.conflict"
+          aria-live="polite"
+          class="text-muted-foreground max-w-32 truncate text-xs"
+          :class="activeDraft.conflict ? 'text-destructive' : ''"
+        >
+          {{
+            saving
+              ? $i18n.t.value.artifactEditing.saving
+              : activeDraft.conflict
+                ? $i18n.t.value.artifactEditing.conflictShort
+                : $i18n.t.value.artifactEditing.unsaved
+          }}
+        </span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1">
+          <ArtifactActions
+            :can-edit="canEdit"
+            :editing="editing"
+            :dirty="dirty"
+            :conflict="activeDraft.conflict"
+            :streaming="streaming"
+            :saving="saving"
+            :can-copy="canCopy"
+            :copy-disabled="copyDisabled"
+            :can-open="hasGatewayArtifact"
+            :can-download="hasGatewayArtifact"
+            :can-install="canInstall"
+            :installing="installing"
+            @edit="beginEdit"
+            @save="save"
+            @exit="exitEdit"
+            @discard="discard"
+            @copy="copyArtifact"
+            @open="runGatewayAction('open')"
+            @download="runGatewayAction('download')"
+            @install="installArtifactSkill"
+          />
+          <!--
         关闭键上游也是 `<ArtifactAction icon={XIcon} label tooltip>`
         （artifact-file-detail.tsx:603），和它左边那八颗是同一个形状——
         wave 70 把那八颗改走 Button 时漏了这一颗孤儿。差的是：
@@ -680,21 +698,23 @@ onBeforeUnmount(() => {
         （手写那版恒为前景色，比上游深一档）、**Tooltip**、
         `cursor-pointer`、3px 焦点环与 `disabled:*`。
       -->
-      <Tooltip>
-        <TooltipTrigger>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            :aria-label="$i18n.t.value.common.close"
-            class="text-muted-foreground hover:text-foreground size-8 p-0"
-            @click="emit('close')"
-          >
-            <X :size="16" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{{ $i18n.t.value.common.close }}</TooltipContent>
-      </Tooltip>
+          <Tooltip>
+            <TooltipTrigger>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                :aria-label="$i18n.t.value.common.close"
+                class="text-muted-foreground hover:text-foreground size-8 p-0"
+                @click="emit('close')"
+              >
+                <X :size="16" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{{ $i18n.t.value.common.close }}</TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
     </header>
 
     <p v-if="error" role="alert" class="text-destructive px-4 pt-3 text-sm">
