@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 88，2026-09-06）
+# React → Vue 平替：挂账总清单（截至 wave 89，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -7,6 +7,8 @@
 > 不是「两个应用一样」。天生看不见的八类见交接文档。
 > **wave 88 又给它补了一条**：双向比对**看不见「两边一起漏」**——
 > 22 颗按钮两个应用都没有 `aria-pressed`，三档全是 0 行。
+> **wave 89 把这条补成了机器守的**：`tests/guards/toggle-variant-pressed.test.ts`
+> 两个应用一起扫，并顺手扫出剩下的两边各 12 颗。
 
 ---
 
@@ -39,7 +41,7 @@
 
 ---
 
-## 三、这一轮（wave 78~88）清掉的
+## 三、这一轮（wave 78~89）清掉的
 
 - **台账 16 → 0**（wave 78，五处根因：页脚两组 / 菜单 align+side / 模式项多传的 `py-2` / `ui/command` 的 class 合同 / artifact 头部三栏 / sidecar 页脚的 `pt-3`）
 - **守卫注释里点名的两笔**（wave 79：保存 agent 键的位置与形状、MessageList 的 artifactTargets 文件名键）
@@ -60,6 +62,9 @@
 - **三处交互态第一次进取样面**（wave 86）：会话行的 ⋯ 菜单量出 7 处（三处根因）、
   侧栏 nav 菜单量出 9 行（少一个 group + 上游的 `menu > link > menuitem` 嵌套，
   **两边同改**）；定时任务的编辑表单 **0 差异**
+- **「选中态只靠换色」从散文变成守卫**（wave 89）：判据收得住口（`<Button>` +
+  条件 `default`/`outline`，**零豁免**），扫出并清掉两边各 12 颗；
+  另加一条 DOM 用例守「值跟着状态走」——静态守卫对 `:aria-pressed="false"` 照样绿
 - **integrations 的两个交互态第一次进取样面**（wave 88）：权限面板的选中态
   （域 + 自定义 scope，连接键改写成「申请新权限」）与「切换飞书 Bot」的整块表单，
   三档全 0；量的过程中撞出**两个应用都缺 `aria-pressed`**（22 颗域按钮 + 2 颗品牌
@@ -72,12 +77,12 @@
 
 ---
 
-## 四、收工时的门禁读数（wave 88 逐条实跑）
+## 四、收工时的门禁读数（wave 89 逐条实跑）
 
 ```
-verify           exit 0    260 文件 / 2170 单测；词典 942 key / 18 unused
+verify           exit 0    262 文件 / 2174 单测；词典 942 key / 18 unused
                            产品 SFC 218（总 220）
-standalone-sim   exit 0    跑过 12 / 未跑 5（4 data + 1 e2e）/ 红 0      ← wave 83 新增
+standalone-sim   exit 0    跑过 13 / 未跑 5（4 data + 1 e2e）/ 红 0      ← wave 83 新增
                            --with-e2e 实测 13 / 4 / 0（那一条：exit 0，47 条跳过）
 e2e-parity       52        台账 0 行 / 44 样本（NEW=0 GONE=0）
 e2e-mock         265 + 22 + 15 + 2 + 6
@@ -86,7 +91,7 @@ e2e-visual       8         wave 88 一张没重录
 asset-budget     exit 0
 icon-parity      0 处待核，不报 stale
 audit            预期红 14（分诊写在 Makefile 的 audit 上方）
-standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 39 处 / 17 个文件）
+standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 40 处 / 18 个文件）
                  ——**只是静态证明**；「移走还能跑」由 standalone-sim 管
 覆盖率棘轮       covered 24 + pending 1 + exempt 2 = 27 = React spec 总数（坐标系已用尽）
 React 侧         check 0 / test 1034 / test:e2e 146（wave 86 三条全真跑过）
@@ -114,8 +119,11 @@ React 侧         check 0 / test 1034 / test:e2e 146（wave 86 三条全真跑�
 2. **给现成的尺子加一档**（wave 75 的 `icon-parity`、wave 76 的几何锚点都是这么来的）。
    注意坑 213 / 186：**一把新尺子最先要量的是它自己**——wave 75 那批线索有近一半
    是扫描范围造出来的。
-3. **把散文里的断言变成守卫**（`tests/guards/` 下已有九条 + wave 83 加进
+3. **把散文里的断言变成守卫**（`tests/guards/` 下已有十条 + wave 83 加进
    `tooling-contracts` 的一组）。加之前先读它们的覆盖面。
+   **wave 89 又证明一次**：把 wave 88 的线索 238 做成守卫，当场扫出两边各 12 颗。
+   **判据再加一条**：一条规则值不值得做成守卫，先看它**要不要豁免表**——
+   要，多半是判据没选对。
    **wave 83/84 连着证明这条最值钱**：83 是一张零消费者的表 17 条里 2 条假；
    84 是三条扫描器盖不全自己声称的范围。**判据两条**：
    「哪一行代码读它」，以及「这把尺子能不能自证盖全」。
@@ -126,8 +134,9 @@ React 侧         check 0 / test 1034 / test:e2e 146（wave 86 三条全真跑�
    「只能变短」——实测**没有任何机器在守这个方向**，`parity-diff.json` 与
    `parity-scenario-coverage.json` 各写了一遍。先决定它是承诺还是评审政策。
 
-> **这条尾巴没有自然终点。** 历史命中率：wave 88 捞出**一处两个应用都有、而对照
-> 天生看不见**的缺陷（外加一条红了一轮的用例）、wave 87 捞出 7 行、
+> **这条尾巴没有自然终点。** 历史命中率：wave 89 把上一轮的线索做成守卫、当场又捞出
+> 两边各 12 颗、wave 88 捞出**一处两个应用都有、而对照天生看不见**的缺陷
+> （外加一条红了一轮的用例）、wave 87 捞出 7 行、
 > wave 86 捞出 16 行、wave 75 捞出 6 处真差异、wave 76 捞出 27 处、
 > wave 82 捞出一个**两个应用都存在**的产品缺陷、wave 83 证伪了**验收判据自己**、
 > wave 84 捞出三条「扫描器盖不全自己声称的范围」、wave 85 把一条只靠人记得的

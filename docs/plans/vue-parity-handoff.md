@@ -8,15 +8,15 @@
 
 ---
 
-## 当前状态（截至 wave 88，2026-09-06）
+## 当前状态（截至 wave 89，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言）。
-- **动过 `frontend/` 的是二十轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 各加一轮）：
-  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88**。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`）。
+- **动过 `frontend/` 的是二十一轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 各加一轮）：
+  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
   而记忆里的压缩版把它读成了「总共三次」。**别再传这个数字，用命令量**：
 
@@ -24,10 +24,11 @@
   git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests
   ```
 
-  **marker 已推到 `1083b122`**（wave 88 的两边同改）；`node scripts/upstream-drift.mjs`
-  wave 88 实测**无漂移**，marker 也确实是 HEAD 的祖先——
+  **marker 已推到 `91ab3b2a`**（wave 89 的两边同改）；`node scripts/upstream-drift.mjs`
+  wave 89 实测**无漂移**，marker 也确实是 HEAD 的祖先——
   **边界规则本身有机器在守，需要人记的只有「这类改动做过哪些轮」。**
-  最近几轮的内容：**wave 88 给 22 颗域按钮 + 2 颗品牌按钮补 `aria-pressed`**（两个应用
+  最近几轮的内容：**wave 89 再给两边各 12 颗筛选/上下文/周期按钮补 `aria-pressed`**
+  （并把这条判据做成守卫）；wave 88 给 22 颗域按钮 + 2 颗品牌按钮补 `aria-pressed`（两个应用
   都只用换色表达选中）；wave 86 侧栏 nav 菜单去掉 `menu > link > menuitem` 的嵌套可交互元素；
   wave 82 长文件名把 artifact 面板整排动作键推出可视区；
   wave 74 两处 `<Toaster />` 用的不是 shadcn wrapper；wave 73 五条「本仓修掉了上游缺陷」；
@@ -74,14 +75,14 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 88 收工时逐条跑过）
+### 门禁实测值（wave 89 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；**260** 文件 / **2170** 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；**262** 文件 / **2174** 单测，词典 942 key、18 unused
                                    产品 SFC **218**（总 **220**，wave 86 新增 DropdownMenuGroup）
 make -C frontend-vue standalone-sim exit 0（wave 83 新增）**判据的动态那一半**：真把
                                    ../frontend rename 走，跑 CROSS_APP_BY_DESIGN 表里
-                                   点名的每一条，再移回来。跑过 12 条 / 未跑 5 条
+                                   点名的每一条，再移回来。跑过 **13** 条 / 未跑 5 条
                                    （4 data + 1 e2e）/ 红 0。**有意不进 verify**
                                    （动文件系统，且不能与任何构建并发）。
                                    `--with-e2e` 额外跑一次 e2e-parity，实测
@@ -93,7 +94,7 @@ make -C frontend-vue asset-budget  exit 0（wave 72 把 vendor-ui 预算按实�
 make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefile 的 audit 上方
 make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55% / 行 74.9%
                                    **诊断工具，不进 verify，没有阈值**
-                                   standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 39 处 / 17 个文件）
+                                   standalone-check BLOCKING 0 处 / 0 个文件（DECLARED **40** 处 / **18** 个文件）
                                    ——**它只是静态证明**，证不了「移走之后还能跑」：
                                    wave 83 第一次真做实验时它早已是 0，而 verify 当场红。
 make -C frontend-vue e2e-parity    **52**  台账 **0 行**，**44** 样本（NEW=0 GONE=0）
@@ -329,6 +330,89 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 89）做了什么：**把「选中态只靠换色」做成守卫，顺手清掉两边各 12 颗**
+
+提交 `91ab3b2a`，React 侧同一条（两边同改），chore `9cb61684`，
+**marker 推到 `91ab3b2a`**。**动过 `frontend/` 的从此是二十一轮。**
+
+wave 88 量出对照台账的一个**结构性盲区**（线索 238）：两个应用一起漏掉同一个属性时，
+aria / 几何 / 请求三档全是 0 行。这一轮把那条散文判据变成机器守的。
+
+### 一、先量：判据能不能收住口
+
+全仓（两个应用）`variant` 在 `default` / `outline` 之间条件切换的地方逐个归位：
+
+```
+React  15 处 <Button> + 1 处 <Badge>
+Vue     9 处 <Button> + 1 处 <Badge>
+```
+
+`<Button>` 那些**全部**是选中/未选中开关；`<Badge>` 那两处不可交互、状态就在徽标
+文字里。其余条件 variant 也逐条看过：`secondary`/`ghost` 的面板触发器（sidecar /
+browser）状态在**可访问名**里（`open ? close : open`），`outline`/`secondary` 的
+渠道键是动作键不是开关。
+**所以「`<Button>` + 条件 `default`/`outline` ⇒ 必须有 `aria-pressed`」这条规则
+一条豁免都不需要**（线索 180：豁免表为空才说明收口选对了）。
+
+### 二、尺子先量自己，再量代码
+
+`tests/guards/toggle-variant-pressed.test.ts` 第一次跑的读数：
+**Vue 6 处（v-for 展开后 12 颗）· React 12 处**，两边同样是 12 颗
+（React 把筛选逐颗写开了，Vue 用 `v-for`）。
+它**没有**报星期几按钮、也没有报 wave 88 刚修好的 24 颗——那三处本来就有。
+报出来的集合与手工点出来的逐条相同，不多不少。
+
+**扫描面自证**：Vue 那一半复用 `productVueInventory()` 并断言 `unscanned` 恒为空
+（线索 229）；React 那一半自己走目录树并断言扫到的文件数不为 0。
+
+### 三、修的是同一个文件里 60 行开外就有的写法
+
+`scheduled-tasks` 页状态筛选 5 + 类型筛选 3、上下文模式 2、周期类型 2。
+**判据仍是「同一份代码库里的既定写法」**——`scheduled-task-schedule-input.tsx`
+里星期几按钮一直写着 `aria-pressed`，而同一个文件里的 cron/once 那两颗没有。
+是漏了，不是决定。
+
+### 四、静态守卫守不住的那一半
+
+守卫只看得见「属性在不在」，写成 `:aria-pressed="false"` 它照样绿（N5 实测）。
+所以另加 `tests/unit/scheduled-tasks/filters.dom.test.ts`：真渲染一次，钉
+**值跟着状态走**、同组只有一颗 true、而且**九颗全都有这个属性**
+（缺属性和 `false` 不是一回事，读屏器只有属性存在时才念「未按下」）。
+
+### 五、跨应用声明与 skip 的真伪
+
+守卫要读 `../frontend/src`，已进 `cross-app-by-design.mjs`。
+**React 那一条是 `it.skipIf` 不是 `describe.skipIf`**，读文件也在用例体里（线索 225）。
+`make standalone-sim` 实测报的是 **1 过 / 1 跳过 / 0 红**——跳过在报表上真的显示为
+跳过（线索 226）。DECLARED 39 → **40 处 / 18 个文件**，BLOCKING 仍 0。
+
+### 负向验证 6 条，全红，无假绿
+
+| #   | 变异                                    | 跑什么                    | 结果                                    |
+| --- | --------------------------------------- | ------------------------- | --------------------------------------- |
+| N1  | 删掉 Vue 一处 `:aria-pressed`           | 守卫 Vue 那条             | 1 failed / 1 passed                     |
+| N2  | 删掉 React 一处 `aria-pressed`          | 守卫 React 那条           | 1 failed / 1 passed                     |
+| N3  | 往白名单外塞一个 `app/dodge-probe.vue`  | 守卫 Vue 那条             | 红在 `unscanned` 上，**不是**静默放过   |
+| N4  | 标签扫描器换成 `/<Button\b[^>]*>/`      | 守卫 React 那条           | **12 条假报**                           |
+| N5  | 值写死成 `:aria-pressed="false"`        | 守卫 vs DOM 用例          | **守卫照样绿**，DOM 用例 2 failed       |
+| N6  | 删掉 React 筛选那颗 `aria-pressed`      | `frontend` scheduled-tasks e2e | 1 failed / 7 passed                |
+
+**N4 是这一轮最值钱的一条**（线索 241）：朴素正则在
+`onClick={() => setStatusFilter("all")}` 的那个 `>` 上把标签截断，写在后面的
+`aria-pressed` 就看不见——同一棵干净的树被报成 12 处缺陷。**方向由属性顺序决定**：
+单独量过 `<Button onClick={() => setX("a")} variant={sel ? "default" : "outline"}>`，
+朴素版切出来是 `<Button onClick={() =>`，**连 variant 都读不到**，那颗会被静默跳过。
+噪的那一半看得见，静默那一半看不见（线索 230 的同一件事）。
+
+### 门禁（逐条真跑）
+
+Vue：verify 0（**262** 文件 / **2174** 单测；词典 942 key / 18 unused）·
+e2e-parity **52**（台账 **0 行 / 44 样本**）· e2e-mock 265+22+15+2+6 ·
+e2e-visual 8（一张没重录）· asset-budget 0 · standalone-sim **13 / 5 / 0** ·
+icon-parity 0 处待核 · e2e-backend 2+5+2+3+3+5+1+1 · audit 预期红 **14** ·
+standalone-check BLOCKING 0（DECLARED **40 / 18**）。
+React：check 0 · test **1034** · test:e2e **146**。
 
 ## 上一轮（wave 88）做了什么：**integrations 的两个交互态进取样面，并两边同改补上 aria-pressed**
 
@@ -2402,7 +2486,15 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 240 条在记忆文件里）
+## 其他常踩的坑（完整 241 条在记忆文件里）
+
+- **朴素的 `<Tag ...>` 正则会在属性值里的 `>` 上把标签切断，而错的方向由属性顺序
+  决定**（线索 241，wave 89）。`/<Button\b[^>]*>/` 碰上
+  `onClick={() => setX("a")}` 只切出 `<Button onClick={() =>`：
+  写在后面的 `aria-pressed` 看不见 → **12 条假报**（噪，看得见）；
+  写在后面的 `variant` 也看不见 → 那颗按钮**连「是不是开关」都判不出来，静默跳过**
+  （看不见）。**扫标签要按字符走，跟踪引号与 `{}` 深度。**
+  与线索 230（正则剥注释不认字符串）是同一件事的另一面。
 
 - **「台账 0 行」只说明两个应用一致，不说明那一处是对的**（线索 238，wave 88）。
   22 颗权限域按钮 + 2 颗品牌按钮，两个应用**都**只用换色表达选中、

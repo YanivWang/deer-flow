@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 88 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 89 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，接手时 HEAD 是 wave 88 的 docs 提交。
@@ -19,10 +19,10 @@
    先看「还欠什么」。三分钟读完。
 2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，2500 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（240 条里最近的十几条）。中间各轮的记录按需查。
+   结尾的「其他常踩的坑」（241 条里最近的十几条）。中间各轮的记录按需查。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **240 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **241 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -32,7 +32,7 @@
 - **默认只改 `frontend-vue/`。** 例外只有一种：**上游自己是坏的**——
   那时按「业界主流做法两边同改」，`frontend/` 与 `frontend-vue/` 同一条提交里改，
   再单独一条 chore 提交把 `frontend-vue/baseline/upstream-marker.json` 推到那条 fix
-  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十轮**，
+  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十一轮**，
   别传这个数字，用 `git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests` 量。
 - **不要中途提问。** 取舍自己定，写进提交说明。分歧的兜底判据是**按业界主流做法**。
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
@@ -62,8 +62,8 @@
 ### 收工门禁（逐条真跑，命令与上一轮实测读数）
 
 ```bash
-make -C <abs>/frontend-vue verify          # exit 0；260 文件 / 2170 单测；词典 942 key / 18 unused
-make -C <abs>/frontend-vue standalone-sim  # exit 0；跑过 12 / 未跑 5 / 红 0
+make -C <abs>/frontend-vue verify          # exit 0；262 文件 / 2174 单测；词典 942 key / 18 unused
+make -C <abs>/frontend-vue standalone-sim  # exit 0；跑过 13 / 未跑 5 / 红 0
 make -C <abs>/frontend-vue e2e-parity      # 52 passed；台账 0 行 / 44 样本
 make -C <abs>/frontend-vue e2e-mock        # 265 + 22 + 15 + 2 + 6
 make -C <abs>/frontend-vue e2e-visual      # 8 passed（只有 -darwin 基线，本机门禁）
@@ -137,8 +137,12 @@ wave 88 又接一处（`integrations`），量出的是**两个应用一起漏�
 
 ### C. 把散文里的断言变成守卫
 
-wave 83/84/85 连着三轮证明这条最值钱。判据两条：**「哪一行代码读它」**，
-以及**「这把尺子能不能自证盖全」**。
+wave 83/84/85 连着三轮证明这条最值钱，**wave 89 又证一次**（把 wave 88 的线索 238
+做成守卫，当场扫出两边各 12 颗）。判据**三**条：**「哪一行代码读它」**、
+**「这把尺子能不能自证盖全」**，以及**「这条规则要不要豁免表」**——
+要豁免表，多半是判据没选对（线索 180）。
+还要记住**一条守卫守不住两件事**：静态守卫只看得见「属性在不在」，
+「值跟着状态走」得另配一条真渲染的用例（wave 89 的 N5 实测）。
 - 已经量过、**不必再查**的：`tests/guards/` 下各豁免表都已双向守着；
   9 份扫 `.vue` 的正则剥法今天一处都没错（219 份逐个比对过）。
 - 同形的下一个目标：各文件头「实测过、做不到」的结论（**已经翻案十一次**）。
