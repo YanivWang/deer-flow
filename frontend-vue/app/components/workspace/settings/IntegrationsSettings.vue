@@ -770,6 +770,11 @@ onUnmounted(() => {
               </p>
             </div>
             <div class="mt-3 flex flex-wrap gap-2">
+              <!--
+                选中只是换了个 variant，不加 aria-pressed 的话读屏器听不出哪些域
+                被选上了——颜色是唯一的线索。与 ScheduledTaskScheduleInput 的
+                星期几按钮同一个形状，那边一直写着 aria-pressed。
+              -->
               <Button
                 v-for="domain in permissionDomains"
                 :key="domain.id"
@@ -779,6 +784,7 @@ onUnmounted(() => {
                 "
                 :disabled="integrationBusy"
                 :title="domain.description"
+                :aria-pressed="selectedDomains.includes(domain.id)"
                 @click="toggleDomain(domain.id)"
               >
                 {{ domain.label }}
@@ -849,12 +855,19 @@ onUnmounted(() => {
               </p>
             </div>
             <div class="flex flex-wrap gap-2">
+              <!--
+                品牌是单选，但这两颗仍然是普通按钮：真做成 radiogroup 就欠一套
+                方向键 roving focus，而两边都没有（ToggleGroupItem 的文件头写的
+                正是这条分叉）。aria-pressed 至少把状态念出来，又不许诺不存在的
+                键盘语义。
+              -->
               <Button
                 v-for="brand in ['feishu', 'lark'] as const"
                 :key="brand"
                 size="sm"
                 :variant="changeAppBrand === brand ? 'default' : 'outline'"
                 :disabled="integrationBusy"
+                :aria-pressed="changeAppBrand === brand"
                 @click="changeAppBrand = brand"
               >
                 {{

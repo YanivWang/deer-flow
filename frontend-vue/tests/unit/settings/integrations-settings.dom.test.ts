@@ -192,6 +192,58 @@ describe("IntegrationsSettings", () => {
     wrapper.unmount();
   });
 
+  it("says out loud which authorization domains are selected", async () => {
+    /*
+      对照台账钉的是「两个应用一不一致」，不是「这个属性在不在」——两边一起漏掉
+      aria-pressed 时它照样是 0 行（wave 88 就是这么量出来的）。所以存在性只能在
+      各自的用例里钉：这一条守 Vue 那一侧，React 那一侧守在
+      frontend/tests/e2e/integrations.spec.ts 的同一处交互上。
+    */
+    const wrapper = mountPanel();
+    await flushPromises();
+
+    const domain = (label: string) =>
+      wrapper.findAll("button").find((button) => button.text() === label)!;
+
+    const calendar = domain(
+      enUS.settings.integrations.lark.authDomains.calendar.label,
+    );
+    expect(calendar.attributes("aria-pressed")).toBe("false");
+    await calendar.trigger("click");
+    expect(
+      domain(
+        enUS.settings.integrations.lark.authDomains.calendar.label,
+      ).attributes("aria-pressed"),
+    ).toBe("true");
+    // 相邻的那颗必须还是 false：整排一起翻过去和一颗都不翻一样是错的。
+    expect(
+      domain(
+        enUS.settings.integrations.lark.authDomains.drive.label,
+      ).attributes("aria-pressed"),
+    ).toBe("false");
+    wrapper.unmount();
+  });
+
+  it("says out loud which Lark app brand is selected", async () => {
+    const wrapper = mountPanel();
+    await flushPromises();
+
+    const byText = (label: string) =>
+      wrapper.findAll("button").find((button) => button.text() === label)!;
+    await byText(enUS.settings.integrations.lark.changeAppButton).trigger(
+      "click",
+    );
+
+    const lark = enUS.settings.integrations.lark;
+    // 单选：点掉默认的 feishu 之后，两颗的状态必须一起翻过来。
+    expect(byText(lark.brandFeishu).attributes("aria-pressed")).toBe("true");
+    expect(byText(lark.brandLark).attributes("aria-pressed")).toBe("false");
+    await byText(lark.brandLark).trigger("click");
+    expect(byText(lark.brandFeishu).attributes("aria-pressed")).toBe("false");
+    expect(byText(lark.brandLark).attributes("aria-pressed")).toBe("true");
+    wrapper.unmount();
+  });
+
   it("drops an in-flight status read that a newer flow has superseded", async () => {
     /*
       真正会撞上的顺序：先点 Refresh（一次状态回读在飞），再点 Connect。Connect 的

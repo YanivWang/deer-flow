@@ -251,7 +251,16 @@ test.describe("Integrations settings", () => {
       dialog.getByText("Provisioned by init container"),
     ).toBeVisible();
 
-    await dialog.getByRole("button", { name: "Calendar" }).click();
+    // Selection is only a variant swap, so aria-pressed is the sole cue a screen
+    // reader gets. The cross-app parity ledger compares React against Vue and
+    // stays silent when both sides drop it, so presence has to be pinned here.
+    const calendarDomain = dialog.getByRole("button", { name: "Calendar" });
+    await expect(calendarDomain).toHaveAttribute("aria-pressed", "false");
+    await calendarDomain.click();
+    await expect(calendarDomain).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      dialog.getByRole("button", { name: "Drive" }),
+    ).toHaveAttribute("aria-pressed", "false");
     await dialog
       .getByLabel("Exact OAuth scope")
       .fill("calendar:calendar.event:read");
@@ -287,7 +296,8 @@ test.describe("Integrations settings", () => {
       page.getByText("Authorization page opened. Waiting for completion..."),
     ).toHaveCount(0);
 
-    await dialog.getByRole("button", { name: "Calendar" }).click();
+    await calendarDomain.click();
+    await expect(calendarDomain).toHaveAttribute("aria-pressed", "false");
     await dialog.getByLabel("Exact OAuth scope").fill("");
     await dialog.getByRole("button", { name: "Reconnect Lark" }).click();
     await expect(
@@ -372,6 +382,15 @@ test.describe("Integrations settings", () => {
     await expect(
       dialog.getByText("Switch to a different Lark app"),
     ).toBeVisible();
+    // Brand is single-select and, like the domain chips, shows it only through a
+    // variant swap; aria-pressed is what makes that audible.
+    await expect(dialog.getByRole("button", { name: "Feishu" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(
+      dialog.getByRole("button", { name: "Lark", exact: true }),
+    ).toHaveAttribute("aria-pressed", "false");
     await dialog.getByLabel("App ID").fill("cli_new_mock");
     await dialog.getByLabel("App Secret").fill("super-secret");
     const popupPromise = page.waitForEvent("popup");

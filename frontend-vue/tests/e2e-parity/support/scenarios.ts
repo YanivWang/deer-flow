@@ -1041,6 +1041,103 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       { kind: "visible", target: { selector: "[role=dialog]" } },
       { kind: "visible", target: { selector: '[data-slot="card-title"]' } },
     ],
+    /*
+      这个面板上「点一下才出现」的东西只有四样，而它们全都挂在两个互斥的终态上：
+      权限面板里选中的域 + 自定义 scope（选了之后连接键会改写成「申请新权限」），
+      以及「切换飞书 Bot」展开出来的整块表单（品牌二选一 + 两个输入 + 两颗动作键）。
+      `useState` 数一遍就是这四个：selectedAuthDomains / customAuthScope /
+      showChangeApp / changeAppBrand，其余状态都要真的授权流程才走得到。
+
+      三个终态而不是两个：`default` 保住此前那一份样本（那一屏本身仍然要比），
+      另外两个各自把一块此前从来没进过取样面的表面接上来。
+
+      **锚点为什么写成跨语言正则**：这个场景跑 en-US 与 zh-CN 两个维度，
+      而域名与按钮文案两边词典里都翻译了（坑 234）。只有 `App ID` 两种语言
+      逐字相同，才敢直接按名字找。
+    */
+    states: [
+      { id: "default", steps: [] },
+      {
+        id: "permission-request",
+        steps: [
+          {
+            kind: "click",
+            target: { role: "button", name: /^(Calendar|日历)$/ },
+          },
+          { kind: "click", target: { role: "button", name: /^(Docs|文档)$/ } },
+          {
+            kind: "fill",
+            target: { role: "textbox", name: /OAuth scope/ },
+            value: "calendar:calendar.event:read",
+          },
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Calendar|日历)$/ },
+          },
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Docs|文档)$/ },
+          },
+          /*
+            一颗**没被选中**的相邻域也要取样：选中与未选中的色板是这一块唯一
+            会变的量，只取选中的那些，「两边都把整排画成选中」也一样是 0。
+          */
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Drive|云空间)$/ },
+          },
+          /*
+            连接键改写成「申请新权限」才说明这次交互真的落到了状态上——
+            没有它，三颗按钮的颜色可以只是主题色相同而已。
+          */
+          {
+            kind: "visible",
+            target: {
+              role: "button",
+              name: /^(Request permissions|申请新权限)$/,
+            },
+          },
+        ],
+      },
+      {
+        id: "change-app",
+        steps: [
+          {
+            kind: "click",
+            target: {
+              role: "button",
+              name: /^(Change Lark app|切换飞书 Bot)$/,
+            },
+          },
+          // 品牌是单选：点掉默认的 feishu，两颗按钮的状态必须一起翻过来。
+          { kind: "click", target: { role: "button", name: /^Lark$/ } },
+          {
+            kind: "visible",
+            target: {
+              text: /^(Switch to a different Lark app|切换到其他飞书 App)$/,
+            },
+          },
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Feishu|飞书)$/ },
+          },
+          { kind: "visible", target: { role: "button", name: /^Lark$/ } },
+          // 两种语言下都是 "App ID"，这是这一块唯一不用写正则的锚点。
+          { kind: "visible", target: { role: "textbox", name: "App ID" } },
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Switch app|切换 App)$/ },
+          },
+          {
+            kind: "visible",
+            target: {
+              role: "button",
+              name: /^(Re-register in browser|在浏览器重新注册)$/,
+            },
+          },
+        ],
+      },
+    ],
     dimensions: [
       DEFAULT_DIMENSION,
       { viewport: "desktop", theme: "light", locale: "zh-CN" },

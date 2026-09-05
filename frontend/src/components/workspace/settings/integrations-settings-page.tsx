@@ -784,6 +784,10 @@ function LarkIntegrationCard() {
                         onClick={() => toggleAuthDomain(domain.id)}
                         disabled={integrationBusy}
                         title={domain.description}
+                        // Selection is a variant swap, so without aria-pressed the
+                        // only cue is color. Same shape as the weekday toggles in
+                        // scheduled-task-schedule-input.tsx.
+                        aria-pressed={selected}
                       >
                         {domain.label}
                       </Button>
@@ -866,6 +870,11 @@ function LarkIntegrationCard() {
                       variant={changeAppBrand === brand ? "default" : "outline"}
                       onClick={() => setChangeAppBrand(brand)}
                       disabled={integrationBusy}
+                      // Single-select, but these stay plain buttons: a real
+                      // radiogroup owes arrow-key roving focus, which neither of
+                      // these two buttons has. aria-pressed exposes the state
+                      // without promising keyboard semantics that aren't there.
+                      aria-pressed={changeAppBrand === brand}
                     >
                       {brand === "feishu"
                         ? t.settings.integrations.lark.brandFeishu
