@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 90，2026-09-06）
+## 当前状态（截至 wave 91，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90（**没动 `frontend/`**）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91（两轮都**没动 `frontend/`**）。
 - **动过 `frontend/` 的是二十一轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -34,10 +34,14 @@
   wave 74 两处 `<Toaster />` 用的不是 shadcn wrapper；wave 73 五条「本仓修掉了上游缺陷」；
   wave 62 `/auth/callback` 吞掉 `?next=` 深链。wave 41~~59、75~~81 都没动过。
 
-- **对照台账 0 行**（wave 78 清零），**48** 个样本，`make -C frontend-vue e2e-parity` **56** 条全绿。
+- **对照台账 2 行**（wave 78 清零后第一次有意接受；两行都是有名有姓的 primitive
+  分叉，见 wave 91 那一节与一页纸清单），**51** 个样本，
+  `make -C frontend-vue e2e-parity` **59** 条全绿。
   （39 → 40：wave 87 的 `states` 轴；40 → 44：wave 88 给 `integrations` 挂上
   `default` / `permission-request` / `change-app`；44 → **48**：wave 90 给 `channels`
-  挂上 `default` / `runtime-config` / `runtime-config-edit`——都是三个终态 × 两个语言维度。）
+  挂上 `default` / `runtime-config` / `runtime-config-edit`——都是三个终态 × 两个语言维度；
+  48 → **51**：wave 91 给 `branch-thread` 挂 `default` / `turn-actions` 两个终态，
+  并给它**补上 zh-CN 维度**。）
   路径是 1716 → …… → 23（wave 76 接上交互后的锚点，量出 27 处此前看不见的差异）
   → 16（wave 77 一处改动关掉 7 行）→ **0**（wave 78 把剩下的 16 行归到五处根因）。
   **这里的 0 是「当前这 39 个取样点上量不出差异」，不是「两个应用一样」**——
@@ -76,7 +80,7 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 90 收工时逐条跑过）
+### 门禁实测值（wave 91 收工时逐条跑过）
 
 ```
 make -C frontend-vue verify        exit 0；**262** 文件 / **2174** 单测，词典 942 key、18 unused
@@ -98,7 +102,9 @@ make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55%
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED **40** 处 / **18** 个文件）
                                    ——**它只是静态证明**，证不了「移走之后还能跑」：
                                    wave 83 第一次真做实验时它早已是 0，而 verify 当场红。
-make -C frontend-vue e2e-parity    **56**  台账 **0 行**，**48** 样本（NEW=0 GONE=0）
+make -C frontend-vue e2e-parity    **59**  台账 **2 行**，**51** 样本
+                                   两行都是 reka-ui 的 tooltip 播报节点被打上
+                                   aria-hidden（wave 91 逐条交代过，见下）
                                    wave 87 加了 `states` 轴：键是 `场景#终态/断点/主题/语言`；
                                    wave 88 用它给 `integrations` 挂了三个终态（× 两种语言）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -331,6 +337,76 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 91）做了什么：**几何加 opacity、步骤加 hover，branch-thread 17 行清到 2 行**
+
+提交 `fa66fb66`。**没动 `frontend/`。** 样本 48 → **51**，e2e-parity 56 → **59**，
+台账 0 → **2 行**（两条都逐条交代过）。
+
+### 一、两处尺子升级，各自先量了自己
+
+**`opacity` 进几何档。** `opacity: 0` 的元素**照样在可访问性树里**、照样有
+x/y/宽高、computed `color` 一点不变——「一边看得见一边看不见」这件事
+**aria / 几何 / 请求三档同时报不出来**。加上去之后既有 48 个样本**一行没多**
+（单独跑了一遍确认），而且**它是活的**：把 Vue 那颗分支键自己的 opacity 改成
+0.5，台账当场报两行（N4）。只取元素自己的值、不乘祖先链（坑 219）。
+
+**`hover` 进步骤档。** `click` 造不出悬停态（点下去有副作用），`visible` 只等待
+不移动指针。**实现是移三次不是一次**——探针里「hover 一次 + 等 1.5 秒」Vue 到了
+React 没到；场景里「hover 一次 + 30 秒轮询」**两边都到不了**，等待时间不是变量。
+**机制没查到底就没写死**（能确定的是 hover 会先 `scrollIntoViewIfNeeded`，
+而这一屏容器确实被滚动了：React scrollTop=60 / Vue=0）。坑 237 的同族。
+
+### 二、量出来的 17 行，三处根因
+
+```
+①  4+4 行  zh-CN 分支键的可访问名不同
+②  2   行  React 的可访问性树里多一个 tooltip 节点
+③  5   行  tooltip 浮层的位置/宽度
+```
+
+**① 真差异，修掉。** 上游用 `common.branch`（zh「分叉」），本仓用
+`messages.actions.branch`（zh「创建对话分支」）——**en-US 下两条恰好都是
+"Branch conversation"，所以只跑 en-US 永远看不出来**。这一屏此前只有 en-US 一维。
+按 wave 28 判据「命名弱但存在算风格不算缺陷」→ 照抄上游。
+**这条对下一轮通用：只跑一种语言的场景，等于把「翻译分叉」整类排除在取样之外。**
+
+**③ 是尺子的毛病不是产品的。** tooltip 是 portal 到 body 的 `position: fixed`
+元素，`sampleGeometry` 的「祖先 scrollTop 加回去」对它无效（祖先只有 body/html），
+量到的 y 里原样带着**触发器所在容器的滚动**。直接量过：分支键**文档**坐标两边
+都是 **y=208**，**视口**坐标 React=148 / Vue=207。改用**触发器自己的
+`data-state="delayed-open"`** 当锚点——普通在流元素，滚动补偿成立。
+（另记：`[role=tooltip]` 不能当锚点，两个库都把它挂在 1×1 clip 的隐藏播报节点上。）
+
+**② 接受进台账，理由查到库里。** Radix 的 `<VisuallyHidden role="tooltip">`
+**不**加 `aria-hidden`；reka-ui 2.10.1 的 `VisuallyHidden` 默认
+`feature: "focusable"`，那一支会打 `aria-hidden="true"`
+（`node_modules/reka-ui/dist/VisuallyHidden/VisuallyHidden.js:28`），
+于是 reka 把**专门给读屏器读的那个节点**从树里摘了出去。
+**两边的描述都还念得出来**（`aria-describedby` 的描述计算不受 aria-hidden 影响），
+差的只是 React 树里多一个 `tooltip` 角色节点。那个节点在 `TooltipContentImpl`
+内部、不经过我们的 slot，本仓够不着。**翻案判据**：reka 改掉那个默认值，
+这两行自己就没了。
+
+### 负向验证 4 条：3 红 + **1 条假绿**
+
+| #   | 变异                            | 结果                                          |
+| --- | ------------------------------- | --------------------------------------------- |
+| N1  | 还原 zh 分支文案                | zh-CN 那把从 1 行涨到 4R+3V 行 → 红          |
+| N2  | hover 只移一次                  | **四个 capture 全部「到不了」** → 红          |
+| N3  | 锚点换回 portal 出去的浮层      | **geometry 0 行，没复现** → **假绿**          |
+| N4  | Vue 分支键自己 opacity 0.5      | 台账报 `opacity R=1 V=0.5` 两行 → 红          |
+
+**N3 的假绿本身就是结论**：同一棵树、同一个锚点，一次跑出 `Δ44/Δ48`、另一次
+跑出 0——那个锚点**不是稳定地量错，是间歇地量错**，而间歇变红的门禁比恒错的
+更难查。换锚点的依据因此不靠 N3，靠上面那组直接读数（文档坐标两边都是 208）。
+
+### 门禁（逐条真跑）
+
+verify 0（**262** 文件 / **2174** 单测）· e2e-parity **59**（台账 **2 行 / 51 样本**）·
+e2e-mock 265+22+15+2+6 · e2e-visual 8（一张没重录）· asset-budget 0 ·
+standalone-sim 13 / 5 / 0 · icon-parity 0 处待核 ·
+e2e-backend 2+5+2+3+3+5+1+1 · audit 预期红 **14**。**没动 `frontend/`。**
 
 ## 上一轮（wave 90）做了什么：**channels 的连接对话框进取样面，两条互斥分支都接上**
 
@@ -2558,7 +2634,25 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 243 条在记忆文件里）
+## 其他常踩的坑（完整 246 条在记忆文件里）
+
+- **只跑一种语言的场景，等于把「翻译分叉」整类排除在取样之外**（线索 244，wave 91）。
+  `branch-thread` 此前只有 en-US 一维，而两个应用的分支键取的是**不同的词典键**
+  （上游 `common.branch`，本仓 `messages.actions.branch`）——en-US 下两条恰好
+  都是 "Branch conversation"，zh-CN 下一个是「分叉」一个是「创建对话分支」。
+  **加一维比加一个场景便宜得多，而且不动棘轮。**
+- **portal 出去的 `position: fixed` 浮层，绝对坐标不能比**（线索 245，wave 91）。
+  `sampleGeometry` 靠「把祖先链的 scrollTop 加回去」得到文档坐标，而浮层的祖先
+  只有 body/html（scrollTop 恒 0），于是量到的 y 里**原样带着触发器所在容器的滚动**。
+  实测：分支键文档坐标两边都是 y=208，视口坐标 React=148 / Vue=207。
+  **要量就量触发器**（普通在流元素），它同样能证明浮层开了
+  （`[data-slot="tooltip-trigger"][data-state="delayed-open"]`）。
+  顺带：`[role=tooltip]` 不能当锚点——Radix 与 Reka 都把它挂在 1×1、
+  `clip: rect(0,0,0,0)` 的隐藏播报节点上，等它「可见」会 30 秒超时。
+- **一个「间歇地量错」的锚点比「稳定地量错」更难查**（线索 246，wave 91）。
+  换掉浮层锚点之后做负向验证，把锚点换回去**没能复现**那 5 行几何差异——
+  同一棵树、同一个锚点，一次 `Δ44/Δ48`、一次 0。假绿如实记下来，
+  而换锚点的依据改成直接读数（文档坐标 vs 视口坐标 + 两边的 scrollTop）。
 
 - **两边没有共用 testid 时，先去夹具里找字符串**（线索 242，wave 90）。
   `channels` 侧栏一屏好几颗一模一样的 "Connect"，两个应用又没有共用的 testid，

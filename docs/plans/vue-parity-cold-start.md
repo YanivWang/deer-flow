@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 90 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 91 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，接手时 HEAD 是 wave 88 的 docs 提交。
@@ -19,10 +19,10 @@
    先看「还欠什么」。三分钟读完。
 2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，2500 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（243 条里最近的十几条）。中间各轮的记录按需查。
+   结尾的「其他常踩的坑」（246 条里最近的十几条）。中间各轮的记录按需查。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **243 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **246 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -37,7 +37,9 @@
 - **不要中途提问。** 取舍自己定，写进提交说明。分歧的兜底判据是**按业界主流做法**。
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
   推到我喊停为止；**不要停下来问「要不要继续」**。
-- **对照台账只能缩短。** `frontend-vue/baseline/parity-diff.json` 当前 **0 行 / 48 样本**。
+- **对照台账只能缩短。** `frontend-vue/baseline/parity-diff.json` 当前 **2 行 / 51 样本**
+  （wave 78 清零后第一次有意接受；两行都是 reka-ui 的 tooltip 播报节点被打上
+  `aria-hidden`，逐条交代在一页纸清单第一节）。
   **注意它钉的是「两个应用一不一致」，不是「这一处对不对」**——wave 88 量出
   22 颗按钮两边都缺 `aria-pressed`，三档全是 0 行。接上一块新表面之后，
   要另问一句「这一块本身对不对」，并把答案钉进**各自**的用例里。
@@ -64,7 +66,7 @@
 ```bash
 make -C <abs>/frontend-vue verify          # exit 0；262 文件 / 2174 单测；词典 942 key / 18 unused
 make -C <abs>/frontend-vue standalone-sim  # exit 0；跑过 13 / 未跑 5 / 红 0
-make -C <abs>/frontend-vue e2e-parity      # 56 passed；台账 0 行 / 48 样本
+make -C <abs>/frontend-vue e2e-parity      # 59 passed；台账 2 行 / 51 样本
 make -C <abs>/frontend-vue e2e-mock        # 265 + 22 + 15 + 2 + 6
 make -C <abs>/frontend-vue e2e-visual      # 8 passed（只有 -darwin 基线，本机门禁）
 make -C <abs>/frontend-vue asset-budget    # exit 0
@@ -113,7 +115,7 @@ wave 86 接三处量出 16 行、wave 87 接一处量出 7 行、wave 88 接一�
 `states` 轴**（`ParityScenario.states?: { id, steps }[]`，与 `steps` 二选一），
 互斥的模态终态不必再二选一；台账键是 `场景#终态/断点/主题/语言`。
 
-还没接的**三处**，各自的已知难点（**两边没有共用 testid 时，先去夹具里找字符串**
+还没接的**两处**，各自的已知难点（**两边没有共用 testid 时，先去夹具里找字符串**
 ——它不进词典、两种语言逐字相同，而且两个应用拿到的是同一份，线索 242）：
 
 wave 88 又接一处（`integrations`），量出的是**两个应用一起漏掉的一处缺陷**。
@@ -122,7 +124,7 @@ wave 88 又接一处（`integrations`），量出的是**两个应用一起漏�
 | -------------------------------- | -------------------------------------------------------------------------------------------- |
 | ~~`integrations` 的权限面板~~    | **wave 88 做完**（`permission-request` / `change-app` 两个终态，三档 0 行）                   |
 | ~~`channels` 的连接对话框~~      | **wave 90 做完**。触发器的坐标是**夹具给的 `display_name`**：`[data-sidebar="menu-item"]:has-text("Feishu") button` |
-| `branch-thread`                  | 分支入口在消息动作条上，那一排是 tooltip 触发（**没有 hover 步骤类型**，可能要先加一档）      |
+| ~~`branch-thread`~~              | **wave 91 做完**（顺手加了 `hover` 步骤档与 `opacity` 几何档；**hover 要移三次**）           |
 | `thread-history-mermaid` 的下载菜单 | 上游那一侧是 **streamdown 的发布产物**，不是上游源码；锚点名字要去 node_modules 里核         |
 | `chat` 那一屏的 composer 菜单    | 注意 `sidebar` 场景明写着**不能有 click 步骤**（活动项跟着指针走），别照抄                    |
 
@@ -130,6 +132,10 @@ wave 88 又接一处（`integrations`），量出的是**两个应用一起漏�
 - 一个锚点加进来之前，先问**它在这个场景的每一个维度上都成立吗**（语言维度最容易漏，
   按可访问名找的锚点天生只在一种语言下成立；两边有共用 testid 就优先用 testid）。
 - **别照着词典 key 猜锚点**——先量一遍它到底有没有被渲染成可见文字。
+
+**再加一条便宜的路**：给场景**补一个语言维度**。wave 91 给 `branch-thread` 加上
+zh-CN 就撞出「两个应用在中文下取了不同词典键」（en-US 下两条恰好一样，
+所以只跑 en-US 永远看不出来，线索 244）。**加维度不动棘轮。**
 
 ### B. 给现成的尺子加一档
 
