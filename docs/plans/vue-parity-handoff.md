@@ -1863,10 +1863,13 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
   容差 0.01（≈9,216 px）之下一直是绿的。**遇到它先看 diff 图**：
   只有文字平移、结构没变，就是它。
 - **新增 Vue SFC 要同步三个数字**：`I18N_INVENTORY.md` 的「共有 N 个 Vue SFC」与
-  「N 个产品 SFC」（**217 / 215**）、`tests/unit/i18n/source-guard.test.ts` 的
-  `toHaveLength(215)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
-  （**945 / 18**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
+  「N 个产品 SFC」（**219 / 217**）、`tests/unit/i18n/source-guard.test.ts` 的
+  `toHaveLength(217)`。`tests/guards/doc-facts.test.ts` 把 key 数与 unused 数对死
+  （**942 / 18**）——改 i18n 后跑 `make i18n-refresh`，`I18N_INVENTORY.md` 里那句
   「N 个已审阅 unused key」也要一起改。
+  **这三个数字 wave 77 复核时全是过期的**（写着 217/215、`toHaveLength(215)`、945/18），
+  而 `doc-facts` 只对死 I18N_INVENTORY 与基线、**不看这份交接文档**——
+  线索 179 的又一例：**不承重的数字写在散文里必然过期，抄之前先量一遍**。
 - **新增 L2 组件要加进 `tests/architecture.test.ts` 的 `l2Files` 允许清单**
   （要有 `【架构位置】 L2` 头、不许 import 产品层——`@/composables`、`#app`、`#imports`
   都是禁的，所以 L2 primitive 不能自己取 i18n，标签由调用点传）。清单按字母序。
