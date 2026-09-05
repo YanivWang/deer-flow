@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 92，2026-09-06）
+## 当前状态（截至 wave 93，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92（三轮都**没动 `frontend/`**）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93（四轮都**没动 `frontend/`**）。
 - **动过 `frontend/` 的是二十一轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -34,16 +34,17 @@
   wave 74 两处 `<Toaster />` 用的不是 shadcn wrapper；wave 73 五条「本仓修掉了上游缺陷」；
   wave 62 `/auth/callback` 吞掉 `?next=` 深链。wave 41~~59、75~~81 都没动过。
 
-- **对照台账 30 行**，**71** 个样本，`make -C frontend-vue e2e-parity` **79** 条全绿。
-  **30 行里没有一行是「还欠的」**：2 行是 reka-ui 的 tooltip 播报节点（wave 91），
-  28 行是**同一类**「上游把字写死成英文、本仓翻译了」（wave 92，逐条在一页纸清单里）。
+- **对照台账 44 行**，**73** 个样本，`make -C frontend-vue e2e-parity` **81** 条全绿。
+  **44 行里没有一行是「还欠的」**：2 行是 reka-ui 的 tooltip 播报节点（wave 91），
+  42 行是**同一类**「上游把字写死成英文、本仓翻译了」（wave 92 量出 28 行，
+  wave 93 给 mermaid 加第二个终态时同一类在同屏又记一次，+14 行）。
   **「只能缩短」这条规则对「新出现、还没定过的行」依然有效。**
   （39 → 40：wave 87 的 `states` 轴；40 → 44：wave 88 给 `integrations` 挂上
   `default` / `permission-request` / `change-app`；44 → **48**：wave 90 给 `channels`
   挂上 `default` / `runtime-config` / `runtime-config-edit`——都是三个终态 × 两个语言维度；
   48 → 51：wave 91 给 `branch-thread` 挂 `default` / `turn-actions` 两个终态，
   并给它**补上 zh-CN 维度**；51 → **71**：wave 92 把**19 个只跑 en-US 的场景
-  全部补上 zh-CN**。）
+  全部补上 zh-CN**；71 → **73**：wave 93 给 `thread-history-mermaid` 挂上下载菜单。）
   路径是 1716 → …… → 23（wave 76 接上交互后的锚点，量出 27 处此前看不见的差异）
   → 16（wave 77 一处改动关掉 7 行）→ **0**（wave 78 把剩下的 16 行归到五处根因）。
   **这里的 0 是「当前这 39 个取样点上量不出差异」，不是「两个应用一样」**——
@@ -82,7 +83,7 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 92 收工时逐条跑过）
+### 门禁实测值（wave 93 收工时逐条跑过）
 
 ```
 make -C frontend-vue verify        exit 0；**262** 文件 / **2174** 单测，词典 942 key、18 unused
@@ -104,10 +105,12 @@ make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55%
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED **40** 处 / **18** 个文件）
                                    ——**它只是静态证明**，证不了「移走之后还能跑」：
                                    wave 83 第一次真做实验时它早已是 0，而 verify 当场红。
-make -C frontend-vue e2e-parity    **79**  台账 **30 行**，**71** 样本
+make -C frontend-vue e2e-parity    **81**  台账 **44 行**，**73** 样本
                                    2 行 = reka-ui 的 tooltip 播报节点被打上
-                                   aria-hidden（wave 91）；28 行 = 上游把字写死成
-                                   英文而本仓翻译了（wave 92）。两类都已决定。
+                                   aria-hidden（wave 91）；42 行 = 上游把字写死成
+                                   英文而本仓翻译了（wave 92 的 28 行 + wave 93
+                                   给 mermaid 加第二个终态时同一屏又记一次的 14 行）。
+                                   **两类都已决定，没有一行是「还欠的」。**
                                    wave 87 加了 `states` 轴：键是 `场景#终态/断点/主题/语言`；
                                    wave 88 用它给 `integrations` 挂了三个终态（× 两种语言）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
@@ -340,6 +343,66 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 93）做了什么：**mermaid 下载菜单进取样面；方向 A 的清单清空**
+
+提交 `0ec3b9a4`。**没动 `frontend/`。** 样本 71 → **73**，e2e-parity 79 → **81**，
+台账 30 → **44 行**（新增 14 行是 wave 92 那一类在同屏第二个终态上的重复）。
+
+### 一、下载菜单本身 **0 差异**，而且那个 0 是算出来的
+
+**上游那一侧不是上游源码**，是 `streamdown` 这个 npm 包的发布产物，所以锚点名字是
+**去那份产物里核出来的**（触发器 `title="Download diagram"`，三项可见文字
+`SVG` / `PNG` / `mmd`），不是照本仓词典猜的。
+
+```
+thread-history-mermaid#download-menu/en-US   0 行
+thread-history-mermaid#download-menu/zh-CN   14 行（= 工具条那一类，与 #default 同）
+```
+
+**en-US 那个 0 是算出来的**：往本仓菜单里多加一项 `JPG`，那个键当场从
+`ariaOnlyVue: []` 变成 `["- button \"JPG\""]`（N2）。
+
+### 二、方向 A 的清单到此**清空**
+
+冷启动 prompt 上最后一条「`chat` 那一屏的 composer 菜单」**是过期的**——
+composer 上四个能展开的控件**都已经在取样面里**，只是挂在别的场景上
+（wave 30 记下的更便宜的做法）：
+
+```
+斜杠建议    → sidebar 场景的 fill 步骤（那个场景明写着不能有 click）
+模型选择器  → agent-chat
+模式菜单    → user-message-plain-text（桌面）+ ui-polish-mobile（移动端）
+推理强度    → workspace-changes#reasoning-menu
+```
+
+剩下的 `addAttachments` 是文件选择器，点开是操作系统对话框，取样够不着。
+**下一轮找活不要再看这张表了，它空了。**
+
+### 三、守卫抓到一次：别把带构建哈希的文件名写进注释
+
+第一版注释写了那个 chunk 的完整文件名，`doc-references` 当场红——它按
+「路径里的文件名在 checkout 里搜得到」判，而 `node_modules` 不在 checkout 里。
+**更要紧的是那个名字带构建哈希，下次装依赖就变了。**
+这次挡住的是一个**必然过期**的引用，不是误报。
+
+### 负向验证 2 条，全红
+
+| #   | 变异                                | 结果                                   |
+| --- | ----------------------------------- | -------------------------------------- |
+| N1  | 菜单项 `PNG` → 「PNG 图片」         | 锚点 `/^PNG$/` 先不匹配 → 到不了 → 红  |
+| N2  | 多加一项 `JPG`（锚点全匹配）        | en-US 那个键多出一行 → 台账红          |
+
+N1 与 wave 92 的 N3 同形（锚点同时也是文案守卫，比台账更早撞停）；
+**N2 才是证明「那个 0 是算出来的」那一条**——它专挑「不碰锚点、只改内容」的改法。
+**这是一条通用做法：要验一个 0，变异必须绕开锚点。**
+
+### 门禁（逐条真跑）
+
+verify 0（**262** 文件 / **2174** 单测）· e2e-parity **81**（台账 **44 行 / 73 样本**）·
+e2e-mock 265+22+15+2+6 · e2e-visual 8（一张没重录）· asset-budget 0 ·
+standalone-sim 13 / 5 / 0 · icon-parity 0 处待核 ·
+e2e-backend 2+5+2+3+3+5+1+1 · audit 预期红 **14**。**没动 `frontend/`。**
 
 ## 上一轮（wave 92）做了什么：**19 个只跑英文的场景全部补上 zh-CN**
 
@@ -2697,7 +2760,17 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 248 条在记忆文件里）
+## 其他常踩的坑（完整 250 条在记忆文件里）
+
+- **要验证一个「0」，变异必须绕开锚点**（线索 249，wave 93）。改菜单项的文案去验
+  「这个 0 是算出来的吗」，红是红了，但红在**锚点**上（`/^PNG$/` 不匹配了），
+  台账那一格根本没跑到——**那不是对 0 的验证**。换成「多加一项、锚点全不碰」，
+  那个键才真的从 `[]` 变成一行。wave 92 的 N3 也踩过同一条。
+- **别把带构建哈希的文件名写进注释**（线索 250，wave 93）。
+  引用 `streamdown` 发布产物时写了 `chunk-XXXXXXXX.js`，`doc-references` 当场红
+  （`node_modules` 不在 checkout 里，那条守卫按「文件名搜得到」判）。
+  **更要紧的是那个名字下次装依赖就变了**——守卫挡住的是一个必然过期的引用。
+  引用第三方产物写**包名 + 里面那段行为**，不写文件名。
 
 - **批量加维度/加场景，先拿可达性层探路，别直接跑 diff**（线索 247，wave 92）。
   一次给 19 个场景补 zh-CN，10 个当场到不了；`diff.spec.ts` 是**一条**用例跑完

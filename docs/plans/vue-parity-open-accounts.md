@@ -1,11 +1,12 @@
-# React → Vue 平替：挂账总清单（截至 wave 92，2026-09-06）
+# React → Vue 平替：挂账总清单（截至 wave 93，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
 
-> **判据提醒**：台账现在是 **30 行 / 71 个取样点**，而且**没有一行是「还欠的」**——
-> 2 行 reka-ui 的 tooltip 播报节点（wave 91）+ 28 行「上游把字写死成英文、本仓翻译了」
-> （wave 92），两类都在下面第一节里逐条交代。
+> **判据提醒**：台账现在是 **44 行 / 73 个取样点**，而且**没有一行是「还欠的」**——
+> 2 行 reka-ui 的 tooltip 播报节点（wave 91）+ 42 行「上游把字写死成英文、本仓翻译了」
+> （wave 92 量出 28 行，wave 93 给 mermaid 加第二个终态时同一类在同屏又记一次，+14），
+> 两类都在下面第一节里逐条交代。
 > **规则相应改成：「新出现、还没定过的行只能减不能增」**，「台账 0 行」这个目标不再成立。
 > 「量不出差异」的准确含义一直是「**这些取样点上量不出差异**」，
 > 不是「两个应用一样」。天生看不见的八类见交接文档。
@@ -21,7 +22,7 @@
 | #   | 账                                    | 状态             | 下一步要做什么                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | --- | ------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | **artifact 头部长文件名的 18px 零头** | **开着（半条）** | wave 82 修完之后，59 字符文件名下裁剪盒仍有轻微溢出：上游 `scrollWidth 481 / clientWidth 458`（23px）、本仓 `497 / 492`（5px）。**溢出的是标题那一侧，不含任何动作键**（五颗键全部回到盒内）。两边 `SelectTrigger` 的最小内容宽不同。台账那条场景用短文件名，进不了取样面。**追之前先决定「这 18px 算不算差异」。**                                                                                                                                             |
-| 4   | **台账里那 28 行「上游写死英文」**    | **已决定：保留本仓的翻译** | wave 92 给 19 个只跑 en-US 的场景补上 zh-CN 之后量出来的，**同一类**：`browser-feature`（Back / Forward / 地址栏 placeholder /「Connecting to live browser…」/「Waiting for the first live frame.」）12 行、`thread-history-mermaid`（工具条六颗键 + 图片 alt）14 行、`artifact-stream-state`（`fileTypeLabel`）2 行。出处逐条查过：`browser-view-panel.tsx:401/462` 是**内联英文字面量**（词典里没有对应 key）；mermaid 工具条来自 **`streamdown` npm 包**，上游连改都改不了；`fileTypeLabel` 是本仓独有的 key。**判据是 fork-boundary 里那条已授权的例外「vue 有更好的可以保留」**——把 13 处译文改回英文，是在这个要留下来的应用上做一次用户可见的退化。**翻案判据**：上游哪天给这些字加了词典，或者 streamdown 支持了 i18n。 |
+| 4   | **台账里那 42 行「上游写死英文」**    | **已决定：保留本仓的翻译** | wave 92 给 19 个只跑 en-US 的场景补上 zh-CN 之后量出来的，**同一类**：`browser-feature`（Back / Forward / 地址栏 placeholder /「Connecting to live browser…」/「Waiting for the first live frame.」）12 行、`thread-history-mermaid`（工具条六颗键 + 图片 alt）14 行、`artifact-stream-state`（`fileTypeLabel`）2 行。出处逐条查过：`browser-view-panel.tsx:401/462` 是**内联英文字面量**（词典里没有对应 key）；mermaid 工具条来自 **`streamdown` npm 包**，上游连改都改不了；`fileTypeLabel` 是本仓独有的 key。**判据是 fork-boundary 里那条已授权的例外「vue 有更好的可以保留」**——把 13 处译文改回英文，是在这个要留下来的应用上做一次用户可见的退化。**翻案判据**：上游哪天给这些字加了词典，或者 streamdown 支持了 i18n。 |
 | 3   | **台账里那 2 行 tooltip 播报节点**    | **开着（够不着）** | wave 91 接上悬停态之后量到：React 的可访问性树里多一个 `tooltip` 角色节点，本仓没有。根因在库里——Radix 的 `<VisuallyHidden role="tooltip">` **不**加 `aria-hidden`，而 reka-ui 2.10.1 的 `VisuallyHidden` 默认 `feature: "focusable"`，那一支会打 `aria-hidden="true"`（`node_modules/reka-ui/dist/VisuallyHidden/VisuallyHidden.js:28`），于是**专门给读屏器读的那个节点被摘出了树**。**两边的描述都还念得出来**（`aria-describedby` 的描述计算不受 aria-hidden 影响）。那个节点在 `TooltipContentImpl` 内部、不经过本仓的 slot，够不着。**翻案判据**：reka 改掉那个默认值，这两行自己就没了。 |
 | 2   | **覆盖率棘轮的 pending 1 条**         | **开着但已收紧** | `chat-thread-init-ordering`。wave 63 用 23 个样本重测：React 仍是**两个终态 19 B / 4 A（约 17%）**，Vue 23/23 单一。**翻案判据已从「连取 5 次」收紧到连取 20 次**，复现脚本写在 `baseline/parity-scenario-coverage.json` 的 `$pendingReasons` 里。**不是「还没做」，是「上游自己在这一屏上不确定」。**                                                                                                                                                          |
 
@@ -47,7 +48,7 @@
 
 ---
 
-## 三、这一轮（wave 78~92）清掉的
+## 三、这一轮（wave 78~93）清掉的
 
 - **台账 16 → 0**（wave 78，五处根因：页脚两组 / 菜单 align+side / 模式项多传的 `py-2` / `ui/command` 的 class 合同 / artifact 头部三栏 / sidecar 页脚的 `pt-3`）
 - **守卫注释里点名的两笔**（wave 79：保存 agent 键的位置与形状、MessageList 的 artifactTargets 文件名键）
@@ -68,6 +69,9 @@
 - **三处交互态第一次进取样面**（wave 86）：会话行的 ⋯ 菜单量出 7 处（三处根因）、
   侧栏 nav 菜单量出 9 行（少一个 group + 上游的 `menu > link > menuitem` 嵌套，
   **两边同改**）；定时任务的编辑表单 **0 差异**
+- **mermaid 下载菜单进取样面，方向 A 的清单清空**（wave 93）：菜单本身 0 差异，
+  而且**那个 0 是算出来的**（多加一项 `JPG` 当场报一行）；顺带查明冷启动表上最后一条
+  「chat 的 composer 菜单」**是过期的**——四个能展开的控件都已挂在别的场景上
 - **19 个只跑英文的场景全部补上 zh-CN**（wave 92）：坑 244 系统扫完，21 处锚点
   改成跨语言正则（zh 文案全部从词典反查、不是猜的），量出一整类「上游写死英文」；
   方法上留下一条：**批量加维度先拿可达性层探路**（10 → 7 → 3 → 0）
@@ -93,14 +97,14 @@
 
 ---
 
-## 四、收工时的门禁读数（wave 92 逐条实跑）
+## 四、收工时的门禁读数（wave 93 逐条实跑）
 
 ```
 verify           exit 0    262 文件 / 2174 单测；词典 942 key / 18 unused
                            产品 SFC 218（总 220）
 standalone-sim   exit 0    跑过 13 / 未跑 5（4 data + 1 e2e）/ 红 0      ← wave 83 新增
                            --with-e2e 实测 13 / 4 / 0（那一条：exit 0，47 条跳过）
-e2e-parity       79        台账 30 行 / 71 样本（两类都见第一节第 3、4 条）
+e2e-parity       81        台账 44 行 / 73 样本（两类都见第一节第 3、4 条）
 e2e-mock         265 + 22 + 15 + 2 + 6
 e2e-backend      2 + 5 + 2 + 3 + 3 + 5 + 1 + 1      ← wave 88 修完 e2e-shell 之后才又全绿
 e2e-visual       8         wave 88 一张没重录
@@ -126,11 +130,13 @@ React 侧         check 0 / test 1034 / test:e2e 146（wave 86 三条全真跑�
    **挂展开态很便宜**：场景 id 受棘轮约束，夹具与 steps 不受。
    **锚点要在这个场景的每一个维度上都成立**（语言维度最容易漏），
    而且别照着词典 key 猜——先量一遍它有没有被渲染。
-   **还没接的交互态**（`integrations` wave 88、`channels` wave 90、
-   `branch-thread` wave 91 都做掉了，**剩两处**）：
-   `thread-history-mermaid` 的下载菜单（上游那一侧是 streamdown 的发布产物，
-   不是上游源码，锚点名字要去 node_modules 里核）、
-   `chat` 那一屏的 composer 菜单（注意 `sidebar` 场景明写着不能有 click 步骤）。
+   **这张表 wave 93 起是空的。** `integrations`（wave 88）、`channels`（wave 90）、
+   `branch-thread`（wave 91）、`thread-history-mermaid` 的下载菜单（wave 93）都做掉了；
+   最后一条「`chat` 的 composer 菜单」查明**是过期的**——四个能展开的控件都已经在
+   取样面里，只是挂在别的场景上（斜杠建议→`sidebar` 的 fill；模型选择器→`agent-chat`；
+   模式菜单→`user-message-plain-text` + `ui-polish-mobile`；推理强度→
+   `workspace-changes#reasoning-menu`），剩下的 `addAttachments` 是操作系统文件对话框，
+   取样够不着。**下一轮找活不要再看这条方向了。**
    **两条通用办法**：① 两边没有共用 testid 时，先去**夹具**里找字符串
    （不进词典、两种语言逐字相同，两个应用拿到同一份，线索 242）；
    ② **给场景补一个语言维度比加一个场景便宜得多，而且不动棘轮**——
@@ -155,7 +161,9 @@ React 侧         check 0 / test 1034 / test:e2e 146（wave 86 三条全真跑�
    「只能变短」——实测**没有任何机器在守这个方向**，`parity-diff.json` 与
    `parity-scenario-coverage.json` 各写了一遍。先决定它是承诺还是评审政策。
 
-> **这条尾巴没有自然终点。** 历史命中率：wave 92 把「语言维度」这条路一次扫完、
+> **这条尾巴没有自然终点。** 历史命中率：wave 93 把方向 A 的清单清空
+> （最后一处 0 差异，而且证明了那个 0 是算出来的）、
+> wave 92 把「语言维度」这条路一次扫完、
 > 量出一整类 28 行的已决定差异、wave 91 给尺子加两档、一次量出 17 行
 > （其中一条真差异藏在一个**从来没取过的语言维度**里）、
 > wave 90 把挂了好几轮的 `channels` 对话框

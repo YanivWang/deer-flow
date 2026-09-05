@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 92 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 93 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，接手时 HEAD 是 wave 88 的 docs 提交。
@@ -19,10 +19,10 @@
    先看「还欠什么」。三分钟读完。
 2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，2500 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（248 条里最近的十几条）。中间各轮的记录按需查。
+   结尾的「其他常踩的坑」（250 条里最近的十几条）。中间各轮的记录按需查。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **248 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **250 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -38,9 +38,9 @@
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
   推到我喊停为止；**不要停下来问「要不要继续」**。
 - **台账的规则现在是「新出现、还没定过的行只能减不能增」**，不再是「保持 0」。
-  `frontend-vue/baseline/parity-diff.json` 当前 **30 行 / 71 样本**，
-  **30 行没有一行是「还欠的」**：2 行 reka-ui 的 tooltip 播报节点（wave 91）+
-  28 行「上游把字写死成英文、本仓翻译了」（wave 92）。两类都在一页纸清单第一节
+  `frontend-vue/baseline/parity-diff.json` 当前 **44 行 / 73 样本**，
+  **44 行没有一行是「还欠的」**：2 行 reka-ui 的 tooltip 播报节点（wave 91）+
+  42 行「上游把字写死成英文、本仓翻译了」（wave 92/93）。两类都在一页纸清单第一节
   逐条交代，各带翻案判据。
   **注意它钉的是「两个应用一不一致」，不是「这一处对不对」**——wave 88 量出
   22 颗按钮两边都缺 `aria-pressed`，三档全是 0 行。接上一块新表面之后，
@@ -68,7 +68,7 @@
 ```bash
 make -C <abs>/frontend-vue verify          # exit 0；262 文件 / 2174 单测；词典 942 key / 18 unused
 make -C <abs>/frontend-vue standalone-sim  # exit 0；跑过 13 / 未跑 5 / 红 0
-make -C <abs>/frontend-vue e2e-parity      # 79 passed；台账 30 行 / 71 样本
+make -C <abs>/frontend-vue e2e-parity      # 81 passed；台账 44 行 / 73 样本
 make -C <abs>/frontend-vue e2e-mock        # 265 + 22 + 15 + 2 + 6
 make -C <abs>/frontend-vue e2e-visual      # 8 passed（只有 -darwin 基线，本机门禁）
 make -C <abs>/frontend-vue asset-budget    # exit 0
@@ -109,37 +109,22 @@ make -C <abs>/frontend-vue audit           # **预期红 14**，分诊写在 Mak
 
 ## 下一轮可以挑的活（按性价比排）
 
-### A. 给取样面接互斥的交互态（命中率最高）
+### A. ~~给取样面接互斥的交互态~~ —— **wave 93 起这张表是空的**
 
-wave 86 接三处量出 16 行、wave 87 接一处量出 7 行、wave 88 接一处量出一个
-**两个应用都有、对照天生看不见**的缺陷、wave 90 接一处 0 差异
-（**值在于这一块从此永久有覆盖**）。**wave 87 起对照场景支持
-`states` 轴**（`ParityScenario.states?: { id, steps }[]`，与 `steps` 二选一），
-互斥的模态终态不必再二选一；台账键是 `场景#终态/断点/主题/语言`。
+wave 86/87/88/90/91/93 逐个做完：`integrations` 的权限面板与换应用表单、
+`channels` 的两条连接对话框分支、`branch-thread` 的悬停动作条、
+`thread-history-mermaid` 的下载菜单。最后一条「`chat` 的 composer 菜单」
+wave 93 查明**是过期的**——四个能展开的控件都已经在取样面里，只是挂在别的场景上：
 
-还没接的**两处**，各自的已知难点（**两边没有共用 testid 时，先去夹具里找字符串**
-——它不进词典、两种语言逐字相同，而且两个应用拿到的是同一份，线索 242）：
+```
+斜杠建议    → sidebar 的 fill 步骤（那个场景明写着不能有 click）
+模型选择器  → agent-chat
+模式菜单    → user-message-plain-text（桌面）+ ui-polish-mobile（移动端）
+推理强度    → workspace-changes#reasoning-menu
+```
 
-wave 88 又接一处（`integrations`），量出的是**两个应用一起漏掉的一处缺陷**。
-
-| 目标                             | 已知难点                                                                                     |
-| -------------------------------- | -------------------------------------------------------------------------------------------- |
-| ~~`integrations` 的权限面板~~    | **wave 88 做完**（`permission-request` / `change-app` 两个终态，三档 0 行）                   |
-| ~~`channels` 的连接对话框~~      | **wave 90 做完**。触发器的坐标是**夹具给的 `display_name`**：`[data-sidebar="menu-item"]:has-text("Feishu") button` |
-| ~~`branch-thread`~~              | **wave 91 做完**（顺手加了 `hover` 步骤档与 `opacity` 几何档；**hover 要移三次**）           |
-| `thread-history-mermaid` 的下载菜单 | 上游那一侧是 **streamdown 的发布产物**，不是上游源码；锚点名字要去 node_modules 里核         |
-| `chat` 那一屏的 composer 菜单    | 注意 `sidebar` 场景明写着**不能有 click 步骤**（活动项跟着指针走），别照抄                    |
-
-**加锚点的两条判据**（本轮踩出来的）：
-- 一个锚点加进来之前，先问**它在这个场景的每一个维度上都成立吗**（语言维度最容易漏，
-  按可访问名找的锚点天生只在一种语言下成立；两边有共用 testid 就优先用 testid）。
-- **别照着词典 key 猜锚点**——先量一遍它到底有没有被渲染成可见文字。
-
-~~**再加一条便宜的路**：给场景补一个语言维度~~ —— **wave 92 已经扫完**：
-24 个场景现在都跑两种语言了。方法留着：批量加维度时**先拿 `scenarios.spec.ts`
-（可达性层）探路**，一个键一条用例、各自计时，坏锚点逐个点名；
-别直接跑 `diff.spec.ts`（一条用例跑完所有样本，一个坏锚点卡 30 秒就拖垮它，
-线索 247）。
+`addAttachments` 是操作系统文件对话框，取样够不着。
+**别再从这条方向找活了**；下面 B / C 两条还在。
 
 ### B. 给现成的尺子加一档
 
