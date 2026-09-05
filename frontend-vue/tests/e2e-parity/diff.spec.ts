@@ -160,7 +160,12 @@ function diffGeometry(
         );
       }
     }
-    for (const field of ["color", "background", "fontSize"] as const) {
+    for (const field of [
+      "color",
+      "background",
+      "fontSize",
+      "opacity",
+    ] as const) {
       if (r[field] !== v[field]) {
         lines.push(`${label} ${field} React=${r[field]} Vue=${v[field]}`);
       }

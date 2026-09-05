@@ -1231,7 +1231,16 @@ export const zhCN: Translations = {
     tryAgain: "重试",
     actions: {
       editAndRerun: "编辑并重新运行",
-      branch: "创建对话分支",
+      /*
+        **照抄上游的 `common.branch`（"分叉"），不是 en 那句的直译。**
+        wave 91 第一次给这一屏加上 zh-CN 维度，台账当场报出两个应用的分支键
+        可访问名不同：上游 `common.branch` 中文是「分叉」，本仓这一条原来写的是
+        「创建对话分支」。en-US 下两边恰好都是 "Branch conversation"，
+        所以只跑 en-US 永远看不出来。
+        按 wave 28 的判据，「命名弱但存在」算风格不算缺陷 → 照抄上游。
+        代价：中文这颗键的名字比英文短、信息量少一点，与上游一致。
+      */
+      branch: "分叉",
       regenerate: "重新生成",
     },
   },

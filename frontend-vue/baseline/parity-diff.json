@@ -197,8 +197,33 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
-    "branch-thread/desktop/light/en-US": {
+    "branch-thread#default/desktop/light/en-US": {
       "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "branch-thread#default/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "branch-thread#turn-actions/desktop/light/en-US": {
+      "ariaOnlyReact": [
+        "- tooltip \"Branch conversation\""
+      ],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "branch-thread#turn-actions/desktop/light/zh-CN": {
+      "ariaOnlyReact": [
+        "- tooltip \"分叉\""
+      ],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],

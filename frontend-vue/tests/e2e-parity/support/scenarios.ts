@@ -67,6 +67,20 @@ export type ParityStep =
   | { kind: "visible"; target: ParityTarget }
   | { kind: "hidden"; target: ParityTarget }
   | { kind: "click"; target: ParityTarget }
+  /*
+    把鼠标移到某个锚点上并停在那里。
+
+    为什么必须是**新的一档**：`opacity-0 group-hover:opacity-100` 这一类
+    「悬停才看得见」的东西，`click` 造不出来——点完鼠标确实在那里，但点击本身
+    往往还有副作用（消息动作条那一排点下去就是真的分叉/重跑了）。
+    而 `visible` 只是等待，不移动指针。
+
+    Playwright 的 `hover()` 把指针留在那里直到下一次移动，所以取样时悬停态还在
+    （与坑 214 的判据一致：加取样点先问「这个点到取样时还在吗」）。
+    **注意 `opacity: 0` 的元素照样可以 hover**：Playwright 的可见性判据看的是
+    盒模型与 `visibility`，不看 opacity。
+  */
+  | { kind: "hover"; target: ParityTarget }
   | { kind: "fill"; target: ParityTarget; value: string }
   | { kind: "press"; key: string }
   /*
@@ -321,6 +335,31 @@ async function runStep(page: Page, step: ParityStep, timeout: number) {
       return locator.click({ timeout });
     case "fill":
       return locator.fill(step.value, { timeout });
+    case "hover":
+      /*
+        **移三次，不是一次**（坑 237 的同族，wave 91 实测）。
+
+        两组读数，都如实记下来：
+
+        - 探针里「`hover()` 一次 + 等 1.5 秒」：**Vue 侧动作条已经 `opacity: 1`
+          且 tooltip 开了，React 侧仍然是 `opacity: 0`、一个 tooltip 都没有**；
+          随手再抖一次鼠标，React 立刻也开了。
+        - 场景里「`hover()` 一次 + 后续 `visible` 轮询（最多 30 秒）」：
+          **两个应用都到不了**。等待时间不是变量——多等 30 秒也没用。
+
+        **机制没查到底，就不写死。** 能确定的只有一条：一次鼠标移动之后，
+        指针最终**不在**它该在的位置上（Playwright 的 hover 会先
+        `scrollIntoViewIfNeeded`，而这一屏的消息容器确实会被滚动——
+        同一次取样里 React 那个容器 scrollTop=60、Vue=0）。
+        再移一次就对了，两边都对。
+
+        修的是**测量方式不是契约**：往元素里的三个不同位置各移一次，每次之间
+        有 Playwright 自己的 auto-wait。这与坑 237 的「滚到它真的动为止」是同一条
+        ——别拿一次输入去赌一个还在动的界面。
+      */
+      await locator.hover({ timeout, position: { x: 3, y: 3 } });
+      await locator.hover({ timeout, position: { x: 5, y: 5 } });
+      return locator.hover({ timeout });
   }
 }
 
@@ -1246,6 +1285,79 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         kind: "visible",
         target: { text: "Which environment should I deploy to?" },
       },
+    ],
+    /*
+      这一屏「点一下才出现」的东西其实**不是点出来的，是悬停出来的**：
+      助手回合下面那一排动作键写的是 `opacity-0 … group-hover:opacity-100`，
+      两个应用都一样。**在 wave 91 之前没有任何门禁量过它**——
+      `opacity: 0` 的元素照样在可访问性树里、照样有位置与尺寸、computed `color`
+      也一点不变，所以 aria / 几何 / 请求三档同时报不出「一边看得见一边看不见」。
+      wave 91 给几何档加了 `opacity`，又加了 `hover` 这一档步骤，这一块才第一次
+      进得来。
+
+      悬停目标直接选**分支键本身**而不是外层回合：悬停按钮既能触发外层的
+      `group-hover`（按钮在回合里面），又能顺带把它的 tooltip 打开，
+      一步取到两样。
+    */
+    states: [
+      { id: "default", steps: [] },
+      {
+        id: "turn-actions",
+        steps: [
+          {
+            kind: "hover",
+            target: {
+              role: "button",
+              name: /^(Branch conversation|分叉|创建对话分支)$/,
+            },
+          },
+          {
+            kind: "visible",
+            target: {
+              role: "button",
+              name: /^(Branch conversation|分叉|创建对话分支)$/,
+            },
+          },
+          { kind: "visible", target: { selector: "[data-assistant-turn]" } },
+          /*
+            证明 tooltip 真的开了，用的是**触发器自己的 `data-state`**，
+            不是那块浮层。两条理由，都是量出来的：
+
+            ① **`[role=tooltip]` 不能用**：Radix 与 Reka 都把它挂在一个
+            1×1、`clip: rect(0,0,0,0)` 的**隐藏播报节点**上，等它「可见」会
+            30 秒超时，报出来是「Vue 没能到达场景」，看着像产品缺陷。
+
+            ② **`[data-slot="tooltip-content"]` 能等到，但它的坐标不能比**：
+            浮层是 portal 到 body 的 `position: fixed` 元素，`sampleGeometry`
+            那套「把祖先链的 scrollTop 加回去」对它无效（它的祖先只有 body/html，
+            scrollTop 都是 0），于是量到的 y 里**原样带着触发器所在容器的滚动**。
+            实测：分支键的**文档**坐标两边都是 y=208，而**视口**坐标 React=148、
+            Vue=207——差的 59px 全是滚动（React 那个消息容器 scrollTop=60，
+            Vue=0，两边 scrollHeight 都是 1042）。台账里会表现成
+            `tooltip-content y Δ44`，看着像 side 反了，其实与布局无关
+            （capture.ts 文件头里 mermaid 那条 Δ69 是同一件事的第一次）。
+
+            触发器是普通的在流元素，滚动补偿对它成立，所以它的几何可比。
+          */
+          {
+            kind: "visible",
+            target: {
+              selector:
+                '[data-slot="tooltip-trigger"][data-state="delayed-open"]',
+            },
+          },
+        ],
+      },
+    ],
+    /*
+      **加 zh-CN 这一维是这一轮的正题之一。** 这一屏此前只跑 en-US，而两个应用
+      的分支键取的是**不同的词典键**（上游 `common.branch`，本仓
+      `messages.actions.branch`）——en-US 下两条恰好都是 "Branch conversation"，
+      所以单跑 en-US 永远看不出来。差异只在另一个语言维度上存在。
+    */
+    dimensions: [
+      DEFAULT_DIMENSION,
+      { viewport: "desktop", theme: "light", locale: "zh-CN" },
     ],
   },
   {

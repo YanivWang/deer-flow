@@ -68,6 +68,20 @@ export type GeometrySample = {
   color: string;
   background: string;
   fontSize: string;
+  /*
+    元素**自己**的 opacity。
+
+    加这一档是因为它是一处真的盲区：`opacity: 0` 的元素**照样在可访问性树里**
+    （不是 `display:none` 也不是 `visibility:hidden`），照样有 x/y/宽高，
+    computed `color` 也一点不变——也就是说「一边看得见、另一边看不见」这件事，
+    aria、几何、请求三档**同时**都报不出来。消息动作条那一排就是这样：
+    两个应用都写 `opacity-0 group-hover:opacity-100`，而在这之前没有任何门禁
+    量过它到底是 0 还是 1。
+
+    只取元素自己的值，不把祖先链乘起来：乘起来的话，一处祖先透明度差异会让
+    它下面每个锚点同时报一行，而那是同一处差异的 N 个投影（坑 219 的同一件事）。
+  */
+  opacity: string;
 };
 
 /** 会随时间或随机数变化、且不体现产品行为的查询参数。 */
@@ -281,6 +295,7 @@ export async function sampleGeometry(
             color: toRgba(style.color),
             background: toRgba(style.backgroundColor),
             fontSize: style.fontSize,
+            opacity: style.opacity,
           };
         },
         undefined,
