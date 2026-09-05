@@ -1943,6 +1943,37 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       { kind: "visible", target: { text: "Here is a relationship diagram." } },
       { kind: "visible", target: { selector: '[data-streamdown="mermaid"]' } },
     ],
+    /*
+      图表工具条上唯一「点一下才出现」的东西：下载菜单。
+
+      **上游那一侧不是上游源码**，是 `streamdown` 这个 npm 包的发布产物（装在上游的
+      依赖目录里，文件名带构建哈希、每次装都会变，所以这里**不写死那个文件名**），
+      锚点名字是去那份产物里核出来的，不是照本仓词典猜的：触发器 `title="Download diagram"`，
+      三个菜单项的可见文字是 `SVG` / `PNG` / `mmd`，`title` 是
+      `Download diagram as SVG|PNG|MMD`。
+
+      菜单项**有可见文字**，所以可访问名来自文字而不是 title（title 退成描述），
+      第三项因此写成两边都认的 `/^(mmd|MMD)$/`——**放宽的是锚点不是判据**：
+      两个应用各自的可访问性树照样整棵进台账，大小写差异该报还是会报。
+    */
+    states: [
+      { id: "default", steps: [] },
+      {
+        id: "download-menu",
+        steps: [
+          {
+            kind: "click",
+            target: {
+              role: "button",
+              name: /^(Download diagram|下载图表)$/,
+            },
+          },
+          { kind: "visible", target: { role: "button", name: /^SVG$/ } },
+          { kind: "visible", target: { role: "button", name: /^PNG$/ } },
+          { kind: "visible", target: { role: "button", name: /^(mmd|MMD)$/ } },
+        ],
+      },
+    ],
     dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {

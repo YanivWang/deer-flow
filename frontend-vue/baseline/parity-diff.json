@@ -433,14 +433,44 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
-    "thread-history-mermaid/desktop/light/en-US": {
+    "thread-history-mermaid#default/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
       "requestsOnlyVue": [],
       "geometry": []
     },
-    "thread-history-mermaid/desktop/light/zh-CN": {
+    "thread-history-mermaid#default/desktop/light/zh-CN": {
+      "ariaOnlyReact": [
+        "- button \"Copy Code\":",
+        "- button \"Download diagram\":",
+        "- button \"Reset zoom and pan\":",
+        "- button \"View fullscreen\":",
+        "- button \"Zoom in\":",
+        "- button \"Zoom out\":",
+        "- img \"Mermaid chart\":"
+      ],
+      "ariaOnlyVue": [
+        "- button \"下载图表\":",
+        "- button \"全屏查看\":",
+        "- button \"复制代码\":",
+        "- button \"放大\":",
+        "- button \"缩小\":",
+        "- button \"重置缩放与平移\":",
+        "- img \"Mermaid 图表\":"
+      ],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "thread-history-mermaid#download-menu/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "thread-history-mermaid#download-menu/desktop/light/zh-CN": {
       "ariaOnlyReact": [
         "- button \"Copy Code\":",
         "- button \"Download diagram\":",
