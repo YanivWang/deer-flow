@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 84，2026-09-05）
+## 当前状态（截至 wave 85，2026-09-05）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85。
 - **动过 `frontend/` 的是十八轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -70,10 +70,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 84 收工时逐条跑过）
+### 门禁实测值（wave 85 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；259 文件 / **2159** 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；**260** 文件 / **2168** 单测，词典 942 key、18 unused
 make -C frontend-vue standalone-sim exit 0（wave 83 新增）**判据的动态那一半**：真把
                                    ../frontend rename 走，跑 CROSS_APP_BY_DESIGN 表里
                                    点名的每一条，再移回来。跑过 12 条 / 未跑 5 条
@@ -318,6 +318,54 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 85）做了什么：**「只能变短」那三句话——一句补成门禁，两句改成实话**
+
+提交 `27fb23ad`。**没动 `frontend/`**——仍是十八轮，marker 仍是 `809237ec`。
+
+wave 84 挂上的那笔账。三处写着「只能缩短 / 只能变短」，实测**没有任何机器在守**。
+这一轮逐处判了一遍：**能守的补上门禁，守不了的把话改准。**
+
+### 一、`parity-diff.json`：能守，因为**只有一条路能让它变长**
+
+`make parity-accept` 此前是**无条件覆盖**基线。Makefile 里那句
+「否则这个目标会变成把回归洗白的按钮」说的正是这件事，而它一直只靠人记得。
+
+现在 accept 时逐行比对新旧，出现一行基线里没有的就**拒写**并打出来；
+真要接受得 `PARITY_ACCEPT_GROW=1 make parity-accept`。
+
+**判据是集合包含，不是行数**——修好一条、同时新坏一条，行数不变，而台账里多了
+一行没人看过的东西。那正是「洗白」的样子（坑 232）。
+
+**算法抽成 `tests/e2e-parity/support/ledger.ts` + 单测**，因为
+**那条分支在台账 0 行时永远走不到**：跑真的 `make parity-accept` 验不了它，
+留在 spec 里就等于一段没人验过的逻辑（坑 233）。
+
+### 二、`pending` 那两句：**守不了，所以把话改准**
+
+`baseline/parity-scenario-coverage.json` 的 `$semantics` 与
+`support/scenarios.ts` 的文件头各写了一遍「pending 只能变短」。
+**没有历史参照就判不了单调性**，而这份 baseline 是手改的、没有 accept 那样的唯一入口。
+
+所以两处都改成实话：标出真正上了门禁的四条（covered == 目录 / 三桶恰好划分上游
+spec 清单 / 每条 pending 有不短于 20 字的理由且无多余理由 / exempt 落在已豁免路由上），
+并写明「只能变短」是**评审政策**，靠的是「从目录里删一个场景」会同时逼出
+「covered 少一个」和「pending 多一条理由」两处 diff。
+真要机器守，可行判据写在那里：「不许有 id 从 covered/exempt 退回 pending」，
+而那需要一份只增不减的 covered 底线。
+
+**这不是绕过去。** 一句不可能被守住的承诺写成门禁的口气，正是 wave 83/84
+反复撞见的那一类：**它长得和真门禁一模一样。**
+
+### 负向验证
+
+| 变异                                | 期望   | 实测                                             |
+| ----------------------------------- | ------ | ------------------------------------------------ |
+| `addedRows` 改成按**行数**判        | 单测红 | 3 failed / 6 passed——正好是区分两种判据的那三条 |
+
+配套：`make parity-accept` **实跑了一次**（台账 0 行，`added` 为空所以放行）。
+它确实改写了基线——逐行 diff **只有 `$comment` 那一行**，正是 accept 分支里
+同步换掉的那段说明。这一跑同时证明新逻辑端到端走通且没有误拦。
 
 ## 上一轮（wave 84）做了什么：**把「扫描面盖全了没有」当成一条判据，量出三处**
 
@@ -2115,7 +2163,19 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 231 条在记忆文件里）
+## 其他常踩的坑（完整 233 条在记忆文件里）
+
+- **「只能缩短」这类单调性判据，要按「集合包含」判，不能按数量判**（线索 232，wave 85）。
+  修好一条、同时新坏一条，**行数不变**——按行数判会放行，而台账里多了一行
+  没人看过的东西。判据写成 `next 里有、previous 里没有的行`，
+  连带把「同一行挪到别的场景键/字段下」也算成新增（那确实是另一处差异）。
+- **只在罕见状态下才走到的分支，等于一段没人验过的代码**（线索 233，wave 85）。
+  `parity-accept` 的「台账将要变长」分支，在台账是 0 行时**永远走不到**——
+  跑真的 accept 验不了它。**修法是把判据抽成纯函数放进单测**
+  （`support/ledger.ts` + `tests/unit/parity/ledger.test.ts`），
+  而不是留在 spec 里等某天有人正好撞上那个状态。
+  这和坑 194「一条长期红着、又不在任何门禁清单里的 gate 等于不存在」是同一件事的
+  另一半：**跑不到的分支和没人跑的门禁，可靠性是一样的。**
 
 - **一张白名单出发的扫描器，加一个白名单外的文件就能全绿溜过去**（线索 229，wave 84）。
   `app/error.vue` 塞四条硬编码英文，`i18n-source-check` / `i18n-check` /
