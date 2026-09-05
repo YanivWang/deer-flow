@@ -8,15 +8,15 @@
 
 ---
 
-## 当前状态（截至 wave 87，2026-09-05）
+## 当前状态（截至 wave 88，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87。
-- **动过 `frontend/` 的是十九轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 各加一轮）：
-  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86**。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言）。
+- **动过 `frontend/` 的是二十轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 各加一轮）：
+  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
   而记忆里的压缩版把它读成了「总共三次」。**别再传这个数字，用命令量**：
 
@@ -24,15 +24,18 @@
   git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests
   ```
 
-  **marker 已推到 `3bfec0f9`**（wave 86 的两边同改）；`node scripts/upstream-drift.mjs`
-  wave 86 实测**无漂移**，marker 也确实是 HEAD 的祖先——
+  **marker 已推到 `1083b122`**（wave 88 的两边同改）；`node scripts/upstream-drift.mjs`
+  wave 88 实测**无漂移**，marker 也确实是 HEAD 的祖先——
   **边界规则本身有机器在守，需要人记的只有「这类改动做过哪些轮」。**
-  最近几轮的内容：**wave 86 侧栏 nav 菜单去掉 `menu > link > menuitem` 的嵌套可交互元素**；
+  最近几轮的内容：**wave 88 给 22 颗域按钮 + 2 颗品牌按钮补 `aria-pressed`**（两个应用
+  都只用换色表达选中）；wave 86 侧栏 nav 菜单去掉 `menu > link > menuitem` 的嵌套可交互元素；
   wave 82 长文件名把 artifact 面板整排动作键推出可视区；
   wave 74 两处 `<Toaster />` 用的不是 shadcn wrapper；wave 73 五条「本仓修掉了上游缺陷」；
   wave 62 `/auth/callback` 吞掉 `?next=` 深链。wave 41~~59、75~~81 都没动过。
 
-- **对照台账 0 行**（wave 78 清零），**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
+- **对照台账 0 行**（wave 78 清零），**44** 个样本，`make -C frontend-vue e2e-parity` **52** 条全绿。
+  （39 → 40：wave 87 的 `states` 轴；40 → **44**：wave 88 给 `integrations` 挂上
+  `default` / `permission-request` / `change-app` 三个终态 × 两个语言维度。）
   路径是 1716 → …… → 23（wave 76 接上交互后的锚点，量出 27 处此前看不见的差异）
   → 16（wave 77 一处改动关掉 7 行）→ **0**（wave 78 把剩下的 16 行归到五处根因）。
   **这里的 0 是「当前这 39 个取样点上量不出差异」，不是「两个应用一样」**——
@@ -71,10 +74,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 87 收工时逐条跑过）
+### 门禁实测值（wave 88 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；**260** 文件 / **2168** 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；**260** 文件 / **2170** 单测，词典 942 key、18 unused
                                    产品 SFC **218**（总 **220**，wave 86 新增 DropdownMenuGroup）
 make -C frontend-vue standalone-sim exit 0（wave 83 新增）**判据的动态那一半**：真把
                                    ../frontend rename 走，跑 CROSS_APP_BY_DESIGN 表里
@@ -93,10 +96,15 @@ make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55%
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 39 处 / 17 个文件）
                                    ——**它只是静态证明**，证不了「移走之后还能跑」：
                                    wave 83 第一次真做实验时它早已是 0，而 verify 当场红。
-make -C frontend-vue e2e-parity    **48**  台账 **0 行**，**40** 样本（NEW=0 GONE=0）
-                                   wave 87 加了 `states` 轴：键是 `场景#终态/断点/主题/语言`
+make -C frontend-vue e2e-parity    **52**  台账 **0 行**，**44** 样本（NEW=0 GONE=0）
+                                   wave 87 加了 `states` 轴：键是 `场景#终态/断点/主题/语言`；
+                                   wave 88 用它给 `integrations` 挂了三个终态（× 两种语言）
 make -C frontend-vue e2e-mock      265 + 22 + 15 + 2 + 6   (= e2e + auth + infra + proxy-options + stream)
 make -C frontend-vue e2e-backend   2 + 5 + 2 + 3 + 3 + 5 + 1 + 1
+                                   **wave 88 又抓到一条**：`e2e-shell` 红，而且干净树上
+                                   照样红——wave 87 把改动面板的行改成 `Collapsible` 时
+                                   漏改了这一份折叠断言，**那一轮没跑 e2e-backend**。
+                                   坑 194 的又一次，见下面 wave 88 那一节。
                                    **这一行 wave 65~78 一直是抄下来的，没人真跑过**：
                                    wave 79 跑全套，`e2e-channels` 当场红，而且单独跑
                                    两遍也红——wave 72 给渠道那颗连接键补上图标那天起
@@ -321,6 +329,113 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 88）做了什么：**integrations 的两个交互态进取样面，并两边同改补上 aria-pressed**
+
+提交 `1083b122`，React 侧同一条（两边同改），chore `9abc8d0c`，**marker 推到 `1083b122`**。
+另有 `55678738`：wave 87 漏改的那一份折叠断言。**动过 `frontend/` 的从此是二十轮。**
+
+### 一、接上取样面：三个终态，两个是新的
+
+`integrations` 此前只有一个默认终态。这个面板上「点一下才出现」的东西，
+`useState` 数一遍**正好四个**：`selectedAuthDomains` / `customAuthScope` /
+`showChangeApp` / `changeAppBrand`（其余状态要真的授权流程才走得到）。
+四个全挂上，用 wave 87 那条 `states` 轴分成两个终态：
+
+- `permission-request`：点两个域（Calendar / Docs）+ 填自定义 scope。
+  连接键因此改写成「申请新权限」——**这一颗锚点是「交互真的落到状态上」的凭据**，
+  没有它，三颗按钮同色只能说明主题相同。
+- `change-app`：展开「切换飞书 Bot」的整块表单，并把品牌从默认的 feishu 点成 lark。
+
+台账键 `integrations/…` → `integrations#default/…` 等六个，样本 **40 → 44**，
+e2e-parity **48 → 52**。**两个新终态的 aria、几何、请求三档全是 0 行。**
+
+### 二、那个 0 是算出来的，不是没算
+
+先量的是尺子自己（坑 213/186）。把锚点的原始几何打出来：
+
+```
+选中的 Calendar   color rgba(250,250,250) background rgba(0,0,0,255)     ← default 档
+未选中的 Drive    color rgba(10,10,10)    background rgba(253,250,243)   ← outline 档
+```
+
+两个应用逐字相同，而**选中与未选中在读数上分得开**——所以这个 0 是「量了，相等」。
+
+### 三、量出来的差异：两个应用都不把选中态念出来
+
+```
+- button "Calendar"                 ← 视觉上已经是黑底白字的选中态
+- button "Drive"
+- button "Switch app" [disabled]    ← 同一份快照里 disabled 是出得来的
+```
+
+**22 颗域按钮 + 2 颗品牌按钮，两个应用都只用 variant 换色表达选中**，
+`aria-pressed` 一处都没有。`[disabled]` 在同一份快照里出得来，
+说明不是快照看不见这类状态，是它真的不在。
+
+判据三条都指向两边同改：① **同一份代码库里的既定写法**（wave 28 那条最强证据）——
+`scheduled-task-schedule-input.tsx:275` / `ScheduledTaskScheduleInput.vue:253`
+的星期几按钮**逐字同形**，那边两个应用都写着 `aria-pressed`；
+② 这处不改 React 自己也是坏的（WCAG 1.4.1 / 4.1.2）；③ 业界主流做法。
+
+**取舍：品牌那两颗为什么不做成 radiogroup。** `ToggleGroupItem.vue` 的文件头
+（坑 102）写的是「单选该是 `role="radio" + aria-checked`」——但那是给一个自带
+single/multiple 模式的 primitive 定的。这里是两颗手写按钮，真做成 radiogroup
+就欠一套方向键 roving focus，两个应用都没有，只挂 `role="radio"` 比现在更糟。
+选的是「普通按钮 + `aria-pressed`」，代价（读屏器听到的是两颗独立的按下键，
+不是「二选一」）写进了两边的注释。
+
+### 四、**台账钉的是「一不一致」，不是「在不在」**
+
+**两边一起漏掉 `aria-pressed` 时，台账照样是 0 行**——这一轮就是这么量出来的。
+所以存在性只能各自钉：Vue 那一侧两条 DOM 单测（2168 → **2170**），
+React 那一侧 `frontend/tests/e2e/integrations.spec.ts` 的同一处交互上六条断言。
+**这条对下一轮有用：「台账 0 行」永远不能读成「这一处没问题」。**
+
+### 五、e2e-backend 又抓到一条红了一轮的用例
+
+`e2e-shell` 的 `workspace-shell.spec.ts:271` 报 `element(s) not found`。
+`git stash` 之后在**干净树上照样红**——是 wave 87 把改动面板的行改成
+`<Collapsible defaultOpen={hasDiff}>` 时漏改的一份折叠断言（同一处断言在
+`tests/e2e/workspace-shell.spec.ts` 里那一份，那一轮已经改过了）。
+**漏得掉的原因是 wave 87 的收工清单里没有 e2e-backend**——坑 194 的又一次。
+修法照抄已经改好的那一份：先把 `[data-slot="collapsible-trigger"]` 里
+`data-state="closed"` 的逐个点开，断言内容一个字没动。
+
+### 六、锚点自己先量了一遍
+
+先跑探针把 `[role=dialog]` 里的 **36 颗按钮 + 1 个输入框**在四种
+（应用 × 语言）组合下全打出来，才定的锚点：域名与按钮文案两边词典都翻译了
+→ 写成覆盖两种语言的正则；**`App ID` 两种语言逐字相同**，是这一块唯一敢直接
+按名字找的锚点；自定义 scope 输入框两种语言都含 `OAuth scope` → 用它做子串。
+
+顺带记一笔（**不改**）：`button "Close"` 在 React 是 sr-only 的 span、
+在 Vue 是 `aria-label`，textContent 一个是 "Close" 一个是空，
+而可访问名相同、台账 0 行。按 wave 28 的判据「命名存在即可」，不动。
+
+### 负向验证 5 条，全红，无假绿
+
+| #   | 变异                            | 跑什么                              | 结果                  |
+| --- | ------------------------------- | ----------------------------------- | --------------------- |
+| M1  | 删掉 Vue 域按钮的 aria-pressed  | `integrations-settings.dom.test.ts` | 1 failed / 5 passed   |
+| M2  | 删掉 Vue 品牌按钮的 aria-pressed| 同上                                | 1 failed / 5 passed   |
+| M3  | 删掉 React 域按钮的 aria-pressed| `frontend` `tests/e2e/integrations` | 1 failed / 5 passed   |
+| M4  | 删掉 React 品牌按钮的 aria-pressed | 同上                             | 1 failed / 5 passed   |
+| M5  | **只删 Vue 两处**，跑对照探针   | integrations 的两个新终态           | aria 差异 0 → **3 行** |
+
+M5 一次证了三件事：新取样面**真的抓得到单边回归**（`button "Calendar" [pressed]` /
+`"Docs" [pressed]` / `"Lark" [pressed]` 只在 React 侧出现）；`/^Lark$/` 那一步
+**真的点中了**（默认品牌是 feishu，而 React 侧 Lark 是 pressed）；
+`[pressed]` 确实进得了快照。
+
+### 门禁（逐条真跑）
+
+Vue：verify 0（**260** 文件 / **2170** 单测；词典 942 key / 18 unused；
+产品 SFC 218 / 总 220）· e2e-parity **52**（台账 **0 行 / 44 样本**）·
+e2e-mock 265+22+15+2+6 · e2e-visual 8（一张没重录）· asset-budget 0 ·
+standalone-sim 12 / 5 / 0 · icon-parity 0 处待核（不报 stale）·
+e2e-backend 2+5+2+3+3+5+**1**+**1**（修完之后）· audit 预期红 **14**。
+React：check 0 · test **1034** · test:e2e **146**。
 
 ## 上一轮（wave 87）做了什么：**给对照场景加一条 `states` 轴，量出改动面板的 7 处**
 
@@ -1532,6 +1647,12 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 > **wave 83 把一页纸清单上排第一那条做掉了**（验收判据本身没被验过）——
 > 实验真跑了，判据当场被证伪并修好，动态那一半现在是 `make standalone-sim`。
 
+> **wave 88 又把「还没接的交互态」里最干净的那一处做掉了**（`integrations` 的权限
+> 面板与换应用表单），并顺带在 `e2e-backend` 里抓到一条 wave 87 漏改、干净树上
+> 照样红的用例。**还没接的四处**：`channels` 的连接对话框、`branch-thread`、
+> `thread-history-mermaid` 的下载菜单、`chat` 那一屏的 composer 菜单
+> （各自的已知难点见 `docs/plans/vue-parity-cold-start.md` 那张表）。
+
 剩下的：
 
 ### 一、~~artifact 头部的标题不截断~~ —— **wave 82 量完并两边同改**
@@ -2281,7 +2402,24 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 237 条在记忆文件里）
+## 其他常踩的坑（完整 240 条在记忆文件里）
+
+- **「台账 0 行」只说明两个应用一致，不说明那一处是对的**（线索 238，wave 88）。
+  22 颗权限域按钮 + 2 颗品牌按钮，两个应用**都**只用换色表达选中、
+  `aria-pressed` 一处都没有——对照的三档（aria / 几何 / 请求）全是 0，
+  而读屏器听到的是 22 颗一模一样的按钮。**双向比对天生看不见「两边一起漏」**，
+  所以每接上一块新表面，都要另问一句「这一块本身对不对」，
+  并把答案钉在**各自**的用例里（这里是 Vue 两条 DOM 单测 + React 六条 e2e 断言）。
+- **一个「跳过」的工具和一个「查过、干净」的工具，输出可以长得几乎一样**（线索 239，
+  wave 88）。`node frontend-vue/scripts/icon-parity.mjs` 从**仓库根**跑时，
+  它按 `process.cwd()` 找 `../frontend/src`、找不到，打一句「跳过」然后 **exit 0**；
+  收工清单上那一行「0 处待核」看起来照样成立。**用 `make -C … icon-parity` 跑**，
+  并且**读输出**，不要只读退出码。（这一条与坑 226 同形，区别是它至少打了那句话。）
+- **`until grep -qE "passed|failed"` 会被 `bypassed` 骗到**（线索 240，wave 88）。
+  Gateway 启动横幅里那句 `authentication is bypassed` 含子串 `passed`，
+  于是等待循环在测试**一条都还没跑**的时候就退出了，紧接着读到的「读数」是空的。
+  **等 Playwright 收工要锚在行首**：`^ *[0-9]+ (passed|failed)`；
+  更稳的是自己在命令末尾追加一行 `echo "EXIT=$?"` 再等 `^EXIT=`。
 
 - **别拿一次输入去赌一个动着的界面**（线索 237，wave 87；wave 86 那两处 drag
   助手是同族）。`page.mouse.wheel` 只发**一个**事件，而流式期间应用每收到一个

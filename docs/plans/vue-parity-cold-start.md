@@ -8,21 +8,21 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 87 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 88 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
-分支 `main-wc`，接手时 HEAD 是 `4cc06d5a`。
+分支 `main-wc`，接手时 HEAD 是 wave 88 的 docs 提交。
 
 ### 第一步：按这个顺序读，不要跳
 
 1. `docs/plans/vue-parity-open-accounts.md` —— **一页纸的挂账总清单**，
    先看「还欠什么」。三分钟读完。
-2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，2400 行。
+2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，2500 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（237 条里最近的十几条）。中间各轮的记录按需查。
+   结尾的「其他常踩的坑」（240 条里最近的十几条）。中间各轮的记录按需查。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **237 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **240 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -32,12 +32,15 @@
 - **默认只改 `frontend-vue/`。** 例外只有一种：**上游自己是坏的**——
   那时按「业界主流做法两边同改」，`frontend/` 与 `frontend-vue/` 同一条提交里改，
   再单独一条 chore 提交把 `frontend-vue/baseline/upstream-marker.json` 推到那条 fix
-  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是十九轮**，
+  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十轮**，
   别传这个数字，用 `git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests` 量。
 - **不要中途提问。** 取舍自己定，写进提交说明。分歧的兜底判据是**按业界主流做法**。
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
   推到我喊停为止；**不要停下来问「要不要继续」**。
-- **对照台账只能缩短。** `frontend-vue/baseline/parity-diff.json` 当前 **0 行 / 40 样本**。
+- **对照台账只能缩短。** `frontend-vue/baseline/parity-diff.json` 当前 **0 行 / 44 样本**。
+  **注意它钉的是「两个应用一不一致」，不是「这一处对不对」**——wave 88 量出
+  22 颗按钮两边都缺 `aria-pressed`，三档全是 0 行。接上一块新表面之后，
+  要另问一句「这一块本身对不对」，并把答案钉进**各自**的用例里。
   `make -C frontend-vue parity-accept` 现在会逐行比对、有新增行就拒写；
   确实要接受得 `PARITY_ACCEPT_GROW=1`，并在提交说明里逐行交代。
 - **先量再改。** 这个项目已经十几次证明「形状看着像上次那处」会改出新差异来。
@@ -59,16 +62,20 @@
 ### 收工门禁（逐条真跑，命令与上一轮实测读数）
 
 ```bash
-make -C <abs>/frontend-vue verify          # exit 0；260 文件 / 2168 单测；词典 942 key / 18 unused
+make -C <abs>/frontend-vue verify          # exit 0；260 文件 / 2170 单测；词典 942 key / 18 unused
 make -C <abs>/frontend-vue standalone-sim  # exit 0；跑过 12 / 未跑 5 / 红 0
-make -C <abs>/frontend-vue e2e-parity      # 48 passed；台账 0 行 / 40 样本
+make -C <abs>/frontend-vue e2e-parity      # 52 passed；台账 0 行 / 44 样本
 make -C <abs>/frontend-vue e2e-mock        # 265 + 22 + 15 + 2 + 6
 make -C <abs>/frontend-vue e2e-visual      # 8 passed（只有 -darwin 基线，本机门禁）
 make -C <abs>/frontend-vue asset-budget    # exit 0
 make -C <abs>/frontend-vue e2e-backend     # 2+5+2+3+3+5+1+1（需要 backend 的 uv 环境）
-node frontend-vue/scripts/icon-parity.mjs  # 0 处待核，不报 stale
+make -C <abs>/frontend-vue icon-parity     # 0 处待核，不报 stale
 make -C <abs>/frontend-vue audit           # **预期红 14**，分诊写在 Makefile 的 audit 上方
 ```
+
+**`icon-parity` 一定要用 `make -C` 跑，并且读输出**：直接
+`node frontend-vue/scripts/icon-parity.mjs` 在仓库根下按 cwd 找不到 `../frontend/src`，
+会打一句「跳过」然后 **exit 0**——那一行「0 处待核」看起来照样成立（线索 239）。
 
 动过 `frontend/` 的话再加 React 三条：
 `python3 scripts/pnpm.py --dir frontend check`（0）/ `test`（**1034**）/
@@ -80,6 +87,10 @@ make -C <abs>/frontend-vue audit           # **预期红 14**，分诊写在 Mak
 ### 跑门禁的操作纪律（都踩过）
 
 - 长门禁**丢后台**，`> file 2>&1`，**不要接 `| tail`**（管道会缓冲到命令结束）。
+- **等后台门禁收工要锚在行首**：`until grep -qE '^ *[0-9]+ (passed|failed)'`。
+  裸 `grep -q "passed"` 会被 Gateway 横幅里的 `authentication is bypassed` 骗到，
+  在一条测试都没跑的时候就退出（线索 240）。更稳的是命令末尾追一行
+  `echo "EXIT=$?" >> <log>`，然后等 `^EXIT=`。
 - **`run_in_background` 就不要再加 `nohup … &`**——被追踪的是外层 shell，
   会立刻假报 "completed (exit 0)"，而真活还在跑（线索 227）。
 - **量退出码不要接管道**：zsh 没有 `${PIPESTATUS[0]}`，`cmd | head` 之后的 `$?` 是 head 的（线索 228）。
@@ -96,15 +107,18 @@ make -C <abs>/frontend-vue audit           # **预期红 14**，分诊写在 Mak
 
 ### A. 给取样面接互斥的交互态（命中率最高）
 
-wave 86 接三处量出 16 行、wave 87 接一处量出 7 行。**wave 87 起对照场景支持
+wave 86 接三处量出 16 行、wave 87 接一处量出 7 行、wave 88 接一处量出一个
+**两个应用都有、对照天生看不见**的缺陷。**wave 87 起对照场景支持
 `states` 轴**（`ParityScenario.states?: { id, steps }[]`，与 `steps` 二选一），
 互斥的模态终态不必再二选一；台账键是 `场景#终态/断点/主题/语言`。
 
-还没接的五处，各自的已知难点：
+还没接的四处，各自的已知难点：
+
+wave 88 又接一处（`integrations`），量出的是**两个应用一起漏掉的一处缺陷**。
 
 | 目标                             | 已知难点                                                                                     |
 | -------------------------------- | -------------------------------------------------------------------------------------------- |
-| `integrations` 的权限面板        | **最干净**，建议从这里开始。夹具已经点亮了 22 个域按钮与自定义 scope，只差交互态             |
+| ~~`integrations` 的权限面板~~    | **wave 88 做完**（`permission-request` / `change-app` 两个终态，三档 0 行）                   |
 | `channels` 的连接对话框          | 两边**没有共用的 testid**（本仓有 `channel-provider-*`，上游没有），按钮文字又都是 "Connect"；先想清楚触发器怎么定位 |
 | `branch-thread`                  | 分支入口在消息动作条上，那一排是 tooltip 触发（**没有 hover 步骤类型**，可能要先加一档）      |
 | `thread-history-mermaid` 的下载菜单 | 上游那一侧是 **streamdown 的发布产物**，不是上游源码；锚点名字要去 node_modules 里核         |

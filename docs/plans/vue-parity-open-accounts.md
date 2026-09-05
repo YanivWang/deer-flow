@@ -1,10 +1,12 @@
-# React → Vue 平替：挂账总清单（截至 wave 87，2026-09-05）
+# React → Vue 平替：挂账总清单（截至 wave 88，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
 
-> **判据提醒**：台账 0 行的准确含义是「**当前 40 个取样点上量不出差异**」，
+> **判据提醒**：台账 0 行的准确含义是「**当前 44 个取样点上量不出差异**」，
 > 不是「两个应用一样」。天生看不见的八类见交接文档。
+> **wave 88 又给它补了一条**：双向比对**看不见「两边一起漏」**——
+> 22 颗按钮两个应用都没有 `aria-pressed`，三档全是 0 行。
 
 ---
 
@@ -37,7 +39,7 @@
 
 ---
 
-## 三、这一轮（wave 78~87）清掉的
+## 三、这一轮（wave 78~88）清掉的
 
 - **台账 16 → 0**（wave 78，五处根因：页脚两组 / 菜单 align+side / 模式项多传的 `py-2` / `ui/command` 的 class 合同 / artifact 头部三栏 / sidecar 页脚的 `pt-3`）
 - **守卫注释里点名的两笔**（wave 79：保存 agent 键的位置与形状、MessageList 的 artifactTargets 文件名键）
@@ -58,23 +60,29 @@
 - **三处交互态第一次进取样面**（wave 86）：会话行的 ⋯ 菜单量出 7 处（三处根因）、
   侧栏 nav 菜单量出 9 行（少一个 group + 上游的 `menu > link > menuitem` 嵌套，
   **两边同改**）；定时任务的编辑表单 **0 差异**
+- **integrations 的两个交互态第一次进取样面**（wave 88）：权限面板的选中态
+  （域 + 自定义 scope，连接键改写成「申请新权限」）与「切换飞书 Bot」的整块表单，
+  三档全 0；量的过程中撞出**两个应用都缺 `aria-pressed`**（22 颗域按钮 + 2 颗品牌
+  按钮，选中只靠换色），**两边同改**
+- **wave 87 漏改的一份折叠断言**（wave 88 的 `55678738`）：`e2e-shell` 红了一轮，
+  干净树上照样红——那一轮的收工清单里没有 `e2e-backend`
 - **对照场景多了一条 `states` 轴**（wave 87）：一个场景可以有多个**互斥**终态，
   于是改动面板那一整块第一次进取样面，量出 7 处（Sheet 头部结构 / `<details>` 不是
   `Collapsible` / 少了增删数 / 链接的 `aria-label` 污染外层按钮名），全清
 
 ---
 
-## 四、收工时的门禁读数（wave 82 逐条实跑）
+## 四、收工时的门禁读数（wave 88 逐条实跑）
 
 ```
-verify           exit 0    260 文件 / 2168 单测；词典 942 key / 18 unused
+verify           exit 0    260 文件 / 2170 单测；词典 942 key / 18 unused
                            产品 SFC 218（总 220）
 standalone-sim   exit 0    跑过 12 / 未跑 5（4 data + 1 e2e）/ 红 0      ← wave 83 新增
                            --with-e2e 实测 13 / 4 / 0（那一条：exit 0，47 条跳过）
-e2e-parity       48        台账 0 行 / 40 样本（NEW=0 GONE=0）
+e2e-parity       52        台账 0 行 / 44 样本（NEW=0 GONE=0）
 e2e-mock         265 + 22 + 15 + 2 + 6
-e2e-backend      2 + 5 + 2 + 3 + 3 + 5 + 1 + 1      ← wave 80 修完之后才全绿
-e2e-visual       8         wave 83 一张没重录
+e2e-backend      2 + 5 + 2 + 3 + 3 + 5 + 1 + 1      ← wave 88 修完 e2e-shell 之后才又全绿
+e2e-visual       8         wave 88 一张没重录
 asset-budget     exit 0
 icon-parity      0 处待核，不报 stale
 audit            预期红 14（分诊写在 Makefile 的 audit 上方）
@@ -97,10 +105,11 @@ React 侧         check 0 / test 1034 / test:e2e 146（wave 86 三条全真跑�
    **挂展开态很便宜**：场景 id 受棘轮约束，夹具与 steps 不受。
    **锚点要在这个场景的每一个维度上都成立**（语言维度最容易漏），
    而且别照着词典 key 猜——先量一遍它有没有被渲染。
-   **还没接的交互态**：`channels` 的连接对话框（两边没有共用的 testid，
-   触发器只能靠位置找，先想清楚怎么定位）、`integrations` 的权限面板、
-   `branch-thread`、`thread-history-mermaid` 的下载菜单（上游那一侧是 streamdown
-   的发布产物，不是上游源码）、`chat` 那一屏的 composer 菜单。
+   **还没接的交互态**（`integrations` 的权限面板 wave 88 做掉了）：
+   `channels` 的连接对话框（两边没有共用的 testid，触发器只能靠位置找，
+   先想清楚怎么定位）、`branch-thread`、`thread-history-mermaid` 的下载菜单
+   （上游那一侧是 streamdown 的发布产物，不是上游源码）、
+   `chat` 那一屏的 composer 菜单。
    **wave 87 起可以用 `states` 挂互斥的终态**，不必再二选一。
 2. **给现成的尺子加一档**（wave 75 的 `icon-parity`、wave 76 的几何锚点都是这么来的）。
    注意坑 213 / 186：**一把新尺子最先要量的是它自己**——wave 75 那批线索有近一半
@@ -117,7 +126,9 @@ React 侧         check 0 / test 1034 / test:e2e 146（wave 86 三条全真跑�
    「只能变短」——实测**没有任何机器在守这个方向**，`parity-diff.json` 与
    `parity-scenario-coverage.json` 各写了一遍。先决定它是承诺还是评审政策。
 
-> **这条尾巴没有自然终点。** 历史命中率：wave 75 捞出 6 处真差异、wave 76 捞出 27 处、
+> **这条尾巴没有自然终点。** 历史命中率：wave 88 捞出**一处两个应用都有、而对照
+> 天生看不见**的缺陷（外加一条红了一轮的用例）、wave 87 捞出 7 行、
+> wave 86 捞出 16 行、wave 75 捞出 6 处真差异、wave 76 捞出 27 处、
 > wave 82 捞出一个**两个应用都存在**的产品缺陷、wave 83 证伪了**验收判据自己**、
 > wave 84 捞出三条「扫描器盖不全自己声称的范围」、wave 85 把一条只靠人记得的
 > 闸门变成了机器守的、wave 86 一次接上三处交互态就量出 16 行、
