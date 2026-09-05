@@ -8,7 +8,7 @@
 
 ---
 
-## 当前状态（截至 wave 80，2026-09-05）
+## 当前状态（截至 wave 81，2026-09-05）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
@@ -308,6 +308,43 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 81）做了什么：**把两笔「先复量再决定」的账量完，两条结论都不变**
+
+**没有代码改动**（探针跑完即删），产出是两组读数。
+
+### `/showcase` 的请求层：第三次逐条复量，一字不差
+
+```
+react  /api: GET /api/features · GET /api/models · GET /api/skills
+             · GET /api/suggestions/config · GET /api/threads/«generated»/uploads/limits
+vue    /api: GET /api/models
+react-only : features · skills · suggestions/config · threads/«generated»/uploads/limits
+vue-only   : （空）        aria: onlyReact 0 / onlyVue 0        落地 URL 两边相同
+```
+
+与 wave 27 / wave 28 完全一致。wave 28 的决定不变（四条都打向需要鉴权的端点，
+案例页是公开只读的，可见差异实测为零）。**翻案判据仍是「有没有哪个只读能力因为缺了
+这四条而在案例页上失灵」。**
+
+### 建 agent 页 chat step 的外壳：**比 wave 28 记的少一项**
+
+wave 79 之后 **More 菜单已经对上**（React 触发器 x=1232，本仓 x=1231，相差 1px），
+`agents.more` 也有了消费点。剩下的是 header 本身：上游
+`justify-between gap-3 border-b px-4 py-3`（高 57，左边返回键 + `h1 "Design your Agent"`，
+右边只有 More），本仓是 AgentChat 的 `absolute h-12 backdrop-blur`（高 48，左边侧栏
+触发器 + agent 名字，右边用量徽标 + More）。**结论不变：保留本仓这一侧**
+（叠上去会有两个 header）。
+
+aria 差 onlyReact 3 / onlyVue 10，**但后者大半不是外壳**——轮次操作条与会话链接是
+两次跑拿到的对话状态不同，属于 wave 63 记的那条竞态。
+`agents.createPageTitle` 在本仓**有消费点**（命名步骤那张页的 h1），不是死词条。
+
+### 方法学
+
+线索 187 又一次算对了账：**两条都是「先复现再修」省下的一整轮**。
+但也要反过来记一句——**复量的结论是「不变」时，要把「不必再复量」写进账里**，
+否则下一轮还会再量一遍。这两条现在都写了。
 
 ## 上一轮（wave 80）做了什么：**修一条红了七轮没人知道的 e2e**
 
@@ -1108,53 +1145,36 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 撤销态画回 Sparkles 1、胶囊去 role/aria-live 1、取消键换 testid 2、
 页脚优化键润色时消失 1、语音键丢 disabled 1。
 
-## 下一轮：**三条**
+## 下一轮：**一条半**
 
-### 一、~~台账里那 16 行几何~~ —— **wave 78 清零**
+> **wave 81 把「下一轮」里那两条「先复量再决定」的账都量完了**（见「挂着的账」里
+> 更新过的两节）：`/showcase` 的四条请求第三次逐条复量，**一字不差**，aria 仍是 0/0，
+> wave 28 的决定不变；建 agent 页 chat step 的外壳复量之后**比 wave 28 记的少一项**
+> （More 菜单 wave 79 已经对上），结论同样不变。
+> **这两条从此不必再复量**，除非上游那两屏自己变了。
 
-16 行归到五处根因（页脚两组 / 菜单 align+side / 模式项多传的 py-2 /
-`ui/command` 的 class 合同 / artifact 头部三栏 / sidecar 页脚的 pt-3），
-逐条见 wave 78 那一节。**台账现在是 0 行 / 39 场景。**
-下一轮不必再读那份清单，只需要看它有没有重新长出来。
+剩下的：
 
-### 二、`/showcase` 的请求层落差（第②类，**没量就别改**）
+### 一、artifact 头部的标题不截断，长文件名会把动作键推出可视区（**wave 78 新挂**）
 
-wave 27/28 两次逐条复量的结果：
+wave 78 照抄上游之后，标题按内容宽（上游 `ArtifactTitle` 没有任何截断，中间那一栏
+才是 `grow`）。文件名足够长时头部被撑开，右边的 Download / 关闭被推出面板的
+`overflow-hidden`。**上游同样如此**，所以这是一笔要**两边同改**的账。
+**做之前先量一次**：拿一个 60 字符的文件名在两个应用上各开一次，确认动作键真的够不着
+——没量出来就不算数（线索 187）。
 
-```
-react-only /api: GET /api/features · GET /api/skills · GET /api/suggestions/config
-                 · GET /api/threads/«generated»/uploads/limits
-vue-only   /api: （空）
-```
+### 二、往下挖什么
 
-wave 28 把它从「待办」改成「已决定」：四条都打向需要鉴权的端点，而案例页是公开只读的
-（上游发它们只是因为 `showcase/[thread_id]/page.tsx` 直接渲染整个 `ChatPage`，
-没有为 demo 分支特判）。**翻案判据是「有没有哪个只读能力因为缺了这四条而在案例页上
-失灵」，不是「上游发了所以要发」。**
+`app/pages/` 下的路由一条不剩地量过了，台账清零，`icon-parity` 归零，
+守卫注释里点名的账也清完了。**下一轮要找活，只能从这三个方向选**：
 
-**这条账已经放了五十轮，先复现再修（线索 187）**：花五分钟量一遍比照着账改代码
-省一整轮。探针写法见「很省时间的调查手段」。
-
-### 三、建 agent 页确认名字之后那一步（chat step）的外壳
-
-上游 `new/page.tsx` 自己画一张极简页：同一个 header（返回 + 标题）再加一颗 More
-下拉；本仓走 `AgentChat` 的完整会话头。wave 28 **有意保留本仓这一侧**（把上游那个
-header 叠上去会让这一屏有两个 header）。
-
-**wave 79 把两边拉近了一步**：保存已经搬进页头右上角的 ⋯ 菜单，形状与位置都对上了
-上游，`agents.more` 也有了消费点。剩下的差异是「本仓那个 header 还带侧栏触发器、
-用量、导出、artifact 触发器」。**同样先复量再决定**——这一屏不在取样面里
-（覆盖率棘轮要求场景 id 逐字等于 React spec 文件名，而上游没有任何一条 spec 走到
-`/workspace/agents/new`，坑 107），台账天生看不见，只能靠 probe + 单测。
-
-### 新挂上的一笔账（wave 78）
-
-- **artifact 头部的标题不截断，长文件名会把动作键推出可视区。** wave 78 照抄上游
-  之后，标题按内容宽（上游 `ArtifactTitle` 没有任何截断，中间那一栏才是 `grow`）。
-  文件名足够长时头部被撑开，右边的 Download / 关闭被推出面板的 `overflow-hidden`。
-  **上游同样如此**，所以这是一笔要**两边同改**的账，不是本仓单边加回 `truncate`
-  的理由。做之前先量一次：拿一个 60 字符的文件名在两个应用上各开一次，
-  确认动作键真的够不着。
+1. **给取样面加交互态**（第①⑦类）。判据仍是 wave 20/21 那条：一个域收工前，
+   把它所有「点一下才出现」的东西列出来，逐个问「这一屏进过取样面没有」。
+   wave 76 刚证明这条还有货——一次接上就量出 27 处。
+   **挂展开态很便宜**：场景 id 受棘轮约束，夹具与 steps 不受。
+2. **给现成的尺子加一档**（wave 75 的 icon-parity、wave 76 的几何锚点都是这么来的）。
+   注意线索 213/186：**一把新尺子最先要量的是它自己**。
+3. **把散文里的断言变成守卫**（`tests/guards/` 下已有九条）。加之前先读它们的覆盖面。
 
 ## wave 64 做了什么：**把覆盖率接上，并订正 wave 63 的误判**
 
@@ -1538,21 +1558,27 @@ issue #3482 与上游逐字同、`ui/sidebar.tsx` 路径在）。
 
 ### 只读案例页剩下的
 
-> wave 28 复量：`/showcase/<demo id>` 的 aria 差异仍是 **onlyReact 0 / onlyVue 0**。
+> **wave 81 第三次复量（2026-09-05），与 wave 27 / 28 逐条相同**：
+> `/showcase/<demo id>` 的 aria 差异 **onlyReact 0 / onlyVue 0**，落地 URL 两边相同。
 
 - **请求层的落差**（台账天生看不见的第②类：`/showcase` 不在取样面里）。
-  wave 28 独立复量，与 wave 27 逐条相同：
+  三轮实测一字不差：
 
   ```
-  react-only /api: GET /api/features · GET /api/skills · GET /api/suggestions/config
-                   · GET /api/threads/«generated»/uploads/limits
-  vue-only   /api: （空）
+  react  /api: GET /api/features · GET /api/models · GET /api/skills
+               · GET /api/suggestions/config · GET /api/threads/«generated»/uploads/limits
+  vue    /api: GET /api/models
+  react-only : features · skills · suggestions/config · threads/«generated»/uploads/limits
+  vue-only   : （空）
   ```
 
   **wave 28 决定不放开，并把它从「待办」改成「已决定」**：这四条都打向需要鉴权的
-  端点，而案例页是公开只读的——上游发它们只是因为没有为 demo 分支特判。
+  端点，而案例页是公开只读的——上游发它们只是因为
+  `showcase/[thread_id]/page.tsx` 直接渲染整个 `ChatPage`，没有为 demo 分支特判。
   它们在这一屏上产生的可见差异实测为零（aria 0/0）。哪天要翻案，判据是
   「有没有哪个只读能力因为缺了这四条而在案例页上失灵」，不是「上游发了所以要发」。
+  **wave 81 按线索 187「先复现再修」重量了一遍，结论不变——这一条不必再复量，
+  除非上游那一屏的取数变了。**
 
 ### settings 域剩下的
 
@@ -1567,9 +1593,26 @@ issue #3482 与上游逐字同、`ui/sidebar.tsx` 路径在）。
 
 - **确认名字之后那一步（chat step）两边的外壳不同。** 上游 `new/page.tsx` 自己画一张
   极简页：同一个 header（返回 + 标题）再加一颗 More 下拉，里面只有 Save；本仓走
-  `AgentChat` 的**完整会话头**（侧栏触发器、agent 名字牌、用量、导出、行内 Save 按钮）。
-  **有意保留本仓这一侧**：把上游那个 header 叠上去会让这一屏有两个 header。
-  代价是 `agents.more` 在本仓永远没有消费点。
+  `AgentChat` 的**完整会话头**。**有意保留本仓这一侧**：把上游那个 header 叠上去
+  会让这一屏有两个 header。
+
+  > **wave 81 复量（2026-09-05，probe 打到 chat step 之后取样）**。
+  > wave 79 之后剩下的差异比 wave 28 记的少一项——**More 菜单已经对上了**
+  > （React 触发器 x=1232，本仓 x=1231，相差 1px），`agents.more` 也有了消费点。
+  > 剩下的是：
+  >
+  > |        | 上游                                              | 本仓                                              |
+  > | ------ | ------------------------------------------------- | ------------------------------------------------- |
+  > | header | `justify-between gap-3 border-b px-4 py-3`，高 57 | AgentChat 的 `absolute h-12 backdrop-blur`，高 48 |
+  > | 左侧   | 返回画廊键 + `h1 "Design your Agent"`             | 侧栏触发器 + agent 名字                           |
+  > | 右侧   | 只有 More                                         | 用量徽标 + More                                   |
+  >
+  > aria 差是 onlyReact 3（返回键、h1、`Completed in <1s`）/ onlyVue 10，
+  > **但后者大半不是外壳**：轮次操作条（分支 / 编辑重跑 / 重新生成 / More）与
+  > 会话链接是**两次跑拿到的对话状态不同**，属于 wave 63 记的那条竞态，不是这一屏的形状。
+  > `agents.createPageTitle` 在本仓**有消费点**（命名步骤那张页的 h1），不是死词条。
+  > **结论不变：保留本仓这一侧。**
+
 - **`agents.saveRequested` 与 agents 下的 agentCreatedPendingRefresh 有意不补。**
   上游靠这两条 toast 报告保存进度；本仓 `useAgentCreationSession` 用
   saving/verifying/created/error 四态 + 行内错误区表达同一件事，再加 toast 等于说两遍。
