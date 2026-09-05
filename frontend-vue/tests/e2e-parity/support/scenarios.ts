@@ -52,6 +52,23 @@ export const DEFAULT_DIMENSION: ParityDimension = {
 };
 
 /**
+ * 默认维度的中文孪生。
+ *
+ * **只跑一种语言的场景，等于把「翻译分叉」整类排除在取样之外**（坑 244）：
+ * wave 91 给 `branch-thread` 补上 zh-CN，当场撞出两个应用的分支键取了不同的
+ * 词典键——en-US 下两条恰好都是 "Branch conversation"，只跑 en-US 永远看不出来。
+ * wave 92 把这一条系统地扫了一遍：19 个此前只有 en-US 的场景全部补上这一维。
+ *
+ * 一个场景补**一维**就够（语言轴与断点/主题轴正交，翻译分叉在哪个断点上都一样），
+ * 所以不给每个既有维度都配一个中文孪生——那只会让取样时间翻倍而不多查出东西。
+ */
+export const ZH_DIMENSION: ParityDimension = {
+  viewport: "desktop",
+  theme: "light",
+  locale: "zh-CN",
+};
+
+/**
  * 定位方式。四种都是两个应用共有的表达，没有第五种。
  */
 export type ParityTarget =
@@ -703,6 +720,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       `[selected]` 因此稳定落在第一项。
     */
     steps: [{ kind: "fill", target: { selector: "textarea" }, value: "/" }],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "thread-history",
@@ -727,15 +745,25 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       两条词条只在子菜单里出现，不点开就永远比不到。
     */
     steps: [
-      { kind: "click", target: { role: "button", name: "More" } },
-      { kind: "visible", target: { role: "menuitem", name: "Rename" } },
-      { kind: "visible", target: { role: "menuitem", name: "Delete" } },
-      { kind: "click", target: { role: "menuitem", name: "Export" } },
+      { kind: "click", target: { role: "button", name: /^(More|更多)$/ } },
       {
         kind: "visible",
-        target: { role: "menuitem", name: "Export as Markdown" },
+        target: { role: "menuitem", name: /^(Rename|重命名)$/ },
+      },
+      {
+        kind: "visible",
+        target: { role: "menuitem", name: /^(Delete|删除)$/ },
+      },
+      { kind: "click", target: { role: "menuitem", name: /^(Export|导出)$/ } },
+      {
+        kind: "visible",
+        target: {
+          role: "menuitem",
+          name: /^(Export as Markdown|导出为 Markdown)$/,
+        },
       },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "agent-chat",
@@ -760,6 +788,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       { kind: "visible", target: { role: "dialog", name: "Model Selector" } },
       { kind: "visible", target: { role: "option", name: /Parity Thinker/ } },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "agents-feature-disabled",
@@ -776,6 +805,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         target: { text: /contact your administrator|联系管理员/i },
       },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     /*
@@ -815,20 +845,30 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     settle: [
       { kind: "visible", target: { testId: "browser-trigger" } },
       { kind: "click", target: { testId: "browser-trigger" } },
-      { kind: "visible", target: { text: /^Browser$/ } },
-      { kind: "visible", target: { role: "button", name: "Back" } },
-      { kind: "visible", target: { role: "button", name: "Forward" } },
+      { kind: "visible", target: { text: /^(Browser|浏览器)$/ } },
+      { kind: "visible", target: { role: "button", name: /^(Back|后退)$/ } },
+      { kind: "visible", target: { role: "button", name: /^(Forward|前进)$/ } },
       {
         kind: "visible",
-        target: { role: "textbox", name: "Enter a URL and press Enter" },
+        target: {
+          role: "textbox",
+          name: /^(Enter a URL and press Enter|输入网址后按 Enter)$/,
+        },
       },
       { kind: "visible", target: { role: "button", name: /^…$/ } },
-      { kind: "visible", target: { role: "button", name: "Close browser" } },
       {
         kind: "visible",
-        target: { role: "heading", name: "Connecting to live browser…" },
+        target: { role: "button", name: /^(Close browser|关闭浏览器)$/ },
+      },
+      {
+        kind: "visible",
+        target: {
+          role: "heading",
+          name: /^(Connecting to live browser…|正在连接实时浏览器…)$/,
+        },
       },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     /*
@@ -881,16 +921,28 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         scope: { testId: "main-message-list" },
         text: "Build it as a side conversation.",
       },
-      { kind: "click", target: { role: "button", name: "Ask in side chat" } },
+      {
+        kind: "click",
+        target: {
+          role: "button",
+          name: /^(Ask in side chat|在侧边聊天中提问)$/,
+        },
+      },
       { kind: "visible", target: { testId: "sidecar-panel" } },
-      { kind: "visible", target: { text: "Side chat" } },
-      { kind: "visible", target: { text: "1 selected text fragment" } },
-      { kind: "visible", target: { text: "Ask a follow-up" } },
+      { kind: "visible", target: { text: /^(Side chat|侧边对话)$/ } },
       {
         kind: "visible",
-        target: { text: "Ask a follow-up grounded in the referenced text." },
+        target: { text: /^1 (selected text fragment|个已选文本片段)$/ },
+      },
+      { kind: "visible", target: { text: /^(Ask a follow-up|继续深入追问)$/ } },
+      {
+        kind: "visible",
+        target: {
+          text: /^(Ask a follow-up grounded in the referenced text\.|基于引用内容单独追问。)$/,
+        },
       },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "thread-list-pin",
@@ -940,6 +992,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         },
       },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "thread-list-infinite-scroll",
@@ -948,6 +1001,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     path: "/workspace/chats",
     mock: { threads: MANY_THREADS },
     settle: [{ kind: "visible", target: { text: "Conversation 001" } }],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "ui-polish-mobile",
@@ -965,11 +1019,17 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     routes: [MODELS_ROUTE_BASIC_FIRST],
     settle: [{ kind: "visible", target: { selector: "textarea" } }],
     steps: [
-      { kind: "click", target: { role: "button", name: /^Flash$/ } },
-      { kind: "visible", target: { role: "menuitemradio", name: /^Flash / } },
+      { kind: "click", target: { role: "button", name: /^(Flash|闪速)$/ } },
+      {
+        kind: "visible",
+        target: { role: "menuitemradio", name: /^(Flash|闪速) / },
+      },
     ],
     // 这个场景的全部意义就是小屏，所以它只跑 mobile。
-    dimensions: [{ viewport: "mobile", theme: "light", locale: "en-US" }],
+    dimensions: [
+      { viewport: "mobile", theme: "light", locale: "en-US" },
+      { viewport: "mobile", theme: "light", locale: "zh-CN" },
+    ],
   },
   {
     id: "user-message-plain-text",
@@ -1007,6 +1067,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         target: { role: "menuitemradio", name: /^Ultra / },
       },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "integrations",
@@ -1454,7 +1515,12 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     settle: [
       { kind: "visible", target: { text: SUBTASK_DESCRIPTION } },
       { kind: "visible", target: { text: SUBTASK_DONE_DESCRIPTION } },
-      { kind: "visible", target: { text: "Executing 2 subtasks in parallel" } },
+      {
+        kind: "visible",
+        target: {
+          text: /^(Executing 2 subtasks in parallel|并行执行 2 个子任务)$/,
+        },
+      },
     ],
     /*
       展开一张卡片。展开区里的一切——prompt 的 markdown、终态步骤、失败原因——
@@ -1470,6 +1536,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         },
       },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "artifact-preview",
@@ -1499,6 +1566,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     dimensions: [
       DEFAULT_DIMENSION,
       { viewport: "mobile", theme: "light", locale: "en-US" },
+      ZH_DIMENSION,
     ],
   },
   {
@@ -1518,6 +1586,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     },
     settle: [{ kind: "visible", target: { text: ARTIFACT_PATH } }],
     steps: [{ kind: "click", target: { text: ARTIFACT_PATH } }],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "scheduled-tasks",
@@ -1676,12 +1745,16 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       改成断言**拒绝提示不在**：那段话只在 denied 时渲染，也就是默认态。
     */
     settle: [
-      { kind: "visible", target: { role: "switch", name: "Notification" } },
+      {
+        kind: "visible",
+        target: { role: "switch", name: /^(Notification|通知)$/ },
+      },
       {
         kind: "hidden",
         target: { text: /Notification permission was denied/ },
       },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "channels",
@@ -1870,6 +1943,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       { kind: "visible", target: { text: "Here is a relationship diagram." } },
       { kind: "visible", target: { selector: '[data-streamdown="mermaid"]' } },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "workspace-changes",
@@ -1959,25 +2033,35 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         steps: [
           {
             kind: "click",
-            target: { role: "button", name: /^Reasoning Effort:/ },
+            target: {
+              role: "button",
+              name: /^(Reasoning Effort|推理深度)[:：]/,
+            },
           },
           {
             kind: "visible",
-            target: { role: "menuitemradio", name: /^Minimal / },
+            target: { role: "menuitemradio", name: /^(Minimal|最低) / },
           },
         ],
       },
       {
         id: "changes-panel",
         steps: [
-          { kind: "click", target: { role: "button", name: "View changes" } },
+          {
+            kind: "click",
+            target: { role: "button", name: /^(View changes|查看更改)$/ },
+          },
           {
             kind: "visible",
-            target: { role: "heading", name: /workspace changes/i },
+            target: {
+              role: "heading",
+              name: /(workspace changes|工作区变更)/i,
+            },
           },
         ],
       },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "streaming-reasoning-order",
@@ -2044,6 +2128,7 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         text: "I am DeerFlow, an open-source super agent.",
       },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "artifact-stream-state",
@@ -2133,8 +2218,12 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       { kind: "click", target: { testId: "artifact-trigger" } },
       { kind: "visible", target: { text: "report.md" } },
       { kind: "click", target: { text: "report.md" } },
-      { kind: "visible", target: { role: "button", name: "Load full file" } },
+      {
+        kind: "visible",
+        target: { role: "button", name: /^(Load full file|加载完整文件)$/ },
+      },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
     id: "artifact-batched-stream",
@@ -2205,15 +2294,24 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       // 详情面板独有的锚点：清单那一支的下载是 link，只有详情面板里它是 button。
       // 不用文件下拉当锚点——它**没有可访问名**（照 React 的 SelectTrigger），
       // 按名字根本定位不到。
-      { kind: "visible", target: { role: "button", name: "Download" } },
+      {
+        kind: "visible",
+        target: { role: "button", name: /^(Download|下载)$/ },
+      },
       // 再点进编辑态：编辑器、保存/退出/放弃，以及「有未保存的改动」那条播报，
       // 此前一条样本都走不到。上面的 ETag 就是为这一步准备的——没有 revision，
       // 两个应用都不会显示编辑入口。
       // 名字用锚定正则：`name: "Edit"` 是子串匹配，会先命中消息工具条上的
       // "Edit and rerun"，一路点进消息编辑态。
-      { kind: "click", target: { role: "button", name: /^Edit$/ } },
-      { kind: "visible", target: { role: "button", name: "Exit editing" } },
-      { kind: "click", target: { role: "button", name: "Exit editing" } },
+      { kind: "click", target: { role: "button", name: /^(Edit|编辑)$/ } },
+      {
+        kind: "visible",
+        target: { role: "button", name: /^(Exit editing|退出编辑)$/ },
+      },
+      {
+        kind: "click",
+        target: { role: "button", name: /^(Exit editing|退出编辑)$/ },
+      },
       /*
         文件下拉**没有可访问名**（照 React 的 SelectTrigger），只能按选择器定位；
         `[role="combobox"]` 是两个应用共有的表达。切到图片走媒体预览分支，
@@ -2224,11 +2322,11 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       { kind: "visible", target: { selector: 'img[alt="diagram.png"]' } },
       { kind: "click", target: { selector: '[role="combobox"]' } },
       { kind: "click", target: { role: "option", name: "report.docx" } },
-      { kind: "visible", target: { text: "Word file" } },
+      { kind: "visible", target: { text: /^Word (file|文件)$/ } },
       // 最后切到 .skill：replay Gateway 的用户是管理员，所以安装入口在两边都该出现。
       { kind: "click", target: { selector: '[role="combobox"]' } },
       { kind: "click", target: { role: "option", name: "helper.skill" } },
-      { kind: "visible", target: { role: "button", name: "Install" } },
+      { kind: "visible", target: { role: "button", name: /^(Install|安装)$/ } },
       /*
         最后切回 markdown，让这一份样本**停在渲染好的 markdown 预览上**。
         前面几支的可达性由上面的步骤各自断言过了，但一个场景只取一份样本——
@@ -2241,5 +2339,6 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       },
       { kind: "visible", target: { role: "link", name: "the upstream repo" } },
     ],
+    dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
 ];

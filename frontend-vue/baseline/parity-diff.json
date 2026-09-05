@@ -92,7 +92,21 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
+    "sidebar/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
     "thread-history/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "thread-history/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -106,7 +120,21 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
+    "agent-chat/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
     "agents-feature-disabled/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "agents-feature-disabled/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -120,7 +148,36 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
+    "browser-feature/desktop/light/zh-CN": {
+      "ariaOnlyReact": [
+        "- button \"Back\"",
+        "- button \"Forward\"",
+        "- heading \"Connecting to live browser…\" [level=3]",
+        "- paragraph: Waiting for the first live frame.",
+        "- textbox \"Enter a URL and press Enter\""
+      ],
+      "ariaOnlyVue": [
+        "- button \"前进\"",
+        "- button \"后退\"",
+        "- heading \"正在连接实时浏览器…\" [level=3]",
+        "- paragraph: 正在等待第一帧实时画面。",
+        "- textbox \"输入网址后按 Enter\""
+      ],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": [
+        "role:heading[/^(Connecting to live browser…|正在连接实时浏览器…)$/] x React=978.1 Vue=991.4 Δ13.3",
+        "role:heading[/^(Connecting to live browser…|正在连接实时浏览器…)$/] width React=194.5 Vue=168 Δ-26.5"
+      ]
+    },
     "sidecar-chat/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "sidecar-chat/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -134,7 +191,21 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
+    "thread-list-pin/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
     "thread-list-infinite-scroll/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "thread-list-infinite-scroll/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -148,7 +219,21 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
+    "ui-polish-mobile/mobile/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
     "user-message-plain-text/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "user-message-plain-text/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -236,6 +321,13 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
+    "subtask-card/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
     "artifact-preview/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
@@ -250,7 +342,21 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
+    "artifact-preview/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
     "artifact-panel-resize/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "artifact-panel-resize/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -272,6 +378,13 @@
       "geometry": []
     },
     "settings-notification/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "settings-notification/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -327,7 +440,37 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
+    "thread-history-mermaid/desktop/light/zh-CN": {
+      "ariaOnlyReact": [
+        "- button \"Copy Code\":",
+        "- button \"Download diagram\":",
+        "- button \"Reset zoom and pan\":",
+        "- button \"View fullscreen\":",
+        "- button \"Zoom in\":",
+        "- button \"Zoom out\":",
+        "- img \"Mermaid chart\":"
+      ],
+      "ariaOnlyVue": [
+        "- button \"下载图表\":",
+        "- button \"全屏查看\":",
+        "- button \"复制代码\":",
+        "- button \"放大\":",
+        "- button \"缩小\":",
+        "- button \"重置缩放与平移\":",
+        "- img \"Mermaid 图表\":"
+      ],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
     "workspace-changes#reasoning-menu/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "workspace-changes#reasoning-menu/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -341,7 +484,21 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
+    "workspace-changes#changes-panel/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
     "streaming-reasoning-order/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "streaming-reasoning-order/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -355,7 +512,25 @@
       "requestsOnlyVue": [],
       "geometry": []
     },
+    "artifact-stream-state/desktop/light/zh-CN": {
+      "ariaOnlyReact": [
+        "- text: summary.txt Text file"
+      ],
+      "ariaOnlyVue": [
+        "- text: summary.txt Text 文件"
+      ],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
     "artifact-batched-stream/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": []
+    },
+    "artifact-batched-stream/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
