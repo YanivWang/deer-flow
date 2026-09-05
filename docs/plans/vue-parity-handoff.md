@@ -8,15 +8,15 @@
 
 ---
 
-## 当前状态（截至 wave 81，2026-09-05）
+## 当前状态（截至 wave 82，2026-09-05）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80。
-- **动过 `frontend/` 的是十七轮**（wave 52 实测订正，wave 62 / 73 / 74 各加一轮）：
-  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74**。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`）。
+- **动过 `frontend/` 的是十八轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 各加一轮）：
+  wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
   而记忆里的压缩版把它读成了「总共三次」。**别再传这个数字，用命令量**：
 
@@ -24,11 +24,12 @@
   git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests
   ```
 
-  **marker 已推到 `b0b7fcb6`**（wave 74 的 chore）；`node scripts/upstream-drift.mjs`
-  wave 74 实测**无漂移**，marker 也确实是 HEAD 的祖先——
+  **marker 已推到 `809237ec`**（wave 82 的 chore）；`node scripts/upstream-drift.mjs`
+  wave 82 实测**无漂移**，marker 也确实是 HEAD 的祖先——
   **边界规则本身有机器在守，需要人记的只有「这类改动做过哪些轮」。**
-  最近三轮的内容：wave 40 重连预算耗尽后那颗键在说反话；wave 39 命令面板搜索框的
-  可访问名；wave 36 `SidebarTrigger` 的窄屏图标。wave 41~59 都没动过。
+  最近几轮的内容：**wave 82 长文件名把 artifact 面板整排动作键推出可视区**；
+  wave 74 两处 `<Toaster />` 用的不是 shadcn wrapper；wave 73 五条「本仓修掉了上游缺陷」；
+  wave 62 `/auth/callback` 吞掉 `?next=` 深链。wave 41~~59、75~~81 都没动过。
 
 - **对照台账 0 行**（wave 78 清零），**39** 个样本，`make -C frontend-vue e2e-parity` **47** 条全绿。
   路径是 1716 → …… → 23（wave 76 接上交互后的锚点，量出 27 处此前看不见的差异）
@@ -69,7 +70,7 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 80 收工时逐条跑过）
+### 门禁实测值（wave 82 收工时逐条跑过）
 
 ```
 make -C frontend-vue verify        exit 0；259 文件 / 2155 单测，词典 942 key、18 unused
@@ -308,6 +309,46 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 82）做了什么：**长文件名把整排动作键推出可视区——两边同改**
+
+提交 `c3399c3b`，React 侧 chore `809237ec`，marker 推到 `809237ec`。
+
+wave 78 挂的那笔账（「上游同样没有截断，长文件名会把动作键推出可视区，**做之前先量**」）
+这一轮量完了。**是真的，而且两边都坏，上游还差 18px。**
+
+### 实测（1280 宽视口，59 字符的 basename）
+
+|                  | 上游                                                | 本仓                        |
+| ---------------- | --------------------------------------------------- | --------------------------- |
+| 面板裁剪盒       | `scrollWidth 657 / clientWidth 458`，溢出 **199px** | `673 / 492`，溢出 **181px** |
+| 编辑键越过裁剪边 | +53.1px                                             | +36.1px                     |
+| 关闭键越过裁剪边 | **+197.1px**                                        | **+180.1px**                |
+
+五颗动作键（编辑 / 新窗口 / 复制 / **下载** / **关闭**）**全部落在面板的
+`overflow-hidden` 盒子之外**，x 从 1285 起而视口只有 1280 宽——这份产物
+**既下载不了、面板也关不掉**。短文件名下两边都正常。
+
+### 修法：宽度归标题栏，动作栏不让位
+
+三处，两边逐条相同：**标题栏 `min-w-0`**（flex item 默认 `min-width:auto`，
+不写它就不肯缩；中间那一栏本来就 `min-w-0 grow`，该让位的是标题）、
+**`SelectTrigger` 加 `max-w-full`**（它是 `w-fit`，不写这条不理会外层的收缩；
+里面的 `SelectValue` 自带 `line-clamp-1`。write_file 那一支的纯文字标题加 `truncate`）、
+**动作栏 `shrink-0`**（里面的 Button 自己带 `shrink-0`，容器一缩它们就溢出容器盒子
+——两条要一起写才闭合）。
+
+复测：长名下五颗键**全部回到裁剪盒内**，位置与短文件名时逐像素相同。
+**残留如实记**：长名下裁剪盒仍有轻微溢出——上游 481/458（23px）、本仓 497/492（5px），
+溢出的是标题那一侧（两边 SelectTrigger 的最小内容宽不同），**没有任何一颗动作键在里面**。
+台账那条场景用的是短文件名，这 18px 差进不了取样面；要不要追是下一笔账。
+
+### 探针自己先量错过一次（坑 186 又一次）
+
+第一版按 `aria-label` 找动作键，**React 侧一个都没找到**——上游 `ArtifactAction`
+把 label 塞进一个 sr-only 的 span，不是 `aria-label`。报表因此把 React 那一半读成
+「没有面板」，看起来像「上游根本没走到详情页」。改成 `aria-label ?? textContent` 之后
+两边都读得到。**可访问名的来源两边不同，按属性找的探针会静默漏掉一整边。**
 
 ## 上一轮（wave 81）做了什么：**把两笔「先复量再决定」的账量完，两条结论都不变**
 
@@ -1145,23 +1186,24 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 撤销态画回 Sparkles 1、胶囊去 role/aria-live 1、取消键换 testid 2、
 页脚优化键润色时消失 1、语音键丢 disabled 1。
 
-## 下一轮：**一条半**
+## 下一轮：**半条**
 
 > **wave 81 把「下一轮」里那两条「先复量再决定」的账都量完了**（见「挂着的账」里
 > 更新过的两节）：`/showcase` 的四条请求第三次逐条复量，**一字不差**，aria 仍是 0/0，
 > wave 28 的决定不变；建 agent 页 chat step 的外壳复量之后**比 wave 28 记的少一项**
 > （More 菜单 wave 79 已经对上），结论同样不变。
 > **这两条从此不必再复量**，除非上游那两屏自己变了。
+> **wave 82 又把「下一轮」的第一条做掉了**（artifact 标题的长文件名，两边同改）。
 
 剩下的：
 
-### 一、artifact 头部的标题不截断，长文件名会把动作键推出可视区（**wave 78 新挂**）
+### 一、~~artifact 头部的标题不截断~~ —— **wave 82 量完并两边同改**
 
-wave 78 照抄上游之后，标题按内容宽（上游 `ArtifactTitle` 没有任何截断，中间那一栏
-才是 `grow`）。文件名足够长时头部被撑开，右边的 Download / 关闭被推出面板的
-`overflow-hidden`。**上游同样如此**，所以这是一笔要**两边同改**的账。
-**做之前先量一次**：拿一个 60 字符的文件名在两个应用上各开一次，确认动作键真的够不着
-——没量出来就不算数（线索 187）。
+量出来是真的，而且两边都坏（59 字符的文件名把五颗动作键全推出 `overflow-hidden`
+盒子，上游溢出 199px、本仓 181px，下载与关闭都点不到）。修法与复测见 wave 82 那一节。
+**剩一个零头**：长名下裁剪盒仍有轻微溢出，上游 481/458（23px）、本仓 497/492（5px），
+溢出的是标题那一侧、不含任何动作键。台账那条场景用的是短文件名，这 18px 进不了取样面。
+要追它，先决定「这算不算差异」。
 
 ### 二、往下挖什么
 
