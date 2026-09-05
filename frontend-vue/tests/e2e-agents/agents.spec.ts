@@ -165,6 +165,11 @@ test.describe.serial("real Gateway Agent lifecycle", () => {
     await expect(page.getByTestId("polish-input-button")).toHaveCount(0);
     await expect(page.getByTestId("composer-mode-trigger")).toHaveCount(0);
     await expect(page.getByTestId("composer-model-selector")).toHaveCount(0);
+    /*
+      保存走页头右上角的 ⋯ 菜单（wave 78 起，同上游 agents/new/page.tsx:309）：
+      菜单项只有菜单展开时才在 DOM 里，所以要先点开触发器。
+    */
+    await page.getByTestId("agent-more").click();
     const save = page.getByTestId("agent-save");
     await expect(save).toBeEnabled();
     await save.evaluate((element) => {

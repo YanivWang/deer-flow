@@ -47,10 +47,7 @@ import WorkspaceChangesBadge from "@/components/workspace/changes/WorkspaceChang
 import ReferenceAttachment from "@/components/workspace/sidecar/ReferenceAttachment.vue";
 import { Button } from "@/components/ui/button";
 import { richContentComponents } from "@/components/markdown/components";
-import {
-  buildWriteFileArtifactURL,
-  resolveMessageImageURL,
-} from "@/core/artifacts/utils";
+import { resolveMessageImageURL } from "@/core/artifacts/utils";
 import { extractCitationSources } from "@/core/citations/sources";
 import {
   deriveHumanInputThreadState,
@@ -724,46 +721,6 @@ function presentFilesLead(group: MessageGroup) {
   const first = group.messages[0];
   return first ? text(first) : "";
 }
-function artifactTargets(message: Message) {
-  if (message.type !== "ai") return [];
-  return (message.tool_calls ?? []).flatMap((call) => {
-    if (call.name === "present_files" && Array.isArray(call.args?.filepaths)) {
-      return call.args.filepaths.flatMap((path) =>
-        typeof path === "string"
-          ? [{ path, label: path.split("/").at(-1) ?? path }]
-          : [],
-      );
-    }
-    if (
-      (call.name === "write_file" || call.name === "str_replace") &&
-      typeof call.args?.path === "string"
-    ) {
-      return [
-        {
-          path: buildWriteFileArtifactURL({
-            filepath: call.args.path,
-            messageId: message.id,
-            toolCallId: call.id,
-          }),
-          label: call.args.path,
-        },
-      ];
-    }
-    if (
-      call.name === "finalize_artifact_write" &&
-      typeof call.args?.path === "string"
-    ) {
-      const result = props.messages.find(
-        (candidate) =>
-          candidate.type === "tool" && candidate.tool_call_id === call.id,
-      );
-      if (result && text(result).trim() === "OK") {
-        return [{ path: call.args.path, label: call.args.path }];
-      }
-    }
-    return [];
-  });
-}
 function runIdOfGroup(index: number) {
   const messages = groups.value[index]?.messages ?? [];
   for (const message of [...messages].reverse()) {
@@ -1275,15 +1232,22 @@ onUnmounted(() => {
                     :streaming="streaming && entry.index === groups.length - 1"
                   />
                   <CitationSourcesPanel :sources="citations(message)" />
-                  <button
-                    v-for="artifact in artifactTargets(message)"
-                    :key="artifact.path"
-                    type="button"
-                    class="border-border bg-muted/30 hover:bg-muted my-2 block max-w-full rounded-lg border px-3 py-2 text-left text-sm break-all"
-                    @click="emit('artifact', artifact.path)"
-                  >
-                    {{ artifact.label }}
-                  </button>
+                  <!--
+                    **这里不画 artifact 的文件名按钮。** 曾经有一排
+                    `write_file` / `str_replace` / `finalize_artifact_write` /
+                    `present_files` 的文字按钮挂在这一层，上游一处都没有：
+                    带这些工具调用的 ai 消息在两个应用里都归 `assistant:processing`
+                    组，画成 chain-of-thought 的一步（NotebookPen + 可点的路径
+                    chip，本仓是 ProcessingToolStep.vue，上游是
+                    message-group.tsx:853 的同一支）。剩下走得到这条通用分支的
+                    只有 `assistant:subagent` 组（同一条消息既有 task 又有写文件
+                    调用时），而上游那一支只画「执行 N 个子任务」+ reasoning +
+                    SubtaskCard（message-list.tsx:1195），文件名按钮同样没有。
+                    `assistant` 组按构造就不带 tool_calls
+                    （becomesAssistantBubble 要求 `!hasToolCalls`），
+                    `assistant:clarification` 组里是 tool 消息不是 ai 消息，
+                    两条都取不到东西——整段是「本仓多出来的」，按双向规则删掉。
+                  -->
                   <!--
                     卡片是 gap-2 容器的**直接**子节点，不再套 `my-2 text-sm`。
                     上游 assistant:subagent 分支把 SubtaskCard 直接 push 进

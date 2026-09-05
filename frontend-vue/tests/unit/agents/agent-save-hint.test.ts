@@ -47,9 +47,24 @@ describe("agent bootstrap save hint", () => {
     expect(source).toMatch(
       /function saveAgent\(\) \{\s*showSaveHint\.value = false;\s*void creation\.save\(\);\s*\}/,
     );
-    // 保存按钮走 saveAgent，不再直接调 creation.save。
-    expect(source).toContain('@click="saveAgent"');
+    // 保存那一项走 saveAgent，不再直接调 creation.save。
+    expect(source).toContain('@select="saveAgent"');
     expect(source).not.toContain('@click="creation.save"');
+    expect(source).not.toContain('@select="creation.save"');
+  });
+
+  /*
+    提示这句文案（两个应用共用的上游 saveHint）写的是「from the top-right menu」。
+    在 wave 78 之前本仓的保存是工具条上一颗可见按钮，界面和它自己的说明打架，
+    所以这里把「保存那一项在 ⋯ 菜单里」也钉住：谁把它搬回工具条，这条当场红。
+    形状同上游 agents/new/page.tsx:309 的 DropdownMenuItem + SaveIcon。
+  */
+  it("keeps save inside the top-right more menu the hint points at", () => {
+    expect(source).toMatch(
+      /<DropdownMenuItem\s+data-testid="agent-save"[\s\S]*?<Save class="h-4 w-4" \/>/,
+    );
+    expect(source).toContain('data-testid="agent-more"');
+    expect(source).toContain("$i18n.t.value.agents.more");
   });
 
   it("gives the conversation the upstream top padding while the hint is up", () => {

@@ -38,10 +38,10 @@ const appDir = fileURLToPath(new URL("../../app", import.meta.url));
  */
 const ALLOWED: Record<string, [number, string]> = {
   "components/chat/AgentChat.vue": [
-    3,
+    2,
     "发送失败重试 / 建 agent 出错重试：上游没有错误态，沿用 recent-chat-list.tsx:468 " +
-      "的 `underline` 写法；保存 agent 那颗上游在页头的 ⋯ 菜单里 " +
-      "（agents/new/page.tsx:316），位置差异另记一笔账",
+      "的 `underline` 写法。保存 agent 那颗 wave 78 已经搬进页头的 ⋯ 菜单 " +
+      "（同上游 agents/new/page.tsx:309 的 DropdownMenuItem + SaveIcon），不再手写",
   ],
   "components/chat/ChatComposer.vue": [
     2,
@@ -52,9 +52,10 @@ const ALLOWED: Record<string, [number, string]> = {
     "citation-sources-panel.tsx:122，上游也手写",
   ],
   "components/chat/MessageList.vue": [
-    2,
-    "历史加载失败的重试（上游没有错误态）+ artifactTargets 的文件名键" +
-      "（上游那一支渲染的是 ArtifactFileCards），两处另记账",
+    1,
+    "历史加载失败的重试，上游没有错误态。artifactTargets 那排文件名键 wave 78 " +
+      "已删：带写文件调用的消息两边都归 assistant:processing 组画成 " +
+      "chain-of-thought 的一步，上游的 assistant:subagent 分支也不画文件名键",
   ],
   "components/chat/ProcessingToolStep.vue": [
     1,

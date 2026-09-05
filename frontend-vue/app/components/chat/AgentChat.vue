@@ -23,7 +23,9 @@ import {
   Check,
   CircleCheckBig,
   Info,
+  MoreHorizontal,
   PlusSquare,
+  Save,
   X,
 } from "lucide-vue-next";
 
@@ -33,6 +35,12 @@ import ChatComposer from "@/components/chat/ChatComposer.vue";
 import MessageList from "@/components/chat/MessageList.vue";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import AuroraText from "@/components/ui/effects/AuroraText.vue";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
@@ -1738,30 +1746,73 @@ onUnmounted(() => {
               @preferences-change="updateThreadSettings('tokenUsage', $event)"
             />
             <ContextUsageBadge v-else :context-usage="contextUsage" />
-            <button
-              v-if="bootstrap"
-              type="button"
-              data-testid="agent-save"
-              class="rounded-md border px-3 py-1.5 text-xs disabled:pointer-events-none disabled:opacity-50"
-              :disabled="
-                !bootstrapConversationReady ||
-                stream.isStreaming.value ||
-                creationBusy ||
-                creation.status.value === 'created'
-              "
-              @click="saveAgent"
-            >
-              {{
-                creation.status.value === "verifying"
-                  ? $i18n.t.value.agents.verifying
-                  : creation.status.value === "created"
-                    ? $i18n.t.value.agents.agentCreated
-                    : creation.status.value === "saving" ||
-                        stream.isStreaming.value
-                      ? $i18n.t.value.agents.saving
-                      : $i18n.t.value.agents.save
-              }}
-            </button>
+            <!--
+              保存 agent 走**页头右上角的 ⋯ 菜单**，不是工具条上一颗可见按钮。
+
+              上游 `agents/new/page.tsx:309` 就是这个形状：header 右端一颗
+              `variant="ghost" size="icon-sm"` 的 More 触发器（`aria-label`
+              取 agents 那条 more），菜单里一个 `DropdownMenuItem` + `SaveIcon`。
+              本仓原来是工具条上一颗手写 `<button>`（`rounded-md border px-3
+              py-1.5 text-xs`）：既不是同一个位置，也不是同一个形状，还少了
+              Button/DropdownMenuItem 那一整套焦点环、hover 与禁用表现。
+
+              **决定性的证据是文案自己**：`agents.saveHint` 这句一次性提示
+              （两个应用共用同一条上游文案）写的是「You can save this agent at
+              any time from the top-right menu」——本仓照着它去找，右上角根本
+              没有菜单。这不是「本仓更好」的取舍，是界面和它自己的说明打架。
+
+              这一条同时把 agents 那条 more 词条接上：wave 28 记的「它在本仓
+              永远没有消费点」到此结束。（未引用扫描器按叶子名匹配，`more`
+              在 common 下有人用，所以它从来没进过 unused 集——数字不会变。）
+
+              禁用判据不动，仍是本仓这四条。上游只用
+              `[Boolean(agent), thread.isLoading, setupAgentStatus !== "idle"]`，
+              少了「bootstrap 会话还没就绪」这一条；本仓的 useAgentCreationSession
+              比上游多一个 verifying 态，多出来的判据是为了它。
+            -->
+            <DropdownMenu v-if="bootstrap">
+              <DropdownMenuTrigger>
+                <!--
+                  `data-testid` 只给 e2e 定位用，不进 aria 快照：这一屏的侧栏里
+                  有一排会话行的 More 键（common 那条 more，念作 "More"），
+                  裸 `getByRole("button", { name: ... })` 在这种页面上是
+                  strict-mode 的定时炸弹。
+                -->
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  data-testid="agent-more"
+                  :aria-label="$i18n.t.value.agents.more"
+                >
+                  <MoreHorizontal class="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  data-testid="agent-save"
+                  :disabled="
+                    !bootstrapConversationReady ||
+                    stream.isStreaming.value ||
+                    creationBusy ||
+                    creation.status.value === 'created'
+                  "
+                  @select="saveAgent"
+                >
+                  <Save class="h-4 w-4" />
+                  {{
+                    creation.status.value === "verifying"
+                      ? $i18n.t.value.agents.verifying
+                      : creation.status.value === "created"
+                        ? $i18n.t.value.agents.agentCreated
+                        : creation.status.value === "saving" ||
+                            stream.isStreaming.value
+                          ? $i18n.t.value.agents.saving
+                          : $i18n.t.value.agents.save
+                  }}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <SidecarTrigger
               v-if="!isDemo && sidecar.sidecarThreadId.value && sidecarReady"
               :open="sidecar.open.value"

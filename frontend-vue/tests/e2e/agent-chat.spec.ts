@@ -441,6 +441,11 @@ test.describe("Agent chat", () => {
     */
     await page.getByPlaceholder("e.g. code-reviewer").fill("reviewer");
     await page.getByRole("button", { name: "Continue" }).click();
+    /*
+      保存走页头右上角的 ⋯ 菜单（wave 78 起，同上游 agents/new/page.tsx:309）：
+      菜单项只有菜单展开时才在 DOM 里，所以要先点开触发器。
+    */
+    await page.getByTestId("agent-more").click();
     const save = page.getByTestId("agent-save");
     await expect(save).toBeEnabled({ timeout: 15_000 });
     await save.evaluate((element) => {
@@ -513,6 +518,7 @@ test.describe("Agent chat", () => {
     await page.goto("/workspace/agents/new");
     await page.getByPlaceholder("e.g. code-reviewer").fill("reviewer");
     await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByTestId("agent-more").click();
     await page.getByTestId("agent-save").click();
     await expect(page.getByTestId("agent-creation-error")).toContainText(
       "storage permission denied",
