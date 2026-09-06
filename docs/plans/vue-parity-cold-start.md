@@ -8,31 +8,37 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 **105 轮**的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 **106 轮**的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
-分支 `main-wc`，**接手时 HEAD 是 `a96aa8e0`（wave 105 的 docs 提交），已推到
+分支 `main-wc`，**接手时 HEAD 是 wave 106 的 docs 提交，已推到
 `origin/main-wc`，本地与远端齐平**。
 
 **这个阶段的工作性质已经变了，先知道这一点再动手**：产品面的差异基本清完了
 （台账 95 行**全部已决定**、一页纸清单「真正还开着的」5 条全是「已决定 / 够不着」），
 现在最有货的不是「再找一处 UI 差异」，而是
 **「找出一句写下来、当规则用、却没有任何机器在守的话」**——
-wave 101~105 连着五轮都是这个形状，五句话全是假的：
+wave 101~106 连着六轮都是这个形状，被撞出来的假话已经有八句：
 「A 会自愈」「两边差 18px」「这几份是手工维护的」「仍然在外面的两类」
-「pending 只能变短」。**在被撞之前，没有任何门禁会因此变红。**
+「pending 只能变短」「凡是能机械算出来的都在这里对一遍」
+「tests/ 有意不在范围里」「顺序天然测不出来，只能靠人盯着两边看」。
+**在被撞之前，没有任何门禁会因此变红。**
+
+**wave 106 又补了一条配套判据**：同一个形状**可以不长成一张表**——
+`gen-contract-constants.mjs` 那处是三个 `readContract("…")` 调用点，
+只 grep `const [A-Z_]+ =` 会漏掉。要问的是「**这段代码凭什么认为自己盖全了**」。
 
 ### 第一步：按这个顺序读，不要跳
 
 1. `docs/plans/vue-parity-open-accounts.md` —— **一页纸的挂账总清单**，
    先看「还欠什么」。三分钟读完。
-2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，约 3900 行。
+2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，约 4100 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（**268 条**里最近的十几条）。中间各轮的记录按需查。
-   **最近五轮（101~105）在最前面，先读它们**——这个阶段的方法论都在那里。
+   结尾的「其他常踩的坑」（**269 条**里最近的十几条）。中间各轮的记录按需查。
+   **最近六轮（101~106）在最前面，先读它们**——这个阶段的方法论都在那里。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **268 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **269 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -42,7 +48,7 @@ wave 101~105 连着五轮都是这个形状，五句话全是假的：
 - **默认只改 `frontend-vue/`。** 例外只有一种：**上游自己是坏的**——
   那时按「业界主流做法两边同改」，`frontend/` 与 `frontend-vue/` 同一条提交里改，
   再单独一条 chore 提交把 `frontend-vue/baseline/upstream-marker.json` 推到那条 fix
-  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十二轮**，
+  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十二轮**（wave 106 没动），
   别传这个数字，用 `git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests` 量。
 - **不要中途提问。** 取舍自己定，写进提交说明。分歧的兜底判据是**按业界主流做法**。
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
@@ -81,7 +87,7 @@ wave 101~105 连着五轮都是这个形状，五句话全是假的：
 ### 收工门禁（逐条真跑，命令与上一轮实测读数）
 
 ```bash
-make -C <abs>/frontend-vue verify          # exit 0；263 文件 / 2187 单测；词典 942 key / 18 unused
+make -C <abs>/frontend-vue verify          # exit 0；263 文件 / 2192 单测；词典 942 key / 18 unused
 make -C <abs>/frontend-vue standalone-sim  # exit 0；跑过 13 / 未跑 5 / 红 0
 make -C <abs>/frontend-vue e2e-parity      # 81 passed；台账 95 行 / 73 样本
 make -C <abs>/frontend-vue e2e-mock        # 265 + 22 + 15 + 2 + 6
@@ -130,6 +136,9 @@ make -C <abs>/frontend-vue audit           # **预期红 14**，分诊写在 Mak
   dimension, state, settleMs = 700)` 的**第 6 个参数是 `settleMs` 不是 timeout**；
   传错不会报错，只会让实验安静地测别的东西。**一个「恰好等于你填的那个数」的输出，
   永远值得停一下。**
+- **变异实验的还原一律用备份文件逐个 `cp` 回去，不要 `git checkout -- <目录>`**
+  （线索 269，wave 106 踩的）：那条命令按 HEAD 还原，**会把本轮尚未提交的改动一起冲掉**。
+  在一棵有未提交改动的树上，它不是「还原变异」，是「回滚这一轮」。
 - **凡是「扫源码找某个串」的守卫，先问「我自己这份文件里有没有这个串」**（线索 267）：
   wave 104 那条检查写成 `/writeFileSync|.../`，而扫描面包含守卫自己，
   于是匹配到自己那段正则的源码而**假绿**。改成 `["write","FileSync"].join("")` 才真红。
@@ -212,17 +221,41 @@ wave 83/84/85/89 证明过一次，**wave 101~105 又连着五轮证明**：这�
   （195 份带 `【主要导出】` 头的文件一份没扫过，占当时扫描面的 73%），
   扩面当场报出 13 处；并补 `EXCLUDED_ROOTS`，
   **`SCAN_ROOTS ∪ EXCLUDED_ROOTS` 恰好等于 checkout 的顶层目录**。
+- wave 106：把判据扫到 `app/` 与 `packages/`，**五处全中**——
+  ① agent-core 的 ARCHITECTURE.md 里五句「数量词 + `：` + 反引号清单」的枚举，
+  **只有一句是双向钉着的**（两句只查一半、两句没人钉）；取样面改成从文档**算**出来，
+  与登记表恰好一一对应；② `file-header-claims` 自己的头还写着 wave 105 已推翻的政策；
+  ③ settings 的分区表与联合类型两处各写一份（改成从表推类型，分叉不可能存在）；
+  ④ `gen-contract-constants.mjs` 的「唯一阻断的一层」只对点名的三份契约成立；
+  ⑤ **唯一的活违规**：`【主要导出】` 里写「等 N 个」的 9 份文件，
+  `app/core/threads/utils.ts` 写着「等 8 个」而实际 9 个，从 2026-08-31 起全绿至今。
 
-**还没筛的（下一轮就从这里挑）**：
-- **`app/` 与 `packages/` 里的同类硬编码表**——wave 105 只筛了
-  `tests/guards/` 与 `scripts/`（29 张）。用上面那条判据筛，别无差别补表。
+**还没筛的（下一轮可以从这里挑）**：
+- **以「后端」为全集的两张表**：`app/core/agent-deerflow/run-protocol.ts` 的
+  `DEERFLOW_DURABLE_STATUS`（头里写着「Gateway 的 durable run status 全集」）与
+  `event-map.ts` 的 `DEERFLOW_WIRE_EVENTS`（「当前 Gateway 会发出的 wire 事件名全集」）。
+  wave 106 逐条量过，**当前都对**（前者与
+  `backend/packages/harness/deerflow/runtime/runs/schemas.py` 的 `RunStatus` 六个成员一致），
+  但没有任何机器在对。补守卫要把 `backend/` 拉进 `make verify` 的读取面——
+  **代价先想清楚**，现在跨目录读的只有 `contracts/` 与 e2e 那边的 replay 夹具。
 - **其余 baseline 的 `$comment` 里的断言**：`i18n-keys.json` / `parity-diff.json` /
   `upstream-marker.json` 三份只有 `$comment`、没有 `$readers`（它们是生成物，
   按约定 `$` 开头 = 纯说明、没人读是正常的）——但**说明里的断言仍然会烂**，
   判据是「这句话现在还成立吗」，不是「有没有人读」。
 - **各文件头「实测过、做不到」的结论**：wave 95 量过一次，**货很少**
   （全仓 10 处，多数是过去式的历史说明）。**别再照旧文档追这一条**，
-  除非有新的形状。
+  除非有新的形状。**但 wave 106 撞到一个新形状值得记**：
+  「**这一档尺子看不见 X**」这类话会因为**后来给尺子加了那一档**而失效——
+  `settings-query.ts` 那句「顺序天然测不出来」自 wave 95 起就不成立，
+  实测把两个分区对调，`order` 档当场报 8 行。
+  写着「台账看不见 / 只能靠人」的地方，先对一遍现在有哪些档。
+
+**wave 106 按判据筛过、判定不是缺口的（别再重筛）**：
+`shared/showcase.ts` 三张表（已与 `public/demo/threads/` 双向逐文件比）、
+`config/routes.ts` 的 `csrRoutes`（**不声称覆盖全集**，同 `ROOT_MAKE_TARGETS`）、
+`SUPPORTED_RUN_STREAM_MODES` ⊃ `THREAD_STREAM_MODES`（白名单本来就更大）、
+`SECTION_ICONS` 与 i18n `settings.sections`（tsc 已双向管住）、
+各种扩展名 / 协议 allowlist（全集无限，不是「另一半没人查」）。
 
 ### D. ~~挂着的账~~ —— **wave 101/102/103 全部处理完，这一段空了**
 
@@ -241,7 +274,8 @@ tooltip 播报节点 2 行（reka-ui 内部，够不着）、
   天生看不见的八类列在交接文档里（第⑧类、第④类的顺序那一半、tab 序都已补上）。
 - **这条尾巴没有自然终点。** 历史命中率：wave 75 捞出 6 处、wave 76 捞出 27 处、
   wave 82 捞出一个两个应用都存在的产品缺陷、wave 83 证伪了验收判据自己、
-  wave 86 捞出 16 行、wave 87 捞出 7 行、**wave 105 捞出一个漏扫 195 份文件的扫描面**。
+  wave 86 捞出 16 行、wave 87 捞出 7 行、**wave 105 捞出一个漏扫 195 份文件的扫描面**、
+  **wave 106 一轮捞出五处守卫缺口（其中一处有活违规）并推翻一句当规则用的话**。
   **什么时候收是停止规则问题，不是能算出来的轮数。**
 - **你写下的归因，下一轮可能被你自己推翻——那是正常的，但要就地标注、不要抹掉。**
   wave 101 把一处「Loading…」归到 `LoadMoreHistoryIndicator` 并据此挂了一笔账，

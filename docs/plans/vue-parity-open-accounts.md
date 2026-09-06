@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 105，2026-09-06）
+# React → Vue 平替：挂账总清单（截至 wave 106，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -54,8 +54,19 @@
 
 ---
 
-## 三、这一轮（wave 78~100）清掉的
+## 三、这一轮（wave 78~106）清掉的
 
+- **五处「一张表把全集切成两半、另一半没人查」**（wave 106，判据来自 wave 105）：
+  agent-core 的文档枚举**五句里只有一句是双向钉着的**（两句只查一半、两句没人钉，
+  取样面现在从文档算出来、与登记表恰好一一对应）；`file-header-claims` 自己的头
+  还写着 wave 105 已经推翻的「`tests/` 有意不在范围里」；settings 的分区表与联合
+  类型两处各写一份（改成从表推类型，分叉不可能存在）；`gen-contract-constants.mjs`
+  的「唯一阻断的一层」只对点名的三份契约成立（补 `CONSUMED`/`NOT_CONSUMED` 恰好划分）；
+  **活违规一处**——`app/core/threads/utils.ts` 头里写「等 8 个」实际 9 个，
+  从 `84108b5f`（2026-08-31）烂到现在，9 份写数量的文件里就它错
+- **一句当规则用的话被实测推翻**（wave 106）：`settings-query.ts` 头里的
+  「顺序天然测不出来——只能靠人盯着两边看」**自 wave 95 起就不成立**。
+  把 `channels` 与 `memory` 对调，`make e2e-parity` 当场红，`order` 档报出 8 行
 - **台账 16 → 0**（wave 78，五处根因：页脚两组 / 菜单 align+side / 模式项多传的 `py-2` / `ui/command` 的 class 合同 / artifact 头部三栏 / sidecar 页脚的 `pt-3`）
 - **守卫注释里点名的两笔**（wave 79：保存 agent 键的位置与形状、MessageList 的 artifactTargets 文件名键）
 - **一条红了七轮没人知道的 e2e**（wave 80：`hasText` 传 RegExp 不做空白归一；并把 `e2e-backend` 写进收工清单）
@@ -143,10 +154,10 @@
 
 ---
 
-## 四、收工时的门禁读数（wave 100 逐条实跑）
+## 四、收工时的门禁读数（wave 106 逐条实跑）
 
 ```
-verify           exit 0    263 文件 / 2183 单测；词典 942 key / 18 unused
+verify           exit 0    263 文件 / 2192 单测；词典 942 key / 18 unused
                            产品 SFC 218（总 220）
 standalone-sim   exit 0    跑过 13 / 未跑 5（4 data + 1 e2e）/ 红 0      ← wave 83 新增
                            --with-e2e 实测 13 / 4 / 0（那一条：exit 0，47 条跳过）
@@ -192,14 +203,16 @@ React 侧         check 0 / test 1034 / test:e2e 146（wave 97 三条全真跑�
 2. **给现成的尺子加一档**（wave 75 的 `icon-parity`、wave 76 的几何锚点都是这么来的）。
    注意坑 213 / 186：**一把新尺子最先要量的是它自己**——wave 75 那批线索有近一半
    是扫描范围造出来的。
-3. **把散文里的断言变成守卫**（**注意：wave 95 量过「文件头里『做不到』的结论」
-   这一条，货很少**——10 处里多数是过去式的历史说明，别再照旧文档去追）
 
 > **方向 B 的存量到 wave 100 基本见底**：`opacity`（91）、`focus`（94）、`order`（95）、
 > tab 序（96）、命中测试（100）都补完了——最后这一档同时覆盖了
 > `pointer-events` 与「被别的东西盖住」（z-index 的实际后果）；
 > **层级那一半 wave 99 量完判定不必做**。
-> 再想加档，先按坑 258 问一句：**有没有一种变异能让它响、而现有的档都不响？**（`tests/guards/` 下已有十条 + wave 83 加进
+> 再想加档，先按坑 258 问一句：**有没有一种变异能让它响、而现有的档都不响？**
+
+3. **把散文里的断言变成守卫**（**注意：wave 95 量过「文件头里『做不到』的结论」
+   这一条，货很少**——10 处里多数是过去式的历史说明，别再照旧文档去追）
+   （`tests/guards/` 下已有十条 + wave 83 加进
    `tooling-contracts` 的一组）。加之前先读它们的覆盖面。
    **wave 89 又证明一次**：把 wave 88 的线索 238 做成守卫，当场扫出两边各 12 颗。
    **判据再加一条**：一条规则值不值得做成守卫，先看它**要不要豁免表**——
@@ -210,9 +223,19 @@ React 侧         check 0 / test 1034 / test:e2e 146（wave 97 三条全真跑�
    **已经量过、不必再查的**：`tests/guards/` 下各豁免表都已双向守着
    （stale 检查 + 精确颗数 + 字典序）；9 份单测里扫 `.vue` 的正则剥法今天
    一处都没错（219 份逐个比对）。
-   **还没查的同形目标**：`baseline/*.json` 的 `$semantics` 里那几句
-   「只能变短」——实测**没有任何机器在守这个方向**，`parity-diff.json` 与
-   `parity-scenario-coverage.json` 各写了一遍。先决定它是承诺还是评审政策。
+   **wave 105/106 又连着证明两次**，判据现在是四条，第四条最好用：
+   **一张表把全集切成两半，而另一半的处理方式是「不检查」吗？**
+   wave 106 用它扫 `app/` 与 `packages/`，五处全中，**其中一处有活违规**。
+   **配套的一条**：同一个形状**可以不长成一张表**——`gen-contract-constants.mjs`
+   那处是三个 `readContract("…")` 调用点，只 grep 常量声明会漏掉。
+   **还没筛的同形目标**：`app/` 里以**后端**为全集的两张表
+   （`DEERFLOW_DURABLE_STATUS` / `DEERFLOW_WIRE_EVENTS`，头里都写着「全集」，
+   实测当前都对，但补守卫要把 `backend/` 拉进 `make verify` 的读取面，代价先想清楚）。
+   **已筛过、不是缺口的**（别重筛）：`shared/showcase.ts` 三张表（已双向）、
+   `config/routes.ts` 的 `csrRoutes`（不声称覆盖全集）、
+   `SUPPORTED_RUN_STREAM_MODES`（白名单本来就更大）、
+   `SECTION_ICONS` 与 i18n `settings.sections`（tsc 双向管住）、
+   各种扩展名/协议 allowlist（全集无限）。
 
 > **这条尾巴没有自然终点。** 历史命中率：wave 100 补上最后一档（并证明了它响）、
 > wave 99 撤掉一档不该要的、wave 98 订正一条当规则用的错事实、

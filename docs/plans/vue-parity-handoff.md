@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 105，2026-09-06）
+## 当前状态（截至 wave 106，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。
 - **动过 `frontend/` 的是二十二轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -91,10 +91,12 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 100 收工时逐条跑过）
+### 门禁实测值（wave 106 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；**263** 文件 / **2183** 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；**263** 文件 / **2192** 单测，词典 942 key、18 unused
+                                   （2183 → 2187 是 wave 104/105 加的；2187 → **2192** 是 wave 106：
+                                   agent-core 契约守卫 8 → 11、file-header-claims 8 → 10）
                                    产品 SFC **218**（总 **220**，wave 86 新增 DropdownMenuGroup）
 make -C frontend-vue standalone-sim exit 0（wave 83 新增）**判据的动态那一半**：真把
                                    ../frontend rename 走，跑 CROSS_APP_BY_DESIGN 表里
@@ -382,6 +384,151 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 106）做了什么：**把 wave 105 的判据往 `app/`、`packages/` 上筛，五处缺口、一处活违规**
+
+**没动 `frontend/`。** wave 105 只筛了 `tests/guards/` 与 `scripts/` 里「长得像表的常量」。
+这一轮把同一条判据（**一张表把全集切成两半，而另一半的处理方式是「不检查」吗**）
+往外扫，量出五处，其中**一处有活的违规**——一份文件头写着「等 8 个」而实际 9 个，
+从 2026-08-31 起烂到今天，每一轮门禁都是绿的。
+
+**方法上先补一条**：wave 105 的筛法漏了 `gen-contract-constants.mjs`，
+因为**同一个形状可以不长成一张表**——那里是三个 `readContract("…")` 调用点。
+找这类缺口不能只 grep `const [A-Z_]+ = [`。
+
+### 一、`packages/agent-core`：文档里五句枚举，只有一句是双向钉着的
+
+`tests/contract.test.ts` 的头写着「凡是能从源码机械算出来的，都在这里对一遍」。
+按「数量词 + 量词 + `：` + **两个以上**反引号项」把 ARCHITECTURE.md 扫一遍，
+恰好五句：
+
+| 文档那句 | 源码那侧 | wave 106 之前 |
+| --- | --- | --- |
+| `AgentErrorKind` 九种 | `unionMembers(errors.ts)` | 双向 ✅ |
+| 角色四种 | `unionMembers(message.ts)` | **只查一半** |
+| 四个文件各管一段 | `readdirSync(src/transport/)` | **没人钉** |
+| 九个状态 | `RunSessionState` 的 `status:` | **只查一半** |
+| 会话向外只发三种输出 | `SessionOutput` 的 `kind:` | **没人钉** |
+
+「只查一半」是什么样：数量那条比的是**数量词**与源码条数、列表本身不参与计数，
+「每个成员都被点名」又只从源码一侧看——于是**文档里躺一个源码没有的成员，
+三条断言全过**。这个漏洞本文件自己在错误 kind 那一条里写明过，只是没推广出去
+（wave 48 在 baseline 键上、wave 104 在 `HAND_MAINTAINED` 上撞的是同一形状）。
+
+修法不是再抄两条用例，而是**把取样面算出来**：`enumerationSentences()` 从文档
+提取那五句，`PINNED_ENUMERATIONS` 必须与它**恰好一一对应**（多一句没人钉会红，
+登记了却在文档里找不到也会红），每条再做数量词 + 清单的**双向**比对。用例 8 → **11**。
+
+**这一处 0 活违规**——五句今天都对。补的是守卫的洞，不是文档的错，如实记。
+最硬的证据是负向验证第 1 条：给「九个状态」的清单加一个源码没有的 `paused`、
+**数量词不动**，`HEAD` 的守卫 **8 条全绿**，新守卫当场红。
+
+### 二、`file-header-claims` 自己的头，还写着 wave 105 已经推翻的政策
+
+那份文件的 `【边界与注意】` 里写着「**`tests/` 有意不在范围里**……两种约定各自成立，
+只是不能共用一条判据」，而**同一份文件下面的 `SCAN_ROOTS` 注释写着「wave 105 补上 `tests`」**。
+一份文件里两段话互相矛盾，而没有任何机器读它们。按交接文档的规矩**就地划掉、保留原文**，
+并写明推翻它的是什么、代价当时没算（195 份文件、73% 的扫描面）。
+
+### 三、`app/` 的 settings 分区：一张表、一个联合类型，两处各写一份
+
+`SETTINGS_SECTIONS`（`core/workspace-shell/settings-query.ts`）标注成
+`readonly SettingsSection[]`，而 `SettingsSection` 是 `composables/useSettingsDialog.ts`
+里另写的一个九成员联合。**「联合里多一个、表里漏登记」没有任何机器会发现**：
+`SECTION_ICONS[id]` 那种索引会被 tsc 挡住，而这张表少一项只表现为
+「导航里不显示、深链打不开」，编译照样过。实测两处成员相同、**顺序已经不同**
+（联合是 …tools/skills/memory/integrations/channels…，表是 …channels/integrations/memory/tools/skills…）
+——没人在同步它们。
+
+改成**从表推类型**（`typeof SETTINGS_SECTIONS[number]`），分叉不再存在；
+`useSettingsDialog` 只转出这个类型，既有 import 路径一行不动。
+
+顺带把 `SECTION_ICONS` 从 `as const` 改成 `as const satisfies Record<SettingsSection, Component>`：
+**少一个图标本来就会红，多一个此前是静默的**（负向验证第 10 条实测：老写法加一个
+`ghost:` 键，`vue-tsc` **0 error**）。
+
+### 四、`gen-contract-constants.mjs`：「唯一阻断的一层」只对点名的那三份成立
+
+它的头写着「后端改了契约就红，这是三层同步方案里唯一**阻断**的一层」。
+实际它按写死的文件名读三份契约，而「`contracts/` 下有没有第四份」**没有任何机器在看**。
+负向验证第 12 条：往 `contracts/` 放一份新契约，**改动前的脚本照样打印
+「后端契约常量与 contracts/\*.json 一致」**——它自己的成功消息就是假的。
+
+补 `CONSUMED` / `NOT_CONSUMED` **恰好划分** `contracts/*.json`（顶层；
+`contracts/skill_review/` 是后端 skill-reviewer 的 JSON Schema，不在这条判据的全集里），
+并且**读取由 `CONSUMED` 驱动**——不是另写三行 `readContract`，否则那张表会与
+真正读了什么漂开（wave 83 的教训）。`NOT_CONSUMED` 现在是**空表**：豁免表为空，
+才说明判据收口选对了（线索 180）。
+
+### 五、活违规在这里：`【主要导出】` 里写「等 N 个」的九份文件
+
+`file-header-claims` 明写「**只钉一个方向：点名的必须存在**」，理由是
+「`主要`两个字就是说它是索引不是全集」。**但有 9 份文件自己写了数量**——
+`… 等 9 个` 不是索引，是一句**关于全集**的断言，而且能算。逐份量：
+
+```
+ok  12/12  app/core/tasks/subtask-result.ts      ok   8/8  app/core/threads/export.ts
+ok  22/22  app/core/messages/human-input.ts      ok   7/7  app/core/threads/types.ts
+ok  31/31  app/core/messages/utils.ts            ok   8/8  app/core/sidecar/context.ts
+ok   7/7   app/core/messages/usage-model.ts      ok   8/8  app/core/messages/usage.ts
+MISMATCH 8 → 实际 9   app/core/threads/utils.ts
+```
+
+`documentTitleOfThread` 是 `84108b5f`（2026-08-31，「把头部导出按钮换回 Button primitive」）
+加的，头里的数字没跟着改，此后每一轮全绿。补一档：**写了「等 N 个」就得对，
+不写的一行不受影响，零豁免**——判据自选口径，不需要豁免表。
+
+### 六、顺带推翻一句当规则用的话（第三处的副产品）
+
+`settings-query.ts` 头里写着「对照台账按多重集比可访问性树，顺序天然测不出来
+——所以这一行只能靠人盯着两边看」。**wave 95 加了 `order` 档之后这句就不成立了。**
+实测（负向验证第 19 条）：把 `channels` 与 `memory` 对调，`make e2e-parity` 当场红，
+`order` 档报出 **8 行**（`integrations` 的三个终态 + `settings-notification`，各两种语言）：
+
+```
+第 14 个公共节点 React=- button "Channels" Vue=- button "Memory"
+第 14 个公共节点 React=- button "渠道"     Vue=- button "记忆"
+```
+
+就地划掉原文并写明**改这张表的顺序跑一次 e2e-parity 就行**。
+
+### 七、负向验证（19 条；15 条期望红、**4 条期望绿**）
+
+期望绿的那四条不是漏网，它们是**证明洞是真的**的实验：同一个变异在改动前后
+一绿一红。
+
+| # | 变异 | 期望 | 实测 |
+| --- | --- | --- | --- |
+| 1 | 「九个状态」多列一个源码没有的 `paused`、数量词不动（HEAD 守卫） | **绿** | **绿（洞）** |
+| 2 | 同上（新守卫） | 红 | 红 |
+| 3 | 源码 `SessionOutput` 加一个 kind | 红 | 红 |
+| 4 | 文档新增一句没登记的枚举 | 红 | 红 |
+| 5 | 登记表删掉 transport 那条 | 红 | 红 |
+| 6 | 文档把「会话向外只发…」整句改写 | 红 | 红 |
+| 7 | 文档整句删掉（登记了、文档找不到） | 红 | 红（「没有恰好命中一句」）|
+| 8 | 文档点名一个源码没有的 controller | 红 | 红 |
+| 9 | `SECTION_ICONS` 多一个键（新写法） | 红 | 红 TS2353 |
+| 10 | 同上，退回 `as const`（老写法） | **绿** | **绿（洞）** |
+| 11 | `SETTINGS_SECTIONS` 删掉 `tools` | 红 | 红 TS2353 + TS2367 |
+| 12 | `contracts/` 多一份契约（改动前的脚本） | **绿** | **绿（洞）** |
+| 13 | 同上（改动后） | 红 | 红 |
+| 14 | `CONSUMED` 少一份 | 红 | 红 |
+| 15 | `NOT_CONSUMED` 里有盘上没有的 | 红 | 红 |
+| 16 | `threads/utils.ts` 头写「等 8 个」（HEAD 守卫） | **绿** | **绿（洞）** |
+| 17 | 同上（新守卫） | 红 | 红 |
+| 18 | 另一份写数量的文件加一个导出、数字不动 | 红 | 红 |
+| 19 | 全仓「等 N 个」都拿掉 | 红（形状断言）| 红 |
+| 20 | settings 分区顺序对调 → `make e2e-parity` | 红 | 红（`order` 档 8 行）|
+
+还原后逐个 `diff -q` 逐字节一致；临时契约文件已删，`contracts/` 干净。
+
+### 八、过程里踩了自己一次，如实记（新坑 269）
+
+第 19 条变异要把全仓 9 份文件的「等 N 个」都拿掉，还原时图省事写了
+`git checkout -- frontend-vue/app/core`——**它按 HEAD 还原，把本轮尚未提交的
+`settings-query.ts` 一起冲掉了**（类型倒推 + 那段划掉的注释全没了），
+下一条命令的 `git status` 才看见。**变异实验的还原一律用备份文件逐个 `cp` 回去**；
+`git checkout -- <目录>` 在一棵有未提交改动的树上不是还原，是回滚。
 
 ## 上一轮（wave 105）做了什么：**文件头门禁整整漏掉 `tests/` 一整个目录，195 份没扫过**
 
@@ -2751,6 +2898,22 @@ wave 101 挂这笔账时写的是「`LoadMoreHistoryIndicator` 的 `isHistoryLoa
    下一个同形的目标：`baseline/*.json` 的 `$semantics`、
    各文件头「实测过、做不到」的结论——**判据是「哪一行代码读它」**。
 
+> **wave 106 把方向 3 往 `app/` 与 `packages/` 上扫了一遍**（wave 105 只筛了
+> `tests/guards/` 与 `scripts/`），量出五处、修完五处，其中**一处有活违规**
+> （`app/core/threads/utils.ts` 的「等 8 个」实际 9 个，从 2026-08-31 烂到现在）。
+> **还没筛的**：`app/` 里那些以**后端**为全集的表——`DEERFLOW_DURABLE_STATUS`
+> （头里写着「Gateway 的 durable run status 全集」，实测与
+> `backend/packages/harness/deerflow/runtime/runs/schemas.py` 的 `RunStatus`
+> 六个成员**当前一致**，但没有任何机器在对；补的话要把 `backend/` 拉进
+> `make verify` 的读取面，代价要先想清楚）、`DEERFLOW_WIRE_EVENTS`
+> （「当前 Gateway 会发出的 wire 事件名全集」，同形）。
+> **已筛过、不是缺口的**（别再重筛）：`shared/showcase.ts` 的三张表
+> （已经与 `public/demo/threads/` 双向逐文件比）、`config/routes.ts` 的
+> `csrRoutes`（**不声称覆盖全集**，同 `ROOT_MAKE_TARGETS`）、
+> `SUPPORTED_RUN_STREAM_MODES` ⊃ `THREAD_STREAM_MODES`（白名单本来就更大）、
+> `SECTION_ICONS` / i18n `settings.sections`（tsc 已经双向管住）、
+> 各种扩展名 / 协议 allowlist（全集无限，不是「另一半没人查」）。
+
 ## wave 64 做了什么：**把覆盖率接上，并订正 wave 63 的误判**
 
 ### 订正：不是「配置工程」，是一个 devDependency 装错了大版本
@@ -3464,7 +3627,20 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 259 条在记忆文件里）
+## 其他常踩的坑（完整 269 条在记忆文件里）
+
+- **变异实验的还原，一律用备份文件逐个 `cp` 回去，不要用 `git checkout -- <目录>`**
+  （线索 269，wave 106）。第 19 条变异要把全仓 9 份文件的「等 N 个」都拿掉，还原时
+  图省事写了 `git checkout -- frontend-vue/app/core`——**它按 HEAD 还原，把本轮尚未
+  提交的 `settings-query.ts` 一起冲掉了**（类型倒推 + 那段划掉的注释全没了），
+  下一条命令的 `git status` 才看见。**在一棵有未提交改动的树上，`git checkout --`
+  不是「还原变异」，是「回滚这一轮」。**
+
+- **同一个「表把全集切成两半」的形状，可以不长成一张表**（线索 268 的补充，wave 106）。
+  wave 105 筛 `scripts/` 时漏了 `gen-contract-constants.mjs`——那里没有
+  `const CONTRACTS = [...]`，只有三行 `readContract("…")` 调用。
+  **按形状找缺口不能只 grep 常量声明**，要问的是「这段代码凭什么认为自己盖全了」。
+
 
 - **写文件的命令不要和长任务一起丢后台**（线索 259，wave 100）。
   改 `capture.ts` 的 python 块断言没匹配上，而整条命令（改文件 + 跑 6 分钟的对照）
