@@ -161,7 +161,7 @@ async function waitForSidecarPaneSettled(page: Page) {
         previous = width;
         return settled;
       },
-      { timeout: 5_000, intervals: [100] },
+      { intervals: [100] },
     )
     .toBe(true);
 }

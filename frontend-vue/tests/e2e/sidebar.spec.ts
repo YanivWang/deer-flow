@@ -58,9 +58,7 @@ test.describe("Sidebar navigation", () => {
     // The button itself has pointer-events suppressed; force the hover so the
     // event reaches the wrapping tooltip-trigger span that surfaces the tooltip.
     await agentsButton.hover({ force: true });
-    await expect(page.getByText("Feature not enabled").first()).toBeVisible({
-      timeout: 5_000,
-    });
+    await expect(page.getByText("Feature not enabled").first()).toBeVisible();
 
     // Keyboard/screen-reader users get the reason too: the disabled entry
     // stays in the tab order (focusable) and is wired to a visually-hidden

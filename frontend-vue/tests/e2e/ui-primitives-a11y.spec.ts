@@ -285,7 +285,7 @@ test("assistant actions keep their accessible name and gain a hover tooltip", as
 
   await branch.hover();
   const tooltip = page.locator('[data-slot="tooltip-content"]');
-  await expect(tooltip.first()).toBeVisible({ timeout: 5_000 });
+  await expect(tooltip.first()).toBeVisible();
   await expect(tooltip.first()).toContainText(label!);
   // 读屏器读到的那份是 Reka 嵌在里面的 visually-hidden role="tooltip"：
   // 视觉层本身不承担语义。它被 1px clip 起来，所以按属性定位而不是按 role。

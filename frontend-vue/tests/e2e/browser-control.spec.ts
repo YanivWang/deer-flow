@@ -112,7 +112,7 @@ async function waitForStableBoundingBox(locator: Locator) {
         previous = signature;
         return stableSamples >= 2;
       },
-      { timeout: 5_000, intervals: [50, 100, 100] },
+      { intervals: [50, 100, 100] },
     )
     .toBe(true);
 

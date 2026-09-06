@@ -859,13 +859,11 @@ test.describe("Chat workspace", () => {
       "Conduct a deep dive research on [topic], and summarize the findings.",
     );
     await expect
-      .poll(
-        () =>
-          textarea.evaluate((element) => {
-            const input = element as HTMLTextAreaElement;
-            return input.value.slice(input.selectionStart, input.selectionEnd);
-          }),
-        { timeout: 5_000 },
+      .poll(() =>
+        textarea.evaluate((element) => {
+          const input = element as HTMLTextAreaElement;
+          return input.value.slice(input.selectionStart, input.selectionEnd);
+        }),
       )
       .toBe("[topic]");
 

@@ -40,7 +40,7 @@ const guide = (page: Page) => page.getByTestId("mode-hover-guide");
 */
 async function guideText(page: Page) {
   const spoken = guide(page).locator('[role="tooltip"]').first();
-  await expect(spoken).toBeVisible({ timeout: 5_000 });
+  await expect(spoken).toBeVisible();
   const text = (await spoken.textContent())?.trim() ?? "";
   await expect(guide(page)).toContainText(text);
   return text;
@@ -208,7 +208,7 @@ test("reaches the guide from the keyboard", async ({ page }) => {
   const trigger = page.getByTestId("composer-mode-trigger");
   await trigger.focus();
   // 键盘用户没有 hover。焦点必须是第二条入口，否则这层说明对他们不存在。
-  await expect(guide(page)).toBeVisible({ timeout: 5_000 });
+  await expect(guide(page)).toBeVisible();
 
   await page.keyboard.press("Escape");
   await expect(guide(page)).toHaveCount(0);
