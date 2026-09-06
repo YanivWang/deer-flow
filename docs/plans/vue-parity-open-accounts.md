@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 97，2026-09-06）
+# React → Vue 平替：挂账总清单（截至 wave 98，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -25,7 +25,7 @@
 | #   | 账                                    | 状态             | 下一步要做什么                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | --- | ------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | **artifact 头部长文件名的 18px 零头** | **开着（半条）** | wave 82 修完之后，59 字符文件名下裁剪盒仍有轻微溢出：上游 `scrollWidth 481 / clientWidth 458`（23px）、本仓 `497 / 492`（5px）。**溢出的是标题那一侧，不含任何动作键**（五颗键全部回到盒内）。两边 `SelectTrigger` 的最小内容宽不同。台账那条场景用短文件名，进不了取样面。**追之前先决定「这 18px 算不算差异」。**                                                                                                                                             |
-| 6   | **台账里那 42 行 ScrollArea 差异**    | **已归因、还没核** | wave 97 给上游 ScrollArea 的 viewport 补 `tabIndex={0}`（两边同改，理由：滚动区纯键盘到不了，而 shadcn 早就给它配了 `focus-visible:ring-*` 样式，那个焦点环永远画不出来）之后**露出来的**：这一类从「本仓多 10 个」变成**「上游多 34 个 + 8 行顺序」**——因为**上游用 ScrollArea 的地方本来就比本仓多**（`settings-dialog` 等；`ai-elements/*` 那两处是上游的零消费者死代码，不算）。**这是一处此前完全看不见的结构差异，不是那次改动造成的回归。** **下一步**：逐个核上游每一处 ScrollArea——本仓同一屏用的是什么（原生 overflow？还是压根没有可滚动区？），再判「该不该补 ScrollArea」还是「上游那处本来就是多余的」。 | wave 96 把「能不能 tab 到」这一档接上之后量出来的，四处根因：**48 行** `div(separator)` 只在本仓可 tab——`splitpanes__splitter`，本仓**每一屏都有一个**，而上游只在可调整面板真的存在时才渲染 `resizable-handle`（只出现在 browser-feature 那一屏），于是本仓每一屏都多一个键盘停靠点；**10 行** `div[data-slot=scroll-area-viewport]` 在本仓可聚焦、上游不是；**4 行** browser 面板那一格是**同一个元素不同标签**（上游 `div` / 本仓 `section`，两边都可 tab）；**2 行** `dropdown-menu-sub-trigger` 只在上游可 tab——菜单走 roving tabindex，同一时刻只有一颗是 0，两边把 roving 焦点停在不同的项上。**下一轮逐个决定**：前两处要判「多出来的键盘停靠点是不是缺陷」（一个 tab 停在没东西可调的分隔条上是噪声，但 splitpanes 的分隔条本来就该能键盘操作），第三处判标签，第四处大概率是时序。 |
+| 6   | **台账里那 42 行 ScrollArea 差异**    | **wave 98 核完：接受** | 逐屏量过：`/workspace/chats`（会话列表页）两边**都**有一个 viewport，对得上；差异全部来自 `/workspace/chats/new` 那一屏——**上游的建议行套了一层 `ai-elements/suggestion` 的 `Suggestions`，而它就是一个 `ScrollArea`**。看它的实现：里面是 `flex w-full flex-wrap`（内容本来就换行）、外面那条横向 `ScrollBar` 还写着 `className="hidden"`——**这一层永远不会真的滚动**。本仓 `WelcomeSuggestionList.vue` 用的是一个普通的 `flex flex-wrap` 容器，**什么都没少**。**决定：不跟。** 补一层不产生滚动的 ScrollArea，只会多一个键盘停靠点（正是第 6 条上一轮刚修掉的那类噪声）。**翻案判据**：上游哪天把那条 `hidden` 去掉、让建议行真的横向滚动。 |
 | 5   | **台账里那 7 行焦点差异**             | **已决定 / 已钉住** | wave 94 把「焦点」这一档接进取样面之后量出来的。**4 行**：settings 深链之后上游焦点落在导航第一项「账号」，而屏幕上显示的是另一个面板；本仓 `SettingsDialog.vue` 的 `focusInitial` 把焦点送到当前分区——**拿掉它之后本仓焦点会落到对话框背后的 composer textarea 上**，也就是模态开着而焦点在模态外面，所以那段代码挡的是真缺陷，**保留本仓这一侧**。**1 行**：mermaid 下载键的名字，是第 4 条那一类（译文）的重复。**2 行**：改动面板打开后的初始焦点（上游落在关闭键、本仓落在第一行文件）——**incidental，不是设计**（两边 `SheetContent` 的 DOM 顺序一致，本仓也没有显式焦点代码），最可能是文件列表到位的时机不同。**翻案判据**：这 2 行哪天翻过来，本身就是一个时序信号，值得去查。 |
 | 4   | **台账里那 42 行「上游写死英文」**    | **已决定：保留本仓的翻译** | wave 92 给 19 个只跑 en-US 的场景补上 zh-CN 之后量出来的，**同一类**：`browser-feature`（Back / Forward / 地址栏 placeholder /「Connecting to live browser…」/「Waiting for the first live frame.」）12 行、`thread-history-mermaid`（工具条六颗键 + 图片 alt）14 行、`artifact-stream-state`（`fileTypeLabel`）2 行。出处逐条查过：`browser-view-panel.tsx:401/462` 是**内联英文字面量**（词典里没有对应 key）；mermaid 工具条来自 **`streamdown` npm 包**，上游连改都改不了；`fileTypeLabel` 是本仓独有的 key。**判据是 fork-boundary 里那条已授权的例外「vue 有更好的可以保留」**——把 13 处译文改回英文，是在这个要留下来的应用上做一次用户可见的退化。**翻案判据**：上游哪天给这些字加了词典，或者 streamdown 支持了 i18n。 |
 | 3   | **台账里那 2 行 tooltip 播报节点**    | **开着（够不着）** | wave 91 接上悬停态之后量到：React 的可访问性树里多一个 `tooltip` 角色节点，本仓没有。根因在库里——Radix 的 `<VisuallyHidden role="tooltip">` **不**加 `aria-hidden`，而 reka-ui 2.10.1 的 `VisuallyHidden` 默认 `feature: "focusable"`，那一支会打 `aria-hidden="true"`（`node_modules/reka-ui/dist/VisuallyHidden/VisuallyHidden.js:28`），于是**专门给读屏器读的那个节点被摘出了树**。**两边的描述都还念得出来**（`aria-describedby` 的描述计算不受 aria-hidden 影响）。那个节点在 `TooltipContentImpl` 内部、不经过本仓的 slot，够不着。**翻案判据**：reka 改掉那个默认值，这两行自己就没了。 |
@@ -53,7 +53,7 @@
 
 ---
 
-## 三、这一轮（wave 78~97）清掉的
+## 三、这一轮（wave 78~98）清掉的
 
 - **台账 16 → 0**（wave 78，五处根因：页脚两组 / 菜单 align+side / 模式项多传的 `py-2` / `ui/command` 的 class 合同 / artifact 头部三栏 / sidecar 页脚的 `pt-3`）
 - **守卫注释里点名的两笔**（wave 79：保存 agent 键的位置与形状、MessageList 的 artifactTargets 文件名键）
@@ -74,6 +74,13 @@
 - **三处交互态第一次进取样面**（wave 86）：会话行的 ⋯ 菜单量出 7 处（三处根因）、
   侧栏 nav 菜单量出 9 行（少一个 group + 上游的 `menu > link > menuitem` 嵌套，
   **两边同改**）；定时任务的编辑表单 **0 差异**
+- **一条记了很久、而且是规则依据的事实被订正**（wave 98）：记忆里写着
+  「React 里零消费者的死代码（`ai-elements/*`、`ui/carousel`）……**禁止移植**」，
+  实测 **28 份里有 14 份是活的**（`prompt-input` 8 处外部引用、`conversation` 4 处…），
+  真正零消费者的是另外 14 份。已在 `deerflow-vue-alignment-scope` 里逐份列出并附量法
+- **ScrollArea 那 42 行核完**（wave 98）：差异全部来自上游给建议行套的那层
+  `Suggestions`——**它永远不会真的滚动**（内容 `flex-wrap`、横向滚动条写着 `hidden`），
+  **决定不跟**
 - **tab 序量出的四处逐条结清**（wave 97）：**关着的分隔条占着一个 Tab 停靠点**
   （`opacity:0 + pointer-events:none` 却仍是 `tabindex="0"`，WCAG 2.4.7，48 行清零）；
   browser 面板 `section` → `div`（没有可访问名的 section 不是地标，4 行清零）；

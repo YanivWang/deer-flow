@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 97 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 98 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，接手时 HEAD 是 wave 88 的 docs 提交。
@@ -19,10 +19,10 @@
    先看「还欠什么」。三分钟读完。
 2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，2500 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（255 条里最近的十几条）。中间各轮的记录按需查。
+   结尾的「其他常踩的坑」（257 条里最近的十几条）。中间各轮的记录按需查。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **255 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **257 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -41,8 +41,10 @@
   `frontend-vue/baseline/parity-diff.json` 当前 **95 行 / 73 样本**。
   其中 51 行**已决定**（2 行 reka tooltip 播报节点 + 42 行「上游写死英文」+ 7 行焦点），
   **wave 97 把 tab 序那 64 行逐条结清了**（修掉 52 行、接受 2 行），
-  剩下第一节第 6 条那 42 行是**上游用 ScrollArea 的地方比本仓多**——
-  已归因、还没核，**下一轮就该逐个核它们**。两类都在一页纸清单第一节
+  剩下那 42 行 **wave 98 也核完了**：差异全来自上游给建议行套的那层
+  `Suggestions`（`ai-elements/suggestion`），而**它永远不会真的滚动**
+  （内容 `flex-wrap`、横向滚动条写着 `hidden`），**决定不跟**。
+  **也就是说：95 行现在全部有名有姓、且都已决定。**两类都在一页纸清单第一节
   逐条交代，各带翻案判据。
   **注意它钉的是「两个应用一不一致」，不是「这一处对不对」**——wave 88 量出
   22 颗按钮两边都缺 `aria-pressed`，三档全是 0 行。接上一块新表面之后，

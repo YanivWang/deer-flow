@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 97，2026-09-06）
+## 当前状态（截至 wave 98，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**。
 - **动过 `frontend/` 的是二十二轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -39,8 +39,8 @@
 - **对照台账 95 行**，**73** 个样本，`make -C frontend-vue e2e-parity` **81** 条全绿。
   wave 96 用 tab 序那一档量出 64 行、四处根因，**wave 97 逐条结清**：
   分隔条那 48 行与 browser 标签那 4 行**修掉了**，菜单 roving 那 2 行**决定接受**，
-  滚动区那一处两边同改之后**变成了另一处此前完全看不见的结构差异**
-  （上游用 ScrollArea 的地方比本仓多，34 行 + 8 行顺序），已挂清单待核。
+  滚动区那一处两边同改之后变成了另一处此前完全看不见的结构差异，
+  **wave 98 已核完并决定接受**（见下）。
   **51 行里没有一行是「还欠的」**：2 行 reka-ui 的 tooltip 播报节点（wave 91）+
   42 行「上游把字写死成英文、本仓翻译了」（wave 92/93）+ 7 行焦点差异
   （wave 94：4 行本仓的 settings 深链焦点更好、1 行是上面那一类的重复、
@@ -358,6 +358,47 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 98）做了什么：**核完 ScrollArea 那 42 行，并订正一条当规则用的错事实**
+
+**没有代码改动**：这一轮的产出是两个读数和两条决定。
+
+### 一、42 行核完：差异全在建议行那一层，而**那一层永远不会滚动**
+
+```
+/workspace/chats（会话列表页）     两边都有 1 个 viewport —— 对得上
+/workspace/chats/new（聊天屏）     上游 1 个（在 #chat 里）、本仓 0 个 —— 差异全在这
+```
+
+顺着祖先链找到出处：上游的建议行套了一层 `ai-elements/suggestion` 的 `Suggestions`，
+**它就是一个 `ScrollArea`**。再看实现——里面是 `flex w-full flex-wrap`（内容本来就换行），
+外面那条横向 `ScrollBar` 写着 `className="hidden"`。**这一层永远不会真的滚动。**
+本仓 `WelcomeSuggestionList.vue` 用普通的 `flex flex-wrap` 容器，**什么都没少**。
+
+**决定：不跟。** 补一层不产生滚动的 ScrollArea，只会多一个键盘停靠点——
+正是 wave 97 ① 刚修掉的那类噪声。翻案判据写进清单了。
+
+### 二、订正：`ai-elements/*` **不是**整个目录都零消费者
+
+记忆 `deerflow-vue-alignment-scope` 写着「React 里零消费者的死代码
+（`ai-elements/*`、`ui/carousel`）不是豁免，是**禁止移植**」——**这句话把整个目录
+都算进去了，而实测 28 份里有 14 份是活的**：`prompt-input`（8 处外部引用）、
+`conversation`（4）、`shimmer` / `streamdown`（各 3）、`chain-of-thought` /
+`model-selector` / `reasoning`（各 2）、`artifact` / `code-block` / `loader` /
+`message` / `queue` / `suggestion` / `task`（各 1）。真正零消费者的是另外 14 份
+（`canvas` / `checkpoint` / `connection` / `context` / `controls` / `edge` / `image` /
+`node` / `open-in-chat` / `panel` / `plan` / `sources` / `toolbar` / `web-preview`）。
+已在记忆里逐份列出并附量法。
+
+**这条要紧，因为它是一条规则的依据**——「禁止移植」按目录理解会把一半活代码划进禁区。
+（`ui/carousel` 那一半这一轮没复核，仍按原文。）
+
+### 三、量的过程里踩了自己一次
+
+第一版统计脚本 `grep -rn "ai-elements/$base\""` 之后再 `grep -v "/ai-elements/"`
+想排掉目录内的自引用——**而每一行 import 里都含 `/ai-elements/`，于是把信号本身
+过滤光了**，28 份全报「外部引用 0」，正好「印证」了那条错事实。
+按**文件路径**排除才对。
 
 ## 上一轮（wave 97）做了什么：**结清 tab 序量出的四处，台账 115 → 95**
 
@@ -2974,7 +3015,19 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 255 条在记忆文件里）
+## 其他常踩的坑（完整 257 条在记忆文件里）
+
+- **过滤器要作用在「哪个文件」上，不是「这一行长什么样」**（线索 257，wave 98）。
+  统计 `ai-elements/*` 有没有外部消费者时，先 `grep -rn "ai-elements/$base\""`
+  再 `grep -v "/ai-elements/"` 想排掉目录内部的自引用——**而每一行 import 里都含
+  `/ai-elements/`，于是信号本身被过滤光了**，28 份全报「外部引用 0」，
+  正好「印证」了那条我本来就想验的错事实。按**文件路径**排除才对。
+  与坑 213 一家：**一把尺子长期给出同一个（顺手的）答案，先怀疑尺子。**
+- **一次正确的「两边同改」也可能让台账变长，那不是回归**（线索 256，wave 97）。
+  给上游 ScrollArea 的 viewport 补 `tabIndex={0}` 之后，这一类从「本仓多 10 个」
+  变成「上游多 34 个 + 8 行顺序」——**此前完全看不见的结构差异被露出来了**。
+  **判据：先问「多出来的行是新坏的，还是本来就在、只是现在才量得到」**；
+  后者要如实写进提交说明并挂上清单，不能因为「台账会变长」就把正确的修改撤掉。
 
 - **stub 掉一个全局，别忘了它排出去的定时器**（线索 254，wave 96）。
   DOM 用例把 `requestAnimationFrame` stub 成 `setTimeout(cb, 16)`，
