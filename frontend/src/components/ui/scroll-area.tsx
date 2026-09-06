@@ -18,6 +18,12 @@ function ScrollArea({
     >
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
+        // A scroll region that only responds to the wheel is unreachable for
+        // keyboard-only users (WCAG 2.1.1). The focus-visible ring below was
+        // already styling this element as focusable, but Radix never makes it
+        // focusable, so the ring could never appear. Radix's Vue counterpart
+        // (reka-ui) sets tabindex on the viewport by default.
+        tabIndex={0}
         className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
       >
         {children}

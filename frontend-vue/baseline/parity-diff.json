@@ -9,10 +9,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "chat/desktop/light/zh-CN": {
@@ -23,10 +23,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "chat/desktop/dark/en-US": {
@@ -37,10 +37,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "chat/desktop/dark/zh-CN": {
@@ -51,10 +51,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "chat/tablet/light/en-US": {
@@ -65,10 +65,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "chat/tablet/light/zh-CN": {
@@ -79,10 +79,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "chat/tablet/dark/en-US": {
@@ -93,10 +93,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "chat/tablet/dark/zh-CN": {
@@ -107,10 +107,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "chat/mobile/light/en-US": {
@@ -121,7 +121,9 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
       "tabbablesOnlyVue": [],
       "tabOrder": []
     },
@@ -133,7 +135,9 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
       "tabbablesOnlyVue": [],
       "tabOrder": []
     },
@@ -145,7 +149,9 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
       "tabbablesOnlyVue": [],
       "tabOrder": []
     },
@@ -157,7 +163,9 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
       "tabbablesOnlyVue": [],
       "tabOrder": []
     },
@@ -170,9 +178,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "sidebar/desktop/light/zh-CN": {
@@ -184,9 +190,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "thread-history/desktop/light/en-US": {
@@ -198,11 +202,10 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [
+        "div",
         "div(menuitem)"
       ],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "thread-history/desktop/light/zh-CN": {
@@ -214,11 +217,10 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [
+        "div",
         "div(menuitem)"
       ],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "agent-chat/desktop/light/en-US": {
@@ -229,10 +231,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "agent-chat/desktop/light/zh-CN": {
@@ -243,10 +245,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "agents-feature-disabled/desktop/light/en-US": {
@@ -281,12 +283,8 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [
-        "div"
-      ],
-      "tabbablesOnlyVue": [
-        "section"
-      ],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "browser-feature/desktop/light/zh-CN": {
@@ -312,12 +310,8 @@
       ],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [
-        "div"
-      ],
-      "tabbablesOnlyVue": [
-        "section"
-      ],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "sidecar-chat/desktop/light/en-US": {
@@ -352,10 +346,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "thread-list-pin/desktop/light/zh-CN": {
@@ -366,10 +360,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "thread-list-infinite-scroll/desktop/light/en-US": {
@@ -381,9 +375,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "thread-list-infinite-scroll/desktop/light/zh-CN": {
@@ -395,9 +387,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "ui-polish-mobile/mobile/light/en-US": {
@@ -408,7 +398,9 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
       "tabbablesOnlyVue": [],
       "tabOrder": []
     },
@@ -420,7 +412,9 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
       "tabbablesOnlyVue": [],
       "tabOrder": []
     },
@@ -433,9 +427,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "user-message-plain-text/desktop/light/zh-CN": {
@@ -447,9 +439,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "integrations#default/desktop/light/en-US": {
@@ -462,12 +452,13 @@
         "React=button \"Account\" Vue=button \"Integrations\""
       ],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div",
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
-      "tabOrder": []
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
     },
     "integrations#default/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -479,12 +470,13 @@
         "React=button \"账号\" Vue=button \"集成\""
       ],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div",
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
-      "tabOrder": []
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
     },
     "integrations#permission-request/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -494,12 +486,13 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div",
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
-      "tabOrder": []
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
     },
     "integrations#permission-request/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -509,12 +502,13 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div",
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
-      "tabOrder": []
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
     },
     "integrations#change-app/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -524,12 +518,13 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div",
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
-      "tabOrder": []
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
     },
     "integrations#change-app/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -539,12 +534,13 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div",
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
-      "tabOrder": []
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
     },
     "branch-thread#default/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -555,9 +551,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "branch-thread#default/desktop/light/zh-CN": {
@@ -569,9 +563,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "branch-thread#turn-actions/desktop/light/en-US": {
@@ -585,9 +577,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "branch-thread#turn-actions/desktop/light/zh-CN": {
@@ -601,9 +591,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "subtask-card/desktop/light/en-US": {
@@ -615,9 +603,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "subtask-card/desktop/light/zh-CN": {
@@ -629,9 +615,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "artifact-preview/desktop/light/en-US": {
@@ -728,12 +712,13 @@
         "React=button \"Account\" Vue=button \"Notification\""
       ],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div",
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
-      "tabOrder": []
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
     },
     "settings-notification/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -745,12 +730,13 @@
         "React=button \"账号\" Vue=button \"通知\""
       ],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div",
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
-      "tabOrder": []
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
     },
     "channels#default/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -760,10 +746,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "channels#default/desktop/light/zh-CN": {
@@ -774,10 +760,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "channels#runtime-config/desktop/light/en-US": {
@@ -788,10 +774,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "channels#runtime-config/desktop/light/zh-CN": {
@@ -802,10 +788,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "channels#runtime-config-edit/desktop/light/en-US": {
@@ -816,10 +802,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "channels#runtime-config-edit/desktop/light/zh-CN": {
@@ -830,10 +816,10 @@
       "geometry": [],
       "focus": [],
       "order": [],
-      "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
+      "tabbablesOnlyReact": [
+        "div"
       ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "thread-history-mermaid#default/desktop/light/en-US": {
@@ -845,9 +831,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "thread-history-mermaid#default/desktop/light/zh-CN": {
@@ -875,9 +859,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "thread-history-mermaid#download-menu/desktop/light/en-US": {
@@ -889,9 +871,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "thread-history-mermaid#download-menu/desktop/light/zh-CN": {
@@ -921,9 +901,7 @@
       ],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "workspace-changes#reasoning-menu/desktop/light/en-US": {
@@ -935,9 +913,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "workspace-changes#reasoning-menu/desktop/light/zh-CN": {
@@ -949,9 +925,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "workspace-changes#changes-panel/desktop/light/en-US": {
@@ -965,9 +939,7 @@
       ],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "workspace-changes#changes-panel/desktop/light/zh-CN": {
@@ -981,9 +953,7 @@
       ],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "streaming-reasoning-order/desktop/light/en-US": {
@@ -995,9 +965,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "streaming-reasoning-order/desktop/light/zh-CN": {
@@ -1009,9 +977,7 @@
       "focus": [],
       "order": [],
       "tabbablesOnlyReact": [],
-      "tabbablesOnlyVue": [
-        "div(separator)"
-      ],
+      "tabbablesOnlyVue": [],
       "tabOrder": []
     },
     "artifact-stream-state/desktop/light/en-US": {

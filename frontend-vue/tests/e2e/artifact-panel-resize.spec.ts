@@ -115,6 +115,14 @@ test.describe("Vue artifacts panel resize", () => {
     // 只是画不出来也拖不动；把它整个摘掉，读屏器就再也说不出这里本来有一条分隔线。
     await expect(separator).toHaveAttribute("aria-disabled", "true");
     await expect(separator).toHaveCSS("opacity", "0");
+    /*
+      关着的时候还要**退出 Tab 序**：它此时 `opacity: 0` 且 `pointer-events: none`，
+      鼠标用户完全感知不到，而 splitpanes 默认给的 `tabindex="0"` 会让纯键盘用户
+      Tab 进一个看不见、也没有焦点环的地方（WCAG 2.4.7）。
+      wave 96 给对照加上「能不能 tab 到」那一档才量出来：本仓**每一屏**都多一个
+      这样的停靠点，而上游只在面板真的展开时才渲染 resizable-handle。
+    */
+    await expect(separator).toHaveAttribute("tabindex", "-1");
     await page.getByText(ARTIFACT_PATH).click();
     await expect(panel).toBeVisible();
 
@@ -135,6 +143,8 @@ test.describe("Vue artifacts panel resize", () => {
     await expect(panel.getByText("report.html")).toBeVisible();
     await expect(separator).toBeVisible();
     await expect(separator).not.toHaveAttribute("aria-disabled", "true");
+    // 开着的时候它可见、可拖、方向键也能调宽度，本来就该在 Tab 序里。
+    await expect(separator).toHaveAttribute("tabindex", "0");
   });
 
   test("a released width is kept when the panel is reopened", async ({

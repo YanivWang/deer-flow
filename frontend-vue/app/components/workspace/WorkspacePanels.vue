@@ -98,12 +98,28 @@ function onResized(payload: SplitpanesResizedPayload) {
   aria-disabled 只能在这里补。React 那边由 react-resizable-panels 自己写
   （dist 里的 `"aria-disabled": n || void 0`），语义一致：关着的分隔线是 disabled，
   不是消失。
+
+  **`tabindex` 也在这里同步，理由是关着的时候它是一个「看不见、也按不动、
+  却照样占一个 Tab 停靠点」的元素。** 下面那条 `.workspace-panels--closed`
+  的样式把它设成 `opacity: 0; pointer-events: none`——鼠标用户完全感知不到它，
+  而 splitpanes 给的 `tabindex="0"` 让纯键盘用户照样会 Tab 进来，落在一个
+  没有焦点环、也没有任何可见反馈的地方（WCAG 2.4.7 焦点可见）。
+  **wave 96 给对照加上「能不能 tab 到」那一档才量出来**：本仓每一屏都多出一个
+  `div(separator)` 停靠点，而上游只在面板真的展开时才渲染 resizable-handle。
+
+  开着的时候不动它：那时它可见、可拖，`keyboard-step` 也让方向键能调宽度，
+  本来就该在 Tab 序里。
 */
 function syncSplitterDisabled() {
   const splitter = root.value?.querySelector(".splitpanes__splitter");
   if (!splitter) return;
-  if (props.open) splitter.removeAttribute("aria-disabled");
-  else splitter.setAttribute("aria-disabled", "true");
+  if (props.open) {
+    splitter.removeAttribute("aria-disabled");
+    splitter.setAttribute("tabindex", "0");
+  } else {
+    splitter.setAttribute("aria-disabled", "true");
+    splitter.setAttribute("tabindex", "-1");
+  }
 }
 onMounted(async () => {
   narrowMedia = globalThis.matchMedia?.(NARROW_QUERY) ?? null;

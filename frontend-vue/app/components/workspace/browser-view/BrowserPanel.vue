@@ -463,7 +463,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section
+  <!--
+    这一格用 `div` 而不是 `section`：**没有可访问名的 `<section>` 不是地标**
+    （不进可访问性树的 landmark 列表），所以它给不了任何语义，
+    而上游同一格用的就是 `div`。wave 96 的 tab 序档把这处标签差异报出来
+    （两边都可 tab，只是标签不同），wave 97 按「照抄上游」对齐。
+  -->
+  <div
     ref="browserPanel"
     data-testid="browser-panel"
     class="bg-background flex size-full flex-col"
@@ -644,5 +650,5 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </main>
-  </section>
+  </div>
 </template>

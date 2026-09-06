@@ -235,7 +235,7 @@ test("每个场景的双向差异都与签入的清单一致", async ({ browser 
           tabOrder: diffSequenceOrder(
             react.tabbables,
             vue.tabbables,
-            "个公共可 tab 元素",
+            "公共可 tab 元素",
           ),
         };
       }
