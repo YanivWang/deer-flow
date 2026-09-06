@@ -8,7 +8,7 @@
 
 ---
 
-## 当前状态（截至 wave 101，2026-09-06）
+## 当前状态（截至 wave 102，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
@@ -208,6 +208,24 @@ useChannelConnections → providersQuery → fetchWithAuth 401`，
 **load 降到 5 之后三套全绿。** 这台机器上 `webServer` 的 240s 在 load>20 时不够用，
 遇到就等负载，不要先去查产品。
 
+**第七条已知抖动（wave 102 新增，而且这一条与前六条不同类）**：
+`tests/e2e-settings/settings.spec.ts:275`
+（`real memory backends preserve 400/404/409/422/500/501 taxonomy`）。
+wave 102 收工跑 `e2e-backend` 时红了一次，断言是 12 路并发 `POST /api/memory/import`
+**期望每一个都是 200 或 409**。前六条的机制都是「异步 / hover / 滚动 + 固定超时」，
+**这一条是并发竞态下的状态码分布**，形状不一样。
+
+因果验过：`git stash` 之后干净树 **5/5 全绿**，`stash pop` 回来再跑 **又 5/5 全绿**
+——那一轮改的只有三份文档和 `$pendingReasons` 的一行字符串，够不着这条路由。
+
+**顺带修了一处真问题**：这三条断言原来**不带消息**，红的时候日志里只有
+`Expected: true / Received: false`，**到底是 500 还是 429 还是别的，事后完全查不到**，
+只能重跑。同一个文件上面那条 `expect(duplicate.status(), await duplicate.text())`
+早就是带消息的写法，这三条只是漏了。现在补上 `statusSummary`，
+负向验证（把判据改成 `status === 999`）确认失败消息里能读到
+`12 路并发 import 的实际状态码：[200,200,409,409,...]`。
+**下次它再红，先看那一行，不要直接重跑。**
+
 **第五条已知抖动（wave 66 新增）**：`tests/e2e/thread-history.spec.ts:695`
 （`new chat does not show previous optimistic user message after client-side navigation`）
 报 `element(s) not found`。**因果够不着**：那一轮唯一影响产物的改动是
@@ -365,6 +383,70 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
 
+## 上一轮（wave 102）做了什么：**把 wave 101 的归因推翻，并第一次逐行量出 A/B 差在哪**
+
+**没动 `frontend/`，也没动任何代码。** 改的仍是 `$pendingReasons` 的一行加几份文档。
+产出是**一条被推翻的归因、三条被订正的事实、一笔被结清的账**。
+
+### 一、A 与 B 到底差哪几行（此前 39 轮只有行数与请求数的推断）
+
+按行做多重集差，`B = 62554acd79`（55 行）对 `A = 4080b1f763`（56 行）：
+
+```
+只在 A： - text: Completed in <1s Hello
+         - button "Copy to clipboard"
+         - alert: Loading... - DeerFlow
+只在 B： - text: Completed in <1s
+         - alert
+```
+
+**两件产品层面的事加一件框架层面的事**：①乐观的用户消息「Hello」在 A 里还没去重，
+连带②多一颗复制键；③`alert` 那一行是框架的，见下。
+
+### 二、那颗「Loading...」是 Next 的路由播报器，不是产品 UI
+
+wave 101 把它归到 `LoadMoreHistoryIndicator` 的 `isHistoryLoading`——**错的**。
+实测命中的元素：
+
+```
+root=ShadowRoot | host=next-route-announcer | hostParent=body
+outerHTML=<div aria-live="assertive" id="__next-route-announcer__" role="alert"
+           style="position: absolute; ... height: 1px; width: 1px ...">
+文本="Loading... - DeerFlow"   而此时 document.title 已经是 "New Chat - DeerFlow"
+```
+
+**没有 `button` 祖先、`document.querySelectorAll("*")` 也找不到它**——因为它在
+shadow root 里，而 **Playwright 的文本引擎会穿开放 shadow root，`querySelectorAll` 不会**。
+它是 Next 的框架管道（Nuxt 没有对应物），A 里它留着上一拍的 `document.title`。
+**屏幕上并没有一个转着的加载指示器**，wave 101 那句描述作废，据此挂的账也作废。
+
+### 三、再订正两条
+
+1. **「A 里那三条后续请求还没发」按集合比是假的。** 实测时间线上
+   `token-usage` / `messages/page` / `langgraph/threads/{id}` 在 A 里同样发了、
+   也都 200 回来了（**+588ms 之前全部完成，此后 60 秒网络上再没有任何东西**）。
+   两个终态的请求**集合完全相同**，差的只是重复次数（20 vs 23）。
+2. **mock 不是嫌疑人。** `messages/page` 的路由**永远 fulfill 200**，
+   线程不认识时返回 `data: []` + `has_more: false`（`tests/e2e/utils/mock-api.ts`）。
+
+### 四、「A 会不会自愈」仍然无解——而这正是 wave 101 读数的真正含义
+
+wave 101 量的「5/5 未收敛」量的是**播报器那一行**，它永远不清（Next 不会回头改它）。
+**产品层面①②那两行会不会收敛，至今没有量过。** 要接着追，直接盯
+`text: Completed in <1s Hello` 消不消失，别再盯 `Loading...`。
+
+### 五、为什么不给播报器加一条归一化
+
+它在今天 **73 个已采纳取样点上一行都没出现**（台账里 0 处）。按坑 258
+「一个几乎永远不会响的东西比没有更糟」，**先不加**；哪天某个已采纳场景被它污染了再加，
+先例是请求档早就在丢 `_next/*` 与 `_nuxt/*`。
+**而且就算加了也不解锁这条 pending**——真正的不确定性是①②那两行产品差异。
+
+### 六、结论没变
+
+**`pending` 保留**，判据不变、不放松。变的是**知道它为什么卡着**：
+不是取样点抖，是那一屏在 700ms 这一刻**乐观消息去没去重**本身就不确定。
+
 ## 上一轮（wave 101）做了什么：**把挂了 38 轮的 pending 量到底：判据没满足，但病因订正了**
 
 **没动 `frontend/`，也没动任何代码。** 这一轮的产出是三组读数、两条订正、一笔新账。
@@ -397,11 +479,15 @@ Vue  ×20 ：1~3ms
 **5 个 A 样本无一收敛。** 回头看，整份历史记录反而全对得上：
 wave 29「5 次里 2 次等满 30s」才是真信号、被读成了「慢」；
 wave 62「14/14 都清掉了」只说明那 14 次**没出现 A**，不说明 A 会自愈。
-所以这条 pending 的病因不是「取样点抖」，是
-**上游这一屏有一个概率出现、且不会自己恢复的加载态**：
-`LoadMoreHistoryIndicator`（`frontend/src/components/workspace/messages/message-list.tsx`）
-的 `isHistoryLoading` 一直为 true，屏幕上一颗「Loading...」一直在转。
-**已挂成一页纸清单上的新账，wave 102 去查它是产品缺陷还是 mock 夹具造成的。**
+~~所以这条 pending 的病因不是「取样点抖」，是上游这一屏有一个不会自己恢复的加载态：
+`LoadMoreHistoryIndicator` 的 `isHistoryLoading` 一直为 true，屏幕上一颗「Loading...」一直在转。~~
+
+**⚠️ 这段归因是错的，wave 102 已推翻。** 那颗「Loading...」根本不在产品 UI 里——
+它是 **Next 自带的路由播报器**（`<next-route-announcer>` 的 shadow root 里那个
+`#__next-route-announcer__`，`aria-live="assertive"`、1×1 裁剪），留着上一拍的
+`document.title`。**屏幕上没有任何东西在转**，`LoadMoreHistoryIndicator` 与这件事无关。
+本轮据此挂出去的那笔账（原第 7 条）随之作废。详见 wave 102 那一节。
+**本轮真正站得住的读数**是「20 次里 React 两个终态、Vue 单一」，那部分不受影响。
 
 ### 三、A → B 第一次被逐字确认
 
@@ -2451,26 +2537,23 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 `return` 报绿，不是跳过，坑 226）。落地见 wave 83 那一节。
 **这条从此有机器守着**：`make standalone-sim` 每次都真做一遍。
 
-### 三、上游那个**不会自愈**的加载态（wave 101 新挂）
+### 三、~~上游那个不会自愈的加载态~~ —— **wave 102 定性完毕：不是产品缺陷，这笔账作废**
 
-`/workspace/chats/new` 提交首轮之后，React 有约 25% 的概率停在 A 态，
-而 A 态里 `LoadMoreHistoryIndicator`（`frontend/src/components/workspace/messages/message-list.tsx`）
-的 `isHistoryLoading` 一直是 true，屏幕上一颗「Loading...」一直转，**等满 90s 也不消失**（5/5）。
-Vue 同一份夹具下 20/20 干净，而且本仓 `MessageList.vue` 有逐字对齐的同一颗按钮。
+wave 101 挂这笔账时写的是「`LoadMoreHistoryIndicator` 的 `isHistoryLoading` 一直是 true，
+屏幕上一颗『Loading...』一直转」。**wave 102 逐个查完，这句话每一半都不成立**：
 
-**先要分清的是「产品缺陷」还是「mock 夹具造成的」**，别直接改代码。可用的判据：
+- 命中的元素在 **shadow root** 里，`host=next-route-announcer`、`hostParent=body`，
+  没有 `button` 祖先，`document.querySelectorAll("*")` 也找不到它
+  （Playwright 的文本引擎穿开放 shadow root，`querySelectorAll` 不穿）。
+  它是 **Next 自带的路由播报器**，1×1 裁剪、`aria-live="assertive"`，
+  内容是上一拍的 `document.title`。**屏幕上没有任何东西在转。**
+- **mock 也不是嫌疑人**：`messages/page` 的路由永远 fulfill 200，
+  线程不认识时返回 `data: []` + `has_more: false`。
+- **请求也不是**：`token-usage` / `messages/page` / `langgraph/threads/{id}` 在 A 里
+  同样发了、也都 200 回来了，**+588ms 之前全部完成，此后 60 秒网络上再没有任何东西**。
 
-- 同一条 probe 换 `backend` 跑一遍，看这个态还在不在；
-- 卡住的那 90 秒里 `GET /api/threads/{id}/messages/page` 到底**发没发、回没回**
-  （A 态在 700ms 取样点上这三条都还没发，但之后发没发没量过）；
-- 上游那颗 sentinel 在一个**全新**线程上凭什么 `hasMore` 为真。
-
-**本仓不是「没挂那颗按钮」**：`MessageList.vue` 有逐字对齐的同一颗，渲染条件
-`v-if="hasMoreHistory || historyLoadingMore || historyError"` 与上游
-`if (!hasMore && !isLoading) return null` 等价（wave 101 读过两边源码）。
-所以问题要问得更准：**为什么上游的 `isHistoryLoading` 会在一个全新线程上变成 true
-并一直不落，而本仓的 `historyLoadingMore` 不会。** 定案后若确属上游缺陷，
-按 fork-boundary 两边同改。
+**这笔账结清，不必再追。** 真正剩下的不确定性回到 `pending` 那一条上——
+是「乐观消息在 700ms 这一刻去没去重」，见 wave 102 那一节。
 
 ### 四、往下挖什么
 

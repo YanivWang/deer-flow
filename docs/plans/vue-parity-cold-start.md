@@ -171,22 +171,27 @@ wave 83/84/85 连着三轮证明这条最值钱，**wave 89 又证一次**（把
   9 份扫 `.vue` 的正则剥法今天一处都没错（219 份逐个比对过）。
 - 同形的下一个目标：各文件头「实测过、做不到」的结论（**已经翻案十一次**）。
 
-### D. 三条挂着的账（第 3 条是 wave 101 新挂的）
+### D. 挂着的账（第 2、3 条 wave 101/102 已经处理掉，只剩第 1 条）
 
 1. **artifact 头部长文件名的 18px 零头**：上游 `scrollWidth 481 / clientWidth 458`、
    本仓 `497 / 492`，溢出的是标题那一侧、不含任何动作键。**追之前先决定「这算不算差异」。**
 2. ~~**覆盖率棘轮的 pending 1 条**~~ —— **wave 101 按判据量到底了，结论是「不翻案」**：
    连取 20 次，React 仍是两个终态（**15 B / 5 A**），Vue 20/20 单一，
    **判据「只出现一个终态」未满足，`pending` 保留**。**不许改判据凑绿**（硬规则 3）。
-   读数、A/B 的哈希与复现方法逐字写在 `baseline/parity-scenario-coverage.json`
-   的 `$pendingReasons`。**这条不必再复量**，除非上游那一屏自己变了。
-3. **上游那个不会自愈的加载态**（**wave 101 新挂，未定性**）：上一条量出来的副产品。
-   A 态里 `LoadMoreHistoryIndicator`（`frontend/src/components/workspace/messages/message-list.tsx`）
-   的 `isHistoryLoading` 一直为 true，一颗「Loading...」**等满 90s 也不消失（5/5）**，
-   Vue 同一份夹具 20/20 干净。**先定性再动手**——换 `backend` 复跑、看那 90 秒里
-   `messages/page` 发没发回没回、查全新线程上 `hasMore` 凭什么为真。
-   **本仓不是「没挂那颗按钮」**（`MessageList.vue` 有逐字对齐的同一颗、渲染条件等价），
-   所以问题是：**为什么上游的 `isHistoryLoading` 在全新线程上变 true 且一直不落。**
+   **wave 102 又第一次逐行量出两个终态差哪几行**：只在 A 的是
+   `text: Completed in <1s Hello`、`button "Copy to clipboard"`、`alert: Loading... - DeerFlow`，
+   只在 B 的是 `text: Completed in <1s`、`alert`——**两件产品层面的事加一件框架层面的事**；
+   **请求集合两边完全相同**（此前记的「A 缺三条请求」是假的）。
+   读数与复现方法逐字写在 `baseline/parity-scenario-coverage.json` 的 `$pendingReasons`。
+   **不必再复量判据本身**；真要往下追，盯的是「乐观消息去没去重」那一行。
+3. ~~**上游那个不会自愈的加载态**~~ —— **wave 102 定性完毕：不是产品缺陷，账作废**。
+   wave 101 把它归到 `LoadMoreHistoryIndicator`，**错的**：命中元素在 shadow root 里
+   （`host=next-route-announcer`、无 `button` 祖先、`querySelectorAll` 找不到它——
+   Playwright 文本引擎穿开放 shadow root，`querySelectorAll` 不穿），是 **Next 自带的
+   路由播报器**，1×1 裁剪、内容是上一拍的 `document.title`。**屏幕上没有东西在转。**
+   mock 与请求都不是嫌疑人（`messages/page` 永远 fulfill 200；三条请求在 A 里同样发了、
+   +588ms 前全部 200 回来）。真正剩下的不确定性回到第 2 条：**乐观消息在 700ms 这一刻
+   去没去重**。要追就盯 `text: Completed in <1s Hello` 这一行。
 
 ---
 
