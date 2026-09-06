@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 122，2026-09-06）
+## 当前状态（截至 wave 123，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）；`52a35b5b` = wave 110（独立性判据自己身上的两处单向检查）；`a750347f` = wave 111（icon-parity 的两张豁免表补成双向，过期豁免开始让门禁红）；`bdf79e73` = wave 112（四张「指向外部东西」的表补反向校验；upstream-drift 的假「无漂移」）；`071a2414` = wave 113（第六条抖动查清机制并修掉，名单七条 → 六条）；wave 114 / 115 **都只有度量、代码改动为零**；`786cd37e` = wave 116（standalone-sim 只跑 8 份文件而判据说的是整套）；`4279a42e` = wave 117（答掉「要不要加 build」：不加，理由量出来了）；`29fcbb1c` = wave 118（--with-e2e 只跑了那个必然跳过的套件）；`af94ed0d` = wave 119（standalone-check 的正则要求带斜杠）；`9502a05c` = wave 120（三个夹具 id 没登记进 KNOWN_IDS）；`92a8f87d` = wave 121（丢弃查询参数那张表一条都没响过）；`f46dbbd3` = wave 122（那条没注释的归一化规则抹掉的是整棵树的层级）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）；`52a35b5b` = wave 110（独立性判据自己身上的两处单向检查）；`a750347f` = wave 111（icon-parity 的两张豁免表补成双向，过期豁免开始让门禁红）；`bdf79e73` = wave 112（四张「指向外部东西」的表补反向校验；upstream-drift 的假「无漂移」）；`071a2414` = wave 113（第六条抖动查清机制并修掉，名单七条 → 六条）；wave 114 / 115 **都只有度量、代码改动为零**；`786cd37e` = wave 116（standalone-sim 只跑 8 份文件而判据说的是整套）；`4279a42e` = wave 117（答掉「要不要加 build」：不加，理由量出来了）；`29fcbb1c` = wave 118（--with-e2e 只跑了那个必然跳过的套件）；`af94ed0d` = wave 119（standalone-check 的正则要求带斜杠）；`9502a05c` = wave 120（三个夹具 id 没登记进 KNOWN_IDS）；`92a8f87d` = wave 121（丢弃查询参数那张表一条都没响过）；`f46dbbd3` = wave 122（那条没注释的归一化规则抹掉的是整棵树的层级）；wave 123 **只有度量、代码改动为零**（在保住缩进的数据上重做层级比对，6 行）。
 - **动过 `frontend/` 的是二十二轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -344,6 +344,9 @@ ls frontend/.next/BUILD_ID frontend-vue/.output/server/index.mjs frontend-vue/.o
 ④ ~~顺序与层级~~ —— **顺序那一半 wave 95 补上了**（`diffAriaOrder`：先取公共多重集
 再比相对顺序，所以「多包一层容器」不误报）；**层级那一半 wave 99 量过了，结论是
 不必单做**——把一个节点挂到别的父节点下，几乎必然同时改变它在线性序里的位置，
+**⚠⚠ wave 123 把这条归因推翻了**：在**保住缩进**的数据上重做一次层级比对，
+**量到 6 行**（划词工具条的三颗按钮 × 两种语言，React 深度 2 / Vue 深度 3）。
+wave 99 的 0 是数据被塌平造成的，不是「层级差异不存在」。原文与 122 的存疑保留如下。
 **⚠ wave 122 给这条归因加了一条存疑**：`normalizeAriaSnapshot` 的 `\s{2,}` 规则
 把**每一层缩进都塌成一个空格**（实测 7692 行里命中 6698 次），也就是说
 **层级信息在归一化那一步就没了**——wave 99 量到的那个 0 也可能只是「数据不在」。
@@ -423,6 +426,58 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 123）做了什么：**在没被塌平的数据上重做层级比对——wave 99 的那个 0 是数据造成的**（代码改动为零）
+
+**没动 `frontend/`，也没留下任何代码。** wave 122 发现归一化把每层缩进都塌成一个空格，
+于是给 wave 99 的归因挂了存疑。这一轮正面验它。
+
+### 一、做法
+
+临时探针：`normalizeAriaTree`（与现有归一化同样的几条规则，**但保住缩进**，
+把每行变成 `{depth, body}`）+ `diffAriaDepth`（**两边都恰好出现一次**的行，比它们的深度
+——这样「一边多包一层容器」不会把整棵子树刷成差异）。只 `console.log`，不进台账。
+
+### 二、读数
+
+```
+控制组：73 个样本都取到了树（每个样本 react=60 / vue=60 这类，行数两边相同）
+深度差异：6 行
+```
+
+**wave 99 在塌平后的数据上量到 0；在保住缩进的数据上是 6。** 那个 0 是数据造成的，
+不是「层级差异不存在」。**wave 99 的归因（「换爹必然换位置，order 先撞上」）
+就此推翻**——原文按规矩保留在下面第④类那一段里，已就地标注。
+
+### 三、6 行是什么
+
+三颗按钮 × 两种语言，全在**划词工具条**上：
+
+```
+- button "Add to conversation" / "添加到对话"   React 深度 2 / Vue 深度 3
+- button "Ask in side chat"    / "在侧边聊天中提问" React 深度 2 / Vue 深度 3
+- button "Close"               / "关闭"          React 深度 2 / Vue 深度 3
+```
+
+**两边行数相同（60/60）**，工具条本身的标记逐行相同（同一组 class、同一个
+`data-sidecar-selection-toolbar`）——所以多出来的那一层是**祖先里的一个 generic 容器**，
+而 `- generic` 正好被归一化过滤掉，于是它在行比对里**看不见**、只在深度上现形。
+
+### 四、这一轮**没有**把这一档做进台账，理由写清楚
+
+- 做进去要走 `PARITY_ACCEPT_GROW=1` 的接受仪式（台账会长 6 行），
+  而**那 6 行的根因还没钉到具体是哪一个容器**——只知道「祖先里多一层 generic」。
+- 工具条是 `position: fixed` + 显式 `left/top`，多一层 generic **没有布局后果**；
+  按 wave 34「欢迎区在树里的位置」的先例，这类多半是「保留」。
+- **所以先挂账**：见一页纸清单新增的那一条，下一轮要做的是「把那一层揪出来」，
+  再决定是修掉还是接受、以及要不要把这一档常驻。
+
+### 五、过程里踩了一次（新坑 271）
+
+探针里写 `console.log(\`W123_DEPTH ${key} ...\`)`，而**同一文件里正好有一个叫 `key`
+的函数**——`${key}` 把**函数源码**插了进去，日志里每一行都带着那三行函数体。
+**不报错、不影响计数**（73 与 6 都是对的），只是标签全是垃圾，
+差点让人以为探针坏了。**模板串里插一个短名字之前，先确认它在这个作用域里是什么。**
 
 ## 上一轮（wave 122）做了什么：**那条没有注释的归一化规则，抹掉的是整棵树的层级**
 
