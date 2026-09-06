@@ -157,7 +157,22 @@ try {
     });
   }
 
-  // ── test：一次 vitest 跑完，逐文件核对「跑到了、没红」 ─────────────────
+  /*
+    ── test：**整套** vitest 跑一遍，再逐文件核对「跑到了、没红」 ─────────────
+
+    **这里原来只跑表里点名的那 8 份文件**（`vitest run ...tests`），而
+    `cross-app-by-design.mjs` 写着的判据是「`../frontend` 不存在时，本仓的
+    install / build / test / e2e **必须照常全绿**」——两者差着整整一套测试。
+    wave 83 撞到的那次正是这个形状：`standalone-check` 的 BLOCKING 早就是 0，
+    而兄弟应用一移走 `make verify` 当场红，红在**一份没人登记过的**文件上
+    （`upstream-key-coverage.test.ts` 的工厂函数）。它后来被补进了表，
+    但「只跑表里的」这条结构没变——**下一份没人登记的照样看不见**（wave 116）。
+
+    代价：这一步从 ~10s 变成整套（本机约 40s）。`standalone-sim` 本来就不在
+    `verify` 里、只在收工清单上跑一次，这个代价买的是判据本身的可信度。
+    lint / typecheck / build 三步没有跟着做：`standalone-check` 的静态扫描覆盖
+    import 那一类，而 wave 83 的教训指向的是**测试运行期**读文件。
+  */
   const outDir = mkdtempSync(join(tmpdir(), "standalone-sim-"));
   const outFile = join(outDir, "vitest.json");
   const vitest = run(process.env.PYTHON ?? "python3", [
@@ -167,7 +182,6 @@ try {
     "exec",
     "vitest",
     "run",
-    ...tests,
     "--reporter=json",
     `--outputFile=${outFile}`,
   ]);
@@ -191,6 +205,30 @@ try {
     }
     if (vitest.code !== 0) console.log(vitest.stdout);
   } else {
+    /*
+      整套的结论单独记一行：表里那 8 份逐个核对回答的是「登记过的还好吗」，
+      这一行回答的是**判据本身**——「兄弟应用不在时，整套测试还绿吗」。
+      没有它，一份新写的、没人登记的文件在这种状态下红了也不会被这个实验看见。
+    */
+    const totals = report.testResults ?? [];
+    const failedSuites = totals
+      .filter((suite) =>
+        (suite.assertionResults ?? []).some((c) => c.status === "failed"),
+      )
+      .map((suite) =>
+        suite.name.startsWith(ROOT)
+          ? suite.name.slice(ROOT.length)
+          : suite.name,
+      );
+    results.push({
+      file: "（整套 vitest）",
+      kind: "test",
+      ok: vitest.code === 0 && failedSuites.length === 0,
+      detail:
+        vitest.code === 0 && failedSuites.length === 0
+          ? `兄弟应用不在时整套仍全绿（${totals.length} 个文件）`
+          : `整套红了：exit ${vitest.code}${failedSuites.length ? `，红的文件 ${failedSuites.slice(0, 5).join("、")}` : ""}`,
+    });
     // 【坑】只看 vitest 的退出码不够：一个文件**根本没被收集**时退出码可以是 0。
     // 所以逐个文件在报告里找它，找不到就算红。
     const byFile = new Map();
