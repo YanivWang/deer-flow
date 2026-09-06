@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 96 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 97 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，接手时 HEAD 是 wave 88 的 docs 提交。
@@ -32,16 +32,17 @@
 - **默认只改 `frontend-vue/`。** 例外只有一种：**上游自己是坏的**——
   那时按「业界主流做法两边同改」，`frontend/` 与 `frontend-vue/` 同一条提交里改，
   再单独一条 chore 提交把 `frontend-vue/baseline/upstream-marker.json` 推到那条 fix
-  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十一轮**，
+  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十二轮**，
   别传这个数字，用 `git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests` 量。
 - **不要中途提问。** 取舍自己定，写进提交说明。分歧的兜底判据是**按业界主流做法**。
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
   推到我喊停为止；**不要停下来问「要不要继续」**。
 - **台账的规则现在是「新出现、还没定过的行只能减不能增」**，不再是「保持 0」。
-  `frontend-vue/baseline/parity-diff.json` 当前 **115 行 / 73 样本**。
+  `frontend-vue/baseline/parity-diff.json` 当前 **95 行 / 73 样本**。
   其中 51 行**已决定**（2 行 reka tooltip 播报节点 + 42 行「上游写死英文」+ 7 行焦点），
-  **64 行是 wave 96 新量出来的 tab 序差异——已归因、还没定，四处根因挂在
-  一页纸清单第一节第 6 条，下一轮就该逐个决定它们。**两类都在一页纸清单第一节
+  **wave 97 把 tab 序那 64 行逐条结清了**（修掉 52 行、接受 2 行），
+  剩下第一节第 6 条那 42 行是**上游用 ScrollArea 的地方比本仓多**——
+  已归因、还没核，**下一轮就该逐个核它们**。两类都在一页纸清单第一节
   逐条交代，各带翻案判据。
   **注意它钉的是「两个应用一不一致」，不是「这一处对不对」**——wave 88 量出
   22 颗按钮两边都缺 `aria-pressed`，三档全是 0 行。接上一块新表面之后，
@@ -69,7 +70,7 @@
 ```bash
 make -C <abs>/frontend-vue verify          # exit 0；263 文件 / 2183 单测；词典 942 key / 18 unused
 make -C <abs>/frontend-vue standalone-sim  # exit 0；跑过 13 / 未跑 5 / 红 0
-make -C <abs>/frontend-vue e2e-parity      # 81 passed；台账 115 行 / 73 样本
+make -C <abs>/frontend-vue e2e-parity      # 81 passed；台账 95 行 / 73 样本
 make -C <abs>/frontend-vue e2e-mock        # 265 + 22 + 15 + 2 + 6
 make -C <abs>/frontend-vue e2e-visual      # 8 passed（只有 -darwin 基线，本机门禁）
 make -C <abs>/frontend-vue asset-budget    # exit 0
