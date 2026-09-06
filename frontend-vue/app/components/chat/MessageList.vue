@@ -87,6 +87,14 @@ import { writeTextToClipboard } from "@/core/clipboard";
 import { useWorkspaceToast } from "@/core/workspace-shell/toast";
 import { cn } from "@/lib/utils";
 
+/*
+  **多根模板必须自己接 attrs**（wave 124）：下面把划词工具条挪出了 `role="log"`
+  那个根，于是这个组件有两个根节点，Vue 不再自动把 `class` 挂上去
+  （`AgentChat.vue` 传的是 `:class="… pt-10"`）。用 `v-bind="$attrs"` 显式挂回
+  日志区那个根——工具条是 `position: fixed`，不该接任何布局 class。
+*/
+defineOptions({ inheritAttrs: false });
+
 const props = withDefaults(
   defineProps<{
     messages: Message[];
@@ -927,6 +935,7 @@ onUnmounted(() => {
 
 <template>
   <div
+    v-bind="$attrs"
     :data-testid="testId"
     role="log"
     class="min-h-0 flex-1 transition-[padding]"
@@ -1428,61 +1437,67 @@ onUnmounted(() => {
         {{ actionError }}
       </p>
     </div>
-    <!--
-      划词工具条。锚在**选区**上（上游 message-list.tsx:1328），不是屏幕角落：
+  </div>
+  <!--
+    划词工具条**挂在日志区外面**，与上游一致（`message-list.tsx` 里它是
+    `</Conversation>` 之后的兄弟节点）。**wave 124 之前它在里面**，后果不是排版
+    ——`role="log"` 是一个 live region，插进去的内容会被读屏器当作日志播报出来，
+    而这是一条随选区出现/消失的浮动工具条。实测：可访问性树里那三颗按钮
+    **上游深度 2、本仓深度 3**（wave 123 量出的 6 行就是它）。
+
+    锚在**选区**上（上游 message-list.tsx:1328），不是屏幕角落：
       此前这里是 `right-8 bottom-28`，实测同一段选区上游画在 (367,197)、本仓画在
       (955,642)——引用的是哪一段完全看不出来。
 
       三颗按钮都要 `@mousedown.prevent`：默认的 mousedown 会先把选区折叠掉，
       工具条上的高亮随之消失，看起来像点错了。上游三颗也都写了。
     -->
-    <div
-      v-if="selection"
-      data-sidecar-selection-toolbar
-      :class="
-        cn(
-          'bg-popover text-popover-foreground border-border fixed z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border p-1 shadow-lg',
-          selection.placement === 'bottom'
-            ? 'translate-y-0'
-            : '-translate-y-full',
-        )
-      "
-      :style="{ left: `${selection.x}px`, top: `${selection.y}px` }"
+  <div
+    v-if="selection"
+    data-sidecar-selection-toolbar
+    :class="
+      cn(
+        'bg-popover text-popover-foreground border-border fixed z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border p-1 shadow-lg',
+        selection.placement === 'bottom'
+          ? 'translate-y-0'
+          : '-translate-y-full',
+      )
+    "
+    :style="{ left: `${selection.x}px`, top: `${selection.y}px` }"
+  >
+    <Button
+      class="h-8 rounded-full px-2.5 text-xs"
+      size="sm"
+      type="button"
+      variant="ghost"
+      @click="dispatchSelection('add')"
+      @mousedown.prevent
     >
-      <Button
-        class="h-8 rounded-full px-2.5 text-xs"
-        size="sm"
-        type="button"
-        variant="ghost"
-        @click="dispatchSelection('add')"
-        @mousedown.prevent
-      >
-        <MessageCircle class="size-3.5" />
-        {{ $i18n.t.value.sidecar.addToConversation }}
-      </Button>
-      <Button
-        v-if="selectionMode === 'main'"
-        class="h-8 rounded-full px-2.5 text-xs"
-        size="sm"
-        type="button"
-        variant="ghost"
-        @click="dispatchSelection('ask')"
-        @mousedown.prevent
-      >
-        <MessageSquarePlus class="size-3.5" />
-        {{ $i18n.t.value.sidecar.askInSideChat }}
-      </Button>
-      <Button
-        :aria-label="$i18n.t.value.common.close"
-        class="size-8 rounded-full"
-        size="icon-sm"
-        type="button"
-        variant="ghost"
-        @click="selection = null"
-        @mousedown.prevent
-      >
-        <span aria-hidden="true">×</span>
-      </Button>
-    </div>
+      <MessageCircle class="size-3.5" />
+      {{ $i18n.t.value.sidecar.addToConversation }}
+    </Button>
+    <Button
+      v-if="selectionMode === 'main'"
+      class="h-8 rounded-full px-2.5 text-xs"
+      size="sm"
+      type="button"
+      variant="ghost"
+      @click="dispatchSelection('ask')"
+      @mousedown.prevent
+    >
+      <MessageSquarePlus class="size-3.5" />
+      {{ $i18n.t.value.sidecar.askInSideChat }}
+    </Button>
+    <Button
+      :aria-label="$i18n.t.value.common.close"
+      class="size-8 rounded-full"
+      size="icon-sm"
+      type="button"
+      variant="ghost"
+      @click="selection = null"
+      @mousedown.prevent
+    >
+      <span aria-hidden="true">×</span>
+    </Button>
   </div>
 </template>
