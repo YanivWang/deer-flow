@@ -198,19 +198,31 @@ test("an existing session leaves the login page for the validated next path", as
     route.fulfill({ json: USER }),
   );
 
-  await page.goto("/login?next=/workspace/chats/safe%3Fview%3D1");
+  await page.goto("/login?next=/workspace/chats%3Fview%3D1");
   /*
     断言要按 **pathname + search** 拆开比，不能用一条没锚住开头的正则：
-    没跳转时 URL 是 `/login?next=/workspace/chats/safe?view=1`，它的**结尾**同样是
-    `workspace/chats/safe?view=1`，于是 `toHaveURL(/...safe\?view=1$/)` 在跳与不跳
+    没跳转时 URL 是 `/login?next=/workspace/chats?view=1`，它的**结尾**同样是
+    `workspace/chats?view=1`，于是 `toHaveURL(/...chats\?view=1$/)` 在跳与不跳
     两种情况下都成立——这条用例第一版就是这么写的，把跳转整个删掉照样绿。
+
+    **`next` 的落点必须是一个「到了就不走」的路由**（wave 107 实测改的）。
+    这里原来写的是 `/workspace/chats/safe?view=1`——那是一个**线程路由**，
+    而夹具里没有 `safe` 这个线程，于是工作区立刻把它换成 `/workspace/chats/new`。
+    也就是说断言钉的是一个**应用本来就要离开的中间态**：poll 采样快就绿、
+    机器忙就红（本轮 `e2e-mock` 全套跑时红一次，单跑 `--repeat-each=5` 5/5 绿）。
+    探针实测的轨迹：
+      直接进  ["/workspace/chats/safe?view=1", "/workspace/chats/new"]
+      从 login ["/login?next=…", "/workspace/chats/new"]
+    换成会话列表页之后是 ["/workspace/chats?view=1"]，十秒不动。
+    **它照样证明了这条契约**：默认落点是 `/workspace` → `/workspace/chats/new`，
+    与 `/workspace/chats?view=1` 不同，写死工作区首页仍然会红。
   */
   await expect
     .poll(() => {
       const url = new URL(page.url());
       return `${url.pathname}${url.search}`;
     })
-    .toBe("/workspace/chats/safe?view=1");
+    .toBe("/workspace/chats?view=1");
 });
 
 /*

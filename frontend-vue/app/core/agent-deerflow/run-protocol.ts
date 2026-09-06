@@ -68,6 +68,13 @@ function assertSupportedStreamModes(payload: Record<string, unknown>): void {
  *
  * `pending` / `running` 不是终态，所以没有 outcome——它们对应内核的
  * `creating` / `streaming`，由会话自己维护，不从这里读。
+ *
+ * **「全集」这句话现在有机器守着**（wave 107）：
+ * `tests/guards/backend-enum-mirror.test.ts` 拿这张表的键与后端
+ * `packages/harness/deerflow/runtime/runs/schemas.py` 的 `RunStatus` 逐个比。
+ * 在那之前它只是一句注释——wave 106 实测两边确实一致，但后端加一个状态
+ * 不会有任何征兆，而后果是**停止操作在那个状态上永远收敛不了**（下面
+ * `inspect` 把不认识的 status 当作「还没到终态」，只能靠有界轮询兜底）。
  */
 export const DEERFLOW_DURABLE_STATUS: Record<string, RunOutcome | null> = {
   pending: null,

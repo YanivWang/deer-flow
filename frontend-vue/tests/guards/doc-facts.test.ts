@@ -2,8 +2,8 @@
   【文件职责】     守住文档里那些**可核实的数字**与代码实际情况一致。
   【架构位置】     门禁测试
   【主要导出】     无；Vitest cases
-  【依赖关系】     I18N_INVENTORY.md · BEHAVIOR_CONTRACTS.md ·
-                   baseline/*.json · tests/fixtures/streams/*.sse · i18n source guard
+  【依赖关系】     I18N_INVENTORY.md · BEHAVIOR_CONTRACTS.md · baseline/*.json ·
+                   tests/fixtures/streams/*.sse · i18n source guard · backend source
   【边界与注意】   与 `doc-references.test.ts` 分工：那边管「文档点名的东西存在吗」，
                    这边管「文档说的数字对吗」。两类都是同一种失效——文档在说谎，
                    而读它的人（越来越多是模型）没有第二个信息源可以对照。
@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { readBackendSource } from "../../scripts/lib/backend-source.mjs";
 import { productVueInventory } from "../../scripts/lib/i18n-source-guard.mjs";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -161,13 +162,14 @@ describe("文档里的数字和代码一致", () => {
       } 个 schema`,
     );
 
-    // router 数只在 backend 也在 checkout 里时校验：本模块必须能独立工作。
-    let app: string;
-    try {
-      app = read("../backend/app/gateway/app.py");
-    } catch {
-      return;
-    }
+    /*
+      router 数只在 backend 也在 checkout 里时校验：本模块必须能独立工作。
+      **不要写回 `try { read(…) } catch { return }`**（wave 107）：那样会把
+      「后端整个不在」和「那份文件被挪走了」压成一件事，后者也被静默吃掉，
+      这条断言从此不再被检查而没有任何征兆。`readBackendSource` 把两者分开。
+    */
+    const app = readBackendSource("app/gateway/app.py");
+    if (app === null) return;
     const all = [...app.matchAll(/^(\s*)app\.include_router\(/gm)];
     const conditional = all.filter((m) => (m[1] ?? "").length > 4).length;
     expect(doc).toContain(
