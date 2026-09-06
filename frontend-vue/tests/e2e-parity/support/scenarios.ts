@@ -1033,7 +1033,34 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     backend: "mock",
     path: "/workspace/chats",
     mock: { threads: MANY_THREADS },
-    settle: [{ kind: "visible", target: { text: "Conversation 001" } }],
+    /*
+      **这个场景的主角是页面里那张列表，不是侧栏**（wave 131）。
+
+      ~~`text: "Conversation 001"`~~ 在这一屏上匹配到**两份**，而且是两个不同的东西
+      ——`.first()` 落在**侧栏**那一份上。实测（两个应用逐字相同）：
+
+        #0  span < a[data-sidebar=menu-button] < li[data-sidebar=menu-item] < …
+            @ x=16  y=258 w=**112**      ← 侧栏的会话行
+        #1  div < div < div < a < …
+            @ x=376 y=176 w=**784**      ← 页面里那张列表的行
+
+      后果两条：`settle` 可能在**页面列表还没画出来**的时候就通过了（侧栏那份先到），
+      而几何档里 `text:Conversation 001` 那一行量的是**112px 宽的侧栏标签**，
+      不是这个场景真正在说的 784px 宽的列表行。这是 wave 129 / 130 那一类的第三例。
+
+      改成把侧栏排除掉：两个应用的侧栏链接都写死 `data-sidebar="menu-button"`
+      （上面的祖先链两边逐字相同），所以 `a:not([data-sidebar])` 是一条两边共有的表达。
+      **不用 `chats-page-sentinel`**（两边都有这个 testid）：它是 `aria-hidden`
+      的 1px 哨兵，量它的几何没有意义，而且它只在 `hasMore && !isSearching` 时才渲染。
+    */
+    settle: [
+      {
+        kind: "visible",
+        target: {
+          selector: 'a:not([data-sidebar]):has-text("Conversation 001")',
+        },
+      },
+    ],
     dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
