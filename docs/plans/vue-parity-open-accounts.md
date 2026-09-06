@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 110，2026-09-06）
+# React → Vue 平替：挂账总清单（截至 wave 111，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -54,8 +54,14 @@
 
 ---
 
-## 三、这一轮（wave 78~110）清掉的
+## 三、这一轮（wave 78~111）清掉的
 
+- **收工清单上「icon-parity 不报 stale」这句是假的**（wave 111）：`VERIFIED` 的
+  stale 检查自 wave 87 起一直在报三条（`FileMinus`/`FilePlus`/`FilePenLine`，
+  wave 87 重做改动面板之后两边都用了），而它只 `console.log`、不影响退出码——
+  **本会话 wave 106/109/110 三份日志里那一行都在，而我三次都记成「不报 stale」**。
+  三条过期豁免删掉；`EXEMPT` 也补成双向（第一跑就抓到已经不存在的 `magicui`）；
+  stale 现在让 exit 1。顺带把 `e2e-suite-contract` 的 `standalone` 补上反方向
 - **独立性判据自己身上的两处「登记了就不再检查」**（wave 110）：
   `kind: "data"` 此前**无条件 `ok: true`**——把一份 `.ts` 标成 data，
   改动前的 `standalone-sim` 报「跑过 13 / 未跑 6 / **红 0**」，
@@ -183,7 +189,7 @@
 
 ---
 
-## 四、收工时的门禁读数（wave 110 逐条实跑）
+## 四、收工时的门禁读数（wave 111 逐条实跑）
 
 ```
 verify           exit 0    264 文件 / 2195 单测；词典 942 key / 18 unused
@@ -196,7 +202,8 @@ e2e-backend      2 + 5 + 2 + 3 + 3 + 5 + 1 + 1      ← wave 88 修完 e2e-shell
 e2e-visual       8         wave 88 一张没重录
 asset-budget     exit 0
 e2e-external     3         **不在任何聚合入口、也不在收工清单**；wave 107 顺带跑了一次，绿
-icon-parity      0 处待核，不报 stale
+icon-parity      0 处待核、**0 条 ⚠**（wave 111 起过期豁免会让它 exit 1；
+                 **这一行在那之前是假的**，stale 自 wave 87 起一直在报三条）
 audit            预期红 14（分诊写在 Makefile 的 audit 上方）
 standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 40 处 / 18 个文件）
                  ——**只是静态证明**；「移走还能跑」由 standalone-sim 管

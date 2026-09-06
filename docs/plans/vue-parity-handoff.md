@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 110，2026-09-06）
+## 当前状态（截至 wave 111，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）；`52a35b5b` = wave 110（独立性判据自己身上的两处单向检查）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）；`52a35b5b` = wave 110（独立性判据自己身上的两处单向检查）；`a750347f` = wave 111（icon-parity 的两张豁免表补成双向，过期豁免开始让门禁红）。
 - **动过 `frontend/` 的是二十二轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -91,7 +91,7 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 110 收工时逐条跑过）
+### 门禁实测值（wave 111 收工时逐条跑过）
 
 ```
 make -C frontend-vue verify        exit 0；**264** 文件 / **2195** 单测，词典 942 key、18 unused
@@ -107,8 +107,11 @@ make -C frontend-vue standalone-sim exit 0（wave 83 新增）**判据的动态�
                                    （动文件系统，且不能与任何构建并发）。
                                    `--with-e2e` 额外跑一次 e2e-parity，实测
                                    **13 / 4 / 0**，那一条报「exit 0，47 条跳过」。
-make -C frontend-vue icon-parity   **0 处待核**（wave 75 逐条核完；另有 12 条写进
-                                   脚本里的 `VERIFIED` 表，双向——某条不再出现会报 stale）
+make -C frontend-vue icon-parity   **0 处待核、0 条 ⚠**（wave 75 逐条核完；`VERIFIED`
+                                   与 `EXEMPT` 两张表现在都双向，**过期豁免会让它 exit 1**）
+                                   **⚠ 这一行 wave 111 之前是假的**：stale 从 wave 87 起
+                                   一直在报三条，而它只 console.log 不影响退出码，
+                                   核清单的人 grep 的是最后那句「共 0 处待核」
 make -C frontend-vue asset-budget  exit 0（wave 72 把 vendor-ui 预算按实测重定了一次，
                                    见 scripts/asset-budget.mjs 里那段注释）
 make -C frontend-vue audit         **预期红**：14 条，分诊写在 Makefile 的 audit 上方
@@ -399,6 +402,56 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 111）做了什么：**收工清单上「icon-parity 不报 stale」这句是假的，而且假了很多轮**
+
+**没动 `frontend/`。** 本轮的正题是「把 guards / scripts 里的表按**有没有反向校验**
+过一遍」（104/105/110 都是零散撞出来的）。第一处就撞到一件更难看的事。
+
+### 一、`VERIFIED` 的 stale 检查一直在报，而没有人读
+
+`icon-parity` 里那张 `VERIFIED` 表是**双向**的（wave 75 就写了 stale 检查），
+但它只 `console.log` 一行 ⚠、**不影响退出码**。收工清单上写的读数是
+「0 处待核，**不报 stale**」——核清单的人 grep 的是最后那句「共 0 处待核」，
+**⚠ 那一行在它上面**。
+
+**证据就在本会话自己的日志里**：wave 106 / 109 / 110 三次 `make icon-parity`
+全部打印
+
+```
+⚠ VERIFIED 表里这几条已经不再出现，回去重看一遍再删：FileMinus、FilePenLine、FilePlus
+```
+
+而 `EXIT=0`，三次都被我记成「0 处待核，不报 stale」。
+**一句要靠人眼读的断言等于没有断言**（线索 194 的同一形状）。
+
+### 二、那三条豁免自 wave 87 起就过期了
+
+wave 69 记的理由是「改动面板双视图，本仓那一屏结构不同」。**wave 87 重做改动面板
+之后两边都用了这三颗**（上游 `FileMinusIcon` 等别名，本仓裸名，canonical 之后同一颗），
+于是它们既不在 `onlyR` 也不在 `onlyV`——正是 stale 的定义。删掉。
+
+### 三、`EXEMPT` 那张表也是单向的，新检查第一跑就抓到 `magicui`
+
+`EXEMPT = {landing, docs, blog, magicui}` 是 walk 时按目录名跳过的豁免，
+**只有「撞到就跳过」，没有「表里的每一条还撞得到吗」**。加 `exemptSeen` 之后第一次
+跑就报：**`magicui` 在两个应用里都已经没有这个目录了**。删掉。
+
+### 四、让它真的红 + 顺带一处
+
+`stale` / `staleExempt` 非空时 `process.exitCode = 1`——清单上的读数从此是机器守的。
+顺带把 `e2e-suite-contract` 的 `standalone = {external, visual, parity}` 补上反方向：
+一个改了名的套件会**同时**从 `expected` 里消失、又在 `standalone` 里留一条死配置，
+两头都不红，而它从此不进任何聚合入口也没人知道。
+
+### 五、负向验证（4 条，其中一条是历史证据）
+
+| # | 变异 | 期望 | 实测 |
+| --- | --- | --- | --- |
+| 1 | EXEMPT 里放回 `magicui` | 红 | 红 exit 1 + ⚠ |
+| 2 | VERIFIED 里放回 `FileMinus` | 红 | 红 exit 1 + ⚠ |
+| 3 | standalone 里加一个不存在的 id | 红 | 红「standalone 里点名的套件已经不存在了」 |
+| 4 | **历史证据**：wave 106/109/110 的 icon-parity 日志 | 绿 | **绿（洞）**——⚠ 一直在，`EXIT=0` |
 
 ## 上一轮（wave 110）做了什么：**独立性判据自己身上的两处「登记了就不再检查」**
 
