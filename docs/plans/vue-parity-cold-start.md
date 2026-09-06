@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 98 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 99 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，接手时 HEAD 是 wave 88 的 docs 提交。
@@ -19,10 +19,10 @@
    先看「还欠什么」。三分钟读完。
 2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，2500 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（257 条里最近的十几条）。中间各轮的记录按需查。
+   结尾的「其他常踩的坑」（258 条里最近的十几条）。中间各轮的记录按需查。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **257 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **258 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -140,10 +140,13 @@ wave 94 的焦点档第一版 17 行里有 **10 行是描述器的噪声**。
 
 **「天生看不见的八类」现在少了两类半**：第⑧类（焦点）wave 94 补完，
 第④类的**顺序**那一半 wave 95 补完（层级那一半仍看不见）。
-**tab 序 wave 96 也补完了。** 剩下没被覆盖的量：`pointer-events`、
-`z-index` 实际堆叠、第④类的**层级**那一半、滚动位置（**故意不比**，
-见 capture.ts 文件头）。
-加之前先问「它是不是真的几档都看不见」，加完先问两句：
+**tab 序 wave 96 也补完了；第④类的「层级」那一半 wave 99 量完判定不必做**
+（序列化的树里「换爹」必然「换位置」，`order` 那一档先撞上——实测过）。
+剩下名义上没覆盖的只有 `pointer-events` 与 `z-index` 实际堆叠，
+以及滚动位置（**故意不比**，见 capture.ts 文件头）。
+**加之前先按坑 258 问一句：有没有一种变异能让它响、而现有的档都不响？**
+举不出来就别加（层级那一档就是这么被撤掉的）。
+再问「它是不是真的几档都看不见」，加完先问两句：
 **「其中几行是它自己造的」**（wave 94：17 行里 10 行是描述器噪声）与
 **「其中几行是别的档已经报过的」**（wave 96：114 行里约 48 行是重复，线索 255）。
 
