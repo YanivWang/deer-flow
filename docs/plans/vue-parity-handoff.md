@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 108，2026-09-06）
+## 当前状态（截至 wave 109，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）。
 - **动过 `frontend/` 的是二十二轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -91,7 +91,7 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 108 收工时逐条跑过）
+### 门禁实测值（wave 109 收工时逐条跑过）
 
 ```
 make -C frontend-vue verify        exit 0；**264** 文件 / **2195** 单测，词典 942 key、18 unused
@@ -199,6 +199,10 @@ config.webServer` 在任何测试跑起来之前就炸）。**绕法**：先自�
 > **两类的区分判据**：把机器调慢，失败点会不会移动——钉错对象的那类调慢了照样红在
 > 同一个语义上（它等的东西永远不来），预算不够的那类是「等的东西来了，只是晚了」。
 > **注意：只有第四条被复现验证过**，第三/五/六条是按症状同形推断的，没有逐条验。
+> **wave 109 把这句推断查完了：不成立。** #5 在 60x、#6 在 70x 节流下**都还是绿的**
+> ——节流只模拟「页面脚本慢」，模拟不了「服务端也慢 / 进程被抢占」；而 #3 与 #5 的
+> 关键断言**本来就写着 `timeout: 15_000`**，它们从一开始就不在这一类里。
+> **那个旋钮有适用域，别当通用复现器用。**
 
 **已知的两条负载抖动**（都不是产品缺陷，但每次遇到都要重新证一遍因果）：
 
@@ -395,6 +399,59 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 109）做了什么：**订正 wave 108 的推断，并清掉最后 7 处写死的 5s 预算**
+
+**没动 `frontend/`。** wave 108 如实写着「只有第四条抖动被复现验证过，第三/五/六条
+按症状同形**推断**」。这一轮把那句推断查完——**推断不成立**。
+
+### 一、订正：CPU 节流复现不了第五、第六条
+
+| 抖动 | 30x | 更高 |
+| --- | --- | --- |
+| #5 `thread-history.spec.ts`（wave 66，`element(s) not found`） | 绿 43.4s | **60x 仍绿** 51.8s |
+| #6 `ui-primitives-a11y.spec.ts`（wave 33，hover tooltip） | 绿 42.8s | **70x 仍绿** 55.1s |
+
+**原因**：节流只模拟「页面脚本执行慢」，模拟不了真实负载下「服务端也慢 /
+进程被抢占 / 磁盘被占」。第四条能复现，是因为它的瓶颈恰好在页内（水合 + 对话框渲染）。
+**那个旋钮有适用域，别当成通用复现器。**
+
+顺带看到一条本该更早发现的事：**#3 与 #5 的关键断言本来就写着 `timeout: 15_000`**
+——它们从一开始就不在「5s 预算」那一类里，wave 108 的推断从这里就该停住。
+
+### 二、确定的那件事：7 处写死的 5s 把 wave 108 的提升挡在门外
+
+全仓显式超时分布（实测）：**15s 164 处 / 10s 40 处 / 20s 28 处 / 30s 12 处 /
+60s 10 处 / 5s 7 处 / 2s 1 处**——**5s 是离群值，没人真的想要它**。
+逐条读那 7 处，**没有一处在断言「必须多快完成」**：全是「等 tooltip 出现」
+「等布局稳下来」「等选区落定」。5s 只是**旧默认值的回声**，写下来就把这条断言
+永久钉在旧预算上，后来把默认调大也救不到它。
+
+```
+mode-hover-guide.spec.ts   ×2   ui-primitives-a11y.spec.ts ×1   sidebar.spec.ts ×1
+browser-control.spec.ts    ×1   sidecar-chat.spec.ts       ×1   chat.spec.ts    ×1
+```
+
+七处全部去掉显式值、改为继承默认（poll 那三处保留 `intervals`）。
+
+### 三、有意不做成门禁
+
+「短超时」不是一律不许写：`tests/e2e-parity/support/capture.ts` 的 `{ timeout: 2_000 }`
+是有意的（逐元素探针，长超时会吃光整套 600s 预算）。判据是
+**「这个数字在断言一件事，还是只是抄了默认值」**，不是数值大小；这条判据机器分不出来，
+做成门禁必然要一张豁免表（线索 180）。所以写进 `playwright-factory.ts` 的注释里。
+
+### 四、负向验证
+
+把那条 tooltip 用例的 `await branch.hover()` 删掉（tooltip 永远不出现），
+失败消息是 **`Timeout: 10000ms`**——继承的预算真的生效，断言照样红，只是晚一倍。
+另有一次变异把 `<TooltipContent` 改名，**构建直接失败**，属于变异写坏了、不算数，如实记。
+
+### 五、门禁
+
+verify 0 / 264 文件 / 2195 单测；standalone-sim 13/5/0；e2e-parity 81（台账 95/73 未动）；
+e2e-mock 265+22+15+2+6；e2e-backend 2+5+2+3+3+5+1+1；e2e-visual 8；e2e-external 3；
+asset-budget 0；icon-parity 0 待核；audit 红 14。
 
 ## 上一轮（wave 108）做了什么：**把「负载抖动」变成可复现实验，量出机制是 5s 断言预算**
 
