@@ -343,11 +343,17 @@ test.describe.serial("real Gateway settings", () => {
       ),
     );
     const statuses = raced.map((response) => response.status());
-    expect(statuses).toContain(200);
-    expect(statuses).toContain(409);
-    expect(statuses.every((status) => status === 200 || status === 409)).toBe(
-      true,
-    );
+    // 12 路并发写同一份 memory.json，红起来是间歇的（wave 102 撞到一次，重跑两次
+    // 都绿）。断言不带消息的话，日志里只有 `Expected true / Received false`——
+    // 到底是 500 还是 429 还是别的，事后无从查起，只能重跑。同一个文件上面那条
+    // `expect(duplicate.status(), await duplicate.text())` 已经是这个写法。
+    const statusSummary = `12 路并发 import 的实际状态码：${JSON.stringify(statuses)}`;
+    expect(statuses, statusSummary).toContain(200);
+    expect(statuses, statusSummary).toContain(409);
+    expect(
+      statuses.every((status) => status === 200 || status === 409),
+      statusSummary,
+    ).toBe(true);
     const conflict = raced.find((response) => response.status() === 409);
     expect(await conflict!.json()).toEqual({
       detail: "Memory changed concurrently; reload and retry.",
