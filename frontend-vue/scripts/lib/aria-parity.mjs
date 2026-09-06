@@ -31,6 +31,25 @@ export function normalizeAriaSnapshot(snapshot) {
         .replace(/(reka|radix)-[\w-]+/g, "«id»")
         // 组件库把序号拼进 name 的场合（v-0-2 这类）
         .replace(/-v-\d+(-\d+)*/g, "")
+        /*
+          **这一条抹掉的是整棵树的层级，不是「名字里多打的空格」**（wave 122 实测）。
+          aria 快照按每层两个空格缩进，所以 `\s{2,}` 命中的绝大多数是**缩进本身**：
+          `  - navigation:` / `    - button "A"` 归一之后都变成 ` - …`，
+          **深度 1、2、3 全部塌成同一个前导空格**。
+
+          实测（探针跑一整轮 e2e-parity，7692 行）：
+            collapse-space  6698 次（87%）   ← 就是它在干活
+            trailing-space / reka-radix-id / v-index / blank-line / generic-line  各 0 次
+
+          也就是说这段里**有注释的那几条一次都没响过，而真正在抹信息的这条此前没有注释**。
+
+          **保留它**：下游 `diffAriaLines` 本来就要去缩进（不去的话「一边多包一层容器」
+          会把整棵子树刷成差异，见下面那段），所以塌掉缩进不改变当前任何一项比对结果。
+          **但要知道代价**：层级信息在这一步就没了，**任何「层级」维度都不可能从
+          归一化之后的快照里恢复**——wave 99 试着做过一档层级差异、量到 0 行，
+          当时归因为「换爹必然换位置、order 先撞上」；**那个 0 也可能只是因为
+          数据在这里已经被塌掉了**。真要做层级，得先让 capture 另存一份带缩进的。
+        */
         .replace(/\s{2,}/g, " "),
     )
     .filter((line) => line.trim() !== "" && line.trim() !== "- generic")
