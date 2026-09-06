@@ -3,7 +3,8 @@
   【文件职责】     验收判据的**动态**那一半：真把 ../frontend 移出 checkout，
                    把 CROSS_APP_BY_DESIGN 表里点名的每一条跑一遍，再移回来。
   【架构位置】     构建脚本
-  【主要导出】     CLI：默认跑 script + test 两类；--with-e2e 再加 make e2e-parity
+  【主要导出】     CLI：默认跑 script + test 两类；
+                   --with-e2e 再加 make e2e-parity / e2e-mock / e2e-backend
   【依赖关系】     scripts/lib/cross-app-by-design.mjs（表的唯一事实源）· vitest · git
   【边界与注意】   **它会 rename 兄弟应用目录**（`<repoRoot>/frontend` →
                    `<repoRoot>/.frontend-standalone-sim-parked`），跑完在 finally 里
@@ -291,7 +292,8 @@ try {
         kind: "e2e",
         ok: true,
         skipped: true,
-        detail: "要跑加 --with-e2e（会起 Nuxt preview，约 1 分钟）",
+        detail:
+          "要跑加 --with-e2e（连 e2e-mock / e2e-backend 一起，十分钟量级）",
       });
       continue;
     }
@@ -306,6 +308,32 @@ try {
           ? `make e2e-parity exit 0，${line ? `${line[1]} 条跳过` : "跳过条数没解析出来"}`
           : `make e2e-parity exit ${parity.code}`,
     });
+  }
+
+  /*
+    判据写的是「install / build / test / **e2e** 必须照常全绿」，而 `--with-e2e`
+    此前**只跑 `make e2e-parity`**——那是唯一一个兄弟应用不在时**整组跳过**的套件。
+    也就是说这个开关几乎什么都没证：真正会执行的那些套件，从来没有在
+    「兄弟应用不在」的状态下跑过（wave 118 第一次跑，两组都绿，读数见交接文档）。
+
+    所以 `--with-e2e` 现在把会真跑的两个聚合入口也带上。它因此从约 1 分钟变成
+    十分钟量级——**这个开关本来就是 opt-in**，而它换来的是判据里 e2e 那一半
+    第一次真的有人验。`e2e-backend` 需要 backend 的 uv 环境，与收工清单同一条前提。
+  */
+  if (withE2e) {
+    for (const target of ["e2e-mock", "e2e-backend"]) {
+      const suite = run("make", [target]);
+      results.push({
+        file: `（make ${target}）`,
+        kind: "e2e",
+        ok: suite.code === 0,
+        detail:
+          suite.code === 0
+            ? `兄弟应用不在时 ${target} 仍全绿`
+            : `${target} exit ${suite.code}——看上面的输出`,
+      });
+      if (suite.code !== 0) console.log(suite.stdout);
+    }
   }
 } finally {
   restore();
