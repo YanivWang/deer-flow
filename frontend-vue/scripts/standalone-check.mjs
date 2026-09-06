@@ -119,6 +119,26 @@ const byFile = (rows) => {
   return [...map.entries()].sort((a, b) => b[1] - a[1]);
 };
 
+/*
+  反方向（wave 110）：`CROSS_APP_BY_DESIGN` 里的每一条，**必须真的还提到兄弟应用**。
+
+  此前只有正方向——「有代码级引用的文件如果在表里就不算 BLOCKING」。一条已经不再
+  引用 `../frontend` 的登记就永远留着，而**没有任何机器会发现**：它不产生 hit，
+  于是既不在 BLOCKING 里、也不在 DECLARED 计数里，看报表只会觉得「40 处 / 18 个文件」
+  一切正常（线索 186 的清单腐烂，wave 104 在 HAND_MAINTAINED 上撞的同一形状）。
+  `standalone-sim` 那条「表里点名的文件必须真的在」只管**文件在不在**，
+  管不了「它还是不是一个对照工具」。
+
+  判据取「任意一处提到」（代码或注释），不是「代码级引用」：一份只在注释里点名
+  上游文件的对照工具仍然是对照工具，只是不阻断构建。
+*/
+const mentioned = new Set(
+  [...blocking, ...comments, ...docs, ...declared].map((row) => row.file),
+);
+const staleDeclarations = Object.keys(CROSS_APP_BY_DESIGN).filter(
+  (file) => !mentioned.has(file),
+);
+
 if (process.argv.includes("--json")) {
   console.log(
     JSON.stringify(
@@ -128,6 +148,7 @@ if (process.argv.includes("--json")) {
         comment: comments.length,
         docs: docs.length,
         declared: declared.length,
+        staleDeclarations,
         rows: blocking,
       },
       null,
@@ -150,6 +171,13 @@ if (process.argv.includes("--json")) {
   for (const [file, { note }] of Object.entries(CROSS_APP_BY_DESIGN)) {
     console.log(`             ${file}\n               ${note}`);
   }
+  if (staleDeclarations.length > 0) {
+    console.log("");
+    console.log(
+      "过期的登记（表里有，而文件已经不再提到兄弟应用；删掉它或说明为什么还留着）：",
+    );
+    for (const file of staleDeclarations) console.log(`  ${file}`);
+  }
   if (blocking.length > 0) {
     console.log("");
     console.log("BLOCKING 明细：");
@@ -164,4 +192,4 @@ if (process.argv.includes("--json")) {
   }
 }
 
-process.exitCode = blocking.length > 0 ? 1 : 0;
+process.exitCode = blocking.length > 0 || staleDeclarations.length > 0 ? 1 : 0;

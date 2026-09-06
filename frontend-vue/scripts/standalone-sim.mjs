@@ -261,13 +261,40 @@ try {
   restore();
 }
 
+/*
+  `data` 这一档此前是**唯一一个什么都不查的**：直接 `ok: true` push 一行
+  「纯数据，没有可执行行为」——那句话是散文，没有任何机器读它（wave 110）。
+  失效方式很具体：把一份 `.ts` 标成 `data`，它就**永远不会被这个实验跑到**，
+  而这个实验正是「移走兄弟应用还能跑」的判据本身。正是 wave 83 建 `kind` 时
+  要解决的那类问题，只是当时漏了这一档。
+
+  判据用**黑名单**不用白名单：可执行源码的后缀是有限且稳定的，而数据格式会长
+  （今天是 .json，明天可能是 .yaml/.csv），白名单会变成一张要维护的表。
+*/
+const EXECUTABLE_EXTENSIONS = new Set([
+  ".ts",
+  ".mts",
+  ".cts",
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".tsx",
+  ".jsx",
+  ".vue",
+  ".py",
+  ".sh",
+]);
 for (const file of data) {
+  const extension = file.slice(file.lastIndexOf("."));
+  const executable = EXECUTABLE_EXTENSIONS.has(extension);
   results.push({
     file,
     kind: "data",
-    ok: true,
-    skipped: true,
-    detail: "纯数据，没有可执行行为",
+    ok: !executable,
+    skipped: !executable,
+    detail: executable
+      ? `标成了 data，但 ${extension} 是可执行源码——它会被整个实验跳过。改成 test/script，或者说明它为什么不会被执行`
+      : "纯数据，没有可执行行为",
   });
 }
 
