@@ -1,9 +1,9 @@
-# React → Vue 平替：挂账总清单（截至 wave 131，2026-09-07）
+# React → Vue 平替：挂账总清单（截至 wave 132，2026-09-07）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
 
-> **判据提醒**：台账现在是 **113 行 / 77 个取样点**（wave 129）。wave 96 用 tab 序那一档量出的
+> **判据提醒**：台账现在是 **121 行 / 79 个取样点**（wave 132）。wave 96 用 tab 序那一档量出的
 > 64 行，**wave 97 已逐条结清**（修掉 52 行、接受 2 行、剩下的变成下面第 6 条那处
 > 新的结构差异）。规则仍是「新出现的行要么已决定、要么有名有姓地挂在这张表上」。
 > 其余各类是——
@@ -58,6 +58,18 @@
 
 ## 三、这一轮（wave 78~128）清掉的
 
+- **第⑥类第一次量到产品层面的分叉**（wave 132）：`artifact-batched-stream#preview-failed`
+  （产物来自 artifacts 清单、正文必须去取，所以 500 才盖得住；`artifact-preview` 那份
+  夹具 wave 130 已量过接不住）。8 行里 6 行是**已判过的 `retry: 3`** 第三次复现，
+  **2 行是新的**：`order` 报出「第 51 个公共节点 React=- radio Vue=- radio [checked]」。
+  探针直接量到 —— **预览失败时本仓选中「代码」、上游仍然选中「预览」**
+  （Vue `#0 aria-checked=true`；React `#1 aria-checked=true`）。机制：上游
+  `preview.ts:238` 的 `initialViewMode` **只由文件策略决定**，与正文取没取到无关；
+  本仓 `reset()` 置回 `code`，只有成功路径才设成 `preview`。
+  **决定：保留本仓这一侧**——上游那一档等于念「预览，已选中」而同屏写着「无法预览此文件」，
+  自相矛盾；**不做两边同改**（没有功能后果，够不上「上游自己是坏的」）。
+  **翻案判据**：上游把 `initialViewMode` 接到加载结果上，或这一屏出现「重试」入口。
+  台账 113/77/85 → **121/79/87**
 - **8 个「一个锚点匹配到多份」逐个核完**（wave 131）：**3 个是缺陷、5 个是正常的多份**。
   判据是「那几份是同一个东西的多份，还是不同的东西」。最后一处缺陷在
   `thread-list-infinite-scroll`：`text:Conversation 001` 的 `.first()` 落在**侧栏**
@@ -302,7 +314,7 @@ verify           exit 0    265 文件 / 2205 单测；词典 942 key / 18 unused
 standalone-sim   exit 0    跑过 14 / 未跑 5（4 data + 1 e2e）/ 红 0      ← wave 83 新增
                            wave 116 起 test 那一步跑**整套** vitest（此前只跑表里的 8 份）
                            --with-e2e 实测 13 / 4 / 0（那一条：exit 0，47 条跳过）
-e2e-parity       85        台账 113 行 / 77 样本（wave 128/129 各多一个后端失败终态）
+e2e-parity       87        台账 121 行 / 79 样本（wave 128/129/132 各多一个后端失败终态）
 e2e-mock         265 + 22 + 15 + 2 + 6
 e2e-backend      2 + 5 + 2 + 3 + 3 + 5 + 1 + 1      ← wave 88 修完 e2e-shell 之后才又全绿
 e2e-visual       8         wave 88 一张没重录
