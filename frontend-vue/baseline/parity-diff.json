@@ -1159,7 +1159,7 @@
       "tabbablesOnlyVue": [],
       "tabOrder": []
     },
-    "artifact-batched-stream/desktop/light/en-US": {
+    "artifact-batched-stream#default/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -1172,7 +1172,7 @@
       "tabbablesOnlyVue": [],
       "tabOrder": []
     },
-    "artifact-batched-stream/desktop/light/zh-CN": {
+    "artifact-batched-stream#default/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -1180,6 +1180,44 @@
       "geometry": [],
       "focus": [],
       "order": [],
+      "depth": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
+    },
+    "artifact-batched-stream#preview-failed/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [
+        "GET /api/threads/00000000-0000-0000-0000-000000000001/artifacts/mnt/user-data/outputs/batched-report.md",
+        "GET /api/threads/00000000-0000-0000-0000-000000000001/artifacts/mnt/user-data/outputs/batched-report.md",
+        "GET /api/threads/00000000-0000-0000-0000-000000000001/artifacts/mnt/user-data/outputs/batched-report.md"
+      ],
+      "requestsOnlyVue": [],
+      "geometry": [],
+      "focus": [],
+      "order": [
+        "第 51 个公共节点 React=- radio Vue=- radio [checked]"
+      ],
+      "depth": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
+    },
+    "artifact-batched-stream#preview-failed/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [
+        "GET /api/threads/00000000-0000-0000-0000-000000000001/artifacts/mnt/user-data/outputs/batched-report.md",
+        "GET /api/threads/00000000-0000-0000-0000-000000000001/artifacts/mnt/user-data/outputs/batched-report.md",
+        "GET /api/threads/00000000-0000-0000-0000-000000000001/artifacts/mnt/user-data/outputs/batched-report.md"
+      ],
+      "requestsOnlyVue": [],
+      "geometry": [],
+      "focus": [],
+      "order": [
+        "第 51 个公共节点 React=- radio Vue=- radio [checked]"
+      ],
       "depth": [],
       "tabbablesOnlyReact": [],
       "tabbablesOnlyVue": [],

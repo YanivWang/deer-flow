@@ -2506,60 +2506,110 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       },
     ],
     settle: [{ kind: "visible", target: { testId: "artifact-trigger" } }],
-    steps: [
-      { kind: "click", target: { testId: "artifact-trigger" } },
-      { kind: "visible", target: { text: "batched-report.md" } },
-      // 从清单点进详情：这一支覆盖的是**正式产物**的详情面板（文件下拉、
-      // 打开/下载/编辑动作、代码/预览切换），write-file 草稿那一支由
-      // artifact-preview 覆盖。
-      { kind: "click", target: { text: "batched-report.md" } },
-      // 详情面板独有的锚点：清单那一支的下载是 link，只有详情面板里它是 button。
-      // 不用文件下拉当锚点——它**没有可访问名**（照 React 的 SelectTrigger），
-      // 按名字根本定位不到。
+    /*
+      **第⑥类的第三处，也是第一处真的走内容请求的**（wave 132）。
+
+      wave 130 量过：`artifact-preview` 那份夹具接不了「预览失败」——它的产物是
+      `write-file-artifact`，正文直接来自消息里的工具结果，**两个应用都不发
+      `/api/threads/<id>/artifacts/<path>`**（探针：`/artifacts` 响应 0 条）。
+      这个场景不一样：它的产物来自 thread 的 `artifacts` 清单，正文**必须**去取，
+      场景自己那条 `routes` 就是喂正文的。把同一条 pattern 在终态上盖成 500，
+      两个应用才第一次同时走到 `ArtifactPreviewError` 那一支。
+
+      **锚点用 `artifactPreview.previewFailed` 的两种译文**——上游那一块**没有 testid**
+      （`artifact-file-detail.tsx:731` 的 `ArtifactPreviewError`；本仓多一个
+      `data-testid="artifact-preview-error"`，所以锚点不能用它）。
+
+      顺带订正 wave 130/131 交接文档里的一句话：那里写着「造一份产物来自 artifacts
+      清单的夹具，会**第一次**让文件下拉那条分支进取样面」——**假的**，
+      这个场景本来就是那条分支（四个产物 + 头部下拉逐个切过去）。
+    */
+    states: [
       {
-        kind: "visible",
-        target: { role: "button", name: /^(Download|下载)$/ },
-      },
-      // 再点进编辑态：编辑器、保存/退出/放弃，以及「有未保存的改动」那条播报，
-      // 此前一条样本都走不到。上面的 ETag 就是为这一步准备的——没有 revision，
-      // 两个应用都不会显示编辑入口。
-      // 名字用锚定正则：`name: "Edit"` 是子串匹配，会先命中消息工具条上的
-      // "Edit and rerun"，一路点进消息编辑态。
-      { kind: "click", target: { role: "button", name: /^(Edit|编辑)$/ } },
-      {
-        kind: "visible",
-        target: { role: "button", name: /^(Exit editing|退出编辑)$/ },
-      },
-      {
-        kind: "click",
-        target: { role: "button", name: /^(Exit editing|退出编辑)$/ },
-      },
-      /*
+        id: "default",
+        steps: [
+          { kind: "click", target: { testId: "artifact-trigger" } },
+          { kind: "visible", target: { text: "batched-report.md" } },
+          // 从清单点进详情：这一支覆盖的是**正式产物**的详情面板（文件下拉、
+          // 打开/下载/编辑动作、代码/预览切换），write-file 草稿那一支由
+          // artifact-preview 覆盖。
+          { kind: "click", target: { text: "batched-report.md" } },
+          // 详情面板独有的锚点：清单那一支的下载是 link，只有详情面板里它是 button。
+          // 不用文件下拉当锚点——它**没有可访问名**（照 React 的 SelectTrigger），
+          // 按名字根本定位不到。
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Download|下载)$/ },
+          },
+          // 再点进编辑态：编辑器、保存/退出/放弃，以及「有未保存的改动」那条播报，
+          // 此前一条样本都走不到。上面的 ETag 就是为这一步准备的——没有 revision，
+          // 两个应用都不会显示编辑入口。
+          // 名字用锚定正则：`name: "Edit"` 是子串匹配，会先命中消息工具条上的
+          // "Edit and rerun"，一路点进消息编辑态。
+          { kind: "click", target: { role: "button", name: /^(Edit|编辑)$/ } },
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Exit editing|退出编辑)$/ },
+          },
+          {
+            kind: "click",
+            target: { role: "button", name: /^(Exit editing|退出编辑)$/ },
+          },
+          /*
         文件下拉**没有可访问名**（照 React 的 SelectTrigger），只能按选择器定位；
         `[role="combobox"]` 是两个应用共有的表达。切到图片走媒体预览分支，
         再切到 .docx 走下载回退分支。
       */
-      { kind: "click", target: { selector: '[role="combobox"]' } },
-      { kind: "click", target: { role: "option", name: "diagram.png" } },
-      { kind: "visible", target: { selector: 'img[alt="diagram.png"]' } },
-      { kind: "click", target: { selector: '[role="combobox"]' } },
-      { kind: "click", target: { role: "option", name: "report.docx" } },
-      { kind: "visible", target: { text: /^Word (file|文件)$/ } },
-      // 最后切到 .skill：replay Gateway 的用户是管理员，所以安装入口在两边都该出现。
-      { kind: "click", target: { selector: '[role="combobox"]' } },
-      { kind: "click", target: { role: "option", name: "helper.skill" } },
-      { kind: "visible", target: { role: "button", name: /^(Install|安装)$/ } },
-      /*
+          { kind: "click", target: { selector: '[role="combobox"]' } },
+          { kind: "click", target: { role: "option", name: "diagram.png" } },
+          { kind: "visible", target: { selector: 'img[alt="diagram.png"]' } },
+          { kind: "click", target: { selector: '[role="combobox"]' } },
+          { kind: "click", target: { role: "option", name: "report.docx" } },
+          { kind: "visible", target: { text: /^Word (file|文件)$/ } },
+          // 最后切到 .skill：replay Gateway 的用户是管理员，所以安装入口在两边都该出现。
+          { kind: "click", target: { selector: '[role="combobox"]' } },
+          { kind: "click", target: { role: "option", name: "helper.skill" } },
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Install|安装)$/ },
+          },
+          /*
         最后切回 markdown，让这一份样本**停在渲染好的 markdown 预览上**。
         前面几支的可达性由上面的步骤各自断言过了，但一个场景只取一份样本——
         停在 .skill 上，整棵 markdown 渲染树就一行都没被比过。
       */
-      { kind: "click", target: { selector: '[role="combobox"]' } },
-      {
-        kind: "click",
-        target: { role: "option", name: "batched-report.md" },
+          { kind: "click", target: { selector: '[role="combobox"]' } },
+          {
+            kind: "click",
+            target: { role: "option", name: "batched-report.md" },
+          },
+          {
+            kind: "visible",
+            target: { role: "link", name: "the upstream repo" },
+          },
+        ],
       },
-      { kind: "visible", target: { role: "link", name: "the upstream repo" } },
+      {
+        id: "preview-failed",
+        routes: [
+          {
+            pattern: "**/api/threads/*/artifacts/**",
+            status: 500,
+            json: { detail: "boom" },
+          },
+        ],
+        steps: [
+          { kind: "click", target: { testId: "artifact-trigger" } },
+          { kind: "visible", target: { text: "batched-report.md" } },
+          { kind: "click", target: { text: "batched-report.md" } },
+          {
+            kind: "visible",
+            target: {
+              text: /^(This file could not be previewed\. You can still download it\.|无法预览此文件，但仍可下载原始文件。)$/,
+            },
+          },
+        ],
+      },
     ],
     dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
