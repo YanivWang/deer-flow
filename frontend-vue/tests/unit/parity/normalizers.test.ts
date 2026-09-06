@@ -206,3 +206,25 @@ describe("可访问性树的深度差异", () => {
     expect(rows.map((row) => row.depth)).toEqual([0, 1, 2]);
   });
 });
+
+/*
+  两个归一化必须**同源**。wave 126 把三条 replace 抽成了一份共享函数，
+  这条用例是它的机器证明：同一份快照，行归一化的每一行去掉前导空格之后，
+  必须与树归一化的 `body` 逐个相等。分叉的后果本文件头写着——
+  同一处差异在一边被抹掉、在另一边报出来。
+*/
+describe("两个归一化同源", () => {
+  it("行归一化的每一行 == 树归一化的 body", () => {
+    const snapshot = [
+      "- main:",
+      '  - navigation "reka-nav-12":',
+      '    - button "Save-v-0-2"   ',
+      "    - generic",
+      "",
+      "  - list:\n    - listitem: hello  world",
+    ].join("\n");
+    const lines = normalizeAriaSnapshot(snapshot).split("\n");
+    const bodies = normalizeAriaTree(snapshot).map((row) => row.body);
+    expect(lines.map((line) => line.trimStart())).toEqual(bodies);
+  });
+});

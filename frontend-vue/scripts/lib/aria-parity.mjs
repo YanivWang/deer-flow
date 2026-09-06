@@ -14,6 +14,30 @@
                    为什么用户感知不到。
 */
 
+/*
+  **两个归一化共用这一份规则，不许各写一份**（wave 126）。
+  本文件头写着「两份各自维护的归一化迟早会分叉，而分叉的后果不是『报告长得不一样』，
+  是同一处差异在一边被抹掉、在另一边报出来」——那说的是两个**消费者**，
+  而 wave 125 加 `normalizeAriaTree` 时**在同一个文件里制造了第二份**：
+  同样三条 replace 抄了两遍。抽成一处，改一条规则不可能只改到一半。
+*/
+function normalizeLineBody(body) {
+  return (
+    body
+      // reka-/radix- 自动生成的 id 每次渲染都不同，且不进可访问名
+      .replace(/(reka|radix)-[\w-]+/g, "«id»")
+      // 组件库把序号拼进 name 的场合（v-0-2 这类）
+      .replace(/-v-\d+(-\d+)*/g, "")
+      // 行内多余空白。**注意它对 `normalizeAriaSnapshot` 还会吃掉缩进**，见下。
+      .replace(/\s{2,}/g, " ")
+  );
+}
+
+/** 纯装饰性的空节点：两边都不该因为它们而产生差异。 */
+function isDecorative(body) {
+  return body === "" || body === "- generic";
+}
+
 /**
  * 归一化 aria 快照。
  *
@@ -22,37 +46,20 @@
  * 层级与顺序——差一条就是真差异。
  */
 export function normalizeAriaSnapshot(snapshot) {
+  /*
+    **这里传进去的是整行（含缩进），所以 `normalizeLineBody` 里那条 `\s{2,}`
+    连缩进一起吃掉**——深度 1、2、3 全部塌成同一个前导空格（wave 122 实测：
+    7692 行里命中 6698，而同一段里有注释的另外几条一次都没响过）。
+
+    **保留它**：下游 `diffAriaLines` 本来就要去缩进（不去的话「一边多包一层容器」
+    会把整棵子树刷成差异，见下面那段），所以塌掉缩进不改变任何一项行比对。
+    **代价是层级信息在这一步就没了**——层级比对因此只能走
+    `normalizeAriaTree`（它先把缩进量出来再调同一份规则）。
+  */
   return snapshot
     .split("\n")
-    .map((line) => line.replace(/\s+$/, ""))
-    .map((line) =>
-      line
-        // reka-/radix- 自动生成的 id 每次渲染都不同，且不进可访问名
-        .replace(/(reka|radix)-[\w-]+/g, "«id»")
-        // 组件库把序号拼进 name 的场合（v-0-2 这类）
-        .replace(/-v-\d+(-\d+)*/g, "")
-        /*
-          **这一条抹掉的是整棵树的层级，不是「名字里多打的空格」**（wave 122 实测）。
-          aria 快照按每层两个空格缩进，所以 `\s{2,}` 命中的绝大多数是**缩进本身**：
-          `  - navigation:` / `    - button "A"` 归一之后都变成 ` - …`，
-          **深度 1、2、3 全部塌成同一个前导空格**。
-
-          实测（探针跑一整轮 e2e-parity，7692 行）：
-            collapse-space  6698 次（87%）   ← 就是它在干活
-            trailing-space / reka-radix-id / v-index / blank-line / generic-line  各 0 次
-
-          也就是说这段里**有注释的那几条一次都没响过，而真正在抹信息的这条此前没有注释**。
-
-          **保留它**：下游 `diffAriaLines` 本来就要去缩进（不去的话「一边多包一层容器」
-          会把整棵子树刷成差异，见下面那段），所以塌掉缩进不改变当前任何一项比对结果。
-          **但要知道代价**：层级信息在这一步就没了，**任何「层级」维度都不可能从
-          归一化之后的快照里恢复**——wave 99 试着做过一档层级差异、量到 0 行，
-          当时归因为「换爹必然换位置、order 先撞上」；**那个 0 也可能只是因为
-          数据在这里已经被塌掉了**。真要做层级，得先让 capture 另存一份带缩进的。
-        */
-        .replace(/\s{2,}/g, " "),
-    )
-    .filter((line) => line.trim() !== "" && line.trim() !== "- generic")
+    .map((line) => normalizeLineBody(line.replace(/\s+$/, "")))
+    .filter((line) => !isDecorative(line.trim()))
     .join("\n");
 }
 
@@ -178,14 +185,13 @@ export function normalizeAriaTree(snapshot) {
     .map((line) => line.replace(/\s+$/, ""))
     .map((line) => {
       const indent = line.match(/^\s*/)[0].length;
-      const body = line
-        .slice(indent)
-        .replace(/(reka|radix)-[\w-]+/g, "«id»")
-        .replace(/-v-\d+(-\d+)*/g, "")
-        .replace(/\s{2,}/g, " ");
-      return { depth: Math.floor(indent / 2), body };
+      // 先把缩进量出来，再对行内容套**同一份**规则——层级因此留了下来。
+      return {
+        depth: Math.floor(indent / 2),
+        body: normalizeLineBody(line.slice(indent)),
+      };
     })
-    .filter((row) => row.body !== "" && row.body !== "- generic");
+    .filter((row) => !isDecorative(row.body));
 }
 
 /**
