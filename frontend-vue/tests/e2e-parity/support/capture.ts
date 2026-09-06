@@ -86,6 +86,28 @@ export type GeometrySample = {
     它下面每个锚点同时报一行，而那是同一处差异的 N 个投影（坑 219 的同一件事）。
   */
   opacity: string;
+  /**
+   * 这个锚点的中心点上，真正拿到指针的是不是它自己（或它的后代）。
+   *
+   * **它答的问题现有各档都答不了**（坑 258 的判据）：一颗按钮可以名字对、
+   * 位置对、尺寸对、颜色对、能 tab 到——**却点不动**，因为
+   * `pointer-events: none`，或者被一层透明浮层盖住了。
+   * aria 看不见它，几何看不见它（盒模型没变），tab 序也看不见它（照样可聚焦）。
+   *
+   * 取 `elementFromPoint(中心)`：命中自己或自己的后代记 `self`；
+   * 命中别的记那个元素的**标签与 role**（不记名字——名字是 aria 档的活，坑 255）；
+   * 点落在视口外记 `off-screen`（两边都这样时 diffGeometry 会当成相同）。
+   *
+   * **只对「点得动才有意义」的元素量，其余记 `n/a`**——这一条是量出来才加的：
+   * 第一版对所有锚点都量，三行差异**全部来自 `text:` 锚点**
+   * （`text:Which environment should I deploy to? hit React=textarea Vue=div(group)`、
+   * `text:Here is a relationship diagram. hit React=header Vue=self`）。
+   * `getByText` 解析到的是**包着这段文字的元素**，它的盒子可能很宽，
+   * 中心点落在贴顶的 header 或压在上面的输入框上——**那不是「这段文字被挡住了」，
+   * 是「盒子中心恰好在别的东西下面」**，对一段正文来说也没有任何后果。
+   * 判据因此收成：**它是不是一个用户要去点的东西**。
+   */
+  hit: string;
 };
 
 /** 会随时间或随机数变化、且不体现产品行为的查询参数。 */
@@ -278,6 +300,37 @@ export async function sampleGeometry(
           塞满假条目，而假条目比没有条目更糟：它会让人不再相信这份清单。
           让浏览器自己画一像素再读回来，比的就是最终呈现的颜色。
         */
+          /*
+            命中测试用**视口坐标**：`elementFromPoint` 就是按视口取的。
+            上面那套「把祖先滚动加回去」是为了让**位置**与滚动无关，两件事不冲突。
+          */
+          const clickable = element.matches(
+            "a[href],button,input,select,textarea,summary,[role=button]," +
+              "[role=menuitem],[role=menuitemradio],[role=option],[role=tab]," +
+              "[role=switch],[role=checkbox],[role=separator],[contenteditable=true]",
+          );
+          const viewportRect = element.getBoundingClientRect();
+          const cx = viewportRect.left + viewportRect.width / 2;
+          const cy = viewportRect.top + viewportRect.height / 2;
+          const topmost =
+            cx >= 0 &&
+            cy >= 0 &&
+            cx <= globalThis.innerWidth &&
+            cy <= globalThis.innerHeight
+              ? document.elementFromPoint(cx, cy)
+              : null;
+          const hit = !clickable
+            ? "n/a"
+            : !topmost
+              ? "off-screen"
+              : element.contains(topmost)
+                ? "self"
+                : `${topmost.tagName.toLowerCase()}${
+                    topmost.getAttribute("role")
+                      ? `(${topmost.getAttribute("role")})`
+                      : ""
+                  }`;
+
           const canvas = document.createElement("canvas");
           canvas.width = 1;
           canvas.height = 1;
@@ -300,6 +353,7 @@ export async function sampleGeometry(
             background: toRgba(style.backgroundColor),
             fontSize: style.fontSize,
             opacity: style.opacity,
+            hit,
           };
         },
         undefined,

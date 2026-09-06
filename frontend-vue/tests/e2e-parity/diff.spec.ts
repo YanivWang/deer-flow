@@ -169,6 +169,7 @@ function diffGeometry(
       "background",
       "fontSize",
       "opacity",
+      "hit",
     ] as const) {
       if (r[field] !== v[field]) {
         lines.push(`${label} ${field} React=${r[field]} Vue=${v[field]}`);
