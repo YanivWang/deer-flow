@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 99 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 100 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，接手时 HEAD 是 wave 88 的 docs 提交。
@@ -19,10 +19,10 @@
    先看「还欠什么」。三分钟读完。
 2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，2500 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（258 条里最近的十几条）。中间各轮的记录按需查。
+   结尾的「其他常踩的坑」（259 条里最近的十几条）。中间各轮的记录按需查。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **258 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **259 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -95,6 +95,9 @@ make -C <abs>/frontend-vue audit           # **预期红 14**，分诊写在 Mak
 ### 跑门禁的操作纪律（都踩过）
 
 - 长门禁**丢后台**，`> file 2>&1`，**不要接 `| tail`**（管道会缓冲到命令结束）。
+- **写文件的命令不要和长任务一起丢后台**（线索 259）：那次改文件的断言失败了，
+  traceback 被后台吞掉，下游拿 `undefined` 比 `undefined`，报出一个看起来很干净的
+  「0 行」。写完立刻回读确认，或者拆成两条命令。
 - **等后台门禁收工要锚在行首**：`until grep -qE '^ *[0-9]+ (passed|failed)'`。
   裸 `grep -q "passed"` 会被 Gateway 横幅里的 `authentication is bypassed` 骗到，
   在一条测试都没跑的时候就退出（线索 240）。更稳的是命令末尾追一行
@@ -142,8 +145,10 @@ wave 94 的焦点档第一版 17 行里有 **10 行是描述器的噪声**。
 第④类的**顺序**那一半 wave 95 补完（层级那一半仍看不见）。
 **tab 序 wave 96 也补完了；第④类的「层级」那一半 wave 99 量完判定不必做**
 （序列化的树里「换爹」必然「换位置」，`order` 那一档先撞上——实测过）。
-剩下名义上没覆盖的只有 `pointer-events` 与 `z-index` 实际堆叠，
-以及滚动位置（**故意不比**，见 capture.ts 文件头）。
+**wave 100 又补上「命中测试」**（锚点中心的 `elementFromPoint`），
+它同时覆盖了 `pointer-events` 与「被别的东西盖住」这两件事。
+**方向 B 的存量到此基本见底**；名义上只剩滚动位置，而那是**故意不比**的
+（见 capture.ts 文件头）。
 **加之前先按坑 258 问一句：有没有一种变异能让它响、而现有的档都不响？**
 举不出来就别加（层级那一档就是这么被撤掉的）。
 再问「它是不是真的几档都看不见」，加完先问两句：
