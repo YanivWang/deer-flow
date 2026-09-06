@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 133，2026-09-07）
+## 当前状态（截至 wave 134，2026-09-07）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）；`52a35b5b` = wave 110（独立性判据自己身上的两处单向检查）；`a750347f` = wave 111（icon-parity 的两张豁免表补成双向，过期豁免开始让门禁红）；`bdf79e73` = wave 112（四张「指向外部东西」的表补反向校验；upstream-drift 的假「无漂移」）；`071a2414` = wave 113（第六条抖动查清机制并修掉，名单七条 → 六条）；wave 114 / 115 **都只有度量、代码改动为零**；`786cd37e` = wave 116（standalone-sim 只跑 8 份文件而判据说的是整套）；`4279a42e` = wave 117（答掉「要不要加 build」：不加，理由量出来了）；`29fcbb1c` = wave 118（--with-e2e 只跑了那个必然跳过的套件）；`af94ed0d` = wave 119（standalone-check 的正则要求带斜杠）；`9502a05c` = wave 120（三个夹具 id 没登记进 KNOWN_IDS）；`92a8f87d` = wave 121（丢弃查询参数那张表一条都没响过）；`f46dbbd3` = wave 122（那条没注释的归一化规则抹掉的是整棵树的层级）；wave 123 **只有度量、代码改动为零**（在保住缩进的数据上重做层级比对，6 行）；`d440b68c` = wave 124（划词工具条挪出 `role="log"`）；`74fab84a` = wave 125（「深度」做成常驻的一档）；`7d171e03` = wave 126（两个归一化抽成一份共享规则）；wave 127 **只有度量、代码改动为零**；`e53db1d0` = wave 128（第⑥类进取样面，量出 `retry: false 与上游一致` 是假话）；`03c85d6f` = wave 129（场景注释里「锚点钉住编辑表单」是假的——两个锚点都落在创建表单上；并订正 wave 128 自己写下的那条判据）；`d691ec36` = wave 130（同一类的第二例：artifact 面板的两处锚点，一个点击前就满足、一个压根不存在；**并把 `#preview-failed` 那条路量到走不通**）；`2100cb23` = wave 131（把 8 个「一个锚点匹配到多份」逐个核完——3 个是缺陷、5 个正常；会话列表页的锚点一直落在侧栏上）；`6477ec4a` = wave 132（第⑥类第一次量到产品层面的分叉：**预览失败时上游仍然选中「预览」**）；`fbed3dde` = wave 133（技能清单取不到时本仓还留着筛选标签与「创建技能」按钮，已对齐）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）；`52a35b5b` = wave 110（独立性判据自己身上的两处单向检查）；`a750347f` = wave 111（icon-parity 的两张豁免表补成双向，过期豁免开始让门禁红）；`bdf79e73` = wave 112（四张「指向外部东西」的表补反向校验；upstream-drift 的假「无漂移」）；`071a2414` = wave 113（第六条抖动查清机制并修掉，名单七条 → 六条）；wave 114 / 115 **都只有度量、代码改动为零**；`786cd37e` = wave 116（standalone-sim 只跑 8 份文件而判据说的是整套）；`4279a42e` = wave 117（答掉「要不要加 build」：不加，理由量出来了）；`29fcbb1c` = wave 118（--with-e2e 只跑了那个必然跳过的套件）；`af94ed0d` = wave 119（standalone-check 的正则要求带斜杠）；`9502a05c` = wave 120（三个夹具 id 没登记进 KNOWN_IDS）；`92a8f87d` = wave 121（丢弃查询参数那张表一条都没响过）；`f46dbbd3` = wave 122（那条没注释的归一化规则抹掉的是整棵树的层级）；wave 123 **只有度量、代码改动为零**（在保住缩进的数据上重做层级比对，6 行）；`d440b68c` = wave 124（划词工具条挪出 `role="log"`）；`74fab84a` = wave 125（「深度」做成常驻的一档）；`7d171e03` = wave 126（两个归一化抽成一份共享规则）；wave 127 **只有度量、代码改动为零**；`e53db1d0` = wave 128（第⑥类进取样面，量出 `retry: false 与上游一致` 是假话）；`03c85d6f` = wave 129（场景注释里「锚点钉住编辑表单」是假的——两个锚点都落在创建表单上；并订正 wave 128 自己写下的那条判据）；`d691ec36` = wave 130（同一类的第二例：artifact 面板的两处锚点，一个点击前就满足、一个压根不存在；**并把 `#preview-failed` 那条路量到走不通**）；`2100cb23` = wave 131（把 8 个「一个锚点匹配到多份」逐个核完——3 个是缺陷、5 个正常；会话列表页的锚点一直落在侧栏上）；`6477ec4a` = wave 132（第⑥类第一次量到产品层面的分叉：**预览失败时上游仍然选中「预览」**）；`fbed3dde` = wave 133（技能清单取不到时本仓还留着筛选标签与「创建技能」按钮，已对齐）；`5ffb7fee` = wave 134（**「还在转」那一档第一次进取样面**，同一处根因一并对齐；并订正 wave 133 提交说明里引错的一条证据）。
 - **动过 `frontend/` 的是二十二轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -36,7 +36,7 @@
   wave 74 两处 `<Toaster />` 用的不是 shadcn wrapper；wave 73 五条「本仓修掉了上游缺陷」；
   wave 62 `/auth/callback` 吞掉 `?next=` 深链。wave 41~~59、75~~81 都没动过。
 
-- **对照台账 137 行**，**81** 个样本，`make -C frontend-vue e2e-parity` **89** 条全绿（wave 130/131 换了三处锚点，**台账一行都没动**——加的是覆盖面不是账；wave 132 接上 `artifact-batched-stream#preview-failed`，113/77/85 → **121/79/87**，新增 8 行里 6 行是已判过的重试差异、2 行是新决定）（wave 128：95/73/81 → 107/75/83；wave 129：107/75/83 → **113/77/85**，新增 6 行全部是 wave 128 已判过的 `retry: 3` 那一条在另一屏上的复现）。
+- **对照台账 141 行**，**83** 个样本，`make -C frontend-vue e2e-parity` **91** 条全绿（wave 130/131 换了三处锚点，**台账一行都没动**——加的是覆盖面不是账；wave 132 接上 `artifact-batched-stream#preview-failed`，113/77/85 → **121/79/87**，新增 8 行里 6 行是已判过的重试差异、2 行是新决定）（wave 128：95/73/81 → 107/75/83；wave 129：107/75/83 → **113/77/85**，新增 6 行全部是 wave 128 已判过的 `retry: 3` 那一条在另一屏上的复现）。
   wave 96 用 tab 序那一档量出 64 行、四处根因，**wave 97 逐条结清**：
   分隔条那 48 行与 browser 标签那 4 行**修掉了**，菜单 roving 那 2 行**决定接受**，
   滚动区那一处两边同改之后变成了另一处此前完全看不见的结构差异，
@@ -426,6 +426,88 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 134）做了什么：**给取样面接上「还在转」那一档，并订正 wave 133 引错的一条证据**
+
+wave 133 只对齐了「取数失败」那一支，**「还在转」那一支当时没量过、所以没动**。
+这一轮补上——**取样面此前一个「加载中」的样本都没有**。
+
+### 一、新机制：`ParityRouteOverride.delayMs`
+
+`states` 造得出「失败」，因为失败是一个稳定终态；**「加载中」不是**——正常 mock 立刻返回，
+取样时它早过去了。加一个字段让应答慢到取样窗口之后，两个应用就都停在各自的加载分支上。
+**仍然是纯数据**（一个数字），等待发生在 `installRoutes` 的固定实现里。
+取 **15 秒**：比整条取样链（步骤 auto-wait + `settleMs` 700ms）长一个量级，
+又不会让失败时的报错等满用例的 30s 预算。
+
+### 二、量出来的（第一跑 12 行 × 两种语言）
+
+```
+ariaOnlyReact   - main: Loading...
+ariaOnlyVue     - button "Create skill" / - main: / - paragraph: Loading...
+                - tab "Custom" / - tab "Public" [selected] / - tablist "Agent Skills":
+geometry        text:/^(Loading…)$/ y React=280 Vue=378 Δ98
+tabOrder / tabbablesOnly*   共 4 条
+```
+
+**与 wave 133 同一处根因**，**外加一条新的**：本仓那句 `Loading...` 写在 `<p>` 里，
+在可访问性树里多出一个 `paragraph` 节点；上游那一句是 `<div>`，直接挂在 main 的文本上。
+
+### 三、改动与读数
+
+`SkillSettings.vue`：创建键那一行、`<Tabs>`、清单三处补上 `!skills.loading.value`；
+`Loading...` 由 `<p>` 改成 `<div>`（**仓内先例**：同目录 `ToolSettings.vue` 的空态
+早就因为同一条理由用的 `<div>`）。
+
+- 改动前（= wave 133 收工那一跑）：`e2e-parity` **89 passed**，台账 **137 / 81**
+- 接上取样面、改 Vue 之前：该终态 **12 行 / 语言**
+- 改动后：该终态 **2 行 / 语言**，`e2e-parity` **91 passed (8.9m)**，台账 **141 行 / 83 样本**
+
+**剩下 2 行 / 语言不需要新决定**（ScrollArea 那一类，这个对话框每个样本上都有；
+判据按线索 278 去现有样本里 grep）。**这一档 aria / 几何 / 顺序 / 焦点 / 深度全部归零。**
+
+### 四、负向验证
+
+| # | 变异 | 预期 | 实测 |
+| --- | --- | --- | --- |
+| 对照 | 无 | 2 条全绿 | **2 passed (57.7s)**，exit 0 |
+| N1 | 去掉 `delayMs` | 该终态两条红 | **2 failed**（31.4/31.5s） |
+
+两处改动的因果分得开：`- paragraph: Loading...` **只可能由 `<p>` → `<div>` 消掉**，
+其余几行只可能由三处 `v-if` 消掉。
+
+### 五、订正 wave 133 提交说明里引错的一条证据
+
+`fbed3dde` 写着「红色小字是这份代码库里错误行的既定写法（`actionError`、
+**`settings-session-unavailable`** 都是这个样式）」——**后一个例子是错的**。实测分布：
+
+| 样式 | 处数 |
+| --- | --- |
+| `text-sm text-red-600` | **9** |
+| `rounded-md bg-red-50 p-3 text-sm text-red-700` | 4（`settings-session-unavailable` 在这一组） |
+| `text-sm text-red-500` | 1 |
+
+**结论不变**（多数写法就是红色小字，上游那一条连颜色都没有），**引的例子举错了**。
+顺带记下：这份代码库里错误行有**两套**样式，本身是一处不一致，**但那不是对照的事**
+（上游只有一套「什么都不写」），不在这一轮动。
+
+### 六、同形但量过之后决定不接的
+
+上游 `tool-settings-page.tsx:35` 有同一形状的 `) : error ? (`。**不接**：
+本仓 `ToolSettings.vue` 的 loading/error 本来就是 `v-if / v-else-if` 互斥的，
+头部也没有像技能页那样的按钮（上游那一页同样没有），
+它只会把 wave 133 已判过的那几类在另一屏上再记一次账——**按线索 278 那是重复计价**。
+接它还要先给 `**/api/mcp/config` 补一条 mock 路由。
+
+### 七、下一轮
+
+`delayMs` 现在是一把新尺子，**第一次量的应该是它自己够不够用**：
+- 还有哪些屏的「加载中」值得接？判据仍是**上游有没有一段代码在这一支上渲染出东西**，
+  外加**线索 278**（新样本里有几行是已决定类的复制品，先 grep 再记账）。
+- 候选：`agents` 列表页、`scheduled-tasks` 列表、`thread-history`——
+  三处本仓都有 skeleton / loading 分支，**先去上游 grep 对应的渲染点**。
+
+---
 
 ## 上一轮（wave 133）做了什么：**技能清单取不到时，本仓还留着筛选标签与「创建技能」按钮**
 
