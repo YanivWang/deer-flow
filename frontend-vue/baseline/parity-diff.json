@@ -773,7 +773,7 @@
       "tabbablesOnlyVue": [],
       "tabOrder": []
     },
-    "scheduled-tasks/desktop/light/en-US": {
+    "scheduled-tasks#default/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -786,10 +786,44 @@
       "tabbablesOnlyVue": [],
       "tabOrder": []
     },
-    "scheduled-tasks/desktop/light/zh-CN": {
+    "scheduled-tasks#default/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": [],
+      "focus": [],
+      "order": [],
+      "depth": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
+    },
+    "scheduled-tasks#load-failed/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [
+        "GET /api/scheduled-tasks",
+        "GET /api/scheduled-tasks",
+        "GET /api/scheduled-tasks"
+      ],
+      "requestsOnlyVue": [],
+      "geometry": [],
+      "focus": [],
+      "order": [],
+      "depth": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
+    },
+    "scheduled-tasks#load-failed/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [
+        "GET /api/scheduled-tasks",
+        "GET /api/scheduled-tasks",
+        "GET /api/scheduled-tasks"
+      ],
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],

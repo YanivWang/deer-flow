@@ -1740,8 +1740,17 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
         ],
       },
     },
+    /*
+      **`settle` 必须在这个场景的每一个终态下都成立。** 它跑在 `state.steps`
+      之前，而下面新增的终态是「列表请求失败」——原来这里等的「Daily summary」
+      那颗任务按钮，恰恰是失败态里唯一不会出现的东西（列表为空）。
+      改等创建表单里的 schedule input：它挂在页面顶部，与列表查询无关，
+      两个终态、两种语言下都在（testid 两边逐字相同）。
+      「Daily summary」那一等原样挪进 `default` 终态的第一步，先后顺序不变。
+    */
     settle: [
-      { kind: "visible", target: { role: "button", name: /Daily summary/i } },
+      { kind: "visible", target: { testId: "schedule-preset" } },
+      { kind: "visible", target: { testId: "schedule-timezone" } },
     ],
     /*
       **详情里的编辑表单此前一行都没进过取样面。** 这个场景的夹具刻意只走
@@ -1750,9 +1759,25 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       `ScheduledTaskScheduleInput`（`scheduleTypeLocked`）+ 「Save edit」，
       两边结构本来就该一样，所以任何差异都是真差异。
 
-      锚点选「Save edit」这颗按钮，加上 schedule input 里面的两个 testid
+      ~~锚点选「Save edit」这颗按钮，加上 schedule input 里面的两个 testid
       （`schedule-preset` / `schedule-timezone`，两边逐字相同）：只钉外壳的话，
-      那一整块换了位置也看不见。
+      那一整块换了位置也看不见。~~ **⚠ 这句话是错的，wave 129 实测推翻。**
+
+      那两个 testid 在**创建表单**里也各有一份，而且是页面一打开就在的
+      （两个应用的创建草稿默认都是 `schedule_type: "cron"`，
+      `frontend-vue/app/core/scheduled-tasks/form.ts:64` /
+      `frontend/src/app/workspace/scheduled-tasks/page.tsx:84`）。
+      `runStep` 与 `sampleGeometry` 都对 locator 取 `.first()`，
+      于是这两步**永远落在创建表单那一份上**：它们在点「Edit」之前就已经满足，
+      既没有等编辑表单里的 schedule 块出现，几何档里那两行量的也是创建表单
+      的控件——**而注释写的是编辑表单**。这是坑 266 的同一形状：
+      一个看起来很具体的锚点，落到了另一个层级上。
+
+      改法分两处，各自说清在钉什么：
+      - 创建表单那两份挪去 `settle`（它们本来就是页面加载态的控件，见上面）；
+      - 编辑表单那两份用 `>> nth=1` 显式取第二份。两个应用的 DOM 顺序都是
+        「创建表单在上、详情/编辑在下」，所以 index 1 在两边指的是同一个东西；
+        万一某天不是，几何档会当场报出一行离谱的差异（自证的锚点，不需要豁免表）。
 
       **两次锚点都先量错了，都记在这里**：
 
@@ -1766,16 +1791,62 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
          所以名字写成覆盖两种语言的正则；内层两个锚点用两边逐字相同的 testid，
          不受语言影响。
 
-      **判据：一个锚点在加进来之前，要问它在这个场景的每一个维度上都成立吗。**
+      **判据：一个锚点在加进来之前，要问它在这个场景的每一个维度上都成立吗**
+      ——wave 129 补上第二问：**它在这一屏上只有一份吗**。
     */
-    steps: [
-      { kind: "click", target: { role: "button", name: /^(Edit|编辑)$/ } },
+    states: [
       {
-        kind: "visible",
-        target: { role: "button", name: /^(Save edit|保存编辑)$/ },
+        id: "default",
+        steps: [
+          {
+            kind: "visible",
+            target: { role: "button", name: /Daily summary/i },
+          },
+          { kind: "click", target: { role: "button", name: /^(Edit|编辑)$/ } },
+          {
+            kind: "visible",
+            target: { role: "button", name: /^(Save edit|保存编辑)$/ },
+          },
+          {
+            kind: "visible",
+            target: { selector: '[data-testid="schedule-preset"] >> nth=1' },
+          },
+          {
+            kind: "visible",
+            target: { selector: '[data-testid="schedule-timezone"] >> nth=1' },
+          },
+        ],
       },
-      { kind: "visible", target: { testId: "schedule-preset" } },
-      { kind: "visible", target: { testId: "schedule-timezone" } },
+      /*
+        **列表请求失败那一支**（wave 129，第⑥类的第二处）。
+
+        判据与 wave 128 的 `integrations#load-failed` 同一条，但**收紧了一格**：
+        不只问「那条 i18n key 上游词典里有没有」，还要问「上游真的把它渲染出来
+        了吗」。这一条两问都过——`scheduledTasks.detail.loadFailed` 在上游词典
+        `frontend/src/core/i18n/locales/en-US.ts:381`，渲染在
+        `frontend/src/app/workspace/scheduled-tasks/page.tsx:339`，
+        而且两边挂的是**同一个 testid** `scheduled-task-load-error`。
+
+        另外三个候选（`agents` / `account` / `artifact` 的 loadFailed）**这一轮
+        没接**，理由逐条量过、写在提交说明里：上游要么没有这一支，要么
+        把 error 整个丢掉了，量出来必然是「本仓有、上游没有」，没有对照意义。
+
+        两边都从 `{ detail }` 里取错误文案（`throwGatewayApiError`），
+        所以文案本身是夹具喂进去的，比出来的是结构不是措辞。
+      */
+      {
+        id: "load-failed",
+        routes: [
+          {
+            pattern: "**/api/scheduled-tasks",
+            status: 500,
+            json: { detail: "boom" },
+          },
+        ],
+        steps: [
+          { kind: "visible", target: { testId: "scheduled-task-load-error" } },
+        ],
+      },
     ],
     dimensions: [
       DEFAULT_DIMENSION,

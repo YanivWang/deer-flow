@@ -1,5 +1,6 @@
 /*
-  【文件职责】     守住本仓写下的、对上游的 `文件:行号` 引用都还指得到东西。
+  【文件职责】     守住本仓写下的 `文件:行号` 引用都还指得到东西：默认按**上游**解，
+                   路径字面以 `frontend-vue/` 开头的按**本模块**解（wave 129，见 LOCAL_PREFIX）。
   【架构位置】     门禁测试
   【主要导出】     无；Vitest cases
   【依赖关系】     本模块的源码/测试/文档注释 · ../frontend/{src,tests}（缺席则整组跳过）
@@ -92,6 +93,23 @@ function walk(dir: string, exts: string[]): string[] {
 
 const CITATION = /([A-Za-z0-9_\-./]+\.(?:tsx|ts))[:：](\d+)/g;
 
+/*
+  **以 `frontend-vue/` 开头的那些说的是本模块自己，不是上游**（wave 129）。
+
+  这条正则收的是**任何** `文件.ts:行号`，而下面那条用例把它们**一律**拿去上游索引里
+  按 basename 找——也就是说这份文件的头写着「守住本仓写下的、对上游的引用」，
+  机器执行的却是「**任何** `.ts:行号` 引用都必须指向上游」。**两句不是一回事。**
+  实测（wave 129 写下第一条这样的引用时当场撞上）：注释里写
+  `frontend-vue/app/core/scheduled-tasks/form.ts:64`，报的是「上游没有」——
+  一句正确的本地引用，得到一条说不通的错误。
+
+  判据取「路径**字面**以 `frontend-vue/` 开头」，不是「在本模块里找得到就算本地」：
+  后者会**削弱**这条守卫——`utils.ts` 两个应用都有，一条漂了的上游引用会因为
+  本模块里恰好有个同名文件而蒙混过关。字面前缀没有这个问题，上游引用永远不会
+  以 `frontend-vue/` 开头。
+*/
+const LOCAL_PREFIX = "frontend-vue/";
+
 /**
  * 「上游 `X`（N 行）」这一类**行数**断言。三种写法都收：
  * 文件名后跟括号里的行数、`上游 \`X\` N 行`、`上游 N 行的 \`X\``。
@@ -174,6 +192,8 @@ function upstreamIndex(): Map<string, string[]> {
 
 describe.skipIf(!upstreamPresent)("本仓写下的上游引用", () => {
   const citations = collectCitations();
+  const local = citations.filter((one) => one.ref.startsWith(LOCAL_PREFIX));
+  const upstream = citations.filter((one) => !one.ref.startsWith(LOCAL_PREFIX));
   const index = upstreamIndex();
 
   it("扫到了引用，也扫到了上游文件（两边空掉时不能假绿）", () => {
@@ -181,6 +201,18 @@ describe.skipIf(!upstreamPresent)("本仓写下的上游引用", () => {
     // 阈值按实测（227 处）留出余量，不是钉死的条数：这里要挡的是「扫成 0」。
     expect(citations.length).toBeGreaterThan(150);
     expect(index.size).toBeGreaterThan(50);
+    /*
+      **分流之后，上游那一半必须还是绝大多数。**
+
+      这里**不写** `local.length + upstream.length === citations.length`——
+      那两个是同一个谓词的正反两半，恒等式，看着像检查其实什么都没证
+      （「一个算出来的 0 和一个没算的 0 长得一模一样」的同族）。
+      真正的风险是**误分流**：把 `LOCAL_PREFIX` 放宽成 `"frontend"` 之类，
+      所有上游引用都会被当成本地的，上游那一档就此静默失效。
+      钉住上游那一半的量能挡住它；本地那一半不设下限（它为空只是没人写本地引用，
+      不是缺陷）。
+    */
+    expect(upstream.length).toBeGreaterThan(150);
   });
 
   it("引用上游文件行数的地方，数字就是那份文件的实际行数", () => {
@@ -211,7 +243,21 @@ describe.skipIf(!upstreamPresent)("本仓写下的上游引用", () => {
 
   it("每条引用的文件都存在，行号都在文件长度之内", () => {
     const broken: string[] = [];
-    for (const citation of citations) {
+    for (const citation of local) {
+      const path = join(moduleRoot, citation.ref.slice(LOCAL_PREFIX.length));
+      if (!existsSync(path)) {
+        broken.push(
+          `${citation.from}:${citation.line} → 本模块里没有 ${citation.ref}`,
+        );
+        continue;
+      }
+      if (readFileSync(path, "utf8").split("\n").length < citation.target) {
+        broken.push(
+          `${citation.from}:${citation.line} → ${citation.ref}:${citation.target} 行号越界`,
+        );
+      }
+    }
+    for (const citation of upstream) {
       const base = citation.ref.slice(citation.ref.lastIndexOf("/") + 1);
       const candidates = index.get(base) ?? [];
       const exact = candidates.filter((path) =>
