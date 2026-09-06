@@ -34,7 +34,10 @@ import {
   MOCK_THREAD_ID_2,
 } from "../../e2e/utils/mock-api";
 
-import { normalizeAriaSnapshot } from "../../../scripts/lib/aria-parity.mjs";
+import {
+  normalizeAriaSnapshot,
+  normalizeAriaTree,
+} from "../../../scripts/lib/aria-parity.mjs";
 import {
   HISTORY_THREAD_ID_NEWEST,
   HISTORY_THREAD_ID_OLDER,
@@ -49,6 +52,8 @@ import {
 
 export type ParityCapture = {
   aria: string;
+  /** 带深度的同一棵树，只给 `diffAriaDepth` 用。 */
+  ariaTree: { depth: number; body: string }[];
   /** 归一化后的产品 API 请求，按发出顺序。 */
   requests: string[];
   /** 场景锚点的盒模型与关键计算样式。 */
@@ -507,13 +512,17 @@ export async function captureScenario(
   try {
     await runScenario(page, base, scenario, dimension, state);
     await page.waitForTimeout(settleMs);
-    const aria = normalizeAriaSnapshot(
-      await page.locator("body").ariaSnapshot(),
-    );
+    const rawAria = await page.locator("body").ariaSnapshot();
+    const aria = normalizeAriaSnapshot(rawAria);
+    /*
+      同一份原始快照再归一一次、**这次保住缩进**：`aria` 那份把层级塌掉了
+      （见 aria-parity.mjs 里 `\s{2,}` 那段），层级比对只能从这一份来。
+    */
+    const ariaTree = normalizeAriaTree(rawAria);
     const geometry = await sampleGeometry(page, scenario, state);
     const focus = await describeFocus(page);
     const tabbables = await sampleTabbables(page);
-    return { aria, requests, geometry, focus, tabbables };
+    return { aria, ariaTree, requests, geometry, focus, tabbables };
   } finally {
     page.off("request", onRequest);
   }

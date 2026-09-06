@@ -1,7 +1,7 @@
 /*
   【文件职责】     可访问性树的归一化与双向逐行差异，两个消费者共用一份。
   【架构位置】     测试/工具共享库
-  【主要导出】     normalizeAriaSnapshot · diffAriaLines
+  【主要导出】     normalizeAriaSnapshot · normalizeAriaTree · diffAriaLines · diffAriaDepth
   【依赖关系】     无
   【边界与注意】   抽出来是因为它有两个消费者：顾问命令 scripts/dom-parity.mjs 与
                    门禁套件 tests/e2e-parity/。两份各自维护的归一化迟早会分叉，
@@ -162,4 +162,62 @@ export function diffAriaLines(reactSnapshot, vueSnapshot) {
     for (let i = 0; i < extra; i++) onlyVue.push(line);
   }
   return { onlyReact: onlyReact.sort(), onlyVue: onlyVue.sort() };
+}
+
+/**
+ * 归一化成**带深度**的行。与 `normalizeAriaSnapshot` 同样的几条规则，
+ * 唯一的区别是**先把缩进量出来再收拾行内容**，所以层级信息留了下来。
+ *
+ * **为什么需要单独一份**：`normalizeAriaSnapshot` 里那条 `\s{2,}` → 一个空格
+ * 会把每一层缩进都塌掉（wave 122 实测：7692 行里命中 6698），
+ * 层级信息在那一步就没了——**任何层级比对都不可能从它的输出里恢复**。
+ */
+export function normalizeAriaTree(snapshot) {
+  return snapshot
+    .split("\n")
+    .map((line) => line.replace(/\s+$/, ""))
+    .map((line) => {
+      const indent = line.match(/^\s*/)[0].length;
+      const body = line
+        .slice(indent)
+        .replace(/(reka|radix)-[\w-]+/g, "«id»")
+        .replace(/-v-\d+(-\d+)*/g, "")
+        .replace(/\s{2,}/g, " ");
+      return { depth: Math.floor(indent / 2), body };
+    })
+    .filter((row) => row.body !== "" && row.body !== "- generic");
+}
+
+/**
+ * 两边**都恰好出现一次**的行，比它们在树里的深度。
+ *
+ * 只比「恰好一次」的行，是为了不跟 `diffAriaLines` 抢活：一边多一个节点属于
+ * 「行差异」，不该在这里再报一遍；而**同一个节点挂在不同深度**是这一档独有的信号。
+ *
+ * **它能看见别的档都看不见的东西**——wave 124 那处就是：本仓把划词工具条渲染在
+ * `role="log"` 的 live region 里面、上游在外面，**aria 行 / 顺序 / 几何 / tab 序 /
+ * 焦点 / 命中六档全是 0，只有这一档报出 6 行**。这也正是 wave 99 撤掉层级档时
+ * 立的判据（「有没有一种变异能让它响、而现有的档都不响」）——当年答不上来，
+ * 是因为它量的是**已经被塌平**的数据（见 wave 122/123）。
+ */
+export function diffAriaDepth(reactTree, vueTree) {
+  const index = (rows) => {
+    const map = new Map();
+    for (const row of rows) {
+      const seen = map.get(row.body);
+      if (seen === undefined) map.set(row.body, { depth: row.depth, count: 1 });
+      else seen.count += 1;
+    }
+    return map;
+  };
+  const react = index(reactTree);
+  const vue = index(vueTree);
+  const out = [];
+  for (const [body, a] of react.entries()) {
+    const b = vue.get(body);
+    if (b === undefined || a.count !== 1 || b.count !== 1) continue;
+    if (a.depth !== b.depth)
+      out.push(`${body} React 深度 ${a.depth} / Vue 深度 ${b.depth}`);
+  }
+  return out.sort();
 }

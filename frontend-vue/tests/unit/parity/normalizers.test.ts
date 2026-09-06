@@ -14,9 +14,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  diffAriaDepth,
   diffAriaLines,
   diffAriaOrder,
   normalizeAriaSnapshot,
+  normalizeAriaTree,
 } from "../../../scripts/lib/aria-parity.mjs";
 import { normalizeRequest } from "../../e2e-parity/support/capture";
 
@@ -170,5 +172,37 @@ describe("可访问性树的顺序差异", () => {
     const react = tree('button "A"', 'button "A"', 'button "B"');
     const vue = tree('button "A"', 'button "B"');
     expect(diffAriaOrder(react, vue)).toEqual([]);
+  });
+});
+
+describe("可访问性树的深度差异", () => {
+  const tree = (snapshot: string) => normalizeAriaTree(snapshot);
+
+  it("同一个节点挂在不同深度时报一行", () => {
+    const react = tree('- main:\n  - button "X"');
+    const vue = tree('- main:\n  - group:\n    - button "X"');
+    expect(diffAriaDepth(react, vue)).toEqual([
+      '- button "X" React 深度 1 / Vue 深度 2',
+    ]);
+  });
+
+  it("深度一样就不报", () => {
+    const same = '- main:\n  - button "X"';
+    expect(diffAriaDepth(tree(same), tree(same))).toEqual([]);
+  });
+
+  /*
+    不跟 `diffAriaLines` 抢活：一边多一个同名节点属于「行差异」，
+    这一档只看**两边都恰好出现一次**的那些行。
+  */
+  it("同一行出现多次时跳过（那是行差异，不是深度差异）", () => {
+    const react = tree('- main:\n  - button "X"\n  - button "X"');
+    const vue = tree('- main:\n  - group:\n    - button "X"');
+    expect(diffAriaDepth(react, vue)).toEqual([]);
+  });
+
+  it("归一化保住了缩进（塌平的那份恢复不出层级）", () => {
+    const rows = tree('- main:\n  - group:\n    - button "X"');
+    expect(rows.map((row) => row.depth)).toEqual([0, 1, 2]);
   });
 });

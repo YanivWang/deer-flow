@@ -24,6 +24,7 @@ import { dirname } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 import {
+  diffAriaDepth,
   diffAriaLines,
   diffAriaOrder,
   diffSequenceOrder,
@@ -229,6 +230,7 @@ test("每个场景的双向差异都与签入的清单一致", async ({ browser 
               ? []
               : [`React=${react.focus} Vue=${vue.focus}`],
           order: diffAriaOrder(react.aria, vue.aria),
+          depth: diffAriaDepth(react.ariaTree, vue.ariaTree),
           tabbablesOnlyReact: diffMultiset(react.tabbables, vue.tabbables)
             .onlyReact,
           tabbablesOnlyVue: diffMultiset(react.tabbables, vue.tabbables)
