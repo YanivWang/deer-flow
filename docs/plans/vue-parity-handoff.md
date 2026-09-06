@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 106，2026-09-06）
+## 当前状态（截至 wave 107，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。
 - **动过 `frontend/` 的是二十二轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -91,12 +91,14 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 106 收工时逐条跑过）
+### 门禁实测值（wave 107 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；**263** 文件 / **2192** 单测，词典 942 key、18 unused
-                                   （2183 → 2187 是 wave 104/105 加的；2187 → **2192** 是 wave 106：
-                                   agent-core 契约守卫 8 → 11、file-header-claims 8 → 10）
+make -C frontend-vue verify        exit 0；**264** 文件 / **2195** 单测，词典 942 key、18 unused
+                                   （2183 → 2187 是 wave 104/105 加的；2187 → 2192 是 wave 106：
+                                   agent-core 契约守卫 8 → 11、file-header-claims 8 → 10；
+                                   2192 → **2195** 是 wave 107 新加的
+                                   `tests/guards/backend-enum-mirror.test.ts`，**文件数 263 → 264**）
                                    产品 SFC **218**（总 **220**，wave 86 新增 DropdownMenuGroup）
 make -C frontend-vue standalone-sim exit 0（wave 83 新增）**判据的动态那一半**：真把
                                    ../frontend rename 走，跑 CROSS_APP_BY_DESIGN 表里
@@ -384,6 +386,122 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 107）做了什么：**给「以后端为全集」的表补镜像门禁，并把一个静默跳过拆成两件事**
+
+**没动 `frontend/`。** wave 106 留的线索是「`app/` 里还有两张以**后端**为全集的表」。
+这一轮把它们逐个量完：**一张补上了门禁，另一张量完判定不做**（wave 99 的形状），
+过程中在 `doc-facts` 里撞到一处**静默跳过**——那才是本轮最实的一条。
+
+### 一、`DEERFLOW_DURABLE_STATUS`：注释说「全集」，现在有机器守着
+
+`run-protocol.ts` 的注释写着「Gateway 的 durable run status 全集」。后端那边是一个
+干净的 `StrEnum`（`backend/packages/harness/deerflow/runtime/runs/schemas.py`，
+六个成员），**能机械比**。新守卫 `tests/guards/backend-enum-mirror.test.ts`（3 条用例）：
+
+- 形状先断言再计算：解析不出 `RunStatus` 成员直接红（枚举改写法 ≠ 悄悄跳过）；
+- **键集合逐个相等**（双向）；
+- 映射内部自洽：映射成 `null` 的恰好是 `pending` / `running`，其余落在内核三个终态里。
+
+**只钉成员集合，不钉映射**：status → outcome 是一条冻结决策（08 §258），
+后端加一个状态该映射成什么只有人能决定——机器能替人做的是**让他不能忘**。
+漏掉的后果不是崩溃：`inspect` 把不认识的 status 当作「还没到终态」，
+于是**停止操作在那个状态上永远收敛不了**，只能靠有界轮询兜底。
+
+### 二、`doc-facts` 的 `catch { return }` 把两件事压成了一件（本轮最实的一条）
+
+原文：
+
+```ts
+let app: string;
+try { app = read("../backend/app/gateway/app.py"); } catch { return; }
+```
+
+它想表达的是「后端不在 checkout 里就跳过」，实际吃掉的是**任何**读取失败——
+**后端把那份文件改个名，用例照常绿**，而它守的那条断言（「其余 N 个 router 无条件挂载」）
+从此不再被检查，没有任何征兆。
+
+**实测（负向验证 3）**：把 `backend/app/gateway/app.py` 挪走，
+**HEAD 的 `doc-facts` 11 条全绿**；换成新写法当场红，并打印「后端挪了文件」。
+
+修法抽成 `scripts/lib/backend-source.mjs`：后端整个不在 → 返回 `null`（调用方**明确**跳过），
+后端在、文件不在 → **抛错**。新守卫用同一个 helper，所以两边的跳过语义一致。
+
+### 三、`DEERFLOW_WIRE_EVENTS`：量了，判定**不做**
+
+同样写着「当前 Gateway 会发出的 wire 事件名全集」，但**后端没有对应的枚举**——
+wire 名字散在 `bridge.publish(run_id, <mode>)` 的调用点上。实测扫下来
+**只有 `values` 与 `messages` 是字面量**，其余走变量（`worker.py` 里的 `single_mode`），
+控制事件 `error` / `end` / `gap` 又在别处。照这个扫出来的集合会漏，
+**做成门禁就是一条会误报的规则**。
+
+按 wave 99 的规矩：读数写进 `event-map.ts` 的头，写明**别再试第二次**，
+以及翻案条件（后端哪天给 stream mode 也定了枚举）。
+
+### 四、顺带：`e2e-external` 实测绿
+
+它既不在 `e2e-mock` / `e2e-backend` 两个聚合入口里（`e2e-suite-contract` 明写这是
+有意的，理由三条），**也不在收工清单里**——正是 wave 79（`e2e-channels` 红了七轮）
+与 wave 88（`e2e-shell`）那个形状。这次跑下来 **3 passed，没有活违规**。
+`e2e-suite-contract` 里那张 `standalone = {external, visual, parity}` 表是单向的
+（没人查表里的 id 还是不是真的 config），**留给下一轮**——本轮没动它，
+因为它现在错不了：三个 id 都在，而且改名会先让「每个 config 有一个 make 目标」那条红。
+
+### 五、收工跑 `e2e-mock` 时红了一条 auth，**查到根因、就地修掉，没有进抖动名单**
+
+`auth-contract.spec.ts:192`「an existing session leaves the login page for the
+validated next path」——期望 `/workspace/chats/safe?view=1`，实际 `/workspace/chats/new`。
+先按硬规则 3 排除因果：本轮改的是两份守卫 + 两处注释，**产品行为一行没动**；
+单跑 `--repeat-each=5` **5/5 绿**。
+
+不重跑收工，写探针量 URL 轨迹（`page.on("framenavigated")` + 每 250ms 采一次，共 10 秒）：
+
+```
+直接进 /workspace/chats/safe?view=1  → ["/workspace/chats/safe?view=1", "/workspace/chats/new"]
+从 /login?next=… 出发               → ["/login?next=…", "/workspace/chats/new"]
+```
+
+**根因**：`next` 的落点 `/workspace/chats/safe` 是一个**线程路由**，而夹具里没有
+`safe` 这个线程，工作区立刻把它换成 `/workspace/chats/new`。也就是说这条断言钉的是
+一个**应用本来就要离开的中间态**——poll 采样快就绿、机器忙就红。
+**这不是负载抖动，是断言钉错了对象**（线索 237 的同一家）。
+
+修法：`next` 换成会话列表页 `/workspace/chats?view=1`——探针实测 10 秒不动。
+**它照样证明这条契约**：默认落点是 `/workspace` → `/workspace/chats/new`，
+与 `/workspace/chats?view=1` 不同。负向验证 7（把 `navigateTo(redirectPath.value)`
+写死成 `navigateTo("/workspace")`）当场红，收到的正是 `/workspace/chats/new`。
+
+**已知抖动名单没有变长**（仍是七条）：这一条被修成了确定的。
+
+### 六、被自己的守卫抓了一次，如实记
+
+新写的 `backend-source.mjs` 头里 `【依赖关系】` 顺手写了「无」，而它 import 了
+`node:fs` / `node:url`——`make verify` 当场红（wave 84 补的那条「写『无』的必须真的零 import」）。
+**一条守卫在自己这一轮里抓住作者本人，是它值钱的直接证据。**
+
+### 七、负向验证（8 条；7 条期望红、1 条期望绿）
+
+| # | 变异 | 期望 | 实测 |
+| --- | --- | --- | --- |
+| 1 | 后端 `RunStatus` 多一个 `paused` | 红 | 红 |
+| 2 | 本仓表删掉 `timeout` | 红 | 红 |
+| 3a | 后端 `app/gateway/app.py` 挪走（**HEAD 的 doc-facts**） | **绿** | **绿（洞）** |
+| 3b | 同上（改动后的 doc-facts） | 红 | 红「后端挪了文件」 |
+| 4 | `pending` 映射成 `failed` | 红 | 红 |
+| 5 | 后端 `class RunStatus` 改名 | 红 | 红（形状断言，不是静默跳过） |
+| 6 | **`backend/` 整个移走** | 绿且明确跳过 | 绿，**3 skipped**（不是假绿） |
+| 7 | login 把 `navigateTo(redirectPath)` 写死成 `/workspace` | 红 | 红（收到 `/workspace/chats/new`） |
+
+后端文件逐个 `diff -q` 还原确认；`backend/` 已移回原位。
+
+### 八、过程里踩了自己一次（新坑 270）
+
+跑单测时写了 `... > /tmp/w107/unit.log 2>&1; echo "EXIT=$?" >> ... || { mkdir -p /tmp/w107; }`
+——目录当时**还不存在**，重定向失败，整条命令没跑；而那个 `||` 兜底子句
+**把非零退出码吃掉了**，于是后台任务报「completed (exit 0)」、日志文件是空的，
+下游 `grep` 什么都没匹配到。冷启动文档里已经有「重定向前先 `mkdir -p`」，
+这次踩的是它的变体：**给失败接一个兜底子句，等于把失败改写成成功**。
+判据：**`||` / `; true` 只能接在「失败无所谓」的命令后面，不能接在被观测的命令后面。**
 
 ## 上一轮（wave 106）做了什么：**把 wave 105 的判据往 `app/`、`packages/` 上筛，五处缺口、一处活违规**
 
@@ -2898,6 +3016,16 @@ wave 101 挂这笔账时写的是「`LoadMoreHistoryIndicator` 的 `isHistoryLoa
    下一个同形的目标：`baseline/*.json` 的 `$semantics`、
    各文件头「实测过、做不到」的结论——**判据是「哪一行代码读它」**。
 
+> **wave 107 把 wave 106 留的那两张「以后端为全集」的表量完了**：
+> `DEERFLOW_DURABLE_STATUS` **补上了镜像门禁**（后端那边是干净的 `StrEnum`），
+> `DEERFLOW_WIRE_EVENTS` **量完判定不做**（后端没有枚举，wire 名字散在
+> `bridge.publish` 的调用点上，只有两个是字面量；做成门禁就会误报——读数写进
+> `event-map.ts` 的头，别再试第二次）。**这条线索到此清空。**
+> 顺带留下一条**新的同形目标**：`e2e-suite-contract` 里那张
+> `standalone = {external, visual, parity}` 是单向的——没人查表里的 id 还是不是
+> 真的 config。本轮没动它，因为三个 id 都还在，且改名会先让「每个 config 有一个
+> make 目标」那条红；真要补就是一条反向断言。
+
 > **wave 106 把方向 3 往 `app/` 与 `packages/` 上扫了一遍**（wave 105 只筛了
 > `tests/guards/` 与 `scripts/`），量出五处、修完五处，其中**一处有活违规**
 > （`app/core/threads/utils.ts` 的「等 8 个」实际 9 个，从 2026-08-31 烂到现在）。
@@ -3627,7 +3755,23 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 269 条在记忆文件里）
+## 其他常踩的坑（完整 270 条在记忆文件里）
+
+- **给失败接一个兜底子句，等于把失败改写成成功**（线索 270，wave 107）。
+  跑单测时写了 `… > /tmp/w107/unit.log 2>&1; echo "EXIT=$?" >> … || { mkdir -p /tmp/w107; }`
+  ——目录当时还不存在，重定向失败、整条命令根本没跑，而那个 `||` 兜底把非零退出码
+  吃掉了：后台任务报「completed (exit 0)」、日志是空文件、下游 `grep` 什么都没匹配到，
+  于是「单测跑完了」是假的。冷启动文档里已有「重定向前先 `mkdir -p`」，
+  这次踩的是它的变体。**判据：`||` / `; true` 只能接在「失败无所谓」的命令后面，
+  不能接在被观测的命令后面。**
+
+- **一条 e2e 断言钉在「应用本来就要离开的中间态」上，表现出来就是抖动**
+  （wave 107，线索 237 的同一家）。`auth-contract.spec.ts` 的 `next` 落点写的是
+  一个**线程路由**，而夹具里没有那个线程，工作区立刻把它换成 `/workspace/chats/new`；
+  `expect.poll` 采样快就绿、机器忙就红。**判据：断言一个 URL / 一屏之前，
+  先用探针量一遍它到底停不停得住**（`page.on("framenavigated")` + 定时采样，
+  打印整条轨迹）；停不住就换一个停得住的落点，别把它加进抖动名单。
+
 
 - **变异实验的还原，一律用备份文件逐个 `cp` 回去，不要用 `git checkout -- <目录>`**
   （线索 269，wave 106）。第 19 条变异要把全仓 9 份文件的「等 N 个」都拿掉，还原时

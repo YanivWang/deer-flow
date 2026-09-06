@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 106，2026-09-06）
+# React → Vue 平替：挂账总清单（截至 wave 107，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -54,8 +54,18 @@
 
 ---
 
-## 三、这一轮（wave 78~106）清掉的
+## 三、这一轮（wave 78~107）清掉的
 
+- **后端枚举的镜像 + 一处静默跳过**（wave 107）：`DEERFLOW_DURABLE_STATUS` 的
+  「Gateway 的 durable run status 全集」现在与后端 `RunStatus` 逐个比
+  （`tests/guards/backend-enum-mirror.test.ts`）；`doc-facts` 的
+  `try { read("../backend/…") } catch { return }` **把「后端不在」与「文件被挪走」
+  压成了一件事**——实测把那份文件挪走，HEAD 的守卫 11 条全绿。抽成
+  `scripts/lib/backend-source.mjs` 之后两者分开。`DEERFLOW_WIRE_EVENTS`
+  **量完判定不做**（后端没有枚举，做成门禁会误报），读数写进文件头
+- **一条 e2e 断言钉错了对象**（wave 107）：`auth-contract.spec.ts` 的 `next` 落点是
+  一个夹具里不存在的**线程路由**，工作区立刻把它换掉——`expect.poll` 采样快就绿、
+  机器忙就红。探针量出 URL 轨迹后换成停得住的落点，**已知抖动名单没有变长**
 - **五处「一张表把全集切成两半、另一半没人查」**（wave 106，判据来自 wave 105）：
   agent-core 的文档枚举**五句里只有一句是双向钉着的**（两句只查一半、两句没人钉，
   取样面现在从文档算出来、与登记表恰好一一对应）；`file-header-claims` 自己的头
@@ -154,10 +164,10 @@
 
 ---
 
-## 四、收工时的门禁读数（wave 106 逐条实跑）
+## 四、收工时的门禁读数（wave 107 逐条实跑）
 
 ```
-verify           exit 0    263 文件 / 2192 单测；词典 942 key / 18 unused
+verify           exit 0    264 文件 / 2195 单测；词典 942 key / 18 unused
                            产品 SFC 218（总 220）
 standalone-sim   exit 0    跑过 13 / 未跑 5（4 data + 1 e2e）/ 红 0      ← wave 83 新增
                            --with-e2e 实测 13 / 4 / 0（那一条：exit 0，47 条跳过）
@@ -166,6 +176,7 @@ e2e-mock         265 + 22 + 15 + 2 + 6
 e2e-backend      2 + 5 + 2 + 3 + 3 + 5 + 1 + 1      ← wave 88 修完 e2e-shell 之后才又全绿
 e2e-visual       8         wave 88 一张没重录
 asset-budget     exit 0
+e2e-external     3         **不在任何聚合入口、也不在收工清单**；wave 107 顺带跑了一次，绿
 icon-parity      0 处待核，不报 stale
 audit            预期红 14（分诊写在 Makefile 的 audit 上方）
 standalone-check BLOCKING 0 处 / 0 个文件（DECLARED 40 处 / 18 个文件）

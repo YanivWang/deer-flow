@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 **106 轮**的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 **107 轮**的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，**接手时 HEAD 是 wave 106 的 docs 提交，已推到
@@ -34,11 +34,11 @@ wave 101~106 连着六轮都是这个形状，被撞出来的假话已经有八�
    先看「还欠什么」。三分钟读完。
 2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，约 4100 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（**269 条**里最近的十几条）。中间各轮的记录按需查。
-   **最近六轮（101~106）在最前面，先读它们**——这个阶段的方法论都在那里。
+   结尾的「其他常踩的坑」（**270 条**里最近的十几条）。中间各轮的记录按需查。
+   **最近七轮（101~107）在最前面，先读它们**——这个阶段的方法论都在那里。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **269 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **270 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -48,7 +48,7 @@ wave 101~106 连着六轮都是这个形状，被撞出来的假话已经有八�
 - **默认只改 `frontend-vue/`。** 例外只有一种：**上游自己是坏的**——
   那时按「业界主流做法两边同改」，`frontend/` 与 `frontend-vue/` 同一条提交里改，
   再单独一条 chore 提交把 `frontend-vue/baseline/upstream-marker.json` 推到那条 fix
-  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十二轮**（wave 106 没动），
+  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十二轮**（wave 106 / 107 都没动），
   别传这个数字，用 `git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests` 量。
 - **不要中途提问。** 取舍自己定，写进提交说明。分歧的兜底判据是**按业界主流做法**。
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
@@ -87,7 +87,7 @@ wave 101~106 连着六轮都是这个形状，被撞出来的假话已经有八�
 ### 收工门禁（逐条真跑，命令与上一轮实测读数）
 
 ```bash
-make -C <abs>/frontend-vue verify          # exit 0；263 文件 / 2192 单测；词典 942 key / 18 unused
+make -C <abs>/frontend-vue verify          # exit 0；264 文件 / 2195 单测；词典 942 key / 18 unused
 make -C <abs>/frontend-vue standalone-sim  # exit 0；跑过 13 / 未跑 5 / 红 0
 make -C <abs>/frontend-vue e2e-parity      # 81 passed；台账 95 行 / 73 样本
 make -C <abs>/frontend-vue e2e-mock        # 265 + 22 + 15 + 2 + 6
@@ -96,6 +96,8 @@ make -C <abs>/frontend-vue asset-budget    # exit 0
 make -C <abs>/frontend-vue e2e-backend     # 2+5+2+3+3+5+1+1（需要 backend 的 uv 环境）
 make -C <abs>/frontend-vue icon-parity     # 0 处待核，不报 stale
 make -C <abs>/frontend-vue audit           # **预期红 14**，分诊写在 Makefile 的 audit 上方
+make -C <abs>/frontend-vue e2e-external   # 3 passed（它**不在任何聚合入口**，
+                                          #  也一直不在这张清单里；wave 107 跑了一次，绿）
 ```
 
 **`icon-parity` 一定要用 `make -C` 跑，并且读输出**：直接
@@ -136,6 +138,15 @@ make -C <abs>/frontend-vue audit           # **预期红 14**，分诊写在 Mak
   dimension, state, settleMs = 700)` 的**第 6 个参数是 `settleMs` 不是 timeout**；
   传错不会报错，只会让实验安静地测别的东西。**一个「恰好等于你填的那个数」的输出，
   永远值得停一下。**
+- **给失败接一个兜底子句，等于把失败改写成成功**（线索 270，wave 107 踩的）：
+  `cmd > /tmp/x/log 2>&1; echo "EXIT=$?" >> … || { mkdir -p /tmp/x; }`——目录不在，
+  重定向失败、整条命令没跑，而 `||` 把非零退出码吃掉，于是后台报「exit 0」、
+  日志是空的。**`||` / `; true` 只能接在「失败无所谓」的命令后面。**
+- **断言一个 URL / 一屏之前，先量一遍它停不停得住**（wave 107）：
+  `auth-contract.spec.ts` 的断言钉在一个**应用本来就要离开的中间态**上
+  （`next` 落点是夹具里不存在的线程路由，工作区立刻换成 `/workspace/chats/new`），
+  表现出来就是「偶尔红」。探针写法：`page.on("framenavigated")` + 每 250ms 采一次、
+  打印整条轨迹。**停不住就换落点，别加进抖动名单。**
 - **变异实验的还原一律用备份文件逐个 `cp` 回去，不要 `git checkout -- <目录>`**
   （线索 269，wave 106 踩的）：那条命令按 HEAD 还原，**会把本轮尚未提交的改动一起冲掉**。
   在一棵有未提交改动的树上，它不是「还原变异」，是「回滚这一轮」。
@@ -272,7 +283,9 @@ tooltip 播报节点 2 行（reka-ui 内部，够不着）、
   那是 wave 87 的数字）。**「量不出差异」的准确含义是「这些取样点上量不出」**，
   不是「两个应用一样」；而 95 行**全部已决定**，规则是「新出现、还没定过的行只能减不能增」。
   天生看不见的八类列在交接文档里（第⑧类、第④类的顺序那一半、tab 序都已补上）。
-- **这条尾巴没有自然终点。** 历史命中率：wave 75 捞出 6 处、wave 76 捞出 27 处、
+- **这条尾巴没有自然终点。** 历史命中率：**wave 107 捞出一处「静默跳过」
+  （HEAD 的守卫在被守的文件挪走之后 11 条全绿）+ 一条钉错对象的 e2e 断言**、
+  wave 75 捞出 6 处、wave 76 捞出 27 处、
   wave 82 捞出一个两个应用都存在的产品缺陷、wave 83 证伪了验收判据自己、
   wave 86 捞出 16 行、wave 87 捞出 7 行、**wave 105 捞出一个漏扫 195 份文件的扫描面**、
   **wave 106 一轮捞出五处守卫缺口（其中一处有活违规）并推翻一句当规则用的话**。
