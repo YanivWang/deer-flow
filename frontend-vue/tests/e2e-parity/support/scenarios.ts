@@ -1615,9 +1615,31 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       ],
     },
     settle: [{ kind: "visible", target: { text: ARTIFACT_PATH } }],
+    /*
+      **锚点必须是「点开面板之后才有」的那一份**（wave 130）。
+
+      ~~`text: "report.html"`~~ 是 wave 129 那处缺陷的第二例：`getByText` 的字符串
+      是**子串**匹配，而消息列表里那张文件卡的文字就是 `/artifact-fixtures/report.html`
+      ——它**在点击之前就已经满足**，`.first()` 也永远落在它身上。实测（两个应用逐条相同）：
+
+        点击前   text:report.html           **1** 个（就是那张卡，visible）
+        点击后   text:report.html           2 个，`.first()` 的文本是
+                                            "/artifact-fixtures/report.html" ← 还是那张卡
+        点击后   text:/^report\.html$/       **1** 个，文本 "report.html" ← 面板标题
+        点击前   text:/^report\.html$/       **0** 个
+
+      也就是说这一步既没有等到面板，几何档里 `text:report.html` 那一行量的也是
+      消息卡（而那张卡 `settle` 已经量过一次了，等于白占一格）。
+      改成整串匹配的正则，**这一格从此量的是面板标题**。
+
+      顺带记下两个**量过之后被排除**的候选：`[data-slot="select-trigger"]` /
+      `[data-slot="select-value"]` / `role:combobox` 在这一屏上**两个应用都是 0 个**
+      ——这份夹具走的不是 artifacts 列表那条 Select 分支（坑 265：同一组件的两条
+      渲染分支，先确认夹具走了哪条）。照着 wave 103 的记忆去选它就会选空。
+    */
     steps: [
       { kind: "click", target: { text: ARTIFACT_PATH } },
-      { kind: "visible", target: { text: "report.html" } },
+      { kind: "visible", target: { text: /^report\.html$/ } },
     ],
     /*
       窄屏也跑一份。React 在 isMobile 分支把右侧面板整个换成 Sheet，也就是一个真的
@@ -1646,7 +1668,17 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
       ],
     },
     settle: [{ kind: "visible", target: { text: ARTIFACT_PATH } }],
-    steps: [{ kind: "click", target: { text: ARTIFACT_PATH } }],
+    /*
+      这一条的 `steps` 原来**只有一个 click、没有任何锚点**（wave 130 补）：
+      点完之后没有人等面板，取样只靠 `captureScenario` 那 700ms 固定等待——
+      而这个场景量的正是**分栏几何**，也就是最怕量到中间态的那一种
+      （坑 237：别拿固定等待去赌一个还在动的界面）。
+      锚点用与上面同一条整串正则，理由见那一段。
+    */
+    steps: [
+      { kind: "click", target: { text: ARTIFACT_PATH } },
+      { kind: "visible", target: { text: /^report\.html$/ } },
+    ],
     dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],
   },
   {
