@@ -8,10 +8,10 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 **129 轮**的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 **130 轮**的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
-分支 `main-wc`，**接手时 HEAD 是 wave 129 的 docs 提交，已推到
+分支 `main-wc`，**接手时 HEAD 是 wave 130 的 docs 提交，已推到
 `origin/main-wc`，本地与远端齐平**。
 
 **这个阶段的工作性质已经变了，先知道这一点再动手**：产品面的差异基本清完了
@@ -52,7 +52,7 @@ wave 101~106 连着六轮都是这个形状，之后又连着撞出来好几句�
 - **默认只改 `frontend-vue/`。** 例外只有一种：**上游自己是坏的**——
   那时按「业界主流做法两边同改」，`frontend/` 与 `frontend-vue/` 同一条提交里改，
   再单独一条 chore 提交把 `frontend-vue/baseline/upstream-marker.json` 推到那条 fix
-  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十二轮**（wave 106~129 都没动），
+  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十二轮**（wave 106~130 都没动），
   别传这个数字，用 `git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests` 量。
 - **不要中途提问。** 取舍自己定，写进提交说明。分歧的兜底判据是**按业界主流做法**。
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
@@ -292,20 +292,20 @@ wave 83/84/85/89 证明过一次，**wave 101~105 又连着五轮证明**：这�
 > 一个匹配到多份的锚点，两件事都落在第一份上，而注释往往说的是另一份。
 > **加锚点时问两句：它在每个维度上都成立吗、它在这一屏上只有一份吗。**
 
-**wave 129 现成的两件活（都已量到读数，直接接着做）**：
-- **`artifact-preview` 是同一处缺陷的第二例**：`text:report.html` 匹配 **2** 个元素，
-  而且**在 `click` 之前就已经满足**（两个应用都是）——那一步声称「面板打开了」，
-  实际被消息列表里的文件卡满足，几何档那一行量的也是卡片。
-  修法与 wave 129 同形（`>> nth=1` 或换一个只在面板里的锚点），
-  **会新增几何取样点，走 `PARITY_ACCEPT_GROW=1`**。
-- **`artifact-preview#preview-failed`**：按 wave 129 订正后的判据（**grep 渲染点，
-  不是词典**），这一支两边都有。路由覆盖写
-  `{ pattern: "**/api/threads/*/artifacts/**", status: 500, json: { detail: "boom" } }`
-  （两边 URL 形状逐字相同，见各自 `core/artifacts/utils.ts` 的 `urlOfArtifact`），
-  锚点只能用 `artifactPreview.previewFailed` 的两种译文——**上游那一块没有 testid**。
-  开工前先确认：`report.html` 在上游走的是 `useArtifactContent`
-  （`enabled: isCodeFile && !isWriteFile`）那一支吗——不是的话上游根本不发这个请求，
-  锚点会在 React 侧超时。
+**wave 130 现成的两件活（都已量到读数，直接接着做）**：
+- **给 artifact 造一份「产物来自 artifacts 列表」的夹具**（thread 上带 `artifacts: [...]`
+  而不是 write_file 工具调用），然后接 `#preview-failed`
+  （`{ pattern: "**/api/threads/*/artifacts/**", status: 500, json: { detail: "boom" } }`，
+  锚点用 `artifactPreview.previewFailed` 的两种译文——**上游那一块没有 testid**）。
+  **wave 130 已经量过：现有夹具走不通**，那条产物是 `write-file-artifact`，
+  正文来自消息里的工具结果，两个应用都不发那个请求（`/artifacts` 响应 **0** 条）。
+  顺带那份新夹具会第一次让 Select 那条分支进取样面。
+- **逐个看 wave 129 量出的另外 6 个「匹配数 > 1」的锚点**：
+  `branch-thread#turn-actions` 的两个、`channels#runtime-config-edit` 的 `text:DingTalk`、
+  `sidecar-chat` 的 `text:1 selected text fragment`、
+  `thread-list-infinite-scroll` 的 `text:Conversation 001`。
+  **判据**：匹配到的那几份**是不是同一个东西的多份**（列表里两条消息各一份，属正常），
+  还是**不同的东西**（消息卡 vs 面板标题，那就是 wave 129/130 这一类缺陷）。
 
 **还没筛的（下一轮可以从这里挑）**：
 - **以「后端」为全集的两张表**：`app/core/agent-deerflow/run-protocol.ts` 的

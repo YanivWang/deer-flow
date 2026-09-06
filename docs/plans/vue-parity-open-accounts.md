@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 129，2026-09-07）
+# React → Vue 平替：挂账总清单（截至 wave 130，2026-09-07）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -58,6 +58,17 @@
 
 ## 三、这一轮（wave 78~128）清掉的
 
+- **同一类锚点缺陷的第二例，并把下一件活量到走不通**（wave 130）：
+  `artifact-preview` 的 `text:report.html` **在 `click` 之前就已经满足**（消息卡的文字
+  是整条路径，`getByText` 字符串是子串匹配），几何档那一行量的也是那张卡；
+  `artifact-panel-resize` 点完之后**一个锚点都没有**，只靠 700ms 固定等待量分栏几何。
+  两处都改成 `text:/^report\.html$/`（点击前 0 个、点击后 1 个，两个应用一致）。
+  **决定性负向验证**：把 Vue 面板标题改成整条路径，**旧锚点集 5 条全绿（exit 0）**、
+  新锚点集**三个维度全红**。**台账 113/77/85 一行没动**——加的是覆盖面不是账。
+  **否定结论**：`artifact-preview#preview-failed` 用现有夹具走不通——那条产物是
+  `write-file-artifact`，正文来自消息里的工具结果，**两个应用都不发
+  `/api/threads/*/artifacts/**`**（探针：`/artifacts` 响应 0 条、iframe=1、previewFailed=0）。
+  要接得先造一份「产物来自 artifacts 列表」的夹具；**判据本身没错，错的是夹具**
 - **两句当规则用的话被实测推翻**（wave 129）：①`scheduled-tasks` 场景注释说两个
   schedule input 锚点钉住的是**编辑表单**——实际那两个 testid 在**创建表单**里也各有
   一份（探针实测两个应用都匹配 **2** 个），`.first()` 永远落在创建表单上，

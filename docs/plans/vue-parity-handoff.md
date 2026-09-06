@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 129，2026-09-07）
+## 当前状态（截至 wave 130，2026-09-07）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）；`52a35b5b` = wave 110（独立性判据自己身上的两处单向检查）；`a750347f` = wave 111（icon-parity 的两张豁免表补成双向，过期豁免开始让门禁红）；`bdf79e73` = wave 112（四张「指向外部东西」的表补反向校验；upstream-drift 的假「无漂移」）；`071a2414` = wave 113（第六条抖动查清机制并修掉，名单七条 → 六条）；wave 114 / 115 **都只有度量、代码改动为零**；`786cd37e` = wave 116（standalone-sim 只跑 8 份文件而判据说的是整套）；`4279a42e` = wave 117（答掉「要不要加 build」：不加，理由量出来了）；`29fcbb1c` = wave 118（--with-e2e 只跑了那个必然跳过的套件）；`af94ed0d` = wave 119（standalone-check 的正则要求带斜杠）；`9502a05c` = wave 120（三个夹具 id 没登记进 KNOWN_IDS）；`92a8f87d` = wave 121（丢弃查询参数那张表一条都没响过）；`f46dbbd3` = wave 122（那条没注释的归一化规则抹掉的是整棵树的层级）；wave 123 **只有度量、代码改动为零**（在保住缩进的数据上重做层级比对，6 行）；`d440b68c` = wave 124（划词工具条挪出 `role="log"`）；`74fab84a` = wave 125（「深度」做成常驻的一档）；`7d171e03` = wave 126（两个归一化抽成一份共享规则）；wave 127 **只有度量、代码改动为零**；`e53db1d0` = wave 128（第⑥类进取样面，量出 `retry: false 与上游一致` 是假话）；`03c85d6f` = wave 129（场景注释里「锚点钉住编辑表单」是假的——两个锚点都落在创建表单上；并订正 wave 128 自己写下的那条判据）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）；`52a35b5b` = wave 110（独立性判据自己身上的两处单向检查）；`a750347f` = wave 111（icon-parity 的两张豁免表补成双向，过期豁免开始让门禁红）；`bdf79e73` = wave 112（四张「指向外部东西」的表补反向校验；upstream-drift 的假「无漂移」）；`071a2414` = wave 113（第六条抖动查清机制并修掉，名单七条 → 六条）；wave 114 / 115 **都只有度量、代码改动为零**；`786cd37e` = wave 116（standalone-sim 只跑 8 份文件而判据说的是整套）；`4279a42e` = wave 117（答掉「要不要加 build」：不加，理由量出来了）；`29fcbb1c` = wave 118（--with-e2e 只跑了那个必然跳过的套件）；`af94ed0d` = wave 119（standalone-check 的正则要求带斜杠）；`9502a05c` = wave 120（三个夹具 id 没登记进 KNOWN_IDS）；`92a8f87d` = wave 121（丢弃查询参数那张表一条都没响过）；`f46dbbd3` = wave 122（那条没注释的归一化规则抹掉的是整棵树的层级）；wave 123 **只有度量、代码改动为零**（在保住缩进的数据上重做层级比对，6 行）；`d440b68c` = wave 124（划词工具条挪出 `role="log"`）；`74fab84a` = wave 125（「深度」做成常驻的一档）；`7d171e03` = wave 126（两个归一化抽成一份共享规则）；wave 127 **只有度量、代码改动为零**；`e53db1d0` = wave 128（第⑥类进取样面，量出 `retry: false 与上游一致` 是假话）；`03c85d6f` = wave 129（场景注释里「锚点钉住编辑表单」是假的——两个锚点都落在创建表单上；并订正 wave 128 自己写下的那条判据）；`d691ec36` = wave 130（同一类的第二例：artifact 面板的两处锚点，一个点击前就满足、一个压根不存在；**并把 `#preview-failed` 那条路量到走不通**）。
 - **动过 `frontend/` 的是二十二轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -36,7 +36,7 @@
   wave 74 两处 `<Toaster />` 用的不是 shadcn wrapper；wave 73 五条「本仓修掉了上游缺陷」；
   wave 62 `/auth/callback` 吞掉 `?next=` 深链。wave 41~~59、75~~81 都没动过。
 
-- **对照台账 113 行**，**77** 个样本，`make -C frontend-vue e2e-parity` **85** 条全绿（wave 128：95/73/81 → 107/75/83；wave 129：107/75/83 → **113/77/85**，新增 6 行全部是 wave 128 已判过的 `retry: 3` 那一条在另一屏上的复现）。
+- **对照台账 113 行**，**77** 个样本，`make -C frontend-vue e2e-parity` **85** 条全绿（wave 130 换了两处锚点，**台账一行没动**——加的是覆盖面不是账）（wave 128：95/73/81 → 107/75/83；wave 129：107/75/83 → **113/77/85**，新增 6 行全部是 wave 128 已判过的 `retry: 3` 那一条在另一屏上的复现）。
   wave 96 用 tab 序那一档量出 64 行、四处根因，**wave 97 逐条结清**：
   分隔条那 48 行与 browser 标签那 4 行**修掉了**，菜单 roving 那 2 行**决定接受**，
   滚动区那一处两边同改之后变成了另一处此前完全看不见的结构差异，
@@ -426,6 +426,84 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 130）做了什么：**wave 129 那一类的第二例修掉；并把「下一件活」量到走不通**
+
+### 一、`artifact-preview` 的锚点在点击之前就已经满足
+
+`{ visible, text: "report.html" }` 跟在 `{ click, text: "/artifact-fixtures/report.html" }`
+后面，本意是「面板打开了」。但 `getByText` 的**字符串**是子串匹配，消息列表里那张
+文件卡的文字就是整条路径。实测（两个应用逐条相同）：
+
+| 时机 | 锚点 | 匹配数 | `.first()` 的文本 |
+| --- | --- | --- | --- |
+| 点击前 | `text:report.html` | **1** | （那张卡，visible） |
+| 点击后 | `text:report.html` | **2** | `"/artifact-fixtures/report.html"` ← 还是那张卡 |
+| 点击前 | `text:/^report\.html$/` | **0** | — |
+| 点击后 | `text:/^report\.html$/` | **1** | `"report.html"` ← 面板标题 |
+
+这一步既没等到面板，几何档那一行量的也是消息卡——**而那张卡 `settle` 已经量过一次**。
+改成整串匹配的正则。
+
+### 二、`artifact-panel-resize` 点完之后**一个锚点都没有**
+
+它的 `steps` 只有一个 click，取样只靠 `captureScenario` 那 **700ms 固定等待**
+——而这个场景量的正是**分栏几何**（坑 237）。补同一条锚点。
+
+### 三、量过之后被排除的候选
+
+`[data-slot="select-trigger"]` / `[data-slot="select-value"]` / `role:combobox`
+在这一屏上**两个应用都是 0 个**。wave 103 记着「artifact 头部有个 455px 宽的
+SelectTrigger」，照那条记忆选锚点会选空——**这份夹具走的是 write_file 分支，
+不是 artifacts 列表那条 Select 分支**（坑 265）。
+
+### 四、`artifact-preview#preview-failed` 走不通——量出来的否定结论
+
+wave 129 把它列为「下一轮可以直接抄」，并留了一个开工前要确认的问题。**答案是不走**：
+
+```
+VUE    previewFailed en=0 zh=0   iframe=1   pre=0   /artifacts 响应 0 条
+REACT  previewFailed en=0 zh=0   iframe=1   pre=0   /artifacts 响应 0 条
+```
+
+`ARTIFACT_MESSAGES` 那条产物是 `write-file-artifact`（`isWriteFile`），正文直接来自
+消息里的工具结果，**两个应用都不会发 `/api/threads/*/artifacts/**`**。盖一个 500
+什么都不会变，量出来必然 0 行、没有对照意义。
+
+要接这一支，得先造一份**产物来自 artifacts 列表**的夹具（thread 上带 `artifacts: [...]`
+而不是 write_file 工具调用），那时 `useArtifactContent` 才会真的发请求。
+**判据本身仍然成立**（wave 129 订正过的「grep 渲染点、不是词典」，两边都有
+`ArtifactPreviewError` + `artifactPreview.previewFailed`）——**走不通的是这份夹具。**
+
+### 五、读数与负向验证
+
+- 改动前（= wave 129 收工那一跑，同一份代码）：`e2e-parity` **85 passed (7.4m)**，台账 **113 行 / 77 样本**
+- 改动后：`e2e-parity` **85 passed (7.5m)**，台账 **113 / 77，一行没动**
+
+**台账没变，但那两个 0 的含义变了**：几何档从「量消息卡」换成「量面板标题」，
+`artifact-panel-resize` 多了一个此前根本不存在的取样点。**加了覆盖面而没有加账。**
+
+| # | 变异 | 预期 | 实测 |
+| --- | --- | --- | --- |
+| 对照 | 无 | 5 条全绿 | **5 passed (1.1m)**，exit 0 |
+| M1 | Vue 面板标题渲染整条路径（`{{ filename }}` → `{{ filepath }}`） | 新锚点红 | **5 failed**（三个维度 + 另一个场景，31.2~31.4s 超时） |
+| M1b | **同一个变异**，锚点换回旧写法 | 旧锚点不响 | **5 passed，exit 0** ← 决定性 |
+
+### 六、下一轮
+
+1. **给 artifact 造一份「来自 artifacts 列表」的夹具**，然后接
+   `#preview-failed`（`{ pattern: "**/api/threads/*/artifacts/**", status: 500 }`，
+   锚点用 `artifactPreview.previewFailed` 的两种译文——**上游那一块没有 testid**）。
+   顺带那份夹具会第一次让 Select 那条分支进取样面（wave 103 量过它的几何，但那是
+   临时探针，不在台账里）。
+2. wave 129 剩下的 6 个「匹配数 > 1」的锚点还没逐个看过是不是同一类：
+   `branch-thread#turn-actions` 的两个、`channels#runtime-config-edit` 的 `text:DingTalk`、
+   `sidecar-chat` 的 `text:1 selected text fragment`、
+   `thread-list-infinite-scroll` 的 `text:Conversation 001`。
+   **判据**：匹配到的那几份**是不是同一个东西的多份**（列表里两条消息各一份，属正常），
+   还是**不同的东西**（消息卡 vs 面板标题，那就是这一类缺陷）。
+
+---
 
 ## 上一轮（wave 129）做了什么：**两句写下来当规则用的话，一句在场景目录里、一句是上一轮自己写的，都被实测推翻**
 
