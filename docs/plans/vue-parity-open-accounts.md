@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 119，2026-09-06）
+# React → Vue 平替：挂账总清单（截至 wave 120，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -54,8 +54,12 @@
 
 ---
 
-## 三、这一轮（wave 78~119）清掉的
+## 三、这一轮（wave 78~120）清掉的
 
+- **三个夹具 id 没登记进 `KNOWN_IDS`，请求归一把它们抹成了 `«generated»`**（wave 120）：
+  `normalizeRequest` 那条规则本是为了吃掉客户端随机 id，对夹具 id 一样有效——
+  **两个应用请求了不同的夹具线程，归一之后差异会消失**。当时没造成假绿是运气。
+  补进去 + 双向守卫；**归一化改了而台账一行没动**，正好证明此前没抹掉过真差异
 - **`standalone-check` 的正则要求带斜杠，安装期的写法一个都看不见**（wave 119）：
   `"file:../frontend"` / workspace 的 `- "../frontend"` 都是 **BLOCKING 0**，
   同一条加个斜杠就是 1。放宽主正则会多出 26 行假命中（Makefile 的 `@echo` 就有 9 行），
@@ -230,7 +234,7 @@
 ## 四、收工时的门禁读数（wave 113 逐条实跑）
 
 ```
-verify           exit 0    264 文件 / 2197 单测；词典 942 key / 18 unused
+verify           exit 0    265 文件 / 2200 单测；词典 942 key / 18 unused
                            产品 SFC 218（总 220）
 standalone-sim   exit 0    跑过 14 / 未跑 5（4 data + 1 e2e）/ 红 0      ← wave 83 新增
                            wave 116 起 test 那一步跑**整套** vitest（此前只跑表里的 8 份）

@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 119，2026-09-06）
+## 当前状态（截至 wave 120，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）；`52a35b5b` = wave 110（独立性判据自己身上的两处单向检查）；`a750347f` = wave 111（icon-parity 的两张豁免表补成双向，过期豁免开始让门禁红）；`bdf79e73` = wave 112（四张「指向外部东西」的表补反向校验；upstream-drift 的假「无漂移」）；`071a2414` = wave 113（第六条抖动查清机制并修掉，名单七条 → 六条）；wave 114 / 115 **都只有度量、代码改动为零**；`786cd37e` = wave 116（standalone-sim 只跑 8 份文件而判据说的是整套）；`4279a42e` = wave 117（答掉「要不要加 build」：不加，理由量出来了）；`29fcbb1c` = wave 118（--with-e2e 只跑了那个必然跳过的套件）；`af94ed0d` = wave 119（standalone-check 的正则要求带斜杠，安装期那几种写法看不见）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）；`52a35b5b` = wave 110（独立性判据自己身上的两处单向检查）；`a750347f` = wave 111（icon-parity 的两张豁免表补成双向，过期豁免开始让门禁红）；`bdf79e73` = wave 112（四张「指向外部东西」的表补反向校验；upstream-drift 的假「无漂移」）；`071a2414` = wave 113（第六条抖动查清机制并修掉，名单七条 → 六条）；wave 114 / 115 **都只有度量、代码改动为零**；`786cd37e` = wave 116（standalone-sim 只跑 8 份文件而判据说的是整套）；`4279a42e` = wave 117（答掉「要不要加 build」：不加，理由量出来了）；`29fcbb1c` = wave 118（--with-e2e 只跑了那个必然跳过的套件）；`af94ed0d` = wave 119（standalone-check 的正则要求带斜杠）；`9502a05c` = wave 120（三个夹具 id 没登记进 KNOWN_IDS，被归一成 «generated»）。
 - **动过 `frontend/` 的是二十二轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -94,7 +94,7 @@
 ### 门禁实测值（wave 113 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；**264** 文件 / **2197** 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；**265** 文件 / **2200** 单测，词典 942 key、18 unused
                                    （2183 → 2187 是 wave 104/105 加的；2187 → 2192 是 wave 106：
                                    agent-core 契约守卫 8 → 11、file-header-claims 8 → 10；
                                    2192 → **2195** 是 wave 107 新加的
@@ -419,6 +419,50 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 120）做了什么：**三个夹具 id 没登记进 `KNOWN_IDS`，请求归一把它们抹成了 `«generated»`**
+
+**没动 `frontend/`。** wave 111/112 把 guards 与 scripts 里的表都按「有没有反向校验」
+筛过了；**对照工厂自己那几张表是唯一没筛过的面**。筛出来一处，而且这一处会造**假绿**。
+
+### 一、机制
+
+`normalizeRequest` 把「UUID 形状、且不在 `KNOWN_IDS` 里」的路径段抹成 `«generated»`。
+那条规则是为了吃掉**客户端随机生成**的 id——但它对**夹具** id 一样有效：
+**两个应用请求了不同的夹具线程，归一之后变成同一个字符串，差异就此消失**
+（硬规则 2：每一条归一化都在抹掉信息）。
+
+实测：`tests/e2e-parity/support/` 下六个 UUID 字面量，`KNOWN_IDS` 只登记了三个
+（外加 mock-api 的 sidecar 那个）。漏在外面的三个：
+
+```
+…010a  历史线程「Newest chat」
+…010b  历史线程「Older chat」
+…09c1  workspace-changes 的 run id
+```
+
+**它们当时没造成假绿**（两个应用请求的是同一个），**但那是运气，不是判据**。
+
+### 二、改动
+
+两个内联 `thread_id` 起名字并导出，三个一起补进 `KNOWN_IDS`；
+新增 `tests/unit/parity/known-ids.test.ts` **双向**钉住——没登记的要红，
+登记了却在源码里找不到的也要红（死配置）。**零豁免**：真出现一个「必须被当成
+客户端生成」的 UUID 字面量，把它挪出这几份文件，而不是在守卫里开口子。
+
+### 三、负向验证
+
+| # | 变异 | 期望 | 实测 |
+| --- | --- | --- | --- |
+| 1 | 从 `KNOWN_IDS` 拿掉一个 | 红 | 红（点名那一个） |
+| 2 | `KNOWN_IDS` 放一个源码里没有的 | 红 | 红（死配置） |
+| 3 | 看 HEAD 的 `KNOWN_IDS` 成员清单 | — | 实测只有 4 个，三个确实漏着 |
+
+### 四、一条值得记的读数
+
+**归一化改了而台账一行没动**（e2e-parity 仍 81 passed / 95 行 / 73 样本）
+——这正好证明这三个 id 此前没产生过差异，与「当时没造成假绿」的判断一致。
+**改归一化规则时，台账不动是个好消息，但要专门去看它**：动了才说明此前抹掉了东西。
 
 ## 上一轮（wave 119）做了什么：**`standalone-check` 的正则要求带斜杠，安装期的那几种写法一个都看不见**
 
