@@ -62,6 +62,25 @@ if (!marker) {
   process.exit(1);
 }
 
+/*
+  **监视路径必须真的还在**（wave 112）。这张表喂给的是
+  `git log <range> -- frontend/src frontend/tests/e2e`：上游把某个目录改了名，
+  git 对一个不存在的 pathspec **不会报错，只会一条 commit 都不返回**——
+  于是这份报告打出「无漂移」，而它其实什么都没看。
+  「无漂移」这句话在交接文档里是被当证据引用的（wave 97 那条），
+  所以坏掉的监视器不能安静。
+*/
+const missingWatched = WATCHED.filter(
+  (rel) => !existsSync(fileURLToPath(new URL(`../../${rel}`, import.meta.url))),
+);
+if (missingWatched.length > 0) {
+  console.error(
+    `监视路径不存在了（上游改名？）：${missingWatched.join("、")}\n` +
+      "在这条修好之前，「无漂移」这个结论不成立。",
+  );
+  process.exit(1);
+}
+
 const head = git(["rev-parse", "HEAD"]);
 
 if (wantAccept) {

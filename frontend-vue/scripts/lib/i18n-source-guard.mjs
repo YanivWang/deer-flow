@@ -21,7 +21,7 @@
 */
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -344,6 +344,22 @@ function allVueFiles() {
 }
 
 export function productVueInventory() {
+  /*
+    **点名的根与入口必须真的在**（wave 112）。`vueFiles` 走的是
+    `git ls-files <root>`，对一个不存在的路径它**不报错、只返回空**——
+    于是把 `app/layouts` 改个名，这份清单会安静地少掉一整个目录，
+    而「产品 SFC 218 / 总 220」这类数字**照样自洽**（它们是从这里算出来的）。
+    与 `PRODUCT_ROOTS` 那条白名单的自证覆盖是同一件事的另一半：
+    那边管「有没有漏掉的目录」，这边管「点名的目录还在不在」。
+  */
+  const missing = [...PRODUCT_ENTRY_FILES, ...PRODUCT_ROOTS].filter(
+    (rel) => !existsSync(join(ROOT, rel)),
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `i18n 扫描面点名的路径不存在了（改名了？）：${missing.join("、")}`,
+    );
+  }
   const discovered = [
     ...PRODUCT_ENTRY_FILES,
     ...PRODUCT_ROOTS.flatMap(vueFiles),

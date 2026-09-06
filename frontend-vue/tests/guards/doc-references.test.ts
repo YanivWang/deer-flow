@@ -111,6 +111,11 @@ const TEXT_EXTENSIONS = new Set([
 ]);
 
 /** 录制下来的 demo 内容不是本仓文档，里面的英文散文不参与检查。 */
+/*
+  扫描面的排除项。**每一条都要真的存在**（wave 112）：一条指向已经不在的目录的
+  排除项，看起来像「这块有意不扫」，实际什么都没排除——下一个人会照着它推断
+  扫描面的形状（线索 186）。反向校验在下面「扫描面的排除项」那一组里。
+*/
 const SKIPPED_PREFIXES = ["public/"];
 
 function makeTargets(makefile: string): Set<string> {
@@ -432,6 +437,18 @@ const SUITE_INFRASTRUCTURE = new Set([
   "e2e-backend",
 ]);
 
+describe("扫描面的排除项", () => {
+  it("SKIPPED_PREFIXES 点名的路径都还在", () => {
+    expect(SKIPPED_PREFIXES.length).toBeGreaterThan(0);
+    expect(
+      SKIPPED_PREFIXES.filter(
+        (prefix) => !existsSync(join(ROOT, prefix.replace(/\/$/, ""))),
+      ),
+      "一条指向已经不在的目录的排除项，看起来像「有意不扫」，实际什么都没排除",
+    ).toEqual([]);
+  });
+});
+
 describe("套件表和 Makefile 不许分叉", () => {
   const suites = [...localTargets].filter(
     (name) => /^e2e(-|$)/.test(name) && !SUITE_INFRASTRUCTURE.has(name),
@@ -439,6 +456,19 @@ describe("套件表和 Makefile 不许分叉", () => {
 
   it("认出了全部套件（清单空掉时不能假绿）", () => {
     expect(suites.length).toBeGreaterThan(10);
+  });
+
+  /*
+    反方向（wave 112）：`SUITE_INFRASTRUCTURE` 点名的必须都还是真的 make 目标。
+    此前只有正方向——「不在这张表里的 e2e-* 才算套件」。一个改了名的入口会在这里
+    留一条死配置，而它自己**同时**变成一个「新套件」进了上面那份清单，两头都不红。
+  */
+  it("SUITE_INFRASTRUCTURE 点名的都还是真的 make 目标", () => {
+    const targets = makeTargets(readFileSync(join(ROOT, "Makefile"), "utf8"));
+    expect(
+      [...SUITE_INFRASTRUCTURE].filter((name) => !targets.has(name)),
+      "这些名字已经不是 make 目标了：删掉它，或者跟上改名",
+    ).toEqual([]);
   });
 
   /*
