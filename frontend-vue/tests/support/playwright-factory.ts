@@ -130,7 +130,24 @@ export function defineSuite(options: {
     timeout: options.timeout ?? 30_000,
     outputDir: `test-results/${options.name}`,
     ...(options.globalSetup ? { globalSetup: options.globalSetup } : {}),
-    ...(options.expect ? { expect: options.expect } : {}),
+    /*
+      单条断言的等待预算。**Playwright 的默认值是 5s，而用例本身有 30s**——
+      交接文档里那一串「异步 / hover / 滚动 + 固定超时」的已知抖动，机制就是这个
+      5s：机器一慢，某一条 `toBeVisible` 用光预算，而同一个用例还剩二十几秒没人用。
+
+      wave 108 用 CDP 的 `Emulation.setCPUThrottlingRate` 把它变成了可复现实验：
+      `i18n-theme.spec.ts` 第一条 `expect(dialog).toBeVisible()` 在 **30x 节流**下
+      实测 **3832ms**（预算 5000ms，用掉 77%），50x 时直接超时。
+      也就是说这一类根本不是「断言钉错了对象」（那是 wave 107 修的另一类），
+      **断言本身是对的，只是预算给小了。**
+
+      取 10s：**语义一行都不变**（能过的断言立刻返回，过不了的照样红），
+      代价只有一个——**真失败时报错慢一倍**（5s → 10s），而且只在那一条上付。
+      仍然远低于用例的 30s，所以失败消息还是「哪个 locator 没等到」，
+      不会退化成一句「Test timeout of 30000ms exceeded」。
+      套件仍可用 `options.expect` 覆盖。
+    */
+    expect: { timeout: 10_000, ...options.expect },
     ...(options.grep ? { grep: options.grep } : {}),
     use: {
       baseURL,
