@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 95 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 96 轮的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，接手时 HEAD 是 wave 88 的 docs 提交。
@@ -19,10 +19,10 @@
    先看「还欠什么」。三分钟读完。
 2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，2500 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
-   结尾的「其他常踩的坑」（253 条里最近的十几条）。中间各轮的记录按需查。
+   结尾的「其他常踩的坑」（255 条里最近的十几条）。中间各轮的记录按需查。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
-   —— 每一轮的实测记录与 **253 条踩坑线索全文**。同目录下另有
+   —— 每一轮的实测记录与 **255 条踩坑线索全文**。同目录下另有
    `deerflow-fork-boundary` / `deerflow-vue-replacement-goal` /
    `deerflow-no-midway-questions` / `deerflow-vue-alignment-scope`。
 4. `AGENTS.md`（仓库根）与 `frontend-vue/README.md` —— 命令与门禁。
@@ -38,9 +38,10 @@
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
   推到我喊停为止；**不要停下来问「要不要继续」**。
 - **台账的规则现在是「新出现、还没定过的行只能减不能增」**，不再是「保持 0」。
-  `frontend-vue/baseline/parity-diff.json` 当前 **51 行 / 73 样本**，
-  **51 行没有一行是「还欠的」**：2 行 reka-ui 的 tooltip 播报节点（wave 91）+
-  42 行「上游把字写死成英文、本仓翻译了」（wave 92/93）+ 7 行焦点差异（wave 94）。两类都在一页纸清单第一节
+  `frontend-vue/baseline/parity-diff.json` 当前 **115 行 / 73 样本**。
+  其中 51 行**已决定**（2 行 reka tooltip 播报节点 + 42 行「上游写死英文」+ 7 行焦点），
+  **64 行是 wave 96 新量出来的 tab 序差异——已归因、还没定，四处根因挂在
+  一页纸清单第一节第 6 条，下一轮就该逐个决定它们。**两类都在一页纸清单第一节
   逐条交代，各带翻案判据。
   **注意它钉的是「两个应用一不一致」，不是「这一处对不对」**——wave 88 量出
   22 颗按钮两边都缺 `aria-pressed`，三档全是 0 行。接上一块新表面之后，
@@ -66,9 +67,9 @@
 ### 收工门禁（逐条真跑，命令与上一轮实测读数）
 
 ```bash
-make -C <abs>/frontend-vue verify          # exit 0；262 文件 / 2180 单测；词典 942 key / 18 unused
+make -C <abs>/frontend-vue verify          # exit 0；263 文件 / 2183 单测；词典 942 key / 18 unused
 make -C <abs>/frontend-vue standalone-sim  # exit 0；跑过 13 / 未跑 5 / 红 0
-make -C <abs>/frontend-vue e2e-parity      # 81 passed；台账 44 行 / 73 样本
+make -C <abs>/frontend-vue e2e-parity      # 81 passed；台账 115 行 / 73 样本
 make -C <abs>/frontend-vue e2e-mock        # 265 + 22 + 15 + 2 + 6
 make -C <abs>/frontend-vue e2e-visual      # 8 passed（只有 -darwin 基线，本机门禁）
 make -C <abs>/frontend-vue asset-budget    # exit 0
@@ -136,9 +137,12 @@ wave 94 的焦点档第一版 17 行里有 **10 行是描述器的噪声**。
 
 **「天生看不见的八类」现在少了两类半**：第⑧类（焦点）wave 94 补完，
 第④类的**顺序**那一半 wave 95 补完（层级那一半仍看不见）。
-剩下没被覆盖的量：`pointer-events`、`z-index` 实际堆叠、**键盘 tab 序**、
-第④类的层级那一半、滚动位置（**故意不比**，见 capture.ts 文件头）。
-加之前先问「它是不是真的几档都看不见」，加完先问「其中几行是它自己造的」。
+**tab 序 wave 96 也补完了。** 剩下没被覆盖的量：`pointer-events`、
+`z-index` 实际堆叠、第④类的**层级**那一半、滚动位置（**故意不比**，
+见 capture.ts 文件头）。
+加之前先问「它是不是真的几档都看不见」，加完先问两句：
+**「其中几行是它自己造的」**（wave 94：17 行里 10 行是描述器噪声）与
+**「其中几行是别的档已经报过的」**（wave 96：114 行里约 48 行是重复，线索 255）。
 
 ### C. 把散文里的断言变成守卫
 
