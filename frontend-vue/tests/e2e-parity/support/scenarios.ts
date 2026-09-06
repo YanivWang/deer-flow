@@ -149,6 +149,24 @@ export type ParityRouteOverride = {
   */
   contentType?: string;
   headers?: Record<string, string>;
+  /*
+    应答之前先等多久（毫秒）。**给「加载中」那一档用的**（wave 134）。
+
+    此前取样面里**一个「还在转」的样本都没有**：`states` 能造出「失败」，
+    因为失败是一个稳定终态；「加载中」不是——正常 mock 立刻返回，取样时它早过去了。
+    这个字段把它变成一个可以停住的终态：应答慢到取样窗口之后，
+    两个应用就都停在各自的加载分支上。
+
+    **仍然是纯数据**（一个数字），没有回调——回调会让场景又能在
+    「React 走这条、Vue 走那条」上分叉，那正是这份目录要防的（见文件头）。
+    等待发生在 `installRoutes` 的固定实现里。
+
+    **取值判据**：要比取样窗口长得多。取样是 `runScenario` 之后再等
+    `settleMs`（默认 700ms），而步骤自己有 auto-wait；取 30 秒的话，
+    用例的 30s 超时会先到。**取 15 秒**：比整条取样链长一个量级，
+    又不会让失败时的报错等满用例预算。
+  */
+  delayMs?: number;
 };
 
 /**
@@ -230,8 +248,10 @@ async function installRoutes(
   overrides: ParityRouteOverride[] | undefined,
 ) {
   for (const override of overrides ?? []) {
-    await page.route(override.pattern, (route) =>
-      route.fulfill({
+    await page.route(override.pattern, async (route) => {
+      if (override.delayMs)
+        await new Promise((resolve) => setTimeout(resolve, override.delayMs));
+      return route.fulfill({
         status: override.status ?? 200,
         contentType: override.contentType ?? "application/json",
         headers: override.headers,
@@ -239,8 +259,8 @@ async function installRoutes(
           typeof override.json === "string" && override.contentType
             ? override.json
             : JSON.stringify(override.json),
-      }),
-    );
+      });
+    });
   }
 }
 
@@ -1279,6 +1299,38 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
             target: { role: "button", name: /^(Skills|技能)$/ },
           },
           { kind: "visible", target: { text: /boom/ } },
+        ],
+      },
+      /*
+        **「还在转」那一档**（wave 134）——取样面此前一个这样的样本都没有。
+
+        与 `skills-load-failed` 同一处代码的另一支：上游
+        `skill-settings-page.tsx:44` 是 `isLoading ? 只画一句 Loading : …`，
+        整块清单让位；本仓原来把 `Loading…` 加在筛选标签**下面**。
+        wave 133 只对齐了 error 那一支，**loading 这一支当时没量过、所以没动**，
+        这一轮补上。
+
+        锚点用 `t.common.loading` 的两种译文——**两边词典都有这一条**，
+        而且这一屏上只有它一处（判据见 wave 131 那三问）。
+      */
+      {
+        id: "skills-loading",
+        routes: [
+          {
+            pattern: "**/api/skills",
+            delayMs: 15_000,
+            json: { skills: [] },
+          },
+        ],
+        steps: [
+          {
+            kind: "click",
+            target: { role: "button", name: /^(Skills|技能)$/ },
+          },
+          {
+            kind: "visible",
+            target: { text: /^(Loading\.\.\.|加载中\.\.\.)$/ },
+          },
         ],
       },
       {

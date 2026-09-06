@@ -610,6 +610,40 @@
         "第 13 个公共可 tab 元素 React=div Vue=button"
       ]
     },
+    "integrations#skills-loading/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": [],
+      "focus": [],
+      "order": [],
+      "depth": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
+    },
+    "integrations#skills-loading/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": [],
+      "focus": [],
+      "order": [],
+      "depth": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
+    },
     "integrations#permission-request/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],

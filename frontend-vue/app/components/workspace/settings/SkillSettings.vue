@@ -86,11 +86,12 @@ async function createSkill() {
         `<div>`，读屏器不会主动念），措辞走词典（上游硬编码 `Error: ` 前缀，
         中文界面上也是英文）。这两处差异**有意留在台账里**，各自有翻案判据。
 
-        **仍然不同、但这一轮没有量过、所以没有动**：`loading` 那一支本仓也是加在
-        标签下面而不是替换整块。要改先给它一个样本（下一轮的活）。
+        **wave 134 把 `loading` 那一支也接上并对齐了**：上游
+        `skill-settings-page.tsx:44` 是 `isLoading ? 只画一句 Loading : …`，
+        同样整块让位。量出来与 error 那一支同形（12 行 × 两种语言）。
       -->
       <div
-        v-if="!skills.error.value"
+        v-if="!skills.error.value && !skills.loading.value"
         class="flex items-start justify-end gap-4"
       >
         <!--
@@ -127,7 +128,10 @@ async function createSkill() {
         >
           {{ t.settings.skills.adminRequired }}
         </p>
-        <Tabs v-if="!skills.error.value" v-model="filter">
+        <Tabs
+          v-if="!skills.error.value && !skills.loading.value"
+          v-model="filter"
+        >
           <TabsList :aria-label="t.settings.skills.title">
             <TabsTrigger
               v-for="kind in ['public', 'custom'] as const"
@@ -138,12 +142,19 @@ async function createSkill() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <p
+        <!--
+          `<div>` 不是 `<p>`：上游那一句是
+          `<div className="text-muted-foreground text-sm">{t.common.loading}</div>`，
+          直接挂在 main 的文本里；`<p>` 会在可访问性树里多出一个 `paragraph` 节点
+          （对照台账当场报出 `ariaOnlyVue: - paragraph: Loading...`）。
+          同一份文件里 `ToolSettings.vue` 的空态早就因为同一条理由用的 `<div>`。
+        -->
+        <div
           v-if="skills.loading.value && !skills.error.value"
           class="text-muted-foreground text-sm"
         >
           {{ t.common.loading }}
-        </p>
+        </div>
         <p v-if="skills.error.value" role="alert" class="text-sm text-red-600">
           {{ errorMessage(skills.error.value) }}
         </p>
@@ -165,7 +176,7 @@ async function createSkill() {
         >
           {{ t.settings.skills.emptyTitle }}
         </p>
-        <template v-if="!skills.error.value">
+        <template v-if="!skills.error.value && !skills.loading.value">
           <div
             v-for="skill in filtered"
             :key="skill.name"
