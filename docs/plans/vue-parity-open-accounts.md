@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 117，2026-09-06）
+# React → Vue 平替：挂账总清单（截至 wave 118，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -54,8 +54,13 @@
 
 ---
 
-## 三、这一轮（wave 78~117）清掉的
+## 三、这一轮（wave 78~118）清掉的
 
+- **判据里 e2e 那一半从没验过**（wave 118）：`--with-e2e` 此前**只跑 `e2e-parity`**，
+  而那是唯一一个兄弟应用不在时**整组跳过**的套件。第一次真跑：把 `frontend/` 移开后
+  `e2e-mock` 265+22+15+2+6、`e2e-backend` 2+5+2+3+3+5+1+1，**两组都绿**。
+  开关现在把它们带上（17 / 4 / 0，十分钟量级）。
+  **四步里只剩 `install` 没人碰过**
 - **「要不要让 standalone-sim 连 build 一起跑」答完了：不加**（wave 117）——
   构造一处「构建期才生效、静态扫描看不见」的依赖（`nuxt.config.ts` 运行时拼路径），
   **静态扫描 BLOCKING 0，而 test 那一步当场红**（nuxt 的 vitest project 会加载它）。
