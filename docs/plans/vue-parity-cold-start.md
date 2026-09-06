@@ -8,20 +8,24 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 **128 轮**的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 **129 轮**的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
-分支 `main-wc`，**接手时 HEAD 是 wave 106 的 docs 提交，已推到
+分支 `main-wc`，**接手时 HEAD 是 wave 129 的 docs 提交，已推到
 `origin/main-wc`，本地与远端齐平**。
 
 **这个阶段的工作性质已经变了，先知道这一点再动手**：产品面的差异基本清完了
 （台账 95 行**全部已决定**、一页纸清单「真正还开着的」5 条全是「已决定 / 够不着」），
 现在最有货的不是「再找一处 UI 差异」，而是
 **「找出一句写下来、当规则用、却没有任何机器在守的话」**——
-wave 101~106 连着六轮都是这个形状，被撞出来的假话已经有八句：
+wave 101~106 连着六轮都是这个形状，之后又连着撞出来好几句，
+到 wave 129 为止已经十二句：
 「A 会自愈」「两边差 18px」「这几份是手工维护的」「仍然在外面的两类」
 「pending 只能变短」「凡是能机械算出来的都在这里对一遍」
-「tests/ 有意不在范围里」「顺序天然测不出来，只能靠人盯着两边看」。
+「tests/ 有意不在范围里」「顺序天然测不出来，只能靠人盯着两边看」
+「`retry: false` 与上游一致」（wave 128）
+「这两个锚点钉住的是编辑表单」「那条 key 上游词典里也有 → 才算共有分支」
+「守住本仓写下的、**对上游的** `文件:行号` 引用」（三句都在 wave 129）。
 **在被撞之前，没有任何门禁会因此变红。**
 
 **wave 106 又补了一条配套判据**：同一个形状**可以不长成一张表**——
@@ -48,13 +52,15 @@ wave 101~106 连着六轮都是这个形状，被撞出来的假话已经有八�
 - **默认只改 `frontend-vue/`。** 例外只有一种：**上游自己是坏的**——
   那时按「业界主流做法两边同改」，`frontend/` 与 `frontend-vue/` 同一条提交里改，
   再单独一条 chore 提交把 `frontend-vue/baseline/upstream-marker.json` 推到那条 fix
-  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十二轮**（wave 106~128 都没动），
+  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十二轮**（wave 106~129 都没动），
   别传这个数字，用 `git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests` 量。
 - **不要中途提问。** 取舍自己定，写进提交说明。分歧的兜底判据是**按业界主流做法**。
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
   推到我喊停为止；**不要停下来问「要不要继续」**。
 - **台账的规则现在是「新出现、还没定过的行只能减不能增」**，不再是「保持 0」。
-  `frontend-vue/baseline/parity-diff.json` 当前 **107 行 / 75 样本**（wave 128 接上后端失败终态时 +12，逐条有名有姓）。
+  `frontend-vue/baseline/parity-diff.json` 当前 **113 行 / 77 样本**
+  （wave 128 接上第一个后端失败终态 +12、wave 129 接上第二个 +6，逐条有名有姓；
+  wave 129 那 6 行是 wave 128 已判过的 `retry: 3` 在另一屏上的复现，不需要新决定）。
   其中 51 行**已决定**（2 行 reka tooltip 播报节点 + 42 行「上游写死英文」+ 7 行焦点），
   **wave 97 把 tab 序那 64 行逐条结清了**（修掉 52 行、接受 2 行），
   剩下那 42 行 **wave 98 也核完了**：差异全来自上游给建议行套的那层
@@ -89,7 +95,7 @@ wave 101~106 连着六轮都是这个形状，被撞出来的假话已经有八�
 ```bash
 make -C <abs>/frontend-vue verify          # exit 0；265 文件 / 2205 单测；词典 942 key / 18 unused
 make -C <abs>/frontend-vue standalone-sim  # exit 0；跑过 14 / 未跑 5 / 红 0（wave 116 起跑整套 vitest）
-make -C <abs>/frontend-vue e2e-parity      # 83 passed；台账 107 行 / 75 样本
+make -C <abs>/frontend-vue e2e-parity      # 85 passed；台账 113 行 / 77 样本
 make -C <abs>/frontend-vue e2e-mock        # 265 + 22 + 15 + 2 + 6
 make -C <abs>/frontend-vue e2e-visual      # 8 passed（只有 -darwin 基线，本机门禁）
 make -C <abs>/frontend-vue asset-budget    # exit 0
@@ -279,6 +285,27 @@ wave 83/84/85/89 证明过一次，**wave 101~105 又连着五轮证明**：这�
   ④ `gen-contract-constants.mjs` 的「唯一阻断的一层」只对点名的三份契约成立；
   ⑤ **唯一的活违规**：`【主要导出】` 里写「等 N 个」的 9 份文件，
   `app/core/threads/utils.ts` 写着「等 8 个」而实际 9 个，从 2026-08-31 起全绿至今。
+
+**wave 129 又磨出第五条，专门筛「锚点」这类东西**（线索 274）：
+
+> `.first()` 让「锚点」有两种意思——**「等到它出现」**和**「量它的几何」**。
+> 一个匹配到多份的锚点，两件事都落在第一份上，而注释往往说的是另一份。
+> **加锚点时问两句：它在每个维度上都成立吗、它在这一屏上只有一份吗。**
+
+**wave 129 现成的两件活（都已量到读数，直接接着做）**：
+- **`artifact-preview` 是同一处缺陷的第二例**：`text:report.html` 匹配 **2** 个元素，
+  而且**在 `click` 之前就已经满足**（两个应用都是）——那一步声称「面板打开了」，
+  实际被消息列表里的文件卡满足，几何档那一行量的也是卡片。
+  修法与 wave 129 同形（`>> nth=1` 或换一个只在面板里的锚点），
+  **会新增几何取样点，走 `PARITY_ACCEPT_GROW=1`**。
+- **`artifact-preview#preview-failed`**：按 wave 129 订正后的判据（**grep 渲染点，
+  不是词典**），这一支两边都有。路由覆盖写
+  `{ pattern: "**/api/threads/*/artifacts/**", status: 500, json: { detail: "boom" } }`
+  （两边 URL 形状逐字相同，见各自 `core/artifacts/utils.ts` 的 `urlOfArtifact`），
+  锚点只能用 `artifactPreview.previewFailed` 的两种译文——**上游那一块没有 testid**。
+  开工前先确认：`report.html` 在上游走的是 `useArtifactContent`
+  （`enabled: isCodeFile && !isWriteFile`）那一支吗——不是的话上游根本不发这个请求，
+  锚点会在 React 侧超时。
 
 **还没筛的（下一轮可以从这里挑）**：
 - **以「后端」为全集的两张表**：`app/core/agent-deerflow/run-protocol.ts` 的
