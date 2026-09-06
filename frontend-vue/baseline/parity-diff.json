@@ -558,6 +558,58 @@
         "第 13 个公共可 tab 元素 React=div Vue=button"
       ]
     },
+    "integrations#skills-load-failed/desktop/light/en-US": {
+      "ariaOnlyReact": [
+        "- main: \"Error: boom\""
+      ],
+      "ariaOnlyVue": [
+        "- alert: boom",
+        "- main:"
+      ],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": [
+        "text:/boom/ height React=24 Vue=20 Δ-4",
+        "text:/boom/ color React=rgba(10,10,10,255) Vue=rgba(231,0,11,255)",
+        "text:/boom/ fontSize React=16px Vue=14px"
+      ],
+      "focus": [],
+      "order": [],
+      "depth": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
+    },
+    "integrations#skills-load-failed/desktop/light/zh-CN": {
+      "ariaOnlyReact": [
+        "- main: \"Error: boom\""
+      ],
+      "ariaOnlyVue": [
+        "- alert: boom",
+        "- main:"
+      ],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [],
+      "geometry": [
+        "text:/boom/ height React=24 Vue=20 Δ-4",
+        "text:/boom/ color React=rgba(10,10,10,255) Vue=rgba(231,0,11,255)",
+        "text:/boom/ fontSize React=16px Vue=14px"
+      ],
+      "focus": [],
+      "order": [],
+      "depth": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
+    },
     "integrations#permission-request/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],

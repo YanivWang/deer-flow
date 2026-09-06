@@ -1245,6 +1245,42 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
           },
         ],
       },
+      /*
+        **设置对话框里另一个域的失败分支**（wave 133）。
+
+        为什么挂在 `integrations` 上：技能设置页在上游**没有对应的 spec 文件**，
+        而场景 id 受覆盖率棘轮约束、编不出新的来；夹具与步骤不受约束，
+        所以按交接文档里那条既定做法「直接挂现成场景」。这个场景本来就是
+        **设置对话框**那一屏（`?settings=integrations`），导航到「技能」只是一次点击。
+
+        两边都有这一支（判据是 wave 129 订正过的**「grep 渲染点、不是词典」**）：
+        上游 `frontend/src/components/workspace/settings/skill-settings-page.tsx:50`
+        的 `) : error ? (` 那一档，本仓 `SkillSettings.vue:124` 的 `v-if="skills.error.value"`。
+        两边的 `isAdminRequired` 都是 `status === 403`，所以 500 走的是 error 那一支
+        而不是「需要管理员」那一支。
+
+        锚点用夹具喂进去的那个词（`boom`）而不是任何一边的措辞：
+        上游画的是 `<div>Error: {message}</div>`（硬编码英文前缀、没有 role），
+        本仓画的是 `<p role="alert">{message}</p>`——**措辞与角色都不一样，
+        那正是要量的东西，不能拿它当锚点。**
+      */
+      {
+        id: "skills-load-failed",
+        routes: [
+          {
+            pattern: "**/api/skills",
+            status: 500,
+            json: { detail: "boom" },
+          },
+        ],
+        steps: [
+          {
+            kind: "click",
+            target: { role: "button", name: /^(Skills|技能)$/ },
+          },
+          { kind: "visible", target: { text: /boom/ } },
+        ],
+      },
       {
         id: "permission-request",
         steps: [

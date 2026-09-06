@@ -72,7 +72,27 @@ async function createSkill() {
     :description="t.settings.skills.description"
   >
     <div class="space-y-4">
-      <div class="flex items-start justify-end gap-4">
+      <!--
+        **取技能清单失败时，这一整块要让位给错误行**（wave 133 对齐）。
+
+        上游把筛选标签、「创建技能」按钮与清单**一起**放在 `SkillSettingsList` 里，
+        而那个组件在 `skill-settings-page.tsx:50` 的 `) : error ? (` 一支里整个不渲染。
+        本仓原来把创建键与标签放在状态分支**外面**，于是取数失败时它们仍然在——
+        对照台账量出来是 15 行 × 两种语言（`ariaOnlyVue` 里 `tablist`/两个 `tab`/
+        `button "Create skill"` 都只在本仓，外加几何、tab 序与可 tab 元素的连带差异）。
+        一屏拿不到数据、却还留着一颗指向同一个后端的「创建」按钮，不是更好的做法。
+
+        **保留的是本仓更好的那两点**：错误行是 `role="alert"`（上游是个没有 role 的
+        `<div>`，读屏器不会主动念），措辞走词典（上游硬编码 `Error: ` 前缀，
+        中文界面上也是英文）。这两处差异**有意留在台账里**，各自有翻案判据。
+
+        **仍然不同、但这一轮没有量过、所以没有动**：`loading` 那一支本仓也是加在
+        标签下面而不是替换整块。要改先给它一个样本（下一轮的活）。
+      -->
+      <div
+        v-if="!skills.error.value"
+        class="flex items-start justify-end gap-4"
+      >
         <!--
           上游 `skill-settings-page.tsx:94` 是
           `<Button size="sm">` 里放一颗 `<SparklesIcon className="size-4" />`。
@@ -107,7 +127,7 @@ async function createSkill() {
         >
           {{ t.settings.skills.adminRequired }}
         </p>
-        <Tabs v-model="filter">
+        <Tabs v-if="!skills.error.value" v-model="filter">
           <TabsList :aria-label="t.settings.skills.title">
             <TabsTrigger
               v-for="kind in ['public', 'custom'] as const"
@@ -118,7 +138,10 @@ async function createSkill() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <p v-if="skills.loading.value" class="text-muted-foreground text-sm">
+        <p
+          v-if="skills.loading.value && !skills.error.value"
+          class="text-muted-foreground text-sm"
+        >
           {{ t.common.loading }}
         </p>
         <p v-if="skills.error.value" role="alert" class="text-sm text-red-600">
@@ -142,24 +165,28 @@ async function createSkill() {
         >
           {{ t.settings.skills.emptyTitle }}
         </p>
-        <div
-          v-for="skill in filtered"
-          :key="skill.name"
-          class="border-border flex items-center justify-between gap-4 rounded-md border p-3"
-          :data-testid="`skill-${skill.name}`"
-        >
-          <div class="min-w-0">
-            <div class="font-medium">{{ skill.name }}</div>
-            <p class="text-muted-foreground text-sm">{{ skill.description }}</p>
+        <template v-if="!skills.error.value">
+          <div
+            v-for="skill in filtered"
+            :key="skill.name"
+            class="border-border flex items-center justify-between gap-4 rounded-md border p-3"
+            :data-testid="`skill-${skill.name}`"
+          >
+            <div class="min-w-0">
+              <div class="font-medium">{{ skill.name }}</div>
+              <p class="text-muted-foreground text-sm">
+                {{ skill.description }}
+              </p>
+            </div>
+            <Switch
+              :aria-label="skill.name"
+              :model-value="skill.enabled"
+              :disabled="!access.canManageSkills.value || skills.pending.value"
+              :data-pending="pendingName === skill.name || undefined"
+              @update:model-value="toggle(skill, $event)"
+            />
           </div>
-          <Switch
-            :aria-label="skill.name"
-            :model-value="skill.enabled"
-            :disabled="!access.canManageSkills.value || skills.pending.value"
-            :data-pending="pendingName === skill.name || undefined"
-            @update:model-value="toggle(skill, $event)"
-          />
-        </div>
+        </template>
       </template>
     </div>
   </SettingsSection>
