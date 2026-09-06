@@ -1,7 +1,7 @@
 /*
   【文件职责】     固定 browser remote keyboard、IME 与 host shortcut preventDefault 策略。
   【架构位置】     测试
-  【主要导出】     decideBrowserKeyInput 回归用例
+  【主要导出】     无；Vitest cases
   【依赖关系】     app/core/browser/keyboard.ts
   【边界与注意】   返回 null 的按键必须留给本地浏览器/系统，调用方不得 preventDefault。
 */

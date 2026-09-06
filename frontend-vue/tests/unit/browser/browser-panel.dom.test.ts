@@ -1,7 +1,7 @@
 /*
   【文件职责】     固定BrowserPanel 的 live/static、REST、geometry、keyboard 与 IME 接线。
   【架构位置】     测试
-  【主要导出】     BrowserPanel DOM 回归用例
+  【主要导出】     无；Vitest cases
   【依赖关系】     BrowserPanel.vue · Vue Query · fake WebSocket/Gateway fetch
   【边界与注意】   DOM/Mock 证明；不混称真实 Gateway 或真实生产 browser runtime。
 */

@@ -1,7 +1,7 @@
 /*
   【文件职责】     固定open/download 预检与 Gateway 错误保真合同。
   【架构位置】     测试
-  【主要导出】     probeArtifactAction 回归
+  【主要导出】     无；Vitest cases
   【依赖关系】     app/core/artifacts/actions.ts
   【边界与注意】   只证明 HTTP/action policy；浏览器窗口和下载点击由 DOM/E2E 证明。
 */

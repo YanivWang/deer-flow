@@ -1,7 +1,7 @@
 /*
   【文件职责】     固定 Vue browser REST fallback 的真实 Gateway path/body/response/error 合同。
   【架构位置】     测试
-  【主要导出】     navigateBrowser 回归用例
+  【主要导出】     无；Vitest cases
   【依赖关系】     browser-api.ts · GatewayResponseError
   【边界与注意】   mock HTTP transport；真实 Gateway 证明由 m6-real-backend 负责。
 */

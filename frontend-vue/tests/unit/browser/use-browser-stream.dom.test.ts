@@ -1,7 +1,7 @@
 /*
   【文件职责】     固定 useBrowserStream 对 Vue scope、frame buffer 与 controller 的唯一适配路径。
   【架构位置】     测试
-  【主要导出】     useBrowserStream DOM 生命周期回归用例
+  【主要导出】     无；Vitest cases
   【依赖关系】     useBrowserStream.ts · fake WebSocket · happy-dom
   【边界与注意】   fake transport；握手权限与真实 binary frame 由 real-Gateway gate 证明。
 */

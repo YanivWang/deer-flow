@@ -96,12 +96,40 @@ const HEADER_MARKERS = [
   换成认字符串的剥法之后**零违规**——头里点名的符号全都真的导出着。
   **扩扫描面最先量到的是尺子自己**（线索 213）。
 
-  仍然在外面的两类，各有理由：**仓库根上的 config 文件**（playwright.*.config.ts、
-  nuxt.config.ts、vitest.config.ts、eslint.config.mjs）那一行按惯例写的是散文
-  （"Playwright config"），不是符号名；**`examples/`** 是一个独立的消费方样例，
-  由 `make consumer-check` 单独装起来跑。
+  仍然在外面的，是**仓库根上的 config 文件**（playwright.*.config.ts、nuxt.config.ts、
+  vitest.config.ts、eslint.config.mjs）——那一行按惯例写的是散文（"Playwright config"），
+  不是符号名。它们是**根上的文件**，不属于任何顶层目录，天然不在 SCAN_ROOTS 的射程里。
+
+  **wave 105 补上 `tests`。** 在那之前这句注释写的是「仍然在外面的两类」，
+  而实际是**三类**——`tests/` 下有 **195 份**文件带着 `【主要导出】` 头，
+  这条门禁一份都没扫过，**而且没有任何机器会发现这件事**
+  （线索 229 的形状：判据由一个看不见新东西的扫描面撑着；
+  wave 104 刚在 `baseline` 那张名单上撞过同一形状）。
+  扩进来当场报出 **13 处**：12 份 spec 把**被测符号**写在了 `【主要导出】`
+  （`probeArtifactAction 回归` 之类，而它们一个 export 都没有），
+  加 `mock-api.ts` 的 `MOCK_*` 通配写法。前者按仓库既定写法改成「无；Vitest cases」
+  （被测对象本来就写在 `【文件职责】` 与 `【依赖关系】` 里），后者列全四个常量。
 */
-const SCAN_ROOTS = ["app", "config", "packages", "scripts", "server", "shared"];
+const SCAN_ROOTS = [
+  "app",
+  "config",
+  "packages",
+  "scripts",
+  "server",
+  "shared",
+  "tests",
+];
+
+/**
+ * 有意不扫的顶层目录，**每一条都要写出理由**。
+ * 它与 `SCAN_ROOTS` 合起来必须**恰好等于 git 跟踪的顶层目录**——
+ * 少了哪一个，那个目录下的文件头就静默不受检查（wave 105 之前 `tests/` 正是如此）。
+ */
+const EXCLUDED_ROOTS: Record<string, string> = {
+  baseline: "签入的数据文件，不是源码",
+  public: "静态资源与录制下来的 demo，不是本仓源码",
+  examples: "独立的消费方样例，由 make consumer-check 单独装起来跑",
+};
 
 const sourceFiles = checkoutFiles(SCAN_ROOTS, { cwd: root }).filter((file) =>
   /\.(ts|mts|mjs)$/.test(file),
@@ -228,6 +256,32 @@ function importSpecifiersOf(source: string): string[] {
     ),
   ];
 }
+
+describe("扫描面", () => {
+  it("SCAN_ROOTS 与 EXCLUDED_ROOTS 恰好划分 checkout 里的顶层目录", () => {
+    const tops = new Set(
+      checkoutFiles(["."], { cwd: root })
+        .map((file) => file.split("/"))
+        .filter((parts) => parts.length > 1)
+        .map((parts) => parts[0] as string),
+    );
+    const declared = [...SCAN_ROOTS, ...Object.keys(EXCLUDED_ROOTS)].sort();
+    expect(
+      declared,
+      "checkout 里多了或少了一个顶层目录：要扫的进 SCAN_ROOTS，" +
+        "有意不扫的进 EXCLUDED_ROOTS 并写出理由——" +
+        "不表态的话那个目录下的文件头就静默不受检查（wave 105 之前 tests/ 正是如此，" +
+        "195 份带头文件一份没扫过，而且没有任何机器会发现）",
+    ).toEqual([...tops].sort());
+  });
+
+  it("EXCLUDED_ROOTS 的每条理由都不是空话", () => {
+    const thin = Object.entries(EXCLUDED_ROOTS).filter(
+      ([, why]) => why.trim().length < 8,
+    );
+    expect(thin, "有意不扫要写得出为什么").toEqual([]);
+  });
+});
 
 describe("文件头的【依赖关系】", () => {
   const claiming = sourceFiles

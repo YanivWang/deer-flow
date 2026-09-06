@@ -1,7 +1,7 @@
 /*
   【文件职责】     固定ArtifactPanel 的文件策略、完整加载、动作、错误与 stale DOM 合同。
   【架构位置】     测试
-  【主要导出】     ArtifactPanel DOM 回归
+  【主要导出】     无；Vitest cases
   【依赖关系】     ArtifactPanel · useArtifactDraft
   【边界与注意】   通过用户可见 DOM 和真实调用参数证明边界，不断言组件内部实现细节。
 */

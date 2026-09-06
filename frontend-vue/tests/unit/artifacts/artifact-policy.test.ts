@@ -1,7 +1,7 @@
 /*
   【文件职责】     固定artifact 显式文件策略、文本加载/保存和 skill 行为边界。
   【架构位置】     测试
-  【主要导出】     classifyArtifact 策略矩阵回归
+  【主要导出】     无；Vitest cases
   【依赖关系】     app/core/artifacts/policy.ts
   【边界与注意】   未知扩展名和无扩展名必须 fail closed；扩展名不得伪造 Gateway 权限。
 */

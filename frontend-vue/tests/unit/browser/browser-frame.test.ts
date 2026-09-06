@@ -1,7 +1,7 @@
 /*
   【文件职责】     固定 Gateway ToolMessage browser_view 静态帧提取与线程隔离合同。
   【架构位置】     测试
-  【主要导出】     latestBrowserViewFrame 回归用例
+  【主要导出】     无；Vitest cases
   【依赖关系】     app/core/browser/frame.ts
   【边界与注意】   只接受服务端消息元数据，不从 UI 文本或 artifact 名称猜测。
 */

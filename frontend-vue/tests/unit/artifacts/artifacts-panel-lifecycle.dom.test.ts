@@ -1,7 +1,7 @@
 /*
   【文件职责】     固定 useArtifactsPanel 将切文件和关面板交给唯一 draft owner。
   【架构位置】     测试
-  【主要导出】     useArtifactsPanel dirty 集成回归
+  【主要导出】     无；Vitest cases
   【依赖关系】     useArtifactsPanel · useArtifactDraft
   【边界与注意】   不复制 draft reducer；只证明面板出口实际消费 owner 的决策。
 */

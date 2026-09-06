@@ -1,7 +1,7 @@
 /*
   【文件职责】     固定browser WS 单一 owner、重连、pending navigate 与 stale generation 合同。
   【架构位置】     测试
-  【主要导出】     BrowserConnectionController 回归用例
+  【主要导出】     无；Vitest cases
   【依赖关系】     app/core/browser/connection.ts
   【边界与注意】   使用确定性 fake socket/timer；不是 Gateway 或生产网络证明。
 */

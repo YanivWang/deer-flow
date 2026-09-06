@@ -1,7 +1,7 @@
 /*
   【文件职责】     固定HTML preview 的完整性、Range 截断和 write-file 边界。
   【架构位置】     测试
-  【主要导出】     canRenderArtifactHtml 回归
+  【主要导出】     无；Vitest cases
   【依赖关系】     app/core/artifacts/preview-policy.ts
   【边界与注意】   正式截断内容永远不得创建 iframe/srcdoc；流式 prefix 与完成文档分开判断。
 */

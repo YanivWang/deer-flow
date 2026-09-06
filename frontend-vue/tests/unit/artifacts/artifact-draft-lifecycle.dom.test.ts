@@ -1,7 +1,7 @@
 /*
   【文件职责】     固定唯一 draft owner 的 switch/close/route/beforeunload/exit 生命周期。
   【架构位置】     测试
-  【主要导出】     useArtifactDraft DOM 生命周期回归
+  【主要导出】     无；Vitest cases
   【依赖关系】     app/composables/useArtifactDraft.ts
   【边界与注意】   beforeunload 只在 dirty 窗口注册；scope dispose 必须移除 listener。
 */

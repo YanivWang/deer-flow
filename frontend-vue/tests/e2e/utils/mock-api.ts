@@ -1,7 +1,8 @@
 /*
   【文件职责】     为浏览器合同测试提供一个 Gateway 的 route-level mock。
   【架构位置】     测试基础设施
-  【主要导出】     mockLangGraphAPI / handleRunStream / MOCK_* 常量
+  【主要导出】     mockLangGraphAPI / handleRunStream / MOCK_THREAD_ID /
+                   MOCK_THREAD_ID_2 / MOCK_SIDECAR_THREAD_ID / MOCK_RUN_ID
   【依赖关系】     @playwright/test（仅类型）
   【边界与注意】   这是本仓自有的 mock。它描述的是 **Gateway 的 HTTP/SSE 行为**，
                    不是任何一个前端的实现——所以判断它对不对，看的是 backend 的路由与
