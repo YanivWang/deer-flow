@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 127，2026-09-07）
+# React → Vue 平替：挂账总清单（截至 wave 128，2026-09-07）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -37,6 +37,7 @@
 
 | 账                                                    | 决定                             | 读数                                                                                                                                                                                                                                                                                                             |
 | ----------------------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`retry: false` 与上游不一致**（台账 6 行）        | **wave 128 判完：保留本仓这一侧**       | 代码注释里原本写着「`retry: false` 与上游一致」——**假的**：上游是 `new QueryClient()`、没有 defaultOptions，吃 TanStack 默认的 `retry: 3`。台账在 `integrations#load-failed` 上量出来：同一次 500，**上游发 3 次请求、本仓 1 次**。判据是 fork-boundary 那条「vue 有更好的可以保留」——TanStack 默认重试**不分错误码**，而 thread history 的 404 意味着 thread 不存在，重试三次只是把跳回空聊天页推迟 3 秒。**翻案判据**：要按错误码分流时换成 `retry: (count, error) => …`，不是改回默认。 |
 | **三处「只能变短」没有机器在守**                       | **wave 85 判完：一句补成门禁，两句改成实话** | `parity-diff.json` 能守——**只有 `make parity-accept` 一条路能让它变长**，现在 accept 时逐行比对、有新增就拒写（`PARITY_ACCEPT_GROW=1` 才放行；判据是集合包含不是行数）。`pending` 那两句守不了（手改文件 + 没有历史参照判不了单调性），改成实话：标出真正上门禁的四条，并写明「只能变短」是评审政策 + 真要机器守该用什么判据。 |
 | **wave 101 挂的「不会自愈的加载态」**                  | **wave 102 定性完毕：不是产品缺陷，账作废** | wave 101 把那颗一直在的「Loading...」归到 `LoadMoreHistoryIndicator` 的 `isHistoryLoading`——**错的**。实测命中元素在 shadow root 里（`host=next-route-announcer`、`hostParent=body`、无 `button` 祖先、`document.querySelectorAll` 找不到它——Playwright 文本引擎穿开放 shadow root，`querySelectorAll` 不穿），是 **Next 自带的路由播报器**，1×1 裁剪、`aria-live="assertive"`，内容是上一拍的 `document.title`。**屏幕上没有任何东西在转。** mock 也不是嫌疑人（`messages/page` 永远 fulfill 200，不认识的线程返回 `data: []` + `has_more: false`）；请求也不是（三条在 A 里同样发了、+588ms 之前全部 200 回来，此后 60 秒网络上再无动静）。**不必再追。** |
 | **artifact 头部长文件名的「18px 零头」**              | **wave 103 复量完：不算差异，账结清** | **用户可见的部分两边逐字相同**：标题 `span` 文本 61 字、盒 `407/407` **被裁 0px**、`line-clamp:1`；`SelectTrigger` 两边都是 **455px 宽**（右边缘 1267 / 1266）；四颗动作键 `Open in new window / Copy / Download / Close` 位置只差 1px，**一颗都没越界**。**并订正 wave 82 的读数**：那条「上游 481/458、本仓 497/492」是拿**两个不同层级的盒子**在比——「从头部往上找第一个 `overflow-x:hidden` 祖先」在上游落到 `div.bg-background.flex.flex-col`（clientWidth **458**）、在本仓落到 `div.ml-auto.h-full.min-w-0`（clientWidth **492**），**两边 clientWidth 差 34px 本身就是「不是同一层」的证据**。所以「18px 零头」不是一个可比的量。本轮复量上游仍有 5px、本仓 0px，但那 5px 被 `overflow-hidden` 裁在右边缘之外，标题没被裁、动作键没越界，**没有任何用户可见后果**，按 fork-boundary 判据上游自己也不坏，不改。 |
@@ -55,8 +56,12 @@
 
 ---
 
-## 三、这一轮（wave 78~127）清掉的
+## 三、这一轮（wave 78~128）清掉的
 
+- **第⑥类第一次进取样面**（wave 128）：给 `ParityState` 加 `routes`，同一条场景可以
+  同时取「正常」与「失败」两个终态（不动棘轮的场景 id）。第一跑就量出
+  **上游对同一次 500 发 3 次请求、本仓 1 次**——顺着查到代码注释里
+  「`retry: false` 与上游一致」**是假话**。台账 95/73/81 → **107/75/83**
 - **第⑤类（primitive 默认值）量完了，判定不做**（wave 127，代码改动为零）：
   按 `data-slot` 比语义属性，73 个样本 **2519 行**，**只在一边出现的 slot 名就有 62 个**
   ——两套 primitive 的词汇表本来就不同（splitpanes vs react-resizable-panels 是早就
@@ -269,7 +274,7 @@ verify           exit 0    265 文件 / 2205 单测；词典 942 key / 18 unused
 standalone-sim   exit 0    跑过 14 / 未跑 5（4 data + 1 e2e）/ 红 0      ← wave 83 新增
                            wave 116 起 test 那一步跑**整套** vitest（此前只跑表里的 8 份）
                            --with-e2e 实测 13 / 4 / 0（那一条：exit 0，47 条跳过）
-e2e-parity       81        台账 95 行 / 73 样本（四类都见第一节第 3~6 条）
+e2e-parity       83        台账 107 行 / 75 样本（wave 128 起多一个后端失败终态）
 e2e-mock         265 + 22 + 15 + 2 + 6
 e2e-backend      2 + 5 + 2 + 3 + 3 + 5 + 1 + 1      ← wave 88 修完 e2e-shell 之后才又全绿
 e2e-visual       8         wave 88 一张没重录
