@@ -29,6 +29,24 @@ const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const SIBLING = /frontend(?!-vue)[/\\]/;
 const SIBLING_G = /frontend(?!-vue)[/\\]/g;
 
+/*
+  **上面那条要求带斜杠，于是「安装期」的那几种写法它一个都看不见**（wave 119 实测）：
+
+    package.json        "w119-probe": "file:../frontend"     → BLOCKING 0
+    pnpm-workspace.yaml   - "../frontend"                    → BLOCKING 0
+    同一条加个斜杠        "file:../frontend/"                 → BLOCKING 1
+
+  斜杠是用来把 `frontend/` 和 `frontend-vue/` 分开的，但 `(?!-vue)` 本来就够了；
+  真正拦不住的是**路径末尾**的那一种。把主正则放宽会炸：实测全仓多出 **26 行**
+  命中，其中 Makefile 的 `@echo "... ../frontend"` 有 9 行——那不是注释，会直接变成
+  假 BLOCKING（**放宽判据 → 需要豁免表 → 判据选错了**，线索 180）。
+
+  所以收窄到「安装期清单」这一类文件：它们**没有散文**，出现兄弟应用就是引用。
+  这一档覆盖的正是判据四步里的 `install`（wave 118 那张表上唯一没人碰过的一档）。
+*/
+const INSTALL_MANIFESTS = /(?:^|\/)(?:package\.json|pnpm-workspace\.yaml)$/;
+const SIBLING_ANYWHERE_G = /frontend(?!-vue)/g;
+
 /** 生成物：随其来源一起消失，不单独计数。 */
 const GENERATED = new Set(["pnpm-lock.yaml"]);
 
@@ -87,7 +105,24 @@ const declared = [];
 for (const file of scannedFiles()) {
   if (GENERATED.has(file)) continue;
   const source = readSafe(join(ROOT, file));
-  if (source === null || !SIBLING.test(source)) continue;
+  if (source === null) continue;
+
+  // 安装期清单：不要求斜杠，出现就是 BLOCKING（理由见上面那段）。
+  if (INSTALL_MANIFESTS.test(file)) {
+    source.split("\n").forEach((line, index) => {
+      const hits = (line.match(SIBLING_ANYWHERE_G) ?? []).length;
+      if (hits === 0) return;
+      blocking.push({
+        file,
+        line: index + 1,
+        text: line.trim().slice(0, 160),
+        hits,
+      });
+    });
+    continue;
+  }
+
+  if (!SIBLING.test(source)) continue;
 
   const isDoc = extname(file) === ".md";
   const stripped = isDoc ? "" : stripComments(source, commentStylesFor(file));
