@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 95，2026-09-06）
+## 当前状态（截至 wave 96，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95（六轮都**没动 `frontend/`**）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏；七轮都**没动 `frontend/`**）。
 - **动过 `frontend/` 的是二十一轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -34,7 +34,9 @@
   wave 74 两处 `<Toaster />` 用的不是 shadcn wrapper；wave 73 五条「本仓修掉了上游缺陷」；
   wave 62 `/auth/callback` 吞掉 `?next=` 深链。wave 41~~59、75~~81 都没动过。
 
-- **对照台账 51 行**，**73** 个样本，`make -C frontend-vue e2e-parity` **81** 条全绿。
+- **对照台账 115 行**，**73** 个样本，`make -C frontend-vue e2e-parity` **81** 条全绿。
+  **wave 96 新增 64 行是 tab 序那一档量出来的，四处根因、全部归因到具体元素，
+  但四处都还没定**——按 wave 92 起的规则，它们有名有姓地挂在一页纸清单上。
   **51 行里没有一行是「还欠的」**：2 行 reka-ui 的 tooltip 播报节点（wave 91）+
   42 行「上游把字写死成英文、本仓翻译了」（wave 92/93）+ 7 行焦点差异
   （wave 94：4 行本仓的 settings 深链焦点更好、1 行是上面那一类的重复、
@@ -85,10 +87,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 95 收工时逐条跑过）
+### 门禁实测值（wave 96 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；**262** 文件 / **2180** 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；**263** 文件 / **2183** 单测，词典 942 key、18 unused
                                    产品 SFC **218**（总 **220**，wave 86 新增 DropdownMenuGroup）
 make -C frontend-vue standalone-sim exit 0（wave 83 新增）**判据的动态那一半**：真把
                                    ../frontend rename 走，跑 CROSS_APP_BY_DESIGN 表里
@@ -107,9 +109,10 @@ make -C frontend-vue coverage      语句 73.22% / 分支 64.72% / 函数 70.55%
                                    standalone-check BLOCKING 0 处 / 0 个文件（DECLARED **40** 处 / **18** 个文件）
                                    ——**它只是静态证明**，证不了「移走之后还能跑」：
                                    wave 83 第一次真做实验时它早已是 0，而 verify 当场红。
-make -C frontend-vue e2e-parity    **81**  台账 **51 行**，**73** 样本
+make -C frontend-vue e2e-parity    **81**  台账 **115 行**，**73** 样本
                                    （wave 94 起多一档 `focus`：7 行；
-                                   wave 95 起多一档 `order`：**0 行**）
+                                   wave 95 起多一档 `order`：**0 行**；
+                                   wave 96 起多三档 tab 序：**64 行、四处根因**）
                                    2 行 = reka-ui 的 tooltip 播报节点被打上
                                    aria-hidden（wave 91）；42 行 = 上游把字写死成
                                    英文而本仓翻译了（wave 92 的 28 行 + wave 93
@@ -351,6 +354,52 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 96）做了什么：**tab 序进取样面 + 修掉一处会让 verify 随机红的泄漏**
+
+提交 `d21a1b67`，另有 `a165c96c`。**没动 `frontend/`。**
+样本仍 **73**，e2e-parity 仍 **81**，台账 51 → **115 行**。
+
+### 一、这一档比 aria 多出来的是「能不能 tab 到」
+
+节点在树里好端端待着、却因为 `tabindex="-1"` / `disabled` / 被盖住而 tab 不到；
+反过来 `tabindex="0"` 的 `<div>` 在树里可能只是 generic。
+**两个应用 aria 树逐行相同、tab 序却不同，是完全可能的**——wave 86 那处
+「上游多一层 `menu > link > menuitem`」正是这一类。
+
+### 二、尺子先量自己：第一版 114 行，只有一处是新东西
+
+带名字的第一版里，**~40 行是「上游写死英文」那一类的重复**（名字不同 → 同一颗键
+被当成两个项），**8 行是 `"🏷️GitHub Issue triage"` vs `"🏷️ GitHub Issue triage"`**
+（emoji 与标题之间差一个空白文本节点，aria 档按可访问名比、根本没报）。
+**名字那一半是 aria 档的活**，描述收窄成 `标签[类型](role)`，114 → **64**。
+
+### 三、64 行四处根因，全部归因到具体元素（都还没定，已挂清单）
+
+```
+48 行  div(separator) 只在本仓可 tab  →  splitpanes__splitter，本仓每一屏都有一个，
+                                        上游只在可调整面板存在时才渲染 resizable-handle
+10 行  div 只在本仓可 tab            →  div[data-slot=scroll-area-viewport] 可聚焦
+ 4 行  browser 面板那一格            →  同一个元素、不同标签（上游 div / 本仓 section）
+ 2 行  div(menuitem) 只在上游可 tab  →  菜单 roving tabindex 停在不同的项上
+```
+
+### 四、顺带修掉一处「用例全绿、退出码却是 1」
+
+收工跑 verify 时 14 条 `ReferenceError: requestAnimationFrame is not defined`。
+**先证因果**：我的树一红一绿、干净树绿、单跑那个文件绿——不是我的改动，
+但按硬规则不当抖动放过，查到底是：DOM 用例把 rAF stub 成 `setTimeout`，
+`vi.unstubAllGlobals()` **只换全局、不清已排队的定时器**，它 16ms 后触发时
+全局已经没有 rAF 了。三份用例的 mount/unmount 是 1/0、6/3、1/0，
+**靠「记得 unmount」收不了口**，改成 stub 自己记账。
+**收窄过一次**：全仓五份 stub 里另两份是同步版与「收集回调自己 drain」版，
+五份一起改会当场红——**同样的形状不等于同样的机制**（坑 236）。
+
+### 门禁（逐条真跑）
+
+verify 0（**263** 文件 / **2183** 单测）· e2e-parity **81**（台账 **115 行 / 73 样本**）·
+e2e-mock 265+22+15+2+6 · e2e-visual 8 · asset-budget 0 · standalone-sim 13 / 5 / 0 ·
+icon-parity 0 处待核 · e2e-backend 2+5+2+3+3+5+1+1 · audit 预期红 **14**。
 
 ## 上一轮（wave 95）做了什么：**顺序进取样面，第一跑就抓到子菜单被 portal 走**
 
@@ -2881,7 +2930,21 @@ node scripts/upstream-drift.mjs        # marker 之后上游/本仓有没有改�
 **锚点要按 prettier 格式化之后的样子写**：wave 28 有一条变异因为把三元写成一行而
 锚点 0 次命中，脚本报了「变异没落地」——那一条如果没被脚本自己抓住，就是一条假绿。
 
-## 其他常踩的坑（完整 253 条在记忆文件里）
+## 其他常踩的坑（完整 255 条在记忆文件里）
+
+- **stub 掉一个全局，别忘了它排出去的定时器**（线索 254，wave 96）。
+  DOM 用例把 `requestAnimationFrame` stub 成 `setTimeout(cb, 16)`，
+  `vi.unstubAllGlobals()` **只把全局换回去、已排队的那个 setTimeout 还在**；
+  它触发时被唤醒的代码再调一次 rAF，而全局已经没有它了 →
+  **用例全绿、退出码却是 1**（Uncaught Exception）。三次只红一次。
+  **收口不能靠「记得 unmount」**（那三份用例 mount/unmount 是 1/0、6/3、1/0），
+  要让 stub 自己记账、`cleanup()` 一律清掉。
+- **新加一档尺子，先问「其中几行是别的档已经报过的」**（线索 255，wave 96）。
+  tab 序那一档第一版带名字，114 行里 **~40 行是「上游写死英文」那一类在这一档的
+  重复**（名字不同 → 同一颗键被当成两个不同的项），**8 行是空白文本节点造成的
+  名字差异**（aria 档按可访问名比，根本没报它）。
+  **判据：一档只回答一个问题。** tab 序回答「能不能 tab 到」，名字归 aria 档；
+  把名字放进来等于让同一处差异在两档各记一次（坑 219 的同一件事）。
 
 - **「文件头里的历史说明」不是「活断言」，别混着追**（线索 252，wave 95）。
   照文档去追「各文件头『实测过、做不到』的结论」，扫出 10 处，
