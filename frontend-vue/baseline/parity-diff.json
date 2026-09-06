@@ -8,7 +8,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "chat/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -17,7 +22,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "chat/desktop/dark/en-US": {
       "ariaOnlyReact": [],
@@ -26,7 +36,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "chat/desktop/dark/zh-CN": {
       "ariaOnlyReact": [],
@@ -35,7 +50,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "chat/tablet/light/en-US": {
       "ariaOnlyReact": [],
@@ -44,7 +64,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "chat/tablet/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -53,7 +78,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "chat/tablet/dark/en-US": {
       "ariaOnlyReact": [],
@@ -62,7 +92,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "chat/tablet/dark/zh-CN": {
       "ariaOnlyReact": [],
@@ -71,7 +106,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "chat/mobile/light/en-US": {
       "ariaOnlyReact": [],
@@ -80,7 +120,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "chat/mobile/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -89,7 +132,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "chat/mobile/dark/en-US": {
       "ariaOnlyReact": [],
@@ -98,7 +144,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "chat/mobile/dark/zh-CN": {
       "ariaOnlyReact": [],
@@ -107,7 +156,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "sidebar/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -116,7 +168,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "sidebar/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -125,7 +182,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "thread-history/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -134,7 +196,14 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [
+        "div(menuitem)"
+      ],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "thread-history/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -143,7 +212,14 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [
+        "div(menuitem)"
+      ],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "agent-chat/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -152,7 +228,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "agent-chat/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -161,7 +242,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "agents-feature-disabled/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -170,7 +256,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "agents-feature-disabled/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -179,7 +268,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "browser-feature/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -188,7 +280,14 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
+      "tabbablesOnlyVue": [
+        "section"
+      ],
+      "tabOrder": []
     },
     "browser-feature/desktop/light/zh-CN": {
       "ariaOnlyReact": [
@@ -212,7 +311,14 @@
         "role:heading[/^(Connecting to live browser…|正在连接实时浏览器…)$/] width React=194.5 Vue=168 Δ-26.5"
       ],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
+      "tabbablesOnlyVue": [
+        "section"
+      ],
+      "tabOrder": []
     },
     "sidecar-chat/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -221,7 +327,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "sidecar-chat/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -230,7 +339,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "thread-list-pin/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -239,7 +351,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "thread-list-pin/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -248,7 +365,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "thread-list-infinite-scroll/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -257,7 +379,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div"
+      ],
+      "tabOrder": []
     },
     "thread-list-infinite-scroll/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -266,7 +393,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div"
+      ],
+      "tabOrder": []
     },
     "ui-polish-mobile/mobile/light/en-US": {
       "ariaOnlyReact": [],
@@ -275,7 +407,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "ui-polish-mobile/mobile/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -284,7 +419,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "user-message-plain-text/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -293,7 +431,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "user-message-plain-text/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -302,7 +445,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "integrations#default/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -313,7 +461,13 @@
       "focus": [
         "React=button \"Account\" Vue=button \"Integrations\""
       ],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div",
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "integrations#default/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -324,7 +478,13 @@
       "focus": [
         "React=button \"账号\" Vue=button \"集成\""
       ],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div",
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "integrations#permission-request/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -333,7 +493,13 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div",
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "integrations#permission-request/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -342,7 +508,13 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div",
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "integrations#change-app/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -351,7 +523,13 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div",
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "integrations#change-app/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -360,7 +538,13 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div",
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "branch-thread#default/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -369,7 +553,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "branch-thread#default/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -378,7 +567,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "branch-thread#turn-actions/desktop/light/en-US": {
       "ariaOnlyReact": [
@@ -389,7 +583,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "branch-thread#turn-actions/desktop/light/zh-CN": {
       "ariaOnlyReact": [
@@ -400,7 +599,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "subtask-card/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -409,7 +613,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "subtask-card/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -418,7 +627,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "artifact-preview/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -427,7 +641,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "artifact-preview/mobile/light/en-US": {
       "ariaOnlyReact": [],
@@ -436,7 +653,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "artifact-preview/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -445,7 +665,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "artifact-panel-resize/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -454,7 +677,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "artifact-panel-resize/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -463,7 +689,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "scheduled-tasks/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -472,7 +701,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "scheduled-tasks/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -481,7 +713,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "settings-notification/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -492,7 +727,13 @@
       "focus": [
         "React=button \"Account\" Vue=button \"Notification\""
       ],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div",
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "settings-notification/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -503,7 +744,13 @@
       "focus": [
         "React=button \"账号\" Vue=button \"通知\""
       ],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div",
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "channels#default/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -512,7 +759,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "channels#default/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -521,7 +773,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "channels#runtime-config/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -530,7 +787,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "channels#runtime-config/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -539,7 +801,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "channels#runtime-config-edit/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -548,7 +815,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "channels#runtime-config-edit/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -557,7 +829,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "thread-history-mermaid#default/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -566,7 +843,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "thread-history-mermaid#default/desktop/light/zh-CN": {
       "ariaOnlyReact": [
@@ -591,7 +873,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "thread-history-mermaid#download-menu/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -600,7 +887,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "thread-history-mermaid#download-menu/desktop/light/zh-CN": {
       "ariaOnlyReact": [
@@ -627,7 +919,12 @@
       "focus": [
         "React=button \"Download diagram\" Vue=button \"下载图表\""
       ],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "workspace-changes#reasoning-menu/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -636,7 +933,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "workspace-changes#reasoning-menu/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -645,7 +947,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "workspace-changes#changes-panel/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -656,7 +963,12 @@
       "focus": [
         "React=button \"Close\" Vue=button \"/mnt/user-data/outputs/report.mdModified\""
       ],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "workspace-changes#changes-panel/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -667,7 +979,12 @@
       "focus": [
         "React=button \"Close\" Vue=button \"/mnt/user-data/outputs/report.md修改+1 -1\""
       ],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "streaming-reasoning-order/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -676,7 +993,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "streaming-reasoning-order/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -685,7 +1007,12 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [
+        "div(separator)"
+      ],
+      "tabOrder": []
     },
     "artifact-stream-state/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -694,7 +1021,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "artifact-stream-state/desktop/light/zh-CN": {
       "ariaOnlyReact": [
@@ -707,7 +1037,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "artifact-batched-stream/desktop/light/en-US": {
       "ariaOnlyReact": [],
@@ -716,7 +1049,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     },
     "artifact-batched-stream/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
@@ -725,7 +1061,10 @@
       "requestsOnlyVue": [],
       "geometry": [],
       "focus": [],
-      "order": []
+      "order": [],
+      "tabbablesOnlyReact": [],
+      "tabbablesOnlyVue": [],
+      "tabOrder": []
     }
   }
 }

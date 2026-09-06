@@ -36,6 +36,16 @@ export type DiffEntry = {
    * 顺序天然测不出来。wave 95 补上，做法见 `diffAriaOrder`。
    */
   order: string[];
+  /**
+   * 只在一边能用 Tab 走到的元素，双向多重集差异。
+   *
+   * 与 aria 那一档的区别是**「能不能 tab 到」**：节点在树里好端端待着、
+   * 却因为 `tabindex="-1"` / `disabled` / 被盖住而走不到，aria 一档报不出来。
+   */
+  tabbablesOnlyReact: string[];
+  tabbablesOnlyVue: string[];
+  /** 两边**共有**的可 tab 元素的相对顺序差异，最多一行（只报第一处分岔）。 */
+  tabOrder: string[];
 };
 
 /** 摊平成 `场景键 · 字段: 那一行` 的形式，排序后返回。 */

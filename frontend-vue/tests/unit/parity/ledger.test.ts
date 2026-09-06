@@ -27,6 +27,9 @@ const empty = (): DiffEntry => ({
   geometry: [],
   focus: [],
   order: [],
+  tabbablesOnlyReact: [],
+  tabbablesOnlyVue: [],
+  tabOrder: [],
 });
 
 const entry = (patch: Partial<DiffEntry>): DiffEntry => ({

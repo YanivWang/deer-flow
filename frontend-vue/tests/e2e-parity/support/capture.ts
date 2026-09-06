@@ -52,6 +52,8 @@ export type ParityCapture = {
   geometry: Record<string, GeometrySample | null>;
   /** 取样时刻的 `document.activeElement`，归一成一句话。见 describeFocus。 */
   focus: string;
+  /** 取样时刻**能用 Tab 走到**的元素，按 DOM 顺序，各归一成一句话。见 sampleTabbables。 */
+  tabbables: string[];
 };
 
 /**
@@ -356,6 +358,67 @@ export async function describeFocus(page: Page): Promise<string> {
   });
 }
 
+/**
+ * 取样时刻**能用 Tab 走到**的元素，按 DOM 顺序。
+ *
+ * **它比 aria 树多出来的信息是「能不能 tab 到」**：一个节点可以在可访问性树里
+ * 好端端地待着，却因为 `tabindex="-1"`、`disabled`、`display:none` 或者被
+ * `inert` 盖住而根本走不到——反过来，一个 `tabindex="0"` 的 `<div>` 在树里
+ * 可能只是个 generic。两个应用的 aria 树逐行相同、tab 序却不同，是完全可能的，
+ * 而在这之前没有任何一档量它（wave 86 那处「上游多一层 menu > link > menuitem
+ * 嵌套可交互元素」正是这一类：多出来的那个 `<a>` 会**自己进 tab 序**）。
+ *
+ * **判据取「原生可聚焦 + 显式 tabindex >= 0」，再逐个问浏览器它到底可不可见**：
+ * `offsetParent` 为空（`display:none` 或祖先如此）与 `disabled` 都排除。
+ * `visibility:hidden` 靠 computed style 排除。**不排 `opacity: 0`**——
+ * 那种元素照样能 tab 到，那正是 wave 91 那一档要管的事。
+ *
+ * **不做完整的 tabindex 排序**：正数 tabindex 会插队，但那本身就是一处该报的
+ * 差异；这里按 DOM 顺序取，两边一旦有一边用了正数 tabindex，顺序档就会报出来。
+ *
+ * **描述只取「标签 + 显式 role」，不取名字**——这一条是量出来才定的。
+ * 第一版把名字也放进来，114 行差异里**只有一处是新东西**：
+ * 其余 40 行是「上游把字写死成英文、本仓翻译了」那一类（名字不同 → 同一颗键
+ * 在两边被当成两个不同的项）在这一档里的重复，还有 8 行是
+ * `button "🏷️GitHub Issue triage"` vs `button "🏷️ GitHub Issue triage"`
+ * ——emoji 与标题之间差一个空白文本节点，而 aria 档按可访问名比、根本没报它。
+ *
+ * **这一档要回答的只有一个问题：「能不能 tab 到」。名字那一半是 aria 档的活。**
+ * 把名字放进来，等于让同一处差异在两档里各记一次（坑 219 的同一件事）。
+ */
+export async function sampleTabbables(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const selector = [
+      "a[href]",
+      "button",
+      "input",
+      "select",
+      "textarea",
+      "summary",
+      "[tabindex]",
+      "[contenteditable=true]",
+    ].join(",");
+    const describe = (element: Element) => {
+      const tag = element.tagName.toLowerCase();
+      const type = tag === "input" ? element.getAttribute("type") : null;
+      const role = element.getAttribute("role");
+      return `${tag}${type ? `[${type}]` : ""}${role ? `(${role})` : ""}`;
+    };
+    return [...document.querySelectorAll(selector)]
+      .filter((element) => {
+        if (element.hasAttribute("disabled")) return false;
+        if (element.getAttribute("aria-hidden") === "true") return false;
+        const tabindex = element.getAttribute("tabindex");
+        if (tabindex !== null && Number(tabindex) < 0) return false;
+        if (!(element instanceof HTMLElement)) return false;
+        if (element.offsetParent === null && element.tagName !== "BODY")
+          return false;
+        return getComputedStyle(element).visibility !== "hidden";
+      })
+      .map(describe);
+  });
+}
+
 export async function captureScenario(
   page: Page,
   base: string,
@@ -378,7 +441,8 @@ export async function captureScenario(
     );
     const geometry = await sampleGeometry(page, scenario, state);
     const focus = await describeFocus(page);
-    return { aria, requests, geometry, focus };
+    const tabbables = await sampleTabbables(page);
+    return { aria, requests, geometry, focus, tabbables };
   } finally {
     page.off("request", onRequest);
   }

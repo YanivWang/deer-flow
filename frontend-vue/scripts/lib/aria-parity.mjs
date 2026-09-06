@@ -64,22 +64,22 @@ export function normalizeAriaSnapshot(snapshot) {
  * 只报**第一处**分岔：一次真的重排会让后面全部错位，全报出来是同一处差异的 N 个投影
  * （坑 219）。
  */
-export function diffAriaOrder(reactSnapshot, vueSnapshot) {
-  const strip = (text) =>
-    text
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-  const react = strip(reactSnapshot);
-  const vue = strip(vueSnapshot);
+/**
+ * 两个**序列**里公共多重集的相对顺序差异，最多一行。
+ *
+ * `diffAriaOrder` 与 tab 序那一档共用这一份：它们要回答的是同一个问题
+ * ——「同样一组东西，两边摆的次序一不一样」。**一边多出来的项不参与**
+ * （那由各自的多重集差异那一档负责报），所以「多包一层容器」「多一颗按钮」
+ * 都不会在这里造成误报。
+ */
+export function diffSequenceOrder(reactLines, vueLines, label) {
   const count = (lines) => {
     const map = new Map();
     for (const line of lines) map.set(line, (map.get(line) ?? 0) + 1);
     return map;
   };
-  const reactCount = count(react);
-  const vueCount = count(vue);
-  /** 公共多重集：每一行取两边出现次数的较小值。 */
+  const reactCount = count(reactLines);
+  const vueCount = count(vueLines);
   const budget = new Map();
   for (const [line, n] of reactCount)
     budget.set(line, Math.min(n, vueCount.get(line) ?? 0));
@@ -95,13 +95,26 @@ export function diffAriaOrder(reactSnapshot, vueSnapshot) {
     }
     return out;
   };
-  const a = keepCommon(react);
-  const b = keepCommon(vue);
+  const a = keepCommon(reactLines);
+  const b = keepCommon(vueLines);
   for (let i = 0; i < a.length; i++) {
     if (a[i] !== b[i])
-      return [`第 ${i + 1} 个公共节点 React=${a[i]} Vue=${b[i]}`];
+      return [`第 ${i + 1} 个${label} React=${a[i]} Vue=${b[i]}`];
   }
   return [];
+}
+
+export function diffAriaOrder(reactSnapshot, vueSnapshot) {
+  const strip = (text) =>
+    text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+  return diffSequenceOrder(
+    strip(reactSnapshot),
+    strip(vueSnapshot),
+    "公共节点",
+  );
 }
 
 export function diffAriaLines(reactSnapshot, vueSnapshot) {
