@@ -269,7 +269,7 @@
       "tabbablesOnlyVue": [],
       "tabOrder": []
     },
-    "agents-feature-disabled/desktop/light/en-US": {
+    "agents-feature-disabled#default/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -282,7 +282,7 @@
       "tabbablesOnlyVue": [],
       "tabOrder": []
     },
-    "agents-feature-disabled/desktop/light/zh-CN": {
+    "agents-feature-disabled#default/desktop/light/zh-CN": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
       "requestsOnlyReact": [],
@@ -293,6 +293,58 @@
       "depth": [],
       "tabbablesOnlyReact": [],
       "tabbablesOnlyVue": [],
+      "tabOrder": []
+    },
+    "agents-feature-disabled#loading/desktop/light/en-US": {
+      "ariaOnlyReact": [
+        "- button \"New Agent\"",
+        "- text: Loading..."
+      ],
+      "ariaOnlyVue": [
+        "- /url: /workspace/agents/new",
+        "- link \"New Agent\":",
+        "- status: Loading agents…"
+      ],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [
+        "GET /api/models"
+      ],
+      "geometry": [],
+      "focus": [],
+      "order": [],
+      "depth": [],
+      "tabbablesOnlyReact": [
+        "button"
+      ],
+      "tabbablesOnlyVue": [
+        "a"
+      ],
+      "tabOrder": []
+    },
+    "agents-feature-disabled#loading/desktop/light/zh-CN": {
+      "ariaOnlyReact": [
+        "- button \"新建智能体\"",
+        "- text: 加载中..."
+      ],
+      "ariaOnlyVue": [
+        "- /url: /workspace/agents/new",
+        "- link \"新建智能体\":",
+        "- status: 正在加载智能体…"
+      ],
+      "requestsOnlyReact": [],
+      "requestsOnlyVue": [
+        "GET /api/models"
+      ],
+      "geometry": [],
+      "focus": [],
+      "order": [],
+      "depth": [],
+      "tabbablesOnlyReact": [
+        "button"
+      ],
+      "tabbablesOnlyVue": [
+        "a"
+      ],
       "tabOrder": []
     },
     "browser-feature/desktop/light/en-US": {

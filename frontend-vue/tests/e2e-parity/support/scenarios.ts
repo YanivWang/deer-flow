@@ -852,10 +852,98 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     routes: [
       { pattern: "**/api/features", json: { agents_api: { enabled: false } } },
     ],
-    settle: [
+    /*
+      **`settle` 是空的，这一条是有意的**（wave 135）。
+
+      规矩是「settle 必须在每一个终态下都成立」（wave 129 立的）。这个场景的两个终态
+      **一个共有的元素都没有**：feature 关掉时本仓整页换成 `AgentsFeatureDisabled`
+      （`v-if="featureDisabled"`），连页头都不在。所以把等待整个交给各终态自己的步骤
+      ——几何取样取的是 `settle` **与** `state.steps` 里的 visible 锚点
+      （见 capture.ts 的 sampleGeometry），一格都不会少。
+
+      **`loading` 那个终态第一次让 agents 画廊本体进取样面。** 此前这条场景只走
+      feature 关掉那一支，画廊页（页头 + 新建入口 + 列表）**一行台账都没有**
+      ——「天生看不见的八类」里的第⑦类。
+    */
+    settle: [],
+    states: [
       {
-        kind: "visible",
-        target: { text: /contact your administrator|联系管理员/i },
+        id: "default",
+        steps: [
+          {
+            kind: "visible",
+            target: { text: /contact your administrator|联系管理员/i },
+          },
+        ],
+      },
+      /*
+        把 feature 打开、再让 `/api/agents` 慢下来，两个应用就都停在各自的加载分支上
+        （`delayMs` 见 ParityRouteOverride，wave 134 加的）。终态的路由装在场景的之后，
+        所以这里的 `/api/features` 覆盖掉上面那条关闭态（**注释里不能写 glob——
+        `*` 加 `/` 就是注释结束符，线索 277，这一轮又踩了一次**）。
+
+        两边都有这一支（判据：**grep 渲染点**）——上游
+        `frontend/src/components/workspace/agents/agent-gallery.tsx:39` 的
+        `isLoading ? …`，本仓 `app/pages/workspace/agents/index.vue:128`。
+
+        **锚点只能是那句加载文案，而且两边措辞不一样**：上游用 `t.common.loading`
+        （`Loading...` / `加载中...`），本仓有一条自己的 `agents.loading`
+        （`Loading agents…` / `正在加载智能体…`，上游词典里没有这个 key）。
+        找不到一个「夹具喂进去的词」可用，也不能拿页头当锚点——页头在加载前就在，
+        钉它等于什么都没等（wave 130 的教训）。所以正则四选一，**措辞差异本身就是
+        要量的东西**，它会如实出现在台账里。
+      */
+      {
+        id: "loading",
+        routes: [
+          {
+            pattern: "**/api/features",
+            json: { agents_api: { enabled: true } },
+          },
+          { pattern: "**/api/agents", delayMs: 15_000, json: [] },
+        ],
+        /*
+          **两个锚点，缺一不可**——第一版只钉那句加载文案，**负向验证当场抓到它太松**：
+          把上面那条打开 feature 的覆盖去掉（本该退回「功能已关闭」那一页、锚点等不到），
+          实测 **zh-CN 红了、en-US 却绿了（395ms）**。原因是本仓那句加载文案的条件是
+          `!features.loaded.value || agentCatalog.loading.value`——`/api/features` 还没回来
+          的那一小段里它同样在，于是锚点撞上的是「feature 还没查到」而不是
+          「agents 还在取」。两种语言表现不同，正说明那是一场竞态。
+
+          加一条**页头 heading** 当前置锚点：两个应用的画廊页头都是 `<h1>{agents.title}</h1>`，
+          而 feature 关掉那一页两边画的都是 `<p>`（`agents-feature-disabled.tsx:15`），
+          所以等到这个 heading 就等到了「feature 查回来且是开着的」。
+
+          **第一版拿「新建智能体」的文本当这条锚点，实测本仓这一侧等不到**：
+          那颗控件加了图标之后，Vue 模板在图标与插值之间留了一个空白文本节点，
+          `textContent` 成了 `" New Agent "`，而 **Playwright 的 `getByText` 用正则时
+          不做空白归一**；上游 JSX 里图标与文字紧挨着，所以那一侧照常匹配。
+          手动挤掉空白会被 prettier 格式化回来——**换成 role + 可访问名，
+          而可访问名是归一化过的**。
+        */
+        steps: [
+          {
+            kind: "visible",
+            target: { role: "heading", name: /^(Agents|智能体)$/ },
+          },
+          /*
+            新建入口也要有一格几何取样：wave 135 第一次量它的时候
+            `width Δ-22.6 / height Δ4 / fontSize 16px vs 14px`（本仓手写了一版按钮样式、
+            还少一个加号图标），改成 `buttonVariants()` + `<Plus>` 之后要有人盯着它。
+
+            **正则不加 `^$`**：本仓那颗控件的 `textContent` 是 `" New Agent "`
+            （模板在图标与插值之间留了一个空白节点，见 index.vue 那段注释），
+            而 Playwright 的 `getByText` 用正则时不做空白归一。不加锚定就两边都匹配得到，
+            而且 `text=` 只取**最内层**包含这段文字的元素，所以不会落到 header 上。
+          */
+          { kind: "visible", target: { text: /New Agent|新建智能体/ } },
+          {
+            kind: "visible",
+            target: {
+              text: /^(Loading\.\.\.|加载中\.\.\.|Loading agents…|正在加载智能体…)$/,
+            },
+          },
+        ],
       },
     ],
     dimensions: [DEFAULT_DIMENSION, ZH_DIMENSION],

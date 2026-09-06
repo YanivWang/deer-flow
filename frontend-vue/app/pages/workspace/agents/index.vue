@@ -12,8 +12,10 @@
                    带边框的提示」，两边在可访问性树上因此差了 7 行、几何上差了
                    5 项（居中空态 vs 页面内一段提示）。
 */
+import { Plus } from "lucide-vue-next";
 import { computed, ref } from "vue";
 
+import { buttonVariants } from "@/components/ui/button";
 import AgentCard from "@/components/workspace/agents/AgentCard.vue";
 import AgentSettingsDialog from "@/components/workspace/agents/AgentSettingsDialog.vue";
 import AgentsFeatureDisabled from "@/components/workspace/agents/AgentsFeatureDisabled.vue";
@@ -116,18 +118,51 @@ async function remove(agent: Agent) {
             {{ $i18n.t.value.agents.description }}
           </p>
         </div>
+        <!--
+          **样式走 `buttonVariants()`，不是手写一版**（wave 135）。上游那一颗是
+          `<Button onClick={handleNewAgent}><PlusIcon className="mr-1.5 h-4 w-4" />…`
+          （`agent-gallery.tsx:31`）：default 尺寸 h-9、`text-sm`、**带一个加号图标**。
+          手写的 `px-3 py-2` 那一版没有图标、字号也大一档，wave 135 第一次让这一屏
+          进取样面时几何档当场报出 `width Δ-22.6 / height Δ4 / fontSize 16px vs 14px`。
+          （同一份代码库里 `SkillSettings.vue` 那颗「创建技能」早就记着同一条教训。）
+
+          **元素仍然是 `<a>` 而不是 `<button>`**：这是一个「点了就跳到某个 URL」的控件，
+          业界主流写法是链接——可以中键新标签页打开、可以复制链接、读屏器念成链接。
+          上游那颗 `<Button onClick={router.push}>` 三样都做不到。这处差异有意留在台账里
+          （aria 与可 tab 元素各两行），**翻案判据**：上游给导航类按钮上了 `asChild`。
+
+          **加了图标之后不要再拿它的文本当对照锚点**：Vue 模板会在 `<Plus />` 与插值之间
+          留一个空白文本节点，`textContent` 是 `" New Agent "`，而上游 JSX 里图标与文字
+          紧挨着；**Playwright 的 `getByText` 用正则时不做空白归一**，于是同一条锚点
+          在本仓这一侧等不到、在上游那一侧照常匹配（wave 135 实测）。手动挤掉那个空白
+          会被 `prettier --write` 格式化回来。**可访问名不受影响**（两边都是 `New Agent`），
+          所以场景那边改用 `role: "heading"` 的锚点，这里保持惯用写法。
+        -->
         <NuxtLink
           v-if="featureEnabled"
           to="/workspace/agents/new"
-          class="bg-primary text-primary-foreground rounded-md px-3 py-2"
-          >{{ $i18n.t.value.agents.newAgent }}</NuxtLink
+          :class="buttonVariants()"
         >
+          <Plus class="mr-1.5 size-4" />
+          {{ $i18n.t.value.agents.newAgent }}
+        </NuxtLink>
       </header>
       <div class="flex-1 overflow-y-auto p-6">
+        <!--
+          加载占位是一个**居中的 h-40 盒子**，不是左上角一行字：上游
+          `frontend/src/components/workspace/agents/agent-gallery.tsx:40` 是
+          `<div className="text-muted-foreground flex h-40 items-center justify-center text-sm">`。
+          wave 135 第一次让这一屏进取样面，几何档当场报出
+          `height React=160 Vue=24 Δ-136` 与 `fontSize React=14px Vue=16px`。
+
+          **保留本仓的 `role="status"` 与那条更具体的文案**（上游用的是通用的
+          `t.common.loading`，本仓有一条自己的 `agents.loading`「正在加载智能体…」）
+          ——那两处差异有意留在台账里，各自有翻案判据。
+        -->
         <p
           v-if="!features.loaded.value || agentCatalog.loading.value"
           role="status"
-          class="text-muted-foreground"
+          class="text-muted-foreground flex h-40 items-center justify-center text-sm"
         >
           {{ $i18n.t.value.agents.loading }}
         </p>
