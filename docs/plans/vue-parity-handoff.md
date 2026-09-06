@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 100，2026-09-06）
+## 当前状态（截至 wave 101，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。
 - **动过 `frontend/` 的是二十二轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -364,6 +364,85 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 101）做了什么：**把挂了 38 轮的 pending 量到底：判据没满足，但病因订正了**
+
+**没动 `frontend/`，也没动任何代码。** 这一轮的产出是三组读数、两条订正、一笔新账。
+样本仍 **73**，台账仍 **95 行**，`pending` 仍 **1 条**——
+改的只有 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的**那一行**。
+
+### 一、按登记的判据跑，结论是「不翻案」
+
+wave 63 把判据收紧成「**同一次构建连取 20 次，React 只出现一个终态**」。
+照登记的复现方法跑（settle 仍是默认 700ms、每次取样换 fresh context、`--workers=1`）：
+
+| | 终态数 | 分布 |
+| --- | --- | --- |
+| React | **2** | B `62554acd79/d2326c6393` ×15 · **A `4080b1f763/45e907c1a3` ×5（25%）** |
+| Vue | **1** | `5c9e8360de/e2083d5866` ×20 |
+
+**判据未满足，`pending` 保留。** 这正是事先写下判据的意义——
+wave 63 当时就估过「20 次全干净约 2.4%」，这次没撞上，**不许改判据凑绿**（硬规则 3）。
+
+### 二、订正：A **不是**「慢」，它不会自愈
+
+原文写着「A 现在只是『慢』，几秒之后会收敛到 B」。这一轮在**取样之后**再等最长 90s：
+
+```
+A 样本 ×5 ：未收敛(>90s) ×5
+B 样本 ×15：2ms 2ms 2ms 3ms 3ms …（那颗元素根本不在，所以立刻算「已隐藏」）
+Vue  ×20 ：1~3ms
+```
+
+**5 个 A 样本无一收敛。** 回头看，整份历史记录反而全对得上：
+wave 29「5 次里 2 次等满 30s」才是真信号、被读成了「慢」；
+wave 62「14/14 都清掉了」只说明那 14 次**没出现 A**，不说明 A 会自愈。
+所以这条 pending 的病因不是「取样点抖」，是
+**上游这一屏有一个概率出现、且不会自己恢复的加载态**：
+`LoadMoreHistoryIndicator`（`frontend/src/components/workspace/messages/message-list.tsx`）
+的 `isHistoryLoading` 一直为 true，屏幕上一颗「Loading...」一直在转。
+**已挂成一页纸清单上的新账，wave 102 去查它是产品缺陷还是 mock 夹具造成的。**
+
+### 三、A → B 第一次被逐字确认
+
+把「等 Loading 消失」当成一条步骤加进场景（**只作探索，不作判据**），
+React 落在**与 B 逐字节相同**的哈希上 18/20。所以 A 是 B 的前一态、不是另一个产品形态——
+wave 63 只能从行数与请求数**推断**这件事。
+
+### 四、A 率的变化**不显著**，别当回归
+
+wave 63 是 4/23（17%），这一轮探索跑是 9/20（45%）、判据跑是 5/20（25%）。
+看着像涨了，但**这是两个都带误差的样本在比**：Fisher 双侧 **p = 0.094**，不显著。
+用二项尾概率算会得到 p = 0.0038——那是把 wave 63 的 4/23 当成真值，问错了问题。
+**两个检验给出相反结论时，先问哪一个才是这次的问题。**
+
+### 五、过程里踩了三次，如实记
+
+1. **`captureScenario` 的第 6 个位置参数是 `settleMs`，不是 timeout。**
+   我当成 timeout 传了 `90_000`，于是每个样本恰好睡 90 秒——**既让实验作废，
+   又等于把 settle 从 700 偷偷改成 90000（硬规则 2 明令不许动）**。
+   识破它靠的是「两个应用耗时完全一样、且恰好等于我填的那个数」。
+2. **`grep -v "isLoading"` 又一次把信号本身过滤掉了**（坑 257 的同一形状）：
+   要找的那一行正是 `{isLoading ? t.common.loading : …}`。
+   差一点写下「这一屏 DOM 里没有 Loading 文案」这个错结论，
+   而那个错结论会让第三节的读数变得无法解释。
+3. **`prettier --check <被忽略的文件>` 会打印「All matched files use Prettier code style!」**
+   ——**零个文件匹配也是这句话**。`baseline/` 在 `.prettierignore` 里，
+   原因就写在那份文件里：prettier 会把短数组折成一行、生成器不会，
+   两边都格式化会让 `*-check` 门禁在一次 `make format` 之后立刻红。
+   我据此误以为可以拿 prettier 规范化，结果把整份文件的缩进从 1 空格变成 2 空格、diff 97 行。
+   改法：**以 HEAD 原文为底稿、只替换那一行**，diff 回到 1 行。
+
+### 六、负向验证（4 条，全部真红）
+
+| 变异 | 期望 | 实测 |
+| --- | --- | --- |
+| 把理由缩到 2 字 | 红 | **红** |
+| 多挂一条无主的理由 | 红 | **红** |
+| 删掉理由 | 红 | **红** |
+| 偷偷把 pending 挪进 covered | 红 | **红** |
+
+还原后 `diff -q` 与备份逐字节一致，**没有假绿**。
 
 ## 上一轮（wave 100）做了什么：**命中测试进取样面**
 
@@ -2349,6 +2428,11 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 > `thread-history-mermaid` 的下载菜单、`chat` 那一屏的 composer 菜单
 > （各自的已知难点见 `docs/plans/vue-parity-cold-start.md` 那张表）。
 
+> **wave 101 把一页纸清单上的第 2 条（覆盖率棘轮的 pending）量到底了**：
+> 按登记的判据连取 20 次，React 仍是两个终态（15 B / 5 A），**判据未满足、pending 保留**；
+> 但顺带订正了它的病因——A **不会自愈**（5/5 等满 90s 都没收敛），
+> 所以真正挡路的是上游那个加载态，已作为新的一条挂在下面第三节。
+
 剩下的：
 
 ### 一、~~artifact 头部的标题不截断~~ —— **wave 82 量完并两边同改**
@@ -2367,7 +2451,28 @@ streaming 5574 / zh-CN settings 990 / settings 599 / reasoning 234），
 `return` 报绿，不是跳过，坑 226）。落地见 wave 83 那一节。
 **这条从此有机器守着**：`make standalone-sim` 每次都真做一遍。
 
-### 三、往下挖什么
+### 三、上游那个**不会自愈**的加载态（wave 101 新挂）
+
+`/workspace/chats/new` 提交首轮之后，React 有约 25% 的概率停在 A 态，
+而 A 态里 `LoadMoreHistoryIndicator`（`frontend/src/components/workspace/messages/message-list.tsx`）
+的 `isHistoryLoading` 一直是 true，屏幕上一颗「Loading...」一直转，**等满 90s 也不消失**（5/5）。
+Vue 同一份夹具下 20/20 干净，而且本仓 `MessageList.vue` 有逐字对齐的同一颗按钮。
+
+**先要分清的是「产品缺陷」还是「mock 夹具造成的」**，别直接改代码。可用的判据：
+
+- 同一条 probe 换 `backend` 跑一遍，看这个态还在不在；
+- 卡住的那 90 秒里 `GET /api/threads/{id}/messages/page` 到底**发没发、回没回**
+  （A 态在 700ms 取样点上这三条都还没发，但之后发没发没量过）；
+- 上游那颗 sentinel 在一个**全新**线程上凭什么 `hasMore` 为真。
+
+**本仓不是「没挂那颗按钮」**：`MessageList.vue` 有逐字对齐的同一颗，渲染条件
+`v-if="hasMoreHistory || historyLoadingMore || historyError"` 与上游
+`if (!hasMore && !isLoading) return null` 等价（wave 101 读过两边源码）。
+所以问题要问得更准：**为什么上游的 `isHistoryLoading` 会在一个全新线程上变成 true
+并一直不落，而本仓的 `historyLoadingMore` 不会。** 定案后若确属上游缺陷，
+按 fork-boundary 两边同改。
+
+### 四、往下挖什么
 
 `app/pages/` 下的路由一条不剩地量过了，台账清零，`icon-parity` 归零，
 守卫注释里点名的账也清完了。**下一轮要找活，只能从这三个方向选**：
