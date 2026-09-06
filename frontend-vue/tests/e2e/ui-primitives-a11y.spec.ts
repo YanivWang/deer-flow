@@ -283,9 +283,24 @@ test("assistant actions keep their accessible name and gain a hover tooltip", as
   const label = await branch.getAttribute("aria-label");
   expect(label?.trim()).toBeTruthy();
 
-  await branch.hover();
   const tooltip = page.locator('[data-slot="tooltip-content"]');
-  await expect(tooltip.first()).toBeVisible();
+  /*
+    **一次 hover 赌不到这颗 tooltip**（wave 113）。Reka 的 tooltip 是延时开的
+    ——探针实测安静时也要**约 600ms 的持续悬停**才出现（`delayDuration`）。
+    在这 600ms 里消息列表只要重渲一次，旧 trigger 卸载、计时器跟着没，
+    而鼠标**没有再动**，新 trigger 收不到 `pointerenter`：结果是
+    `element(s) not found` 一直等到超时，**而 hover 那一步本身没有报错**。
+    这解释了为什么它对负载敏感（重渲落在 hover 之后），也解释了为什么
+    wave 109 用 CPU 节流复现不了（整条用例一起变慢，重渲又落回 hover 之前）。
+
+    实测频率：跑完四个套件之后立刻 `--repeat-each=10` 是 **3 失败 / 7 通过**；
+    机器安静时 10/10。`toPass` 每一轮重新 hover 一次，把这个竞态消掉——
+    **断言本身一个字没松**：tooltip 仍然必须出现、仍然必须念出同一条 label。
+  */
+  await expect(async () => {
+    await branch.hover();
+    await expect(tooltip.first()).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
   await expect(tooltip.first()).toContainText(label!);
   // 读屏器读到的那份是 Reka 嵌在里面的 visually-hidden role="tooltip"：
   // 视觉层本身不承担语义。它被 1px clip 起来，所以按属性定位而不是按 role。
