@@ -78,7 +78,19 @@ export type ParityTarget =
   | { text: string | RegExp };
 
 /** 一个具名终态：`id` 进台账的键，`steps` 是走到它的交互。 */
-export type ParityState = { id: string; steps: ParityStep[] };
+export type ParityState = {
+  id: string;
+  steps: ParityStep[];
+  /*
+    这个终态**额外**装的路由覆盖，装在场景自己的之后（Playwright 后注册者优先）。
+
+    **为什么需要**（wave 128）：「天生看不见的八类」里的第⑥类是「只在某种后端状态下
+    才分叉的渲染路径」——错误态、降级态这些分支，只有让接口真的失败才走得到。
+    此前 `routes` 只能写在**场景**上，而一个场景只有一份后端；用 `states` 挂就能在
+    同一条场景里同时取「正常」与「失败」两个终态，**而且不动覆盖率棘轮的场景 id**。
+  */
+  routes?: ParityRouteOverride[];
+};
 
 export type ParityStep =
   | { kind: "visible"; target: ParityTarget }
@@ -212,14 +224,12 @@ export function locateTarget(page: Page, target: ParityTarget) {
   return page.getByText(target.text);
 }
 
-/** 把后端接上。mock 场景必须在 goto 之前调用。 */
-export async function applyScenarioBackend(
+/** 装一组路由覆盖。后注册者优先，所以调用顺序就是优先级顺序。 */
+async function installRoutes(
   page: Page,
-  scenario: ParityScenario,
+  overrides: ParityRouteOverride[] | undefined,
 ) {
-  if (scenario.backend === "mock") mockLangGraphAPI(page, scenario.mock);
-  // 后注册者优先，所以覆盖一定要在 mock 之后。
-  for (const override of scenario.routes ?? []) {
+  for (const override of overrides ?? []) {
     await page.route(override.pattern, (route) =>
       route.fulfill({
         status: override.status ?? 200,
@@ -232,6 +242,18 @@ export async function applyScenarioBackend(
       }),
     );
   }
+}
+
+/** 把后端接上。mock 场景必须在 goto 之前调用。 */
+export async function applyScenarioBackend(
+  page: Page,
+  scenario: ParityScenario,
+  state?: ParityState,
+) {
+  if (scenario.backend === "mock") mockLangGraphAPI(page, scenario.mock);
+  // 后注册者优先，所以覆盖一定要在 mock 之后；终态的又在场景的之后。
+  await installRoutes(page, scenario.routes);
+  await installRoutes(page, state?.routes);
 }
 
 /**
@@ -406,7 +428,7 @@ export async function runScenario(
   state: ParityState = scenarioStates(scenario)[0]!,
   timeout = 30_000,
 ) {
-  await applyScenarioBackend(page, scenario);
+  await applyScenarioBackend(page, scenario, state);
   await applyScenarioStubs(page, scenario);
   await applyDimension(page, base, dimension);
   await page.goto(`${base}${scenario.path}`);
@@ -1168,6 +1190,34 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     */
     states: [
       { id: "default", steps: [] },
+      /*
+        **后端失败那一支**（wave 128，第⑥类第一次进取样面）。
+
+        这一屏的错误态只有让 `/api/integrations/lark/status` 真的失败才走得到——
+        场景自己的 `routes` 是一份「正常」的响应，而一个场景只有一份后端，
+        所以这一支挂在 `states` 上（`ParityState.routes`，装在场景的之后、优先级更高）。
+
+        锚点用 `settings.integrations.loadFailed` 的两种译文：**两边词典都有这一条**
+        （上游 `en-US.ts:885`），所以它是一条真正共有的表面，不是本仓独有的分支。
+      */
+      {
+        id: "load-failed",
+        routes: [
+          {
+            pattern: "**/api/integrations/lark/status",
+            status: 500,
+            json: { detail: "boom" },
+          },
+        ],
+        steps: [
+          {
+            kind: "visible",
+            target: {
+              text: /(Failed to load integration status|加载集成状态失败)/,
+            },
+          },
+        ],
+      },
       {
         id: "permission-request",
         steps: [

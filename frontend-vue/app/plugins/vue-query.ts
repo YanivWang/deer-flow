@@ -7,10 +7,20 @@
                    持久化历史缓存」没有作用对象，这也是 06 把 A7/A8 从 M2 顺延到
                    M4a 的全部理由。
 
-                   `retry: false` 与上游一致。**不要改成默认的 3 次重试**：
+                   ~~`retry: false` 与上游一致。~~ **⚠ 这句话是错的，wave 128 实测推翻。**
+                   上游是 `new QueryClient()`——**没有 defaultOptions**，
+                   吃的是 TanStack 的默认值 `retry: 3`。对照台账在
+                   `integrations#load-failed` 那个终态上把它量了出来：
+                   同一次 500，**上游发了 3 次 `GET /api/integrations/lark/status`，
+                   本仓发 1 次**。
+
+                   **决定：保留本仓的 `retry: false`**，判据是 fork-boundary 里
+                   那条已授权的例外「vue 有更好的可以保留」——
                    thread history 的 404 意味着 thread 不存在（上游把 403 也当
-                   404 处理，为的是不泄露「这个 thread 存不存在」），重试三次
-                   只是把跳回空聊天页这件事推迟 3 秒。
+                   404 处理，为的是不泄露「这个 thread 存不存在」），而 TanStack 的
+                   默认重试**不分错误码**，于是重试三次只是把跳回空聊天页推迟 3 秒。
+                   **翻案判据**：哪天需要按错误码分流（5xx 重试、4xx 不重试），
+                   那时把这里换成一个 `retry: (count, error) => …`，而不是改回默认。
 
                    `refetchOnWindowFocus: false` 是全局默认，`THREAD_HISTORY_QUERY_POLICY`
                    里又写了一遍——不是冗余：那份策略是上游 `thread-history-options`

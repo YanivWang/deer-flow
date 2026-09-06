@@ -512,6 +512,52 @@
         "第 13 个公共可 tab 元素 React=div Vue=button"
       ]
     },
+    "integrations#load-failed/desktop/light/en-US": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [
+        "GET /api/integrations/lark/status",
+        "GET /api/integrations/lark/status",
+        "GET /api/integrations/lark/status"
+      ],
+      "requestsOnlyVue": [],
+      "geometry": [],
+      "focus": [
+        "React=button \"Account\" Vue=button \"Integrations\""
+      ],
+      "order": [],
+      "depth": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
+    },
+    "integrations#load-failed/desktop/light/zh-CN": {
+      "ariaOnlyReact": [],
+      "ariaOnlyVue": [],
+      "requestsOnlyReact": [
+        "GET /api/integrations/lark/status",
+        "GET /api/integrations/lark/status",
+        "GET /api/integrations/lark/status"
+      ],
+      "requestsOnlyVue": [],
+      "geometry": [],
+      "focus": [
+        "React=button \"账号\" Vue=button \"集成\""
+      ],
+      "order": [],
+      "depth": [],
+      "tabbablesOnlyReact": [
+        "div"
+      ],
+      "tabbablesOnlyVue": [],
+      "tabOrder": [
+        "第 13 个公共可 tab 元素 React=div Vue=button"
+      ]
+    },
     "integrations#permission-request/desktop/light/en-US": {
       "ariaOnlyReact": [],
       "ariaOnlyVue": [],
