@@ -41,7 +41,16 @@ const canonical = (map, name) => {
   落地页 / docs / blog 是**双向豁免**的面（对齐范围只覆盖产品面），
   它们独占的图标不是差异，留在报告里只会把真信号淹掉。
 */
-const EXEMPT = new Set(["landing", "docs", "blog", "magicui"]);
+// `magicui` wave 111 删掉：两个应用里都已经没有这个目录了（新加的 staleExempt 报的）。
+const EXEMPT = new Set(["landing", "docs", "blog"]);
+
+/*
+  哪些豁免真的在扫描过程中撞到过。**没撞到 = 那个目录已经不在了**，
+  留着的是一条过期豁免——下一个人会以为它还在挡着什么（线索 186）。
+  与下面 `VERIFIED` 的 stale 检查同一条理由：wave 111 之前这张表是单向的，
+  只有「撞到就跳过」，没有「表里的每一条还撞得到吗」。
+*/
+const exemptSeen = new Set();
 
 /*
   **`.ts` 也要扫。**
@@ -54,7 +63,10 @@ const EXEMPT = new Set(["landing", "docs", "blog", "magicui"]);
 */
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
-    if (EXEMPT.has(name)) continue;
+    if (EXEMPT.has(name)) {
+      exemptSeen.add(name);
+      continue;
+    }
     const p = join(dir, name);
     const st = statSync(p);
     if (st.isDirectory()) walk(p, out);
@@ -356,10 +368,11 @@ const VERIFIED = {
   // —— 两边 primitive 实现不同，不是产品面差异 ——
   Bookmark: "ai-elements/ 的内部件，本仓那一层用 reka 自己的结构",
   GripVertical: "ui/ 的 resizable 手柄，本仓走 splitpanes",
-  // —— 改动面板双视图结构不同（wave 69 核过）——
-  FileMinus: "workspace-change-panel 的双视图，本仓那一屏结构不同",
-  FilePlus: "同 FileMinus",
-  FilePenLine: "同 FileMinus",
+  // —— 改动面板那三条（FileMinus / FilePlus / FilePenLine）wave 111 删掉了 ——
+  // wave 69 记的是「本仓那一屏结构不同」，而 wave 87 重做改动面板之后**两边都用了**
+  // （上游是 `FileMinusIcon` 等别名，本仓是裸名，canonical 之后同一颗）。
+  // 也就是说这条豁免自 wave 87 起就过期了，而 `stale` **一直在报**——
+  // 没有人读那一行，因为收工清单只核最后那句「共 0 处待核」。见下面的 exitCode。
   // —— 名字撞车 / 第三方内部 ——
   Github:
     "上游画的是**本地组件** `components/workspace/github-icon.tsx`（手写 svg），" +
@@ -389,10 +402,23 @@ console.log(`   只有 Vue  用：${onlyV.join("、") || "无"}`);
 console.log(
   `   （另有 ${Object.keys(VERIFIED).length - stale.length} 条已核实并排除，理由写在 VERIFIED 表里）`,
 );
+const staleExempt = [...EXEMPT].filter((name) => !exemptSeen.has(name));
+if (staleExempt.length)
+  console.log(
+    `   ⚠ EXEMPT 表里这几个目录在两边都不存在了，删掉或改名：${staleExempt.join("、")}`,
+  );
 if (stale.length)
   console.log(
     `   ⚠ VERIFIED 表里这几条已经不再出现，回去重看一遍再删：${stale.join("、")}`,
   );
+/*
+  **过期的豁免要让这条门禁红**（wave 111）。收工清单上写的读数一直是
+  「0 处待核，**不报 stale**」——而 `stale` 从 wave 87 起就一直在报那三条，
+  连着几十轮没有人发现：核清单的人只 grep 最后那句「共 0 处待核」，
+  ⚠ 那一行在它上面。**一句要靠人眼读的断言，等于没有断言**（线索 194 的同一形状）。
+  现在它自己会把退出码变成 1。
+*/
+if (stale.length || staleExempt.length) process.exitCode = 1;
 /*
   **尺寸也要有一档全仓的。**
 

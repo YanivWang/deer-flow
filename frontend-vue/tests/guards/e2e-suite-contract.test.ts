@@ -101,6 +101,17 @@ describe("E2E 套件布局", () => {
     //               install/build/test/e2e 都不依赖它（见 make standalone-check）。
     //               把它放进聚合入口，等于把独立性这条硬要求悄悄降级成建议。
     const standalone = new Set(["external", "visual", "parity"]);
+    /*
+      反方向（wave 111）：这三个 id 必须真的还是 config。此前只有正方向——
+      「非 standalone 的都要进聚合入口」；一个改了名的套件会**同时**从
+      `expected` 里消失、又在 `standalone` 里留一条死配置，两头都不红，
+      而它从此不进任何聚合入口也没人知道（线索 186 那一类）。
+    */
+    const suiteIds = new Set(configFiles.map(suiteIdOf));
+    expect(
+      [...standalone].filter((id) => !suiteIds.has(id)),
+      "standalone 里点名的套件已经不存在了：删掉它，或者跟上改名",
+    ).toEqual([]);
     const expected = configFiles
       .map(suiteIdOf)
       .filter((id) => !standalone.has(id))
