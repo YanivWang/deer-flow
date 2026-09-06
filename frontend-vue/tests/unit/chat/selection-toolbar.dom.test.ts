@@ -27,6 +27,7 @@ import {
   createWorkspaceToastStore,
   workspaceToastKey,
 } from "@/core/workspace-shell/toast";
+import { installAnimationFrameStub } from "../../support/animation-frame-stub";
 
 const toastStore = createWorkspaceToastStore();
 
@@ -36,21 +37,19 @@ class ResizeObserverStub {
   unobserve() {}
 }
 
+let animationFrames: ReturnType<typeof installAnimationFrameStub>;
+
 beforeEach(() => {
   toastStore.clear();
   vi.stubGlobal("useNuxtApp", () => ({
     $i18n: { t: ref(enUS), locale: ref("en-US") },
   }));
   vi.stubGlobal("ResizeObserver", ResizeObserverStub);
-  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
-    window.setTimeout(() => callback(performance.now()), 16),
-  );
-  vi.stubGlobal("cancelAnimationFrame", (handle: number) =>
-    window.clearTimeout(handle),
-  );
+  animationFrames = installAnimationFrameStub();
 });
 
 afterEach(() => {
+  animationFrames.cleanup();
   vi.unstubAllGlobals();
   // 坑 130：工具条是 fixed 的，留在 body 上会遮住下一条用例。
   document.body.innerHTML = "";

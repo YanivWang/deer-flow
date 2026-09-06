@@ -17,6 +17,7 @@ import {
   createWorkspaceToastStore,
   workspaceToastKey,
 } from "@/core/workspace-shell/toast";
+import { installAnimationFrameStub } from "../../support/animation-frame-stub";
 
 const toastStore = createWorkspaceToastStore();
 
@@ -26,20 +27,18 @@ class ResizeObserverStub {
   unobserve() {}
 }
 
+let animationFrames: ReturnType<typeof installAnimationFrameStub>;
+
 beforeEach(() => {
   vi.stubGlobal("useNuxtApp", () => ({
     $i18n: { t: ref(enUS), locale: ref("en-US") },
   }));
   vi.stubGlobal("ResizeObserver", ResizeObserverStub);
-  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
-    return window.setTimeout(() => callback(performance.now()), 16);
-  });
-  vi.stubGlobal("cancelAnimationFrame", (handle: number) =>
-    window.clearTimeout(handle),
-  );
+  animationFrames = installAnimationFrameStub();
 });
 
 afterEach(() => {
+  animationFrames.cleanup();
   vi.unstubAllGlobals();
 });
 

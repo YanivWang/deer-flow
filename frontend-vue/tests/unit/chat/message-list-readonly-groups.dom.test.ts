@@ -20,6 +20,7 @@ import {
   createWorkspaceToastStore,
   workspaceToastKey,
 } from "@/core/workspace-shell/toast";
+import { installAnimationFrameStub } from "../../support/animation-frame-stub";
 
 /*
   ArtifactFileCards 的 `.skill` 安装走真实的 skills API 与 workspace toast，
@@ -53,6 +54,8 @@ class ResizeObserverStub {
   unobserve() {}
 }
 
+let animationFrames: ReturnType<typeof installAnimationFrameStub>;
+
 beforeEach(() => {
   toastStore = createWorkspaceToastStore();
   skillsApi.installSkill.mockReset();
@@ -60,15 +63,11 @@ beforeEach(() => {
     $i18n: { t: ref(enUS), locale: ref("en-US") },
   }));
   vi.stubGlobal("ResizeObserver", ResizeObserverStub);
-  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
-    window.setTimeout(() => callback(performance.now()), 16),
-  );
-  vi.stubGlobal("cancelAnimationFrame", (handle: number) =>
-    window.clearTimeout(handle),
-  );
+  animationFrames = installAnimationFrameStub();
 });
 
 afterEach(() => {
+  animationFrames.cleanup();
   vi.unstubAllGlobals();
 });
 
