@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 126，2026-09-07）
+# React → Vue 平替：挂账总清单（截至 wave 127，2026-09-07）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -55,8 +55,12 @@
 
 ---
 
-## 三、这一轮（wave 78~126）清掉的
+## 三、这一轮（wave 78~127）清掉的
 
+- **第⑤类（primitive 默认值）量完了，判定不做**（wave 127，代码改动为零）：
+  按 `data-slot` 比语义属性，73 个样本 **2519 行**，**只在一边出现的 slot 名就有 62 个**
+  ——两套 primitive 的词汇表本来就不同（splitpanes vs react-resizable-panels 是早就
+  决定的分叉）。做成常驻等于往台账灌 2500 行「已决定」。**翻案判据**：两边词汇表收敛时再量
 - **上一轮的产出立刻违反了那份文件自己的规矩**（wave 126）：`aria-parity.mjs` 的头
   写着「两份各自维护的归一化迟早会分叉」，而 wave 125 加 `normalizeAriaTree` 时
   **在同一个文件里抄了第二份**。抽成一份共享规则 + 一条**同源用例**
