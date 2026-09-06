@@ -113,9 +113,6 @@ export type GeometrySample = {
   hit: string;
 };
 
-/** 会随时间或随机数变化、且不体现产品行为的查询参数。 */
-const VOLATILE_QUERY_KEYS = new Set(["_", "t", "ts", "cacheBust"]);
-
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -156,8 +153,21 @@ export function normalizeRequest(
     )
     .join("/");
 
+  /*
+    **这里原来还有一张 `VOLATILE_QUERY_KEYS = {_, t, ts, cacheBust}` 的丢弃表**，
+    wave 121 量掉了：给这段装探针跑一整轮，**116 次查询参数观测，`DROPPED` 0 次**
+    ——四条一条都没响过。而那个 0 是**算出来的**：同一轮的控制组打印了实际出现的
+    参数（`include_files` 48 / `include_diff` 48 / `limit` 8 / `task_id`、`offset`、
+    `event_types` 各 4），证明探针在跑（线索 195）。
+
+    删掉的理由不是「没用」，是**它在抹信息而没有证据**（硬规则 2：归一化规则只能
+    因为实测而增加）——`t` / `ts` 完全可能是产品自己的参数名，真出现时会被静默丢掉，
+    与 wave 120 那三个夹具 id 是同一类失效。
+
+    **真需要再加时的做法**：先让台账把那个抖动的参数报出来（它会作为一条
+    requests 差异出现），拿着那条读数再加，别凭「看起来像缓存参数」加。
+  */
   const params = [...parsed.searchParams.entries()]
-    .filter(([key]) => !VOLATILE_QUERY_KEYS.has(key))
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([key, value]) => `${key}=${value}`);
   const query = params.length ? `?${params.join("&")}` : "";
