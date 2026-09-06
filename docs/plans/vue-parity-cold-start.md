@@ -8,7 +8,7 @@
 
 ## 开工指令（整段贴给新窗口）
 
-你接手一个已经跑了 **107 轮**的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
+你接手一个已经跑了 **108 轮**的长期任务：把 `frontend-vue/`（Nuxt/Vue）对齐
 `frontend/`（Next.js/React），目标是「移走 `frontend/` 之后 Vue 仍能自足」。
 仓库在 `/Users/wangcheng/Documents/workSpace/frontEnd/aiAppSpace/deer-flow`，
 分支 `main-wc`，**接手时 HEAD 是 wave 106 的 docs 提交，已推到
@@ -35,7 +35,7 @@ wave 101~106 连着六轮都是这个形状，被撞出来的假话已经有八�
 2. `docs/plans/vue-parity-handoff.md` —— **轮次交接文档**，约 4100 行。
    必读：开头的「当前状态 / 门禁实测值」、「下一轮」那一节、
    结尾的「其他常踩的坑」（**270 条**里最近的十几条）。中间各轮的记录按需查。
-   **最近七轮（101~107）在最前面，先读它们**——这个阶段的方法论都在那里。
+   **最近八轮（101~108）在最前面，先读它们**——这个阶段的方法论都在那里。
 3. Claude 记忆 `deerflow-parity-harness-plan`
    （`/Users/wangcheng/.claude/projects/-Users-wangcheng-Documents-workSpace-frontEnd-aiAppSpace-deer-flow/memory/`）
    —— 每一轮的实测记录与 **270 条踩坑线索全文**。同目录下另有
@@ -48,7 +48,7 @@ wave 101~106 连着六轮都是这个形状，被撞出来的假话已经有八�
 - **默认只改 `frontend-vue/`。** 例外只有一种：**上游自己是坏的**——
   那时按「业界主流做法两边同改」，`frontend/` 与 `frontend-vue/` 同一条提交里改，
   再单独一条 chore 提交把 `frontend-vue/baseline/upstream-marker.json` 推到那条 fix
-  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十二轮**（wave 106 / 107 都没动），
+  （`make -C frontend-vue upstream-accept`）。**动过 `frontend/` 的至今是二十二轮**（wave 106 / 107 / 108 都没动），
   别传这个数字，用 `git log --format='%h %ci %s' --since=2026-08-25 -- frontend/src frontend/tests` 量。
 - **不要中途提问。** 取舍自己定，写进提交说明。分歧的兜底判据是**按业界主流做法**。
 - **每轮收工写交接文档 + 一页纸清单 + 记忆，然后自动开下一轮**，
@@ -156,6 +156,12 @@ make -C <abs>/frontend-vue e2e-external   # 3 passed（它**不在任何聚合�
 - 「测试红了」第一步永远是分「用例过期」还是「产品回归」，两者修法相反。
 - 遇到疑似抖动：**先证因果**——干净树连跑 N 次、`git stash` 之后再跑、
   只还原可疑的那一个文件再跑。
+- **遇到「偶尔红」先用 CPU 节流复现，别换个时间重跑**（wave 108）：
+  `page.context().newCDPSession(page)` + `Emulation.setCPUThrottlingRate({ rate: 30 })`。
+  **两类的区分判据**：把机器调慢，失败点会不会移动——「断言钉错对象」那类调慢了
+  照样红在同一个语义上（它等的东西永远不来，wave 107 那条），「预算不够」那类是
+  「等的东西来了，只是晚了」（wave 108 量出第四条就是这一类，5s 预算用掉 77%）。
+  **默认 expect 预算 wave 108 已从 5s 提到 10s**（`tests/support/playwright-factory.ts`）。
 - **已知抖动现在是七条**，第七条是 wave 102 新加的，**与前六条不同类**：
   `tests/e2e-settings/settings.spec.ts:275`（12 路并发 `POST /api/memory/import`
   期望每个都是 200 或 409）。前六条都是「异步 / hover / 滚动 + 固定超时」，

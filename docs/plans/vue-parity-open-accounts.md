@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 107，2026-09-06）
+# React → Vue 平替：挂账总清单（截至 wave 108，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -54,8 +54,13 @@
 
 ---
 
-## 三、这一轮（wave 78~107）清掉的
+## 三、这一轮（wave 78~108）清掉的
 
+- **「负载抖动」第一次可以按需复现**（wave 108）：CDP 的
+  `Emulation.setCPUThrottlingRate` 当旋钮，实测第四条抖动在 30x 节流下第一条断言
+  用掉 **3832 / 5000ms**（77%）、50x 直接超时——**机制是 Playwright 默认的 5s
+  expect 预算**（用例本身有 30s，二十几秒没人用），不是「断言钉错对象」。
+  预算提到 10s；**只有第四条被复现验证过**，其余按症状同形推断，如实记
 - **后端枚举的镜像 + 一处静默跳过**（wave 107）：`DEERFLOW_DURABLE_STATUS` 的
   「Gateway 的 durable run status 全集」现在与后端 `RunStatus` 逐个比
   （`tests/guards/backend-enum-mirror.test.ts`）；`doc-facts` 的
@@ -164,7 +169,7 @@
 
 ---
 
-## 四、收工时的门禁读数（wave 107 逐条实跑）
+## 四、收工时的门禁读数（wave 108 逐条实跑）
 
 ```
 verify           exit 0    264 文件 / 2195 单测；词典 942 key / 18 unused
