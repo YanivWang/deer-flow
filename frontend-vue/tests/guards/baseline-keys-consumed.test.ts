@@ -51,7 +51,7 @@
                    `HAND_MAINTAINED` 之外，这里如实列出而不是假装能覆盖全部。
 */
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -108,6 +108,39 @@ const HAND_MAINTAINED = [
   "react-parity-scope.json",
   "route-payload-budget.json",
 ];
+
+/**
+ * 生成出来的 baseline —— 由某个脚本或用例写出，手加的键会在下一次重新生成时被写掉，
+ * 所以**不要求**它们声明 `$readers`。
+ *
+ * **每一份都要点名谁生成它，而那句话由下面的用例去撞。** wave 83 的教训是
+ * 「守卫注释里点名的上游符号在 frontend/src 里根本不存在」——散文写下的
+ * 「这份是生成的」同样会烂：生成器改名、挪走、或者干脆不再写这份文件，
+ * 而这里照样绿着。
+ *
+ * **为什么需要这张表**：wave 104 之前只有 HAND_MAINTAINED 一张，而校验是**单向**的
+ * （只查「表里的都真的在 baseline/ 里」）。于是新加一份**手工维护**的 baseline、
+ * 忘了登记，它就永远不必声明 `$readers`，**没有任何机器会发现**——
+ * 正是线索 229 那个形状（判据由一个看不见新东西的扫描面撑着）。
+ * 两张表合起来必须**恰好划分** `baseline/*.json`，与覆盖率棘轮的三个桶同构。
+ */
+/*
+  **模式要拼出来，不能写成字面量。** 这条检查扫的是源文件的文本，而扫描面里包含
+  **本文件自己**——第一版写成 `/writeFileSync|writeFile\(/`，于是当 GENERATED 指向
+  本守卫时，它匹配到的是自己那段正则的源码，判定「有写调用」而**假绿**
+  （wave 104 的负向验证 N5 当场抓到）。同线索 126 的形状：
+  **写进源码里的模式串会把自己算进扫描结果。**
+*/
+const WRITE_CALL = new RegExp(
+  ["write", "FileSync"].join("") + "|" + ["write", "File"].join("") + "\\(",
+);
+
+const GENERATED: Record<string, string> = {
+  "i18n-keys.json": "scripts/i18n-manager.mjs",
+  "openapi.snapshot.json": "scripts/gen-api-types.mjs",
+  "parity-diff.json": "tests/e2e-parity/diff.spec.ts",
+  "upstream-marker.json": "scripts/upstream-drift.mjs",
+};
 
 /** 注释剥掉之后，`app`/`scripts`/`tests` 里提到这份 baseline 文件名的源文件。 */
 function referencedBy(name: string): string[] {
@@ -168,6 +201,49 @@ describe("baseline 说明里「谁在引我」那句话", () => {
     expect(
       undeclared,
       "少了这条，下面那条用例会静默没有被测对象（同线索 131）",
+    ).toEqual([]);
+  });
+
+  it("两张表恰好划分 baseline/*.json（多一份少一份都要表态）", () => {
+    const declared = [...HAND_MAINTAINED, ...Object.keys(GENERATED)].sort();
+    const actual = [...baselines].sort();
+    expect(
+      declared,
+      "baseline/ 下多了或少了一份 .json：手工维护的进 HAND_MAINTAINED" +
+        "（并给它加 $readers），生成出来的进 GENERATED 并点名生成器——" +
+        "不表态的话它就永远不必声明 $readers，而没有任何机器会发现",
+    ).toEqual(actual);
+  });
+
+  it("GENERATED 点名的生成器确实存在，而且确实写这份 baseline", () => {
+    const broken: { baseline: string; generator: string; why: string }[] = [];
+    for (const [name, generator] of Object.entries(GENERATED)) {
+      const full = join(root, generator);
+      if (!existsSync(full)) {
+        broken.push({ baseline: name, generator, why: "生成器文件不存在" });
+        continue;
+      }
+      const text = stripComments(readFileSync(full, "utf8"));
+      if (!text.includes(name)) {
+        broken.push({
+          baseline: name,
+          generator,
+          why: "生成器里没提到这份 baseline",
+        });
+        continue;
+      }
+      if (!WRITE_CALL.test(text)) {
+        broken.push({
+          baseline: name,
+          generator,
+          why: "生成器里没有任何写文件调用",
+        });
+      }
+    }
+    expect(
+      broken,
+      "「这份是生成的」这句话烂了：生成器改名/挪走/不再写它——" +
+        "而在 wave 104 补上这条之前，烂了也没有任何东西会红（同 wave 83 的形状）",
     ).toEqual([]);
   });
 
