@@ -36,8 +36,11 @@ import {
 
 import { normalizeAriaSnapshot } from "../../../scripts/lib/aria-parity.mjs";
 import {
+  HISTORY_THREAD_ID_NEWEST,
+  HISTORY_THREAD_ID_OLDER,
   locateTarget,
   runScenario,
+  WORKSPACE_CHANGES_RUN_ID,
   type ParityDimension,
   type ParityScenario,
   type ParityState,
@@ -122,6 +125,10 @@ export const KNOWN_IDS = new Set([
   MOCK_THREAD_ID_2,
   MOCK_SIDECAR_THREAD_ID,
   MOCK_RUN_ID,
+  // wave 120 补：这三个是场景里的夹具 id，此前被当成客户端生成的抹掉了。
+  HISTORY_THREAD_ID_NEWEST,
+  HISTORY_THREAD_ID_OLDER,
+  WORKSPACE_CHANGES_RUN_ID,
 ]);
 
 /**

@@ -419,6 +419,17 @@ const MOCK_THREAD_ID = "00000000-0000-0000-0000-000000000001";
 const MOCK_RUN_ID = "00000000-0000-0000-0000-000000000099";
 const MOCK_THREAD_ID_2 = "00000000-0000-0000-0000-000000000002";
 
+/*
+  **每一个 UUID 形状的夹具 id 都必须进 `KNOWN_IDS`**（wave 120）。
+  `normalizeRequest` 把「UUID 形状且不在 KNOWN_IDS 里」的路径段抹成 `«generated»`
+  ——那是为了吃掉客户端随机生成的 id，但它对夹具 id 一样有效：**两个应用请求了
+  不同的夹具线程，归一之后会变成同一个字符串，差异就此消失**（硬规则 2：
+  每一条归一化都在抹掉信息）。这三个此前就漏在外面。
+  下面 `tests/unit/parity/known-ids.test.ts` 双向钉住这件事。
+*/
+export const HISTORY_THREAD_ID_NEWEST = "00000000-0000-0000-0000-00000000010a";
+export const HISTORY_THREAD_ID_OLDER = "00000000-0000-0000-0000-00000000010b";
+
 const MOCK_AGENTS = [
   {
     name: "test-agent",
@@ -631,7 +642,7 @@ flowchart TD
 \`\`\`
 `;
 
-const WORKSPACE_CHANGES_RUN_ID = "00000000-0000-0000-0000-0000000009c1";
+export const WORKSPACE_CHANGES_RUN_ID = "00000000-0000-0000-0000-0000000009c1";
 
 const HISTORY_THREADS = [
   {
@@ -952,12 +963,12 @@ export const PARITY_SCENARIOS: ParityScenario[] = [
     mock: {
       threads: [
         {
-          thread_id: "00000000-0000-0000-0000-00000000010a",
+          thread_id: HISTORY_THREAD_ID_NEWEST,
           title: "Newest chat",
           updated_at: "2026-07-04T10:00:00Z",
         },
         {
-          thread_id: "00000000-0000-0000-0000-00000000010b",
+          thread_id: HISTORY_THREAD_ID_OLDER,
           title: "Older chat",
           updated_at: "2026-07-03T10:00:00Z",
         },
