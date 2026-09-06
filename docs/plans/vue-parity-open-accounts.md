@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 118，2026-09-06）
+# React → Vue 平替：挂账总清单（截至 wave 119，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -54,8 +54,13 @@
 
 ---
 
-## 三、这一轮（wave 78~118）清掉的
+## 三、这一轮（wave 78~119）清掉的
 
+- **`standalone-check` 的正则要求带斜杠，安装期的写法一个都看不见**（wave 119）：
+  `"file:../frontend"` / workspace 的 `- "../frontend"` 都是 **BLOCKING 0**，
+  同一条加个斜杠就是 1。放宽主正则会多出 26 行假命中（Makefile 的 `@echo` 就有 9 行），
+  所以收窄到「安装期清单」这一类没有散文的文件。
+  **判据四步（install / build / test / e2e）到此第一次四格都有着落**
 - **判据里 e2e 那一半从没验过**（wave 118）：`--with-e2e` 此前**只跑 `e2e-parity`**，
   而那是唯一一个兄弟应用不在时**整组跳过**的套件。第一次真跑：把 `frontend/` 移开后
   `e2e-mock` 265+22+15+2+6、`e2e-backend` 2+5+2+3+3+5+1+1，**两组都绿**。
