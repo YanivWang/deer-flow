@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 111，2026-09-06）
+# React → Vue 平替：挂账总清单（截至 wave 112，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。
@@ -54,8 +54,13 @@
 
 ---
 
-## 三、这一轮（wave 78~111）清掉的
+## 三、这一轮（wave 78~112）清掉的
 
+- **`upstream-drift` 会打一句假的「无漂移」**（wave 112）：`git log -- <不存在的路径>`
+  **不报错、只返回空**，于是上游改个目录名，这份报告照样说「无漂移」——而这句话
+  在交接文档里是**被当证据引用**的。实测 HEAD 的脚本 exit 0 且打印「无漂移」。
+  同形的另外三张（i18n 扫描面的根与入口、`SUITE_INFRASTRUCTURE`、`SKIPPED_PREFIXES`）
+  一起补上。**至此 `tests/guards/` 与 `scripts/` 里「指向外部东西」的表都双向了**
 - **收工清单上「icon-parity 不报 stale」这句是假的**（wave 111）：`VERIFIED` 的
   stale 检查自 wave 87 起一直在报三条（`FileMinus`/`FilePlus`/`FilePenLine`，
   wave 87 重做改动面板之后两边都用了），而它只 `console.log`、不影响退出码——
@@ -189,10 +194,10 @@
 
 ---
 
-## 四、收工时的门禁读数（wave 111 逐条实跑）
+## 四、收工时的门禁读数（wave 112 逐条实跑）
 
 ```
-verify           exit 0    264 文件 / 2195 单测；词典 942 key / 18 unused
+verify           exit 0    264 文件 / 2197 单测；词典 942 key / 18 unused
                            产品 SFC 218（总 220）
 standalone-sim   exit 0    跑过 13 / 未跑 5（4 data + 1 e2e）/ 红 0      ← wave 83 新增
                            --with-e2e 实测 13 / 4 / 0（那一条：exit 0，47 条跳过）

@@ -8,13 +8,13 @@
 
 ---
 
-## 当前状态（截至 wave 111，2026-09-06）
+## 当前状态（截至 wave 112，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
   `54454b7c` = wave 43，`46f62dea` = wave 44，`f15c7181` = wave 45，`ca1c7f1d` = wave 46，
   `c12c4d37` = wave 47，`3f152764` = wave 48，`5978d533` = wave 49，`80ef4d15` = wave 50，
-  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）；`52a35b5b` = wave 110（独立性判据自己身上的两处单向检查）；`a750347f` = wave 111（icon-parity 的两张豁免表补成双向，过期豁免开始让门禁红）。
+  `a1d675d6` = wave 51，`3382f7e0` = wave 52，`333edeef` = wave 53，`ff2cd759` = wave 54，`c8b2d1a8` = wave 55，`509219ea` = wave 56，`ccf6d0b8` = wave 57，`3e47b1fd` = wave 58，`cffb11f4` = wave 59，`ed0439ee` = wave 60，`88d4859d` = wave 61（chore `891d3f7a`），`ff9552d8` = wave 62（chore `088ea168`），`85ca893a` = wave 63，`2759b3e8` = wave 64，`bc34c7b3` = wave 65，`2b2f56b7` = wave 66，`5cf9d44d` = wave 67，`e775ba9e` = wave 68，`585e0bc7` = wave 69（chore `eec54d3c`），`43d5f289` = wave 70，`32d71958` = wave 71，`3034bd05` = wave 72，`209c49db` = wave 73（chore `7630e6e3`），`16ca870e` = wave 74（chore `b0b7fcb6`），`7d2b7a30` = wave 75，`e96f0adf` = wave 76，`60b8f1e8` = wave 77，`ba84b142` = wave 78，`b79695de` = wave 79，`e1028406` = wave 80，`0722d66a` = wave 81（无代码改动），`c3399c3b` = wave 82（chore `809237ec`），`3703ae61` = wave 83（另有 `5a5580d5`：两处 drag 助手的观测缝），`55022f02` = wave 84，`27fb23ad` = wave 85，`3bfec0f9` = wave 86（chore `1677e96b`），`289cb588` = wave 87，`1083b122` = wave 88（chore `9abc8d0c`；另有 `55678738`：wave 87 漏改的那一份折叠断言），`91ab3b2a` = wave 89（chore `9cb61684`），`1e5a2815` = wave 90，`fa66fb66` = wave 91，`d36c2d60` = wave 92，`0ec3b9a4` = wave 93，`6804bd6b` = wave 94，`855c209c` = wave 95，`d21a1b67` = wave 96（另有 `a165c96c`：rAF stub 的定时器泄漏），`a16ff72a` = wave 97（chore `b92c90e0`，**两边同改**），wave 98 **只有度量与订正、没有代码改动**；wave 99 **是一次否定结论，代码改动为零**；`b34f4f4e` = wave 100；wave 101 **同样只有度量与订正**（只改了 `baseline/parity-scenario-coverage.json` 里 `$pendingReasons` 的一行），**没有代码改动**。wave 102~105 见各自那一节；`29a233e3` = wave 106（五处守卫缺口，**其中一处有活违规**）。`97089b4f` = wave 107（后端枚举镜像 + doc-facts 的静默跳过 + 一条 auth e2e 的根因修复）。`2afc0ba8` = wave 108（把「负载抖动」变成可复现实验，expect 预算 5s → 10s）；`059d8bd5` = wave 109（订正 108 的推断 + 清掉最后 7 处写死的 5s）；`52a35b5b` = wave 110（独立性判据自己身上的两处单向检查）；`a750347f` = wave 111（icon-parity 的两张豁免表补成双向，过期豁免开始让门禁红）；`bdf79e73` = wave 112（四张「指向外部东西」的表补反向校验；upstream-drift 的假「无漂移」）。
 - **动过 `frontend/` 的是二十二轮**（wave 52 实测订正，wave 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97 各加一轮）：
   wave **3 / 4 / 6 / 11 / 17 / 20 / 21 / 22 / 23 / 27 / 28 / 36 / 39 / 40 / 62 / 73 / 74 / 82 / 86 / 88 / 89 / 97**。
   此前这里只列了 36/39/40（那三行本身没说错，它们的范围是「wave 30 以来」），
@@ -91,10 +91,10 @@
 > 其余六个面板仍然没有合法的场景 id（棘轮要求 id 逐字等于 React spec 文件名），
 > 它们的差异只能靠 probe 找、靠单测守（线索 107）。
 
-### 门禁实测值（wave 111 收工时逐条跑过）
+### 门禁实测值（wave 112 收工时逐条跑过）
 
 ```
-make -C frontend-vue verify        exit 0；**264** 文件 / **2195** 单测，词典 942 key、18 unused
+make -C frontend-vue verify        exit 0；**264** 文件 / **2197** 单测，词典 942 key、18 unused
                                    （2183 → 2187 是 wave 104/105 加的；2187 → 2192 是 wave 106：
                                    agent-core 契约守卫 8 → 11、file-header-claims 8 → 10；
                                    2192 → **2195** 是 wave 107 新加的
@@ -225,6 +225,10 @@ useChannelConnections → providersQuery → fetchWithAuth 401`，
 **wave 33 赶上别的仓库在构建，load 一度到 60**：`e2e-settings` 与 `e2e-external` 两次
 `Timed out waiting 240000ms from config.webServer`（**基建超时，不是断言**），
 `ui-primitives-a11y.spec.ts:288` 的 hover tooltip 在 load 22 时红过一次。
+**wave 112 实测它的真实频率高得多**：四个套件连跑之后（load 7~9）立刻单跑
+`--repeat-each=10` 是 **3 失败 / 7 通过**；机器安静下来之后两次都 **10/10**。
+**「红过一次」这个记录严重低估了它。** 而 wave 109 已证明 CPU 节流复现不了它（70x 仍绿），
+所以下一轮要查它，用的复现条件是「跑完几个套件之后立刻跑」，不是节流。
 **load 降到 5 之后三套全绿。** 这台机器上 `webServer` 的 240s 在 load>20 时不够用，
 遇到就等负载，不要先去查产品。
 
@@ -402,6 +406,71 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 112）做了什么：**四张「指向外部东西」的表补上反向校验；`upstream-drift` 会打一句假的「无漂移」**
+
+**没动 `frontend/`。** wave 111 的正题（按**有没有反向校验**把表过一遍）被 icon-parity
+那件事岔开了，这一轮过完。**最值钱的一条是 `upstream-drift`。**
+
+### 一、`upstream-drift` 会打印一句假的「无漂移」
+
+`WATCHED = ["frontend/src", "frontend/tests/e2e"]` 喂给的是
+`git log <range> -- frontend/src frontend/tests/e2e`。**git 对一个不存在的 pathspec
+不报错，只会一条 commit 都不返回**——上游把某个目录改了名，这份报告照样打印
+「无漂移：marker 之后上游没有改动被监视的路径」，而**它其实什么都没看**。
+而「无漂移」这句话在本文档里是**被当证据引用**的（wave 97 那条）。
+
+**实测**：把 `frontend/tests/e2e` 改成不存在的名字，**HEAD 的脚本 exit 0 并打印
+「无漂移」**；改动后 exit 1，并说明「在这条修好之前，『无漂移』这个结论不成立」。
+
+### 二、i18n 扫描面点名的根与入口
+
+`PRODUCT_ROOTS` / `PRODUCT_ENTRY_FILES` 走 `git ls-files <root>`，**对不存在的路径
+同样不报错、只返回空**。把 `app/layouts` 改个名，清单会安静地少掉一整个目录，
+而「产品 SFC 218 / 总 220」这类数字**照样自洽**——它们就是从这里算出来的。
+与「白名单要能自证覆盖全」是同一件事的另一半。
+
+### 三、`doc-references` 的两张
+
+`SUITE_INFRASTRUCTURE`（从「套件」里排除的 5 个入口）此前只有正方向：一个改了名的
+入口会留一条死配置，同时它自己变成一个「新套件」进了清单，**两头都不红**。
+`SKIPPED_PREFIXES` 同理——指向已经不在的目录的排除项，看起来像「有意不扫」，
+实际什么都没排除。
+
+### 四、按判据筛过、**不是**缺口的（别重筛）
+
+`FORK_ROOT_DOCS`（已有「文件没了就拿掉」）、`LOCKSTEP`（已有「这些包都还在
+devDependencies 里」）、`SKIPPED_DIRS`（构建产物，死条目无害）、
+`CONSUMED`/`NOT_CONSUMED`（106）、`HAND_MAINTAINED`/`GENERATED`（104）、
+`SCAN_ROOTS`/`EXCLUDED_ROOTS`（105）、`CROSS_APP_BY_DESIGN`（110）、
+`VERIFIED`/`EXEMPT`（111）。**这一轮之后，`tests/guards/` 与 `scripts/` 里
+「指向外部东西」的表都双向了。**
+
+### 五、负向验证（5 条）
+
+| # | 变异 | 期望 | 实测 |
+| --- | --- | --- | --- |
+| 1 | `SUITE_INFRASTRUCTURE` 放一个改名的入口 | 红 | 红 |
+| 2 | `SKIPPED_PREFIXES` 放一个不存在的目录 | 红 | 红 |
+| 3 | `WATCHED` 放一个不存在的路径（新脚本） | 红 | 红 exit 1 |
+| 4 | 同上（**HEAD 的脚本**） | **绿** | **绿（洞）**，还打印「无漂移」 |
+| 5 | `PRODUCT_ROOTS` 放一个改名的目录 | 红 | 红（抛错） |
+
+### 六、`e2e-mock` 第一次跑红了一条，如实记
+
+红的是 `ui-primitives-a11y` 的 hover tooltip——**交接文档里的已知抖动第六条**。
+
+- 本轮改的是 scripts 与 guards，**碰不到浏览器里的 tooltip**；
+- 紧接着单跑 `--repeat-each=10`：**3 失败 / 7 通过**（load 7~9，刚跑完四个套件）；
+- 机器安静下来之后再跑两次 `--repeat-each=10`：**两次都 10/10**
+  （一次用旧的显式 5s、一次用现在继承的 10s）；
+- **所以「5s vs 10s」那组对照是被负载混淆的，不能当因果读**——差一点就写成
+  「wave 109 removing 5s 让它变差了」，那是错的；
+- 重跑 `e2e-mock` 收工读数 265 + 22 + 15 + 2 + 6 全绿。
+
+**这条抖动的真实频率比记录高得多**（负载上来时 30%），**而且 wave 109 已经证明
+CPU 节流复现不了它**（70x 仍绿）。下一轮值得正面查它：现在至少知道
+「四个套件连跑之后立刻跑它」能把频率抬到 30%，这比「红过一次」好用得多。
 
 ## 上一轮（wave 111）做了什么：**收工清单上「icon-parity 不报 stale」这句是假的，而且假了很多轮**
 
