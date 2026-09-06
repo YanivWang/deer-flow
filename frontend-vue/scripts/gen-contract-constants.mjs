@@ -10,9 +10,24 @@
                    这是三层同步方案里唯一**阻断**的一层：它是上游变更能直接
                    让 Vue 功能损坏的路径。
                    产物签入，所以窄 context 的 Docker 构建不需要 contracts/ 也能编译。
+
+                   **上面那句「唯一阻断的一层」以前只对点名的那几份成立**
+                   （wave 106）：本文件按写死的文件名读三份契约，而
+                   「`contracts/` 下还有没有第四份」没有任何机器在看——
+                   后端新加一份契约，`--check` 照样绿，Vue 这边没有任何征兆。
+                   现在 `CONSUMED` 与 `NOT_CONSUMED` 必须**恰好划分**
+                   `contracts/*.json`：新来一份就得表态，要么接进来，要么写清
+                   为什么前端用不到。`NOT_CONSUMED` **现在是空的**——豁免表为空，
+                   才说明判据收口选对了（线索 180）。
 */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,9 +45,62 @@ function readContract(name) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
-const subagent = readContract("subagent_status_contract.json");
-const slash = readContract("slash_skill_contract.json");
-const runEvents = readContract("run_event_stream_contract.json");
+/** 本脚本真的读进来、并且会进产物的契约。 */
+const CONSUMED = [
+  "subagent_status_contract.json",
+  "slash_skill_contract.json",
+  "run_event_stream_contract.json",
+];
+
+/**
+ * 认得、但前端用不到的契约：键是文件名，值是**为什么用不到**。
+ * 空表是正常状态；往里加一条就是在说「这份契约前端故意不跟」。
+ */
+const NOT_CONSUMED = {};
+
+/*
+  读取由 CONSUMED 驱动，不是另写三行 readContract——否则那张表会与真正读了
+  什么漂开，而「表里写着、其实没读」在报表上和真话长得一模一样（wave 83 的教训）。
+*/
+const contracts = Object.fromEntries(
+  CONSUMED.map((name) => [name, readContract(name)]),
+);
+function contractOf(name) {
+  const value = contracts[name];
+  if (!value) {
+    console.error(`契约 ${name} 不在 CONSUMED 里，生成不出来`);
+    process.exit(1);
+  }
+  return value;
+}
+
+const subagent = contractOf("subagent_status_contract.json");
+const slash = contractOf("slash_skill_contract.json");
+const runEvents = contractOf("run_event_stream_contract.json");
+
+/*
+  两张表必须恰好等于 contracts/ 顶层的 json 全集。
+  放在读取之后：契约目录整个不在时，`readContract` 那句友好的
+  「缺少后端契约」先报，不让 readdirSync 抛一个难读的 ENOENT。
+  只看顶层——`contracts/skill_review/` 是后端 skill-reviewer 的 JSON Schema，
+  不是「前端要不要跟」的那种契约，它们不在这条判据的全集里。
+*/
+const onDisk = readdirSync(CONTRACTS, { withFileTypes: true })
+  .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+  .map((entry) => entry.name)
+  .sort();
+const declared = [...CONSUMED, ...Object.keys(NOT_CONSUMED)].sort();
+if (declared.join("\n") !== onDisk.join("\n")) {
+  const missing = onDisk.filter((name) => !declared.includes(name));
+  const stale = declared.filter((name) => !onDisk.includes(name));
+  console.error(
+    "后端契约的表态不全：CONSUMED + NOT_CONSUMED 必须恰好等于 contracts/*.json。\n" +
+      (missing.length ? `  没表态的契约：${missing.join("、")}\n` : "") +
+      (stale.length ? `  表里有、盘上没有：${stale.join("、")}\n` : "") +
+      "  新契约要么接进本脚本，要么写进 NOT_CONSUMED 并说明前端为什么用不到。",
+  );
+  process.exit(1);
+}
 
 const tuple = (values) =>
   `[\n${values.map((value) => `  ${JSON.stringify(value)},`).join("\n")}\n] as const`;

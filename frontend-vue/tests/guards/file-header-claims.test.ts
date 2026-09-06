@@ -18,6 +18,13 @@
                    不钉——`主要`两个字就是说它是索引不是全集，钉全集会把
                    每加一个内部 helper 都变成改注释。
 
+                   **例外是自己写了数量的那几份**（wave 106）：`… 等 9 个` 不是
+                   索引，是**声称全集有多大**，而它同样能从源码算出来。9 份文件
+                   这么写，实测 `app/core/threads/utils.ts` 写着「等 8 个」、
+                   实际 9 个——`documentTitleOfThread` 是 `84108b5f`（2026-08-31）
+                   加的，头没跟着改，此后每一轮门禁都是绿的。判据自选口径、
+                   **零豁免**：不写数字的一律不受影响，写了就得对。
+
                    **只判「长得像标识符」的 token。** 头里混着散文
                    （`browser API helpers`、`list/get/create Agent`、`Nitro API route`），
                    判据取三种命名法：camelCase、多驼峰 PascalCase、带下划线的全大写。
@@ -27,11 +34,17 @@
                    那种数字不承重，写下来必然过期（线索 179）；量它的是下面
                    「形状先断言再计算」那条用例，跑一次就有当下的读数。
 
-                   **`tests/` 有意不在范围里**：那边同一行写的是「被测对象是谁」
+                   ~~**`tests/` 有意不在范围里**：那边同一行写的是「被测对象是谁」
                    （`probeArtifactAction 回归`），不是「本文件导出什么」，
-                   同一条规则套上去会产 14 条误报。wave 60 顺手逐条撞过，
-                   那 12 个被测符号在 `app/` 里全都找得到——两种约定各自成立，
-                   只是不能共用一条判据。
+                   同一条规则套上去会产 14 条误报。~~ **⚠️ 这条政策 wave 105 已经推翻，
+                   原文留在这里是因为它解释了那 13 处是怎么来的。** 当时的判断是
+                   「两种约定各自成立，只是不能共用一条判据」——而**代价没算**：
+                   `tests/` 下 195 份文件因此一份都没扫过，占扫描面的 73%，
+                   且没有任何机器会发现（线索 229）。wave 105 的做法不是给它配一条
+                   第二判据，而是**把那 12 份改成仓库既定写法**（`无；Vitest cases`——
+                   被测对象本来就写在 `【文件职责】` 与 `【依赖关系】` 里，信息不丢），
+                   于是一条判据就够了。**现在 `tests/` 在 SCAN_ROOTS 里**，
+                   见下方那段注释。
 
                    **形状先断言再计算**（线索 176）：扫不到文件、没有一个
                    token 能判、或者某份文件解析出零导出却点了名，都直接红——
@@ -219,6 +232,8 @@ interface Declaration {
   tokens: string[];
   exported: Set<string>;
   reExports: boolean;
+  /** 头里自己写下的导出总数（`… 等 9 个`），没写就是 null。 */
+  claimedCount: number | null;
 }
 
 const declarations: Declaration[] = [];
@@ -229,12 +244,14 @@ for (const file of sourceFiles) {
   const tokens = [
     ...new Set([...block.matchAll(/[A-Za-z_$][\w$]*/g)].map((m) => m[0])),
   ].filter(looksLikeSymbol);
+  const counted = /等\s*(\d+)\s*个/.exec(block);
   declarations.push({
     file,
     block,
     tokens,
     exported: exportedNamesOf(source),
     reExports: /^\s*export\s+\*/m.test(stripJs(source)),
+    claimedCount: counted ? Number(counted[1]) : null,
   });
 }
 
@@ -346,6 +363,36 @@ describe("文件头的【主要导出】", () => {
       }
     }
     expect(broken).toEqual([]);
+  });
+
+  /*
+    写了「等 N 个」就不再是索引，而是一句**关于全集**的断言，而且能算。
+    这一档与上面「只钉点名的存在」不冲突：不写数字的文件一行都不受影响。
+    `export *` 的转出名解析不了，所以那种文件写数字也不判——真出现时
+    上面那条 `starred` 用例会先红。
+  */
+  const counting = declarations.filter(
+    (entry) => entry.claimedCount !== null && !entry.reExports,
+  );
+
+  it("确实有文件在头里写导出总数（形状先断言再计算）", () => {
+    expect(
+      counting.length,
+      "一份写数量的文件都没扫到——`等 N 个` 的取法失效了",
+    ).toBeGreaterThan(5);
+  });
+
+  it("写了「等 N 个」的，N 必须等于实际导出数", () => {
+    const wrong = counting
+      .filter((entry) => entry.claimedCount !== entry.exported.size)
+      .map(
+        (entry) =>
+          `${entry.file}：头里写「等 ${entry.claimedCount} 个」，实际导出 ${entry.exported.size} 个`,
+      );
+    expect(
+      wrong,
+      "写数字就得对；不想维护这个数就把「等 N 个」去掉，判据自选口径",
+    ).toEqual([]);
   });
 
   it("当前没有任何文件靠 export * 绕过比对", () => {

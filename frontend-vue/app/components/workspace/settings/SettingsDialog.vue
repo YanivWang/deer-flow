@@ -19,7 +19,14 @@
                    正文容器不再包 <main>——每个面板自己的 SettingsSection 会包，
                    与 React 的 main 数量一一对应。
 */
-import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  ref,
+  watch,
+  type Component,
+} from "vue";
 import {
   Bell,
   Brain,
@@ -77,7 +84,14 @@ const IntegrationsSettings = defineAsyncComponent({
     import("@/components/workspace/settings/IntegrationsSettings.vue"),
   loadingComponent: SettingsPageLoading,
 });
-/** 与 React sections 的 icon 一一对应。 */
+/*
+  与 React sections 的 icon 一一对应。
+
+  `satisfies Record<SettingsSection, Component>` 不是装饰：少一个分区，
+  下面 `SECTION_ICONS[id]` 那处索引本来就会红；**多一个**却一直没人查——
+  `as const` 对多出来的键一声不响，于是「分区已经删了、图标还留着」
+  可以一路全绿地烂着。加上之后两个方向都由 tsc 挡住（wave 106）。
+*/
 const SECTION_ICONS = {
   account: User,
   appearance: Palette,
@@ -88,7 +102,7 @@ const SECTION_ICONS = {
   tools: Wrench,
   skills: Sparkles,
   about: Info,
-} as const;
+} as const satisfies Record<SettingsSection, Component>;
 
 const { $i18n } = useNuxtApp();
 const route = useRoute();

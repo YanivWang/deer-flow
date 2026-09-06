@@ -1,7 +1,7 @@
 /*
   【文件职责】     见下方导出与 JSDoc。
   【架构位置】     L3
-  【主要导出】     THREAD_PINNED_METADATA_KEY / ChannelThreadSource / pathOfThread / textOfMessage / titleOfThread / isThreadPinned 等 8 个
+  【主要导出】     THREAD_PINNED_METADATA_KEY / ChannelThreadSource / pathOfThread / textOfMessage / titleOfThread / documentTitleOfThread / isThreadPinned 等 9 个
   【依赖关系】     见下方 import。
   【边界与注意】   本文件由本仓维护；行为由 tests/ 下的用例约束。
 */
