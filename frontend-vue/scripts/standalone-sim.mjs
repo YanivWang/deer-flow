@@ -195,12 +195,24 @@ try {
   rmSync(outDir, { recursive: true, force: true });
 
   if (report === null) {
+    /*
+      整套压根没跑起来（最常见的原因：某个 project 的配置在兄弟应用不在时加载失败，
+      比如 `nuxt.config.ts` —— nuxt 那个 vitest project 会加载它）。
+      **这一行要先说清楚是「整套没跑起来」**，否则输出把责任推给表里那几份文件，
+      而它们其实一次都没被执行（wave 117 实测出的误导）。
+    */
+    results.push({
+      file: "（整套 vitest）",
+      kind: "test",
+      ok: false,
+      detail: `整套没跑起来：exit ${vitest.code}，vitest 没产出报告——看上面的输出`,
+    });
     for (const file of tests) {
       results.push({
         file,
         kind: "test",
         ok: false,
-        detail: `vitest 没产出报告（exit ${vitest.code}）——看上面的输出`,
+        detail: "整套没跑起来，这一条没被执行（不是它自己红）",
       });
     }
     if (vitest.code !== 0) console.log(vitest.stdout);
