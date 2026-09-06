@@ -1,4 +1,4 @@
-# React → Vue 平替：挂账总清单（截至 wave 104，2026-09-06）
+# React → Vue 平替：挂账总清单（截至 wave 105，2026-09-06）
 
 这份文件回答一个问题：**「还欠什么」。** 逐条给状态，不给散文。
 深度背景在 `vue-parity-handoff.md`，踩坑线索在 Claude 记忆 `deerflow-parity-harness-plan`。

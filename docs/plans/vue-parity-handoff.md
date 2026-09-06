@@ -8,7 +8,7 @@
 
 ---
 
-## 当前状态（截至 wave 104，2026-09-06）
+## 当前状态（截至 wave 105，2026-09-06）
 
 - 分支 `main-wc`。`b700cf17` = wave 39（chore `b09adb80`），
   `aef3618d` = wave 40（chore `2f9627fa`），`096c17d4` = wave 41，`706b3785` = wave 42，
@@ -382,6 +382,70 @@ wave 62 给消息轮次的复制键补上可访问名之后，这一屏同名元
 
 `asset-budget` 与 `audit` **此前不在任何一轮的门禁清单里**——和 `make coverage`
 之前的处境一样。`asset-budget` 现在是绿的，已进清单；`audit` 预期红，分诊已记。
+
+## 上一轮（wave 105）做了什么：**文件头门禁整整漏掉 `tests/` 一整个目录，195 份没扫过**
+
+**没动 `frontend/`。** wave 104 在 `baseline` 那张名单上撞到「单向校验」，
+这一轮把同一个形状往外扫了一遍——**在扫描面上又撞到一处，而且这一处漏得多得多**。
+
+### 一、先按判据筛，大多数表不是缺口
+
+`tests/guards/` 与 `scripts/` 下有 29 张硬编码表。判据不是「有没有反向校验」，
+而是——**这张表把全集切成两半，而另一半的处理方式是「不检查」吗**：
+
+- `VERIFY_STEPS`（doc-facts）：已经是「**逐个等于** verify 的先决条件」，双向，**不是缺口**；
+- `ROOT_MAKE_TARGETS`（doc-references）：它**不声称覆盖全集**（根 Makefile 几十个目标，
+  文档只提 5 个），反向校验没有意义，**不是缺口**；
+- `SCAN_ROOTS`（file-header-claims）：**是缺口**，见下。
+
+### 二、`SCAN_ROOTS` 漏掉 `tests/`，而注释里写着「仍然在外面的两类」
+
+```
+const SCAN_ROOTS = ["app", "config", "packages", "scripts", "server", "shared"];
+```
+
+注释说明了两类在外面（根上的 config 文件、`examples/`）。**实际是三类**——
+`tests/` 下有 **195 份**文件带着 `【主要导出】` 头，这条门禁**一份都没扫过**，
+而且没有任何机器会发现。当前扫描面一共才 268 份带头文件，**漏掉的这块占 73%**。
+
+**扩进来当场报出 13 处**（12 份 spec + 1 份工具）：
+
+```
+tests/unit/artifacts/artifact-actions.test.ts：【主要导出】点名了 probeArtifactAction，文件没有导出它
+tests/unit/browser/browser-keyboard.test.ts  ：【主要导出】点名了 decideBrowserKeyInput，文件没有导出它
+…（artifacts/ 6 份、browser/ 6 份，同一批写法）
+tests/e2e/utils/mock-api.ts                  ：【主要导出】点名了 MOCK_，文件没有导出它
+```
+
+12 份 spec 把**被测符号**写在了 `【主要导出】` 上，而它们一个 `export` 都没有。
+按仓库既定写法（`normalizers.test.ts` 那种）改成「无；Vitest cases」——
+**信息不丢**：被测对象本来就写在 `【文件职责】` 与 `【依赖关系】` 里。
+`mock-api.ts` 不是说谎，只是 `MOCK_*` 这个**通配写法**守卫认不出，改成列全四个常量。
+
+### 三、补上「顶层目录必须表态」
+
+光扩一次面不解决下一次。补 `EXCLUDED_ROOTS`（每条写理由），并加用例：
+**`SCAN_ROOTS ∪ EXCLUDED_ROOTS` 恰好等于 checkout 里的顶层目录**。
+
+```
+扫描  app config packages scripts server shared tests   （7）
+不扫  baseline（数据）public（静态资源）examples（独立样例，consumer-check 跑）（3）
+```
+
+`checkoutFiles` 用的是 `git ls-files --cached --others --exclude-standard`，
+**未跟踪的新目录也算进全集**——所以新建一个目录、不表态，门禁当场红。
+
+### 四、负向验证（5 条，全部真红）
+
+| 变异 | 期望 | 实测 |
+| --- | --- | --- |
+| 从 SCAN_ROOTS 删掉 tests | 红 | **红** |
+| 从 EXCLUDED_ROOTS 删掉 baseline | 红 | **红** |
+| 新增一个没表态的顶层目录 | 红 | **红** |
+| 把某份 spec 的【主要导出】改回被测符号 | 红 | **红**（证明扩面真生效） |
+| EXCLUDED_ROOTS 的理由写成空话 | 红 | **红** |
+
+还原后 `diff -q` 逐字节一致，临时目录已清理。
 
 ## 上一轮（wave 104）做了什么：**HAND_MAINTAINED 那张表是单向校验的，补成双向**
 
