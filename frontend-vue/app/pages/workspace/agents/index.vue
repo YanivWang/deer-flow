@@ -43,8 +43,26 @@ const featureDisabled = computed(
   () => features.loaded.value && !features.agentsApiEnabled.value,
 );
 const agentCatalog = useAgents({ enabled: featureEnabled });
-const modelCatalog = useModels({ enabled: featureEnabled });
 const editing = ref<Agent | null>(null);
+/*
+  **模型清单等到对话框真的打开才取**（wave 136）。
+
+  上游把 `useModels()` 放在 `agent-settings-dialog.tsx:58` 里，也就是只有编辑对话框
+  挂载时才发这个请求；本仓原来写的是 `enabled: featureEnabled`，**进画廊页就取**。
+  wave 135 第一次给这一屏做对照时台账当场报出
+  `requestsOnlyVue: GET /api/models`——只是来浏览画廊的人不需要模型清单。
+
+  **没有把 `useModels` 搬进对话框组件**：这份工作区的服务端真相一律由页面/composable
+  这一层的 Query 持有（ARCHITECTURE「本工作区没有客户端 store」那一节），
+  对话框只收 props，单测也是靠 props 挂载的。改 `enabled` 的谓词就够，
+  而且与 `ChatComposer.vue:260`、`AgentChat.vue:187` 的既定写法一致。
+
+  关掉对话框之后查询会重新失效，但 `useModels` 是 `staleTime: Infinity`，
+  再打开时直接命中缓存、不会重发。
+*/
+const modelCatalog = useModels({
+  enabled: computed(() => featureEnabled.value && editing.value !== null),
+});
 const actionError = ref("");
 
 function message(error: unknown, fallback: string) {
